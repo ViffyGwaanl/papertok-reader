@@ -498,6 +498,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
             // height: 500,
             width: MediaQuery.of(context).size.width,
             child: FilledContainer(
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
