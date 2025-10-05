@@ -1,4 +1,3 @@
-
 import 'package:anx_reader/models/book_note.dart';
 
 import 'database.dart';
@@ -9,7 +8,8 @@ Future<int> insertBookNote(BookNote bookNote) async {
     return bookNote.id!;
   }
 
-  List<BookNote> bookNotes = await selectBookNoteByCfiAndBookId(bookNote.cfi, bookNote.bookId);
+  List<BookNote> bookNotes =
+      await selectBookNoteByCfiAndBookId(bookNote.cfi, bookNote.bookId);
   if (bookNotes.isNotEmpty) {
     bookNote.id = bookNotes.last.id;
     updateBookNoteById(bookNote);
@@ -20,9 +20,11 @@ Future<int> insertBookNote(BookNote bookNote) async {
   return db.insert('tb_notes', bookNote.toMap());
 }
 
-Future<List<BookNote>> selectBookNoteByCfiAndBookId(String cfi, int bookId) async {
+Future<List<BookNote>> selectBookNoteByCfiAndBookId(
+    String cfi, int bookId) async {
   final db = await DBHelper().database;
-  final List<Map<String, dynamic>> maps = await db.query('tb_notes', where: 'cfi = ? AND book_id = ?', whereArgs: [cfi, bookId]);
+  final List<Map<String, dynamic>> maps = await db.query('tb_notes',
+      where: 'cfi = ? AND book_id = ?', whereArgs: [cfi, bookId]);
   return List.generate(maps.length, (i) {
     return BookNote(
       id: maps[i]['id'],
@@ -124,12 +126,51 @@ Future<List<BookNote>> searchBookNotes(String keyword) async {
     return [];
   }
 
+  return searchBookNotesAdvanced(keyword: query);
+}
+
+Future<List<BookNote>> searchBookNotesAdvanced({
+  String? keyword,
+  int? bookId,
+  DateTime? from,
+  DateTime? to,
+  int? limit,
+}) async {
+  final query = keyword?.trim();
+
+  assert(query != null && query.isNotEmpty ||
+      bookId != null ||
+      from != null ||
+      to != null);
+
   final db = await DBHelper().database;
+  final where = <String>[];
+  final whereArgs = <Object?>[];
+
+  where.add('(content LIKE ? OR reader_note LIKE ? OR chapter LIKE ?)');
+  whereArgs.addAll(['%$query%', '%$query%', '%$query%']);
+
+  if (bookId != null) {
+    where.add('book_id = ?');
+    whereArgs.add(bookId);
+  }
+
+  if (from != null) {
+    where.add('update_time >= ?');
+    whereArgs.add(from.toIso8601String());
+  }
+
+  if (to != null) {
+    where.add('update_time <= ?');
+    whereArgs.add(to.toIso8601String());
+  }
+
   final List<Map<String, dynamic>> maps = await db.query(
     'tb_notes',
-    where: 'content LIKE ? OR reader_note LIKE ? OR chapter LIKE ?',
-    whereArgs: ['%$query%', '%$query%', '%$query%'],
+    where: where.join(' AND '),
+    whereArgs: whereArgs,
     orderBy: 'update_time DESC',
+    limit: limit,
   );
 
   return List.generate(maps.length, (i) {

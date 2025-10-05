@@ -2,12 +2,14 @@
 
 ## 1.8.2
 - Feat: AI can call tools to assist in answering
+- Feat: Add AI tools, AI can call tools such as note search, bookshelf lookup to assist in answering
 - Feat: Enhance AI chat streaming with cancellation support
 - Feat: Optimize the interface design of the thinking model
 - Fix: Fix the issue of some AI services loading indefinitely
 - UI: Optimize part of the interface design
 
 - Feat: AI 可以调用工具来辅助回答
+- Feat: 添加 AI 工具,AI 可以调用笔记搜索、书架查询等工具来辅助回答
 - Feat: 增强 AI 对话流，支持终止当前对话
 - Feat: 优化思考模型的界面设计
 - Fix: 修复部分 AI 服务无限加载的问题

@@ -5,7 +5,12 @@ import 'package:langchain_google/langchain_google.dart';
 import 'package:langchain_openai/langchain_openai.dart';
 
 import 'langchain_ai_config.dart';
+import 'repository/books_repository.dart';
+import 'repository/notes_repository.dart';
+import 'tools/bookshelf_lookup_tool.dart';
 import 'tools/calculator_tool.dart';
+import 'tools/current_time_tool.dart';
+import 'tools/notes_search_tool.dart';
 
 /// Factory responsible for building chat models based on user preferences.
 class LangchainAiRegistry {
@@ -73,11 +78,35 @@ class LangchainAiRegistry {
     required bool useAgent,
   }) {
     final tools = useAgent ? _buildTools(config) : const <Tool>[];
-    return LangchainPipeline(model: model, tools: tools);
+    final systemMessage = useAgent ? _buildAgentSystemMessage() : null;
+    return LangchainPipeline(
+      model: model,
+      tools: tools,
+      systemMessage: systemMessage,
+    );
   }
 
   List<Tool> _buildTools(LangchainAiConfig config) {
-    return [calculatorTool];
+    final notesRepository = NotesRepository();
+    final booksRepository = BooksRepository();
+
+    return [
+      calculatorTool,
+      NotesSearchTool(notesRepository).tool,
+      BookshelfLookupTool(booksRepository).tool,
+      currentTimeTool,
+    ];
+  }
+
+  ChatMessage _buildAgentSystemMessage() {
+    const guidance = '''You are the Anx Reader assistant. When users ask for help:
+- Use `notes_search` to retrieve highlights or annotations. Include book title, chapter, and a concise snippet when summarising results.
+- Use `bookshelf_lookup` to inspect the user\'s library (title, author, progress). Combine with other knowledge to answer queries about available books.
+- Use `calculator` only for arithmetic operations.
+- Use `current_time` when the user needs the current date or time. Prefer local time but mention UTC when relevant.
+If a tool returns no data, explain that to the user and suggest next steps.''';
+
+    return ChatMessage.system(guidance);
   }
 }
 
@@ -85,8 +114,10 @@ class LangchainPipeline {
   const LangchainPipeline({
     required this.model,
     required this.tools,
+    this.systemMessage,
   });
 
   final BaseChatModel model;
   final List<Tool> tools;
+  final ChatMessage? systemMessage;
 }

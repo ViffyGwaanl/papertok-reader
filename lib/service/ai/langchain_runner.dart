@@ -328,11 +328,7 @@ class _ToolStep {
 enum ToolStepStatus { pending, success, failed }
 
 String _escapeAttr(String value) {
-  return value
-      .replaceAll('&', '&amp;')
-      .replaceAll("'", '&apos;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;');
+  return Uri.encodeComponent(value);
 }
 
 class _ReasoningItem {

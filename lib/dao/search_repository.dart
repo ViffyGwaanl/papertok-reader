@@ -7,14 +7,26 @@ import 'package:anx_reader/models/search_result_data.dart';
 class SearchRepository {
   const SearchRepository();
 
-  Future<SearchResultData> search(String keyword) async {
+  Future<SearchResultData> search(
+    String keyword, {
+    int? bookId,
+    DateTime? from,
+    DateTime? to,
+    int? limit,
+  }) async {
     final query = keyword.trim();
     if (query.isEmpty) {
       return SearchResultData.empty;
     }
 
     final books = await book_dao.searchBooks(query);
-    final notes = await note_dao.searchBookNotes(query);
+    final notes = await note_dao.searchBookNotesAdvanced(
+      keyword: query,
+      bookId: bookId,
+      from: from,
+      to: to,
+      limit: limit,
+    );
 
     if (notes.isEmpty) {
       return SearchResultData(books: books, noteGroups: const <SearchNoteGroup>[]);

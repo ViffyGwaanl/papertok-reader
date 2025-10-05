@@ -73,7 +73,7 @@ ParsedReasoning parseReasoningContent(String content) {
   _parseTimeline(think, timeline);
 
   // Backward compatibility: handle tool tags outside <think></think>
-  final toolRegex = RegExp(r'<tool-step\s+([^/>]+?)\s*/>');
+  final toolRegex = RegExp(r'<tool-step\s+([\s\S]*?)\s*/>');
   remaining = remaining.replaceAllMapped(toolRegex, (match) {
     final attrs = _parseAttributes(match.group(1)!);
     timeline.add(
@@ -108,12 +108,7 @@ Map<String, String> _parseAttributes(String raw) {
 }
 
 String _unescapeAttr(String value) {
-  return value
-      .replaceAll('&lt;', '<')
-      .replaceAll('&gt;', '>')
-      .replaceAll('&apos;', "'")
-      .replaceAll('&quot;', '"')
-      .replaceAll('&amp;', '&');
+  return Uri.decodeComponent(value);
 }
 
 void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
