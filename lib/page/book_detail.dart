@@ -91,7 +91,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
       double top = 60;
 
       return SizedBox(
-        height: 270 + top,
+        height: 280 + top,
         child: Stack(
           children: [
             // background card
@@ -102,6 +102,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                   height: 120,
                   width: width,
                   child: FilledContainer(
+                    margin: const EdgeInsets.only(bottom: 3),
                     child: Row(
                       children: [
                         const Spacer(),
