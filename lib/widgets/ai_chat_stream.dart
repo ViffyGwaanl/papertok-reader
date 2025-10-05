@@ -467,7 +467,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             margin: const EdgeInsets.only(bottom: 8.0),
           ),
         if (parsed.hasAnswer)
-          MarkdownBody(data: parsed.answer)
+          MarkdownBody(
+            data: parsed.answer,
+            selectable: true,
+          )
         else if (!parsed.hasToolSteps)
           Skeletonizer.zone(child: Bone.multiText()),
       ],
