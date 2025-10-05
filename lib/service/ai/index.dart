@@ -161,9 +161,7 @@ String _roleOf(ChatMessage message) {
 }
 
 String _mapError(Object error) {
-  final context = navigatorKey.currentContext;
-  final l10n = context != null ? L10n.of(context) : null;
-  final base = l10n?.translateError ?? 'Error: ';
+  final base = 'Error: ';
 
   if (error is TimeoutException) {
     return '${base}Request timed out';

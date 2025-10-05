@@ -1,3 +1,4 @@
+import 'package:anx_reader/utils/log/common.dart';
 import 'package:langchain_core/tools.dart';
 import 'package:math_expressions/math_expressions.dart';
 
@@ -14,6 +15,7 @@ class _CalculatorInput {
 }
 
 String _evaluateExpression(String expression) {
+  AnxLog.info('Evaluating expression: $expression');
   final trimmed = expression.trim();
   if (trimmed.isEmpty) {
     throw ArgumentError('Expression cannot be empty');
