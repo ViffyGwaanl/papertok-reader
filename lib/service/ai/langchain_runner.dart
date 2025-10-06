@@ -108,6 +108,7 @@ class CancelableLangchainRunner {
       final timeline = <_ReasoningItem>[];
 
       var finalAnswer = '';
+      String? pendingThought;
       var iterations = 0;
 
       void emit() {
@@ -168,11 +169,21 @@ class CancelableLangchainRunner {
                   ? chunk
                   : aggregated!.concat(chunk);
 
-              final content = aggregated!.output.content;
-              if (content != lastEmitted) {
-                finalAnswer = content;
-                emit();
-                lastEmitted = content;
+              final output = aggregated!.output;
+              if (output.toolCalls.isNotEmpty) {
+                pendingThought = output.content;
+                if (finalAnswer.isNotEmpty) {
+                  finalAnswer = '';
+                  lastEmitted = '';
+                  emit();
+                }
+              } else {
+                final content = output.content;
+                if (content != lastEmitted) {
+                  finalAnswer = content;
+                  emit();
+                  lastEmitted = content;
+                }
               }
             },
             onError: (Object error, StackTrace stack) {
@@ -202,6 +213,15 @@ class CancelableLangchainRunner {
           final message = aggregated!.output;
           final actions = await parser.parseChatMessage(message);
 
+          if (message.toolCalls.isNotEmpty) {
+            final thought = (pendingThought ?? message.content).trim();
+            if (thought.isNotEmpty) {
+              timeline.add(_ReasoningItem.think(thought));
+              emit();
+            }
+            pendingThought = null;
+          }
+
           var shouldStop = false;
           for (final action in actions) {
             if (action is AgentFinish) {
@@ -226,9 +246,7 @@ class CancelableLangchainRunner {
             emit();
 
             try {
-              final inputJson = agentAction.toolInput is Map<String, dynamic>
-                  ? agentAction.toolInput as Map<String, dynamic>
-                  : Map<String, dynamic>.from(agentAction.toolInput as Map);
+              final inputJson = agentAction.toolInput;
               final toolInput = tool.getInputFromJson(inputJson);
               final observation = await tool.invoke(toolInput);
               final observationText = observation.toString();
