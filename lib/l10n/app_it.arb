@@ -568,5 +568,9 @@
   "quickPrompt7": "Riassumi i momenti salienti di oggi.",
   "quickPrompt8": "Quale libro mi ha preso più tempo questa settimana?",
   "quickPrompt9": "Dammi una citazione dalle mie note.",
-  "quickPrompt10": "Cosa dovrei leggere dopo?"
+  "quickPrompt10": "Cosa dovrei leggere dopo?",
+  "history": "Storia",
+  "conversationHistory": "Storia della conversazione",
+  "noConversationTip": "Nessuna conversazione ancora, inizia a chattare!",
+  "failedToLoadHistoryTip": "Impossibile caricare la cronologia"
 }

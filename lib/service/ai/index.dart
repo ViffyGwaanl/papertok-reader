@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
-import 'package:anx_reader/service/ai/ai_cache.dart';
 import 'package:anx_reader/service/ai/langchain_ai_config.dart';
 import 'package:anx_reader/service/ai/langchain_registry.dart';
 import 'package:anx_reader/service/ai/langchain_runner.dart';
@@ -65,17 +64,6 @@ Stream<String> _generateStream({
     config = mergeConfigs(config, override);
   }
 
-  final hash = _hashMessages(messages);
-  final cacheEntry = await AiCache.getAiCache(hash);
-
-  if (!useAgent &&
-      cacheEntry != null &&
-      cacheEntry.data.isNotEmpty &&
-      !regenerate) {
-    yield cacheEntry.decoratedText();
-    return;
-  }
-
   AnxLog.info(
       'aiGenerateStream: $selectedIdentifier, model: ${config.model}, baseUrl: ${config.baseUrl}');
 
@@ -121,7 +109,7 @@ Stream<String> _generateStream({
     stream = _runner.stream(model: model, prompt: prompt);
   }
 
-  var buffer = cacheEntry?.data ?? '';
+  var buffer = '';
 
   try {
     await for (final chunk in stream) {
@@ -129,10 +117,6 @@ Stream<String> _generateStream({
       yield buffer;
     }
 
-    if (!useAgent && buffer.isNotEmpty) {
-      final conversation = [...messages, ChatMessage.ai(buffer)];
-      await AiCache.setAiCache(hash, buffer, selectedIdentifier, conversation);
-    }
   } catch (error, stack) {
     final mapped = _mapError(error);
     AnxLog.severe('AI error: $mapped\n$stack');
@@ -142,22 +126,6 @@ Stream<String> _generateStream({
       model.close();
     } catch (_) {}
   }
-}
-
-int _hashMessages(List<ChatMessage> messages) {
-  final digest =
-      messages.map((m) => '${_roleOf(m)}: ${m.contentAsString}').join('\n');
-  return digest.hashCode;
-}
-
-String _roleOf(ChatMessage message) {
-  return switch (message) {
-    SystemChatMessage _ => 'system',
-    HumanChatMessage _ => 'user',
-    AIChatMessage _ => 'assistant',
-    ToolChatMessage _ => 'tool',
-    CustomChatMessage custom => custom.role,
-  };
 }
 
 String _mapError(Object error) {

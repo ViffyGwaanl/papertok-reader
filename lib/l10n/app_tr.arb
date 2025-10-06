@@ -568,5 +568,9 @@
   "quickPrompt7": "Bugünün öne çıkanlarını özetle.",
   "quickPrompt8": "Bu hafta en çok zamanımı alan kitap hangisi?",
   "quickPrompt9": "Notlarımıdan bir alıntı ver.",
-  "quickPrompt10": "Sonra ne okumalıyım?"
+  "quickPrompt10": "Sonra ne okumalıyım?",
+  "history": "Tarih",
+  "conversationHistory": "Konuşma geçmişi",
+  "noConversationTip": "Henüz konuşma yok, sohbet etmeye başlayın!",
+  "failedToLoadHistoryTip": "Geçmişi yükleyemedi"
 }

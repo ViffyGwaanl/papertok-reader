@@ -568,5 +568,9 @@
   "quickPrompt7": "總結今天的亮點。",
   "quickPrompt8": "這週哪本書花的時間最多？",
   "quickPrompt9": "從我的筆記中給我一句引用。",
-  "quickPrompt10": "接下來我應該讀什麼？"
+  "quickPrompt10": "接下來我應該讀什麼？",
+  "history": "歷史",
+  "conversationHistory": "對話歷史",
+  "noConversationTip": "還沒有對話，開始聊天！",
+  "failedToLoadHistoryTip": "無法加載歷史記錄"
 }

@@ -568,5 +568,9 @@
   "quickPrompt7": "Summarize today's highlights.",
   "quickPrompt8": "Which book took the most time this week?",
   "quickPrompt9": "Give me a quote from my notes.",
-  "quickPrompt10": "What should I read next?"
+  "quickPrompt10": "What should I read next?",
+  "history": "History",
+  "conversationHistory": "Conversation history",
+  "noConversationTip": "No conversations yet, start chatting!",
+  "failedToLoadHistoryTip": "Failed to load history"
 }

@@ -568,5 +568,9 @@
   "quickPrompt7": "撮今日之要點。",
   "quickPrompt8": "本週何書費時最多？",
   "quickPrompt9": "自吾筆記中取一言。",
-  "quickPrompt10": "吾下將讀何？"
+  "quickPrompt10": "吾下將讀何？",
+  "history": "史",
+  "conversationHistory": "對話史",
+  "noConversationTip": "尚未有對話，開始閒談！",
+  "failedToLoadHistoryTip": "載入史蹟失敗"
 }

@@ -568,5 +568,9 @@
   "quickPrompt7": "오늘의 하이라이트를 요약해 주세요.",
   "quickPrompt8": "이번 주에 가장 많은 시간을 투자한 책은 무엇인가요?",
   "quickPrompt9": "내 노트에서 인용구를 하나 알려주세요.",
-  "quickPrompt10": "다음에 무엇을 읽어야 할까요?"
+  "quickPrompt10": "다음에 무엇을 읽어야 할까요?",
+  "history": "역사",
+  "conversationHistory": "대화 역사",
+  "noConversationTip": "아직 대화가 없습니다, 채팅을 시작하십시오!",
+  "failedToLoadHistoryTip": "기록을로드하지 못했습니다"
 }

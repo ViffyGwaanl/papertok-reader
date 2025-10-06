@@ -78,6 +78,8 @@ ThemeData colorSchema(
           scaffoldBackgroundColor: gropedBackgroundColor,
           bottomSheetTheme: BottomSheetThemeData()
               .copyWith(backgroundColor: gropedBackgroundColor),
+          drawerTheme: DrawerThemeData().copyWith(
+              backgroundColor: gropedBackgroundColor),
           dialogTheme: DialogThemeData()
               .copyWith(backgroundColor: gropedBackgroundColor))
       .useSystemChineseFont(brightness);

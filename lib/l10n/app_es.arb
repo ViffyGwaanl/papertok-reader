@@ -568,5 +568,9 @@
   "quickPrompt7": "Resume los aspectos destacados de hoy.",
   "quickPrompt8": "¿Qué libro me tomó más tiempo esta semana?",
   "quickPrompt9": "Dame una cita de mis notas.",
-  "quickPrompt10": "¿Qué debería leer a continuación?"
+  "quickPrompt10": "¿Qué debería leer a continuación?",
+  "history": "Historia",
+  "conversationHistory": "Historia de conversación",
+  "noConversationTip": "Sin conversaciones todavía, ¡comienza a chatear!",
+  "failedToLoadHistoryTip": "No se pudo cargar el historial"
 }

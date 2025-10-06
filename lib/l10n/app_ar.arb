@@ -568,5 +568,9 @@
   "quickPrompt7": "لخص أبرز النقاط اليوم.",
   "quickPrompt8": "ما الكتاب الذي استغرق أكثر وقتًا هذا الأسبوع؟",
   "quickPrompt9": "أعطني اقتباسًا من ملاحظاتي.",
-  "quickPrompt10": "ما الذي يجب أن أقرأه بعد ذلك؟"
+  "quickPrompt10": "ما الذي يجب أن أقرأه بعد ذلك؟",
+  "history": "تاريخ",
+  "conversationHistory": "تاريخ المحادثة",
+  "noConversationTip": "لا محادثات حتى الآن ، ابدأ في الدردشة!",
+  "failedToLoadHistoryTip": "فشل في تحميل التاريخ"
 }

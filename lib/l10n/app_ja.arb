@@ -568,5 +568,9 @@
   "quickPrompt7": "今日のハイライトを要約してください。",
   "quickPrompt8": "今週最も時間がかかった本はどれですか？",
   "quickPrompt9": "私のノートから引用を1つ教えてください。",
-  "quickPrompt10": "次に何を読むべきですか？"
+  "quickPrompt10": "次に何を読むべきですか？",
+  "history": "歴史",
+  "conversationHistory": "会話の歴史",
+  "noConversationTip": "会話はまだありません、チャットを始めてください！",
+  "failedToLoadHistoryTip": "履歴をロードできませんでした"
 }

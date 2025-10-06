@@ -4,16 +4,20 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/providers/ai_chat.dart';
+import 'package:anx_reader/providers/ai_history.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
+import 'package:anx_reader/service/ai/ai_history.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/widgets/ai/ai_reasoning_panel.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:langchain_core/chat_models.dart';
 
@@ -30,6 +34,7 @@ class AiChatStream extends ConsumerStatefulWidget {
 
 class AiChatStreamState extends ConsumerState<AiChatStream> {
   final TextEditingController inputController = TextEditingController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Stream<List<ChatMessage>>? _messageStream;
   StreamController<List<ChatMessage>>? _messageController;
   StreamSubscription<List<ChatMessage>>? _messageSubscription;
@@ -146,6 +151,200 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           curve: Curves.easeOut,
         );
       }
+    });
+  }
+
+  Widget _buildHistoryDrawer(BuildContext context) {
+    final historyState = ref.watch(aiHistoryProvider);
+    return SafeArea(
+      child: Column(
+        children: [
+          ListTile(
+            title: Text(L10n.of(context).conversationHistory),
+            trailing: DeleteConfirm(
+              delete: () => _confirmClearHistory(context),
+              deleteIcon: Icon(Icons.delete_sweep),
+            ),
+          ),
+          Expanded(
+            child: historyState.when(
+              data: (items) {
+                if (items.isEmpty) {
+                  return Center(
+                    child: Text(L10n.of(context).noConversationTip),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemBuilder: (context, index) {
+                    final entry = items[index];
+                    return _buildHistoryTile(context, entry);
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Text(L10n.of(context).failedToLoadHistoryTip),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryTile(BuildContext context, AiChatHistoryEntry entry) {
+    final option = _serviceOptionById(entry.serviceId);
+    final statusColor =
+        entry.completed ? Colors.green : Theme.of(context).colorScheme.tertiary;
+    final title = _deriveTitle(entry);
+    final subtitle = _buildHistorySubtitle(option, entry);
+
+    return FilledContainer(
+      margin: EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.all(8),
+      radius: 15,
+      child: GestureDetector(
+        onTap: () => _handleHistoryTap(context, entry),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                    Text(
+                      _formatTimestamp(entry.updatedAt),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ),
+                Spacer(),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.circle, size: 10, color: statusColor),
+                    DeleteConfirm(
+                        delete: () => _confirmDeleteHistory(context, entry)),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _buildHistorySubtitle(
+      AiServiceOption? option, AiChatHistoryEntry entry) {
+    final serviceLabel = option?.title ?? entry.serviceId;
+    if (entry.model.isEmpty) {
+      return serviceLabel;
+    }
+    return '$serviceLabel · ${entry.model}';
+  }
+
+  AiServiceOption? _serviceOptionById(String id) {
+    for (final option in _serviceOptions) {
+      if (option.identifier == id) {
+        return option;
+      }
+    }
+    return null;
+  }
+
+  String _deriveTitle(AiChatHistoryEntry entry) {
+    for (final message in entry.messages) {
+      if (message is HumanChatMessage) {
+        final content = message.contentAsString.trim();
+        if (content.isNotEmpty) {
+          final firstLine = content.split('\n').first.trim();
+          return firstLine;
+        }
+      }
+    }
+    if (entry.messages.isNotEmpty) {
+      return 'Conversation';
+    }
+    return 'Empty conversation';
+  }
+
+  String _formatTimestamp(int timestamp) {
+    final dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp).toLocal();
+    String twoDigits(int value) => value.toString().padLeft(2, '0');
+    final date =
+        '${dateTime.year}-${twoDigits(dateTime.month)}-${twoDigits(dateTime.day)}';
+    final time = '${twoDigits(dateTime.hour)}:${twoDigits(dateTime.minute)}';
+    return '$date $time';
+  }
+
+  Future<void> _handleHistoryTap(
+    BuildContext context,
+    AiChatHistoryEntry entry,
+  ) async {
+    if (_isStreaming) {
+      _cancelStreaming();
+    }
+    _messageSubscription?.cancel();
+    _messageSubscription = null;
+    final controller = _messageController;
+    if (controller != null && !controller.isClosed) {
+      await controller.close();
+    }
+    _messageController = null;
+
+    ref.read(aiChatProvider.notifier).loadHistoryEntry(entry);
+
+    setState(() {
+      _messageStream = null;
+      _expandedState.clear();
+      _userControlled.clear();
+    });
+
+    Navigator.of(context).pop();
+    _scrollToBottom();
+  }
+
+  Future<void> _confirmDeleteHistory(
+    BuildContext context,
+    AiChatHistoryEntry entry,
+  ) async {
+    await ref.read(aiHistoryProvider.notifier).remove(entry.id);
+
+    final currentSessionId = ref.read(aiChatProvider.notifier).currentSessionId;
+    if (currentSessionId == entry.id) {
+      ref.read(aiChatProvider.notifier).clear();
+      setState(() {
+        _messageStream = null;
+        _expandedState.clear();
+        _userControlled.clear();
+      });
+    }
+  }
+
+  Future<void> _confirmClearHistory(BuildContext context) async {
+    await ref.read(aiHistoryProvider.notifier).clear();
+    ref.read(aiChatProvider.notifier).clear();
+    setState(() {
+      _messageStream = null;
+      _expandedState.clear();
+      _userControlled.clear();
     });
   }
 
@@ -382,10 +581,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               Expanded(
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: _clearMessage,
-                    ),
                     Flexible(child: aiService),
                   ],
                 ),
@@ -433,7 +628,25 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: Text(L10n.of(context).aiChat),
+        leading: IconButton(
+          icon: const Icon(BoxIcons.bxs_file_archive),
+          tooltip: L10n.of(context).history,
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(BoxIcons.bxs_file_plus),
+            onPressed: _clearMessage,
+          ),
+        ],
+      ),
+      drawer: Drawer(
+        child: _buildHistoryDrawer(context),
+      ),
       body: Column(
         children: [
           Expanded(
