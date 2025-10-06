@@ -6,14 +6,14 @@ import 'base_tool.dart';
 
 class _NotesSearchInput {
   _NotesSearchInput({
-    required this.query,
+    this.keyword,
     this.bookId,
     this.from,
     this.to,
     this.limit,
   });
 
-  final String query;
+  final String? keyword;
   final int? bookId;
   final DateTime? from;
   final DateTime? to;
@@ -32,7 +32,7 @@ class _NotesSearchInput {
     }
 
     return _NotesSearchInput(
-      query: json['query']?.toString() ?? '',
+      keyword: json['keyword']?.toString() ?? '',
       bookId: parseInt(json['book_id'] ?? json['bookId']),
       from: parseDate(json['from']?.toString()),
       to: parseDate(json['to']?.toString()),
@@ -52,11 +52,11 @@ class NotesSearchTool
       : super(
           name: 'notes_search',
           description:
-              'Search user notes by keyword. Optional filters: book_id, from, to (ISO8601), limit.',
+              'Search user notes by keyword, book_id, from, to (ISO8601), limit.',
           inputJsonSchema: const {
             'type': 'object',
             'properties': {
-              'query': {
+              'keyword': {
                 'type': 'string',
                 'description': 'Keyword of the note content or chapter.',
               },
@@ -92,7 +92,7 @@ class NotesSearchTool
   @override
   Future<Map<String, dynamic>> run(_NotesSearchInput input) async {
     final results = await _repository.searchNotes(
-      keyword: input.query,
+      keyword: input.keyword,
       bookId: input.bookId,
       from: input.from,
       to: input.to,
@@ -100,7 +100,7 @@ class NotesSearchTool
     );
 
     return {
-      'query': input.query,
+      'keyword': input.keyword,
       'bookId': input.bookId,
       'from': input.from?.toIso8601String(),
       'to': input.to?.toIso8601String(),

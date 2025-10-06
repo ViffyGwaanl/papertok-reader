@@ -138,11 +138,6 @@ Future<List<BookNote>> searchBookNotesAdvanced({
 }) async {
   final query = keyword?.trim();
 
-  assert(query != null && query.isNotEmpty ||
-      bookId != null ||
-      from != null ||
-      to != null);
-
   final db = await DBHelper().database;
   final where = <String>[];
   final whereArgs = <Object?>[];

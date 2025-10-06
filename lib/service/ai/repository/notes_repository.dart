@@ -45,13 +45,13 @@ class NotesRepository {
   const NotesRepository();
 
   Future<List<NoteSearchResult>> searchNotes({
-    required String keyword,
+    String? keyword,
     int? bookId,
     DateTime? from,
     DateTime? to,
     int limit = 10,
   }) async {
-    final query = keyword.trim();
+    final query = keyword?.trim();
 
     final notes = await note_dao.searchBookNotesAdvanced(
       keyword: query,
