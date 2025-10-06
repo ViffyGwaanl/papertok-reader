@@ -1,7 +1,7 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:flutter/material.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
-import 'package:anx_reader/widgets/tool_step_tile.dart';
+import 'package:anx_reader/widgets/ai/tool_step_tile.dart';
 
 class ReasoningPanel extends StatelessWidget {
   const ReasoningPanel({

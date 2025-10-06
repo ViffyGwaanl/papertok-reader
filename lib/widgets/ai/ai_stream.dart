@@ -8,7 +8,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
-import 'package:anx_reader/widgets/ai_reasoning_panel.dart';
+import 'package:anx_reader/widgets/ai/ai_reasoning_panel.dart';
 
 class AiStream extends ConsumerStatefulWidget {
   const AiStream({

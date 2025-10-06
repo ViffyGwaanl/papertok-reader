@@ -1,4 +1,5 @@
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
+import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/common/container/outlined_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,7 +36,7 @@ class _ToolStepTileState extends State<ToolStepTile> {
     final statusColor = _statusColor(widget.step.status, theme);
 
     return OutlinedContainer(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
       radius: 14,
       child: InkWell(
         onTap: () => setState(() => _expanded = !_expanded),
@@ -44,7 +45,7 @@ class _ToolStepTileState extends State<ToolStepTile> {
           children: [
             Row(
               children: [
-                Icon(Icons.build, size: 16),
+                Icon(Icons.build, size: 12),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -107,14 +108,20 @@ class _ExpandableField extends StatelessWidget {
             Expanded(child: Text(label, style: theme.textTheme.labelMedium)),
             IconButton(
               tooltip: 'Copy',
-              icon: const Icon(Icons.copy, size: 16),
+              icon: const Icon(Icons.copy, size: 12),
               onPressed: () => Clipboard.setData(ClipboardData(text: value)),
             ),
           ],
         ),
-        SelectableText(
-          value,
-          style: theme.textTheme.bodyMedium,
+        FilledContainer(
+          color: theme.colorScheme.surfaceVariant,
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          radius: 6,
+          child: SelectableText(
+            value,
+            style: theme.textTheme.bodyMedium,
+          ),
         ),
       ],
     );

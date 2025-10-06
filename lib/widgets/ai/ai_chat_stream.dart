@@ -5,7 +5,7 @@ import 'package:anx_reader/providers/ai_chat.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
-import 'package:anx_reader/widgets/ai_reasoning_panel.dart';
+import 'package:anx_reader/widgets/ai/ai_reasoning_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';

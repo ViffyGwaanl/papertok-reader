@@ -6,7 +6,7 @@ import 'package:anx_reader/providers/ai_cache_count.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/service/ai/prompt_generate.dart';
 import 'package:anx_reader/utils/env_var.dart';
-import 'package:anx_reader/widgets/ai_stream.dart';
+import 'package:anx_reader/widgets/ai/ai_stream.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
