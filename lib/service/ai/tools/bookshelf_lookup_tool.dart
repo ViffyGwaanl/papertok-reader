@@ -51,7 +51,7 @@ class BookshelfLookupTool
       : super(
           name: 'bookshelf_lookup',
           description:
-              'Search books on the local shelf by title or author. Optional filters: group_id, include_deleted, limit.',
+              'Search books on the local shelf by title or author. Optional filters: group_id, include_deleted, limit. Returns a list of matching books, and the meta information(title, author, progress, last reading time) of each book.',
           inputJsonSchema: const {
             'type': 'object',
             'properties': {
