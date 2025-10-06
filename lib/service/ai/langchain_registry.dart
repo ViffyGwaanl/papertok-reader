@@ -7,10 +7,12 @@ import 'package:langchain_openai/langchain_openai.dart';
 import 'langchain_ai_config.dart';
 import 'repository/books_repository.dart';
 import 'repository/notes_repository.dart';
+import 'repository/reading_history_repository.dart';
 import 'tools/bookshelf_lookup_tool.dart';
 import 'tools/calculator_tool.dart';
 import 'tools/current_time_tool.dart';
 import 'tools/notes_search_tool.dart';
+import 'tools/reading_history_tool.dart';
 
 /// Factory responsible for building chat models based on user preferences.
 class LangchainAiRegistry {
@@ -89,12 +91,14 @@ class LangchainAiRegistry {
   List<Tool> _buildTools(LangchainAiConfig config) {
     final notesRepository = NotesRepository();
     final booksRepository = BooksRepository();
+    final historyRepository = ReadingHistoryRepository();
 
     return [
       calculatorTool,
       NotesSearchTool(notesRepository).tool,
       BookshelfLookupTool(booksRepository).tool,
       currentTimeTool,
+      ReadingHistoryTool(historyRepository).tool,
     ];
   }
 
@@ -104,6 +108,7 @@ class LangchainAiRegistry {
 - Use `bookshelf_lookup` to inspect the user's library (title, author, progress). Combine with other knowledge to answer queries about available books.
 - Use `calculator` only for arithmetic operations.
 - Use `current_time` when the user needs the current date or time. Prefer local time but mention UTC when relevant.
+- Use `reading_history` to summarise or retrieve reading sessions; mention total minutes and relevant books.
 If a tool returns no data, explain that to the user and suggest next steps.''';
 
     return ChatMessage.system(guidance);

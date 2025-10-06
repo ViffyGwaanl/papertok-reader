@@ -114,7 +114,7 @@ class BookNoteTile extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        timeToHuman(note.createTime, context),
+                        timeToHuman(note.createTime),
                         style: infoStyle,
                       ),
                     ],

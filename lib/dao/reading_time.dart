@@ -150,6 +150,54 @@ Future<List<ReadingTime>> selectReadingTimeByBookId(int bookId) async {
   });
 }
 
+Future<List<ReadingTime>> queryReadingHistory({
+  int? bookId,
+  DateTime? from,
+  DateTime? to,
+  int? limit,
+}) async {
+  final db = await DBHelper().database;
+  final where = <String>[];
+  final whereArgs = <Object?>[];
+
+  if (bookId != null) {
+    where.add('book_id = ?');
+    whereArgs.add(bookId);
+  }
+
+  String? toDateString(DateTime? date) => date?.toIso8601String().substring(0, 10);
+
+  final fromStr = toDateString(from);
+  final toStr = toDateString(to);
+
+  if (fromStr != null) {
+    where.add('date >= ?');
+    whereArgs.add(fromStr);
+  }
+
+  if (toStr != null) {
+    where.add('date <= ?');
+    whereArgs.add(toStr);
+  }
+
+  final List<Map<String, dynamic>> maps = await db.query(
+    'tb_reading_time',
+    where: where.isEmpty ? null : where.join(' AND '),
+    whereArgs: where.isEmpty ? null : whereArgs,
+    orderBy: 'date DESC, id DESC',
+    limit: limit,
+  );
+
+  return List.generate(maps.length, (i) {
+    return ReadingTime(
+      id: maps[i]['id'],
+      bookId: maps[i]['book_id'],
+      date: maps[i]['date'],
+      readingTime: maps[i]['reading_time'],
+    );
+  });
+}
+
 Future<List<Map<int, int>>> selectThisWeekBooks() async {
   final db = await DBHelper().database;
   final List<Map<String, dynamic>> maps = await db.rawQuery(

@@ -1,7 +1,8 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:flutter/material.dart';
+import 'package:anx_reader/main.dart';
 
-String timeToHuman(DateTime? date, BuildContext context) {
+String timeToHuman(DateTime? date) {
+  final context = navigatorKey.currentContext!;
   final DateTime now = DateTime.now();
   if (date == null) {
     return '';

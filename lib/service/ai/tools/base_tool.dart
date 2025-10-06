@@ -52,10 +52,13 @@ abstract class RepositoryTool<I extends Object, O> {
   bool shouldLogError(Object error) => true;
 
   Future<String> _execute(I input) async {
+    AnxLog.info('AiTool: Executing tool $name with input: $input');
     try {
       final result = await _runWithTimeout(() => run(input));
       final serialized = serializeSuccess(result);
-      return jsonEncode(serialized);
+      final resultJson = jsonEncode(serialized);
+      AnxLog.info('AiTool: Tool $name completed with result: $resultJson');
+      return resultJson;
     } catch (error, stack) {
       if (shouldLogError(error)) {
         AnxLog.severe('Tool $name failed: $error\n$stack');
