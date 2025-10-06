@@ -38,6 +38,20 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   bool _isStreaming = false;
   late List<AiServiceOption> _serviceOptions;
   late String _selectedServiceId;
+  late List<String> _suggestedPrompts;
+
+  static const List<String> _starterPrompts = [
+    'What books did I read in the last 7 days?',
+    'Summarize my latest reading session.',
+    'Which books have the highest reading progress?',
+    'List all notes I took yesterday.',
+    'Show unread books in my shelf.',
+    'Recommend a book based on my recent reads.',
+    'Summarize today\'s highlights.',
+    'Which book took the most time this week?',
+    'Give me a quote from my notes.',
+    'What should I read next?',
+  ];
 
   List<Map<String, String>> _getQuickPrompts(BuildContext context) {
     return [
@@ -75,6 +89,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       Prefs().selectedAiService = _selectedServiceId;
     }
     inputController.text = widget.initialMessage ?? '';
+    _suggestedPrompts = _pickSuggestedPrompts();
     if (widget.sendImmediate) {
       _sendMessage();
     }
@@ -114,6 +129,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     setState(() {
       _selectedServiceId = identifier;
     });
+  }
+
+  List<String> _pickSuggestedPrompts() {
+    final prompts = List<String>.from(_starterPrompts)..shuffle();
+    return prompts.take(3).toList(growable: false);
   }
 
   void _scrollToBottom() {
@@ -199,6 +219,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     setState(() {
       ref.read(aiChatProvider.notifier).clear();
       _messageStream = null;
+      _suggestedPrompts = _pickSuggestedPrompts();
     });
   }
 
@@ -378,6 +399,38 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       ),
     );
 
+    Widget buildEmptyState() {
+      final theme = Theme.of(context);
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Try a quick prompt:',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: _suggestedPrompts
+                  .map(
+                    (prompt) => ActionChip(
+                      label: Text(prompt),
+                      onPressed: () {
+                        inputController.text = prompt;
+                        _sendMessage();
+                      },
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -392,15 +445,17 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       }
 
                       final messages = snapshot.data!;
+                      if (messages.isEmpty) {
+                        return buildEmptyState();
+                      }
+
                       return _buildMessageList(messages);
                     },
                   )
                 : ref.watch(aiChatProvider).when(
                       data: (messages) {
                         if (messages.isEmpty) {
-                          return Center(
-                            child: Text(L10n.of(context).aiHintText),
-                          );
+                          return buildEmptyState();
                         }
 
                         return _buildMessageList(messages);
