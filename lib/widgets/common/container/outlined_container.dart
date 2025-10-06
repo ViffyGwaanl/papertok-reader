@@ -18,6 +18,7 @@ class OutlinedContainer extends BaseRoundedContainer {
     BorderRadiusGeometry borderRadius,
   ) {
     return buildShapeDecoration(
+      color: Colors.transparent,
       borderSide: BorderSide(
         color: Theme.of(context).colorScheme.outline,
         width: 1,

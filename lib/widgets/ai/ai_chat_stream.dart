@@ -535,7 +535,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
     Widget inputBox = FilledContainer(
       padding: const EdgeInsets.all(4),
-      radius: 10,
+      radius: 15,
       child: Column(
         children: [
           Row(
@@ -731,7 +731,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isUser
-                    ? Theme.of(context).colorScheme.secondaryContainer
+                    ? Theme.of(context).colorScheme.surfaceContainer
                     : Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.only(
                   topLeft: isUser ? const Radius.circular(12) : Radius.zero,
