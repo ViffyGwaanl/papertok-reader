@@ -177,15 +177,16 @@ class BookBottomSheet extends ConsumerWidget {
               itemBuilder: (context) {
                 return actions.map((action) {
                   return PopupMenuItem(
-                    child: TextButton.icon(
-                      icon: Icon(action["icon"] as IconData),
-                      label: Text(action["text"] as String),
-                      onPressed: () {
-                        Navigator.pop(context);
+                      onTap: () {
                         (action["onTap"] as Function())();
                       },
-                    ),
-                  );
+                      child: Row(
+                        children: [
+                          Icon(action["icon"] as IconData),
+                          const SizedBox(width: 8),
+                          Text(action["text"] as String),
+                        ],
+                      ));
                 }).toList();
               },
               child: IconAndText(
