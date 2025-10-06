@@ -17,7 +17,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:icons_plus/icons_plus.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:langchain_core/chat_models.dart';
 
@@ -633,13 +632,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       appBar: AppBar(
         title: Text(L10n.of(context).aiChat),
         leading: IconButton(
-          icon: const Icon(BoxIcons.bxs_file_archive),
+          icon: const Icon(Icons.insert_drive_file),
           tooltip: L10n.of(context).history,
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
           IconButton(
-            icon: const Icon(BoxIcons.bxs_file_plus),
+            icon: const Icon(Icons.edit_document),
             onPressed: _clearMessage,
           ),
         ],
