@@ -536,61 +536,63 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     Widget inputBox = FilledContainer(
       padding: const EdgeInsets.all(4),
       radius: 15,
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              SizedBox.shrink(),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  reverse: true,
-                  child: Row(
-                    spacing: 8,
-                    children: quickPrompts.map((prompt) {
-                      return ActionChip(
-                        // labelPadding: EdgeInsets.all(0),
-                        label: Text(prompt['label']!),
-                        onPressed: () => _useQuickPrompt(prompt['prompt']!),
-                      );
-                    }).toList(),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                SizedBox.shrink(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    reverse: true,
+                    child: Row(
+                      spacing: 8,
+                      children: quickPrompts.map((prompt) {
+                        return ActionChip(
+                          // labelPadding: EdgeInsets.all(0),
+                          label: Text(prompt['label']!),
+                          onPressed: () => _useQuickPrompt(prompt['prompt']!),
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 4),
-          TextField(
-            controller: inputController,
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: L10n.of(context).aiHintInputPlaceholder,
-              border: InputBorder.none,
+              ],
             ),
-            maxLines: 5,
-            minLines: 1,
-            textInputAction: TextInputAction.send,
-            onSubmitted: (_) => _sendMessage(),
-          ),
-          SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Flexible(child: aiService),
-                  ],
+            SizedBox(height: 4),
+            TextField(
+              controller: inputController,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: L10n.of(context).aiHintInputPlaceholder,
+                border: InputBorder.none,
+              ),
+              maxLines: 5,
+              minLines: 1,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _sendMessage(),
+            ),
+            SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(child: aiService),
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(_isStreaming ? Icons.stop : Icons.send, size: 18),
-                onPressed: _isStreaming ? _cancelStreaming : _sendMessage,
-              ),
-            ],
-          ),
-        ],
+                IconButton(
+                  icon: Icon(_isStreaming ? Icons.stop : Icons.send, size: 18),
+                  onPressed: _isStreaming ? _cancelStreaming : _sendMessage,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
 
