@@ -123,20 +123,26 @@ class CancelableLangchainRunner {
       }
 
       List<ChatMessage> buildScratchpad() {
-        return steps
-            .map((step) {
-              final messages = <ChatMessage>[];
-              messages.addAll(step.action.messageLog);
-              messages.add(
-                ChatMessage.tool(
-                  toolCallId: step.action.id,
-                  content: step.observation,
-                ),
-              );
-              return messages;
-            })
-            .expand((messages) => messages)
-            .toList(growable: false);
+        final scratchpad = <ChatMessage>[];
+        final seenLogs = <int>{};
+
+        for (final step in steps) {
+          for (final logMessage in step.action.messageLog) {
+            final key = identityHashCode(logMessage);
+            if (seenLogs.add(key)) {
+              scratchpad.add(logMessage);
+            }
+          }
+
+          scratchpad.add(
+            ChatMessage.tool(
+              toolCallId: step.action.id,
+              content: step.observation,
+            ),
+          );
+        }
+
+        return scratchpad;
       }
 
       List<ChatMessage> buildConversation() {

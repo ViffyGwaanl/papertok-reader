@@ -38,7 +38,7 @@ class NotesSearchTool
                 'description': 'Maximum number of results (1-50).',
               },
             },
-            'required': [],
+            // 'required': const <String>[],
           },
           timeout: const Duration(seconds: 4),
         );
