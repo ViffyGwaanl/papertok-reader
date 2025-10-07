@@ -131,17 +131,31 @@ void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
 
   final tagRegex = RegExp(r'<(think-block|tool-step)\s+([^/>]+?)\s*/>');
   var currentIndex = 0;
+  var thinkBuffer = StringBuffer();
+
+  void flushThinkBuffer() {
+    final chunk = thinkBuffer.toString();
+    thinkBuffer = StringBuffer();
+    if (chunk.isEmpty) {
+      return;
+    }
+    _appendThinkIfNeeded(chunk, timeline);
+  }
+
   for (final match in tagRegex.allMatches(source)) {
     final preceding = source.substring(currentIndex, match.start);
-    _appendThinkIfNeeded(preceding, timeline);
+    if (preceding.isNotEmpty) {
+      thinkBuffer.write(preceding);
+    }
 
     final tagName = match.group(1)!;
     final attrs = _parseAttributes(match.group(2)!);
 
     if (tagName == 'think-block') {
       final text = _unescapeAttr(attrs['text'] ?? '');
-      _appendThinkIfNeeded(text, timeline);
+      thinkBuffer.write(text);
     } else {
+      flushThinkBuffer();
       timeline.add(
         ParsedReasoningEntry.tool(
           ParsedToolStep(
@@ -159,7 +173,10 @@ void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
   }
 
   final trailing = source.substring(currentIndex);
-  _appendThinkIfNeeded(trailing, timeline);
+  if (trailing.isNotEmpty) {
+    thinkBuffer.write(trailing);
+  }
+  flushThinkBuffer();
 }
 
 void _appendThinkIfNeeded(String text, List<ParsedReasoningEntry> timeline) {
