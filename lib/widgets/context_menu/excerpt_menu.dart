@@ -52,15 +52,99 @@ class ExcerptMenuState extends State<ExcerptMenu> {
   bool deleteConfirm = false;
   late final GlobalKey<ReaderNoteMenuState> readerNoteMenuKey;
   int? noteId;
+  BookNote? _currentNote;
+  late String annoType;
+  late String annoColor;
 
   @override
   initState() {
     super.initState();
     readerNoteMenuKey = GlobalKey<ReaderNoteMenuState>();
+    annoType = Prefs().annotationType;
+    annoColor = Prefs().annotationColor;
+    _initializeExistingNote();
   }
 
-  String annoType = Prefs().annotationType;
-  String annoColor = Prefs().annotationColor;
+  Future<void> _initializeExistingNote() async {
+    final existingId = widget.id;
+    if (existingId == null) {
+      return;
+    }
+
+    try {
+      final note = await selectBookNoteById(existingId);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _currentNote = note;
+        noteId = note.id;
+        annoType = note.type;
+        annoColor = note.color;
+      });
+    } catch (_) {
+      // When the note cannot be loaded we keep the defaults from Prefs.
+    }
+  }
+
+  Future<BookNote?> _fetchLatestNote() async {
+    final existingId = noteId ?? widget.id;
+    if (existingId == null) {
+      return null;
+    }
+
+    try {
+      return await selectBookNoteById(existingId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<BookNote> _persistNote(
+      {String? color, String? type, String? content}) async {
+    final existingNote = await _fetchLatestNote() ?? _currentNote;
+    final now = DateTime.now();
+
+    final resolvedContent = (content ?? widget.annoContent).trim().isNotEmpty
+        ? (content ?? widget.annoContent)
+        : (existingNote?.content ?? widget.annoContent);
+    final resolvedType = type ?? existingNote?.type ?? annoType;
+    final resolvedColor = color ?? existingNote?.color ?? annoColor;
+
+    final BookNote bookNote = BookNote(
+      id: existingNote?.id ?? widget.id,
+      bookId:
+          existingNote?.bookId ?? epubPlayerKey.currentState!.widget.book.id,
+      content: resolvedContent,
+      cfi: existingNote?.cfi ?? widget.annoCfi,
+      chapter:
+          existingNote?.chapter ?? epubPlayerKey.currentState!.chapterTitle,
+      type: resolvedType,
+      color: resolvedColor,
+      readerNote: existingNote?.readerNote,
+      createTime: existingNote?.createTime ?? now,
+      updateTime: now,
+    );
+
+    final id = await insertBookNote(bookNote);
+    bookNote.setId(id);
+
+    if (mounted) {
+      setState(() {
+        _currentNote = bookNote;
+        noteId = id;
+        annoType = resolvedType;
+        annoColor = resolvedColor;
+      });
+    } else {
+      _currentNote = bookNote;
+      noteId = id;
+      annoType = resolvedType;
+      annoColor = resolvedColor;
+    }
+
+    return bookNote;
+  }
 
   Icon deleteIcon() {
     return deleteConfirm
@@ -87,48 +171,31 @@ class ExcerptMenuState extends State<ExcerptMenu> {
 
   Future<void> onColorSelected(String color, {bool close = true}) async {
     Prefs().annotationColor = color;
-    annoColor = color;
-
-    BookNote? existingNote;
-    DateTime? createTime;
-    String? readerNote;
-
-    if (widget.id != null) {
-      try {
-        existingNote = await selectBookNoteById(widget.id!);
-        createTime = existingNote.createTime;
-        readerNote = existingNote.readerNote;
-      } catch (e) {
-        createTime = DateTime.now();
-      }
+    if (mounted) {
+      setState(() {
+        annoColor = color;
+      });
     } else {
-      createTime = DateTime.now();
+      annoColor = color;
     }
-
-    BookNote bookNote = BookNote(
-      id: widget.id,
-      bookId: epubPlayerKey.currentState!.widget.book.id,
-      content: widget.annoContent,
-      cfi: widget.annoCfi,
-      chapter: epubPlayerKey.currentState!.chapterTitle,
-      type: annoType,
-      color: annoColor,
-      readerNote: readerNote,
-      createTime: createTime,
-      updateTime: DateTime.now(),
-    );
-    noteId = await insertBookNote(bookNote);
-    bookNote.setId(noteId!);
+    final bookNote = await _persistNote(color: color);
     epubPlayerKey.currentState!.addAnnotation(bookNote);
     if (close) {
       widget.onClose();
     }
   }
 
-  void onTypeSelected(String type) {
+  Future<void> onTypeSelected(String type) async {
     Prefs().annotationType = type;
-    annoType = type;
-    onColorSelected(annoColor, close: false);
+    if (mounted) {
+      setState(() {
+        annoType = type;
+      });
+    } else {
+      annoType = type;
+    }
+    final bookNote = await _persistNote(type: type);
+    epubPlayerKey.currentState!.addAnnotation(bookNote);
   }
 
   Widget iconButton({required Icon icon, required Function() onPressed}) {
@@ -304,7 +371,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
             children: [
               ReaderNoteMenu(
                 key: readerNoteMenuKey,
-                noteId: widget.id,
+                noteId: noteId ?? widget.id,
                 decoration: widget.decoration,
               ),
             ],
