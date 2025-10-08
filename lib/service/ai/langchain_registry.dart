@@ -6,9 +6,11 @@ import 'package:langchain_openai/langchain_openai.dart';
 
 import 'langchain_ai_config.dart';
 import 'tools/repository/books_repository.dart';
+import 'tools/repository/groups_repository.dart';
 import 'tools/repository/notes_repository.dart';
 import 'tools/repository/reading_history_repository.dart';
 import 'tools/bookshelf_lookup_tool.dart';
+import 'tools/bookshelf_organize_tool.dart';
 import 'tools/calculator_tool.dart';
 import 'tools/current_time_tool.dart';
 import 'tools/notes_search_tool.dart';
@@ -91,21 +93,25 @@ class LangchainAiRegistry {
   List<Tool> _buildTools(LangchainAiConfig config) {
     final notesRepository = NotesRepository();
     final booksRepository = BooksRepository();
+    final groupsRepository = GroupsRepository();
     final historyRepository = ReadingHistoryRepository();
 
     return [
       calculatorTool,
       NotesSearchTool(notesRepository).tool,
       BookshelfLookupTool(booksRepository).tool,
+      BookshelfOrganizeTool(booksRepository, groupsRepository).tool,
       currentTimeTool,
       ReadingHistoryTool(historyRepository).tool,
     ];
   }
 
   ChatMessage _buildAgentSystemMessage() {
-    const guidance = '''You are the Anx Reader assistant. When users ask for help:
+    const guidance =
+        '''You are the Anx Reader assistant. When users ask for help:
 - Use `notes_search` to retrieve highlights or annotations. Include book title, chapter, and a concise snippet when summarising results.
 - Use `bookshelf_lookup` to inspect the user's library (title, author, progress). Combine with other knowledge to answer queries about available books.
+- Use `bookshelf_organize` to draft regrouping plans. 
 - Use `calculator` only for arithmetic operations.
 - Use `current_time` when the user needs the current date or time. Prefer local time but mention UTC when relevant.
 - Use `reading_history` to summarise or retrieve reading sessions; mention total minutes and relevant books.
