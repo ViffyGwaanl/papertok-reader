@@ -7,8 +7,8 @@ import 'package:anx_reader/service/ai/tools/models/bookshelf_organize_plan_group
 import 'package:anx_reader/service/bookshelf/bookshelf_organize_service.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/widgets/ai/tool_tiles/tool_tile_base.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
-import 'package:anx_reader/widgets/common/container/outlined_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -30,18 +30,12 @@ class OrganizeBookshelfStepTile extends ConsumerStatefulWidget {
 
 class _OrganizeBookshelfStepTileState
     extends ConsumerState<OrganizeBookshelfStepTile> {
-  bool _expanded = true;
   bool _isApplying = false;
   bool _applied = false;
   bool _requiresConfirmation = false;
   BookshelfOrganizePlan? _plan;
   String? _parseError;
   bool _didInitialSync = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   void didChangeDependencies() {
@@ -113,58 +107,17 @@ class _OrganizeBookshelfStepTileState
     }
   }
 
-  Color _statusColor(String status, ThemeData theme) {
-    switch (status) {
-      case 'success':
-        return Colors.green;
-      case 'failed':
-        return Colors.red;
-      default:
-        return Colors.orange;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statusColor = _statusColor(widget.step.status, theme);
+    final statusColor = ToolTileBase.statusColorFor(widget.step.status);
 
-    return OutlinedContainer(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-      radius: 14,
-      child: InkWell(
-        onTap: () => setState(() => _expanded = !_expanded),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.auto_awesome_mosaic, size: 12),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    widget.step.name,
-                    style: theme.textTheme.titleSmall,
-                  ),
-                ),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ),
-            if (_expanded)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-                child: _buildExpandedContent(theme),
-              ),
-          ],
-        ),
-      ),
+    return ToolTileBase(
+      title: widget.step.name,
+      leadingIcon: Icons.auto_awesome_mosaic,
+      statusColor: statusColor,
+      initiallyExpanded: true,
+      contentBuilder: (_) => _buildExpandedContent(theme),
     );
   }
 
@@ -227,7 +180,9 @@ class _OrganizeBookshelfStepTileState
                       ),
                     )
                   : Text(
-                      _applied ? L10n.of(context).completed : L10n.of(context).applyToBookshelf,
+                      _applied
+                          ? L10n.of(context).completed
+                          : L10n.of(context).applyToBookshelf,
                     ),
             ),
           ],
