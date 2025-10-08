@@ -141,8 +141,18 @@ class _OrganizeBookshelfStepTileState
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(_plan!.summary!, style: theme.textTheme.bodyMedium),
           ),
-        ..._plan!.groups
-            .map((group) => _buildGroupBlock(group, groupLookup, theme)),
+        Container(
+          constraints: const BoxConstraints(maxHeight: 200),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                ..._plan!.groups.map(
+                    (group) => _buildGroupBlock(group, groupLookup, theme)),
+              ],
+            ),
+          ),
+        ),
         if (_plan!.groups.isNotEmpty) const SizedBox(height: 8),
         if (_plan!.ungroupedBooks.isNotEmpty) _buildUngroupedBlock(theme),
         if (_plan!.cleanupGroupIds.isNotEmpty)
@@ -211,56 +221,55 @@ class _OrganizeBookshelfStepTileState
       chips.add(_buildChip(theme, L10n.of(context).renameFrom(current)));
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: FilledContainer(
-        color: theme.colorScheme.surfaceContainer,
-        padding: const EdgeInsets.all(8),
-        radius: 10,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title ?? L10n.of(context).groupWithId(group.groupId),
-              style: theme.textTheme.titleSmall,
+    return FilledContainer(
+      width: double.infinity,
+      color: theme.colorScheme.surfaceContainer,
+      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.only(bottom: 8),
+      radius: 10,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title ?? L10n.of(context).groupWithId(group.groupId),
+            style: theme.textTheme.titleSmall,
+          ),
+          if (chips.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: chips,
+              ),
             ),
-            if (chips.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4.0),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: chips,
-                ),
-              ),
-            if (group.books.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 6.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: group.books
-                      .map(
-                        (book) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4.0),
-                          child: Text(
-                            '• ${book.title}${book.author != null ? ' — ${book.author}' : ''}',
-                            style: theme.textTheme.bodySmall,
-                          ),
+          if (group.books.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: group.books
+                    .map(
+                      (book) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4.0),
+                        child: Text(
+                          '• ${book.title}${book.author != null ? ' — ${book.author}' : ''}',
+                          style: theme.textTheme.bodySmall,
                         ),
-                      )
-                      .toList(),
-                ),
+                      ),
+                    )
+                    .toList(),
               ),
-            if (group.books.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 6.0),
-                child: Text(
-                  L10n.of(context).noBooksAssignedInThisPlan,
-                  style: theme.textTheme.bodySmall,
-                ),
+            ),
+          if (group.books.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6.0),
+              child: Text(
+                L10n.of(context).noBooksAssignedInThisPlan,
+                style: theme.textTheme.bodySmall,
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
