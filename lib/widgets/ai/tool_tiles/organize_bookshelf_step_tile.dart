@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/tb_groups.dart';
 import 'package:anx_reader/service/ai/tools/models/bookshelf_organize_plan.dart';
 import 'package:anx_reader/service/ai/tools/models/bookshelf_organize_plan_group.dart';
@@ -57,22 +58,22 @@ class _OrganizeBookshelfStepTileState
     var requiresConfirmation = false;
 
     if (output == null || output.trim().isEmpty) {
-      parseError = 'Waiting for tool output...'; // TODO: l10n
+      parseError = L10n.of(context).waitingForToolOutput;
     } else {
       try {
         final decoded = jsonDecode(output);
         if (decoded is! Map<String, dynamic>) {
-          parseError = 'Unexpected tool output format.'; // TODO: l10n
+          parseError = L10n.of(context).unexpectedToolOutputFormat;
         } else {
           final data = decoded['data'];
           if (data is! Map<String, dynamic>) {
-            parseError = 'Missing plan payload.'; // TODO: l10n
+            parseError = L10n.of(context).missingPlanPayload;
           } else {
             requiresConfirmation = data['requiresConfirmation'] == true ||
                 data['requires_confirmation'] == true;
             final planJson = data['plan'];
             if (planJson is! Map) {
-              parseError = 'Plan details missing.'; // TODO: l10n
+              parseError = L10n.of(context).planDetailsMissing;
             } else {
               plan = BookshelfOrganizePlan.fromJson(
                 Map<String, dynamic>.from(planJson),
@@ -82,7 +83,7 @@ class _OrganizeBookshelfStepTileState
           }
         }
       } catch (error) {
-        parseError = 'Failed to parse plan: $error'; // TODO: l10n
+        parseError = L10n.of(context).failedToParsePlan(error);
       }
     }
 
@@ -164,8 +165,8 @@ class _OrganizeBookshelfStepTileState
     }
 
     if (_plan == null) {
-      return Text('No re-organization plan was generated.',
-          style: theme.textTheme.bodyMedium); // TODO: l10n
+      return Text(L10n.of(context).noReorganizationPlanGenerated,
+          style: theme.textTheme.bodyMedium);
     }
 
     final groupLookup = _resolveGroupNames();
@@ -197,10 +198,10 @@ class _OrganizeBookshelfStepTileState
                   : () {
                       Clipboard.setData(
                           ClipboardData(text: widget.step.output!));
-                      AnxToast.show('Plan copied.'); // TODO: l10n
+                      AnxToast.show(L10n.of(context).planCopied);
                     },
               icon: const Icon(Icons.copy, size: 14),
-              label: const Text('Copy JSON'), // TODO: l10n
+              label: Text(L10n.of(context).copyJson),
             ),
             const SizedBox(width: 8),
             FilledButton(
@@ -217,8 +218,8 @@ class _OrganizeBookshelfStepTileState
                       ),
                     )
                   : Text(
-                      _applied ? 'Completed' : 'Apply to bookshelf',
-                    ), // TODO: l10n
+                      _applied ? L10n.of(context).completed : L10n.of(context).applyToBookshelf,
+                    ),
             ),
           ],
         ),
@@ -237,13 +238,13 @@ class _OrganizeBookshelfStepTileState
     final title = group.proposedName ?? group.currentName;
     final chips = <Widget>[];
     if (group.createNew) {
-      chips.add(_buildChip(theme, 'New group')); // TODO: l10n
+      chips.add(_buildChip(theme, L10n.of(context).newGroup));
     }
     if (group.willRename) {
       final current = group.currentName ??
           groupLookup[group.groupId] ??
-          'Unnamed'; // TODO: l10n
-      chips.add(_buildChip(theme, 'Rename from "$current"')); // TODO: l10n
+          L10n.of(context).unnamed;
+      chips.add(_buildChip(theme, L10n.of(context).renameFrom(current)));
     }
 
     return Padding(
@@ -256,7 +257,7 @@ class _OrganizeBookshelfStepTileState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title ?? 'Group ${group.groupId}', // TODO: l10n
+              title ?? L10n.of(context).groupWithId(group.groupId),
               style: theme.textTheme.titleSmall,
             ),
             if (chips.isNotEmpty)
@@ -290,7 +291,7 @@ class _OrganizeBookshelfStepTileState
               Padding(
                 padding: const EdgeInsets.only(top: 6.0),
                 child: Text(
-                  'No books assigned in this plan.', // TODO: l10n
+                  L10n.of(context).noBooksAssignedInThisPlan,
                   style: theme.textTheme.bodySmall,
                 ),
               ),
@@ -308,8 +309,8 @@ class _OrganizeBookshelfStepTileState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Books to ungroup',
-              style: theme.textTheme.titleSmall), // TODO: l10n
+          Text(L10n.of(context).booksToUngroup,
+              style: theme.textTheme.titleSmall),
           const SizedBox(height: 4),
           ..._plan!.ungroupedBooks.map(
             (book) => Padding(
@@ -336,15 +337,15 @@ class _OrganizeBookshelfStepTileState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Groups to remove',
-              style: theme.textTheme.titleSmall), // TODO: l10n
+          Text(L10n.of(context).groupsToRemove,
+              style: theme.textTheme.titleSmall),
           const SizedBox(height: 4),
           ..._plan!.cleanupGroupIds.map((id) {
             final name = lookup[id];
             return Text(
               name != null
                   ? '• $name (ID $id)'
-                  : '• Group ID $id', // TODO: l10n
+                  : '• ${L10n.of(context).groupId(id)}',
               style: theme.textTheme.bodySmall,
             );
           }),
@@ -382,13 +383,13 @@ class _OrganizeBookshelfStepTileState
         _isApplying = false;
         _applied = true;
       });
-      AnxToast.show('Bookshelf updated.'); // TODO: l10n
+      AnxToast.show(L10n.of(context).bookshelfUpdated);
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _isApplying = false;
       });
-      AnxToast.show('Failed to apply plan: $error'); // TODO: l10n
+      AnxToast.show(L10n.of(context).failedToApplyPlan(error));
     }
   }
 
