@@ -230,18 +230,6 @@ class CancelableLangchainRunner {
           var shouldStop = false;
           for (final action in actions) {
             if (action is AgentFinish) {
-              final resolved = action.returnValues;
-              final text = resolved.values.first?.toString();
-              if (text != null && text.trim().isNotEmpty) {
-                final existing = timeline.isNotEmpty &&
-                        timeline.last.type == _ReasoningItemType.reply
-                    ? timeline.last.reply?.trim()
-                    : null;
-                if (existing != text.trim()) {
-                  appendReplyChunk(text);
-                  emit();
-                }
-              }
               shouldStop = true;
               break;
             }
