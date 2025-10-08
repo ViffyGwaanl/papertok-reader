@@ -3,6 +3,7 @@ import 'package:anx_reader/widgets/common/container/outlined_container.dart';
 import 'package:flutter/material.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/widgets/ai/tool_step_tile.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class ReasoningPanel extends StatelessWidget {
   const ReasoningPanel({
@@ -71,15 +72,14 @@ class _ReasoningTimeline extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final theme = Theme.of(context);
     final children = <Widget>[];
     for (var i = 0; i < timeline.length; i++) {
       final entry = timeline[i];
       if (entry.isThink && entry.text != null && entry.text!.isNotEmpty) {
         children.add(
-          SelectableText(
-            entry.text!,
-            style: theme.textTheme.bodyMedium,
+          MarkdownBody(
+            data: entry.text!,
+            selectable: true,
           ),
         );
       } else if (entry.isToolStep && entry.toolStep != null) {
