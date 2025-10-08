@@ -2,6 +2,7 @@
 
 ## 1.8.2
 - Feat: Add AI page in navigation bar
+- Feat: AI can organize bookshelf
 - Feat: View AI chat history
 - Feat: AI can call tools to assist in answering
 - Feat: Add AI tools, AI can call tools such as note search, bookshelf lookup, reading history to assist in answering
@@ -14,6 +15,7 @@
 - UI: Optimize part of the interface design
 
 - Feat: 在 导航栏 添加 AI 页面
+- Feat: AI 可以整理书架了
 - Feat: 可以查看 AI 对话历史记录
 - Feat: AI 可以调用工具来辅助回答
 - Feat: 添加 AI 工具,AI 可以调用笔记搜索、书架查询、阅读记录等工具来辅助回答
