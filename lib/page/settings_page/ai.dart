@@ -81,12 +81,12 @@ class _AISettingsState extends ConsumerState<AISettings> {
       {
         "identifier": AiPrompts.summaryTheChapter,
         "title": L10n.of(context).settingsAiPromptSummaryTheChapter,
-        "variables": ["chapter"],
+        "variables": [],
       },
       {
         "identifier": AiPrompts.summaryTheBook,
         "title": L10n.of(context).settingsAiPromptSummaryTheBook,
-        "variables": ["book", "author"],
+        "variables": [],
       },
       {
         "identifier": AiPrompts.summaryThePreviousContent,

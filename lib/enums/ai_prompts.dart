@@ -22,12 +22,11 @@ Length: 8-10 complete sentences.
 Structure: Three paragraphs: Main plot, Core characters, Themes/messages.
 Style: Avoid boilerplate phrases like "This chapter describes..."
 Perspective: Maintain a literary analysis perspective, not just narration.
-Chapter content: {{chapter}}
         ''';
 
       case AiPrompts.summaryTheBook:
         return '''
-Generate a book summary for "{{book}}" by {{author}}
+Generate a book summary
 [Requirements]:
 Language matches the book title's language
 Central conflict (highlight with » symbol)

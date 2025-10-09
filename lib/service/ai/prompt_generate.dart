@@ -9,13 +9,29 @@ class PromptTemplatePayload {
   const PromptTemplatePayload({
     required this.template,
     required this.variables,
+    required this.identifier,
   });
 
   final ChatPromptTemplate template;
   final Map<String, dynamic> variables;
+  final AiPrompts identifier;
 
   List<ChatMessage> buildMessages() {
-    return template.formatPrompt(variables).toChatMessages();
+    try {
+      return template.formatPrompt(variables).toChatMessages();
+    } catch (e) {
+      Prefs().deleteAiPrompt(identifier);
+      final prompt = Prefs().getAiPrompt(identifier);
+      final normalized = _normalizePrompt(prompt);
+      final template = ChatPromptTemplate.fromPromptMessages([
+        HumanChatMessagePromptTemplate.fromTemplate(normalized),
+      ]);
+      return template.formatPrompt(variables).toChatMessages();
+    }
+  }
+
+  String buildString() {
+    return buildMessages().last.contentAsString;
   }
 }
 
@@ -29,10 +45,11 @@ PromptTemplatePayload generatePromptTest() {
   return PromptTemplatePayload(
     template: template,
     variables: {'language_locale': currentLocale},
+    identifier: AiPrompts.test,
   );
 }
 
-PromptTemplatePayload generatePromptSummaryTheChapter(String chapter) {
+PromptTemplatePayload generatePromptSummaryTheChapter() {
   final prompt = Prefs().getAiPrompt(AiPrompts.summaryTheChapter);
   final normalized = _normalizePrompt(prompt);
   final template = ChatPromptTemplate.fromPromptMessages([
@@ -40,11 +57,12 @@ PromptTemplatePayload generatePromptSummaryTheChapter(String chapter) {
   ]);
   return PromptTemplatePayload(
     template: template,
-    variables: {'chapter': chapter.trim()},
+    variables: {},
+    identifier: AiPrompts.summaryTheChapter,
   );
 }
 
-PromptTemplatePayload generatePromptSummaryTheBook(String book, String author) {
+PromptTemplatePayload generatePromptSummaryTheBook() {
   final prompt = Prefs().getAiPrompt(AiPrompts.summaryTheBook);
   final normalized = _normalizePrompt(prompt);
   final template = ChatPromptTemplate.fromPromptMessages([
@@ -52,10 +70,8 @@ PromptTemplatePayload generatePromptSummaryTheBook(String book, String author) {
   ]);
   return PromptTemplatePayload(
     template: template,
-    variables: {
-      'book': book,
-      'author': author,
-    },
+    variables: {},
+    identifier: AiPrompts.summaryTheBook,
   );
 }
 
@@ -71,6 +87,7 @@ PromptTemplatePayload generatePromptSummaryThePreviousContent(
     variables: {
       'previous_content': previousContent.trim(),
     },
+    identifier: AiPrompts.summaryThePreviousContent,
   );
 }
 
@@ -91,6 +108,7 @@ PromptTemplatePayload generatePromptTranslate(
       'to_locale': toLocale,
       'from_locale': fromLocale,
     },
+    identifier: AiPrompts.translate,
   );
 }
 

@@ -11,6 +11,7 @@ import 'package:anx_reader/models/current_reading_state.dart';
 import 'package:anx_reader/page/home_page.dart';
 import 'package:anx_reader/page/iap_page.dart';
 import 'package:anx_reader/providers/ai_chat.dart';
+import 'package:anx_reader/providers/chapter_content_bridge.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/providers/book_list.dart';
@@ -411,8 +412,9 @@ Future<void> pushToReadingPage(
           initialThemes: initialThemes,
         ),
       )).then((_) {
-        AnxLog.info('ReadingPage: poped ${book.title}');
+    AnxLog.info('ReadingPage: poped ${book.title}');
     ref.read(currentReadingProvider.notifier).finish();
+    ref.read(chapterContentBridgeProvider.notifier).state = null;
   });
 }
 

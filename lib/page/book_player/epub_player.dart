@@ -729,7 +729,6 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
   @override
   void dispose() {
-    ref.read(chapterContentBridgeProvider.notifier).state = null;
     _animationController?.dispose();
     saveReadingProgress();
     removeOverlay();

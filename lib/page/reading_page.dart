@@ -7,6 +7,7 @@ import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
+import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/models/read_theme.dart';
 import 'package:anx_reader/page/book_detail.dart';
@@ -266,6 +267,18 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     String? content,
     bool sendImmediate = false,
   }) async {
+    List<AiQuickPromptChip> quickPrompts = [
+      AiQuickPromptChip(
+        icon: EvaIcons.book,
+        label: L10n.of(context).settingsAiPromptSummaryTheChapter,
+        prompt: generatePromptSummaryTheChapter().buildString(),
+      ),
+      AiQuickPromptChip(
+        icon: Icons.menu_book_rounded,
+        label: L10n.of(context).settingsAiPromptSummaryTheBook,
+        prompt: generatePromptSummaryTheBook().buildString(),
+      ),
+    ];
     if (MediaQuery.of(navigatorKey.currentContext!).size.width < 600) {
       showModalBottomSheet(
           context: navigatorKey.currentContext!,
@@ -282,6 +295,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                       key: aiChatKey,
                       initialMessage: content,
                       sendImmediate: sendImmediate,
+                      quickPromptChips: quickPrompts,
                     ),
                   ),
                 ),
@@ -306,6 +320,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                   key: aiChatKey,
                   initialMessage: content,
                   sendImmediate: sendImmediate,
+                  quickPromptChips: quickPrompts,
                 ),
               ),
             ],
