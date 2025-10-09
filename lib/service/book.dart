@@ -7,9 +7,11 @@ import 'package:anx_reader/enums/sync_trigger.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/book.dart';
+import 'package:anx_reader/models/current_reading_state.dart';
 import 'package:anx_reader/page/home_page.dart';
 import 'package:anx_reader/page/iap_page.dart';
 import 'package:anx_reader/providers/ai_chat.dart';
+import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/providers/book_list.dart';
 import 'package:anx_reader/service/convert_to_epub/txt/convert_from_txt.dart';
@@ -187,8 +189,7 @@ void _showImportDialog(
 
         return StatefulBuilder(builder: (context, setState) {
           return AlertDialog(
-            title:
-                Text(L10n.of(context).importNBooksSelected(fileList.length)),
+            title: Text(L10n.of(context).importNBooksSelected(fileList.length)),
             contentPadding: const EdgeInsets.all(16),
             content: SingleChildScrollView(
               child: Column(
@@ -394,6 +395,12 @@ Future<void> pushToReadingPage(
   }
   ref.read(aiChatProvider.notifier).clear();
   final initialThemes = await selectThemes();
+  ref.read(currentReadingProvider.notifier).start(
+        CurrentReadingState(
+          book: book,
+          cfi: cfi,
+        ),
+      );
   await Navigator.push(
       navigatorKey.currentContext!,
       CupertinoPageRoute(
@@ -403,7 +410,10 @@ Future<void> pushToReadingPage(
           cfi: cfi,
           initialThemes: initialThemes,
         ),
-      ));
+      )).then((_) {
+        AnxLog.info('ReadingPage: poped ${book.title}');
+    ref.read(currentReadingProvider.notifier).finish();
+  });
 }
 
 void updateBookRating(Book book, double rating) {
