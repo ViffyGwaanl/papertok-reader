@@ -95,7 +95,8 @@ class LangchainAiRegistry {
     final isReading =
         ref != null && ref!.read(currentReadingProvider).isReading;
 
-    final tools = useAgent ? _buildTools(config, isReading, ref) : const <Tool>[];
+    final tools =
+        useAgent ? _buildTools(config, isReading, ref!) : const <Tool>[];
     final systemMessage = useAgent ? _buildAgentSystemMessage(isReading) : null;
     return LangchainPipeline(
       model: model,
@@ -104,7 +105,8 @@ class LangchainAiRegistry {
     );
   }
 
-  List<Tool> _buildTools(LangchainAiConfig config, bool isReading, WidgetRef? ref) {
+  List<Tool> _buildTools(
+      LangchainAiConfig config, bool isReading, WidgetRef ref) {
     final notesRepository = NotesRepository();
     final booksRepository = BooksRepository();
     final groupsRepository = GroupsRepository();
@@ -117,22 +119,16 @@ class LangchainAiRegistry {
       BookshelfOrganizeTool(booksRepository, groupsRepository).tool,
       currentTimeTool,
       ReadingHistoryTool(historyRepository).tool,
-      if (isReading && ref != null) ...[
-        currentReadingMetadataTool(ref),
-        currentBookTocTool(ref),
-        currentChapterContentTool(ref),
-        chapterContentByHrefTool(ref),
-      ],
+      // if (isReading && ref != null) ...[
+      currentReadingMetadataTool(ref),
+      currentBookTocTool(ref),
+      currentChapterContentTool(ref),
+      chapterContentByHrefTool(ref),
+      // ],
     ];
   }
 
   ChatMessage _buildAgentSystemMessage(bool isReading) {
-    const isReadingToolsote = '''
-- Use `current_reading_metadata` to inspect the reader's active book, chapter, and progress before giving guidance about the current session.
-- Use `current_book_toc` to understand the table of contents and plan navigation.
-- Use `current_chapter_content` to retrieve the text of the chapter the reader currently has open.
-- Use `chapter_content_by_href` to fetch the text of another chapter by its href when additional context is required.
-''';
 
     final guidance =
         '''You are the Anx Reader assistant. When users ask for help:
@@ -142,7 +138,10 @@ class LangchainAiRegistry {
 - Use `calculator` only for arithmetic operations.
 - Use `current_time` when the user needs the current date or time. Prefer local time but mention UTC when relevant.
 - Use `reading_history` to summarise or retrieve reading sessions; mention total minutes and relevant books.
-${isReading ? isReadingToolsote : ''}
+- Use `current_reading_metadata` to inspect the reader's active book, chapter, and progress before giving guidance about the current session.
+- Use `current_book_toc` to understand the table of contents and plan navigation.
+- Use `current_chapter_content` to retrieve the text of the chapter the reader currently has open.
+- Use `chapter_content_by_href` to fetch the text of another chapter by its href when additional context is required.
 If a tool returns no data, explain that to the user and suggest next steps.''';
 
     return ChatMessage.system(guidance);
