@@ -22,6 +22,7 @@ import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/providers/book_list.dart';
 import 'package:anx_reader/providers/book_toc.dart';
 import 'package:anx_reader/providers/bookmark.dart';
+import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/book_player/book_player_server.dart';
 import 'package:anx_reader/utils/coordinates_to_part.dart';
 import 'package:anx_reader/utils/js/convert_dart_color_to_js.dart';
@@ -401,6 +402,14 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             bookmarkExists = location['bookmark']['exists'] ?? false;
             bookmarkCfi = location['bookmark']['cfi'] ?? '';
           });
+          ref.read(currentReadingProvider.notifier).update(
+                cfi: cfi,
+                percentage: percentage,
+                chapterTitle: chapterTitle,
+                chapterHref: chapterHref,
+                chapterCurrentPage: chapterCurrentPage,
+                chapterTotalPages: chapterTotalPages,
+              );
           widget.updateParent();
           saveReadingProgress();
           readingPageKey.currentState?.resetAwakeTimer();
