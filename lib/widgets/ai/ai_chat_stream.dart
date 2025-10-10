@@ -911,9 +911,9 @@ class _CollapsibleTextState extends State<_CollapsibleText> {
                       colors: [
                         Theme.of(context)
                             .colorScheme
-                            .secondaryContainer
+                            .surfaceContainer
                             .withValues(alpha: 0),
-                        Theme.of(context).colorScheme.secondaryContainer,
+                        Theme.of(context).colorScheme.surfaceContainer,
                       ],
                     ),
                   ),
