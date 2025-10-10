@@ -7,6 +7,7 @@ import 'package:langchain_google/langchain_google.dart';
 import 'package:langchain_openai/langchain_openai.dart';
 
 import 'langchain_ai_config.dart';
+import 'tools/book_content_search_tool.dart';
 import 'tools/bookshelf_lookup_tool.dart';
 import 'tools/bookshelf_organize_tool.dart';
 import 'tools/calculator_tool.dart';
@@ -17,6 +18,7 @@ import 'tools/current_reading_metadata_tool.dart';
 import 'tools/current_time_tool.dart';
 import 'tools/notes_search_tool.dart';
 import 'tools/reading_history_tool.dart';
+import 'tools/repository/book_content_search_repository.dart';
 import 'tools/repository/books_repository.dart';
 import 'tools/repository/groups_repository.dart';
 import 'tools/repository/notes_repository.dart';
@@ -109,6 +111,8 @@ class LangchainAiRegistry {
       LangchainAiConfig config, bool isReading, WidgetRef ref) {
     final notesRepository = NotesRepository();
     final booksRepository = BooksRepository();
+    final bookContentSearchRepository =
+        BookContentSearchRepository(booksRepository: booksRepository);
     final groupsRepository = GroupsRepository();
     final historyRepository = ReadingHistoryRepository();
 
@@ -117,6 +121,7 @@ class LangchainAiRegistry {
       NotesSearchTool(notesRepository).tool,
       BookshelfLookupTool(booksRepository).tool,
       BookshelfOrganizeTool(booksRepository, groupsRepository).tool,
+      bookContentSearchTool(bookContentSearchRepository),
       currentTimeTool,
       ReadingHistoryTool(historyRepository).tool,
       // if (isReading && ref != null) ...[
@@ -129,7 +134,6 @@ class LangchainAiRegistry {
   }
 
   ChatMessage _buildAgentSystemMessage(bool isReading) {
-
     final guidance =
         '''You are "Anx Reader AI", a professional reading assistant. You are not just a tool user, but a user's reading companion and learning mentor.
 
@@ -162,6 +166,7 @@ When users are not reading, you are a wise librarian:
 - **notes_search**: When searching notes and highlights, must include book title, chapter, and key excerpts
 - **bookshelf_lookup**: When viewing library, focus on book title, author, and reading progress
 - **reading_history**: When analyzing reading history, mention total duration and related books
+- **book_content_search**: When searching book content, provide book id and keyword
 
 ### 📖 Content Access Tools
 - **current_reading_metadata**: Understand current reading status (book title, chapter, progress)
