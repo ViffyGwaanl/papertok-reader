@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/tool_tile_base.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:graphview/GraphView.dart';
 
@@ -19,8 +20,14 @@ class MindmapStepTile extends StatefulWidget {
 }
 
 class _MindmapStepTileState extends State<MindmapStepTile> {
+  static const double _minScale = 0.4;
+  static const double _maxScale = 3.5;
+
   MindmapGraphBundle? _bundle;
   String? _error;
+  final GlobalKey _viewportKey = GlobalKey(debugLabel: 'mindmapViewport');
+  final TransformationController _transformController =
+      TransformationController();
 
   @override
   void initState() {
@@ -34,6 +41,12 @@ class _MindmapStepTileState extends State<MindmapStepTile> {
     if (widget.step.output != oldWidget.step.output) {
       _refreshBundle();
     }
+  }
+
+  @override
+  void dispose() {
+    _transformController.dispose();
+    super.dispose();
   }
 
   void _refreshBundle() {
@@ -68,6 +81,7 @@ class _MindmapStepTileState extends State<MindmapStepTile> {
       setState(() {
         _bundle = MindmapGraphBundle.fromPayload(payload);
         _error = null;
+        _transformController.value = Matrix4.identity();
       });
     } catch (error) {
       setState(() {
@@ -118,26 +132,40 @@ class _MindmapStepTileState extends State<MindmapStepTile> {
               final height = constraints.maxHeight.isFinite
                   ? constraints.maxHeight
                   : 320.0;
-              return InteractiveViewer(
-                minScale: 0.4,
-                maxScale: 2.5,
-                child: SizedBox(
-                  width: width,
-                  height: height,
-                  child: GraphView.builder(
-                    graph: bundle.graph,
-                    algorithm: bundle.algorithm,
-                    builder: (node) {
-                      final id = node.key?.value?.toString() ?? '';
-                      final data = bundle.lookup[id];
-                      final level = bundle.levels[id] ?? 0;
-                      final style = _resolveLevelStyle(theme, level);
-                      return _MindmapNodeCard(
-                        label: data?.label ?? id,
-                        backgroundColor: style.background,
-                        foregroundColor: style.foreground,
-                      );
-                    },
+              return Listener(
+                onPointerSignal: (event) {
+                  if (event is PointerScrollEvent) {
+                    GestureBinding.instance.pointerSignalResolver.register(
+                      event,
+                      (resolvedEvent) => _handlePointerScroll(
+                        resolvedEvent as PointerScrollEvent,
+                      ),
+                    );
+                  }
+                },
+                child: InteractiveViewer(
+                  key: _viewportKey,
+                  transformationController: _transformController,
+                  minScale: _minScale,
+                  maxScale: _maxScale,
+                  child: SizedBox(
+                    width: width,
+                    height: height,
+                    child: GraphView.builder(
+                      graph: bundle.graph,
+                      algorithm: bundle.algorithm,
+                      builder: (node) {
+                        final id = node.key?.value?.toString() ?? '';
+                        final data = bundle.lookup[id];
+                        final level = bundle.levels[id] ?? 0;
+                        final style = _resolveLevelStyle(theme, level);
+                        return _MindmapNodeCard(
+                          label: data?.label ?? id,
+                          backgroundColor: style.background,
+                          foregroundColor: style.foreground,
+                        );
+                      },
+                    ),
                   ),
                 ),
               );
@@ -154,6 +182,40 @@ class _MindmapStepTileState extends State<MindmapStepTile> {
           ),
       ],
     );
+  }
+
+  void _handlePointerScroll(PointerScrollEvent event) {
+    if (_bundle == null) {
+      return;
+    }
+
+    final renderObject = _viewportKey.currentContext?.findRenderObject();
+    if (renderObject is! RenderBox) {
+      return;
+    }
+
+    final focalPoint = renderObject.globalToLocal(event.position);
+    final currentMatrix = _transformController.value;
+    final currentScale = currentMatrix.getMaxScaleOnAxis();
+
+    final scaleDelta = (-event.scrollDelta.dy / 400).clamp(-0.5, 0.5);
+    if (scaleDelta.abs() < 1e-4) {
+      return;
+    }
+
+    final desiredScale = (currentScale * (1 + scaleDelta))
+        .clamp(_minScale, _maxScale);
+    final zoomFactor = desiredScale / currentScale;
+    if (zoomFactor == 1) {
+      return;
+    }
+
+    final nextMatrix = currentMatrix.clone()
+      ..translate(focalPoint.dx, focalPoint.dy)
+      ..scale(zoomFactor)
+      ..translate(-focalPoint.dx, -focalPoint.dy);
+
+    _transformController.value = nextMatrix;
   }
 }
 
