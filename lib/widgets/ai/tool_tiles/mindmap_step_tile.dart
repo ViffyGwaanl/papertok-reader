@@ -203,8 +203,8 @@ class _MindmapStepTileState extends State<MindmapStepTile> {
       return;
     }
 
-    final desiredScale = (currentScale * (1 + scaleDelta))
-        .clamp(_minScale, _maxScale);
+    final desiredScale =
+        (currentScale * (1 + scaleDelta)).clamp(_minScale, _maxScale);
     final zoomFactor = desiredScale / currentScale;
     if (zoomFactor == 1) {
       return;
@@ -232,20 +232,16 @@ class _MindmapNodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return FilledContainer(
       margin: EdgeInsets.zero,
       color: backgroundColor,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          label,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: foregroundColor),
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Text(
+        label,
+        style: Theme.of(context)
+            .textTheme
+            .bodyMedium
+            ?.copyWith(color: foregroundColor),
       ),
     );
   }
