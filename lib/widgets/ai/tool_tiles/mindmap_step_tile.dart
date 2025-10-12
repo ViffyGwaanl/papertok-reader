@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:anx_reader/l10n/generated/l10n.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/tool_tile_base.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
@@ -187,8 +187,8 @@ class _MindmapStepTileState extends State<MindmapStepTile> {
             padding: const EdgeInsets.only(top: 8.0),
             child: Text(
               L10n.of(context).mindmapStats(
-                bundle.stats!.nodeCount,
                 bundle.stats!.depth,
+                bundle.stats!.nodeCount,
               ),
               style: theme.textTheme.bodySmall,
             ),
