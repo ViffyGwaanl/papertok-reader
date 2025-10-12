@@ -16,6 +16,7 @@ import 'tools/current_book_toc_tool.dart';
 import 'tools/current_chapter_content_tool.dart';
 import 'tools/current_reading_metadata_tool.dart';
 import 'tools/current_time_tool.dart';
+import 'tools/mindmap_tool.dart';
 import 'tools/notes_search_tool.dart';
 import 'tools/reading_history_tool.dart';
 import 'tools/repository/book_content_search_repository.dart';
@@ -124,12 +125,11 @@ class LangchainAiRegistry {
       bookContentSearchTool(bookContentSearchRepository),
       currentTimeTool,
       ReadingHistoryTool(historyRepository).tool,
-      // if (isReading && ref != null) ...[
       currentReadingMetadataTool(ref),
       currentBookTocTool(ref),
       currentChapterContentTool(ref),
       chapterContentByHrefTool(ref),
-      // ],
+      mindmapTool,
     ];
   }
 
@@ -178,6 +178,7 @@ When users are not reading, you are a wise librarian:
 - **calculator**: Only for mathematical calculations
 - **current_time**: Provide time information, prioritize local time
 - **bookshelf_organize**: Develop bookshelf organization plans
+- **mindmap_draw**: Create mind maps to visualize book structures and relationships
 
 ## Response Format
 1. **Understand Query**: First confirm user intent

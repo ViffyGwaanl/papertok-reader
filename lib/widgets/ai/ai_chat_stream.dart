@@ -11,6 +11,7 @@ import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/widgets/ai/tool_step_tile.dart';
+import 'package:anx_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/organize_bookshelf_step_tile.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
@@ -853,6 +854,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Widget _buildToolTile(ParsedToolStep step) {
     if (step.name == 'bookshelf_organize') {
       return OrganizeBookshelfStepTile(step: step);
+    }
+    if (step.name == 'mindmap_draw') {
+      return MindmapStepTile(step: step);
     }
     return ToolStepTile(step: step);
   }

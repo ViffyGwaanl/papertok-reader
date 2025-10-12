@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/widgets/ai/tool_step_tile.dart';
+import 'package:anx_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/organize_bookshelf_step_tile.dart';
 
 class AiStream extends ConsumerStatefulWidget {
@@ -45,7 +46,7 @@ class AiStreamState extends ConsumerState<AiStream> {
   Stream<String> _createStream(bool regenerate) {
     final messages = widget.prompt.buildMessages();
     return aiGenerateStream(
-       messages,
+      messages,
       identifier: widget.identifier,
       config: widget.config,
       regenerate: regenerate,
@@ -152,6 +153,9 @@ class AiStreamState extends ConsumerState<AiStream> {
   Widget _buildToolTile(ParsedToolStep step) {
     if (step.name == 'bookshelf_organize') {
       return OrganizeBookshelfStepTile(step: step);
+    }
+    if (step.name == 'mindmap_draw') {
+      return MindmapStepTile(step: step);
     }
     return ToolStepTile(step: step);
   }
