@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/reading_time.dart';
@@ -67,6 +68,9 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   String heroTag = 'preventHeroWhenStart';
   Widget? _aiChat;
   final aiChatKey = GlobalKey<AiChatStreamState>();
+  static const double _aiChatMinWidth = 240;
+  double _aiChatWidth = 300;
+  bool _isResizingAiChat = false;
   bool bookmarkExists = false;
 
   late FocusOnKeyEventCallback _handleKeyEvent;
@@ -244,6 +248,39 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     });
   }
 
+  double _aiChatMaxWidth(BuildContext context) {
+    final totalWidth = MediaQuery.of(context).size.width;
+    final maxByPercentage = totalWidth * 0.65;
+    final maxByRemaining = totalWidth - 320;
+    final maxWidth = math.min(maxByPercentage, maxByRemaining);
+    return math.max(_aiChatMinWidth, maxWidth);
+  }
+
+  void _beginAiChatResize(double globalDx) {
+    setState(() {
+      _isResizingAiChat = true;
+    });
+  }
+
+  void _applyAiChatResizeDelta(double delta, BuildContext context) {
+    final maxWidth = _aiChatMaxWidth(context);
+    final updated =
+        (_aiChatWidth - delta).clamp(_aiChatMinWidth, maxWidth).toDouble();
+    if (updated != _aiChatWidth) {
+      setState(() {
+        _aiChatWidth = updated;
+      });
+    }
+  }
+
+  void _endAiChatResize() {
+    if (_isResizingAiChat) {
+      setState(() {
+        _isResizingAiChat = false;
+      });
+    }
+  }
+
   Future<void> onLoadEnd() async {
     if (Prefs().autoSummaryPreviousContent) {
       final previousContent =
@@ -307,29 +344,28 @@ class ReadingPageState extends ConsumerState<ReadingPage>
               ));
     } else {
       setState(() {
-        _aiChat = SizedBox(
-          width: 300,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              IconButton(
-                onPressed: () {
-                  setState(() {
-                    _aiChat = null;
-                  });
-                },
-                icon: const Icon(Icons.close),
+        final maxWidth = _aiChatMaxWidth(navigatorKey.currentContext!);
+        _aiChatWidth = _aiChatWidth.clamp(_aiChatMinWidth, maxWidth);
+        _aiChat = Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _aiChat = null;
+                });
+              },
+              icon: const Icon(Icons.close),
+            ),
+            Expanded(
+              child: AiChatStream(
+                key: aiChatKey,
+                initialMessage: content,
+                sendImmediate: sendImmediate,
+                quickPromptChips: quickPrompts,
               ),
-              Expanded(
-                child: AiChatStream(
-                  key: aiChatKey,
-                  initialMessage: content,
-                  sendImmediate: sendImmediate,
-                  quickPromptChips: quickPrompts,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       });
     }
@@ -506,26 +542,63 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                           child: Focus(
                             focusNode: FocusNode(),
                             onKeyEvent: _handleKeyEvent,
-                            child: EpubPlayer(
-                              key: epubPlayerKey,
-                              book: _book,
-                              cfi: widget.cfi,
-                              showOrHideAppBarAndBottomBar:
-                                  showOrHideAppBarAndBottomBar,
-                              onLoadEnd: onLoadEnd,
-                              initialThemes: widget.initialThemes,
-                              updateParent: updateState,
+                            child: Stack(
+                              children: [
+                                EpubPlayer(
+                                  key: epubPlayerKey,
+                                  book: _book,
+                                  cfi: widget.cfi,
+                                  showOrHideAppBarAndBottomBar:
+                                      showOrHideAppBarAndBottomBar,
+                                  onLoadEnd: onLoadEnd,
+                                  initialThemes: widget.initialThemes,
+                                  updateParent: updateState,
+                                ),
+                                if (_isResizingAiChat)
+                                  SizedBox.expand(
+                                    child: Container(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surface
+                                          .withAlpha(1),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                      _aiChat != null
-                          ? const VerticalDivider(width: 1)
-                          : const SizedBox.shrink(),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: _aiChat,
-                      ),
+                      if (_aiChat != null)
+                        GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onHorizontalDragStart: (details) {
+                            _beginAiChatResize(details.globalPosition.dx);
+                          },
+                          onHorizontalDragUpdate: (details) {
+                            _applyAiChatResizeDelta(
+                              details.delta.dx,
+                              context,
+                            );
+                          },
+                          onHorizontalDragEnd: (_) {
+                            _endAiChatResize();
+                          },
+                          onHorizontalDragCancel: () {
+                            _endAiChatResize();
+                          },
+                          child: MouseRegion(
+                              cursor: SystemMouseCursors.resizeColumn,
+                              child: VerticalDivider(
+                                width: 2,
+                                thickness: 1,
+                              )),
+                        ),
+                      if (_aiChat != null)
+                        SizedBox(
+                          key: const ValueKey('ai-chat-panel'),
+                          width: _aiChatWidth,
+                          child: _aiChat,
+                        )
                     ],
                   ),
                   controller,

@@ -330,7 +330,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     }
 
     final result = await webViewController.callAsyncJavaScript(
-      functionBody: 'return await getChapterContentByHref("${href.replaceAll('"', '\\"')}")',
+      functionBody:
+          'return await getChapterContentByHref("${href.replaceAll('"', '\\"')}")',
     );
 
     final value = result?.value;
