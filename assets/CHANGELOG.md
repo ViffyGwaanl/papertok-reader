@@ -2,13 +2,14 @@
 
 ## 1.8.2
 - Feat: Add AI page in navigation bar
-- Feat: AI can organize bookshelf
+- Feat: AI can draw mind maps and organize bookshelf
 - Feat: View AI chat history
 - Feat: AI can call tools to assist in answering
 - Feat: Add AI tools, AI can call tools such as note search, bookshelf lookup, reading history to assist in answering
 - Feat: Enhance AI chat streaming with cancellation support
 - Feat: Optimize the interface design of the thinking model
 - Feat: On touch devices, a long press is required to open images
+- Feat: Optimize the interface design of chapter summaries
 - Fix: Fix the issue of some AI services loading indefinitely
 - Fix: The bottom details on the bookshelf page sometimes do not work when clicked
 - Fix: Gemini model cannot be used
@@ -16,13 +17,14 @@
 - UI: Optimize part of the interface design
 
 - Feat: 在 导航栏 添加 AI 页面
-- Feat: AI 可以整理书架了
+- Feat: AI 可以绘制思维导图、整理书架了
 - Feat: 可以查看 AI 对话历史记录
 - Feat: AI 可以调用工具来辅助回答
 - Feat: 添加 AI 工具,AI 可以调用笔记搜索、书架查询、阅读记录等工具来辅助回答
 - Feat: 增强 AI 对话流，支持终止当前对话
 - Feat: 优化思考模型的界面设计
 - Feat: 在触摸设备上需要长按才能打开图片
+- Feat: 优化章节总结的界面设计
 - Fix: 修复部分 AI 服务无限加载的问题
 - Fix: 书架页面底部详情有时点击后不起作用的问题
 - Fix: Gemini 模型无法使用的问题
