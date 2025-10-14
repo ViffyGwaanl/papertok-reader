@@ -30,11 +30,13 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.initialMessage,
     this.sendImmediate = false,
     this.quickPromptChips = const [],
+    this.trailing,
   });
 
   final String? initialMessage;
   final bool sendImmediate;
   final List<AiQuickPromptChip> quickPromptChips;
+  final List<Widget>? trailing;
 
   @override
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
@@ -688,6 +690,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             icon: const Icon(Icons.edit_document),
             onPressed: _clearMessage,
           ),
+          if (widget.trailing != null) ...widget.trailing!,
         ],
       ),
       drawer: Drawer(

@@ -349,20 +349,22 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         _aiChat = Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  _aiChat = null;
-                });
-              },
-              icon: const Icon(Icons.close),
-            ),
             Expanded(
               child: AiChatStream(
                 key: aiChatKey,
                 initialMessage: content,
                 sendImmediate: sendImmediate,
                 quickPromptChips: quickPrompts,
+                trailing: [
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _aiChat = null;
+                      });
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
               ),
             ),
           ],
