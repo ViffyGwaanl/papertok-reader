@@ -4,34 +4,41 @@ import 'package:anx_reader/main.dart';
 import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+import 'package:share_handler/share_handler.dart';
 
 void receiveShareIntent(WidgetRef ref) {
+  final handler = ShareHandlerPlatform.instance;
+
   // receive sharing intent
-  Future<void> handleShare(List<SharedMediaFile> value) async {
+  Future<void> handleShare(SharedMedia? media) async {
+    if (media == null ||
+        media.attachments == null ||
+        media.attachments!.isEmpty) {
+      AnxLog.info('share: Receive share intent: no media or empty');
+      return;
+    }
+    AnxLog.info(
+        'share: Receive share intent: ${media.attachments!.map((e) => e?.path).join(', ')}');
+
     List<File> files = [];
-    for (var item in value) {
-      final sourceFile = File(item.path);
-      files.add(sourceFile);
+    for (var item in media.attachments!) {
+      if (item != null && item.path.isNotEmpty) {
+        final sourceFile = File(item.path);
+        files.add(sourceFile);
+      }
     }
     importBookList(files, navigatorKey.currentContext!, ref);
-    ReceiveSharingIntent.instance.reset();
+    handler.resetInitialSharedMedia();
   }
 
-  ReceiveSharingIntent.instance.getMediaStream().listen((value) {
-    AnxLog.info('share: Receive share intent: ${value.map((e) => e.toMap())}');
-    if (value.isNotEmpty) {
-      handleShare(value);
-    }
+  handler.sharedMediaStream.listen((SharedMedia media) {
+    handleShare(media);
   }, onError: (err) {
     AnxLog.severe('share: Receive share intent');
   });
 
-  ReceiveSharingIntent.instance.getInitialMedia().then((value) {
-    AnxLog.info('share: Receive share intent: ${value.map((e) => e.toMap())}');
-    if (value.isNotEmpty) {
-      handleShare(value);
-    }
+  handler.getInitialSharedMedia().then((media) {
+    handleShare(media);
   }, onError: (err) {
     AnxLog.severe('share: Receive share intent');
   });

@@ -36,9 +36,13 @@ target 'Runner' do
   target 'RunnerTests' do
     inherit! :search_paths
   end
+  # share_handler addition start
   target 'shareExtension' do
     inherit! :search_paths
+    pod "share_handler_ios_models", :path => ".symlinks/plugins/share_handler_ios/ios/Models"
   end
+  # share_handler addition end
+
 end
 
 post_install do |installer|
