@@ -3,6 +3,9 @@ name: Setup Environment
 on:
   workflow_call:
     outputs:
+      tag:
+        description: "Git tag"
+        value: ${{ jobs.setup.outputs.tag }}
       version:
         description: "Version string"
         value: ${{ jobs.setup.outputs.version }}
