@@ -460,7 +460,7 @@ class _TranslateSettingItemState extends State<TranslateSettingItem> {
             helperText: item.description,
             border: const OutlineInputBorder(),
           ),
-          value: currentValue,
+          initialValue: currentValue,
           items: item.options!.map((option) {
             return DropdownMenuItem<String>(
               value: option['value'].toString(),

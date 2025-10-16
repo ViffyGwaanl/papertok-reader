@@ -594,9 +594,9 @@ jobs:
   // ask if he wish to override the file
   if (existingFiles.isNotEmpty) {
     print('The following files already exist:');
-    existingFiles.forEach((file) {
+    for (var file in existingFiles) {
       print(file);
-    });
+    }
     stdout.write('Do you wish to override the files? (y/n): ');
     String? answer = stdin.readLineSync();
 

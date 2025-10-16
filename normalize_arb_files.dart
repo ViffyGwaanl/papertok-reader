@@ -79,7 +79,7 @@ Future<void> normalizeArbFile(
     const encoder = JsonEncoder.withIndent('  ');
     final normalizedContent = encoder.convert(normalizedMap);
 
-    await file.writeAsString(normalizedContent + '\n');
+    await file.writeAsString('$normalizedContent\n');
 
     print(
         '  ✓ Normalized $fileName: $foundKeys keys found, $missingKeys missing, ${extraKeys.length} extra removed');

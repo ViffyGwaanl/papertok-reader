@@ -58,8 +58,7 @@ class InitializationCheck {
     // wait 0.8 seconds to ensure the app is ready
     Future.delayed(const Duration(milliseconds: 800), () {
       showCupertinoSheet(
-        context: navigatorKey.currentContext!,
-        pageBuilder: (context) => Scaffold(
+        context: navigatorKey.currentContext!, builder: (context) => Scaffold(
           body: OnboardingScreen(
             onComplete: () async {
               Prefs().lastAppVersion = cv;
@@ -77,8 +76,7 @@ class InitializationCheck {
     AnxLog.info('Version update detected: $lv -> $cv');
     Future.delayed(const Duration(milliseconds: 800), () {
       showCupertinoSheet(
-        context: navigatorKey.currentContext!,
-        pageBuilder: (context) => ChangelogScreen(
+        context: navigatorKey.currentContext!, builder: (context) => ChangelogScreen(
           lastVersion: lv,
           currentVersion: cv,
           onComplete: () {

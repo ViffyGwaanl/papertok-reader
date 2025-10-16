@@ -13,12 +13,10 @@ import 'package:anx_reader/utils/share_file.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/icon_and_text.dart';
-import 'package:anx_reader/widgets/show_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:icons_plus/icons_plus.dart';
-import 'package:share_plus/share_plus.dart';
 
 class BookBottomSheet extends ConsumerWidget {
   const BookBottomSheet({

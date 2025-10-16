@@ -13,14 +13,12 @@ import 'package:anx_reader/utils/share_file.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/book_share/excerpt_share_card.dart';
 import 'package:anx_reader/widgets/icon_and_text.dart';
-import 'package:anx_reader/widgets/show_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
-import 'package:share_plus/share_plus.dart';
 
 class ExcerptShareBottomSheet extends ConsumerStatefulWidget {
   final String bookTitle;
