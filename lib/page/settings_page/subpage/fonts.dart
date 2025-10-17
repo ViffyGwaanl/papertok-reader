@@ -1,3 +1,4 @@
+import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -28,7 +29,7 @@ class FontsSettingPage extends ConsumerWidget {
             itemCount: fonts.length,
             itemBuilder: (context, index) {
               final font = fonts[index];
-              return Card(
+              return FilledContainer(
                 margin: const EdgeInsets.all(8.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
