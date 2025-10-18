@@ -371,6 +371,8 @@ const getCSS = ({ fontSize,
     background-position: center center !important;
     background-clip: content-box !important;`
 
+
+    // Some CSS selectors are inspired by https://github.com/readest/foliate-js
   return `
     @namespace epub "http://www.idpf.org/2007/ops";
     @font-face {
@@ -393,8 +395,9 @@ const getCSS = ({ fontSize,
         background-color: transparent;
     }
 
-    img {
-        max-width: 100% !important;
+    img, svg {
+        height: auto !important;
+        width: auto !important;
         object-fit: contain !important;
         break-inside: avoid !important;
         box-sizing: border-box !important;
@@ -405,16 +408,16 @@ const getCSS = ({ fontSize,
     }
 
     * {
-        line-height: ${spacing}em !important;
+        // line-height: ${spacing}em !important;
         ${fontFamily}
-    }
-
-    p, li, blockquote, dd, div, font {
+      }
+      
+    p, li, blockquote, dd, div:not(:has(*:not(b, a, em, i, strong, u, span))), font {
         color: ${fontColor} !important;
-        // line-height: ${spacing} !important;
+        line-height: ${spacing} !important;
         font-weight: ${fontWeight} !important;
-        padding-bottom: ${paragraphSpacing}em !important;
         text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign};
+        text-indent: ${textIndent}em !important;
         -webkit-hyphens: ${hyphenate ? 'auto' : 'manual'};
         hyphens: ${hyphenate ? 'auto' : 'manual'};
         -webkit-hyphenate-limit-before: 3;
@@ -422,19 +425,24 @@ const getCSS = ({ fontSize,
         -webkit-hyphenate-limit-lines: 2;
         hanging-punctuation: allow-end last;
         margin-top: 0 !important;
-        margin-bottom: 0 !important;
+        margin-block-end: ${paragraphSpacing}em !important;
         widows: 2;
     }
 
-    ${textIndent >= 0 ? `
-    p, li, blockquote, dd, font {
-        text-indent: ${textIndent}em !important;
+    /*  Paragraphs containing only an image — don't change */
+    p:has(> img:only-child),
+    p:has(> span:only-child > img:only-child),
+    p:has(> img:not(.has-text-siblings)),
+    p:has(> a:first-child + img:last-child) {
+        text-indent: initial !important;
     }
-    
-    p img {
-      margin-left: -${textIndent}em;
+
+    /*  Paragraphs inside list items — prevent double indentation */
+    li > p,
+    ol > p,
+    ul > p {
+        text-indent: 0 !important;
     }
-    ` : ''}
         
     /* prevent the above from overriding the align attribute */
     [align="left"] { text-align: left; }
