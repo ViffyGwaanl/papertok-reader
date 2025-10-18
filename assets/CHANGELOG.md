@@ -2,10 +2,12 @@
 
 ## 1.9.1
 
+- Feat: On touch devices, a long press is required to open images
 - Fix: Fix the issue where iOS26 devices cannot turn pages by touch
 - Fix: Optimized indentation display effect, fixed the issue where indentation caused abnormal image positioning
 - UI: Optimized part of the interface design
 
+- Feat: 在触摸设备上需要长按才能打开图片
 - Fix: 修复 iOS26 设备无法触摸翻页的问题
 - Fix: 优化缩进的显示效果，修复了缩进引起图片位置异常的问题
 - UI: 优化部分界面设计

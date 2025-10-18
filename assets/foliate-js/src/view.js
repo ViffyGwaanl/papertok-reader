@@ -234,29 +234,49 @@ export class View extends HTMLElement {
       // disable for a link
       if (img.closest('a[href]')) continue;
 
+      // prevent iOS long-press image preview / callout and disable dragging/selecting
+      img.style.webkitTouchCallout = 'none'       // iOS long-press callout
+      img.style.webkitUserSelect = 'none'
+      img.style.userSelect = 'none'
+      img.style.webkitUserDrag = 'none'
+      img.draggable = false
+      // also block contextmenu to be safe
+      img.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); }, true);
       // Check if device supports touch (mobile/tablet)
       const isTouchDevice = 'ontouchstart' in window;
-
+ 
       if (isTouchDevice) {
         // For touch devices, implement longpress
         let longPressTimer;
+        let longPressTriggered = false;
         const longPressDelay = 500; // 500ms for longpress
-
+      
         img.addEventListener('touchstart', e => {
-          e.preventDefault();
-          e.stopPropagation();
+          longPressTriggered = false;
           longPressTimer = setTimeout(() => {
+            longPressTriggered = true;
             this.#emit('click-image', { img });
           }, longPressDelay);
         });
-
+      
         img.addEventListener('touchend', e => {
           clearTimeout(longPressTimer);
+          // do not prevent here so a short tap will produce a normal click that can bubble
         });
-
+      
         img.addEventListener('touchmove', e => {
           clearTimeout(longPressTimer);
         });
+      
+        // intercept the synthetic click after a longpress and suppress it;
+        // allow normal clicks (short taps) to bubble
+        img.addEventListener('click', e => {
+          if (longPressTriggered) {
+            e.preventDefault();
+            e.stopPropagation();
+            longPressTriggered = false;
+          }
+        }, true);
       } else {
         // For desktop devices, keep original click behavior
         img.addEventListener('click', e => {
