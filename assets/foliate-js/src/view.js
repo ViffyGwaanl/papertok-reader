@@ -237,14 +237,14 @@ export class View extends HTMLElement {
       // Check if device supports touch (mobile/tablet)
       const isTouchDevice = 'ontouchstart' in window;
 
-      if (!isTouchDevice) {
+      if (isTouchDevice) {
         // For touch devices, implement longpress
         let longPressTimer;
         const longPressDelay = 500; // 500ms for longpress
 
         img.addEventListener('touchstart', e => {
-          // e.preventDefault();
-          // e.stopPropagation();
+          e.preventDefault();
+          e.stopPropagation();
           longPressTimer = setTimeout(() => {
             this.#emit('click-image', { img });
           }, longPressDelay);
@@ -553,7 +553,7 @@ export class View extends HTMLElement {
           overlayer.remove(this.oldValue);
         }
         const value = this.getCFI(this.#index, range);
-        overlayer.add(value, range, Overlayer.squiggly, { color: '#39c5bb' });
+        overlayer.add(value, range, Overlayer.highlight, { color: '#39c5bc83' });
         this.oldValue = value;
       }
       this.renderer.scrollToAnchor(range);
