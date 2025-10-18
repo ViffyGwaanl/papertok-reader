@@ -453,7 +453,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   void _copyMessageContent(String content) {
-    Clipboard.setData(ClipboardData(text: content));
+    final parsed = parseReasoningContent(content);
+    final clipboardText = _buildCopyableText(parsed, content);
+    Clipboard.setData(ClipboardData(text: clipboardText));
     AnxToast.show(L10n.of(context).notesPageCopied);
   }
 
@@ -813,6 +815,54 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ],
       ),
     );
+  }
+
+  String _buildCopyableText(ParsedReasoning parsed, String fallback) {
+    final buffer = StringBuffer();
+    var hasWrittenSection = false;
+
+    void startSection() {
+      if (hasWrittenSection) {
+        buffer.writeln();
+      } else {
+        hasWrittenSection = true;
+      }
+    }
+
+    // void appendField(String label, String? value) {
+    //   final trimmed = value?.trim();
+    //   if (trimmed != null && trimmed.isNotEmpty) {
+    //     buffer.writeln('$label: $trimmed');
+    //   }
+    // }
+
+    for (final entry in parsed.timeline) {
+      switch (entry.type) {
+        case ParsedReasoningEntryType.reply:
+          final text = entry.text?.trim();
+          if (text != null && text.isNotEmpty) {
+            startSection();
+            buffer.writeln(text);
+          }
+          break;
+        case ParsedReasoningEntryType.tool:
+          // final step = entry.toolStep;
+          // if (step != null) {
+          //   startSection();
+          //   buffer.writeln('[${step.name} (${step.status})]');
+          //   appendField('Input', step.input);
+          //   appendField('Output', step.output);
+          //   appendField('Error', step.error);
+          // }
+          break;
+      }
+    }
+
+    final copyText = buffer.toString().trimRight();
+    if (copyText.isEmpty) {
+      return fallback;
+    }
+    return copyText;
   }
 
   Widget _buildAssistantTimeline(ParsedReasoning parsed, bool isStreaming) {
