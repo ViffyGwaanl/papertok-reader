@@ -3,8 +3,10 @@
 ## 1.9.1
 
 - Fix: Fix the issue where iOS26 devices cannot turn pages by touch
+- UI: Optimize part of the interface design
 
 - Fix: 修复 iOS26 设备无法触摸翻页的问题
+- UI: 优化部分界面设计
 
 ## 1.9.0
 - Feat: Add AI page in navigation bar

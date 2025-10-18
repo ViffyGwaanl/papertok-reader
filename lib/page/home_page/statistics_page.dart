@@ -60,8 +60,7 @@ class _StatisticPageState extends State<StatisticPage> {
       // appBar: AppBar(
       //   title: Text(context.navBarStatistics),
       // ),
-      body: Padding(
-        padding: const EdgeInsets.only(left: 10, right: 10, top: 10),
+      body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             if (constraints.maxWidth > 600) {
