@@ -61,6 +61,7 @@ class _StatisticPageState extends State<StatisticPage> {
       //   title: Text(context.navBarStatistics),
       // ),
       body: SafeArea(
+        bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
             if (constraints.maxWidth > 600) {

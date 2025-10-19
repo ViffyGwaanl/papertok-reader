@@ -27,6 +27,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      bottom: false,
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth > 600) {
