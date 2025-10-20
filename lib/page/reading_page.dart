@@ -58,13 +58,12 @@ final epubPlayerKey = GlobalKey<EpubPlayerState>();
 class ReadingPageState extends ConsumerState<ReadingPage>
     with WidgetsBindingObserver, TickerProviderStateMixin {
   static const empty = SizedBox.shrink();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late Book _book;
   late Widget _currentPage = empty;
   final Stopwatch _readTimeWatch = Stopwatch();
   Timer? _awakeTimer;
   bool bottomBarOffstage = true;
-  bool tocOffstage = true;
-  Widget? _tocWidget;
   String heroTag = 'preventHeroWhenStart';
   Widget? _aiChat;
   final aiChatKey = GlobalKey<AiChatStreamState>();
@@ -180,7 +179,6 @@ class ReadingPageState extends ConsumerState<ReadingPage>
 
   void hideBottomBar() {
     setState(() {
-      tocOffstage = true;
       _currentPage = empty;
       bottomBarOffstage = true;
       if (Prefs().hideStatusBar) {
@@ -199,14 +197,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   }
 
   Future<void> tocHandler() async {
-    setState(() {
-      _tocWidget = TocWidget(
-        epubPlayerKey: epubPlayerKey,
-        hideAppBarAndBottomBar: showOrHideAppBarAndBottomBar,
-      );
-      _currentPage = empty;
-      tocOffstage = false;
-    });
+    hideBottomBar();
+    _scaffoldKey.currentState?.openDrawer();
   }
 
   void noteHandler() {
@@ -415,7 +407,6 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                   )),
             ),
             Column(
-              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 AppBar(
                   title: Text(_book.title, overflow: TextOverflow.ellipsis),
@@ -464,16 +455,15 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                       constraints: const BoxConstraints(maxWidth: 600),
                       child: StatefulBuilder(
                         builder: (BuildContext context, StateSetter setState) {
+                          final hasContent = !identical(_currentPage, empty);
                           return IntrinsicHeight(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Expanded(child: _currentPage),
-                                Offstage(
-                                  offstage:
-                                      tocOffstage || _currentPage is! SizedBox,
-                                  child: _tocWidget,
-                                ),
+                                if (hasContent)
+                                  Expanded(
+                                    child: _currentPage,
+                                  ),
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceAround,
@@ -527,7 +517,23 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             height: MediaQuery.of(context).size.height,
             width: MediaQuery.of(context).size.width,
             child: Scaffold(
+              key: _scaffoldKey,
               resizeToAvoidBottomInset: false,
+              drawer: Drawer(
+                width: math.min(
+                  MediaQuery.of(context).size.width * 0.8,
+                  420,
+                ),
+                child: SafeArea(
+                  child: TocWidget(
+                    epubPlayerKey: epubPlayerKey,
+                    hideAppBarAndBottomBar: showOrHideAppBarAndBottomBar,
+                    closeDrawer: () {
+                      _scaffoldKey.currentState?.closeDrawer();
+                    },
+                  ),
+                ),
+              ),
               body: Stack(
                 children: [
                   Row(

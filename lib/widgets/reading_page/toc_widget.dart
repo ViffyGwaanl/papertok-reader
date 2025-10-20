@@ -9,10 +9,12 @@ class TocWidget extends StatefulWidget {
     super.key,
     required this.epubPlayerKey,
     required this.hideAppBarAndBottomBar,
+    required this.closeDrawer,
   });
 
   final GlobalKey<EpubPlayerState> epubPlayerKey;
   final Function hideAppBarAndBottomBar;
+  final VoidCallback closeDrawer;
 
   @override
   State<TocWidget> createState() => _TocWidgetState();
@@ -36,41 +38,46 @@ class _TocWidgetState extends State<TocWidget>
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height - 300,
-      child: Column(
-        children: [
-          TabBar(
-            controller: _tabController,
-            tabs: [
-              Tab(text: L10n.of(context).readingContents),
-              Tab(text: L10n.of(context).readingBookmark),
-            ],
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  buildBookToc(),
-                  buildBookmarkList(),
-                ],
-              ),
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: L10n.of(context).readingContents),
+            Tab(text: L10n.of(context).readingBookmark),
+          ],
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                buildBookToc(),
+                buildBookmarkList(),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget buildBookmarkList() {
-    return BookmarkWidget(epubPlayerKey: widget.epubPlayerKey);
+    return BookmarkWidget(
+      epubPlayerKey: widget.epubPlayerKey,
+      onNavigate: () {
+        widget.hideAppBarAndBottomBar(false);
+        widget.closeDrawer();
+      },
+    );
   }
 
   BookToc buildBookToc() {
     return BookToc(
-        epubPlayerKey: widget.epubPlayerKey,
-        hideAppBarAndBottomBar: widget.hideAppBarAndBottomBar);
+      epubPlayerKey: widget.epubPlayerKey,
+      hideAppBarAndBottomBar: widget.hideAppBarAndBottomBar,
+      closeDrawer: widget.closeDrawer,
+    );
   }
 }

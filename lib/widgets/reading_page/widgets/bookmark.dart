@@ -12,9 +12,11 @@ class BookmarkWidget extends ConsumerStatefulWidget {
   const BookmarkWidget({
     super.key,
     required this.epubPlayerKey,
+    required this.onNavigate,
   });
 
   final GlobalKey<EpubPlayerState> epubPlayerKey;
+  final VoidCallback onNavigate;
 
   @override
   ConsumerState<BookmarkWidget> createState() => _BookmarkWidgetState();
@@ -54,6 +56,7 @@ class _BookmarkWidgetState extends ConsumerState<BookmarkWidget> {
                 bookmark: bookmark,
                 onTap: (cfi) {
                   widget.epubPlayerKey.currentState?.goToCfi(cfi);
+                  widget.onNavigate();
                 },
                 onDelete: (id) {
                   ref.read(BookmarkProvider(bookId).notifier).removeBookmark(

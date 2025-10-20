@@ -13,10 +13,12 @@ class BookToc extends ConsumerStatefulWidget {
     super.key,
     required this.epubPlayerKey,
     required this.hideAppBarAndBottomBar,
+    required this.closeDrawer,
   });
 
   final GlobalKey<EpubPlayerState> epubPlayerKey;
   final Function hideAppBarAndBottomBar;
+  final VoidCallback closeDrawer;
 
   @override
   ConsumerState<BookToc> createState() => _BookTocState();
@@ -323,14 +325,15 @@ class _BookTocState extends ConsumerState<BookToc> {
                 child: ListView.builder(
                   itemCount: searchResults.length,
                   itemBuilder: (context, index) {
-                    return searchResultWidget(
-                      searchResult: searchResults[index],
-                      hideAppBarAndBottomBar: widget.hideAppBarAndBottomBar,
-                      epubPlayerKey: widget.epubPlayerKey,
-                    );
-                  },
-                ),
-              );
+                  return searchResultWidget(
+                    searchResult: searchResults[index],
+                    hideAppBarAndBottomBar: widget.hideAppBarAndBottomBar,
+                    epubPlayerKey: widget.epubPlayerKey,
+                    closeDrawer: widget.closeDrawer,
+                  );
+                },
+              ),
+            );
             }),
       ],
     ));
@@ -372,6 +375,7 @@ class _BookTocState extends ConsumerState<BookToc> {
                     onTap: () {
                       widget.hideAppBarAndBottomBar(false);
                       widget.epubPlayerKey.currentState!.goToHref(tocItem.href);
+                      widget.closeDrawer();
                     },
                   );
                 },
@@ -386,6 +390,7 @@ Widget searchResultWidget({
   required SearchResultModel searchResult,
   required Function hideAppBarAndBottomBar,
   required GlobalKey<EpubPlayerState> epubPlayerKey,
+  required VoidCallback closeDrawer,
 }) {
   bool isExpanded = true;
   TextStyle matchStyle = TextStyle(
@@ -428,6 +433,7 @@ Widget searchResultWidget({
                 onPressed: () {
                   hideAppBarAndBottomBar(false);
                   epubPlayerKey.currentState!.goToCfi(subItem.cfi);
+                  closeDrawer();
                 },
                 child: RichText(
                   text: TextSpan(
