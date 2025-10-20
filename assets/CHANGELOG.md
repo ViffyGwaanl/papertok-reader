@@ -2,14 +2,14 @@
 
 
 ## 1.9.2
-- Feat: Drawer-style display of the table of contents interface
+- Feat: Directory interface is displayed as a drawer from the side
 - Fix: Fix the issue where external links could not be opened
 - Fix: Fix the issue of abnormal indentation
 - Fix: The issue of being unable to adjust paragraph spacing in some files
 - Fix: Optimize the timing of context menu popup and close
 - UI: Optimize part of the interface design
 
-- Feat: 目录界面一抽屉形式从侧面显示
+- Feat: 目录界面以抽屉形式从侧面显示
 - Fix: 修复外链无法打开的问题
 - Fix: 修复缩进异常的问题
 - Fix: 部分文件无法调节段间距的问题
