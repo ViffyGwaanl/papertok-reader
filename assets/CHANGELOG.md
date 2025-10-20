@@ -4,10 +4,12 @@
 ## 1.9.2
 - Fix: Fix the issue where external links could not be opened
 - Fix: Fix the issue of abnormal indentation
+- Fix: The issue of being unable to adjust paragraph spacing in some files
 - UI: Optimize part of the interface design
 
 - Fix: 修复外链无法打开的问题
 - Fix: 修复缩进异常的问题
+- Fix: 部分文件无法调节段间距的问题
 - UI: 优化部分界面设计
 
 
