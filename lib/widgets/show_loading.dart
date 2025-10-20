@@ -6,7 +6,6 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart'
 void showLoading() {
   SmartDialog.show(
     builder: (context) =>
-        Center(child: FilledContainer(
-          child: CircularProgressIndicator())),
+        Center(child: FilledContainer(child: CircularProgressIndicator())),
   );
 }

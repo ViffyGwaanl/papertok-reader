@@ -2,7 +2,7 @@ name: anx_reader
 description: "An e-book reader."
 publish_to: 'none'
 
-version: 1.8.2+6217
+version: 1.9.1+6226
 
 environment:
   sdk: '>=3.5.2 <4.0.0'
@@ -34,6 +34,7 @@ dependencies:
       path: flutter_inappwebview
   shelf: ^1.4.1
   fl_chart: ^0.70.2
+  graphview: ^1.3.2
   flutter_rating_bar: ^4.0.1
   permission_handler: ^11.3.1
   webdav_client:
@@ -70,7 +71,6 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.26
   flutter_reorderable_grid_view: ^5.4.0
   uuid: ^4.5.1
-  receive_sharing_intent: ^1.8.1
   desktop_drop: ^0.5.0
   audio_service: ^0.18.16
   audio_session: ^0.1.23
@@ -113,6 +113,7 @@ dependencies:
   langchain_core: ^0.3.9
   skeletonizer: ^2.1.0+1
   math_expressions: ^2.5.0
+  share_handler: ^0.0.25
 
 dependency_overrides:
   openai_dart:

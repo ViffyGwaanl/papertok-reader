@@ -22,6 +22,8 @@ import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/providers/book_list.dart';
 import 'package:anx_reader/providers/book_toc.dart';
 import 'package:anx_reader/providers/bookmark.dart';
+import 'package:anx_reader/providers/chapter_content_bridge.dart';
+import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/book_player/book_player_server.dart';
 import 'package:anx_reader/utils/coordinates_to_part.dart';
 import 'package:anx_reader/utils/js/convert_dart_color_to_js.dart';
@@ -314,6 +316,54 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         source: "previousContent($count)",
       );
 
+  Future<String> _getCurrentChapterContent({int? maxCharacters}) async {
+    final raw = await theChapterContent();
+    return _normalizeChapterContent(raw, maxCharacters);
+  }
+
+  Future<String> _getChapterContentByHref(
+    String href, {
+    int? maxCharacters,
+  }) async {
+    if (href.isEmpty) {
+      return '';
+    }
+
+    final result = await webViewController.callAsyncJavaScript(
+      functionBody:
+          'return await getChapterContentByHref("${href.replaceAll('"', '\\"')}")',
+    );
+
+    final value = result?.value;
+    if (value is String) {
+      return _normalizeChapterContent(value, maxCharacters);
+    }
+    return '';
+  }
+
+  String _normalizeChapterContent(String? content, int? maxCharacters) {
+    if (content == null || content.isEmpty) {
+      return '';
+    }
+    final trimmed = content.trim();
+    if (maxCharacters != null &&
+        maxCharacters > 0 &&
+        trimmed.length > maxCharacters) {
+      return trimmed.substring(0, maxCharacters);
+    }
+    return trimmed;
+  }
+
+  void _registerChapterContentBridge() {
+    ref.read(chapterContentBridgeProvider.notifier).state =
+        ChapterContentHandlers(
+      fetchCurrentChapter: ({int? maxCharacters}) =>
+          _getCurrentChapterContent(maxCharacters: maxCharacters),
+      fetchChapterByHref: (href, {int? maxCharacters}) =>
+          _getChapterContentByHref(href, maxCharacters: maxCharacters),
+    );
+  }
+
   void onClick(Map<String, dynamic> location) {
     readingPageKey.currentState?.resetAwakeTimer();
     if (contextMenuEntry != null) {
@@ -401,6 +451,14 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             bookmarkExists = location['bookmark']['exists'] ?? false;
             bookmarkCfi = location['bookmark']['cfi'] ?? '';
           });
+          ref.read(currentReadingProvider.notifier).update(
+                cfi: cfi,
+                percentage: percentage,
+                chapterTitle: chapterTitle,
+                chapterHref: chapterHref,
+                chapterCurrentPage: chapterCurrentPage,
+                chapterTotalPages: chapterTotalPages,
+              );
           widget.updateParent();
           saveReadingProgress();
           readingPageKey.currentState?.resetAwakeTimer();
@@ -569,6 +627,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     }
     webViewController = controller;
     setHandler(controller);
+    _registerChapterContentBridge();
 
     // Initialize translation mode based on book-specific settings
     Future.delayed(const Duration(milliseconds: 300), () {
@@ -671,15 +730,15 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
   @override
   void dispose() {
-    super.dispose();
     _animationController?.dispose();
     saveReadingProgress();
     removeOverlay();
+    super.dispose();
   }
 
   InAppWebViewSettings initialSettings = InAppWebViewSettings(
     supportZoom: false,
-    transparentBackground: true,
+    // transparentBackground: true,
     isInspectable: kDebugMode,
   );
 

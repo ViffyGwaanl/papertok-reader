@@ -1,7 +1,7 @@
 import 'package:logging/logging.dart';
 
-Level stringToLevel(String str){
-  switch(str){
+Level stringToLevel(String str) {
+  switch (str) {
     case 'OFF':
       return Level.OFF;
     case 'FINEST':

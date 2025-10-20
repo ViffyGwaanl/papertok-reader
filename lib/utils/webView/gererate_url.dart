@@ -59,7 +59,6 @@ String generateUrl(
   //   bionicReadingMode: ${Prefs().readingRules.bionicReading},
   // }
 
-
   Map<String, dynamic> style = {
     'fontSize': bookStyle.fontSize,
     'fontName': fontName,
@@ -67,13 +66,13 @@ String generateUrl(
     'fontWeight': bookStyle.fontWeight,
     'letterSpacing': bookStyle.letterSpacing,
     'spacing': bookStyle.lineHeight,
-    'paragraphSpacing': bookStyle.paragraphSpacing, 
+    'paragraphSpacing': bookStyle.paragraphSpacing,
     'textIndent': bookStyle.indent,
     'fontColor': '#$textColor',
     'backgroundColor': '#$backgroundColor',
     'topMargin': bookStyle.topMargin,
     'bottomMargin': bookStyle.bottomMargin,
-    'sideMargin': bookStyle.sideMargin, 
+    'sideMargin': bookStyle.sideMargin,
     'justify': true,
     'hyphenate': false,
     'pageTurnStyle': Prefs().pageTurnStyle.name,
@@ -115,11 +114,7 @@ String generateUrl(
   // query += '&style=$style';
   // query += '&readingRules=$readingRules';
 
-
-
-
-  final uri =  '$indexHtmlPath?$query';
-
+  final uri = '$indexHtmlPath?$query';
 
   return uri;
 }

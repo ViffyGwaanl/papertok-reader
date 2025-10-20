@@ -4,15 +4,14 @@ class DeleteConfirm extends StatefulWidget {
   const DeleteConfirm(
       {super.key,
       required this.delete,
-       this.deleteIcon = const Icon(
-         Icons.delete_outline,
+      this.deleteIcon = const Icon(
+        Icons.delete_outline,
         //  color: Colors.red,
-       ),
-       this.confirmIcon = const Icon(
-         Icons.check_circle_outline,
-         color: Colors.red,
-       )
-       });
+      ),
+      this.confirmIcon = const Icon(
+        Icons.check_circle_outline,
+        color: Colors.red,
+      )});
 
   final Function delete;
   final Widget deleteIcon;

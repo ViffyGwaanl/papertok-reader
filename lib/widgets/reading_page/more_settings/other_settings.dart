@@ -132,8 +132,7 @@ class _OtherSettingsState extends State<OtherSettings> {
     ListTile autoSummaryPreviousContent() {
       return ListTile(
         contentPadding: EdgeInsets.zero,
-        title:
-            Text(L10n.of(context).readingPageAutoSummaryPreviousContent),
+        title: Text(L10n.of(context).readingPageAutoSummaryPreviousContent),
         trailing: Switch(
           value: Prefs().autoSummaryPreviousContent,
           onChanged: (bool value) => setState(() {
@@ -147,8 +146,7 @@ class _OtherSettingsState extends State<OtherSettings> {
       return ListTile(
         contentPadding: EdgeInsets.zero,
         title: Text(L10n.of(context).readingPageAutoAdjustReadingTheme),
-        subtitle:
-            Text(L10n.of(context).readingPageAutoAdjustReadingThemeTips),
+        subtitle: Text(L10n.of(context).readingPageAutoAdjustReadingThemeTips),
         trailing: Switch(
           value: Prefs().autoAdjustReadingTheme,
           onChanged: (bool value) => setState(() {

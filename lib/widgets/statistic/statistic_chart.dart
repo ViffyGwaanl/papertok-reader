@@ -19,13 +19,9 @@ class StatisticChart extends ConsumerStatefulWidget {
 class _StatisticChartState extends ConsumerState<StatisticChart> {
   int? touchedIndex;
   final Color bottomColor =
-      Theme
-          .of(navigatorKey.currentState!.context)
-          .colorScheme
-          .primary;
+      Theme.of(navigatorKey.currentState!.context).colorScheme.primary;
 
-  final Color topColor = Theme
-      .of(navigatorKey.currentState!.context)
+  final Color topColor = Theme.of(navigatorKey.currentState!.context)
       .colorScheme
       .primary
       .withOpacity(0.5);
@@ -41,7 +37,7 @@ class _StatisticChartState extends ConsumerState<StatisticChart> {
         gridData: const FlGridData(show: false),
         alignment: BarChartAlignment.spaceAround,
         maxY: widget.readingTime
-            .reduce((value, element) => value > element ? value : element) *
+                .reduce((value, element) => value > element ? value : element) *
             1.2,
       ),
     );
@@ -88,8 +84,7 @@ class _StatisticChartState extends ConsumerState<StatisticChart> {
     );
   }
 
-  FlTitlesData get titlesData =>
-      FlTitlesData(
+  FlTitlesData get titlesData => FlTitlesData(
         show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
@@ -109,13 +104,11 @@ class _StatisticChartState extends ConsumerState<StatisticChart> {
         ),
       );
 
-  FlBorderData get borderData =>
-      FlBorderData(
+  FlBorderData get borderData => FlBorderData(
         show: false,
       );
 
-  LinearGradient get _barsGradient =>
-      LinearGradient(
+  LinearGradient get _barsGradient => LinearGradient(
         colors: [
           bottomColor,
           topColor,

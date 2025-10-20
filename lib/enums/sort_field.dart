@@ -20,4 +20,3 @@ extension SortFieldExtension on SortFieldEnum {
     };
   }
 }
-

@@ -1,7 +1,1 @@
-enum BgimgType {
-  none,
-  assets,
-  localFile
-}
-
-
+enum BgimgType { none, assets, localFile }

@@ -8,7 +8,9 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
-import 'package:anx_reader/widgets/ai/ai_reasoning_panel.dart';
+import 'package:anx_reader/widgets/ai/tool_step_tile.dart';
+import 'package:anx_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
+import 'package:anx_reader/widgets/ai/tool_tiles/organize_bookshelf_step_tile.dart';
 
 class AiStream extends ConsumerStatefulWidget {
   const AiStream({
@@ -34,8 +36,6 @@ class AiStream extends ConsumerStatefulWidget {
 
 class AiStreamState extends ConsumerState<AiStream> {
   late Stream<String> stream;
-  bool _reasoningExpanded = true;
-  bool _userControlled = false;
 
   @override
   void initState() {
@@ -51,6 +51,7 @@ class AiStreamState extends ConsumerState<AiStream> {
       config: widget.config,
       regenerate: regenerate,
       useAgent: widget.useAgent,
+      ref: ref,
     );
   }
 
@@ -75,31 +76,19 @@ class AiStreamState extends ConsumerState<AiStream> {
         final l10n = L10n.of(context);
         final data = snapshot.data!;
         final parsed = parseReasoningContent(data);
-        _syncReasoningState(parsed);
+        final timelineWidgets = _buildTimeline(parsed.timeline);
+        final isCompleted = snapshot.connectionState == ConnectionState.done;
 
         return SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (parsed.timeline.isNotEmpty)
-                ReasoningPanel(
-                  timeline: parsed.timeline,
-                  expanded: _reasoningExpanded,
-                  streaming: !parsed.hasAnswer,
-                  onToggle: () {
-                    setState(() {
-                      _reasoningExpanded = !_reasoningExpanded;
-                      _userControlled = true;
-                    });
-                  },
-                ),
-              if (parsed.hasAnswer)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: MarkdownBody(data: parsed.answer),
-                )
-              else if (parsed.timeline.isEmpty)
-                SizedBox.shrink(),
+              if (timelineWidgets.isNotEmpty)
+                ...timelineWidgets
+              else if (!isCompleted)
+                Skeletonizer.zone(child: Bone.multiText())
+              else
+                const SizedBox.shrink(),
               if (widget.canCopy)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -107,8 +96,6 @@ class AiStreamState extends ConsumerState<AiStream> {
                     TextButton(
                       onPressed: () {
                         setState(() {
-                          _userControlled = false;
-                          _reasoningExpanded = true;
                           stream = _createStream(true);
                         });
                       },
@@ -130,16 +117,46 @@ class AiStreamState extends ConsumerState<AiStream> {
     );
   }
 
-  void _syncReasoningState(ParsedReasoning parsed) {
-    if (_userControlled) return;
-    final shouldExpand = !parsed.hasAnswer;
-    if (_reasoningExpanded != shouldExpand) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _userControlled) return;
-        setState(() {
-          _reasoningExpanded = shouldExpand;
-        });
-      });
+  List<Widget> _buildTimeline(List<ParsedReasoningEntry> timeline) {
+    final widgets = <Widget>[];
+    for (var i = 0; i < timeline.length; i++) {
+      final entry = timeline[i];
+      switch (entry.type) {
+        case ParsedReasoningEntryType.reply:
+          if (entry.text != null && entry.text!.trim().isNotEmpty) {
+            widgets.add(
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: MarkdownBody(data: entry.text!, selectable: true),
+              ),
+            );
+          }
+          break;
+        case ParsedReasoningEntryType.tool:
+          if (entry.toolStep != null) {
+            widgets.add(
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: _buildToolTile(entry.toolStep!),
+              ),
+            );
+          }
+          break;
+      }
+      if (i != timeline.length - 1) {
+        widgets.add(const SizedBox(height: 4));
+      }
     }
+    return widgets;
+  }
+
+  Widget _buildToolTile(ParsedToolStep step) {
+    if (step.name == 'bookshelf_organize') {
+      return OrganizeBookshelfStepTile(step: step);
+    }
+    if (step.name == 'mindmap_draw') {
+      return MindmapStepTile(step: step);
+    }
+    return ToolStepTile(step: step);
   }
 }

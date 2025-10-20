@@ -34,9 +34,8 @@ class _HintBannerState extends State<HintBanner>
   @override
   void initState() {
     super.initState();
-    _visible = widget.hintKey == null
-        ? true
-        : Prefs().shouldShowHint(widget.hintKey!);
+    _visible =
+        widget.hintKey == null ? true : Prefs().shouldShowHint(widget.hintKey!);
   }
 
   void _handleClose() {

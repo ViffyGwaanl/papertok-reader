@@ -6,12 +6,11 @@ part 'statistic_data_model.freezed.dart';
 
 @freezed
 abstract class StatisticDataModel with _$StatisticDataModel {
-  const factory StatisticDataModel({
-    required ChartMode mode,
-    required bool isSelectingDay,
-    required DateTime date,
-    required List<int> readingTime,
-    required List<String> xLabels,
-    required List<Map<Book, int>> bookReadingTime
-  }) = _StatisticDataModel;
+  const factory StatisticDataModel(
+      {required ChartMode mode,
+      required bool isSelectingDay,
+      required DateTime date,
+      required List<int> readingTime,
+      required List<String> xLabels,
+      required List<Map<Book, int>> bookReadingTime}) = _StatisticDataModel;
 }

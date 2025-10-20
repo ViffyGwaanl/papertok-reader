@@ -4,7 +4,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'tb_groups.g.dart';
 
-
 @riverpod
 class GroupDao extends _$GroupDao {
   @override
@@ -78,13 +77,13 @@ class GroupDao extends _$GroupDao {
       final id = await db.insert(
         'tb_groups',
         {
-        'id': groupId,
-        'name': "...",
-        'parent_id': 0,
-        'is_deleted': 0,
-        'create_time': now,
-        'update_time': now,
-      },
+          'id': groupId,
+          'name': "...",
+          'parent_id': 0,
+          'is_deleted': 0,
+          'create_time': now,
+          'update_time': now,
+        },
       );
       ref.invalidateSelf();
       return id;

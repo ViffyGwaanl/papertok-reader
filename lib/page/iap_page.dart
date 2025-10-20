@@ -258,20 +258,21 @@ class _IAPPageState extends State<IAPPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      return Wrap(
-                        children: content.map((item) => SizedBox(
-                          width: constraints.maxWidth / (constraints.maxWidth ~/ 400),
-                          child: _buildFeatureItem(
-                                item['icon'],
-                                item['title'],
-                                item['desc'],
-                              ),
-                        )).toList(),
-                      );
-                    }
-                  ),
+                  LayoutBuilder(builder: (context, constraints) {
+                    return Wrap(
+                      children: content
+                          .map((item) => SizedBox(
+                                width: constraints.maxWidth /
+                                    (constraints.maxWidth ~/ 400),
+                                child: _buildFeatureItem(
+                                  item['icon'],
+                                  item['title'],
+                                  item['desc'],
+                                ),
+                              ))
+                          .toList(),
+                    );
+                  }),
                   const SizedBox(height: 30),
                   Text(L10n.of(context).iapPageRestoreHint),
 

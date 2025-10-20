@@ -22,7 +22,6 @@ class RemoteFile {
   });
 }
 
-
 extension WebdavFileExtension on webdav.File {
   RemoteFile toRemoteFile() {
     return RemoteFile(

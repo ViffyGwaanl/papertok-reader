@@ -204,7 +204,7 @@ class SyncStatus extends _$SyncStatus {
     if (isCover(filePath)) {
       return;
     }
-    final bookId = await  pathToBookId(filePath);
+    final bookId = await pathToBookId(filePath);
     if (bookId == null || state.value == null) {
       return;
     }

@@ -8,7 +8,6 @@ import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-
 class ReadingSettings extends ConsumerStatefulWidget {
   const ReadingSettings({super.key});
 
@@ -17,30 +16,18 @@ class ReadingSettings extends ConsumerStatefulWidget {
 }
 
 class _ReadingSettingsState extends ConsumerState<ReadingSettings> {
-  
   @override
   Widget build(BuildContext context) {
     return settingsSections(sections: [
-      SettingsSection(
-        title:Text(L10n.of(context).readingPageReading),
-        tiles: [
-          CustomSettingsTile(child: ReadingMoreSettings()),
-        ]
-      ),
-      SettingsSection(
-        title:Text(L10n.of(context).readingPageStyle),
-        tiles: [
-          CustomSettingsTile(child: StyleSettings()),
-        ]
-      ),
-      SettingsSection(
-        title:Text(L10n.of(context).readingPageOther),
-        tiles: [
-          CustomSettingsTile(child: OtherSettings()),
-
-        ]
-      ),
-      
+      SettingsSection(title: Text(L10n.of(context).readingPageReading), tiles: [
+        CustomSettingsTile(child: ReadingMoreSettings()),
+      ]),
+      SettingsSection(title: Text(L10n.of(context).readingPageStyle), tiles: [
+        CustomSettingsTile(child: StyleSettings()),
+      ]),
+      SettingsSection(title: Text(L10n.of(context).readingPageOther), tiles: [
+        CustomSettingsTile(child: OtherSettings()),
+      ]),
     ]);
   }
 }

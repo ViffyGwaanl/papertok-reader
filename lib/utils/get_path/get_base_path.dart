@@ -7,19 +7,19 @@ String documentPath = '';
 
 Future<String> getAnxDocumentsPath() async {
   final directory = await getApplicationDocumentsDirectory();
-  switch(defaultTargetPlatform) {
+  switch (defaultTargetPlatform) {
     case TargetPlatform.android:
       return directory.path;
     case TargetPlatform.windows:
       // return '${directory.path}\\AnxReader';
       return (await getApplicationSupportDirectory()).path;
     case TargetPlatform.linux:
-    final path = '${directory.path}/AnxReader';
-    return path;
+      final path = '${directory.path}/AnxReader';
+      return path;
     case TargetPlatform.macOS:
-    return directory.path;
+      return directory.path;
     case TargetPlatform.iOS:
-    return (await getApplicationSupportDirectory()).path;
+      return (await getApplicationSupportDirectory()).path;
     default:
       throw Exception('Unsupported platform');
   }
@@ -38,7 +38,7 @@ void initBasePath() async {
   final fontDir = getFontDir();
   final bgimgDir = getBgimgDir();
   if (!fileDir.existsSync()) {
-    fileDir.createSync( recursive: true);
+    fileDir.createSync(recursive: true);
   }
   if (!coverDir.existsSync()) {
     coverDir.createSync(recursive: true);

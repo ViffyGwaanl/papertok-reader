@@ -7,4 +7,3 @@ enum BookSyncStatusEnum {
   uploading,
   checking,
 }
-

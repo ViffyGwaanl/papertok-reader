@@ -67,5 +67,11 @@ List<PageTurningType> type5 = [
 // next, prev, menu from 0
 List<int> icon5 = [7, 4, 1];
 
-List<List<PageTurningType>> pageTurningTypes = [type1, type2, type3, type4, type5];
+List<List<PageTurningType>> pageTurningTypes = [
+  type1,
+  type2,
+  type3,
+  type4,
+  type5
+];
 List<List<int>> pageTurningIcons = [icon1, icon2, icon3, icon4, icon5];

@@ -38,9 +38,11 @@ class FontList extends _$FontList {
       if (font.path.isEmpty) {
         continue;
       }
-      
+
       final fontLoader = FontLoader(font.path);
-      final fontData = await File(getFontDir().path + Platform.pathSeparator + font.path).readAsBytes();
+      final fontData =
+          await File(getFontDir().path + Platform.pathSeparator + font.path)
+              .readAsBytes();
 
       fontLoader.addFont(Future.value(fontData.buffer.asByteData()));
 

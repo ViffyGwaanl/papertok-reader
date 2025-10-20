@@ -34,22 +34,20 @@ class _AISettingsState extends ConsumerState<AISettings> {
   @override
   void initState() {
     serviceOptions = buildDefaultAiServices();
-    services = serviceOptions
-        .map(
-          (option) {
-            return {
-              'identifier': option.identifier,
-              'title': option.title,
-              'logo': option.logo,
-              'config': {
-                'url': option.defaultUrl,
-                'api_key': option.defaultApiKey,
-                'model': option.defaultModel,
-              },
-            };
+    services = serviceOptions.map(
+      (option) {
+        return {
+          'identifier': option.identifier,
+          'title': option.title,
+          'logo': option.logo,
+          'config': {
+            'url': option.defaultUrl,
+            'api_key': option.defaultApiKey,
+            'model': option.defaultModel,
           },
-        )
-        .toList();
+        };
+      },
+    ).toList();
     initialServicesConfig = services
         .map(
           (service) => {
@@ -81,12 +79,12 @@ class _AISettingsState extends ConsumerState<AISettings> {
       {
         "identifier": AiPrompts.summaryTheChapter,
         "title": L10n.of(context).settingsAiPromptSummaryTheChapter,
-        "variables": ["chapter"],
+        "variables": [],
       },
       {
         "identifier": AiPrompts.summaryTheBook,
         "title": L10n.of(context).settingsAiPromptSummaryTheBook,
-        "variables": ["book", "author"],
+        "variables": [],
       },
       {
         "identifier": AiPrompts.summaryThePreviousContent,
@@ -97,6 +95,11 @@ class _AISettingsState extends ConsumerState<AISettings> {
         "identifier": AiPrompts.translate,
         "title": L10n.of(context).settingsAiPromptTranslateAndDictionary,
         "variables": ["text", "to_locale", "from_locale"],
+      },
+      {
+        "identifier": AiPrompts.mindmap,
+        "title": L10n.of(context).settingsAiPromptMindmap,
+        "variables": [],
       }
     ];
 

@@ -16,7 +16,7 @@ abstract class BookshelfLookupInput with _$BookshelfLookupInput {
   factory BookshelfLookupInput.fromJson(Map<String, dynamic> json) =>
       _$BookshelfLookupInputFromJson(json);
 
-  int resolvedLimit([int fallback = 10]) {
+  int resolvedLimit([int fallback = 500]) {
     final value = limit ?? fallback;
     return value.clamp(1, 50);
   }

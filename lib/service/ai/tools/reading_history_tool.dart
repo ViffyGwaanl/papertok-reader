@@ -12,25 +12,29 @@ class ReadingHistoryTool
       : super(
           name: 'reading_history',
           description:
-              'Fetch reading history entries. Optional filters: book_id, from/to (ISO date), limit.',
+              'Retrieve historical reading sessions recorded by the app. Use this to analyse habits or reference when the user last read a book. Supports optional filters for book, date range, and record count. Returns the filtered entries plus totals for duration and count.',
           inputJsonSchema: const {
             'type': 'object',
             'properties': {
               'book_id': {
                 'type': 'integer',
-                'description': 'Filter by book identifier.',
+                'description':
+                    'Optional. Only include history for the specified book ID.',
               },
               'from': {
                 'type': 'string',
-                'description': 'Include entries on/after this ISO date.',
+                'description':
+                    'Optional. ISO-8601 date or timestamp marking the earliest entry to include.',
               },
               'to': {
                 'type': 'string',
-                'description': 'Include entries on/before this ISO date.',
+                'description':
+                    'Optional. ISO-8601 date or timestamp marking the latest entry to include.',
               },
               'limit': {
                 'type': 'integer',
-                'description': 'Max number of records to return (1-100).',
+                'description':
+                    'Optional. Upper bound on the number of records to return (range 1-100).',
               },
             },
           },

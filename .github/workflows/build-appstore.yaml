@@ -9,6 +9,9 @@ on:
       flutter_version:
         required: true
         type: string
+      xcode_version:
+        required: true
+        type: string
     secrets:
       ASC_KEY_ID:
         required: true
@@ -46,7 +49,7 @@ jobs:
 
       - name: Get Dependencies
         run: |
-          sudo xcode-select -switch /Applications/Xcode_16.4.0.app/Contents/Developer
+          sudo xcode-select -switch /Applications/Xcode_${{ inputs.xcode_version }}.app/Contents/Developer
           # xcodebuild -downloadPlatform iOS -buildVersion 18.2
           flutter --version
           # flutter doctor -v

@@ -83,8 +83,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
 
   String _extractVersionChangelog(String fullChangelog) {
     // Extract version number from currentVersion (e.g., "1.2.3+1234" -> "1.2.3")
-    final versionMatch =
-        RegExp(r'^(\d+\.\d+\.\d+)').firstMatch(currentVersion);
+    final versionMatch = RegExp(r'^(\d+\.\d+\.\d+)').firstMatch(currentVersion);
     if (versionMatch == null) {
       return _getDefaultChangelog();
     }
@@ -135,8 +134,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       appBar: AppBar(
         title: Text(L10n.of(context).whatsNew),
         elevation: 0,
-        actions: [
-        ],
+        actions: [],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -225,6 +223,6 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
   }
 
   void _onComplete() async {
-      widget.onComplete();
+    widget.onComplete();
   }
 }

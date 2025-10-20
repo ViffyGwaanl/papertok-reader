@@ -11,4 +11,3 @@ abstract class SearchNoteGroup with _$SearchNoteGroup {
     required List<BookNote> notes,
   }) = _SearchNoteGroup;
 }
-

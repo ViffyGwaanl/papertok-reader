@@ -9,17 +9,16 @@ import 'package:anx_reader/providers/font_list.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/save_img.dart';
+import 'package:anx_reader/utils/share_file.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/book_share/excerpt_share_card.dart';
 import 'package:anx_reader/widgets/icon_and_text.dart';
-import 'package:anx_reader/widgets/show_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
-import 'package:share_plus/share_plus.dart';
 
 class ExcerptShareBottomSheet extends ConsumerStatefulWidget {
   final String bookTitle;
@@ -118,8 +117,6 @@ class _ExcerptShareBottomSheetState
   }
 
   Future<void> _shareAsImage() async {
-    showLoading();
-
     final imageData = await _captureCard();
     if (imageData == null) {
       SmartDialog.dismiss();
@@ -130,10 +127,7 @@ class _ExcerptShareBottomSheetState
     final file = File('$tempDir/anx_excerpt_share.png');
     await file.writeAsBytes(imageData);
 
-    await SharePlus.instance.share(
-      ShareParams(files: [XFile(file.path)]),
-    );
-    SmartDialog.dismiss();
+    await shareFile(file: file);
   }
 
   Future<void> _saveAsImage() async {

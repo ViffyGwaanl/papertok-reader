@@ -31,7 +31,7 @@ class IconAndText extends StatelessWidget {
               child: Text(
                 text,
                 style: TextStyle(fontSize: fontSize),
-                textAlign: TextAlign.center,              
+                textAlign: TextAlign.center,
               ),
             ),
           ),

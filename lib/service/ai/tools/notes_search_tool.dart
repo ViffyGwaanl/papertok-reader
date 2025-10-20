@@ -11,31 +11,34 @@ class NotesSearchTool
       : super(
           name: 'notes_search',
           description:
-              'Search user notes by keyword, book_id, from, to (ISO8601), limit.',
+              'Search through the user\'s saved notes. Use this to surface annotations relevant to the current discussion by keyword, book, or time range. Returns matching note entries with chapter context, highlights, and timestamps.',
           inputJsonSchema: const {
             'type': 'object',
             'properties': {
               'keyword': {
                 'type': 'string',
-                'description': 'Keyword of the note content or chapter.',
+                'description':
+                    'Optional. Text to match in note body content or chapter titles.',
               },
               'book_id': {
                 'type': 'integer',
-                'description': 'Optional book identifier to scope the search.',
+                'description':
+                    'Optional. Restrict the search to notes belonging to a specific book ID.',
               },
               'from': {
                 'type': 'string',
                 'description':
-                    'ISO8601 timestamp to filter notes updated after this time.',
+                    'Optional. ISO-8601 timestamp; only notes updated at or after this moment are returned.',
               },
               'to': {
                 'type': 'string',
                 'description':
-                    'ISO8601 timestamp to filter notes updated before this time.',
+                    'Optional. ISO-8601 timestamp; only notes updated at or before this moment are returned.',
               },
               'limit': {
                 'type': 'integer',
-                'description': 'Maximum number of results (1-50).',
+                'description':
+                    'Optional. Maximum number of results to return (range 1-50).',
               },
             },
             // 'required': const <String>[],

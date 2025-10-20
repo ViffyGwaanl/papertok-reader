@@ -26,8 +26,7 @@ Future<void> checkUpdate(bool manualCheck) async {
   BuildContext context = navigatorKey.currentContext!;
   Response response;
   try {
-    response = await Dio()
-        .get('https://api.anx.anxcye.com/api/info/latest');
+    response = await Dio().get('https://api.anx.anxcye.com/api/info/latest');
   } catch (e) {
     if (manualCheck) {
       AnxToast.show(L10n.of(context).commonFailed);
@@ -36,13 +35,13 @@ Future<void> checkUpdate(bool manualCheck) async {
     return;
   }
   String newVersion = response.data['version'].toString().substring(1);
-  String currentVersion =
-      (await getAppVersion()).split('+').first;
+  String currentVersion = (await getAppVersion()).split('+').first;
   AnxLog.info('Update: new version $newVersion');
 
   List<String> newVersionList = newVersion.split('.');
   List<String> currentVersionList = currentVersion.split('.');
-  AnxLog.info('Current version: $currentVersionList, New version: $newVersionList');
+  AnxLog.info(
+      'Current version: $currentVersionList, New version: $newVersionList');
   bool needUpdate = false;
   for (int i = 0; i < newVersionList.length; i++) {
     int newVer = int.parse(newVersionList[i]);
@@ -79,7 +78,7 @@ $body'''),
             TextButton(
               onPressed: () {
                 SmartDialog.dismiss();
-              },  
+              },
               child: Text(L10n.of(context).commonCancel),
             ),
             TextButton(
@@ -93,9 +92,7 @@ $body'''),
             ),
             TextButton(
               onPressed: () {
-                launchUrl(
-                    Uri.parse(
-                        'https://anx.anxcye.com/download'),
+                launchUrl(Uri.parse('https://anx.anxcye.com/download'),
                     mode: LaunchMode.externalApplication);
               },
               child: Text(L10n.of(context).updateViaOfficialWebsite),

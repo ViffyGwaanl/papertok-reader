@@ -272,7 +272,7 @@ class DBHelper {
           ''', [groupId]);
         }
     }
-    
+
     if (oldVersion != 0 && Prefs().webdavStatus) {
       updatedDB = true;
     }

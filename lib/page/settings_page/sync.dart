@@ -165,8 +165,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
       if (filePath != null) {
         AnxLog.info('exportData: Saved to: $filePath');
-        AnxToast.show(
-            L10n.of(navigatorKey.currentContext!).exportTo(filePath));
+        AnxToast.show(L10n.of(navigatorKey.currentContext!).exportTo(filePath));
       } else {
         AnxLog.info('exportData: Cancelled');
         AnxToast.show(L10n.of(navigatorKey.currentContext!).commonCanceled);
@@ -382,8 +381,7 @@ void showWebdavDialog(BuildContext context) {
                   },
                 ),
                 icon: const Icon(Icons.wifi_find),
-                label:
-                    Text(L10n.of(context).settingsSyncWebdavTestConnection),
+                label: Text(L10n.of(context).settingsSyncWebdavTestConnection),
               ),
               TextButton(
                 onPressed: () {

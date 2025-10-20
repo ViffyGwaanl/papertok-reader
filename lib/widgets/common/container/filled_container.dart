@@ -12,20 +12,26 @@ class FilledContainer extends BaseRoundedContainer {
     super.padding,
     super.margin,
     this.color,
+    this.fill = false,
     super.radius,
+    super.animationDuration,
+    super.animationCurve,
   });
 
   final Color? color;
+  final bool fill;
 
   @override
   Widget build(BuildContext context) {
-    if (Prefs().eInkMode) {
+    if (Prefs().eInkMode && !fill) {
       return OutlinedContainer(
         width: width,
         height: height,
         padding: padding,
         margin: margin,
         radius: radius,
+        animationDuration: animationDuration,
+        animationCurve: animationCurve,
         child: child,
       );
     }

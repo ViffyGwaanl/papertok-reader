@@ -179,7 +179,8 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     void onBottomTap(int index, bool fromRail) {
       if (navBarItems[index]['identifier'] == 'ai' && !fromRail) {
-        showCupertinoSheet(context:  context, builder: (context) => const AiPage());
+        showCupertinoSheet(
+            context: context, builder: (context) => const AiPage());
         return;
       }
       setState(() {
@@ -209,35 +210,41 @@ class _HomePageState extends ConsumerState<HomePage> {
             extendBody: true,
             body: Row(
               children: [
-                FilledContainer(
-                  margin: const EdgeInsets.all(16),
-                  color: ElevationOverlay.applySurfaceTint(
-                    Theme.of(context).colorScheme.surface,
-                    Theme.of(context).colorScheme.primary,
-                    3,
-                  ),
-                  radius: 20,
-                  child: NavigationRail(
-                    leading: InkWell(
-                      onTap: () => openAboutDialog(),
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 2.0),
-                        child: Image.asset(
-                          width: 32,
-                          height: 32,
-                          'assets/icon/Anx-logo-tined.png',
-                          color: Theme.of(context).colorScheme.secondary,
+                SafeArea(
+                  bottom: false,
+                  child: FilledContainer(
+                    margin: const EdgeInsets.all(16),
+                    color: ElevationOverlay.applySurfaceTint(
+                      Theme.of(context).colorScheme.surface,
+                      Theme.of(context).colorScheme.primary,
+                      3,
+                    ),
+                    radius: 20,
+                    child: SafeArea(
+                      child: NavigationRail(
+                        leading: InkWell(
+                          onTap: () => openAboutDialog(),
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 2.0),
+                            child: Image.asset(
+                              width: 32,
+                              height: 32,
+                              'assets/icon/Anx-logo-tined.png',
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
+                          ),
                         ),
+                        groupAlignment: 1,
+                        extended: false,
+                        selectedIndex: _currentIndex,
+                        onDestinationSelected: (int index) =>
+                            onBottomTap(index, true),
+                        destinations: railBarItems,
+                        labelType: NavigationRailLabelType.all,
+                        backgroundColor: Colors.transparent,
+                        // elevation: 0,
                       ),
                     ),
-                    groupAlignment: 1,
-                    extended: false,
-                    selectedIndex: _currentIndex,
-                    onDestinationSelected: (int index) => onBottomTap(index, true),
-                    destinations: railBarItems,
-                    labelType: NavigationRailLabelType.all,
-                    backgroundColor: Colors.transparent,
-                    // elevation: 0,
                   ),
                 ),
                 Expanded(child: pages(_currentIndex, constraints, null)),

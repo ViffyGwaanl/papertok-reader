@@ -1,12 +1,30 @@
 # Changelog
 
-## 1.8.2
+## 1.9.1
+
+- Feat: On touch devices, a long press is required to open images
+- Fix: Fix the issue where iOS26 devices cannot turn pages by touch
+- Fix: Optimized indentation display effect, fixed the issue where indentation caused abnormal image positioning
+- Fix: Fixed the issue where text output by AI could not be read after copying
+- UI: Optimized part of the interface design
+
+- Feat: 在触摸设备上需要长按才能打开图片
+- Fix: 修复 iOS26 设备无法触摸翻页的问题
+- Fix: 优化缩进的显示效果，修复了缩进引起图片位置异常的问题
+- Fix: 修复 AI 输出的文本复制后无法阅读的问题
+- UI: 优化部分界面设计
+
+## 1.9.0
 - Feat: Add AI page in navigation bar
+- Feat: AI can draw mind maps and organize bookshelf
 - Feat: View AI chat history
 - Feat: AI can call tools to assist in answering
 - Feat: Add AI tools, AI can call tools such as note search, bookshelf lookup, reading history to assist in answering
 - Feat: Enhance AI chat streaming with cancellation support
 - Feat: Optimize the interface design of the thinking model
+- Feat: On touch devices, a long press is required to open images
+- Feat: Optimize the interface design of chapter summaries
+- Feat: Adjustable width for AI chat panel
 - Fix: Fix the issue of some AI services loading indefinitely
 - Fix: The bottom details on the bookshelf page sometimes do not work when clicked
 - Fix: Gemini model cannot be used
@@ -14,11 +32,15 @@
 - UI: Optimize part of the interface design
 
 - Feat: 在 导航栏 添加 AI 页面
+- Feat: AI 可以绘制思维导图、整理书架了
 - Feat: 可以查看 AI 对话历史记录
 - Feat: AI 可以调用工具来辅助回答
 - Feat: 添加 AI 工具,AI 可以调用笔记搜索、书架查询、阅读记录等工具来辅助回答
 - Feat: 增强 AI 对话流，支持终止当前对话
 - Feat: 优化思考模型的界面设计
+- Feat: 在触摸设备上需要长按才能打开图片
+- Feat: 优化章节总结的界面设计
+- Feat: 可以调节 AI 对话面板的宽度
 - Fix: 修复部分 AI 服务无限加载的问题
 - Fix: 书架页面底部详情有时点击后不起作用的问题
 - Fix: Gemini 模型无法使用的问题

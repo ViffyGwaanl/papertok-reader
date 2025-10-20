@@ -1,7 +1,5 @@
-
 import 'package:freezed_annotation/freezed_annotation.dart';
 part 'sync_status.freezed.dart';
-
 
 @freezed
 abstract class SyncStatusModel with _$SyncStatusModel {

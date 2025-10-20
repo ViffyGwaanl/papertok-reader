@@ -233,8 +233,9 @@ $ssml
         // If we get here, the request was successful
         return Uint8List.fromList(audioData);
       } catch (e) {
-        if (e.toString().contains(
-            "No audio received. Please check your parameters.")) {
+        if (e
+            .toString()
+            .contains("No audio received. Please check your parameters.")) {
           return Uint8List.fromList([]);
         }
         currentRetry++;

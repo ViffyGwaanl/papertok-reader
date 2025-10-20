@@ -135,7 +135,7 @@ class IAPService {
       final receiptBase64 = await _getReceiptBase64();
       if (receiptBase64.isEmpty) {
         AnxLog.warning('IAP: Empty receipt during initialization');
-        _isInitialized = true; 
+        _isInitialized = true;
         return;
       }
 

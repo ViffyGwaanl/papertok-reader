@@ -207,8 +207,8 @@ class Sync extends _$Sync {
       clickMaskDismiss: false,
       builder: (context) => AlertDialog(
         title: Text(L10n.of(context).webdavSyncAborted),
-        content: Text(L10n.of(context)
-            .syncMismatchTip(currentDbVersion, remoteVersion)),
+        content: Text(
+            L10n.of(context).syncMismatchTip(currentDbVersion, remoteVersion)),
         actions: [
           TextButton(
             onPressed: () {
@@ -278,8 +278,7 @@ class Sync extends _$Sync {
       }
 
       if (Prefs().syncCompletedToast) {
-        AnxToast.show(
-            L10n.of(navigatorKey.currentContext!).webdavSyncingFiles);
+        AnxToast.show(L10n.of(navigatorKey.currentContext!).webdavSyncingFiles);
       }
 
       await syncFiles();
@@ -297,8 +296,7 @@ class Sync extends _$Sync {
       // Backup cleanup is now handled by DatabaseSyncManager
 
       if (Prefs().syncCompletedToast) {
-        AnxToast.show(
-            L10n.of(navigatorKey.currentContext!).webdavSyncComplete);
+        AnxToast.show(L10n.of(navigatorKey.currentContext!).webdavSyncComplete);
       }
     } catch (e, s) {
       if (e is DioException && e.type == DioExceptionType.connectionError) {
@@ -571,16 +569,16 @@ class Sync extends _$Sync {
         final localPath = getBasePath(book.filePath);
         await uploadFile(localPath, remotePath);
       } catch (e) {
-        AnxToast.show(L10n.of(navigatorKey.currentContext!)
-            .bookSyncStatusUploadFailed);
+        AnxToast.show(
+            L10n.of(navigatorKey.currentContext!).bookSyncStatusUploadFailed);
         AnxLog.severe('Failed to upload book\n$e');
         rethrow;
       }
     }
 
     if (syncStatus.remoteOnly.contains(book.id)) {
-      AnxToast.show(L10n.of(navigatorKey.currentContext!)
-          .bookSyncStatusSpaceReleased);
+      AnxToast.show(
+          L10n.of(navigatorKey.currentContext!).bookSyncStatusSpaceReleased);
       return;
     } else if (syncStatus.both.contains(book.id)) {
       await deleteLocalBook();
@@ -590,8 +588,8 @@ class Sync extends _$Sync {
         await uploadBook();
         await deleteLocalBook();
       } catch (e) {
-        AnxToast.show(L10n.of(navigatorKey.currentContext!)
-            .bookSyncStatusUploadFailed);
+        AnxToast.show(
+            L10n.of(navigatorKey.currentContext!).bookSyncStatusUploadFailed);
       }
     }
   }
@@ -641,8 +639,8 @@ class Sync extends _$Sync {
       final localPath = getBasePath(book.filePath);
       await downloadFile(remotePath, localPath);
     } catch (e) {
-      AnxToast.show(L10n.of(navigatorKey.currentContext!)
-          .bookSyncStatusDownloadFailed);
+      AnxToast.show(
+          L10n.of(navigatorKey.currentContext!).bookSyncStatusDownloadFailed);
       AnxLog.severe('Failed to download book\n$e');
       rethrow;
     }

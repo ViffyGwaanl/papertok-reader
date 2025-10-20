@@ -1,1 +1,1 @@
-enum ChartMode { week, month, year, heatmap}
+enum ChartMode { week, month, year, heatmap }

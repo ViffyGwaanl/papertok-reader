@@ -8,10 +8,10 @@ import 'package:anx_reader/service/ai/langchain_ai_config.dart';
 import 'package:anx_reader/service/ai/langchain_registry.dart';
 import 'package:anx_reader/service/ai/langchain_runner.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
 
-final LangchainAiRegistry _registry = LangchainAiRegistry();
 final CancelableLangchainRunner _runner = CancelableLangchainRunner();
 
 Stream<String> aiGenerateStream(
@@ -20,14 +20,20 @@ Stream<String> aiGenerateStream(
   Map<String, String>? config,
   bool regenerate = false,
   bool useAgent = false,
+  WidgetRef? ref,
 }) {
+  if (useAgent) {
+    assert(ref != null, 'ref must be provided when useAgent is true');
+  }
+  LangchainAiRegistry registry = LangchainAiRegistry(ref);
+
   return _generateStream(
-    messages: messages,
-    identifier: identifier,
-    overrideConfig: config,
-    regenerate: regenerate,
-    useAgent: useAgent,
-  );
+      messages: messages,
+      identifier: identifier,
+      overrideConfig: config,
+      regenerate: regenerate,
+      useAgent: useAgent,
+      registry: registry);
 }
 
 void cancelActiveAiRequest() {
@@ -40,6 +46,7 @@ Stream<String> _generateStream({
   Map<String, String>? overrideConfig,
   required bool regenerate,
   required bool useAgent,
+  required LangchainAiRegistry registry,
 }) async* {
   AnxLog.info('aiGenerateStream called identifier: $identifier');
   final selectedIdentifier = identifier ?? Prefs().selectedAiService;
@@ -65,7 +72,7 @@ Stream<String> _generateStream({
   AnxLog.info(
       'aiGenerateStream: $selectedIdentifier, model: ${config.model}, baseUrl: ${config.baseUrl}');
 
-  final pipeline = _registry.resolve(config, useAgent: useAgent);
+  final pipeline = registry.resolve(config, useAgent: useAgent);
   final model = pipeline.model;
 
   Stream<String> stream;
@@ -104,7 +111,6 @@ Stream<String> _generateStream({
       buffer = chunk;
       yield buffer;
     }
-
   } catch (error, stack) {
     final mapped = _mapError(error);
     AnxLog.severe('AI error: $mapped\n$stack');

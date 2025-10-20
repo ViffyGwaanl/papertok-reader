@@ -165,7 +165,8 @@ Future<List<ReadingTime>> queryReadingHistory({
     whereArgs.add(bookId);
   }
 
-  String? toDateString(DateTime? date) => date?.toIso8601String().substring(0, 10);
+  String? toDateString(DateTime? date) =>
+      date?.toIso8601String().substring(0, 10);
 
   final fromStr = toDateString(from);
   final toStr = toDateString(to);

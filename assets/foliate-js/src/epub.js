@@ -747,11 +747,14 @@ class Loader {
       // replace vw and vh as they cause problems with layout
       .replace(/(\d*\.?\d+)vw/gi, (_, d) => parseFloat(d) * w / 100 + 'px')
       .replace(/(\d*\.?\d+)vh/gi, (_, d) => parseFloat(d) * h / 100 + 'px')
-      // `page-break-*` unsupported in columns; replace with `column-break-*`
-      .replace(/page-break-(after|before|inside)\s*:/gi, (_, x) =>
-        `-webkit-column-break-${x}:`)
-      .replace(/break-(after|before|inside)\s*:\s*(avoid-)?page/gi, (_, x, y) =>
-        `break-${x}: ${y ?? ''}column`)
+
+      // This cause a bug on Safari, element with box-shadow inside a column
+      // get incorrectly clipped. So for now, we just remove it.
+      // // `page-break-*` unsupported in columns; replace with `column-break-*`
+      // .replace(/page-break-(after|before|inside)\s*:/gi, (_, x) =>
+      //   `-webkit-column-break-${x}:`)
+      // .replace(/break-(after|before|inside)\s*:\s*(avoid-)?page/gi, (_, x, y) =>
+      //   `break-${x}: ${y ?? ''}column`)
       // If px is used as the unit of font-size, it should be converted to em and the 
       // number should be divided by 16
       .replace(/(\d*\.?\d+)px/gi, (_, d) => `${parseFloat(d) / 16}em`)

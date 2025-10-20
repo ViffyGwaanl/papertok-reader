@@ -7,6 +7,6 @@ enum SyncProtocol {
   dropbox('Dropbox');
 
   const SyncProtocol(this.displayName);
-  
+
   final String displayName;
 }

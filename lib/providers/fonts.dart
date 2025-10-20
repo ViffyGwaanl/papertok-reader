@@ -69,7 +69,7 @@ class Fonts extends _$Fonts {
   final Dio dio = Dio();
 
   @override
-   Future<List<RemoteFontModel>> build() async {
+  Future<List<RemoteFontModel>> build() async {
     final response = await http.get(Uri.parse(fontManifestUrl));
     if (response.statusCode == 200) {
       final List<dynamic> jsonList = jsonDecode(response.body);

@@ -29,7 +29,8 @@ class SearchRepository {
     );
 
     if (notes.isEmpty) {
-      return SearchResultData(books: books, noteGroups: const <SearchNoteGroup>[]);
+      return SearchResultData(
+          books: books, noteGroups: const <SearchNoteGroup>[]);
     }
 
     final notesByBookId = <int, List<BookNote>>{};

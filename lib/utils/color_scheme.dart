@@ -24,7 +24,9 @@ ThemeData colorSchema(
       prefsNotifier.trueDarkMode ? Color(0xFF000000) : Color(0xFF1C1C1E);
   final gropedBackgroundColor = isEinkMode
       ? Colors.white
-      : isDark ? darkGropedBackground : lightGropedBackground;
+      : isDark
+          ? darkGropedBackground
+          : lightGropedBackground;
 
   final colorScheme = isEinkMode
       ? const ColorScheme.light(
@@ -69,7 +71,6 @@ ThemeData colorSchema(
             )
         };
 
-  
   return themeData
       .copyWith(
           sliderTheme: const SliderThemeData(year2023: false),
@@ -78,8 +79,8 @@ ThemeData colorSchema(
           scaffoldBackgroundColor: gropedBackgroundColor,
           bottomSheetTheme: BottomSheetThemeData()
               .copyWith(backgroundColor: gropedBackgroundColor),
-          drawerTheme: DrawerThemeData().copyWith(
-              backgroundColor: gropedBackgroundColor),
+          drawerTheme: DrawerThemeData()
+              .copyWith(backgroundColor: gropedBackgroundColor),
           dialogTheme: DialogThemeData()
               .copyWith(backgroundColor: gropedBackgroundColor))
       .useSystemChineseFont(brightness);

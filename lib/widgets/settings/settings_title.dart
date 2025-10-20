@@ -3,16 +3,16 @@ import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-Widget settingsTitle(
-    {required Icon icon,
-    required String title,
-    required bool isMobile,
-    required int id,
-    required int selectedIndex,
-    required Function setDetail,
-    required Widget subPage,
-    required List<String>  subtitle,
-    }) {
+Widget settingsTitle({
+  required Icon icon,
+  required String title,
+  required bool isMobile,
+  required int id,
+  required int selectedIndex,
+  required Function setDetail,
+  required Widget subPage,
+  required List<String> subtitle,
+}) {
   BuildContext context = navigatorKey.currentContext!;
   return ListTile(
     leading: icon,

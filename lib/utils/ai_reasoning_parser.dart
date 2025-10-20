@@ -3,45 +3,36 @@ import 'dart:convert';
 class ParsedReasoning {
   const ParsedReasoning({
     required this.timeline,
-    required this.answer,
   });
 
   final List<ParsedReasoningEntry> timeline;
-  final String answer;
 
-  bool get hasThink => timeline.any((entry) => entry.isThink);
+  bool get hasReplies =>
+      timeline.any((entry) => entry.type == ParsedReasoningEntryType.reply);
 
-  bool get hasAnswer => answer.trim().isNotEmpty;
-
-  bool get hasToolSteps => timeline.any((entry) => entry.isToolStep);
+  bool get hasToolSteps =>
+      timeline.any((entry) => entry.type == ParsedReasoningEntryType.tool);
 
   List<ParsedToolStep> get toolSteps => timeline
-      .where((entry) => entry.isToolStep)
+      .where((entry) => entry.type == ParsedReasoningEntryType.tool)
       .map((entry) => entry.toolStep!)
       .toList(growable: false);
-
-  String get think => timeline
-      .where((entry) => entry.isThink)
-      .map((entry) => entry.text!.trim())
-      .where((text) => text.isNotEmpty)
-      .join('\n\n');
 }
 
+enum ParsedReasoningEntryType { reply, tool }
+
 class ParsedReasoningEntry {
-  const ParsedReasoningEntry.think(this.text)
+  const ParsedReasoningEntry.reply(this.text)
       : toolStep = null,
-        isThink = true,
-        isToolStep = false;
+        type = ParsedReasoningEntryType.reply;
 
   const ParsedReasoningEntry.tool(this.toolStep)
       : text = null,
-        isThink = false,
-        isToolStep = true;
+        type = ParsedReasoningEntryType.tool;
 
   final String? text;
   final ParsedToolStep? toolStep;
-  final bool isThink;
-  final bool isToolStep;
+  final ParsedReasoningEntryType type;
 }
 
 class ParsedToolStep {
@@ -61,41 +52,26 @@ class ParsedToolStep {
 }
 
 ParsedReasoning parseReasoningContent(String content) {
-  String think = '';
-  String remaining = content;
+  final timeline = <ParsedReasoningEntry>[];
+  final thinkRegex = RegExp(r'<think>([\s\S]*?)<\/think>');
+  var remaining = content;
 
-  final thinkStart = content.indexOf('<think>');
-  final thinkEnd = content.indexOf('</think>');
-  if (thinkStart != -1 && thinkEnd != -1 && thinkEnd > thinkStart) {
-    think = content.substring(thinkStart + '<think>'.length, thinkEnd);
-    remaining = content.substring(thinkEnd + '</think>'.length);
+  final matches = thinkRegex.allMatches(content).toList(growable: false);
+  if (matches.isNotEmpty) {
+    for (final match in matches) {
+      final inner = match.group(1);
+      if (inner != null && inner.isNotEmpty) {
+        _parseTimeline(inner, timeline);
+      }
+    }
+    remaining = content.replaceAll(thinkRegex, '');
   }
 
-  final timeline = <ParsedReasoningEntry>[];
-  _parseTimeline(think, timeline);
+  if (remaining.trim().isNotEmpty) {
+    _parseTimeline(remaining, timeline);
+  }
 
-  // Backward compatibility: handle tool tags outside <think></think>
-  final toolRegex = RegExp(r'<tool-step\s+([\s\S]*?)\s*/>');
-  remaining = remaining.replaceAllMapped(toolRegex, (match) {
-    final attrs = _parseAttributes(match.group(1)!);
-    timeline.add(
-      ParsedReasoningEntry.tool(
-        ParsedToolStep(
-          name: _unescapeAttr(attrs['name'] ?? ''),
-          status: (attrs['status'] ?? 'pending').toLowerCase(),
-          input: _decodeAttrValue(attrs, 'input'),
-          output: _decodeAttrValue(attrs, 'output'),
-          error: _decodeAttrValue(attrs, 'error'),
-        ),
-      ),
-    );
-    return '';
-  }).trim();
-
-  return ParsedReasoning(
-    timeline: timeline,
-    answer: remaining.trim(),
-  );
+  return ParsedReasoning(timeline: timeline);
 }
 
 Map<String, String> _parseAttributes(String raw) {
@@ -125,37 +101,35 @@ String _unescapeAttr(String value) {
 }
 
 void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
-  if (source.trim().isEmpty) {
+  if (source.isEmpty) {
     return;
   }
 
-  final tagRegex = RegExp(r'<(think-block|tool-step)\s+([^/>]+?)\s*/>');
+  final tagRegex = RegExp(r'<(tool-step|reply|think-block)\s+([^/>]+?)\s*/>');
   var currentIndex = 0;
-  var thinkBuffer = StringBuffer();
+  var buffer = StringBuffer();
 
-  void flushThinkBuffer() {
-    final chunk = thinkBuffer.toString();
-    thinkBuffer = StringBuffer();
-    if (chunk.isEmpty) {
+  void flushBuffer() {
+    final chunk = buffer.toString();
+    buffer = StringBuffer();
+    final trimmed = chunk.trim();
+    if (trimmed.isEmpty) {
       return;
     }
-    _appendThinkIfNeeded(chunk, timeline);
+    timeline.add(ParsedReasoningEntry.reply(trimmed));
   }
 
   for (final match in tagRegex.allMatches(source)) {
     final preceding = source.substring(currentIndex, match.start);
     if (preceding.isNotEmpty) {
-      thinkBuffer.write(preceding);
+      buffer.write(preceding);
     }
 
     final tagName = match.group(1)!;
     final attrs = _parseAttributes(match.group(2)!);
 
-    if (tagName == 'think-block') {
-      final text = _unescapeAttr(attrs['text'] ?? '');
-      thinkBuffer.write(text);
-    } else {
-      flushThinkBuffer();
+    if (tagName == 'tool-step') {
+      flushBuffer();
       timeline.add(
         ParsedReasoningEntry.tool(
           ParsedToolStep(
@@ -167,6 +141,14 @@ void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
           ),
         ),
       );
+    } else {
+      final decoded = _decodeAttrValue(attrs, 'text');
+      final text = decoded ?? _unescapeAttr(attrs['text'] ?? '');
+      final trimmed = text.trim();
+      if (trimmed.isNotEmpty) {
+        flushBuffer();
+        timeline.add(ParsedReasoningEntry.reply(trimmed));
+      }
     }
 
     currentIndex = match.end;
@@ -174,39 +156,7 @@ void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
 
   final trailing = source.substring(currentIndex);
   if (trailing.isNotEmpty) {
-    thinkBuffer.write(trailing);
+    buffer.write(trailing);
   }
-  flushThinkBuffer();
-}
-
-void _appendThinkIfNeeded(String text, List<ParsedReasoningEntry> timeline) {
-  final trimmed = text.trim();
-  if (trimmed.isEmpty) {
-    return;
-  }
-  final sanitized = _sanitizeThinkText(trimmed);
-  if (sanitized.isEmpty) {
-    return;
-  }
-  timeline.add(ParsedReasoningEntry.think(sanitized));
-}
-
-String _sanitizeThinkText(String text) {
-  final lines = text
-      .split('\n')
-      .map((line) => line.trim())
-      .where((line) => line.isNotEmpty && !_shouldDropThinkLine(line))
-      .toList(growable: false);
-
-  return lines.join('\n').trim();
-}
-
-bool _shouldDropThinkLine(String line) {
-  final normalized = line.toLowerCase();
-  return normalized.contains('invoking:') ||
-      normalized.contains('responded:') ||
-      normalized.contains('observation:') ||
-      normalized.contains('tool call:') ||
-      normalized.contains('tool input:') ||
-      normalized.contains('tool output:');
+  flushBuffer();
 }

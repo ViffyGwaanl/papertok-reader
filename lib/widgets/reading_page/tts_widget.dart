@@ -251,8 +251,8 @@ class _TtsWidgetState extends State<TtsWidget> {
                           .commonMinutesFull((stopSeconds / 60).round()),
                     ),
                   ),
-                  Text(L10n.of(context)
-                      .ttsStopAfter((stopSeconds / 60).ceil())),
+                  Text(
+                      L10n.of(context).ttsStopAfter((stopSeconds / 60).ceil())),
                 ],
               ),
             );

@@ -131,7 +131,9 @@ class _MyAppState extends ConsumerState<MyApp>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       if (Prefs().webdavStatus) {
-        ref.read(syncProvider.notifier).syncData(SyncDirection.both, ref, trigger: SyncTrigger.auto);
+        ref
+            .read(syncProvider.notifier)
+            .syncData(SyncDirection.both, ref, trigger: SyncTrigger.auto);
       }
     } else if (state == AppLifecycleState.resumed) {
       if (Platform.isIOS) {

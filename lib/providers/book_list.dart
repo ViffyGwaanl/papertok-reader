@@ -35,19 +35,17 @@ class BookList extends _$BookList {
     String pinyina = '';
     String pinyinb = '';
     try {
-      pinyina =
-          PinyinHelper.getPinyin(a, format: PinyinFormat.WITHOUT_TONE);
+      pinyina = PinyinHelper.getPinyin(a, format: PinyinFormat.WITHOUT_TONE);
     } catch (e) {
       pinyina = a;
     }
     try {
-      pinyinb =
-          PinyinHelper.getPinyin(b, format: PinyinFormat.WITHOUT_TONE);
+      pinyinb = PinyinHelper.getPinyin(b, format: PinyinFormat.WITHOUT_TONE);
     } catch (e) {
       pinyinb = b;
     }
 
-      return pinyina.compareTo(pinyinb);
+    return pinyina.compareTo(pinyinb);
   }
 
   List<Book> sortBooks(List<Book> books) {

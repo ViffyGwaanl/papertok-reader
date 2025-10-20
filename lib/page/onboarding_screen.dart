@@ -394,13 +394,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 24),
-
               buildLanguageSelector(),
-
               const SizedBox(height: 12),
-
               Row(
                 children: [
                   Icon(
@@ -447,13 +443,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 24),
-
               buildThemeColorSelector(),
-
               const SizedBox(height: 24),
-
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -489,7 +481,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 16),
             ],
           ),
@@ -536,10 +527,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   tipText,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withAlpha(150),
+                    color:
+                        Theme.of(context).colorScheme.onSurface.withAlpha(150),
                   ),
                 ),
               ),

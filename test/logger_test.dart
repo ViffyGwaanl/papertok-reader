@@ -1,4 +1,4 @@
-void main(){
+void main() {
   // red
   // print('\x1B[31mred');
   // orange

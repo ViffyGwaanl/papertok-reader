@@ -116,7 +116,7 @@ class BookmarkItem extends StatelessWidget {
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         )),
-                    Text('${bookmark.percentage.toStringAsFixed(2)}%',
+                    Text('${(bookmark.percentage * 100).toStringAsFixed(2)}%',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         )),

@@ -9,15 +9,14 @@ import 'package:anx_reader/page/book_detail.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/providers/book_list.dart';
 import 'package:anx_reader/providers/sync_status.dart';
+import 'package:anx_reader/utils/share_file.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/icon_and_text.dart';
-import 'package:anx_reader/widgets/show_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:icons_plus/icons_plus.dart';
-import 'package:share_plus/share_plus.dart';
 
 class BookBottomSheet extends ConsumerWidget {
   const BookBottomSheet({
@@ -116,12 +115,10 @@ class BookBottomSheet extends ConsumerWidget {
     }
 
     Future<void> handleShare() async {
-      showLoading();
-      await SharePlus.instance.share(ShareParams(
+      await shareFile(
         title: '${book.title}.${book.filePath.split('.').last}',
-        files: [XFile(book.fileFullPath)],
-      ));
-      SmartDialog.dismiss();
+        filePath: book.fileFullPath,
+      );
     }
 
     final actions = [

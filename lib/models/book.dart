@@ -35,10 +35,10 @@ class Book {
   String get coverFullPath {
     return getBasePath(coverPath);
   }
+
   String get fileFullPath {
     return getBasePath(filePath);
   }
-
 
   Map<String, Object?> toMap() {
     return {

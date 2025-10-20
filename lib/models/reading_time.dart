@@ -1,4 +1,4 @@
-class ReadingTime{
+class ReadingTime {
   int? id;
   int bookId;
   String? date;
@@ -18,5 +18,4 @@ class ReadingTime{
       'reading_time': readingTime,
     };
   }
-
 }

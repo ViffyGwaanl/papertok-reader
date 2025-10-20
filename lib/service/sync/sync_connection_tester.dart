@@ -25,8 +25,8 @@ class SyncConnectionTester {
       await client.ping();
 
       AnxLog.info('${protocol.displayName} connection test successful');
-      return SyncTestResult.success(L10n.of(navigatorKey.currentContext!)
-          .connectionSuccessful);
+      return SyncTestResult.success(
+          L10n.of(navigatorKey.currentContext!).connectionSuccessful);
     } catch (e) {
       final errorMessage = '${getErrorMessage(e)}\n$e';
       AnxLog.severe(

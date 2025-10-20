@@ -93,6 +93,7 @@ class AiChat extends _$AiChat {
         messages,
         regenerate: isRegenerate,
         useAgent: true,
+        ref: widgetRef,
       )) {
         assistantResponse = chunk;
 

@@ -71,13 +71,15 @@ class ConfigItem {
 
 abstract class TranslateServiceProvider {
   Widget translate(String text, LangListEnum from, LangListEnum to);
-  
-  Stream<String> translateStream(String text, LangListEnum from, LangListEnum to);
-  
+
+  Stream<String> translateStream(
+      String text, LangListEnum from, LangListEnum to);
+
   /// Only translate text with retries, return the final result or throw an exception if all attempts fail.
-  Future<String> translateTextOnly(String text, LangListEnum from, LangListEnum to) async {
+  Future<String> translateTextOnly(
+      String text, LangListEnum from, LangListEnum to) async {
     const int maxRetries = 2;
-    
+
     for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         String? lastResult;
@@ -88,20 +90,22 @@ abstract class TranslateServiceProvider {
             return result; // 成功获取翻译结果
           }
         }
-        
-        throw Exception('Translation returned no valid result: ${lastResult ?? 'No result'}');
-        
+
+        throw Exception(
+            'Translation returned no valid result: ${lastResult ?? 'No result'}');
       } catch (e) {
         if (attempt < maxRetries) {
-          AnxLog.warning('Translation attempt ${attempt + 1} failed with exception: $e. Retrying...');
+          AnxLog.warning(
+              'Translation attempt ${attempt + 1} failed with exception: $e. Retrying...');
           await Future.delayed(Duration(milliseconds: 100 * (attempt + 1)));
           continue;
         } else {
-          throw Exception('Translation failed after ${maxRetries + 1} attempts: $e');
+          throw Exception(
+              'Translation failed after ${maxRetries + 1} attempts: $e');
         }
       }
     }
-    
+
     throw Exception('Translation failed after all retry attempts');
   }
 
@@ -179,10 +183,12 @@ void saveTranslateServiceConfig(
   return TranslateFactory.getProvider(service).saveConfig(config);
 }
 
-Future<String> translateTextOnly(String text, {TranslateService? service}) async {
+Future<String> translateTextOnly(String text,
+    {TranslateService? service}) async {
   service ??= Prefs().translateService;
   final from = Prefs().translateFrom;
   final to = Prefs().translateTo;
 
-  return await TranslateFactory.getProvider(service).translateTextOnly(text, from, to);
+  return await TranslateFactory.getProvider(service)
+      .translateTextOnly(text, from, to);
 }

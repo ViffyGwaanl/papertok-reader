@@ -24,6 +24,16 @@ class BookSearchResult {
 class BooksRepository {
   const BooksRepository();
 
+  Future<Map<int, Book>> fetchByIds(Iterable<int> ids) async {
+    final uniqueIds = ids.where((id) => id > 0).toSet().toList();
+    if (uniqueIds.isEmpty) {
+      return const <int, Book>{};
+    }
+
+    final books = await book_dao.selectBooksByIds(uniqueIds);
+    return {for (final book in books) book.id: book};
+  }
+
   Future<List<BookSearchResult>> searchBooks({
     String? keyword,
     int? groupId,

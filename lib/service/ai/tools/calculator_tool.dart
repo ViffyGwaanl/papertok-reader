@@ -12,13 +12,14 @@ class CalculatorTool
       : super(
           name: 'calculator',
           description:
-              'Use this to evaluate arithmetic expressions with numbers and + - * / ^.',
+              'Evaluate straightforward arithmetic expressions when you need an exact numeric answer. Supports numbers and the operators +, -, *, /, and ^. Returns the original expression along with the computed result as a string.',
           inputJsonSchema: const {
             'type': 'object',
             'properties': {
               'expression': {
                 'type': 'string',
-                'description': 'The arithmetic expression to evaluate.',
+                'description':
+                    'Required. Plain-text arithmetic expression to compute. No variables or functions are supported.',
               },
             },
             'required': ['expression'],

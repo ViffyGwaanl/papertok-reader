@@ -11,25 +11,29 @@ class BookshelfLookupTool
       : super(
           name: 'bookshelf_lookup',
           description:
-              'Search books on the local shelf by title or author. Optional filters: group_id, include_deleted, limit. Returns a list of matching books, and the meta information(title, author, progress, last reading time) of each book.',
+              'Find books that already exist on the user\'s local shelf based on title, author, or group membership. Use this before referencing a book in replies so you can cite real items from the library. Supports optional filters for bookshelf groups, deleted books, and result limits. Returns a structured list of matching books with identifiers, metadata, progress, and last-read timestamps.',
           inputJsonSchema: const {
             'type': 'object',
             'properties': {
               'query': {
                 'type': 'string',
-                'description': 'Keyword for title or author search. Optional when filtering by group only.',
+                'description':
+                    'Optional. Text to match against book titles or authors. Omit when you want to list everything in a group.',
               },
               'group_id': {
                 'type': 'integer',
-                'description': 'Optional group identifier to filter books.',
+                'description':
+                    'Optional. Restrict the search to a specific bookshelf group ID.',
               },
               'include_deleted': {
                 'type': 'boolean',
-                'description': 'Whether to include deleted books (default false).',
+                'description':
+                    'Optional. Set true when you also need books that are currently marked as deleted (defaults to false).',
               },
               'limit': {
                 'type': 'integer',
-                'description': 'Maximum number of results (1-50).',
+                'description':
+                    'Optional. Upper bound on the number of books to return (range 1-50; backend default used if omitted).',
               },
             },
           },

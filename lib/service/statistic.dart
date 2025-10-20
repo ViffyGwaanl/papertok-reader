@@ -1,7 +1,6 @@
 import 'package:anx_reader/models/reading_time.dart';
 import 'package:anx_reader/dao/reading_time.dart';
 
-
 class StatisticService {
   static StatisticService? _instance;
 
@@ -19,7 +18,7 @@ class StatisticService {
   List<ReadingTime> readingTimes = [];
 
   int get totalReadingTime {
-    return readingTimes.fold<int>(0, (previousValue, element) => previousValue + element.readingTime);
+    return readingTimes.fold<int>(
+        0, (previousValue, element) => previousValue + element.readingTime);
   }
-
 }

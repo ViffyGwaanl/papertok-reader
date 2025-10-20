@@ -16,8 +16,19 @@
 Anx Reader，一款为热爱阅读的你精心打造的电子书阅读器。集成多种 AI 能力，支持丰富的电子书格式，让阅读更智能、更专注。现代化界面设计，只为提供纯粹的阅读体验。
 
 
-![](./docs/images/9_zh.jpg)
+![](./docs/images/main.jpg)
 
+
+| 功能模块 | 详细说明 | 状态 |
+| --- | --- | --- |
+| 多种格式 | EPUB/MOBI/AZW3/FB2/TXT/PDF 已支持 | ✅ |
+| 全平台数据同步 | Android/iOS/macOS/Windows 多端覆盖<br>书籍文件、笔记、阅读进度一站式同步 | ✅ |
+| AI 助理 | 按阅读进度与风格整理书架<br>生成思维导图辅助理解<br>AI 词典与即时翻译<br>提供观点分析与内容总结 | ✅ |
+| 自定义阅读体验 | 调整字间距、段间距、行间距与边距<br>自定义字体大小、样式与字重<br>配置阅读配色、背景图片<br>设置对齐方式与自定义样式 | ✅ |
+| 记录笔记 | 多配色与样式选择<br>按时间、章节排序并可按颜色筛选<br>导出 TXT/Markdown/CSV 等多种格式<br>一键生成美观卡片便于分享 | ✅ |
+| 阅读统计 | 记录阅读时长<br>按年/月/周/日维度查看<br>阅读热力图呈现习惯变化 | ✅ |
+| 其他 | 听书功能：支持多模型、语速、音色与定时<br>书籍全文翻译：原文、译文对照阅读<br>节省空间：云端上传节省本地存储，随用随下<br>简繁转换：中文简繁体一键转换 | ✅ |
+| OPDS 书源 | 支持 OPDS 书源，支持自定义添加  |  🛠️  |
 
 <table border="1">
   <tr>
@@ -57,59 +68,12 @@ Anx Reader，一款为热爱阅读的你精心打造的电子书阅读器。集�
       <a href="https://github.com/Anxcye/anx-reader/releases/latest" target="_blank">
         <img src="https://github.com/user-attachments/assets/cf61e197-d756-4606-a8ad-fb591f79fdfc" alt="GitHub" height="45"/>
       </a>
+      <a href="https://f-droid.org/packages/com.anxcye.anx_reader" target="_blank">
+        <img src="./docs/get-it-on.png" alt="Get it on F-Droid" height="45" />
+      </a>
     </td>
   </tr>
 </table>
-
-
-📚 **丰富的格式支持**
-- 支持主流电子书格式：EPUB、MOBI、AZW3、FB2、TXT
-- 完美解析，确保最佳阅读体验
-
-☁️ **无缝同步体验**
-- 通过 WebDAV 跨设备同步阅读进度、笔记和书籍
-- 随时随地继续您的阅读之旅
-
-🤖 **智能 AI 助手**
-- 集成多款顶尖 AI 服务：OpenAI、DeepSeek、Claude、Gemini
-- 智能总结内容、回忆阅读位置，让阅读更有效率
-
-🎨 **个性化阅读体验**
-- 精心设计的主题配色，支持自定义
-- 滚动/分页模式自由切换
-- 支持导入自定义字体，打造专属阅读空间
-
-📊 **专业的阅读追踪**
-- 详尽的阅读数据统计
-- 支持周、月、年度阅读报告
-- 直观的阅读热力图，记录每一刻阅读时光
-
-📝 **强大的笔记系统**
-- 灵活的文本批注功能
-- 支持导出为 TXT、CSV、Markdown 格式
-- 轻松整理和分享您的读书心得
-
-🛠️ **实用工具集**
-- TTS 智能朗读，解放双眼
-- 全文搜索，快速定位内容
-- 即时划词翻译，提升阅读效率
-
-💻 **跨平台支持**
-- 完美支持 Android 与 Windows 系统
-- 统一的用户体验，无缝切换设备
-
-
-### TODO
-- [X] UI 适配 Tab 端
-- [X] 翻页动画
-- [X] TTS 语音朗读
-- [X] 阅读字体
-- [X] 翻译
-- [ ] 全文翻译
-- [ ] 支持更多文件类型（pdf）
-- [X] 支持 WebDAV 同步
-- [ ] 支持 Linux, MacOS
-
 
 
 ### 我遇到了问题，怎么办？
@@ -152,5 +116,3 @@ QQ群：1042905699
 - 运行 `flutter run` 启动应用。
 
 您可能遇到 Flutter 版本不兼容的问题，请参考 [Flutter 文档](https://flutter.dev/docs/get-started/install)。
-
-

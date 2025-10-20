@@ -29,7 +29,6 @@ class TocItem {
       subitems: json['subitems'] == null
           ? []
           : (json['subitems'] as List).map((i) => TocItem.fromJson(i)).toList(),
-
     );
   }
 }

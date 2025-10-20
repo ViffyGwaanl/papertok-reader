@@ -3,6 +3,9 @@ name: Setup Environment
 on:
   workflow_call:
     outputs:
+      tag:
+        description: "Git tag"
+        value: ${{ jobs.setup.outputs.tag }}
       version:
         description: "Version string"
         value: ${{ jobs.setup.outputs.version }}
@@ -18,6 +21,9 @@ on:
       flutter_version:
         description: "Flutter SDK version"
         value: ${{ jobs.setup.outputs.flutter_version }}
+      xcode_version:
+        description: "Xcode version"
+        value: ${{ jobs.setup.outputs.xcode_version }}
 
 jobs:
   setup:
@@ -29,6 +35,7 @@ jobs:
       is_beta: ${{ steps.get_version.outputs.is_beta }}
       release_notes: ${{ steps.extract_release_notes.outputs.release_notes }}
       flutter_version: ${{ steps.get_flutter_version.outputs.flutter_version }}
+      xcode_version: ${{ steps.get_xcode_version.outputs.xcode_version }}
     
     steps:
       - name: Checkout repository
@@ -37,8 +44,14 @@ jobs:
       - name: Read Flutter version
         id: get_flutter_version
         run: |
-          FLUTTER_VERSION=3.35.4
+          FLUTTER_VERSION=3.35.3
           echo "flutter_version=${FLUTTER_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Read Xcode version
+        id: get_xcode_version
+        run: |
+          XCODE_VERSION=26.0
+          echo "xcode_version=${XCODE_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Get version from pubspec.yaml and determine release type
         id: get_version

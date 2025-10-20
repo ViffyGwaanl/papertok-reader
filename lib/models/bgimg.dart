@@ -21,7 +21,9 @@ abstract class BgimgModel with _$BgimgModel {
 
   String get url => switch (type) {
         BgimgType.none => 'none',
-        BgimgType.assets => 'http://127.0.0.1:${Server().port}/bgimg/assets/$path',
-        BgimgType.localFile => 'http://127.0.0.1:${Server().port}/bgimg/local/$path',
+        BgimgType.assets =>
+          'http://127.0.0.1:${Server().port}/bgimg/assets/$path',
+        BgimgType.localFile =>
+          'http://127.0.0.1:${Server().port}/bgimg/local/$path',
       };
 }

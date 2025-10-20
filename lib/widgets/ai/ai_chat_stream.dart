@@ -10,7 +10,9 @@ import 'package:anx_reader/service/ai/ai_history.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
-import 'package:anx_reader/widgets/ai/ai_reasoning_panel.dart';
+import 'package:anx_reader/widgets/ai/tool_step_tile.dart';
+import 'package:anx_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
+import 'package:anx_reader/widgets/ai/tool_tiles/organize_bookshelf_step_tile.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:flutter/material.dart';
@@ -20,12 +22,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:langchain_core/chat_models.dart';
 
+import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
+
 class AiChatStream extends ConsumerStatefulWidget {
-  const AiChatStream(
-      {super.key, this.initialMessage, this.sendImmediate = false});
+  const AiChatStream({
+    super.key,
+    this.initialMessage,
+    this.sendImmediate = false,
+    this.quickPromptChips = const [],
+    this.trailing,
+  });
 
   final String? initialMessage;
   final bool sendImmediate;
+  final List<AiQuickPromptChip> quickPromptChips;
+  final List<Widget>? trailing;
 
   @override
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
@@ -38,8 +49,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   StreamController<List<ChatMessage>>? _messageController;
   StreamSubscription<List<ChatMessage>>? _messageSubscription;
   final ScrollController _scrollController = ScrollController();
-  final Map<int, bool> _expandedState = <int, bool>{};
-  final Set<int> _userControlled = <int>{};
   bool _isStreaming = false;
   late List<AiServiceOption> _serviceOptions;
   late String _selectedServiceId;
@@ -85,6 +94,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       L10n.of(navigatorKey.currentContext!).quickPrompt8,
       L10n.of(navigatorKey.currentContext!).quickPrompt9,
       L10n.of(navigatorKey.currentContext!).quickPrompt10,
+      L10n.of(navigatorKey.currentContext!).quickPrompt11,
+      L10n.of(navigatorKey.currentContext!).quickPrompt12,
     ];
     _serviceOptions = buildDefaultAiServices();
     _selectedServiceId = Prefs().selectedAiService;
@@ -312,8 +323,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     setState(() {
       _messageStream = null;
-      _expandedState.clear();
-      _userControlled.clear();
+      // reset state when switching service
     });
 
     Navigator.of(context).pop();
@@ -331,8 +341,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       ref.read(aiChatProvider.notifier).clear();
       setState(() {
         _messageStream = null;
-        _expandedState.clear();
-        _userControlled.clear();
+        // reset state when conversation changes
       });
     }
   }
@@ -342,8 +351,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     ref.read(aiChatProvider.notifier).clear();
     setState(() {
       _messageStream = null;
-      _expandedState.clear();
-      _userControlled.clear();
     });
   }
 
@@ -446,7 +453,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   void _copyMessageContent(String content) {
-    Clipboard.setData(ClipboardData(text: content));
+    final parsed = parseReasoningContent(content);
+    final clipboardText = _buildCopyableText(parsed, content);
+    Clipboard.setData(ClipboardData(text: clipboardText));
     AnxToast.show(L10n.of(context).notesPageCopied);
   }
 
@@ -598,33 +607,73 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     Widget buildEmptyState() {
       final theme = Theme.of(context);
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              L10n.of(context).tryAQuickPrompt,
-              style: theme.textTheme.titleMedium,
+
+      Widget buildQuickChipColumn() {
+        if (widget.quickPromptChips.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final chips = <Widget>[];
+        for (var i = 0; i < widget.quickPromptChips.length; i++) {
+          final chip = widget.quickPromptChips[i];
+          chips.add(
+            Padding(
+              padding: EdgeInsets.only(top: i == 0 ? 0 : 8.0),
+              child: ActionChip(
+                avatar: Icon(chip.icon, size: 18),
+                label: Text(chip.label),
+                onPressed: () {
+                  inputController.text = chip.prompt;
+                  _sendMessage();
+                },
+              ),
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: _suggestedPrompts
-                  .map(
-                    (prompt) => ActionChip(
-                      label: Text(prompt),
-                      onPressed: () {
-                        inputController.text = prompt;
-                        _sendMessage();
-                      },
-                    ),
-                  )
-                  .toList(growable: false),
+          );
+        }
+
+        return Positioned(
+          right: 16,
+          bottom: 16,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: chips,
+          ),
+        );
+      }
+
+      return Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  L10n.of(context).tryAQuickPrompt,
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _suggestedPrompts
+                      .map(
+                        (prompt) => ActionChip(
+                          label: Text(prompt),
+                          onPressed: () {
+                            inputController.text = prompt;
+                            _sendMessage();
+                          },
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          buildQuickChipColumn(),
+        ],
       );
     }
 
@@ -643,6 +692,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             icon: const Icon(Icons.edit_document),
             onPressed: _clearMessage,
           ),
+          if (widget.trailing != null) ...widget.trailing!,
         ],
       ),
       drawer: Drawer(
@@ -710,12 +760,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final isLongMessage = content.length > 300;
     final lastAssistantMessage = _getLastAssistantMessage();
 
-    if (!isUser && (parsed.hasThink || parsed.hasToolSteps)) {
-      _syncMessageExpansion(index, parsed, isStreaming);
-    }
-
-    final expanded = _expandedState[index] ?? (!parsed.hasAnswer);
-
     return Padding(
       padding: EdgeInsets.only(
         bottom: 8.0,
@@ -747,11 +791,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 children: [
                   isUser
                       ? _buildCollapsibleText(content, isLongMessage)
-                      : _buildAssistantBubble(
-                          parsed,
-                          expanded,
-                          () => _toggleMessageExpansion(index, !expanded),
-                        ),
+                      : _buildAssistantTimeline(parsed, isStreaming),
                   if (!isUser)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -777,60 +817,101 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
-  void _toggleMessageExpansion(int key, bool value) {
-    setState(() {
-      _expandedState[key] = value;
-      _userControlled.add(key);
-    });
+  String _buildCopyableText(ParsedReasoning parsed, String fallback) {
+    final buffer = StringBuffer();
+    var hasWrittenSection = false;
+
+    void startSection() {
+      if (hasWrittenSection) {
+        buffer.writeln();
+      } else {
+        hasWrittenSection = true;
+      }
+    }
+
+    // void appendField(String label, String? value) {
+    //   final trimmed = value?.trim();
+    //   if (trimmed != null && trimmed.isNotEmpty) {
+    //     buffer.writeln('$label: $trimmed');
+    //   }
+    // }
+
+    for (final entry in parsed.timeline) {
+      switch (entry.type) {
+        case ParsedReasoningEntryType.reply:
+          final text = entry.text?.trim();
+          if (text != null && text.isNotEmpty) {
+            startSection();
+            buffer.writeln(text);
+          }
+          break;
+        case ParsedReasoningEntryType.tool:
+          // final step = entry.toolStep;
+          // if (step != null) {
+          //   startSection();
+          //   buffer.writeln('[${step.name} (${step.status})]');
+          //   appendField('Input', step.input);
+          //   appendField('Output', step.output);
+          //   appendField('Error', step.error);
+          // }
+          break;
+      }
+    }
+
+    final copyText = buffer.toString().trimRight();
+    if (copyText.isEmpty) {
+      return fallback;
+    }
+    return copyText;
   }
 
-  void _syncMessageExpansion(
-    int key,
-    ParsedReasoning parsed,
-    bool isStreaming,
-  ) {
-    if (_userControlled.contains(key)) return;
-    final shouldExpand = !(parsed.hasAnswer && !isStreaming);
-    final current = _expandedState[key];
-    if (current == null) {
-      _expandedState[key] = shouldExpand;
-      return;
+  Widget _buildAssistantTimeline(ParsedReasoning parsed, bool isStreaming) {
+    if (parsed.timeline.isEmpty) {
+      return isStreaming
+          ? Skeletonizer.zone(child: Bone.multiText())
+          : const SizedBox.shrink();
     }
-    if (current != shouldExpand) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _userControlled.contains(key)) return;
-        setState(() {
-          _expandedState[key] = shouldExpand;
-        });
-      });
-    }
-  }
 
-  Widget _buildAssistantBubble(
-    ParsedReasoning parsed,
-    bool expanded,
-    VoidCallback onToggle,
-  ) {
+    final widgets = <Widget>[];
+    for (var i = 0; i < parsed.timeline.length; i++) {
+      final entry = parsed.timeline[i];
+      switch (entry.type) {
+        case ParsedReasoningEntryType.reply:
+          if (entry.text != null && entry.text!.trim().isNotEmpty) {
+            widgets.add(
+              MarkdownBody(
+                data: entry.text!,
+                selectable: true,
+              ),
+            );
+          }
+          break;
+        case ParsedReasoningEntryType.tool:
+          if (entry.toolStep != null) {
+            widgets.add(_buildToolTile(entry.toolStep!));
+          }
+          break;
+      }
+
+      if (i != parsed.timeline.length - 1) {
+        widgets.add(const SizedBox(height: 8));
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (parsed.timeline.isNotEmpty)
-          ReasoningPanel(
-            timeline: parsed.timeline,
-            expanded: expanded,
-            streaming: !parsed.hasAnswer,
-            onToggle: onToggle,
-            margin: const EdgeInsets.only(bottom: 8.0),
-          ),
-        if (parsed.hasAnswer)
-          MarkdownBody(
-            data: parsed.answer,
-            selectable: true,
-          )
-        else if (!parsed.hasToolSteps)
-          Skeletonizer.zone(child: Bone.multiText()),
-      ],
+      children: widgets,
     );
+  }
+
+  Widget _buildToolTile(ParsedToolStep step) {
+    if (step.name == 'bookshelf_organize') {
+      return OrganizeBookshelfStepTile(step: step);
+    }
+    if (step.name == 'mindmap_draw') {
+      return MindmapStepTile(step: step);
+    }
+    return ToolStepTile(step: step);
   }
 
   Widget _buildCollapsibleText(String text, bool isLongMessage) {
@@ -887,9 +968,9 @@ class _CollapsibleTextState extends State<_CollapsibleText> {
                       colors: [
                         Theme.of(context)
                             .colorScheme
-                            .secondaryContainer
+                            .surfaceContainer
                             .withValues(alpha: 0),
-                        Theme.of(context).colorScheme.secondaryContainer,
+                        Theme.of(context).colorScheme.surfaceContainer,
                       ],
                     ),
                   ),

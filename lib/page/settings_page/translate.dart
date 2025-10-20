@@ -41,8 +41,8 @@ class _TranslateSettingState extends State<TranslateSetting> {
             CustomSettingsTile(
               child: FilledContainer(
                 margin: const EdgeInsets.all(2.0),
-                  color: Theme.of(context).cardColor,
-                  radius: 28,
+                color: Theme.of(context).cardColor,
+                radius: 28,
                 child: Padding(
                   padding: EdgeInsets.all(8.0),
                   child: Column(
@@ -84,8 +84,8 @@ class _TranslateSettingState extends State<TranslateSetting> {
             CustomSettingsTile(
               child: FilledContainer(
                 margin: const EdgeInsets.all(2.0),
-                  color: Theme.of(context).cardColor,
-                  radius: 28,
+                color: Theme.of(context).cardColor,
+                radius: 28,
                 child: Padding(
                   padding: EdgeInsets.all(8.0),
                   child: Column(
@@ -460,7 +460,7 @@ class _TranslateSettingItemState extends State<TranslateSettingItem> {
             helperText: item.description,
             border: const OutlineInputBorder(),
           ),
-          value: currentValue,
+          initialValue: currentValue,
           items: item.options!.map((option) {
             return DropdownMenuItem<String>(
               value: option['value'].toString(),

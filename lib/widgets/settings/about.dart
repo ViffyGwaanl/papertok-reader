@@ -32,9 +32,7 @@ class _AboutState extends State<About> {
     initData();
   }
 
-  Future<void> initData() async {
-
-  }
+  Future<void> initData() async {}
 
   @override
   Widget build(BuildContext context) {
@@ -50,9 +48,9 @@ class _AboutState extends State<About> {
 }
 
 Future<void> openAboutDialog() async {
-    final pubspecContent = await rootBundle.loadString('pubspec.yaml');
-    final pubspec = Pubspec.parse(pubspecContent);
-    final version = pubspec.version.toString();
+  final pubspecContent = await rootBundle.loadString('pubspec.yaml');
+  final pubspec = Pubspec.parse(pubspecContent);
+  final version = pubspec.version.toString();
 
   showDialog(
     context: navigatorKey.currentContext!,

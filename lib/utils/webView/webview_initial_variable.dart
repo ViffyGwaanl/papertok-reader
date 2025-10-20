@@ -27,7 +27,6 @@ Future<void> webviewInitialVariable(
   textColor = convertDartColorToJs(textColor);
   backgroundColor = convertDartColorToJs(backgroundColor);
 
-
   String replaceSingleQuote(String value) {
     return value.replaceAll("'", "\\'");
   }

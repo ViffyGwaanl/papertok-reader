@@ -90,8 +90,7 @@ class _BookTocState extends ConsumerState<BookToc> {
       }
       Scrollable.ensureVisible(
         context,
-        duration:
-            animated ? const Duration(milliseconds: 250) : Duration.zero,
+        duration: animated ? const Duration(milliseconds: 250) : Duration.zero,
         alignment: 0.0,
         curve: Curves.easeInOut,
       );
@@ -109,6 +108,7 @@ class _BookTocState extends ConsumerState<BookToc> {
     }
     _ensureItemVisible(path.last, animated: animated);
   }
+
   @override
   Widget build(BuildContext context) {
     tocItems = ref.watch(bookTocProvider);
@@ -414,8 +414,8 @@ class TocItemWidgetState extends State<TocItemWidget> {
                             ),
                             if (isEnd)
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 10.0),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10.0),
                                 child: Row(
                                   children: [
                                     Icon(Icons.keyboard_arrow_right_rounded),

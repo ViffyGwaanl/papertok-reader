@@ -9,6 +9,9 @@ on:
       flutter_version:
         required: true
         type: string
+      xcode_version:
+        required: true
+        type: string
 
 jobs:
   build-macos:
@@ -36,7 +39,7 @@ jobs:
       - name: Build for macOS
         shell: bash
         run: |
-          sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
+          sudo xcode-select -switch /Applications/Xcode_${{ inputs.xcode_version }}.app/Contents/Developer
           flutter gen-l10n
           dart run build_runner build --delete-conflicting-outputs
           chmod +x ./scripts/macos_nosign.sh

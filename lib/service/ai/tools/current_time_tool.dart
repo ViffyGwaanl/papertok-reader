@@ -10,14 +10,14 @@ class CurrentTimeTool
       : super(
           name: 'current_time',
           description:
-              'Return the current system time. Optional parameter include_timezone (default true).',
+              'Retrieve the device\'s current time so you can reference timestamps in replies. Use when relative phrases need precise values. Returns ISO-8601 local and UTC strings, a millisecond timestamp, and optional timezone metadata.',
           inputJsonSchema: const {
             'type': 'object',
             'properties': {
               'include_timezone': {
                 'type': 'boolean',
                 'description':
-                    'Whether to include timezone offset information (default true).',
+                    'Optional. Set false to omit timezone name/offset from the response (defaults to true).',
               },
             },
           },

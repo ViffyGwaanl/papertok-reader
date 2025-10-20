@@ -1,4 +1,4 @@
-class BookNote{
+class BookNote {
   int? id;
   int bookId;
   String content;
@@ -51,5 +51,4 @@ class BookNote{
       'color': '#$color',
     };
   }
-
 }

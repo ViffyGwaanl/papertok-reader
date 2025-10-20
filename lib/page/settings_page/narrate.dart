@@ -364,8 +364,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      L10n.of(context)
-                          .settingsNarrateVoiceModelCurrentModel,
+                      L10n.of(context).settingsNarrateVoiceModelCurrentModel,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -421,8 +420,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
-                      L10n.of(context)
-                          .settingsNarrateVoiceModelClickToView,
+                      L10n.of(context).settingsNarrateVoiceModelClickToView,
                       style: TextStyle(
                         fontSize: 14,
                         color: Theme.of(context).colorScheme.primary,

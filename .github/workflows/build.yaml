@@ -32,6 +32,7 @@ jobs:
     with:
       version: ${{ needs.setup.outputs.version }}
       flutter_version: ${{ needs.setup.outputs.flutter_version }}
+      xcode_version: ${{ needs.setup.outputs.xcode_version }}
 
   build-windows:
     needs: setup
@@ -49,6 +50,7 @@ jobs:
     with:
       version: ${{ needs.setup.outputs.version }}
       flutter_version: ${{ needs.setup.outputs.flutter_version }}
+      xcode_version: ${{ needs.setup.outputs.xcode_version }}
 
   build-appstore:
     needs: setup
@@ -56,6 +58,7 @@ jobs:
     with:
       version: ${{ needs.setup.outputs.version }}
       flutter_version: ${{ needs.setup.outputs.flutter_version }}
+      xcode_version: ${{ needs.setup.outputs.xcode_version }}
     secrets:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}

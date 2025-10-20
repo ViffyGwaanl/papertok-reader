@@ -1,8 +1,7 @@
-
 class Section {
   final String title;
   final String content;
-  final int level; 
+  final int level;
 
   Section(this.title, this.content, this.level);
 

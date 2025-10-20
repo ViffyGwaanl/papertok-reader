@@ -55,7 +55,8 @@ class Server {
 
   String setTempFile(File file) {
     _tempFile = file;
-    _tempFileName = '${DateTime.now().millisecondsSinceEpoch}.${file.path.split('.').last}';
+    _tempFileName =
+        '${DateTime.now().millisecondsSinceEpoch}.${file.path.split('.').last}';
     return _tempFileName!;
   }
 
