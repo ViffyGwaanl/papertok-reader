@@ -7,6 +7,7 @@
 - Fix: Fix the issue of abnormal indentation
 - Fix: The issue of being unable to adjust paragraph spacing in some files
 - Fix: Optimize the timing of context menu popup and close
+- Fix: The issue where the table of contents could not locate the current chapter
 - UI: Optimize part of the interface design
 
 - Feat: 目录界面以抽屉形式从侧面显示
@@ -14,6 +15,7 @@
 - Fix: 修复缩进异常的问题
 - Fix: 部分文件无法调节段间距的问题
 - Fix: 优化上下文菜单弹出和关闭的时机
+- Fix: 目录无法定位到当前章节的问题
 - UI: 优化部分界面设计
 
 
