@@ -75,7 +75,7 @@ Anx Reader, a thoughtfully crafted e-book reader for book lovers. Featuring powe
         <img src="https://github.com/user-attachments/assets/cf61e197-d756-4606-a8ad-fb591f79fdfc" alt="GitHub" height="45"/>
       </a>
       <a href="https://f-droid.org/packages/com.anxcye.anx_reader" target="_blank">
-        <img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="65" style="display:inline-block; margin:-10px;" />
+        <img src="./docs/get-it-on.png" alt="Get it on F-Droid" height="45" />
       </a>
     </td>
   </tr>
