@@ -325,15 +325,15 @@ class _BookTocState extends ConsumerState<BookToc> {
                 child: ListView.builder(
                   itemCount: searchResults.length,
                   itemBuilder: (context, index) {
-                  return searchResultWidget(
-                    searchResult: searchResults[index],
-                    hideAppBarAndBottomBar: widget.hideAppBarAndBottomBar,
-                    epubPlayerKey: widget.epubPlayerKey,
-                    closeDrawer: widget.closeDrawer,
-                  );
-                },
-              ),
-            );
+                    return searchResultWidget(
+                      searchResult: searchResults[index],
+                      hideAppBarAndBottomBar: widget.hideAppBarAndBottomBar,
+                      epubPlayerKey: widget.epubPlayerKey,
+                      closeDrawer: widget.closeDrawer,
+                    );
+                  },
+                ),
+              );
             }),
       ],
     ));
