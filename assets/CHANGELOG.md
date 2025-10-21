@@ -9,6 +9,7 @@
 - Fix: Optimize the timing of context menu popup and close
 - Fix: The issue where the table of contents could not locate the current chapter
 - Fix: Optimize TTS function to improve performance in unstable network environments (experimental)
+- Fix: Optimize image size display
 - UI: Optimize part of the interface design
 
 - Feat: 目录界面以抽屉形式从侧面显示
@@ -18,6 +19,7 @@
 - Fix: 优化上下文菜单弹出和关闭的时机
 - Fix: 目录无法定位到当前章节的问题
 - Fix: 优化朗读功能，提升不稳定网络环境下的表现（实验）
+- Fix: 优化图片大小的显示效果
 - UI: 优化部分界面设计
 
 
