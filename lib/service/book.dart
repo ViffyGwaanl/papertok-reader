@@ -402,20 +402,24 @@ Future<void> pushToReadingPage(
           cfi: cfi,
         ),
       );
+
+  final currentReading = ref.read(currentReadingProvider.notifier);
+  final chapterContentBridge = ref.read(chapterContentBridgeProvider.notifier);
+
   await Navigator.push(
-      navigatorKey.currentContext!,
-      CupertinoPageRoute(
-        builder: (c) => ReadingPage(
-          key: readingPageKey,
-          book: book,
-          cfi: cfi,
-          initialThemes: initialThemes,
-        ),
-      )).then((_) async {
-    AnxLog.info('ReadingPage: poped ${book.title}');
-    await Future.delayed(const Duration(seconds: 1));
-    ref.read(currentReadingProvider.notifier).finish();
-    ref.read(chapterContentBridgeProvider.notifier).state = null;
+    navigatorKey.currentContext!,
+    CupertinoPageRoute(
+      builder: (c) => ReadingPage(
+        key: readingPageKey,
+        book: book,
+        cfi: cfi,
+        initialThemes: initialThemes,
+      ),
+    ),
+  ).then((_) {
+    AnxLog.info('ReadingPage: poped: ${book.title}');
+    currentReading.finish();
+    chapterContentBridge.state = null;
   });
 }
 
