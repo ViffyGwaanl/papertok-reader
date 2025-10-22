@@ -447,6 +447,11 @@ const getCSS = ({ fontSize,
         padding: 0 !important;
     }
 
+    body > div:only-of-type,
+    body > div:only-of-type > div:only-of-type {
+        overflow: visible !important;
+    }
+
     img, svg {
         height: auto !important;
         width: auto !important;
