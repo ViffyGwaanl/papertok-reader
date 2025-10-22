@@ -77,7 +77,9 @@ class BookItem extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Expanded(child: bookCover(context, book)),
+                    Expanded(
+                      child: BookCover(book: book),
+                    ),
                   ],
                 ),
               ),
