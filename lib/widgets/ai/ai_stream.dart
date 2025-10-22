@@ -2,9 +2,9 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/service/ai/prompt_generate.dart';
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
@@ -127,7 +127,7 @@ class AiStreamState extends ConsumerState<AiStream> {
             widgets.add(
               Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
-                child: MarkdownBody(data: entry.text!, selectable: true),
+                child: StyledMarkdown(data: entry.text!, selectable: true),
               ),
             );
           }

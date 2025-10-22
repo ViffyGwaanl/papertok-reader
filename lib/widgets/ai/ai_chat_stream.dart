@@ -15,9 +15,9 @@ import 'package:anx_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/organize_bookshelf_step_tile.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
+import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:langchain_core/chat_models.dart';
@@ -879,7 +879,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         case ParsedReasoningEntryType.reply:
           if (entry.text != null && entry.text!.trim().isNotEmpty) {
             widgets.add(
-              MarkdownBody(
+              StyledMarkdown(
                 data: entry.text!,
                 selectable: true,
               ),
