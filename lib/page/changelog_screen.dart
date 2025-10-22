@@ -1,9 +1,9 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/utils/get_current_language_code.dart';
+import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:anx_reader/utils/log/common.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 /// Changelog screen for showing app updates
 /// Displays version history and new features
@@ -180,33 +180,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
-                    child: MarkdownBody(
-                      data: _changelogContent,
-                      styleSheet:
-                          MarkdownStyleSheet.fromTheme(Theme.of(context))
-                              .copyWith(
-                        h1: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        h2: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                          height: 1.5,
-                        ),
-                        p: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurface,
-                          height: 1.5,
-                        ),
-                        listBullet: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
+                    child: StyledMarkdown(data: _changelogContent),
                   ),
                 ),
                 Container(
