@@ -218,11 +218,27 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused) {
-      epubPlayerKey.currentState!.saveReadingProgress();
-      _readTimeWatch.stop();
-    } else if (state == AppLifecycleState.resumed) {
-      _readTimeWatch.start();
+    switch (state) {
+      case AppLifecycleState.resumed:
+        if (!_readTimeWatch.isRunning) {
+          _readTimeWatch.start();
+        }
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        if (_readTimeWatch.isRunning) {
+          _readTimeWatch.stop();
+        }
+        if (state == AppLifecycleState.paused ||
+            state == AppLifecycleState.hidden ||
+            state == AppLifecycleState.detached) {
+          epubPlayerKey.currentState?.saveReadingProgress();
+          insertReadingTime(ReadingTime(
+              bookId: _book.id, readingTime: _readTimeWatch.elapsed.inSeconds));
+        }
+        break;
     }
   }
 
