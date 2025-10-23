@@ -139,7 +139,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: double.infinity,
