@@ -69,9 +69,12 @@ class _BookDetailState extends ConsumerState<BookDetail> {
           width: MediaQuery.of(context).size.width,
         ),
       );
-      return ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-        child: bg,
+      return Transform.scale(
+        scale: 1.1,
+        child: ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+          child: bg,
+        ),
       );
     }
 

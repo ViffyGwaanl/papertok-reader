@@ -10,12 +10,14 @@ class BookCover extends StatefulWidget {
     this.height,
     this.width,
     this.radius,
+    this.showBorder = true,
   });
 
   final Book book;
   final double? height;
   final double? width;
   final double? radius;
+  final bool showBorder;
 
   @override
   State<BookCover> createState() => _BookCoverState();
@@ -84,10 +86,12 @@ class _BookCoverState extends State<BookCover> {
 
     final RoundedSuperellipseBorder borderShape = RoundedSuperellipseBorder(
       borderRadius: borderRadius,
-      side: const BorderSide(
-        width: 0.3,
-        color: Colors.grey,
-      ),
+      side: widget.showBorder
+          ? BorderSide(
+              width: 0.3,
+              color: Theme.of(context).dividerColor,
+            )
+          : BorderSide.none,
     );
 
     return RepaintBoundary(
