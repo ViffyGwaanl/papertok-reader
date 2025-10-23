@@ -43,7 +43,6 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -108,8 +107,6 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
   Stream<List<SearchResultModel>> get searchResultStream =>
       _searchResultController.stream;
-
-  FocusNode focusNode = FocusNode();
 
   // to know anytime if we are on top of navigation stack
   bool get _isTopOfNavigationStack =>
@@ -779,35 +776,6 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     contextMenuEntry = null;
   }
 
-  void _handleKeyAndMouseEvents(KeyEvent event) {
-    final nextPageEvent = [
-      LogicalKeyboardKey.arrowRight,
-      LogicalKeyboardKey.arrowDown,
-      LogicalKeyboardKey.pageDown,
-      LogicalKeyboardKey.space,
-    ];
-
-    final prevPageEvent = [
-      LogicalKeyboardKey.arrowLeft,
-      LogicalKeyboardKey.arrowUp,
-      LogicalKeyboardKey.pageUp,
-    ];
-
-    final appBarEvent = [
-      LogicalKeyboardKey.enter,
-    ];
-
-    if (event is KeyDownEvent) {
-      if (nextPageEvent.contains(event.logicalKey)) {
-        nextPage();
-      } else if (prevPageEvent.contains(event.logicalKey)) {
-        prevPage();
-      } else if (appBarEvent.contains(event.logicalKey)) {
-        widget.showOrHideAppBarAndBottomBar(true);
-      }
-    }
-  }
-
   Future<void> _handlePointerEvents(PointerEvent event) async {
     if (await isFootNoteOpen() || Prefs().pageTurnStyle == PageTurn.scroll) {
       return;
@@ -824,7 +792,6 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   @override
   void initState() {
     book = widget.book;
-    focusNode.requestFocus();
     getThemeColor();
 
     contextMenu = ContextMenu(
@@ -1047,60 +1014,56 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     String url = 'http://127.0.0.1:${Server().port}/book/$uri';
     String initialCfi = widget.cfi ?? widget.book.lastReadPosition;
 
-    return KeyboardListener(
-      focusNode: focusNode,
-      onKeyEvent: _handleKeyAndMouseEvents,
-      child: Listener(
-        onPointerSignal: (event) {
-          _handlePointerEvents(event);
-        },
-        child: Scaffold(
-          resizeToAvoidBottomInset: false,
-          body: Stack(
-            children: [
-              buildWebviewWithIOSWorkaround(context, url, initialCfi),
-              readingInfoWidget(),
-              if (showHistory)
-                Positioned(
-                  bottom: 30,
-                  left: 0,
-                  child: Container(
-                    width: MediaQuery.of(context).size.width,
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        if (canGoBack)
-                          IconButton(
-                            onPressed: () {
-                              backHistory();
-                            },
-                            icon: const Icon(Icons.arrow_back_ios),
-                          ),
-                        if (canGoForward)
-                          IconButton(
-                            onPressed: () {
-                              forwardHistory();
-                            },
-                            icon: const Icon(Icons.arrow_forward_ios),
-                          ),
-                      ],
-                    ),
+    return Listener(
+      onPointerSignal: (event) {
+        _handlePointerEvents(event);
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: Stack(
+          children: [
+            buildWebviewWithIOSWorkaround(context, url, initialCfi),
+            readingInfoWidget(),
+            if (showHistory)
+              Positioned(
+                bottom: 30,
+                left: 0,
+                child: Container(
+                  width: MediaQuery.of(context).size.width,
+                  padding: const EdgeInsets.all(10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (canGoBack)
+                        IconButton(
+                          onPressed: () {
+                            backHistory();
+                          },
+                          icon: const Icon(Icons.arrow_back_ios),
+                        ),
+                      if (canGoForward)
+                        IconButton(
+                          onPressed: () {
+                            forwardHistory();
+                          },
+                          icon: const Icon(Icons.arrow_forward_ios),
+                        ),
+                    ],
                   ),
                 ),
-              if (Prefs().openBookAnimation)
-                SizedBox.expand(
-                  child: Prefs().openBookAnimation
-                      ? IgnorePointer(
-                          ignoring: true,
-                          child: FadeTransition(
-                              opacity: _animation!,
-                              child: BookCover(book: widget.book)),
-                        )
-                      : BookCover(book: widget.book),
-                ),
-            ],
-          ),
+              ),
+            if (Prefs().openBookAnimation)
+              SizedBox.expand(
+                child: Prefs().openBookAnimation
+                    ? IgnorePointer(
+                        ignoring: true,
+                        child: FadeTransition(
+                            opacity: _animation!,
+                            child: BookCover(book: widget.book)),
+                      )
+                    : BookCover(book: widget.book),
+              ),
+          ],
         ),
       ),
     );

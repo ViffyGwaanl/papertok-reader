@@ -29,10 +29,13 @@ import 'package:anx_reader/widgets/reading_page/toc_widget.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart'
+    show debugPrint, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
+import 'package:volume_key_board/volume_key_board.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class ReadingPage extends ConsumerStatefulWidget {
@@ -72,10 +75,13 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   bool _isResizingAiChat = false;
   bool bookmarkExists = false;
 
-  late FocusOnKeyEventCallback _handleKeyEvent;
+  late final FocusNode _readerFocusNode;
+  late final VolumeKeyBoard _volumeKeyBoard;
+  bool _volumeKeyListenerAttached = false;
 
   @override
   void initState() {
+    _readerFocusNode = FocusNode(debugLabel: 'reading_page_focus');
     if (widget.book.isDeleted) {
       Navigator.pop(context);
       AnxToast.show(L10n.of(context).bookDeleted);
@@ -90,8 +96,13 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     setAwakeTimer(Prefs().awakeTime);
 
     _book = widget.book;
-
-    _addKeyboardListener();
+    _volumeKeyBoard = VolumeKeyBoard.instance;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _requestReaderFocus();
+        _attachVolumeKeyListener();
+      }
+    });
     // delay 1000ms to prevent hero animation
     Future.delayed(const Duration(milliseconds: 2000), () {
       if (mounted) {
@@ -114,33 +125,94 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     insertReadingTime(ReadingTime(
         bookId: _book.id, readingTime: _readTimeWatch.elapsed.inSeconds));
     audioHandler.stop();
-    _removeKeyboardListener();
+    if (_volumeKeyListenerAttached) {
+      unawaited(_volumeKeyBoard.removeListener());
+    }
+    _readerFocusNode.dispose();
     super.dispose();
   }
 
-  void _addKeyboardListener() {
-    _handleKeyEvent = (FocusNode node, KeyEvent event) {
-      if (!Prefs().volumeKeyTurnPage) {
-        return KeyEventResult.ignored;
-      }
-
-      if (event is KeyDownEvent) {
-        if (event.physicalKey == PhysicalKeyboardKey.audioVolumeUp) {
-          epubPlayerKey.currentState?.prevPage();
-          return KeyEventResult.handled;
-        } else if (event.physicalKey == PhysicalKeyboardKey.audioVolumeDown) {
-          epubPlayerKey.currentState?.nextPage();
-          return KeyEventResult.handled;
-        }
-      }
-      return KeyEventResult.ignored;
-    };
+  void _requestReaderFocus() {
+    if (bottomBarOffstage && !_readerFocusNode.hasFocus) {
+      _readerFocusNode.requestFocus();
+    }
   }
 
-  void _removeKeyboardListener() {
-    _handleKeyEvent = (FocusNode node, KeyEvent event) {
+  void _releaseReaderFocus() {
+    if (_readerFocusNode.hasFocus) {
+      _readerFocusNode.unfocus();
+    }
+  }
+
+  Future<void> _attachVolumeKeyListener() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS ||
+        _volumeKeyListenerAttached) {
+      return;
+    }
+
+    try {
+      await _volumeKeyBoard.addListener(_handleVolumeKeyEvent);
+      _volumeKeyListenerAttached = true;
+    } catch (error) {
+      debugPrint('Failed to attach volume key listener: $error');
+    }
+  }
+
+  void _handleVolumeKeyEvent(VolumeKey key) {
+    if (!Prefs().volumeKeyTurnPage || !_readerFocusNode.hasFocus) {
+      return;
+    }
+
+    if (key == VolumeKey.up) {
+      epubPlayerKey.currentState?.prevPage();
+    } else if (key == VolumeKey.down) {
+      epubPlayerKey.currentState?.nextPage();
+    }
+  }
+
+  KeyEventResult _handleReaderKeyEvent(FocusNode node, KeyEvent event) {
+    if (!_readerFocusNode.hasFocus) {
       return KeyEventResult.ignored;
-    };
+    }
+
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final logicalKey = event.logicalKey;
+
+    if (logicalKey == LogicalKeyboardKey.arrowRight ||
+        logicalKey == LogicalKeyboardKey.arrowDown ||
+        logicalKey == LogicalKeyboardKey.pageDown ||
+        logicalKey == LogicalKeyboardKey.space) {
+      epubPlayerKey.currentState?.nextPage();
+      return KeyEventResult.handled;
+    }
+
+    if (logicalKey == LogicalKeyboardKey.arrowLeft ||
+        logicalKey == LogicalKeyboardKey.arrowUp ||
+        logicalKey == LogicalKeyboardKey.pageUp) {
+      epubPlayerKey.currentState?.prevPage();
+      return KeyEventResult.handled;
+    }
+
+    if (logicalKey == LogicalKeyboardKey.enter) {
+      showOrHideAppBarAndBottomBar(true);
+      return KeyEventResult.handled;
+    }
+
+    if (Prefs().volumeKeyTurnPage) {
+      if (event.physicalKey == PhysicalKeyboardKey.audioVolumeUp) {
+        epubPlayerKey.currentState?.prevPage();
+        return KeyEventResult.handled;
+      }
+      if (event.physicalKey == PhysicalKeyboardKey.audioVolumeDown) {
+        epubPlayerKey.currentState?.nextPage();
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -173,7 +245,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     setState(() {
       showStatusBarWithoutResize();
       bottomBarOffstage = false;
-      _removeKeyboardListener();
+      _releaseReaderFocus();
     });
   }
 
@@ -184,7 +256,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
       if (Prefs().hideStatusBar) {
         hideStatusBar();
       }
-      _addKeyboardListener();
+      _requestReaderFocus();
     });
   }
 
@@ -550,8 +622,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                             }
                           },
                           child: Focus(
-                            focusNode: FocusNode(),
-                            onKeyEvent: _handleKeyEvent,
+                            focusNode: _readerFocusNode,
+                            onKeyEvent: _handleReaderKeyEvent,
                             child: Stack(
                               children: [
                                 EpubPlayer(
