@@ -61,7 +61,10 @@ const childGetter = (doc, ns) => {
 
 const resolveURL = (url, relativeTo) => {
     try {
-        if (relativeTo.includes(':')) return new URL(url, relativeTo)
+        // some tools (e.g., calibre) percent-encode punctuation we expect to be raw
+        url = url.replace(/%2c/gi, ',').replace(/%3a/gi, ':')
+        if (relativeTo.includes(':') && !relativeTo.startsWith('OEBPS'))
+            return new URL(url, relativeTo)
         // the base needs to be a valid URL, so set a base URL and then remove it
         const root = 'https://invalid.invalid/'
         const obj = new URL(url, root + relativeTo)
@@ -584,6 +587,7 @@ class Loader {
     #cache = new Map()
     #children = new Map()
     #refCount = new Map()
+    eventTarget = new EventTarget()
     allowScript = false
     constructor({ loadText, loadBlob, resources }) {
         this.loadText = loadText
@@ -597,9 +601,18 @@ class Loader {
         // needed only when replacing in (X)HTML w/o parsing (see below)
         //.filter(({ mediaType }) => ![MIME.XHTML, MIME.HTML].includes(mediaType))
     }
-    createURL(href, data, type, parent) {
+    async createURL(href, data, type, parent) {
         if (!data) return ''
-        const url = URL.createObjectURL(new Blob([data], { type }))
+        const detail = { name: href, data, type }
+        this.eventTarget.dispatchEvent(new CustomEvent('data', { detail }))
+        const resolvedData = await detail.data
+        const resolvedType = detail.type ?? type
+        const blob = resolvedData instanceof Blob
+            ? resolvedData
+            : new Blob([resolvedData], { type: resolvedType })
+        detail.type = blob.type || resolvedType
+        detail.data = blob
+        const url = URL.createObjectURL(blob)
         this.#cache.set(href, url)
         this.#refCount.set(href, 1)
         if (parent) {
@@ -637,20 +650,28 @@ class Loader {
     // load manifest item, recursively loading all resources as needed
     async loadItem(item, parents = []) {
         if (!item) return null
-        const { href, mediaType } = item
-
-        const isScript = MIME.JS.test(item.mediaType)
-        if (isScript && !this.allowScript) return null
+        const { href } = item
+        let mediaType = item.mediaType
+        let isScript = MIME.JS.test(mediaType)
+        let allow = !(isScript && !this.allowScript)
+        const detail = { name: href, type: mediaType, isScript, allow }
+        this.eventTarget.dispatchEvent(new CustomEvent('load', { detail }))
+        mediaType = detail.type ?? mediaType
+        isScript = detail.isScript ?? MIME.JS.test(mediaType)
+        allow = detail.allow ?? allow
+        if (!allow) return null
 
         const parent = parents[parents.length - 1]
         if (this.#cache.has(href)) return this.ref(href, parent)
 
+        const targetItem = mediaType === item.mediaType ? item : { ...item, mediaType }
         const shouldReplace =
             (isScript || [MIME.XHTML, MIME.HTML, MIME.CSS, MIME.SVG].includes(mediaType))
             // prevent circular references
             && parents.every(p => p !== href)
-        if (shouldReplace) return this.loadReplaced(item, parents)
-        return this.createURL(href, await this.loadBlob(href), mediaType, parent)
+        if (shouldReplace) return this.loadReplaced(targetItem, parents)
+        const dataSource = detail.data ?? Promise.resolve().then(() => this.loadBlob(href))
+        return this.createURL(href, dataSource, mediaType, parent)
     }
     async loadHref(href, base, parents = []) {
         if (isExternal(href)) return href
@@ -855,6 +876,7 @@ ${doc.querySelector('parsererror').innerText}`)
                 .then(this.#encryption.getDecoder(uri)),
             resources: this.resources,
         })
+        this.transformTarget = this.#loader.eventTarget
         this.sections = this.resources.spine.map((spineItem, index) => {
             const { idref, linear, properties = [] } = spineItem
             const item = this.resources.getItemByID(idref)
