@@ -459,7 +459,7 @@ const getCSS = ({ fontSize,
         break-inside: avoid !important;
         box-sizing: border-box !important;
         font-size: initial !important;
-        height: initial !important;
+        // height: initial !important;
         // width: initial !important;
     }
 
