@@ -68,7 +68,8 @@ class _SettingsPageBodyState extends State<SettingsPageBody> {
               ? <Widget>[
                   CupertinoSliverNavigationBar(
                     largeTitle: Text(widget.title),
-                    backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+                    backgroundColor:
+                        Theme.of(context).appBarTheme.backgroundColor,
                   )
                 ]
               : <Widget>[];
