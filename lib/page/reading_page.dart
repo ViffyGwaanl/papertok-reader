@@ -29,13 +29,12 @@ import 'package:anx_reader/widgets/reading_page/toc_widget.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart'
-    show debugPrint, defaultTargetPlatform, TargetPlatform;
+// import 'package:flutter/foundation.dart'
+    // show debugPrint, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
-import 'package:volume_key_board/volume_key_board.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class ReadingPage extends ConsumerStatefulWidget {
@@ -76,8 +75,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   bool bookmarkExists = false;
 
   late final FocusNode _readerFocusNode;
-  late final VolumeKeyBoard _volumeKeyBoard;
-  bool _volumeKeyListenerAttached = false;
+  // late final VolumeKeyBoard _volumeKeyBoard;
+  // bool _volumeKeyListenerAttached = false;
 
   @override
   void initState() {
@@ -96,11 +95,11 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     setAwakeTimer(Prefs().awakeTime);
 
     _book = widget.book;
-    _volumeKeyBoard = VolumeKeyBoard.instance;
+    // _volumeKeyBoard = VolumeKeyBoard.instance;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _requestReaderFocus();
-        _attachVolumeKeyListener();
+        // _attachVolumeKeyListener();
       }
     });
     // delay 1000ms to prevent hero animation
@@ -125,9 +124,9 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     insertReadingTime(ReadingTime(
         bookId: _book.id, readingTime: _readTimeWatch.elapsed.inSeconds));
     audioHandler.stop();
-    if (_volumeKeyListenerAttached) {
-      unawaited(_volumeKeyBoard.removeListener());
-    }
+    // if (_volumeKeyListenerAttached) {
+    //   unawaited(_volumeKeyBoard.removeListener());
+    // }
     _readerFocusNode.dispose();
     super.dispose();
   }
@@ -144,31 +143,31 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     }
   }
 
-  Future<void> _attachVolumeKeyListener() async {
-    if (defaultTargetPlatform != TargetPlatform.iOS ||
-        _volumeKeyListenerAttached) {
-      return;
-    }
+  // Future<void> _attachVolumeKeyListener() async {
+  //   if (defaultTargetPlatform != TargetPlatform.iOS ||
+  //       _volumeKeyListenerAttached) {
+  //     return;
+  //   }
 
-    try {
-      await _volumeKeyBoard.addListener(_handleVolumeKeyEvent);
-      _volumeKeyListenerAttached = true;
-    } catch (error) {
-      debugPrint('Failed to attach volume key listener: $error');
-    }
-  }
+  //   try {
+  //     await _volumeKeyBoard.addListener(_handleVolumeKeyEvent);
+  //     _volumeKeyListenerAttached = true;
+  //   } catch (error) {
+  //     debugPrint('Failed to attach volume key listener: $error');
+  //   }
+  // }
 
-  void _handleVolumeKeyEvent(VolumeKey key) {
-    if (!Prefs().volumeKeyTurnPage || !_readerFocusNode.hasFocus) {
-      return;
-    }
+  // void _handleVolumeKeyEvent(VolumeKey key) {
+  //   if (!Prefs().volumeKeyTurnPage || !_readerFocusNode.hasFocus) {
+  //     return;
+  //   }
 
-    if (key == VolumeKey.up) {
-      epubPlayerKey.currentState?.prevPage();
-    } else if (key == VolumeKey.down) {
-      epubPlayerKey.currentState?.nextPage();
-    }
-  }
+  //   if (key == VolumeKey.up) {
+  //     epubPlayerKey.currentState?.prevPage();
+  //   } else if (key == VolumeKey.down) {
+  //     epubPlayerKey.currentState?.nextPage();
+  //   }
+  // }
 
   KeyEventResult _handleReaderKeyEvent(FocusNode node, KeyEvent event) {
     if (!_readerFocusNode.hasFocus) {
