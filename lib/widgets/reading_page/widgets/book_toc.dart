@@ -433,7 +433,6 @@ Widget searchResultWidget({
                 onPressed: () {
                   hideAppBarAndBottomBar(false);
                   epubPlayerKey.currentState!.goToCfi(subItem.cfi);
-                  closeDrawer();
                 },
                 child: RichText(
                   text: TextSpan(
