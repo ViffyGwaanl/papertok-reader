@@ -160,3 +160,48 @@ void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
   }
   flushBuffer();
 }
+
+String reasoningContentToPlainText(String content) {
+  final parsed = parseReasoningContent(content);
+  if (parsed.timeline.isEmpty) {
+    return content;
+  }
+
+  final sections = <String>[];
+
+  for (final entry in parsed.timeline) {
+    switch (entry.type) {
+      case ParsedReasoningEntryType.reply:
+        final text = entry.text?.trim();
+        if (text != null && text.isNotEmpty) {
+          sections.add(text);
+        }
+        break;
+      case ParsedReasoningEntryType.tool:
+        final step = entry.toolStep;
+        if (step != null) {
+          final lines = <String>['[Tool ${step.name} ${step.status}]'];
+          final output = step.output?.trim();
+          if (output != null && output.isNotEmpty) {
+            lines.add(output);
+          }
+          final error = step.error?.trim();
+          if (error != null && error.isNotEmpty) {
+            lines.add('Error: $error');
+          }
+          final input = step.input?.trim();
+          if (input != null && input.isNotEmpty) {
+            lines.add('Input: $input');
+          }
+          final section = lines.join('\n').trim();
+          if (section.isNotEmpty) {
+            sections.add(section);
+          }
+        }
+        break;
+    }
+  }
+
+  final result = sections.join('\n\n').trim();
+  return result.isEmpty ? content : result;
+}

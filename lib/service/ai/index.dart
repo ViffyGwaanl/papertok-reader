@@ -7,6 +7,7 @@ import 'package:anx_reader/main.dart';
 import 'package:anx_reader/service/ai/langchain_ai_config.dart';
 import 'package:anx_reader/service/ai/langchain_registry.dart';
 import 'package:anx_reader/service/ai/langchain_runner.dart';
+import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:langchain_core/chat_models.dart';
@@ -49,6 +50,7 @@ Stream<String> _generateStream({
   required LangchainAiRegistry registry,
 }) async* {
   AnxLog.info('aiGenerateStream called identifier: $identifier');
+  final sanitizedMessages = _sanitizeMessagesForPrompt(messages);
   final selectedIdentifier = identifier ?? Prefs().selectedAiService;
   final savedConfig = Prefs().getAiConfig(selectedIdentifier);
   if (savedConfig.isEmpty &&
@@ -77,7 +79,7 @@ Stream<String> _generateStream({
 
   Stream<String> stream;
   if (useAgent) {
-    final inputMessage = _latestUserMessage(messages);
+    final inputMessage = _latestUserMessage(sanitizedMessages);
     if (inputMessage == null) {
       yield 'No user input provided';
       return;
@@ -89,8 +91,9 @@ Stream<String> _generateStream({
       return;
     }
 
-    final historyMessages =
-        messages.sublist(0, messages.length - 1).toList(growable: false);
+    final historyMessages = sanitizedMessages
+        .sublist(0, sanitizedMessages.length - 1)
+        .toList(growable: false);
 
     stream = _runner.streamAgent(
       model: model,
@@ -100,7 +103,7 @@ Stream<String> _generateStream({
       systemMessage: pipeline.systemMessage,
     );
   } else {
-    final prompt = PromptValue.chat(messages);
+    final prompt = PromptValue.chat(sanitizedMessages);
     stream = _runner.stream(model: model, prompt: prompt);
   }
 
@@ -156,6 +159,22 @@ String _mapError(Object error) {
   }
 
   return '$base${error.toString()}';
+}
+
+List<ChatMessage> _sanitizeMessagesForPrompt(List<ChatMessage> messages) {
+  return messages.map((message) {
+    if (message is AIChatMessage) {
+      final plainText = reasoningContentToPlainText(message.content);
+      if (plainText == message.content) {
+        return message;
+      }
+      return AIChatMessage(
+        content: plainText,
+        toolCalls: message.toolCalls,
+      );
+    }
+    return message;
+  }).toList(growable: false);
 }
 
 String? _latestUserMessage(List<ChatMessage> messages) {
