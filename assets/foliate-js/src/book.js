@@ -493,6 +493,14 @@ const getCSS = ({ fontSize,
         margin-block-end: ${paragraphSpacing / 2}em !important;
     }
 
+    .anx-text-center,
+    [align="center"],
+    [style*="text-align: center"],
+    [style*="text-align:center"] {
+        text-indent: 0 !important;
+    }
+
+
     /*  Paragraphs containing only an image — don't change */
     p:has(> img:only-child),
     p:has(> span:only-child > img:only-child),
@@ -573,6 +581,16 @@ const readingFeaturesDocHandler = (doc) => {
   }
   if (readingRules.bionicReadingMode) {
     bionicReadingHandler(doc)
+  }
+
+  if (style.textIndent > 0) {
+    const elements = doc.querySelectorAll('p, div, li, blockquote, dd, font')
+    elements.forEach(el => {
+      const computedStyle = window.getComputedStyle(el)
+      if (computedStyle.textAlign === 'center') {
+        el.classList.add('anx-text-center')
+      }
+    })
   }
 }
 
