@@ -20,6 +20,7 @@
 - Fix: Optimize timer logic to improve the accuracy of reading progress recording
 - Fix: Ensure that notes deleted in the note list are synchronously updated in the reading interface
 - Fix: The issue where AI reply content could not be read sometimes
+- Fix: The issue of inaccurate click position recognition
 - UI: Optimize part of the interface design
 
 - Feat: 目录界面以抽屉形式从侧面显示
@@ -40,6 +41,7 @@
 - Fix: 优化计时器逻辑，提升阅读进度记录的准确性
 - Fix: 保证笔记列表中的笔记删除时在阅读界面同步更新
 - Fix: 有时 AI 回复内容无法阅读的问题
+- Fix: 点击位置识别不准确的问题
 - UI: 优化部分界面设计
 
 

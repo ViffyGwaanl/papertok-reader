@@ -301,7 +301,7 @@ export class View extends HTMLElement {
       const position = doc.position
       const scale = doc.scale
       let { clientX, clientY } = e
-
+      
       // if the position is not null, it is fixed layout
       if (position) {
         clientX *= scale
@@ -314,15 +314,12 @@ export class View extends HTMLElement {
         this.#emit('click-view', { x: clientX, y: clientY })
         return
       }
-      if (this.renderer.vertical) {
-        this.renderer.scrollProp == 'scrollLeft'
-          ? clientX = this.renderer.size - (this.renderer.viewSize - this.renderer.start - clientX)
-          : clientY -= (this.renderer.start - this.renderer.size)
-      }
-      else {
-        this.renderer.scrollProp == 'scrollLeft'
-          ? clientX -= (this.renderer.start - this.renderer.size)
-          : clientY -= (this.renderer.start)
+      
+      const iframe = doc.defaultView?.frameElement
+      if (iframe) {
+        const rect = iframe.getBoundingClientRect()
+        clientX += rect.left
+        clientY += rect.top
       }
 
       this.#emit('click-view', { x: clientX, y: clientY })
