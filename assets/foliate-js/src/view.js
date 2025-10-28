@@ -290,7 +290,7 @@ export class View extends HTMLElement {
 
   #handleClick(doc) {
     doc.addEventListener('click', e => {
-      if (window.isFootNoteOpen()) {
+      if (window.isFootNoteOpen() && !e.currentTarget.__isFootNote) {
         window.closeFootNote()
         return
       }

@@ -613,6 +613,7 @@ const replaceFootnote = (view) => {
     setSelectionHandler(view, doc, index)
     // convertChineseHandler(convertChineseMode, doc)
     readingFeaturesDocHandler(doc)
+    doc.__isFootNote = true
 
 
     setTimeout(() => {
@@ -1361,7 +1362,7 @@ window.setNoAnimation = () => {
 }
 
 const onSelectionEnd = (selection) => {
-  if (footnoteDialog.open || isPdf) {
+  if (window.isFootNoteOpen() || isPdf) {
     callFlutter('onSelectionEnd', { ...selection, footnote: true })
   } else {
     callFlutter('onSelectionEnd', { ...selection, footnote: false })
@@ -1369,7 +1370,7 @@ const onSelectionEnd = (selection) => {
 }
 
 window.showContextMenu = () => {
-  if (footnoteDialog.open) {
+  if (window.isFootNoteOpen()) {
     footnoteSelection()
   } else {
     reader.showContextMenu()
