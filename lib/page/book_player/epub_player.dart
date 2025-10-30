@@ -574,8 +574,6 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             bookmarkCfi = location['bookmark']['cfi'] ?? '';
             writingMode =
                 WritingModeEnum.fromCode(location['writingMode'] ?? '');
-
-            print('writingMode: ${writingMode.code}');
           });
           ref.read(currentReadingProvider.notifier).update(
                 cfi: cfi,
