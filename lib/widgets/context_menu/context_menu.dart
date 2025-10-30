@@ -17,7 +17,7 @@ void showContextMenu(
   String annoContent,
   String annoCfi,
   int? annoId,
-  bool footnote, 
+  bool footnote,
   Axis axis,
 ) {
   final playerKey = epubPlayerKey.currentState;
@@ -183,8 +183,7 @@ void showContextMenu(
                   );
                 }),
                 const SizedBox(height: 10),
-                if (showTranslationMenu)
-                ...[
+                if (showTranslationMenu) ...[
                   SizedBox.square(
                     dimension: 10,
                   ),
@@ -197,7 +196,8 @@ void showContextMenu(
                         axis: axis,
                       ),
                     ],
-                  )],
+                  )
+                ],
               ],
             ),
           );
