@@ -1202,7 +1202,7 @@ const callFlutter = (name, data) => {
   window.flutter_inappwebview.callHandler(name, data)
 }
 
-const setStyle = () => {
+const setStyle = (oldStyle) => {
   const turn = {
     scroll: false,
     animated: true
@@ -1255,7 +1255,25 @@ const setStyle = () => {
     customCSSEnabled: style.customCSSEnabled
   }
   reader.view.renderer.setStyles?.(getCSS(newStyle))
+
+  if (oldStyle?.writingMode !== style.writingMode ||
+    oldStyle?.pageTurnStyle !== style.pageTurnStyle && [oldStyle?.pageTurnStyle, style.pageTurnStyle].includes('scroll')
+  ) {
+    refreshLayout()
+  }
 }
+
+const refreshLayout = () => {
+  const cfi = reader.view.lastLocation?.cfi
+  window.nextSection().then(() => {
+    if (cfi) {
+      setTimeout(() => {
+        window.goToCfi(cfi)
+      }, 0)
+    }
+  })
+}
+
 
 const onRelocated = (currentInfo) => {
   const chapterTitle = currentInfo.tocItem?.label
@@ -1312,12 +1330,13 @@ const getMetadata = async () => {
 window.refreshToc = () => onSetToc()
 
 window.changeStyle = (newStyle) => {
+  const oldStyle = style
   style = {
     ...style,
     ...newStyle
   }
   console.log('changeStyle', JSON.stringify(style))
-  setStyle()
+  setStyle(oldStyle)
 }
 
 window.goToHref = href => reader.view.goTo(href)
