@@ -192,13 +192,13 @@ class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
                       SegmentButtonItem(
                         label: L10n.of(context)
                             .readingPageWritingDirectionVertical,
-                        value: WritingModeEnum.vertical,
+                        value: WritingModeEnum.verticalRl,
                         icon: const Icon(Bootstrap.arrows_vertical),
                       ),
                       SegmentButtonItem(
                         label: L10n.of(context)
                             .readingPageWritingDirectionHorizontal,
-                        value: WritingModeEnum.horizontal,
+                        value: WritingModeEnum.horizontalTb,
                         icon: const Icon(Bootstrap.arrows),
                       ),
                     ],

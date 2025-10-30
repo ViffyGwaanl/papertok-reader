@@ -49,7 +49,7 @@ class _StyleSettingsState extends State<StyleSettings> {
 
     Widget sideMarginSlider(BookStyle bookStyle, StateSetter setState) {
       return Row(children: [
-        Prefs().writingMode == WritingModeEnum.vertical
+        Prefs().writingMode == WritingModeEnum.verticalRl
             ? IconAndText(
                 icon: const Icon(Bootstrap.arrows_vertical),
                 text: L10n.of(context).readingPageVerticleMargin,
@@ -106,7 +106,7 @@ class _StyleSettingsState extends State<StyleSettings> {
 
     Row topBottomMarginSlider(BookStyle bookStyle, StateSetter setState) {
       return Row(children: [
-        Prefs().writingMode == WritingModeEnum.vertical
+        Prefs().writingMode == WritingModeEnum.verticalRl
             ? IconAndText(
                 icon: const Icon(Bootstrap.chevron_bar_right),
                 text: L10n.of(context).readingPageRightMargin,
@@ -132,7 +132,7 @@ class _StyleSettingsState extends State<StyleSettings> {
             label: (bookStyle.topMargin / 20).toStringAsFixed(0),
           ),
         ),
-        Prefs().writingMode == WritingModeEnum.vertical
+        Prefs().writingMode == WritingModeEnum.verticalRl
             ? IconAndText(
                 icon: const Icon(Bootstrap.chevron_bar_left),
                 text: L10n.of(context).readingPageLeftMargin,

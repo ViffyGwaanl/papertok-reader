@@ -7,6 +7,7 @@ import 'package:anx_reader/dao/book.dart';
 import 'package:anx_reader/dao/book_note.dart';
 import 'package:anx_reader/enums/reading_info.dart';
 import 'package:anx_reader/enums/translation_mode.dart';
+import 'package:anx_reader/enums/writing_mode.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/main.dart';
@@ -95,6 +96,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   Timer? styleTimer;
   String bookmarkCfi = '';
   bool bookmarkExists = false;
+  WritingModeEnum writingMode = WritingModeEnum.horizontalTb;
 
   // to know anytime if we are on top of navigation stack
   bool get _isTopOfNavigationStack =>
@@ -570,6 +572,10 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             chapterTotalPages = location['chapterTotalPages'] ?? 0;
             bookmarkExists = location['bookmark']['exists'] ?? false;
             bookmarkCfi = location['bookmark']['cfi'] ?? '';
+            writingMode =
+                WritingModeEnum.fromCode(location['writingMode'] ?? '');
+
+            print('writingMode: ${writingMode.code}');
           });
           ref.read(currentReadingProvider.notifier).update(
                 cfi: cfi,
