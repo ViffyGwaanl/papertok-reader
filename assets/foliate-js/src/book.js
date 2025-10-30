@@ -569,6 +569,7 @@ const readingFeaturesDocHandler = (doc) => {
     bionicReadingHandler(doc)
   }
 
+  // handle text indent and center alignment
   if (style.textIndent > 0) {
     const elements = doc.querySelectorAll('p, div, li, blockquote, dd, font')
     elements.forEach(el => {
@@ -577,6 +578,24 @@ const readingFeaturesDocHandler = (doc) => {
         el.classList.add('anx-text-center')
       }
     })
+  }
+
+  // handle vertical writing mode, replace “”‘’ with 『』「」
+  if (style.writingMode.startsWith('vertical') || reader.view.renderer.writingMode.startsWith('vertical')) {
+    const replaceQuotes = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          node.textContent = node.textContent
+            .replace(/“/g, '『')
+            .replace(/”/g, '』')
+            .replace(/‘/g, '「')
+            .replace(/’/g, '」');
+        } else {
+          node.childNodes.forEach(child => replaceQuotes(child));
+        }
+    };
+    doc.body.childNodes.forEach(node => {
+      replaceQuotes(node);
+    });
   }
 }
 

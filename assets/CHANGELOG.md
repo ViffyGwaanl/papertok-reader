@@ -5,6 +5,7 @@
 - Feat: Directory interface is displayed as a drawer from the side
 - Feat: AI output can be more easily selected and copied
 - Feat: Books on the shelf can be displayed using their original cover aspect ratio
+- Feat: In vertical layout, optimize the quotation mark style
 - Fix: Fix the issue where external links could not be opened
 - Fix: Fix the issue of abnormal indentation
 - Fix: The issue of being unable to adjust paragraph spacing in some files
@@ -28,6 +29,7 @@
 - Feat: 目录界面以抽屉形式从侧面显示
 - Feat: AI 的输出可以更方便的选择和复制了
 - Feat: 书架上的书籍可以选择使用原始封面比例
+- Feat: 直排模式下,引号样式优化
 - Fix: 修复外链无法打开的问题
 - Fix: 修复缩进异常的问题
 - Fix: 部分文件无法调节段间距的问题
