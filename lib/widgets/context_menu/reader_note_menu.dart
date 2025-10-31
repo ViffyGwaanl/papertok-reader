@@ -132,7 +132,7 @@ class ReaderNoteMenuState extends State<ReaderNoteMenu> {
                           });
                         },
                       ),
-                      const Spacer(),
+                    const Spacer(),
                   ],
                 ),
               ),
