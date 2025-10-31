@@ -80,58 +80,50 @@ class _TranslationMenuState extends State<TranslationMenu> {
 
   @override
   Widget build(BuildContext context) {
+    // print('Building TranslationMenu');
     return Expanded(
       child: AnimatedSize(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: widget.axis == Axis.vertical ? double.infinity : 200,
-            maxWidth: widget.axis == Axis.horizontal ? double.infinity : 100,
-          ),
-          child: Container(
-            decoration: widget.decoration,
-            padding: const EdgeInsets.all(8),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    widget.content,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+        child: Container(
+          height: widget.axis == Axis.vertical ? double.infinity : 150,
+          width: widget.axis == Axis.vertical ? 100 : double.infinity,
+          decoration: widget.decoration,
+          padding: const EdgeInsets.all(8),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.content,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 200),
-                    opacity: 1.0,
-                    child: Column(
+                ),
+                const SizedBox(height: 8),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    translateText(widget.content),
+                    const Divider(),
+                    AxisFlex(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      axis: widget.axis,
                       children: [
-                        translateText(widget.content),
-                        const Divider(),
-                        AxisFlex(
-                          mainAxisSize: MainAxisSize.min,
-                          axis: widget.axis,
-                          children: [
-                            _langPicker(true),
-                            Transform.rotate(
-                                angle:
-                                    widget.axis == Axis.horizontal ? 0 : 1.57,
-                                child: Icon(Icons.arrow_forward_ios, size: 16)),
-                            _langPicker(false),
-                            if (widget.axis == Axis.horizontal) const Spacer(),
-                          ],
-                        ),
+                        _langPicker(true),
+                        Transform.rotate(
+                            angle: widget.axis == Axis.horizontal ? 0 : 1.57,
+                            child: Icon(Icons.arrow_forward_ios, size: 16)),
+                        _langPicker(false),
+                        if (widget.axis == Axis.horizontal) const Spacer(),
                       ],
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

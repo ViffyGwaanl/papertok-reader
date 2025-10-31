@@ -119,29 +119,34 @@ abstract class TranslateServiceProvider {
     return StreamBuilder<String>(
       stream: stream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Text('...');
-        } else if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
-        } else if (snapshot.hasData) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(snapshot.data!),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                      onPressed: () => Clipboard.setData(
-                          ClipboardData(text: snapshot.data!)),
-                      child: Text(L10n.of(context).commonCopy))
-                ],
-              )
-            ],
-          );
-        } else {
-          return const Text('No data');
+        Widget content() {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Text('...');
+          } else if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else if (snapshot.hasData) {
+            return Text(snapshot.data!);
+          } else {
+            return const Text('');
+          }
         }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            content(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                    onPressed: () =>
+                        Clipboard.setData(ClipboardData(text: snapshot.data!)),
+                    child: Text(L10n.of(context).commonCopy))
+              ],
+            )
+          ],
+        );
       },
     );
   }

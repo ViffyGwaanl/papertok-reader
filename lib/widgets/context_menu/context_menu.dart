@@ -23,16 +23,17 @@ void showContextMenu(
   final playerKey = epubPlayerKey.currentState;
   if (playerKey == null) return;
 
-  RenderBox? renderBox =
+  final renderBox =
       epubPlayerKey.currentContext?.findRenderObject() as RenderBox?;
-  Size? renderBoxSize = renderBox?.size;
+  final renderBoxSize = renderBox?.size;
 
-  double screenHeight =
-      renderBoxSize?.height ?? MediaQuery.of(context).size.height;
-  double screenWidth =
-      renderBoxSize?.width ?? MediaQuery.of(context).size.width;
+  final mediaQuery = MediaQuery.of(context);
+  final double screenHeight = renderBoxSize?.height ?? mediaQuery.size.height;
+  final double screenWidth = renderBoxSize?.width ?? mediaQuery.size.width;
+  final double keyboardInset = mediaQuery.viewInsets.bottom;
 
-  Offset localToGlobal = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+  final Offset localToGlobal =
+      renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
 
   final viewportRect = Rect.fromLTWH(
     localToGlobal.dx,
@@ -52,65 +53,34 @@ void showContextMenu(
   const double verticalMargin = 16;
   const double gap = 12;
 
-  final double menuWidth =
+  final double maxMenuWidth =
       math.min(350, math.max(120, screenWidth - horizontalMargin * 2));
-  final double maxHeight = screenHeight - verticalMargin * 2;
-  final double menuHeight = math.min(
+  final double effectiveHeight = math.max(0, screenHeight - keyboardInset);
+  final double maxHeightCandidate = effectiveHeight - verticalMargin * 2;
+  final double rawMaxHeight = math.min(
     footnote ? 350 : 550,
-    math.max(200, maxHeight),
+    math.max(200, maxHeightCandidate),
+  );
+  final double maxMenuHeight = math.max(
+    0,
+    math.min(rawMaxHeight, maxHeightCandidate),
   );
 
-  late double widgetTop;
-  late double widgetLeft;
-  bool placeBelow = true;
-  bool placeRight = true;
+  final menuConstraints = BoxConstraints(
+    maxWidth: maxMenuWidth,
+    maxHeight: maxMenuHeight,
+  );
 
-  if (axis == Axis.horizontal) {
-    final double spaceAbove = selectionRect.top - viewportRect.top;
-    final double spaceBelow = viewportRect.bottom - selectionRect.bottom;
-    placeBelow = (spaceBelow >= menuHeight + gap) || (spaceBelow >= spaceAbove);
-
-    double desiredTop = placeBelow
-        ? selectionRect.bottom + gap
-        : selectionRect.top - menuHeight - gap;
-    desiredTop = desiredTop.clamp(
-      viewportRect.top + verticalMargin,
-      viewportRect.bottom - menuHeight - verticalMargin,
-    );
-
-    double desiredLeft = selectionRect.center.dx - menuWidth / 2;
-    desiredLeft = desiredLeft.clamp(
-      viewportRect.left + horizontalMargin,
-      viewportRect.right - menuWidth - horizontalMargin,
-    );
-
-    widgetTop = desiredTop;
-    widgetLeft = desiredLeft;
-  } else {
-    final double spaceLeft = selectionRect.left - viewportRect.left;
-    final double spaceRight = viewportRect.right - selectionRect.right;
-    placeRight = (spaceRight >= menuWidth + gap) || (spaceRight >= spaceLeft);
-
-    double desiredLeft = placeRight
-        ? selectionRect.right + gap
-        : selectionRect.left - menuWidth - gap;
-    desiredLeft = desiredLeft.clamp(
-      viewportRect.left + horizontalMargin,
-      viewportRect.right - menuWidth - horizontalMargin,
-    );
-
-    double desiredTop = selectionRect.center.dy - menuHeight / 2;
-    desiredTop = desiredTop.clamp(
-      viewportRect.top + verticalMargin,
-      viewportRect.bottom - menuHeight - verticalMargin,
-    );
-
-    widgetTop = desiredTop;
-    widgetLeft = desiredLeft;
-  }
-
-  final bool shouldReverse =
-      axis == Axis.horizontal ? !placeBelow : !placeRight;
+  final initialPlacement = _resolveMenuPlacement(
+    axis: axis,
+    selectionRect: selectionRect,
+    viewportRect: viewportRect,
+    menuSize: Size(maxMenuWidth, maxMenuHeight),
+    horizontalMargin: horizontalMargin,
+    verticalMargin: verticalMargin,
+    gap: gap,
+    bottomInset: keyboardInset,
+  );
 
   playerKey.removeOverlay();
 
@@ -119,7 +89,7 @@ void showContextMenu(
     playerKey.removeOverlay();
   }
 
-  BoxDecoration decoration = BoxDecoration(
+  final decoration = BoxDecoration(
     color: Prefs().eInkMode
         ? Colors.white
         : Theme.of(context).colorScheme.secondaryContainer,
@@ -133,7 +103,7 @@ void showContextMenu(
           offset: const Offset(0, 3),
         ),
       if (Prefs().eInkMode)
-        BoxShadow(
+        const BoxShadow(
           color: Colors.black,
           spreadRadius: 1,
           blurRadius: 0,
@@ -141,85 +111,347 @@ void showContextMenu(
     ],
   );
 
-  bool showTranslationMenu = Prefs().autoTranslateSelection;
   playerKey.contextMenuEntry = OverlayEntry(builder: (context) {
-    return Positioned(
-      left: widgetLeft,
-      top: widgetTop,
-      child: Container(
-        color: Colors.transparent,
-        constraints: BoxConstraints(
-          maxWidth: menuWidth,
-          maxHeight: menuHeight,
-        ),
-        child: StatefulBuilder(builder: (context, setState) {
-          void toggleTranslationMenu() {
-            setState(() {
-              showTranslationMenu = !showTranslationMenu;
-            });
-          }
+    return _ContextMenuOverlay(
+      axis: axis,
+      selectionRect: selectionRect,
+      viewportRect: viewportRect,
+      annoContent: annoContent,
+      annoCfi: annoCfi,
+      annoId: annoId,
+      footnote: footnote,
+      decoration: decoration,
+      onClose: onClose,
+      menuConstraints: menuConstraints,
+      initialPlacement: initialPlacement,
+      showTranslationDefault: Prefs().autoTranslateSelection,
+      horizontalMargin: horizontalMargin,
+      verticalMargin: verticalMargin,
+      gap: gap,
+      initialBottomInset: keyboardInset,
+    );
+  });
 
-          return PointerInterceptor(
-            child: Stack(
-              children: [
-                GestureDetector(
-                  onTap: onClose,
+  Overlay.of(context).insert(playerKey.contextMenuEntry!);
+}
+
+class _MenuPlacement {
+  const _MenuPlacement({required this.offset, required this.shouldReverse});
+
+  final Offset offset;
+  final bool shouldReverse;
+}
+
+double _clampWithin(double value, double min, double max) {
+  if (min > max) {
+    return min;
+  }
+  return value.clamp(min, max);
+}
+
+_MenuPlacement _resolveMenuPlacement({
+  required Axis axis,
+  required Rect selectionRect,
+  required Rect viewportRect,
+  required Size menuSize,
+  required double horizontalMargin,
+  required double verticalMargin,
+  required double gap,
+  required double bottomInset,
+}) {
+  final double menuWidth = menuSize.width;
+  final double menuHeight = menuSize.height;
+
+  final double clampedViewportBottom =
+      math.max(viewportRect.top, viewportRect.bottom - bottomInset);
+
+  if (axis == Axis.horizontal) {
+    final double spaceAbove = selectionRect.top - viewportRect.top;
+    final double spaceBelow = clampedViewportBottom - selectionRect.bottom;
+    final bool placeBelow =
+        (spaceBelow >= menuHeight + gap) || (spaceBelow >= spaceAbove);
+
+    final double minTop = viewportRect.top + verticalMargin;
+    final double maxTop = clampedViewportBottom - menuHeight - verticalMargin;
+    double desiredTop = placeBelow
+        ? selectionRect.bottom + gap
+        : selectionRect.top - menuHeight - gap;
+    desiredTop = _clampWithin(desiredTop, minTop, maxTop);
+
+    final double minLeft = viewportRect.left + horizontalMargin;
+    final double maxLeft = viewportRect.right - menuWidth - horizontalMargin;
+    double desiredLeft = selectionRect.center.dx - menuWidth / 2;
+    desiredLeft = _clampWithin(desiredLeft, minLeft, maxLeft);
+
+    return _MenuPlacement(
+      offset: Offset(desiredLeft, desiredTop),
+      shouldReverse: !placeBelow,
+    );
+  }
+
+  final double spaceLeft = selectionRect.left - viewportRect.left;
+  final double spaceRight = viewportRect.right - selectionRect.right;
+  final bool placeRight =
+      (spaceRight >= menuWidth + gap) || (spaceRight >= spaceLeft);
+
+  final double minLeft = viewportRect.left + horizontalMargin;
+  final double maxLeft = viewportRect.right - menuWidth - horizontalMargin;
+  double desiredLeft = placeRight
+      ? selectionRect.right + gap
+      : selectionRect.left - menuWidth - gap;
+  desiredLeft = _clampWithin(desiredLeft, minLeft, maxLeft);
+
+  final double minTop = viewportRect.top + verticalMargin;
+  final double maxTop = clampedViewportBottom - menuHeight - verticalMargin;
+  double desiredTop = selectionRect.center.dy - menuHeight / 2;
+  desiredTop = _clampWithin(desiredTop, minTop, maxTop);
+
+  return _MenuPlacement(
+    offset: Offset(desiredLeft, desiredTop),
+    shouldReverse: !placeRight,
+  );
+}
+
+class _ContextMenuOverlay extends StatefulWidget {
+  const _ContextMenuOverlay({
+    required this.axis,
+    required this.selectionRect,
+    required this.viewportRect,
+    required this.annoContent,
+    required this.annoCfi,
+    required this.annoId,
+    required this.footnote,
+    required this.decoration,
+    required this.onClose,
+    required this.menuConstraints,
+    required this.initialPlacement,
+    required this.showTranslationDefault,
+    required this.horizontalMargin,
+    required this.verticalMargin,
+    required this.gap,
+    required this.initialBottomInset,
+  });
+
+  final Axis axis;
+  final Rect selectionRect;
+  final Rect viewportRect;
+  final String annoContent;
+  final String annoCfi;
+  final int? annoId;
+  final bool footnote;
+  final BoxDecoration decoration;
+  final VoidCallback onClose;
+  final BoxConstraints menuConstraints;
+  final _MenuPlacement initialPlacement;
+  final bool showTranslationDefault;
+  final double horizontalMargin;
+  final double verticalMargin;
+  final double gap;
+  final double initialBottomInset;
+
+  @override
+  State<_ContextMenuOverlay> createState() => _ContextMenuOverlayState();
+}
+
+class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
+    with WidgetsBindingObserver {
+  final GlobalKey _menuKey = GlobalKey();
+
+  late Offset _position;
+  late bool _reverse;
+  late bool _showTranslationMenu;
+  bool _waitingForFirstMeasurement = true;
+  late BoxConstraints _menuConstraints;
+  late double _bottomInset;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _position = widget.initialPlacement.offset;
+    _reverse = widget.initialPlacement.shouldReverse;
+    _showTranslationMenu = widget.showTranslationDefault;
+    _bottomInset = widget.initialBottomInset;
+    _menuConstraints = _buildConstraints(widget.initialBottomInset);
+    _scheduleRecalculate();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  BoxConstraints _buildConstraints(double bottomInset) {
+    final original = widget.menuConstraints;
+    final double availableHeight = math.max(
+      0,
+      widget.viewportRect.height - bottomInset - widget.verticalMargin * 2,
+    );
+
+    double maxHeight;
+    if (original.hasBoundedHeight) {
+      maxHeight = math.min(original.maxHeight, availableHeight);
+    } else {
+      maxHeight = availableHeight;
+    }
+    maxHeight = math.max(0, maxHeight);
+
+    final double minHeight = math.min(original.minHeight, maxHeight);
+
+    return BoxConstraints(
+      minWidth: original.minWidth,
+      maxWidth: original.maxWidth,
+      minHeight: minHeight,
+      maxHeight: maxHeight,
+    );
+  }
+
+  void _scheduleRecalculate() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _updatePlacement();
+    });
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (!mounted) return;
+    _scheduleRecalculate();
+  }
+
+  void _updatePlacement() {
+    final renderBox = _menuKey.currentContext?.findRenderObject() as RenderBox?;
+    final double currentBottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final newConstraints = _buildConstraints(currentBottomInset);
+
+    if (renderBox == null) {
+      final bool needsStateUpdate =
+          (_bottomInset - currentBottomInset).abs() > 0.5 ||
+              _menuConstraints.maxHeight != newConstraints.maxHeight;
+
+      if (needsStateUpdate) {
+        setState(() {
+          _bottomInset = currentBottomInset;
+          _menuConstraints = newConstraints;
+        });
+      }
+      return;
+    }
+
+    final size = renderBox.size;
+    final placement = _resolveMenuPlacement(
+      axis: widget.axis,
+      selectionRect: widget.selectionRect,
+      viewportRect: widget.viewportRect,
+      menuSize: size,
+      horizontalMargin: widget.horizontalMargin,
+      verticalMargin: widget.verticalMargin,
+      gap: widget.gap,
+      bottomInset: currentBottomInset,
+    );
+
+    final bool positionChanged =
+        (_position.dx - placement.offset.dx).abs() > 0.5 ||
+            (_position.dy - placement.offset.dy).abs() > 0.5;
+
+    final bool bottomInsetChanged =
+        (_bottomInset - currentBottomInset).abs() > 0.5;
+
+    final bool constraintsChanged =
+        _menuConstraints.maxHeight != newConstraints.maxHeight;
+
+    final bool shouldUpdate = _waitingForFirstMeasurement ||
+        positionChanged ||
+        _reverse != placement.shouldReverse ||
+        bottomInsetChanged ||
+        constraintsChanged;
+
+    if (shouldUpdate) {
+      setState(() {
+        _position = placement.offset;
+        _reverse = placement.shouldReverse;
+        _bottomInset = currentBottomInset;
+        _menuConstraints = newConstraints;
+        _waitingForFirstMeasurement = false;
+      });
+    }
+  }
+
+  void _toggleTranslationMenu() {
+    setState(() {
+      _showTranslationMenu = !_showTranslationMenu;
+    });
+    _scheduleRecalculate();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: _position.dx,
+      top: _position.dy,
+      child: PointerInterceptor(
+        child: Stack(
+          children: [
+            GestureDetector(
+              onTap: widget.onClose,
+              child: IgnorePointer(
+                ignoring: _waitingForFirstMeasurement,
+                child: Opacity(
+                  opacity: _waitingForFirstMeasurement ? 0 : 1,
                   child: Container(
+                    key: _menuKey,
                     color: Colors.transparent,
+                    constraints: _menuConstraints,
                     child: AxisFlex(
-                      axis: flipAxis(axis),
-                      reverse: shouldReverse,
+                      axis: flipAxis(widget.axis),
+                      reverse: _reverse,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         AxisFlex(
-                          axis: flipAxis(axis),
-                          reverse: shouldReverse,
+                          axis: flipAxis(widget.axis),
+                          reverse: _reverse,
                           children: [
                             AxisFlex(
-                              axis: axis,
+                              axis: widget.axis,
                               children: [
                                 ExcerptMenu(
-                                  annoCfi: annoCfi,
-                                  annoContent: annoContent,
-                                  id: annoId,
-                                  onClose: onClose,
-                                  footnote: footnote,
-                                  decoration: decoration,
-                                  toggleTranslationMenu: toggleTranslationMenu,
-                                  axis: axis,
-                                  reverse: shouldReverse,
+                                  annoCfi: widget.annoCfi,
+                                  annoContent: widget.annoContent,
+                                  id: widget.annoId,
+                                  onClose: widget.onClose,
+                                  footnote: widget.footnote,
+                                  decoration: widget.decoration,
+                                  toggleTranslationMenu: _toggleTranslationMenu,
+                                  axis: widget.axis,
+                                  reverse: _reverse,
                                 ),
                               ],
                             ),
-                            // SizedBox(height: bottom),
                           ],
                         ),
-                        if (showTranslationMenu) ...[
-                          SizedBox.square(
-                            dimension: 10,
-                          ),
+                        if (_showTranslationMenu) ...[
+                          const SizedBox.square(dimension: 10),
                           AxisFlex(
-                            axis: axis,
+                            axis: widget.axis,
                             children: [
                               TranslationMenu(
-                                content: annoContent,
-                                decoration: decoration,
-                                axis: axis,
+                                content: widget.annoContent,
+                                decoration: widget.decoration,
+                                axis: widget.axis,
                               ),
                             ],
-                          )
+                          ),
                         ],
                       ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          );
-        }),
+          ],
+        ),
       ),
     );
-  });
-
-  Overlay.of(context).insert(playerKey.contextMenuEntry!);
+  }
 }
