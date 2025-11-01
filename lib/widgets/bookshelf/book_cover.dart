@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:anx_reader/models/book.dart';
 import 'package:flutter/material.dart';
 
-class BookCover extends StatefulWidget {
+class BookCover extends StatelessWidget {
   const BookCover({
     super.key,
     required this.book,
@@ -20,59 +20,26 @@ class BookCover extends StatefulWidget {
   final bool showBorder;
 
   @override
-  State<BookCover> createState() => _BookCoverState();
-}
-
-class _BookCoverState extends State<BookCover> {
-  ImageProvider? _imageProvider;
-  bool _hasCover = false;
-  late String _coverPath;
-
-  @override
-  void initState() {
-    super.initState();
-    _coverPath = widget.book.coverFullPath;
-    _prepareImageProvider();
-  }
-
-  @override
-  void didUpdateWidget(covariant BookCover oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final newPath = widget.book.coverFullPath;
-    if (newPath != _coverPath) {
-      _coverPath = newPath;
-      _prepareImageProvider();
-    }
-  }
-
-  void _prepareImageProvider() {
-    final file = File(_coverPath);
-    if (file.existsSync()) {
-      _imageProvider = FileImage(file);
-      _hasCover = true;
-    } else {
-      _imageProvider = null;
-      _hasCover = false;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final double effectiveRadius = widget.radius ?? 8;
+    final double effectiveRadius = radius ?? 8;
     final BorderRadius borderRadius = BorderRadius.circular(effectiveRadius);
+    final file = File(book.coverFullPath);
+    final hasCover = file.existsSync();
 
     Widget child;
-    if (_hasCover && _imageProvider != null) {
-      child = Image(
-        image: _imageProvider!,
-        fit: BoxFit.cover,
-        alignment: Alignment.topCenter,
-        filterQuality: FilterQuality.medium,
+    if (hasCover) {
+      child = DecoratedBox(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: FileImage(file),
+            fit: BoxFit.cover,
+          ),
+        ),
       );
     } else {
       child = Container(
         color: Colors
-            .primaries[widget.book.title.hashCode % Colors.primaries.length]
+            .primaries[book.title.hashCode % Colors.primaries.length]
             .shade200,
         child: Center(
           child: Icon(
@@ -86,7 +53,7 @@ class _BookCoverState extends State<BookCover> {
 
     final RoundedSuperellipseBorder borderShape = RoundedSuperellipseBorder(
       borderRadius: borderRadius,
-      side: widget.showBorder
+      side: showBorder
           ? BorderSide(
               width: 0.3,
               color: Theme.of(context).dividerColor,
@@ -96,8 +63,8 @@ class _BookCoverState extends State<BookCover> {
 
     return RepaintBoundary(
       child: SizedBox(
-        height: widget.height,
-        width: widget.width,
+        height: height,
+        width: width,
         child: DecoratedBox(
           position: DecorationPosition.foreground,
           decoration: ShapeDecoration(
