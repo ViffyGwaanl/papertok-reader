@@ -96,14 +96,12 @@ void main() async {
   final versionTags = releaseType == 'stable'
       ? tags.where((tag) => tag == 'v$suggestedVersion').toList()
       : tags
-          .where((tag) => tag
-              .startsWith('v$suggestedVersion-$releaseType.'))
+          .where((tag) => tag.startsWith('v$suggestedVersion-$releaseType.'))
           .toList();
 
   if (releaseType != 'stable' && versionTags.isNotEmpty) {
     suggestedTagBuild =
-        _findHighestBuildNumber(versionTags, suggestedVersion, releaseType) +
-            1;
+        _findHighestBuildNumber(versionTags, suggestedVersion, releaseType) + 1;
   }
 
   if (allTags.isNotEmpty) {
