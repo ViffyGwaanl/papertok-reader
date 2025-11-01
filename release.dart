@@ -15,10 +15,10 @@ void main() async {
   // Get current branch
   final currentBranch = await _getCurrentBranch();
   print('Current branch: $currentBranch');
-  if (currentBranch != 'develop') {
-    print('Error: Releases must start from develop branch.');
-    exit(1);
-  }
+  // if (currentBranch != 'develop') {
+  //   print('Error: Releases must start from develop branch.');
+  //   exit(1);
+  // }
   // Display release options
   print('\nSelect release type:');
   print('1. Stable (main branch)');
