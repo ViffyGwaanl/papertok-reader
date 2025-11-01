@@ -1,21 +1,7 @@
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-const debounce = (f, wait, immediate) => {
-  let timeout
-  return (...args) => {
-    const later = () => {
-      timeout = null
-      if (!immediate) f(...args)
-    }
-    const callNow = immediate && !timeout
-    if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(later, wait)
-    if (callNow) f(...args)
-  }
-}
-
 const lerp = (min, max, x) => x * (max - min) + min
-const easeOutQuad = x => 1 - (1 - x) * (1 - x)
+const easeOutSine = x => Math.sin((x * Math.PI) / 2)
 const animate = (a, b, duration, ease, render) => new Promise(resolve => {
   let start
   const step = now => {
@@ -191,6 +177,9 @@ class View {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
+      contain: 'layout paint size',
+      contentVisibility: 'auto',
+      willChange: 'transform',
     })
     Object.assign(this.#iframe.style, {
       overflow: 'hidden',
@@ -413,11 +402,47 @@ export class Paginator extends HTMLElement {
   #styleMap = new WeakMap()
   #mediaQuery = matchMedia('(prefers-color-scheme: dark)')
   #mediaQueryListener
-  #scrollBounds
+  #ignoreNativeScroll = false
+  #pendingScrollFrame = null
   #touchState
   #touchScrolled
   #loadingNext = false
   #loadingPrev = false
+  #momentumDisabled = false
+  #prevOverflowScrolling = ''
+  #prevOverflowX = ''
+  #prevOverflowY = ''
+  #momentumTimer = null
+  #cancelMomentumTimer() {
+    if (this.#momentumTimer) {
+      clearTimeout(this.#momentumTimer)
+      this.#momentumTimer = null
+    }
+  }
+  #disableMomentum() {
+    this.#cancelMomentumTimer()
+    if (this.#momentumDisabled) return
+    const style = this.#container.style
+    this.#prevOverflowScrolling = style.webkitOverflowScrolling
+    this.#prevOverflowX = style.overflowX
+    this.#prevOverflowY = style.overflowY
+    style.webkitOverflowScrolling = 'auto'
+    if (this.scrollProp === 'scrollLeft') style.overflowX = 'hidden'
+    else style.overflowY = 'hidden'
+    this.#momentumDisabled = true
+  }
+  #restoreMomentum() {
+    this.#cancelMomentumTimer()
+    if (!this.#momentumDisabled) return
+    const style = this.#container.style
+    style.webkitOverflowScrolling = this.#prevOverflowScrolling || 'touch'
+    style.overflowX = this.#prevOverflowX || ''
+    style.overflowY = this.#prevOverflowY || ''
+    this.#prevOverflowScrolling = ''
+    this.#prevOverflowX = ''
+    this.#prevOverflowY = ''
+    this.#momentumDisabled = false
+  }
   constructor() {
     super()
     this.#root.innerHTML = `<style>
@@ -476,11 +501,13 @@ export class Paginator extends HTMLElement {
         #container {
             grid-column: 1 / -1;
             grid-row: 1 / -1;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
             -ms-overflow-style: none;  /* Internet Explorer 10+ */
             scrollbar-width: none;  /* Firefox */
         }
-        #container::-webkit-scrollbar { 
+        #container::-webkit-scrollbar {
             display: none;  /* Safari and Chrome */
         }
         :host([flow="scrolled"]) #container {
@@ -529,15 +556,20 @@ export class Paginator extends HTMLElement {
     // this.#footer = this.#root.getElementById('footer')
 
     this.#observer.observe(this.#container)
-    this.#container.addEventListener('scroll', debounce(() => {
-       if (this.scrolled) {
-        if (this.#justAnchored) this.#justAnchored = false
-        else {
-          this.#afterScroll('scroll')
-          // this.#handleScrollBoundaries()
-        }
+    this.#container.addEventListener('scroll', () => {
+      if (this.#ignoreNativeScroll) return
+      if (this.#justAnchored) {
+        this.#justAnchored = false
+        return
       }
-    }, 50))
+      if (this.#pendingScrollFrame)
+        cancelAnimationFrame(this.#pendingScrollFrame)
+      this.#pendingScrollFrame = requestAnimationFrame(() => {
+        this.#pendingScrollFrame = null
+        this.#afterScroll('scroll')
+        if (this.scrolled) this.#handleScrollBoundaries()
+      })
+    })
 
     const opts = { passive: false }
     this.addEventListener('touchstart', this.#onTouchStart.bind(this), opts)
@@ -716,28 +748,33 @@ export class Paginator extends HTMLElement {
     return Math.round(this.viewSize / this.size)
   }
   scrollBy(dx, dy) {
-    const delta = this.#vertical ? dy : dx
     const element = this.#container
-    const { scrollProp } = this
-    const [offset, a, b] = this.#scrollBounds
-    const rtl = this.#rtl
-    const min = rtl ? offset - b : offset - a
-    const max = rtl ? offset + a : offset + b
-    element[scrollProp] = Math.max(min, Math.min(max,
-      element[scrollProp] + delta))
+    const prop = this.scrollProp
+    const horizontal = prop === 'scrollLeft'
+    const delta = horizontal ? dx : dy
+    if (horizontal) element.scrollBy({ left: delta, top: 0, behavior: 'auto' })
+    else element.scrollBy({ left: 0, top: delta, behavior: 'auto' })
   }
   snap(vx, vy) {
     const velocity = this.#vertical ? vy : vx
-    const [offset, a, b] = this.#scrollBounds
-    const { start, end, pages, size } = this
-    const min = Math.abs(offset) - a
-    const max = Math.abs(offset) + b
-    const d = velocity * (this.#rtl ? -size : size)
-    const page = Math.floor(
-      Math.max(min, Math.min(max, (start + end) / 2
-        + (isNaN(d) ? 0 : d))) / size)
+    const { pages, size } = this
+    if (!pages || size === 0) return
+    const currentOffset = this.#container[this.scrollProp]
+    const signedOffset = this.#rtl ? -currentOffset : currentOffset
+    let page = Math.round(signedOffset / size)
+    const velocityThreshold = 0.35
+    if (Math.abs(velocity) > velocityThreshold)
+      page += velocity > 0 ? 1 : -1
+    page = Math.max(0, Math.min(pages - 1, page))
+    const targetOffset = page * size
+    const distance = Math.abs(targetOffset - signedOffset)
+    const baseDuration = 280
+    const duration = Math.max(180, Math.min(380,
+      baseDuration * (distance / (size || 1) + 0.2)))
 
-    this.#scrollToPage(page, 'snap').then(() => {
+    const pageArg = this.#rtl ? -page : page
+    this.#disableMomentum()
+    this.#scrollToPage(pageArg, 'snap', { animate: true, duration, restoreMomentum: true, momentumDelay: 200 }).then(() => {
       const dir = page <= 0 ? -1 : page >= pages - 1 ? 1 : null
       if (dir) return this.#goTo({
         index: this.#adjacentIndex(dir),
@@ -750,13 +787,14 @@ export class Paginator extends HTMLElement {
     this.#touchState = {
       x: touch?.screenX, y: touch?.screenY,
       t: e.timeStamp,
-      vx: 0, xy: 0,
+      vx: 0, vy: 0,
+      pinched: false,
       direction: 'none',
       startTouch: {
         x: e.touches[0].screenX,
         y: e.touches[0].screenY,
       },
-      delta: { x: 0, deltaY: 0, }
+      delta: { x: 0, y: 0 }
     }
     this.dispatchEvent(new CustomEvent('doctouchstart', {
       detail: {
@@ -770,88 +808,77 @@ export class Paginator extends HTMLElement {
   #onTouchMove(e) {
     if (window.getSelection()?.toString()) return
 
-    const deltaX = e.changedTouches[0].screenX - this.#touchState.startTouch.x;
-    const deltaY = e.changedTouches[0].screenY - this.#touchState.startTouch.y;
+    const touch = e.changedTouches[0]
+    const state = this.#touchState
+    if (!state) return
+
+    const deltaX = touch.screenX - state.startTouch.x
+    const deltaY = touch.screenY - state.startTouch.y
 
     const absDeltaX = Math.abs(deltaX);
     const absDeltaY = Math.abs(deltaY);
 
-    this.#touchState.delta.x = deltaX
-    this.#touchState.delta.y = deltaY
+    state.delta.x = deltaX
+    state.delta.y = deltaY
 
 
 
     const threshold = 5
 
-    const notHorizontal = this.#touchState.direction === 'horizontal' && absDeltaY > absDeltaX;
-    const notVertical = this.#touchState.direction === 'vertical' && absDeltaX > absDeltaY;
+    const notHorizontal = state.direction === 'horizontal' && absDeltaY > absDeltaX;
+    const notVertical = state.direction === 'vertical' && absDeltaX > absDeltaY;
 
-    if (this.#touchState.direction !== 'none' || (notHorizontal && notVertical)) {
+    if (state.direction !== 'none' || (notHorizontal && notVertical)) {
       if (absDeltaX < threshold && absDeltaY < threshold) return;
     }
 
-    if ((absDeltaX > threshold || absDeltaY > threshold) && this.#touchState.direction === 'none') {
+    if ((absDeltaX > threshold || absDeltaY > threshold) && state.direction === 'none') {
       if (absDeltaX > absDeltaY) {
-        this.#touchState.direction = 'horizontal'
+        state.direction = 'horizontal'
       } else {
-        this.#touchState.direction = 'vertical'
+        state.direction = 'vertical'
       }
     }
 
-    const isHorizontal = this.#touchState.direction === 'horizontal' && this.scrollProp === 'scrollLeft'
-    const isVertical = this.#touchState.direction === 'vertical' && this.scrollProp === 'scrollTop'
+    const isHorizontal = state.direction === 'horizontal' && this.scrollProp === 'scrollLeft'
+    const isVertical = state.direction === 'vertical' && this.scrollProp === 'scrollTop'
 
-    if (!isHorizontal && !isVertical) {
-      this.dispatchEvent(new CustomEvent('doctouchmove', {
-        detail: {
-          touch: e.changedTouches[0],
-          touchState: this.#touchState,
-        },
-        preventDefault: () => e.preventDefault(),
-        bubbles: true,
-        composed: true
-      }))
-      return
-    }
-
-    const state = this.#touchState
-    if (!state) return
+    const forwarded = new CustomEvent('doctouchmove', {
+      detail: {
+        touch,
+        touchState: state,
+      },
+      preventDefault: () => e.preventDefault(),
+      bubbles: true,
+      composed: true
+    })
+    this.dispatchEvent(forwarded)
 
     if (state.pinched) return
     state.pinched = globalThis.visualViewport.scale > 1
-
-    if (this.scrolled || state.pinched) return
+    if (state.pinched) return
 
     if (e.touches.length > 1) {
       if (this.#touchScrolled) e.preventDefault()
       return
     }
 
-    e.preventDefault()
+    const dt = e.timeStamp - state.t || 16.7
+    const stepX = state.x - touch.screenX
+    const stepY = state.y - touch.screenY
+    state.x = touch.screenX
+    state.y = touch.screenY
+    state.t = e.timeStamp
+    state.vx = stepX / dt
+    state.vy = stepY / dt
 
-    if (!state.animationFrameId) {
-      state.animationFrameId = requestAnimationFrame(() => {
-        const touch = e.changedTouches[0]
-        const x = touch.screenX, y = touch.screenY
+    if (this.scrolled) return
 
-        const dx = state.x - x, dy = state.y - y
-        const dt = e.timeStamp - state.t || 16.7
-
-        const damping = 0.85
-        const smoothDx = dx * damping
-        const smoothDy = dy * damping
-
-        state.x = x
-        state.y = y
-        state.t = e.timeStamp
-        state.vx = dx / dt
-        state.vy = dy / dt
-
-        this.#touchScrolled = true
-        this.scrollBy(smoothDx, smoothDy)
-
-        state.animationFrameId = null
-      })
+    if (isVertical) {
+      e.preventDefault()
+    } else if (isHorizontal) {
+      this.#touchScrolled = true
+      // rely on native scrolling for horizontal paging
     }
   }
   #onTouchEnd(e) {
@@ -911,31 +938,44 @@ export class Paginator extends HTMLElement {
   async #scrollTo(offset, reason, smooth) {
     const element = this.#container
     const { scrollProp, size } = this
+    this.#ignoreNativeScroll = true
+    const opts = typeof smooth === 'object' ? smooth ?? {} : {}
+    const shouldAnimate = opts.animate ?? (reason === 'snap' || smooth === true)
+    const easing = opts.easing ?? easeOutSine
+    const finish = () => {
+      this.#afterScroll(reason)
+      this.#ignoreNativeScroll = false
+      if (reason === 'snap' || opts.restoreMomentum) {
+        const delay = opts.momentumDelay ?? 120
+        this.#cancelMomentumTimer()
+        this.#momentumTimer = setTimeout(() => {
+          this.#restoreMomentum()
+        }, delay)
+      }
+    }
+    if (reason === 'snap' || opts.disableMomentum) this.#disableMomentum()
+
+    const previousBehavior = element.style.scrollBehavior
+    if (shouldAnimate) element.style.scrollBehavior = 'auto'
 
     if (Math.abs(element[scrollProp] - offset) < 1) {
-      this.#scrollBounds = [offset, this.atStart ? 0 : size, this.atEnd ? 0 : size]
-      this.#afterScroll(reason)
+      finish()
+      element.style.scrollBehavior = previousBehavior
       return
     }
 
     // FIXME: vertical-rl only, not -lr
     if (this.scrolled && this.#vertical) offset = -offset
 
-    const useAnimation = (reason === 'snap' || smooth) && this.hasAttribute('animated')
+    const useAnimation = shouldAnimate && this.hasAttribute('animated')
 
     if (useAnimation) {
       const distance = Math.abs(element[scrollProp] - offset)
       const baseDuration = 300
-      const adaptiveDuration = Math.min(
-        500,
-        Math.max(200,
-          baseDuration * (distance / size)
-        )
+      const adaptiveDuration = opts.duration ?? Math.min(
+        400,
+        Math.max(200, baseDuration * (distance / (size || 1)))
       )
-
-      const smoothEasing = x => {
-        return 1 - Math.pow(1 - x, 3);
-      }
 
       this.#justAnchored = true
 
@@ -943,20 +983,25 @@ export class Paginator extends HTMLElement {
         element[scrollProp],
         offset,
         adaptiveDuration,
-        smoothEasing,
+        easing,
         x => element[scrollProp] = x,
       ).then(() => {
         element[scrollProp] = offset
-        this.#scrollBounds = [offset, this.atStart ? 0 : size, this.atEnd ? 0 : size]
-
-        return wait(10).then(() => {
-          this.#afterScroll(reason)
-        })
+        return wait(10)
+      }).then(() => {
+        finish()
+        element.style.scrollBehavior = previousBehavior
+      }).catch(err => {
+        this.#ignoreNativeScroll = false
+        this.#restoreMomentum()
+        element.style.scrollBehavior = previousBehavior
+        throw err
       })
     } else {
+      element.style.scrollBehavior = 'auto'
       element[scrollProp] = offset
-      this.#scrollBounds = [offset, this.atStart ? 0 : size, this.atEnd ? 0 : size]
-      this.#afterScroll(reason)
+      finish()
+      element.style.scrollBehavior = previousBehavior
     }
   }
   async #scrollToPage(page, reason, smooth) {
@@ -1122,24 +1167,24 @@ export class Paginator extends HTMLElement {
     if (!this.#view) return true
     if (this.scrolled) {
       if (this.start > 0) return this.#scrollTo(
-        Math.max(0, this.start - (distance ?? this.size)), null, true)
+        Math.max(0, this.start - (distance ?? this.size)), null, { animate: true })
       return true
     }
     if (this.atStart) return
     const page = this.page - 1
-    return this.#scrollToPage(page, 'page', true).then(() => page <= 0)
+    return this.#scrollToPage(page, 'page', { animate: true }).then(() => page <= 0)
   }
   #scrollNext(distance) {
     if (!this.#view) return true
     if (this.scrolled) {
       if (this.viewSize - this.end > 2) return this.#scrollTo(
-        Math.min(this.viewSize, distance ? this.start + distance : this.end), null, true)
+        Math.min(this.viewSize, distance ? this.start + distance : this.end), null, { animate: true })
       return true
     }
     if (this.atEnd) return
     const page = this.page + 1
     const pages = this.pages
-    return this.#scrollToPage(page, 'page', true).then(() => page >= pages - 1)
+    return this.#scrollToPage(page, 'page', { animate: true }).then(() => page >= pages - 1)
   }
   get atStart() {
     return this.#adjacentIndex(-1) == null && this.page <= 1
@@ -1217,6 +1262,11 @@ export class Paginator extends HTMLElement {
     this.#view = null
     this.sections[this.#index]?.unload?.()
     this.#mediaQuery.removeEventListener('change', this.#mediaQueryListener)
+    if (this.#pendingScrollFrame) {
+      cancelAnimationFrame(this.#pendingScrollFrame)
+      this.#pendingScrollFrame = null
+    }
+    this.#restoreMomentum()
   }
 }
 
