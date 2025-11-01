@@ -77,7 +77,7 @@ class BookItem extends ConsumerWidget {
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Prefs().useOriginalCoverRatio
               ? coverWidget
