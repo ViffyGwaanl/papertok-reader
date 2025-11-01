@@ -53,35 +53,46 @@ jobs:
           XCODE_VERSION=26.0
           echo "xcode_version=${XCODE_VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Get version from pubspec.yaml and determine release type
+      - name: Get version from tag and determine release type
         id: get_version
         shell: bash
         run: |
-          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          VERSION=$( grep '^version:' pubspec.yaml | cut -d ' ' -f 2 | cut -d '+' -f 1 )
-          if [[ ${{ github.ref }} == refs/tags/alpha-* ]]; then
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+          PUBSPEC_VERSION=$( grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d '+' -f 1 )
+
+          if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)-alpha\.([0-9]+)$ ]]; then
+            BASE_VERSION="${BASH_REMATCH[1]}"
+            PRE_BUILD="${BASH_REMATCH[2]}"
             echo "is_alpha=true" >> $GITHUB_OUTPUT
             echo "is_beta=false" >> $GITHUB_OUTPUT
-            echo "version=alpha-${VERSION}" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.ref }} == refs/tags/beta-* ]]; then
+            echo "version=${BASE_VERSION}-alpha.${PRE_BUILD}" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
+            BASE_VERSION="${BASH_REMATCH[1]}"
+            PRE_BUILD="${BASH_REMATCH[2]}"
             echo "is_alpha=false" >> $GITHUB_OUTPUT
             echo "is_beta=true" >> $GITHUB_OUTPUT
-            echo "version=beta-${VERSION}" >> $GITHUB_OUTPUT
-          else
+            echo "version=${BASE_VERSION}-beta.${PRE_BUILD}" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            BASE_VERSION="${BASH_REMATCH[1]}"
             echo "is_alpha=false" >> $GITHUB_OUTPUT
             echo "is_beta=false" >> $GITHUB_OUTPUT
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "version=${BASE_VERSION}" >> $GITHUB_OUTPUT
+          else
+            echo "::error::Unsupported tag format: ${TAG}" >&2
+            exit 1
+          fi
+
+          if [[ "${BASE_VERSION}" != "${PUBSPEC_VERSION}" ]]; then
+            echo "::warning::Tag version ${BASE_VERSION} does not match pubspec version ${PUBSPEC_VERSION}" >&2
           fi
 
       - name: Extract release notes
         id: extract_release_notes
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
-          if [[ $VERSION == beta-* ]] || [[ $VERSION == alpha-* ]]; then
-            MAIN_VERSION=$(echo $VERSION | cut -d'-' -f2 | cut -d'-' -f1)
-          else
-            MAIN_VERSION=$VERSION
-          fi
+          MAIN_VERSION=${VERSION%%-*}
           CHANGELOG_CONTENT=$(sed -n "/## $MAIN_VERSION/,/## /p" assets/CHANGELOG.md | sed '$d')
           echo "release_notes<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT

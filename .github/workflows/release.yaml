@@ -36,6 +36,12 @@ jobs:
     env:
       BASE_NOTIFICATION_URL: ${{ secrets.NOTIFICATION_URL }}/Anx-Reader%20Action
     steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -60,6 +66,12 @@ jobs:
     env:
       BASE_NOTIFICATION_URL: ${{ secrets.NOTIFICATION_URL }}/Anx-Reader%20Action
     steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -121,4 +133,3 @@ jobs:
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           curl -s "$BASE_NOTIFICATION_URL/Build%20Completed?url=$RUN_URL&level=timeSensitive&icon=https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png" || echo "Notification failed, continuing..."
-

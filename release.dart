@@ -93,11 +93,17 @@ void main() async {
     }
   }
   // For beta/alpha, check for existing builds of the current version in tags
-  final versionTags =
-      tags.where((tag) => tag.contains(suggestedVersion)).toList();
-  if (versionTags.isNotEmpty) {
+  final versionTags = releaseType == 'stable'
+      ? tags.where((tag) => tag == 'v$suggestedVersion').toList()
+      : tags
+          .where((tag) => tag
+              .startsWith('v$suggestedVersion-$releaseType.'))
+          .toList();
+
+  if (releaseType != 'stable' && versionTags.isNotEmpty) {
     suggestedTagBuild =
-        _findHighestBuildNumber(versionTags, suggestedVersion) + 1;
+        _findHighestBuildNumber(versionTags, suggestedVersion, releaseType) +
+            1;
   }
 
   if (allTags.isNotEmpty) {
@@ -122,19 +128,9 @@ void main() async {
     }
   }
 
-  String tagPrefix = '';
-  if (releaseType == 'stable') {
-    tagPrefix = 'v';
-  } else {
-    tagPrefix = '$releaseType-';
-  }
-
-  String suggestedTag = '';
-  if (releaseType == 'stable') {
-    suggestedTag = '$tagPrefix$suggestedVersion';
-  } else {
-    suggestedTag = '$tagPrefix$suggestedVersion-$suggestedTagBuild';
-  }
+  final suggestedTag = releaseType == 'stable'
+      ? 'v$suggestedVersion'
+      : 'v$suggestedVersion-$releaseType.$suggestedTagBuild';
 
   print('\nSuggested tag: $suggestedTag');
   print('Suggested pubspec version: $suggestedVersion+$suggestedPubspecBuild');
@@ -182,7 +178,7 @@ void main() async {
   if (releaseType == 'stable') {
     tag = 'v$version';
   } else {
-    tag = '$releaseType-$version-$suggestedTagBuild';
+    tag = 'v$version-$releaseType.$suggestedTagBuild';
   }
 
   print('\nTag to create: $tag');
@@ -290,9 +286,9 @@ Future<List<String>> _getTagsByPattern(String releaseType) async {
   String pattern;
 
   if (releaseType == 'stable') {
-    pattern = 'v[0-9]*';
+    pattern = 'v[0-9]*.[0-9]*.[0-9]*';
   } else {
-    pattern = '$releaseType-*';
+    pattern = 'v[0-9]*.[0-9]*.[0-9]*-$releaseType.[0-9]*';
   }
 
   final result =
@@ -320,12 +316,13 @@ String? _extractLatestVersionFromTags(List<String> tags) {
   return match?.group(1);
 }
 
-int _findHighestBuildNumber(List<String> tags, String version) {
+int _findHighestBuildNumber(
+    List<String> tags, String version, String releaseType) {
   int highestBuild = 0;
 
-  // For alpha/beta tags like alpha-1.2.3-5
-  final buildRegExp =
-      RegExp(r'(?:alpha|beta)-' + version.replaceAll('.', '\\.') + r'-(\d+)');
+  final escapedVersion = RegExp.escape(version);
+  final pattern = '^v$escapedVersion-$releaseType\\.(\\d+)\$';
+  final buildRegExp = RegExp(pattern);
 
   for (final tag in tags) {
     final match = buildRegExp.firstMatch(tag);
