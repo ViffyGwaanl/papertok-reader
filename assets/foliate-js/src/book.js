@@ -462,6 +462,10 @@ const getCSS = ({ fontSize,
         ${fontFamily}
     }
 
+    h1, h2, h3, h4, h5, h6 {
+        line-height: ${spacing} !important;
+    }
+
     p, li, blockquote, dd, div:not(:has(*:not(b, a, em, i, strong, u, span))), font {
         color: ${fontColor} !important;
         line-height: ${spacing} !important;
