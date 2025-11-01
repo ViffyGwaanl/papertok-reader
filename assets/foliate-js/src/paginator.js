@@ -942,6 +942,23 @@ export class Paginator extends HTMLElement {
       return
     }
 
+    const verticalLocked = state?.direction === 'vertical'
+      && state.axis === 'scrollLeft'
+      && state.lockedOffset != null
+
+    if (verticalLocked) {
+      // restore original horizontal position and skip snapping to avoid accidental page turns
+      this.#container.scrollLeft = state.lockedOffset
+      this.#restoreMomentum()
+      this.#touchState = null
+      if (this.#pendingRelocate) {
+        const detail = this.#pendingRelocate
+        this.#pendingRelocate = null
+        this.dispatchEvent(new CustomEvent('relocate', { detail }))
+      }
+      return
+    }
+
 
     // XXX: Firefox seems to report scale as 1... sometimes...?
     // at this point I'm basically throwing `requestAnimationFrame` at
