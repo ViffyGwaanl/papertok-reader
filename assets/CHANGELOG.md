@@ -80,6 +80,7 @@
 - Fix: The bottom details on the bookshelf page sometimes do not work when clicked
 - Fix: Gemini model cannot be used
 - Fix: Fix the issue of blank content not updating after modifying underline notes
+- Fix: AI line breaks sometimes display abnormally
 - UI: Optimize part of the interface design
 
 - Feat: 在 导航栏 添加 AI 页面
@@ -96,6 +97,7 @@
 - Fix: 书架页面底部详情有时点击后不起作用的问题
 - Fix: Gemini 模型无法使用的问题
 - Fix: 修复划线笔记修改后内容空白不更新的问题
+- Fix: AI 换行符有时显示异常的问题
 - UI: 优化部分界面设计
 
 ## 1.8.1

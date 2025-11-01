@@ -120,9 +120,6 @@ class CancelableLangchainRunner {
       }
 
       void appendReplyChunk(String text) {
-        if (text.trim().isEmpty) {
-          return;
-        }
         if (timeline.isNotEmpty &&
             timeline.last.type == _ReasoningItemType.reply) {
           timeline.last.appendReply(text);
@@ -176,7 +173,6 @@ class CancelableLangchainRunner {
           final options = model.defaultOptions.copyWith(tools: toolSpecs);
 
           ChatResult? aggregated;
-
           final completer = Completer<void>();
           _subscription = model.stream(prompt, options: options).listen(
             (chunk) {
@@ -189,10 +185,8 @@ class CancelableLangchainRunner {
 
               if (output.toolCalls.isEmpty) {
                 final textChunk = normalizedChunk.outputAsString;
-                if (textChunk.trim().isNotEmpty) {
-                  appendReplyChunk(textChunk);
-                  emit();
-                }
+                appendReplyChunk(textChunk);
+                emit();
               }
             },
             onError: (Object error, StackTrace stack) {

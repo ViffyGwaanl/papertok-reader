@@ -67,7 +67,7 @@ ParsedReasoning parseReasoningContent(String content) {
     remaining = content.replaceAll(thinkRegex, '');
   }
 
-  if (remaining.trim().isNotEmpty) {
+  if (remaining.isNotEmpty) {
     _parseTimeline(remaining, timeline);
   }
 
@@ -112,11 +112,10 @@ void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
   void flushBuffer() {
     final chunk = buffer.toString();
     buffer = StringBuffer();
-    final trimmed = chunk.trim();
-    if (trimmed.isEmpty) {
+    if (chunk.isEmpty) {
       return;
     }
-    timeline.add(ParsedReasoningEntry.reply(trimmed));
+    timeline.add(ParsedReasoningEntry.reply(chunk));
   }
 
   for (final match in tagRegex.allMatches(source)) {
@@ -144,10 +143,9 @@ void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
     } else {
       final decoded = _decodeAttrValue(attrs, 'text');
       final text = decoded ?? _unescapeAttr(attrs['text'] ?? '');
-      final trimmed = text.trim();
-      if (trimmed.isNotEmpty) {
+      if (text.isNotEmpty) {
         flushBuffer();
-        timeline.add(ParsedReasoningEntry.reply(trimmed));
+        timeline.add(ParsedReasoningEntry.reply(text));
       }
     }
 
@@ -172,7 +170,7 @@ String reasoningContentToPlainText(String content) {
   for (final entry in parsed.timeline) {
     switch (entry.type) {
       case ParsedReasoningEntryType.reply:
-        final text = entry.text?.trim();
+        final text = entry.text;
         if (text != null && text.isNotEmpty) {
           sections.add(text);
         }
