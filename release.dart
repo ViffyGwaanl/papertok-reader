@@ -281,27 +281,18 @@ Future<List<String>> _getAllTags() async {
 }
 
 Future<List<String>> _getTagsByPattern(String releaseType) async {
-  String pattern;
-
+  // Get all tags first
+  final allTags = await _getAllTags();
+  
   if (releaseType == 'stable') {
-    pattern = 'v[0-9]*.[0-9]*.[0-9]*';
+    // Match stable releases: v1.2.3 (no suffix)
+    final stablePattern = RegExp(r'^v\d+\.\d+\.\d+$');
+    return allTags.where((tag) => stablePattern.hasMatch(tag)).toList();
   } else {
-    pattern = 'v[0-9]*.[0-9]*.[0-9]*-$releaseType.[0-9]*';
+    // Match beta/alpha releases in new format: v1.2.3-alpha.1 or v1.2.3-beta.1
+    final preReleasePattern = RegExp(r'^v\d+\.\d+\.\d+-' + releaseType + r'\.\d+$');
+    return allTags.where((tag) => preReleasePattern.hasMatch(tag)).toList();
   }
-
-  final result =
-      await Process.run('git', ['tag', '-l', pattern, '--sort=-v:refname']);
-
-  if (result.exitCode != 0) {
-    return [];
-  }
-
-  final output = result.stdout.toString().trim();
-  if (output.isEmpty) {
-    return [];
-  }
-
-  return LineSplitter.split(output).toList();
 }
 
 String? _extractLatestVersionFromTags(List<String> tags) {
@@ -318,6 +309,7 @@ int _findHighestBuildNumber(
     List<String> tags, String version, String releaseType) {
   int highestBuild = 0;
 
+  // New format: v1.2.3-alpha.1 or v1.2.3-beta.1
   final escapedVersion = RegExp.escape(version);
   final pattern = '^v$escapedVersion-$releaseType\\.(\\d+)\$';
   final buildRegExp = RegExp(pattern);
