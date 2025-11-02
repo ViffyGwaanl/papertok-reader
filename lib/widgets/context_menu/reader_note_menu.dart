@@ -82,7 +82,7 @@ class ReaderNoteMenuState extends State<ReaderNoteMenu> {
     try {
       final fetchedNote = await selectBookNoteById(id);
       note = fetchedNote;
-    
+
       if (note != null &&
           note!.readerNote != null &&
           note!.readerNote!.isNotEmpty) {
@@ -173,7 +173,7 @@ class ReaderNoteMenuState extends State<ReaderNoteMenu> {
                   ],
                 ),
               ),
-            ),
+      ),
     ));
   }
 }
