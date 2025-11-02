@@ -283,14 +283,15 @@ Future<List<String>> _getAllTags() async {
 Future<List<String>> _getTagsByPattern(String releaseType) async {
   // Get all tags first
   final allTags = await _getAllTags();
-  
+
   if (releaseType == 'stable') {
     // Match stable releases: v1.2.3 (no suffix)
     final stablePattern = RegExp(r'^v\d+\.\d+\.\d+$');
     return allTags.where((tag) => stablePattern.hasMatch(tag)).toList();
   } else {
     // Match beta/alpha releases in new format: v1.2.3-alpha.1 or v1.2.3-beta.1
-    final preReleasePattern = RegExp(r'^v\d+\.\d+\.\d+-' + releaseType + r'\.\d+$');
+    final preReleasePattern =
+        RegExp(r'^v\d+\.\d+\.\d+-' + releaseType + r'\.\d+$');
     return allTags.where((tag) => preReleasePattern.hasMatch(tag)).toList();
   }
 }
