@@ -70,20 +70,38 @@ class ConfigItem {
 }
 
 abstract class TranslateServiceProvider {
-  Widget translate(String text, LangListEnum from, LangListEnum to);
+  Widget translate(
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    String? contextText,
+  });
 
   Stream<String> translateStream(
-      String text, LangListEnum from, LangListEnum to);
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    String? contextText,
+  });
 
   /// Only translate text with retries, return the final result or throw an exception if all attempts fail.
   Future<String> translateTextOnly(
-      String text, LangListEnum from, LangListEnum to) async {
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    String? contextText,
+  }) async {
     const int maxRetries = 2;
 
     for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         String? lastResult;
-        await for (String result in translateStream(text, from, to)) {
+        await for (String result in translateStream(
+          text,
+          from,
+          to,
+          contextText: contextText,
+        )) {
           lastResult = result;
           // Skip intermediate results like "..."
           if (result != '...' && result.trim().isNotEmpty) {
@@ -167,12 +185,18 @@ class TranslateFactory {
   }
 }
 
-Widget translateText(String text, {TranslateService? service}) {
+Widget translateText(String text,
+    {TranslateService? service, String? contextText}) {
   service ??= Prefs().translateService;
   final from = Prefs().translateFrom;
   final to = Prefs().translateTo;
 
-  return TranslateFactory.getProvider(service).translate(text, from, to);
+  return TranslateFactory.getProvider(service).translate(
+    text,
+    from,
+    to,
+    contextText: contextText,
+  );
 }
 
 List<ConfigItem> getTranslateServiceConfigItems(TranslateService service) {
@@ -189,11 +213,15 @@ void saveTranslateServiceConfig(
 }
 
 Future<String> translateTextOnly(String text,
-    {TranslateService? service}) async {
+    {TranslateService? service, String? contextText}) async {
   service ??= Prefs().translateService;
   final from = Prefs().translateFrom;
   final to = Prefs().translateTo;
 
-  return await TranslateFactory.getProvider(service)
-      .translateTextOnly(text, from, to);
+  return await TranslateFactory.getProvider(service).translateTextOnly(
+    text,
+    from,
+    to,
+    contextText: contextText,
+  );
 }

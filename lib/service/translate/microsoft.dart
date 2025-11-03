@@ -12,13 +12,24 @@ const urlMicrosoftAuth = 'https://edge.microsoft.com/translate/auth';
 
 class MicrosoftTranslateProvider extends TranslateServiceProvider {
   @override
-  Widget translate(String text, LangListEnum from, LangListEnum to) {
-    return convertStreamToWidget(translateStream(text, from, to));
+  Widget translate(
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    String? contextText,
+  }) {
+    return convertStreamToWidget(
+      translateStream(text, from, to, contextText: contextText),
+    );
   }
 
   @override
   Stream<String> translateStream(
-      String text, LangListEnum from, LangListEnum to) async* {
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    String? contextText,
+  }) async* {
     try {
       yield "...";
       final token = await getMicrosoftKey();

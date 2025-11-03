@@ -11,10 +11,12 @@ class TranslationMenu extends StatefulWidget {
     required this.content,
     required this.decoration,
     required this.axis,
+    this.contextText,
   });
   final String content;
   final BoxDecoration decoration;
   final Axis axis;
+  final String? contextText;
 
   @override
   State<TranslationMenu> createState() => _TranslationMenuState();
@@ -81,6 +83,9 @@ class _TranslationMenuState extends State<TranslationMenu> {
   @override
   Widget build(BuildContext context) {
     // print('Building TranslationMenu');
+    final effectiveContextText = (widget.contextText?.trim().isEmpty ?? true)
+        ? null
+        : widget.contextText;
     return Expanded(
       child: AnimatedSize(
         duration: const Duration(milliseconds: 300),
@@ -107,7 +112,10 @@ class _TranslationMenuState extends State<TranslationMenu> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    translateText(widget.content),
+                    translateText(
+                      widget.content,
+                      contextText: effectiveContextText,
+                    ),
                     const Divider(),
                     AxisFlex(
                       mainAxisSize: MainAxisSize.min,

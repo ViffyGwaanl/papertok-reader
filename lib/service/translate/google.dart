@@ -8,13 +8,24 @@ const urlGoogle = 'https://translate.google.com/translate_a/single';
 
 class GoogleTranslateProvider extends TranslateServiceProvider {
   @override
-  Widget translate(String text, LangListEnum from, LangListEnum to) {
-    return convertStreamToWidget(translateStream(text, from, to));
+  Widget translate(
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    String? contextText,
+  }) {
+    return convertStreamToWidget(
+      translateStream(text, from, to, contextText: contextText),
+    );
   }
 
   @override
   Stream<String> translateStream(
-      String text, LangListEnum from, LangListEnum to) async* {
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    String? contextText,
+  }) async* {
     final params = {
       'client': 'gtx',
       'sl': from.code,

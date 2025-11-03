@@ -9,11 +9,17 @@ import 'package:flutter/material.dart';
 
 class AiTranslateProvider extends TranslateServiceProvider {
   @override
-  Widget translate(String text, LangListEnum from, LangListEnum to) {
+  Widget translate(
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    String? contextText,
+  }) {
     final prompt = generatePromptTranslate(
       text,
       to.nativeName,
       from.nativeName,
+      contextText: contextText,
     );
 
     return AiStream(
@@ -24,12 +30,17 @@ class AiTranslateProvider extends TranslateServiceProvider {
 
   @override
   Stream<String> translateStream(
-      String text, LangListEnum from, LangListEnum to) async* {
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    String? contextText,
+  }) async* {
     try {
       final payload = generatePromptTranslate(
         text,
         to.nativeName,
         from.nativeName,
+        contextText: contextText,
       );
 
       final messages = payload.buildMessages();

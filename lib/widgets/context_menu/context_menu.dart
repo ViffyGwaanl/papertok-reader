@@ -10,17 +10,17 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 void showContextMenu(
-  BuildContext context,
-  double left,
-  double top,
-  double right,
-  double bottom,
-  String annoContent,
-  String annoCfi,
-  int? annoId,
-  bool footnote,
-  Axis axis,
-) {
+    BuildContext context,
+    double left,
+    double top,
+    double right,
+    double bottom,
+    String annoContent,
+    String annoCfi,
+    int? annoId,
+    bool footnote,
+    Axis axis,
+    {String? contextText}) {
   final playerKey = epubPlayerKey.currentState;
   if (playerKey == null) return;
 
@@ -121,6 +121,7 @@ void showContextMenu(
       annoCfi: annoCfi,
       annoId: annoId,
       footnote: footnote,
+      contextText: contextText,
       decoration: decoration,
       onClose: onClose,
       menuConstraints: menuConstraints,
@@ -222,6 +223,7 @@ class _ContextMenuOverlay extends StatefulWidget {
     required this.annoCfi,
     required this.annoId,
     required this.footnote,
+    this.contextText,
     required this.decoration,
     required this.onClose,
     required this.menuConstraints,
@@ -240,6 +242,7 @@ class _ContextMenuOverlay extends StatefulWidget {
   final String annoCfi;
   final int? annoId;
   final bool footnote;
+  final String? contextText;
   final BoxDecoration decoration;
   final VoidCallback onClose;
   final BoxConstraints menuConstraints;
@@ -514,6 +517,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
                                 content: widget.annoContent,
                                 decoration: widget.decoration,
                                 axis: widget.axis,
+                                contextText: widget.contextText,
                               ),
                             ],
                           ),

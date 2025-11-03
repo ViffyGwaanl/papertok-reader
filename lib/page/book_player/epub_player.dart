@@ -97,6 +97,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   String bookmarkCfi = '';
   bool bookmarkExists = false;
   WritingModeEnum writingMode = WritingModeEnum.horizontalTb;
+  String? _lastSelectionContextText;
 
   // to know anytime if we are on top of navigation stack
   bool get _isTopOfNavigationStack =>
@@ -614,6 +615,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           String cfi = location['cfi'];
           String text = location['text'];
           bool footnote = location['footnote'];
+          final rawContextText = location['contextText']?.toString();
+          _lastSelectionContextText =
+              (rawContextText?.trim().isEmpty ?? true) ? null : rawContextText;
           double left = location['pos']['left'];
           double top = location['pos']['top'];
           double right = location['pos']['right'];
@@ -629,11 +633,13 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             null,
             footnote,
             writingMode.isVertical ? Axis.vertical : Axis.horizontal,
+            contextText: _lastSelectionContextText,
           );
         });
     controller.addJavaScriptHandler(
         handlerName: 'onSelectionCleared',
         callback: (args) {
+          _lastSelectionContextText = null;
           removeOverlay();
         });
     controller.addJavaScriptHandler(
@@ -643,6 +649,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           int id = annotation['annotation']['id'];
           String cfi = annotation['annotation']['value'];
           String note = annotation['annotation']['note'];
+          final rawContextText = annotation['contextText']?.toString();
+          _lastSelectionContextText =
+              (rawContextText?.trim().isEmpty ?? true) ? null : rawContextText;
           double left = annotation['pos']['left'];
           double top = annotation['pos']['top'];
           double right = annotation['pos']['right'];
@@ -658,6 +667,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             id,
             false,
             writingMode.isVertical ? Axis.vertical : Axis.horizontal,
+            contextText: _lastSelectionContextText,
           );
         });
     controller.addJavaScriptHandler(
