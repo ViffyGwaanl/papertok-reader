@@ -341,7 +341,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
             },
             child: IconAndText(
               icon: const Icon(EvaIcons.message_circle_outline),
-              text: L10n.of(context).aiChat,
+              text: L10n.of(context).navBarAI,
             ),
           ),
           // share
