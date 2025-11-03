@@ -3,7 +3,7 @@
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
 
-## 1.9.2
+## 1.9.3
 - Feat: Directory interface is displayed as a drawer from the side
 - Feat: AI output can be more easily selected and copied
 - Feat: In vertical layout, optimize the quotation mark style

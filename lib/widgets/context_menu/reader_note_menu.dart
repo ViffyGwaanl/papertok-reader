@@ -169,7 +169,6 @@ class ReaderNoteMenuState extends State<ReaderNoteMenu> {
                           _notifySizeChange();
                         },
                       ),
-                    const Spacer(),
                   ],
                 ),
               ),
