@@ -73,6 +73,75 @@ const getSelectionRange = (selection) => {
   return range.collapsed ? null : range;
 };
 
+const CONTEXT_WINDOW_CHARS = 120;
+const MAX_CONTEXT_CHARS = 600;
+
+const _collapseWhitespace = (text) =>
+  typeof text === 'string'
+    ? text.replace(/\s+/g, ' ').trim()
+    : '';
+
+const _sliceWithWindow = (text, start, end) => {
+  if (!text) return '';
+  const safeStart = Math.max(0, Math.min(text.length, start));
+  const safeEnd = Math.max(safeStart, Math.min(text.length, end));
+  return text.slice(safeStart, safeEnd);
+};
+
+const buildRangeContextText = (range) => {
+  if (!range) return '';
+
+  const selectionText = range.toString().trim();
+  const startNode = range.startContainer;
+  const endNode = range.endContainer;
+  const startText = startNode?.textContent ?? '';
+  const endText = endNode?.textContent ?? '';
+
+  let contextText = '';
+
+  if (startNode === endNode) {
+    const segment = _sliceWithWindow(
+      startText,
+      range.startOffset - CONTEXT_WINDOW_CHARS,
+      range.endOffset + CONTEXT_WINDOW_CHARS
+    );
+    contextText = _collapseWhitespace(segment);
+  } else {
+    const startSegment = _collapseWhitespace(
+      _sliceWithWindow(
+        startText,
+        range.startOffset - CONTEXT_WINDOW_CHARS,
+        range.startOffset + CONTEXT_WINDOW_CHARS
+      )
+    );
+    const endSegment = _collapseWhitespace(
+      _sliceWithWindow(
+        endText,
+        range.endOffset - CONTEXT_WINDOW_CHARS,
+        range.endOffset + CONTEXT_WINDOW_CHARS
+      )
+    );
+    const parts = [
+      startSegment,
+      selectionText,
+      endSegment
+    ].filter(Boolean);
+    contextText = parts.join(' ');
+  }
+
+  if (!contextText && selectionText) {
+    contextText = selectionText;
+  }
+
+  contextText = _collapseWhitespace(contextText);
+
+  if (contextText.length > MAX_CONTEXT_CHARS) {
+    return contextText.slice(0, MAX_CONTEXT_CHARS);
+  }
+
+  return contextText;
+};
+
 const handleSelection = (view, doc, index) => {
   const selection = doc.getSelection();
   const range = getSelectionRange(selection);
@@ -91,13 +160,16 @@ const handleSelection = (view, doc, index) => {
     text = newSelection.toString();
   }
 
+  const contextText = buildRangeContextText(range);
+
   onSelectionEnd({
     index,
     range,
     lang,
     cfi,
     pos: position,
-    text
+    text,
+    contextText
   });
 };
 
@@ -751,7 +823,8 @@ class Reader {
       const annotation = this.annotationsByValue.get(e.detail.value)
       const pos = getPosition(e.detail.range)
       if (window.getSelection()?.toString()) return
-      onAnnotationClick({ annotation, pos })
+      const contextText = buildRangeContextText(e.detail.range)
+      onAnnotationClick({ annotation, pos, contextText })
     })
     view.addEventListener('external-link', e => {
       e.preventDefault()
