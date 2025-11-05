@@ -469,7 +469,9 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                   return Row(
                     children: [
                       Text(
-                        readingTimes[index].date!,
+                        readingTimes[index].dateOnly ??
+                            readingTimes[index].date ??
+                            '',
                         style: const TextStyle(
                           fontSize: 15,
                         ),

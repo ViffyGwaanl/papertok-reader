@@ -64,6 +64,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   late Book _book;
   late Widget _currentPage = empty;
   final Stopwatch _readTimeWatch = Stopwatch();
+  DateTime? _sessionStart;
   Timer? _awakeTimer;
   bool bottomBarOffstage = true;
   String heroTag = 'preventHeroWhenStart';
@@ -92,6 +93,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
 
     WidgetsBinding.instance.addObserver(this);
     _readTimeWatch.start();
+    _sessionStart = DateTime.now();
     setAwakeTimer(Prefs().awakeTime);
 
     _book = widget.book;
@@ -121,8 +123,14 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     WakelockPlus.disable();
     showStatusBar();
     WidgetsBinding.instance.removeObserver(this);
-    readingTimeDao.insertReadingTime(ReadingTime(
-        bookId: _book.id, readingTime: _readTimeWatch.elapsed.inSeconds));
+    readingTimeDao.insertReadingTime(
+      ReadingTime(
+        bookId: _book.id,
+        readingTime: _readTimeWatch.elapsed.inSeconds,
+      ),
+      startedAt: _sessionStart,
+    );
+    _sessionStart = null;
     audioHandler.stop();
     // if (_volumeKeyListenerAttached) {
     //   unawaited(_volumeKeyBoard.removeListener());
@@ -222,6 +230,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         if (!_readTimeWatch.isRunning) {
           _readTimeWatch.start();
         }
+        _sessionStart ??= DateTime.now();
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
@@ -234,8 +243,14 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             state == AppLifecycleState.hidden ||
             state == AppLifecycleState.detached) {
           epubPlayerKey.currentState?.saveReadingProgress();
-          readingTimeDao.insertReadingTime(ReadingTime(
-              bookId: _book.id, readingTime: _readTimeWatch.elapsed.inSeconds));
+          readingTimeDao.insertReadingTime(
+            ReadingTime(
+              bookId: _book.id,
+              readingTime: _readTimeWatch.elapsed.inSeconds,
+            ),
+            startedAt: _sessionStart,
+          );
+          _sessionStart = null;
         }
         break;
     }
