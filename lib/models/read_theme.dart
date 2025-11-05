@@ -40,4 +40,13 @@ class ReadTheme {
         textColor: data['textColor'],
         backgroundImagePath: data['backgroundImagePath']);
   }
+
+  factory ReadTheme.fromDb(Map<String, dynamic> map) {
+    return ReadTheme(
+      id: map['id'] as int?,
+      backgroundColor: map['background_color'] as String? ?? '',
+      textColor: map['text_color'] as String? ?? '',
+      backgroundImagePath: map['background_image_path'] as String? ?? '',
+    );
+  }
 }

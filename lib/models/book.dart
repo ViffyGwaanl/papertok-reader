@@ -91,4 +91,23 @@ class Book {
       updateTime: updateTime ?? this.updateTime,
     );
   }
+
+  factory Book.fromDb(Map<String, dynamic> map) {
+    return Book(
+      id: map['id'] as int,
+      title: map['title'] as String? ?? '',
+      coverPath: map['cover_path'] as String? ?? '',
+      filePath: map['file_path'] as String? ?? '',
+      lastReadPosition: map['last_read_position'] as String? ?? '',
+      readingPercentage: (map['reading_percentage'] as num?)?.toDouble() ?? 0.0,
+      author: map['author'] as String? ?? '',
+      isDeleted: (map['is_deleted'] as int? ?? 0) == 1,
+      description: map['description'] as String?,
+      rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
+      groupId: map['group_id'] as int? ?? 0,
+      md5: map['file_md5'] as String?,
+      createTime: DateTime.parse(map['create_time'] as String),
+      updateTime: DateTime.parse(map['update_time'] as String),
+    );
+  }
 }

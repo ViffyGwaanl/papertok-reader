@@ -51,4 +51,25 @@ class BookNote {
       'color': '#$color',
     };
   }
+
+  factory BookNote.fromDb(Map<String, dynamic> map) {
+    final createTimeString = map['create_time'] as String?;
+    final updateTimeString = map['update_time'] as String?;
+
+    return BookNote(
+      id: map['id'] as int?,
+      bookId: map['book_id'] as int,
+      content: map['content'] as String? ?? '',
+      cfi: map['cfi'] as String? ?? '',
+      chapter: map['chapter'] as String? ?? '',
+      type: map['type'] as String? ?? '',
+      color: map['color'] as String? ?? '',
+      readerNote: map['reader_note'] as String?,
+      createTime:
+          createTimeString != null ? DateTime.tryParse(createTimeString) : null,
+      updateTime: updateTimeString != null
+          ? DateTime.parse(updateTimeString)
+          : DateTime.now(),
+    );
+  }
 }
