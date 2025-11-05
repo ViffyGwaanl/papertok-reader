@@ -167,8 +167,9 @@ class ReadingTimeDao extends BaseDao {
     };
 
     return List<int>.generate(12, (index) {
-      final monthKey =
-          DateTime(dateTime.year, index + 1, 1).toIso8601String().substring(0, 7);
+      final monthKey = DateTime(dateTime.year, index + 1, 1)
+          .toIso8601String()
+          .substring(0, 7);
       return totals[monthKey] ?? 0;
     });
   }
@@ -258,7 +259,8 @@ class ReadingTimeDao extends BaseDao {
     return _attachBooks(rows);
   }
 
-  Future<List<Map<Book, int>>> selectBookReadingTimeOfWeek(DateTime date) async {
+  Future<List<Map<Book, int>>> selectBookReadingTimeOfWeek(
+      DateTime date) async {
     final start = date.subtract(Duration(days: date.weekday - 1));
     final end = start.add(const Duration(days: 6));
     final rows = await _aggregateByBook(
@@ -390,8 +392,7 @@ Future<List<ReadingTime>> selectAllReadingTime() =>
     readingTimeDao.selectAllReadingTime();
 
 @Deprecated('Use readingTimeDao.selectTotalReadingTime instead')
-Future<int> selectTotalReadingTime() =>
-    readingTimeDao.selectTotalReadingTime();
+Future<int> selectTotalReadingTime() => readingTimeDao.selectTotalReadingTime();
 
 @Deprecated('Use readingTimeDao.selectTotalNumberOfBook instead')
 Future<int> selectTotalNumberOfBook() =>

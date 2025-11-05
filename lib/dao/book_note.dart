@@ -179,8 +179,7 @@ Future<Map<String, int>> selectNumberOfNotesAndBooks() =>
     bookNoteDao.selectNumberOfNotesAndBooks();
 
 @Deprecated('Use bookNoteDao.deleteBookNoteById instead')
-Future<void> deleteBookNoteById(int id) =>
-    bookNoteDao.deleteBookNoteById(id);
+Future<void> deleteBookNoteById(int id) => bookNoteDao.deleteBookNoteById(id);
 
 @Deprecated('Use bookNoteDao.searchBookNotes instead')
 Future<List<BookNote>> searchBookNotes(String keyword) =>
