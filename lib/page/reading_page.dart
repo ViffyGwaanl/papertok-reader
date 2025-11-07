@@ -419,7 +419,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
       showModalBottomSheet(
           context: navigatorKey.currentContext!,
           isScrollControlled: true,
-          showDragHandle: true,
+          showDragHandle: false,
+          clipBehavior: Clip.hardEdge,
           builder: (context) => PointerInterceptor(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
