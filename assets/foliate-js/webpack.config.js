@@ -2,7 +2,7 @@ const path = require('path');
 
 module.exports = {
   entry: {
-    bundle: './src/book.js',
+    bundle: ['core-js/stable', './src/book.js'],
     'pdf-legacy': './src/vendor/pdfjs/pdf.js',
     'pdf-legacy.worker': './src/vendor/pdfjs/pdf.worker.js'
   },

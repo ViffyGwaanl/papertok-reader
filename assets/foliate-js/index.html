@@ -50,9 +50,42 @@
   <main></main>
 </div>
 <script>
-  console.log("AnxUA", navigator.userAgent);
+  (function () {
+    const ua = navigator.userAgent || '';
+    const platform = navigator.platform || '';
+    console.log('AnxUA', ua);
+
+    const isAppleDevice = /iPad|iPhone|iPod/.test(ua)
+      || (/Mac/.test(platform) && navigator.maxTouchPoints > 1)
+      || /Mac OS X/.test(ua);
+
+    const chromeMatch = ua.match(/Chrome\/(\d+)/);
+    const chromeVersion = chromeMatch ? parseInt(chromeMatch[1], 10) : NaN;
+    const shouldUseModernBundle = isAppleDevice || (!Number.isNaN(chromeVersion) && chromeVersion >= 100);
+
+    const loadScript = (src, options = {}) => new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      if (options.type) script.type = options.type;
+      if (options.async !== undefined) script.async = options.async;
+      if (options.defer !== undefined) script.defer = options.defer;
+      script.onload = () => resolve();
+      script.onerror = (err) => {
+        console.error('Failed to load script', src, err);
+        reject(err);
+      };
+      document.head.appendChild(script);
+    });
+
+    (async () => {
+      if (shouldUseModernBundle) {
+        await loadScript('./src/vendor/pdfjs/pdf.js', { async: false, defer: false });
+        await loadScript('./src/book.js', { type: 'module' });
+        return;
+      }
+
+      await loadScript('./dist/bundle.js', { type: 'module' });
+      await loadScript('./dist/pdf-legacy.js', { async: false, defer: false });
+    })();
+  })();
 </script>
-<script src="./dist/bundle.js" type="module"></script>
-<script src="./dist/pdf-legacy.js"></script>
-<!-- <script src="./src/vendor/pdfjs/pdf.js"></script> -->
-<!-- <script src="./src/book.js" type="module"></script> -->
