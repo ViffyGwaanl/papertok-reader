@@ -5,11 +5,15 @@
 ## 1.10.0
 - Feat: Translation can leverage context for more accurate understanding and expression
 - Feat: More granular reading data statistics
+- Fix: Smoother page turn animation
 - Fix: Optimize context menu styles
+- UI: Optimize part of the interface design
 
 - Feat: 翻译内容可以结合上下文进行更准确的理解和表达
 - Feat: 更精细的阅读数据统计
+- Fix: 更流畅的滑动翻页动画
 - Fix: 优化上下文菜单样式
+- UI: 优化部分界面设计
 
 ## 1.9.2
 - Feat: Directory interface is displayed as a drawer from the side
