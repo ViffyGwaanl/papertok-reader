@@ -123,12 +123,12 @@
         justify: true,
         hyphenate: true,
         // 'slide' 'scroll' 'noAnimation'
-        pageTurnStyle: "scroll",
+        pageTurnStyle: "slide",
         // pageTurnStyle: "slide",
         maxColumnCount: 1,
         // auto 'horizontal-tb' 'vertical-rl'
-        writingMode: "vertical-rl",
-        // writingMode: "auto",
+        // writingMode: "vertical-rl",
+        writingMode: "auto",
         backgroundImage: "none",
         
         // true, false
@@ -155,7 +155,7 @@
       // console.log(`Flutter Handler Called: ${name}`, data);
       // Mock translation response for testing
       if (name === 'translateText') {
-        return Promise.resolve(`【模拟翻译】${data}`);
+        return Promise.resolve(`TRANS: ${data}`);
       }
       return Promise.resolve(null);
     }
