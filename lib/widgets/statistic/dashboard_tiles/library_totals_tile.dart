@@ -10,7 +10,7 @@ class LibraryTotalsTile extends StatisticsDashboardTileBase {
           type: StatisticsDashboardTileType.libraryTotals,
           title: 'Library totals', // TODO(l10n)
           description: 'Books, reading days, and notes overview.', // TODO(l10n)
-          columnSpan: 2,
+          columnSpan: 4,
           rowSpan: 1,
           icon: Icons.menu_book_outlined,
         ));
@@ -24,9 +24,9 @@ class LibraryTotalsTile extends StatisticsDashboardTileBase {
     final l10n = L10n.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(metadata.title, style: textTheme.titleMedium),
-        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(

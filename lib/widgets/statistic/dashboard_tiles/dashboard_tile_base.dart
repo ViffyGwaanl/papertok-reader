@@ -29,7 +29,6 @@ abstract class StatisticsDashboardTileBase {
     required double baseTileHeight,
   }) {
     final span = metadata.columnSpan.clamp(1, columnUnits);
-    final height = metadata.rowSpan * baseTileHeight;
 
     return ReorderableItem(
       trackingNumber: type.index,
@@ -37,13 +36,11 @@ abstract class StatisticsDashboardTileBase {
       crossAxisCellCount: span,
       mainAxisCellCount: metadata.rowSpan,
       child: DashboardTileShell(
-        height: height,
         tileType: type,
         onRemove: onRemove,
         child: buildContent(context, snapshot),
       ),
       placeholder: DashboardTileShell(
-        height: height,
         tileType: type,
         onRemove: null,
         child: buildContent(context, snapshot),
@@ -55,13 +52,11 @@ abstract class StatisticsDashboardTileBase {
 class DashboardTileShell extends ConsumerWidget {
   const DashboardTileShell({
     super.key,
-    required this.height,
     required this.child,
     required this.tileType,
     this.onRemove,
   });
 
-  final double height;
   final Widget child;
   final StatisticsDashboardTileType tileType;
   final VoidCallback? onRemove;
@@ -74,8 +69,8 @@ class DashboardTileShell extends ConsumerWidget {
     return SizedBox.expand(
       child: FilledContainer(
         width: double.infinity,
-        height: height,
-        padding: const EdgeInsets.all(12),
+        height: double.infinity,
+        padding: const EdgeInsets.all(6),
         radius: 16,
         child: Stack(
           fit: StackFit.expand,

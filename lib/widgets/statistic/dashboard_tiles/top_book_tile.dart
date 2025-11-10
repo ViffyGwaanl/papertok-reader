@@ -30,7 +30,7 @@ class TopBookTile extends StatisticsDashboardTileBase {
         return statisticData.when(
           data: (data) {
             if (data.bookReadingTime.isEmpty) {
-              return const StatisticsTips();
+              return  FittedBox(child: StatisticsTips());
             }
             final entry = data.bookReadingTime.first;
             final book = entry.keys.first;

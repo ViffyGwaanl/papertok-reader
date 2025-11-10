@@ -16,7 +16,7 @@ class PeriodSummaryTile extends StatisticsDashboardTileBase {
           description:
               'Highlights for the selected period below.', // TODO(l10n)
           columnSpan: 2,
-          rowSpan: 1,
+          rowSpan: 2,
           icon: Icons.bar_chart_rounded,
         ));
 
