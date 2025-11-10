@@ -1,7 +1,9 @@
 import 'package:anx_reader/models/statistics_dashboard_tile.dart';
+import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:staggered_reorderable/staggered_reorderable.dart';
 
 /// Base class for all statistics dashboard tiles.
@@ -22,7 +24,6 @@ abstract class StatisticsDashboardTileBase {
   ReorderableItem buildReorderableItem({
     required BuildContext context,
     required StatisticsDashboardSnapshot snapshot,
-    required bool canRemove,
     required VoidCallback? onRemove,
     required int columnUnits,
     required double baseTileHeight,
@@ -30,45 +31,46 @@ abstract class StatisticsDashboardTileBase {
     final span = metadata.columnSpan.clamp(1, columnUnits);
     final height = metadata.rowSpan * baseTileHeight;
 
-    DashboardTileShell buildShell({required bool includeRemoveButton}) {
-      return DashboardTileShell(
-        height: height,
-        showRemoveButton: includeRemoveButton && canRemove && onRemove != null,
-        onRemove: includeRemoveButton ? onRemove : null,
-        child: buildContent(context, snapshot),
-      );
-    }
-
     return ReorderableItem(
       trackingNumber: type.index,
       id: type.name,
       crossAxisCellCount: span,
       mainAxisCellCount: metadata.rowSpan,
-      child: buildShell(includeRemoveButton: true),
-      placeholder: Opacity(
-        opacity: 0.25,
-        child: buildShell(includeRemoveButton: false),
+      child: DashboardTileShell(
+        height: height,
+        tileType: type,
+        onRemove: onRemove,
+        child: buildContent(context, snapshot),
+      ),
+      placeholder: DashboardTileShell(
+        height: height,
+        tileType: type,
+        onRemove: null,
+        child: buildContent(context, snapshot),
       ),
     );
   }
 }
 
-class DashboardTileShell extends StatelessWidget {
+class DashboardTileShell extends ConsumerWidget {
   const DashboardTileShell({
     super.key,
     required this.height,
     required this.child,
-    required this.showRemoveButton,
+    required this.tileType,
     this.onRemove,
   });
 
   final double height;
   final Widget child;
-  final bool showRemoveButton;
+  final StatisticsDashboardTileType tileType;
   final VoidCallback? onRemove;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(dashboardTilesProvider);
+    final showRemoveButton =
+        state.isEditing && state.workingTiles.length > 1 && onRemove != null;
     return SizedBox.expand(
       child: FilledContainer(
         width: double.infinity,
@@ -79,7 +81,7 @@ class DashboardTileShell extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             child,
-            if (showRemoveButton && onRemove != null)
+            if (showRemoveButton)
               Positioned(
                 top: -8,
                 right: -8,

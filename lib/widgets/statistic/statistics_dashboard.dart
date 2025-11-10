@@ -16,7 +16,6 @@ class StatisticsDashboard extends ConsumerWidget {
     final notifier = ref.read(dashboardTilesProvider.notifier);
     final workingTiles = tilesState.workingTiles;
     final availableTiles = notifier.availableTiles;
-    final canRemove = workingTiles.length > 1;
 
     void showAddTileSheet() {
       if (availableTiles.isEmpty) return;
@@ -54,7 +53,7 @@ class StatisticsDashboard extends ConsumerWidget {
             Text('Dashboard', // TODO(l10n)
                 style: Theme.of(context).textTheme.titleLarge),
             const Spacer(),
-            if (tilesState.hasUnsavedChanges)
+            if (tilesState.isEditing)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -104,7 +103,6 @@ class StatisticsDashboard extends ConsumerWidget {
                       snapshot,
                       workingTiles,
                       crossAxisUnits,
-                      canRemove,
                       notifier.removeTile,
                     ),
                     onReorder: notifier.reorder,
@@ -121,7 +119,6 @@ class StatisticsDashboard extends ConsumerWidget {
     StatisticsDashboardSnapshot snapshot,
     List<StatisticsDashboardTileType> workingTiles,
     int columnUnits,
-    bool canRemove,
     void Function(StatisticsDashboardTileType) onRemove,
   ) {
     return workingTiles
@@ -129,8 +126,7 @@ class StatisticsDashboard extends ConsumerWidget {
           (type) => dashboardTileRegistry[type]!.buildReorderableItem(
             context: context,
             snapshot: snapshot,
-            canRemove: canRemove,
-            onRemove: canRemove ? () => onRemove(type) : null,
+            onRemove: () => onRemove(type),
             columnUnits: columnUnits,
             baseTileHeight: kDashboardTileBaseHeight,
           ),

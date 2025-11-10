@@ -9,21 +9,25 @@ class DashboardTilesState {
     required this.savedTiles,
     required this.workingTiles,
     required this.hasUnsavedChanges,
+    required this.isEditing,
   });
 
   final List<StatisticsDashboardTileType> savedTiles;
   final List<StatisticsDashboardTileType> workingTiles;
   final bool hasUnsavedChanges;
+  final bool isEditing;
 
   DashboardTilesState copyWith({
     List<StatisticsDashboardTileType>? savedTiles,
     List<StatisticsDashboardTileType>? workingTiles,
     bool? hasUnsavedChanges,
+    bool? isEditing,
   }) {
     return DashboardTilesState(
       savedTiles: savedTiles ?? this.savedTiles,
       workingTiles: workingTiles ?? this.workingTiles,
       hasUnsavedChanges: hasUnsavedChanges ?? this.hasUnsavedChanges,
+      isEditing: isEditing ?? this.isEditing,
     );
   }
 }
@@ -44,6 +48,7 @@ class DashboardTilesNotifier extends StateNotifier<DashboardTilesState> {
       savedTiles: tiles,
       workingTiles: List.of(tiles),
       hasUnsavedChanges: false,
+      isEditing: false,
     );
   }
 
@@ -73,6 +78,7 @@ class DashboardTilesNotifier extends StateNotifier<DashboardTilesState> {
         savedTiles: sanitized,
         workingTiles: List.of(sanitized),
         hasUnsavedChanges: false,
+        isEditing: state.isEditing && state.hasUnsavedChanges,
       );
     }
   }
@@ -90,6 +96,7 @@ class DashboardTilesNotifier extends StateNotifier<DashboardTilesState> {
   }
 
   void reorder(List<int> order) {
+    _ensureEditing();
     final map = {
       for (final type in state.workingTiles) type.index: type,
     };
@@ -110,11 +117,13 @@ class DashboardTilesNotifier extends StateNotifier<DashboardTilesState> {
 
   void addTile(StatisticsDashboardTileType type) {
     if (state.workingTiles.contains(type)) return;
+    _ensureEditing();
     _updateWorking(List.of(state.workingTiles)..add(type));
   }
 
   void removeTile(StatisticsDashboardTileType type) {
     if (state.workingTiles.length <= 1) return;
+    _ensureEditing();
     final updated = List.of(state.workingTiles)..remove(type);
     _updateWorking(updated);
   }
@@ -125,6 +134,7 @@ class DashboardTilesNotifier extends StateNotifier<DashboardTilesState> {
       savedTiles: sanitized,
       workingTiles: List.of(sanitized),
       hasUnsavedChanges: false,
+      isEditing: false,
     );
     _prefs.statisticsDashboardTiles = sanitized;
   }
@@ -133,6 +143,7 @@ class DashboardTilesNotifier extends StateNotifier<DashboardTilesState> {
     state = state.copyWith(
       workingTiles: List.of(state.savedTiles),
       hasUnsavedChanges: false,
+      isEditing: false,
     );
   }
 
@@ -142,7 +153,14 @@ class DashboardTilesNotifier extends StateNotifier<DashboardTilesState> {
     state = state.copyWith(
       workingTiles: sanitized,
       hasUnsavedChanges: dirty,
+      isEditing: state.isEditing || dirty,
     );
+  }
+
+  void _ensureEditing() {
+    if (!state.isEditing) {
+      state = state.copyWith(isEditing: true);
+    }
   }
 
   @override
