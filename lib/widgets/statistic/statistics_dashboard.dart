@@ -12,8 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:staggered_reorderable/staggered_reorderable.dart';
 
-const double _baseTileHeight = 100.0;
-
 final Map<StatisticsDashboardTileType, StatisticsDashboardTileBase>
     _tileRegistry = {
   StatisticsDashboardTileType.totalTime: const TotalTimeTile(),
@@ -273,7 +271,6 @@ class _StatisticsDashboardState extends ConsumerState<StatisticsDashboard> {
         canRemove: canRemove,
         onRemove: canRemove ? () => _handleRemoveTile(type) : null,
         columnUnits: columnUnits,
-        baseTileHeight: _baseTileHeight,
       );
     }).toList(growable: false);
   }

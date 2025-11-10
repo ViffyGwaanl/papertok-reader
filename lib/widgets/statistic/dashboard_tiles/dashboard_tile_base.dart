@@ -25,15 +25,14 @@ abstract class StatisticsDashboardTileBase {
     required bool canRemove,
     required VoidCallback? onRemove,
     required int columnUnits,
-    required double baseTileHeight,
   }) {
     final span = metadata.columnSpan;
 
     DashboardTileShell buildShell({required bool includeRemoveButton}) {
       return DashboardTileShell(
-        child: buildContent(context, snapshot),
         showRemoveButton: includeRemoveButton && canRemove && onRemove != null,
         onRemove: includeRemoveButton ? onRemove : null,
+        child: buildContent(context, snapshot),
       );
     }
 
