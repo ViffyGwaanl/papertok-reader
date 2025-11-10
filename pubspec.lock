@@ -1998,6 +1998,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.12.1"
+  staggered_reorderable:
+    dependency: "direct main"
+    description:
+      name: staggered_reorderable
+      sha256: "0aa94d065714396b87d403d3bcae65fc278e566de9c76d9197f05f5c3168ccaf"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.14"
   state_notifier:
     dependency: transitive
     description:

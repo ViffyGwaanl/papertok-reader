@@ -5,6 +5,7 @@ import 'package:anx_reader/enums/chart_mode.dart';
 import 'package:anx_reader/enums/hint_key.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book.dart';
+import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/page/book_detail.dart';
 import 'package:anx_reader/providers/statistic_data.dart';
 import 'package:anx_reader/providers/total_reading_time.dart';
@@ -16,6 +17,7 @@ import 'package:anx_reader/widgets/common/container/outlined_container.dart';
 import 'package:anx_reader/widgets/highlight_digit.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
 import 'package:anx_reader/widgets/statistic/statistic_card.dart';
+import 'package:anx_reader/widgets/statistic/statistics_dashboard.dart';
 import 'package:anx_reader/widgets/tips/statistic_tips.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,6 +58,12 @@ class _StatisticPageState extends State<StatisticPage> {
 
   @override
   Widget build(BuildContext context) {
+    final dashboardSnapshot = StatisticsDashboardSnapshot(
+      totalBooks: totalNumberOfBook,
+      totalDays: totalNumberOfDate,
+      totalNotes: totalNumberOfNotes,
+    );
+
     return Scaffold(
       // appBar: AppBar(
       //   title: Text(context.navBarStatistics),
@@ -64,55 +72,63 @@ class _StatisticPageState extends State<StatisticPage> {
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth > 600) {
-                return Row(
-                  children: [
-                    Expanded(
-                      child: Column(
+          child: Column(
+            children: [
+              StatisticsDashboard(snapshot: dashboardSnapshot),
+              const SizedBox(height: 16),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth > 600) {
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const TotalReadTime(),
+                                const SizedBox(height: 20),
+                                baseStatistic(context),
+                                const StatisticCard(),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: ListView(
+                              controller: _scrollController,
+                              children: const [
+                                DateBooks(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    } else {
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const TotalReadTime(),
+                          SafeArea(bottom: false, child: const TotalReadTime()),
                           const SizedBox(height: 20),
                           baseStatistic(context),
-                          const StatisticCard(),
+                          const SizedBox(height: 30),
+                          Expanded(
+                            child: ListView(
+                                padding: const EdgeInsets.only(bottom: 80),
+                                controller: _scrollController,
+                                children: const [
+                                  StatisticCard(),
+                                  SizedBox(height: 20),
+                                  DateBooks(),
+                                ]),
+                          ),
                         ],
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: ListView(
-                        controller: _scrollController,
-                        children: const [
-                          DateBooks(),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              } else {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SafeArea(bottom: false, child: const TotalReadTime()),
-                    const SizedBox(height: 20),
-                    baseStatistic(context),
-                    const SizedBox(height: 30),
-                    Expanded(
-                      child: ListView(
-                          padding: const EdgeInsets.only(bottom: 80),
-                          controller: _scrollController,
-                          children: const [
-                            StatisticCard(),
-                            SizedBox(height: 20),
-                            DateBooks(),
-                          ]),
-                    ),
-                  ],
-                );
-              }
-            },
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),
