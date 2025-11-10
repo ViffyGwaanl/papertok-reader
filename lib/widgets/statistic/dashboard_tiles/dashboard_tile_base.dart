@@ -25,11 +25,14 @@ abstract class StatisticsDashboardTileBase {
     required bool canRemove,
     required VoidCallback? onRemove,
     required int columnUnits,
+    required double baseTileHeight,
   }) {
-    final span = metadata.columnSpan;
+    final span = metadata.columnSpan.clamp(1, columnUnits);
+    final height = metadata.rowSpan * baseTileHeight;
 
     DashboardTileShell buildShell({required bool includeRemoveButton}) {
       return DashboardTileShell(
+        height: height,
         showRemoveButton: includeRemoveButton && canRemove && onRemove != null,
         onRemove: includeRemoveButton ? onRemove : null,
         child: buildContent(context, snapshot),
@@ -53,11 +56,13 @@ abstract class StatisticsDashboardTileBase {
 class DashboardTileShell extends StatelessWidget {
   const DashboardTileShell({
     super.key,
+    required this.height,
     required this.child,
     required this.showRemoveButton,
     this.onRemove,
   });
 
+  final double height;
   final Widget child;
   final bool showRemoveButton;
   final VoidCallback? onRemove;
@@ -66,8 +71,10 @@ class DashboardTileShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox.expand(
       child: FilledContainer(
-        padding: const EdgeInsets.all(6),
-        radius: 12,
+        width: double.infinity,
+        height: height,
+        padding: const EdgeInsets.all(12),
+        radius: 16,
         child: Stack(
           fit: StackFit.expand,
           children: [
