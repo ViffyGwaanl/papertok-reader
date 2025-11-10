@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
@@ -135,7 +137,7 @@ class StatisticsDashboard extends ConsumerWidget {
   }
 
   int _calculateColumnUnits(double width) {
-    return (width ~/ 600) * 2 + 4;
+    return max(4, (width ~/ 200) * 2);
   }
 }
 
