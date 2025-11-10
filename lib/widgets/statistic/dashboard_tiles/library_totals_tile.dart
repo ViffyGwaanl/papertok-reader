@@ -1,20 +1,25 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
 import 'package:anx_reader/models/statistics_dashboard_tile.dart';
+import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
+import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
 import 'package:flutter/material.dart';
 
-class LibraryTotalsTile extends StatelessWidget {
-  const LibraryTotalsTile({
-    super.key,
-    required this.snapshot,
-    required this.metadata,
-  });
-
-  final StatisticsDashboardSnapshot snapshot;
-  final StatisticsDashboardTileMetadata metadata;
+class LibraryTotalsTile extends StatisticsDashboardTileBase {
+  const LibraryTotalsTile()
+      : super(const StatisticsDashboardTileMetadata(
+          type: StatisticsDashboardTileType.libraryTotals,
+          title: 'Library totals', // TODO(l10n)
+          description: 'Books, reading days, and notes overview.', // TODO(l10n)
+          columnSpan: 2,
+          rowSpan: 1,
+          icon: Icons.menu_book_outlined,
+        ));
 
   @override
-  Widget build(BuildContext context) {
+  Widget buildContent(
+    BuildContext context,
+    StatisticsDashboardSnapshot snapshot,
+  ) {
     final textTheme = Theme.of(context).textTheme;
     final l10n = L10n.of(context);
     return Column(

@@ -1,62 +1,38 @@
-import 'dart:math' as math;
-
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/models/statistics_dashboard_tile.dart';
-import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
+import 'package:anx_reader/providers/statistic_data.dart';
+import 'package:anx_reader/providers/total_reading_time.dart';
+import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/library_totals_tile.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/period_summary_tile.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/top_book_tile.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/total_time_tile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:staggered_reorderable/staggered_reorderable.dart';
 
-final Map<StatisticsDashboardTileType, StatisticsDashboardTileMetadata>
-    _tileMetadata = {
-  StatisticsDashboardTileType.totalTime: StatisticsDashboardTileMetadata(
-    type: StatisticsDashboardTileType.totalTime,
-    title: 'Lifetime reading', // TODO(l10n)
-    description: 'Hours and minutes logged in Anx Reader.', // TODO(l10n)
-    columnSpan: 2,
-    rowSpan: 1,
-    icon: Icons.timer_outlined,
-  ),
-  StatisticsDashboardTileType.libraryTotals: StatisticsDashboardTileMetadata(
-    type: StatisticsDashboardTileType.libraryTotals,
-    title: 'Library totals', // TODO(l10n)
-    description: 'Books, reading days, and notes overview.', // TODO(l10n)
-    columnSpan: 2,
-    rowSpan: 1,
-    icon: Icons.menu_book_outlined,
-  ),
-  StatisticsDashboardTileType.periodSummary: StatisticsDashboardTileMetadata(
-    type: StatisticsDashboardTileType.periodSummary,
-    title: 'Current period', // TODO(l10n)
-    description: 'Highlights for the selected period below.', // TODO(l10n)
-    columnSpan: 2,
-    rowSpan: 1,
-    icon: Icons.bar_chart_rounded,
-  ),
-  StatisticsDashboardTileType.topBook: StatisticsDashboardTileMetadata(
-    type: StatisticsDashboardTileType.topBook,
-    title: 'Top book', // TODO(l10n)
-    description: 'Most read title in the current period.', // TODO(l10n)
-    columnSpan: 2,
-    rowSpan: 2,
-    icon: Icons.bookmark_added_outlined,
-  ),
+const double _baseTileHeight = 100.0;
+
+final Map<StatisticsDashboardTileType, StatisticsDashboardTileBase>
+    _tileRegistry = {
+  StatisticsDashboardTileType.totalTime: const TotalTimeTile(),
+  StatisticsDashboardTileType.libraryTotals: const LibraryTotalsTile(),
+  StatisticsDashboardTileType.periodSummary: const PeriodSummaryTile(),
+  StatisticsDashboardTileType.topBook: const TopBookTile(),
 };
 
-class StatisticsDashboard extends StatefulWidget {
+class StatisticsDashboard extends ConsumerStatefulWidget {
   const StatisticsDashboard({super.key, required this.snapshot});
 
   final StatisticsDashboardSnapshot snapshot;
 
   @override
-  State<StatisticsDashboard> createState() => _StatisticsDashboardState();
+  ConsumerState<StatisticsDashboard> createState() =>
+      _StatisticsDashboardState();
 }
 
-class _StatisticsDashboardState extends State<StatisticsDashboard> {
+class _StatisticsDashboardState extends ConsumerState<StatisticsDashboard> {
   final Prefs _prefs = Prefs();
   bool _ignorePrefsEvent = false;
   late List<StatisticsDashboardTileType> _persistedTiles;
@@ -72,18 +48,21 @@ class _StatisticsDashboardState extends State<StatisticsDashboard> {
   }
 
   List<StatisticsDashboardTileType> _safeTiles(
-      List<StatisticsDashboardTileType> source) {
-    return source
-        .where((type) => _tileMetadata.containsKey(type))
+    List<StatisticsDashboardTileType> source,
+  ) {
+    final available = source
+        .where((type) => _tileRegistry.containsKey(type))
         .toList(growable: false);
+    if (available.isEmpty) {
+      return List.of(defaultStatisticsDashboardTiles);
+    }
+    return available;
   }
 
   void _handlePrefsChange() {
     if (_ignorePrefsEvent) return;
-    final latest = _safeTiles(_prefs.statisticsDashboardTiles);
     setState(() {
-      _persistedTiles =
-          latest.isEmpty ? List.of(defaultStatisticsDashboardTiles) : latest;
+      _persistedTiles = _safeTiles(_prefs.statisticsDashboardTiles);
       if (!_hasUnsavedChanges) {
         _workingTiles = List.of(_persistedTiles);
       }
@@ -166,6 +145,7 @@ class _StatisticsDashboardState extends State<StatisticsDashboard> {
   List<StatisticsDashboardTileType> get _availableTiles =>
       StatisticsDashboardTileType.values
           .where((type) => !_workingTiles.contains(type))
+          .where((type) => _tileRegistry.containsKey(type))
           .toList(growable: false);
 
   void _showAddTileSheet() {
@@ -184,7 +164,7 @@ class _StatisticsDashboardState extends State<StatisticsDashboard> {
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final type = items[index];
-                    final metadata = _tileMetadata[type]!;
+                    final metadata = _tileRegistry[type]!.metadata;
                     return ListTile(
                       leading: Icon(metadata.icon),
                       title: Text(metadata.title),
@@ -203,13 +183,23 @@ class _StatisticsDashboardState extends State<StatisticsDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final tiles = _workingTiles;
+    final totalReadingSnapshot = ref.watch(totalReadingTimeProvider);
+    final statisticDataSnapshot = ref.watch(statisticDataProvider);
+    final viewKey = ValueKey(Object.hashAll([
+      _workingTiles,
+      totalReadingSnapshot.hashCode,
+      statisticDataSnapshot.hashCode,
+    ]));
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
+            Text('Dashboard', // TODO(l10n)
+                style: Theme.of(context).textTheme.titleLarge),
+            const Spacer(),
             if (_hasUnsavedChanges)
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -245,115 +235,51 @@ class _StatisticsDashboardState extends State<StatisticsDashboard> {
           ],
         ),
         const SizedBox(height: 12),
-        if (tiles.isEmpty)
-          _EmptyDashboardState(onAddPressed: _showAddTileSheet)
-        else
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final crossAxisUnits =
-                  _calculateColumnUnits(constraints.maxWidth);
-              final spacing = 12.0;
-              return StaggeredReorderableView.customer(
-                columnNum: crossAxisUnits,
-                spacing: spacing,
-                children: _buildReorderableItems(crossAxisUnits),
-                canDrag: true,
-                scrollDirection: Axis.vertical,
-                onReorder: _handleReorder,
-                fixedCellHeight: 90,
-              );
-            },
-          ),
+        _workingTiles.isEmpty
+            ? _EmptyDashboardState(onAddPressed: _showAddTileSheet)
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossAxisUnits =
+                      _calculateColumnUnits(constraints.maxWidth);
+                  return StaggeredReorderableView.customer(
+                    key: viewKey,
+                    columnNum: crossAxisUnits,
+                    spacing: 10,
+                    canDrag: true,
+                    children: _buildReorderableItems(
+                      context,
+                      crossAxisUnits,
+                    ),
+                    onReorder: _handleReorder,
+                    fixedCellHeight: 90,
+                  );
+                },
+              ),
       ],
     );
   }
 
-  List<ReorderableItem> _buildReorderableItems(int columnUnits) {
+  List<ReorderableItem> _buildReorderableItems(
+    BuildContext context,
+    int columnUnits,
+  ) {
+    final snapshot = widget.snapshot;
+    final canRemove = _workingTiles.length > 1;
     return _workingTiles.map((type) {
-      final metadata = _tileMetadata[type]!;
-      final span = math.min(columnUnits, metadata.columnSpan);
-      // final tileHeight = _baseTileHeight * metadata.rowSpan;
-      final tile = SizedBox.expand(
-        child: _DashboardTileShell(
-          // height: tileHeight,
-          child: _buildTileContent(metadata),
-          showRemoveButton: _workingTiles.length > 1,
-          onRemove:
-              _workingTiles.length > 1 ? () => _handleRemoveTile(type) : null,
-        ),
-      );
-      return ReorderableItem(
-        trackingNumber: type.index,
-        id: type.name,
-        crossAxisCellCount: span,
-        mainAxisCellCount: metadata.rowSpan,
-        child: tile,
-        placeholder: Opacity(opacity: 0.2, child: tile),
+      final tile = _tileRegistry[type]!;
+      return tile.buildReorderableItem(
+        context: context,
+        snapshot: snapshot,
+        canRemove: canRemove,
+        onRemove: canRemove ? () => _handleRemoveTile(type) : null,
+        columnUnits: columnUnits,
+        baseTileHeight: _baseTileHeight,
       );
     }).toList(growable: false);
   }
 
-  Widget _buildTileContent(StatisticsDashboardTileMetadata metadata) {
-    switch (metadata.type) {
-      case StatisticsDashboardTileType.totalTime:
-        return TotalTimeTile(snapshot: widget.snapshot, metadata: metadata);
-      case StatisticsDashboardTileType.libraryTotals:
-        return LibraryTotalsTile(snapshot: widget.snapshot, metadata: metadata);
-      case StatisticsDashboardTileType.periodSummary:
-        return PeriodSummaryTile(snapshot: widget.snapshot, metadata: metadata);
-      case StatisticsDashboardTileType.topBook:
-        return TopBookTile(snapshot: widget.snapshot, metadata: metadata);
-    }
-  }
-
   int _calculateColumnUnits(double width) {
-    return (width ~/ 300) * 2 + 2;
-  }
-}
-
-class _DashboardTileShell extends StatelessWidget {
-  const _DashboardTileShell({
-    // required this.height,
-    required this.child,
-    required this.showRemoveButton,
-    this.onRemove,
-  });
-
-  // final double height;
-  final Widget child;
-  final bool showRemoveButton;
-  final VoidCallback? onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          child,
-          if (showRemoveButton && onRemove != null)
-            Positioned(
-              top: -8,
-              right: -8,
-              child: IconButton.filledTonal(
-                iconSize: 18,
-                visualDensity: VisualDensity.compact,
-                tooltip: 'Remove card', // TODO(l10n)
-                onPressed: onRemove,
-                icon: const Icon(Icons.close),
-              ),
-            ),
-        ],
-      ),
-    );
+    return (width ~/ 600) * 2 + 4;
   }
 }
 
@@ -365,8 +291,8 @@ class _EmptyDashboardState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const SizedBox(height: 24),
         const Text(
             'No cards yet. Tap “Add card” to get started.'), // TODO(l10n)
         const SizedBox(height: 12),
