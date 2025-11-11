@@ -18,7 +18,6 @@ class LibraryTotalsTile extends StatisticsDashboardTileBase {
   @override
   Widget buildContent(
     BuildContext context,
-    StatisticsDashboardSnapshot snapshot,
   ) {
     final textTheme = Theme.of(context).textTheme;
     final l10n = L10n.of(context);
@@ -32,21 +31,21 @@ class LibraryTotalsTile extends StatisticsDashboardTileBase {
             Expanded(
               child: _NumberTile(
                 icon: Icons.auto_stories,
-                label: l10n.statisticBooksRead(snapshot.totalBooks),
+                label: l10n.statisticBooksRead(9),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _NumberTile(
                 icon: Icons.calendar_today,
-                label: l10n.statisticDaysOfReading(snapshot.totalDays),
+                label: l10n.statisticDaysOfReading(9),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _NumberTile(
                 icon: Icons.note_alt_outlined,
-                label: l10n.statisticNotes(snapshot.totalNotes),
+                label: l10n.statisticNotes(9),
               ),
             ),
           ],

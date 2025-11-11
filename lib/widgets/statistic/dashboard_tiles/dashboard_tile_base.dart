@@ -17,13 +17,11 @@ abstract class StatisticsDashboardTileBase {
   /// Builds the tile body.
   Widget buildContent(
     BuildContext context,
-    StatisticsDashboardSnapshot snapshot,
   );
 
   /// Returns the [ReorderableItem] used by the reorderable grid.
   ReorderableItem buildReorderableItem({
     required BuildContext context,
-    required StatisticsDashboardSnapshot snapshot,
     required VoidCallback? onRemove,
     required int columnUnits,
     required double baseTileHeight,
@@ -38,12 +36,12 @@ abstract class StatisticsDashboardTileBase {
       child: DashboardTileShell(
         tileType: type,
         onRemove: onRemove,
-        child: buildContent(context, snapshot),
+        child: buildContent(context),
       ),
       placeholder: DashboardTileShell(
         tileType: type,
         onRemove: null,
-        child: buildContent(context, snapshot),
+        child: buildContent(context),
       ),
     );
   }

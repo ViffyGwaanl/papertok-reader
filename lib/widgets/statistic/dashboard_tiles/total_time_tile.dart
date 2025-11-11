@@ -21,7 +21,6 @@ class TotalTimeTile extends StatisticsDashboardTileBase {
   @override
   Widget buildContent(
     BuildContext context,
-    StatisticsDashboardSnapshot _,
   ) {
     return Consumer(
       builder: (context, ref, _) {

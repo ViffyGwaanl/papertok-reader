@@ -23,7 +23,6 @@ class PeriodSummaryTile extends StatisticsDashboardTileBase {
   @override
   Widget buildContent(
     BuildContext context,
-    StatisticsDashboardSnapshot _,
   ) {
     final theme = Theme.of(context);
     final l10n = L10n.of(context);

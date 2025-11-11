@@ -21,7 +21,6 @@ class TopBookTile extends StatisticsDashboardTileBase {
   @override
   Widget buildContent(
     BuildContext context,
-    StatisticsDashboardSnapshot _,
   ) {
     final textTheme = Theme.of(context).textTheme;
     return Consumer(

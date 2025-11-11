@@ -8,90 +8,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:staggered_reorderable/staggered_reorderable.dart';
 
 class StatisticsDashboard extends ConsumerWidget {
-  const StatisticsDashboard({super.key, required this.snapshot});
-
-  final StatisticsDashboardSnapshot snapshot;
+  const StatisticsDashboard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tilesState = ref.watch(dashboardTilesProvider);
     final notifier = ref.read(dashboardTilesProvider.notifier);
     final workingTiles = tilesState.workingTiles;
-    final availableTiles = notifier.availableTiles;
-
-    void showAddTileSheet() {
-      if (availableTiles.isEmpty) return;
-      showModalBottomSheet(
-        context: context,
-        builder: (context) {
-          return SafeArea(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: availableTiles.length,
-              itemBuilder: (context, index) {
-                final type = availableTiles[index];
-                final metadata = dashboardTileRegistry[type]!.metadata;
-                return ListTile(
-                  leading: Icon(metadata.icon),
-                  title: Text(metadata.title),
-                  subtitle: Text(metadata.description),
-                  onTap: () {
-                    Navigator.pop(context);
-                    notifier.addTile(type);
-                  },
-                );
-              },
-            ),
-          );
-        },
-      );
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text('Dashboard', // TODO(l10n)
-                style: Theme.of(context).textTheme.titleLarge),
-            const Spacer(),
-            if (tilesState.isEditing)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextButton(
-                    onPressed: notifier.discardChanges,
-                    child: const Text('Discard'), // TODO(l10n)
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: notifier.saveLayout,
-                    icon: const Icon(Icons.save),
-                    label: const Text('Save layout'), // TODO(l10n)
-                  ),
-                ],
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Text('Long press a card to rearrange.', // TODO(l10n)
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.grey[600])),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: availableTiles.isEmpty ? null : showAddTileSheet,
-              icon: const Icon(Icons.add),
-              label: const Text('Add card'), // TODO(l10n)
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
         workingTiles.isEmpty
-            ? _EmptyDashboardState(onAddPressed: showAddTileSheet)
+            ? _buildEmptyState(context, () => notifier.reorder)
             : LayoutBuilder(
                 builder: (context, constraints) {
                   final crossAxisUnits =
@@ -102,7 +31,6 @@ class StatisticsDashboard extends ConsumerWidget {
                     canDrag: true,
                     children: _buildReorderableItems(
                       context,
-                      snapshot,
                       workingTiles,
                       crossAxisUnits,
                       notifier.removeTile,
@@ -118,7 +46,6 @@ class StatisticsDashboard extends ConsumerWidget {
 
   List<ReorderableItem> _buildReorderableItems(
     BuildContext context,
-    StatisticsDashboardSnapshot snapshot,
     List<StatisticsDashboardTileType> workingTiles,
     int columnUnits,
     void Function(StatisticsDashboardTileType) onRemove,
@@ -127,7 +54,6 @@ class StatisticsDashboard extends ConsumerWidget {
         .map(
           (type) => dashboardTileRegistry[type]!.buildReorderableItem(
             context: context,
-            snapshot: snapshot,
             onRemove: () => onRemove(type),
             columnUnits: columnUnits,
             baseTileHeight: kDashboardTileBaseHeight,
@@ -139,15 +65,8 @@ class StatisticsDashboard extends ConsumerWidget {
   int _calculateColumnUnits(double width) {
     return max(4, (width ~/ 200) * 2);
   }
-}
 
-class _EmptyDashboardState extends StatelessWidget {
-  const _EmptyDashboardState({this.onAddPressed});
-
-  final VoidCallback? onAddPressed;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, VoidCallback? onAddPressed) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [

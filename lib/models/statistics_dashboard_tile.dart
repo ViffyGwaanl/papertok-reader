@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Types of dashboard tiles that can appear in the statistics dashboard.
 enum StatisticsDashboardTileType {
   totalTime,
@@ -15,17 +13,3 @@ const List<StatisticsDashboardTileType> defaultStatisticsDashboardTiles = [
   StatisticsDashboardTileType.periodSummary,
   StatisticsDashboardTileType.topBook,
 ];
-
-/// Snapshot of the basic counters used by most tiles.
-@immutable
-class StatisticsDashboardSnapshot {
-  const StatisticsDashboardSnapshot({
-    required this.totalBooks,
-    required this.totalDays,
-    required this.totalNotes,
-  });
-
-  final int totalBooks;
-  final int totalDays;
-  final int totalNotes;
-}

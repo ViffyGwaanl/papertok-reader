@@ -1,14 +1,11 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/book.dart';
 import 'package:anx_reader/dao/reading_time.dart';
 import 'package:anx_reader/enums/chart_mode.dart';
 import 'package:anx_reader/enums/hint_key.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/page/book_detail.dart';
 import 'package:anx_reader/providers/statistic_data.dart';
-import 'package:anx_reader/providers/total_reading_time.dart';
 import 'package:anx_reader/utils/date/convert_seconds.dart';
 import 'package:anx_reader/utils/date/week_of_year.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
@@ -17,6 +14,7 @@ import 'package:anx_reader/widgets/common/container/outlined_container.dart';
 import 'package:anx_reader/widgets/highlight_digit.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
 import 'package:anx_reader/widgets/statistic/statistic_card.dart';
+import 'package:anx_reader/widgets/statistic/statistics_dashboard_title.dart';
 import 'package:anx_reader/widgets/statistic/statistics_dashboard.dart';
 import 'package:anx_reader/widgets/tips/statistic_tips.dart';
 import 'package:flutter/material.dart';
@@ -58,12 +56,6 @@ class _StatisticPageState extends State<StatisticPage> {
 
   @override
   Widget build(BuildContext context) {
-    final dashboardSnapshot = StatisticsDashboardSnapshot(
-      totalBooks: totalNumberOfBook,
-      totalDays: totalNumberOfDate,
-      totalNotes: totalNumberOfNotes,
-    );
-
     return Scaffold(
       // appBar: AppBar(
       //   title: Text(context.navBarStatistics),
@@ -74,8 +66,7 @@ class _StatisticPageState extends State<StatisticPage> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             children: [
-              StatisticsDashboard(snapshot: dashboardSnapshot),
-              const SizedBox(height: 16),
+              StatisticsDashboardTitle(),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -86,9 +77,10 @@ class _StatisticPageState extends State<StatisticPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const TotalReadTime(),
-                                const SizedBox(height: 20),
-                                baseStatistic(context),
+                                // const TotalReadTime(),
+                                // const SizedBox(height: 20),
+                                // baseStatistic(context),
+                                StatisticsDashboard(),
                                 const StatisticCard(),
                               ],
                             ),
@@ -108,15 +100,16 @@ class _StatisticPageState extends State<StatisticPage> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SafeArea(bottom: false, child: const TotalReadTime()),
-                          const SizedBox(height: 20),
-                          baseStatistic(context),
-                          const SizedBox(height: 30),
+                          // SafeArea(bottom: false, child: const TotalReadTime()),
+                          // const SizedBox(height: 20),
+                          // baseStatistic(context),
+                          // const SizedBox(height: 30),
                           Expanded(
                             child: ListView(
                                 padding: const EdgeInsets.only(bottom: 80),
                                 controller: _scrollController,
                                 children: const [
+                                  StatisticsDashboard(),
                                   StatisticCard(),
                                   SizedBox(height: 20),
                                   DateBooks(),
@@ -165,63 +158,6 @@ class _StatisticPageState extends State<StatisticPage> {
                 textStyle,
                 digitStyle)),
       ],
-    );
-  }
-}
-
-class TotalReadTime extends ConsumerWidget {
-  const TotalReadTime({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final totalReadingTime = ref.watch(totalReadingTimeProvider);
-
-    TextStyle textStyle = const TextStyle(
-      fontSize: 30,
-      fontWeight: FontWeight.bold,
-    );
-
-    TextStyle digitStyle = const TextStyle(
-      fontSize: 24,
-      fontWeight: FontWeight.bold,
-    );
-
-    return totalReadingTime.when(
-      data: (totalSeconds) {
-        // 12 h 34 m
-        int H = totalSeconds ~/ 3600;
-        int M = (totalSeconds % 3600) ~/ 60;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                highlightDigit(
-                  context,
-                  L10n.of(context).commonHours(H),
-                  digitStyle,
-                  textStyle,
-                ),
-                highlightDigit(
-                  context,
-                  L10n.of(context).commonMinutes(M),
-                  digitStyle,
-                  textStyle,
-                ),
-              ],
-            ),
-            Text(
-              '${Prefs().beginDate.toString().substring(0, 10)} ${L10n.of(context).statisticToPresent}',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-            )
-          ],
-        );
-      },
-      loading: () => const CircularProgressIndicator(),
-      error: (error, stack) => Text('Error: $error'),
     );
   }
 }
