@@ -14,10 +14,34 @@ abstract class StatisticsDashboardTileBase {
 
   StatisticsDashboardTileType get type => metadata.type;
 
-  /// Builds the tile body with access to WidgetRef.
+  /// Builds the tile body with access to BuildContext and WidgetRef.
   Widget buildContent(BuildContext context, WidgetRef ref);
 
-  onRemove() {}
+  /// Called when the tile is removed from the dashboard.
+  /// Override this method to perform cleanup or additional actions.
+  void onRemove(BuildContext context, WidgetRef ref) {}
+
+  /// Builds an optional icon widget for the tile.
+  /// Override this method to provide a custom icon.
+  Widget buildCorner(BuildContext context, WidgetRef ref) {
+    return Opacity(
+      opacity: 0.1,
+      child: Transform.rotate(
+        angle: -0.2,
+        child: SizedBox.shrink(),
+      ),
+    );
+  }
+
+  Widget cornerIcon(BuildContext context, IconData iconData) {
+    return Icon(
+      iconData,
+      size: 90,
+      color: Theme.of(context).colorScheme.primary,
+    );
+  }
+
+  String get title => '';
 
   /// Returns the [ReorderableItem] used by the reorderable grid.
   ReorderableItem buildReorderableItem({required BuildContext context}) {
@@ -28,14 +52,14 @@ abstract class StatisticsDashboardTileBase {
       mainAxisCellCount: metadata.rowSpan,
       child: DashboardTileShell(
         tileType: type,
-        onRemove: onRemove,
+        tile: this,
         buildContent: buildContent,
       ),
       placeholder: Opacity(
         opacity: 0.5,
         child: DashboardTileShell(
           tileType: type,
-          onRemove: null,
+          tile: this,
           buildContent: buildContent,
         ),
       ),
@@ -48,18 +72,17 @@ class DashboardTileShell extends ConsumerWidget {
     super.key,
     required this.buildContent,
     required this.tileType,
-    this.onRemove,
+    required this.tile,
   });
 
   final Widget Function(BuildContext context, WidgetRef ref) buildContent;
   final StatisticsDashboardTileType tileType;
-  final VoidCallback? onRemove;
+  final StatisticsDashboardTileBase tile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dashboardTilesProvider);
-    final showRemoveButton =
-        state.isEditing && state.workingTiles.length > 1 && onRemove != null;
+    final showRemoveButton = state.isEditing && state.workingTiles.length > 1;
 
     final notifier = ref.read(dashboardTilesProvider.notifier);
 
@@ -70,7 +93,18 @@ class DashboardTileShell extends ConsumerWidget {
           height: double.infinity,
           padding: const EdgeInsets.all(6),
           radius: 16,
-          child: buildContent(context, ref),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (tile.title.isNotEmpty)
+                Text(
+                  tile.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              buildContent(context, ref),
+            ],
+          ),
         ),
         if (showRemoveButton)
           Positioned(
@@ -82,11 +116,22 @@ class DashboardTileShell extends ConsumerWidget {
               tooltip: 'Remove card', // TODO(l10n)
               onPressed: () {
                 notifier.removeTile(tileType);
-                onRemove?.call();
+                tile.onRemove(context, ref);
               },
               icon: const Icon(Icons.close),
             ),
           ),
+        Positioned(
+          bottom: -20,
+          right: -20,
+          child: Opacity(
+            opacity: 0.1,
+            child: Transform.rotate(
+              angle: -0.2,
+              child: tile.buildCorner(context, ref),
+            ),
+          ),
+        ),
       ],
     );
   }

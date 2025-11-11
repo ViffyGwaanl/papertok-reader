@@ -21,6 +21,14 @@ class TotalTimeTile extends StatisticsDashboardTileBase {
         ));
 
   @override
+  Widget buildCorner(BuildContext context, WidgetRef ref) {
+    return cornerIcon(context, metadata.icon);
+  }
+
+  @override
+  String get title => metadata.title;
+
+  @override
   Widget buildContent(
     BuildContext context,
     WidgetRef ref,
@@ -54,11 +62,6 @@ class _TotalTimeContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          metadata.title,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 4),
         Wrap(
           children: [
             highlightDigit(

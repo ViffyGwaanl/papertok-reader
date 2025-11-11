@@ -5,8 +5,6 @@ import 'package:anx_reader/widgets/statistic/dashboard_tiles/period_summary_tile
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/top_book_tile.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/total_time_tile.dart';
 
-const double kDashboardTileBaseHeight = 120.0;
-
 const Map<StatisticsDashboardTileType, StatisticsDashboardTileBase>
     dashboardTileRegistry = {
   StatisticsDashboardTileType.totalTime: TotalTimeTile(),
