@@ -1,3 +1,4 @@
+import 'package:anx_reader/models/statistic_data_model.dart';
 import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/providers/book_daily_reading_provider.dart';
 import 'package:anx_reader/providers/statistic_data.dart';
@@ -34,11 +35,12 @@ class TopBookTile extends StatisticsDashboardTileBase {
   ) {
     return AsyncSkeletonWrapper(
       asyncValue: ref.watch(statisticDataProvider),
-      builder: (data) {
-        if (data.bookReadingTime.isEmpty) {
+      mock: StatisticDataModel.mock(),
+      builder: (statisticData) {
+        if (statisticData.bookReadingTime.isEmpty) {
           return Center(child: FittedBox(child: StatisticsTips()));
         }
-        final entry = data.bookReadingTime.first;
+        final entry = statisticData.bookReadingTime.first;
         final book = entry.keys.first;
         final seconds = entry.values.first;
 
@@ -86,55 +88,22 @@ class TopBookTile extends StatisticsDashboardTileBase {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    SizedBox(
-                      height: 80,
-                      child: Consumer(
-                        builder: (context, ref, child) {
-                          final chartData = ref.watch(
-                            bookDailyReadingProvider(bookId: book.id),
-                          );
-
-                          return chartData.when(
-                            data: (data) {
-                              if (data.readingTimes.isEmpty ||
-                                  data.readingTimes
-                                      .every((time) => time == 0)) {
-                                return Center(
-                                  child: Text(
-                                    'No recent reading data',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.withOpacity(0.6),
-                                    ),
-                                  ),
-                                );
-                              }
-
-                              return BookReadingChart(
-                                readingTimes: data.readingTimes,
-                                xLabels: data.formattedLabels,
-                                maxReadingTime: data.maxReadingTime,
-                              );
-                            },
-                            loading: () => const Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                            error: (error, stack) => Center(
-                              child: Icon(
-                                Icons.error_outline,
-                                color: Colors.red.withOpacity(0.6),
-                                size: 20,
+                    AsyncSkeletonWrapper(
+                        asyncValue: ref.watch(
+                          bookDailyReadingProvider(bookId: book.id),
+                        ),
+                        builder: (bookReadingData) {
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: BookReadingChart(
+                                readingTimes: bookReadingData.readingTimes,
+                                xLabels: bookReadingData.formattedLabels,
+                                maxReadingTime: bookReadingData.maxReadingTime,
                               ),
                             ),
                           );
-                        },
-                      ),
-                    ),
+                        }),
                   ]),
             ),
           ],

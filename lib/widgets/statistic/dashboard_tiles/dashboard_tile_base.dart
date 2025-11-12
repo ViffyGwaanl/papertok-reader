@@ -216,19 +216,38 @@ class DashboardTileShell extends ConsumerWidget {
             FilledContainer(
               width: double.infinity,
               height: double.infinity,
-              padding: const EdgeInsets.all(6),
               radius: 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              color: Theme.of(context).colorScheme.surfaceContainer,
+              child: Stack(
                 children: [
-                  if (tile.title.isNotEmpty)
-                    Text(
-                      tile.title,
-                      style: Theme.of(context).textTheme.titleMedium,
+                  Positioned(
+                    bottom: -20,
+                    right: -20,
+                    child: Opacity(
+                      opacity: 0.1,
+                      child: Transform.rotate(
+                        angle: -0.2,
+                        child: tile.buildCorner(context, ref),
+                      ),
                     ),
-                  Expanded(
-                    child: buildContent(context, ref),
+                  ),
+                  Container(
+                    color: Colors.transparent,
+                    padding: const EdgeInsets.all(6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (tile.title.isNotEmpty)
+                          Text(
+                            tile.title,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        Expanded(
+                          child: buildContent(context, ref),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -248,17 +267,6 @@ class DashboardTileShell extends ConsumerWidget {
                   icon: const Icon(Icons.close),
                 ),
               ),
-            Positioned(
-              bottom: -20,
-              right: -20,
-              child: Opacity(
-                opacity: 0.1,
-                child: Transform.rotate(
-                  angle: -0.2,
-                  child: tile.buildCorner(context, ref),
-                ),
-              ),
-            ),
           ],
         ),
       ),
