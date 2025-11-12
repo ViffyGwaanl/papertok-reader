@@ -18,7 +18,7 @@ class BookDailyReadingData {
     required this.maxReadingTime,
   });
 
-  factory BookDailyReadingData.empty() {
+  factory BookDailyReadingData.mock() {
     return BookDailyReadingData(
       dates: [],
       readingTimes: [],
@@ -40,7 +40,7 @@ class BookDailyReading extends _$BookDailyReading {
     );
 
     if (rawData.isEmpty) {
-      return BookDailyReadingData.empty();
+      return BookDailyReadingData.mock();
     }
 
     // 创建日期到阅读时长的映射
