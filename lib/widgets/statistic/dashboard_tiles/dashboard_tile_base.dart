@@ -1,9 +1,11 @@
 import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_detail_view.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:heroine/heroine.dart';
 import 'package:staggered_reorderable/staggered_reorderable.dart';
 
 /// Base class for all statistics dashboard tiles.
@@ -23,15 +25,7 @@ abstract class StatisticsDashboardTileBase {
 
   /// Builds an optional icon widget for the tile.
   /// Override this method to provide a custom icon.
-  Widget buildCorner(BuildContext context, WidgetRef ref) {
-    return Opacity(
-      opacity: 0.1,
-      child: Transform.rotate(
-        angle: -0.2,
-        child: SizedBox.shrink(),
-      ),
-    );
-  }
+  Widget buildCorner(BuildContext context, WidgetRef ref) => SizedBox.shrink();
 
   Widget cornerIcon(BuildContext context, IconData iconData) {
     return Icon(
@@ -85,54 +79,89 @@ class DashboardTileShell extends ConsumerWidget {
     final showRemoveButton = state.isEditing && state.workingTiles.length > 1;
 
     final notifier = ref.read(dashboardTilesProvider.notifier);
+    final heroTag = 'dashboard_tile_${tileType.name}';
 
-    return Stack(
-      children: [
-        FilledContainer(
-          width: double.infinity,
-          height: double.infinity,
-          padding: const EdgeInsets.all(6),
-          radius: 16,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (tile.title.isNotEmpty)
-                Text(
-                  tile.title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              Expanded(child: buildContent(context, ref)),
-            ],
-          ),
-        ),
-        if (showRemoveButton)
-          Positioned(
-            top: 0,
-            right: 0,
-            child: IconButton.filledTonal(
-              iconSize: 18,
-              visualDensity: VisualDensity.compact,
-              tooltip: 'Remove card', // TODO(l10n)
-              onPressed: () {
-                notifier.removeTile(tileType);
-                tile.onRemove(context, ref);
+    return Heroine(
+      tag: heroTag,
+      flightShuttleBuilder: const FlipShuttleBuilder(
+        axis: Axis.vertical,
+        halfFlips: 1,
+      ),
+      motion: Motion.bouncySpring(
+        snapToEnd: true,
+        duration: const Duration(milliseconds: 500),
+      ),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.of(context).push(
+            PageRouteBuilder(
+              opaque: false,
+              pageBuilder: (context, animation, secondaryAnimation) {
+                return AnimatedBuilder(
+                  animation: animation,
+                  builder: (context, child) {
+                    return DashboardTileDetailView(
+                      tile: tile,
+                      heroTag: heroTag,
+                      animationValue: animation.value,
+                    );
+                  },
+                );
               },
-              icon: const Icon(Icons.close),
             ),
-          ),
-        Positioned(
-          bottom: -20,
-          right: -20,
-          child: Opacity(
-            opacity: 0.1,
-            child: Transform.rotate(
-              angle: -0.2,
-              child: tile.buildCorner(context, ref),
+          );
+        },
+        child: Stack(
+          children: [
+            FilledContainer(
+              width: double.infinity,
+              height: double.infinity,
+              padding: const EdgeInsets.all(6),
+              radius: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (tile.title.isNotEmpty)
+                    Text(
+                      tile.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  Expanded(
+                    child: buildContent(context, ref),
+                  ),
+                ],
+              ),
             ),
-          ),
+            if (showRemoveButton)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton.filledTonal(
+                  iconSize: 18,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Remove card', // TODO(l10n)
+                  onPressed: () {
+                    notifier.removeTile(tileType);
+                    tile.onRemove(context, ref);
+                  },
+                  icon: const Icon(Icons.close),
+                ),
+              ),
+            Positioned(
+              bottom: -20,
+              right: -20,
+              child: Opacity(
+                opacity: 0.1,
+                child: Transform.rotate(
+                  angle: -0.2,
+                  child: tile.buildCorner(context, ref),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
