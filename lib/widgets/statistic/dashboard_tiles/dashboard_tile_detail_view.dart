@@ -82,137 +82,51 @@ class _DashboardTileDetailViewState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          // Backdrop with blur
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(
-                    alpha: 0.4 * (widget.animationValue * _blurSigma / 10.0)),
+    return Stack(
+      children: [
+        // Backdrop with blur
+        GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(
+                  alpha: 0.4 * (widget.animationValue * _blurSigma / 10.0)),
+            ),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: _blurSigma,
+                sigmaY: _blurSigma,
               ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: _blurSigma,
-                  sigmaY: _blurSigma,
-                ),
-                child: Container(
-                  color: Colors.transparent,
-                ),
+              child: Container(
+                color: Colors.transparent,
               ),
             ),
           ),
+        ),
 
-          // Draggable card
-          AnimatedPositioned(
-            duration:
-                _isDragging ? Duration.zero : const Duration(milliseconds: 300),
-            curve: Curves.elasticOut,
-            left: MediaQuery.of(context).size.width / 2 - 150 + _dragOffset.dx,
-            top: MediaQuery.of(context).size.height / 2 - 200 + _dragOffset.dy,
-            child: GestureDetector(
-              onPanStart: _handleDragStart,
-              onPanUpdate: _handleDragUpdate,
-              onPanEnd: _handleDragEnd,
-              child: Heroine(
-                tag: widget.heroTag,
-                child: Material(
-                  elevation: 8,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    width: 300,
-                    height: 400,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: theme.colorScheme.surface,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        // Header
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(16),
-                            ),
-                            color: theme.colorScheme.primaryContainer,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                widget.tile.metadata.icon,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  widget.tile.metadata.title,
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    color: theme.colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () => Navigator.of(context).pop(),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Content area
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.tile.metadata.description,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 16),
-                                Expanded(
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: theme
-                                          .colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.5),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child:
-                                        widget.tile.buildContent(context, ref),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+        // Draggable card
+        AnimatedPositioned(
+          duration:
+              _isDragging ? Duration.zero : const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          left: MediaQuery.of(context).size.width / 2 -
+              widget.tile.flipSize(context).width / 2 +
+              _dragOffset.dx,
+          top: MediaQuery.of(context).size.height / 2 -
+              widget.tile.flipSize(context).height / 2 +
+              _dragOffset.dy,
+          child: GestureDetector(
+            onPanStart: _handleDragStart,
+            onPanUpdate: _handleDragUpdate,
+            onPanEnd: _handleDragEnd,
+            child: Heroine(
+              tag: widget.heroTag,
+              child: widget.tile.buildFlipSide(context, ref),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

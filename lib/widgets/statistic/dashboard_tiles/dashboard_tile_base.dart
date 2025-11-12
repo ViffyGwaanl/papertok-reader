@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/common/fitted_text.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_detail_view.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +30,34 @@ abstract class StatisticsDashboardTileBase {
   /// Override this method to provide a custom icon.
   Widget buildCorner(BuildContext context, WidgetRef ref) => SizedBox.shrink();
 
+  String get title => '';
+
+  bool get canFlip => true;
+
+  double get flipSquareSize => 120;
+
+  double get flipTitleSize => 100;
+
+  Size flipSize(BuildContext context) {
+    final width = min(max(flipSquareSize * metadata.columnSpan, 300.0),
+        MediaQuery.sizeOf(context).width * 0.8);
+
+    final height = min(flipSquareSize * metadata.rowSpan + flipTitleSize,
+        MediaQuery.sizeOf(context).height * 0.8);
+
+    return Size(width, height);
+  }
+
+  Widget buildFlipSide(BuildContext context, WidgetRef ref) {
+    return flipScaffold(
+      context,
+      ref,
+      buildContent(context, ref),
+    );
+  }
+
+  void onTap() {}
+
   Widget cornerIcon(BuildContext context, IconData iconData) {
     return Icon(
       iconData,
@@ -35,7 +66,72 @@ abstract class StatisticsDashboardTileBase {
     );
   }
 
-  String get title => '';
+  Widget flipScaffold(BuildContext context, WidgetRef ref, Widget flipContent) {
+    final theme = Theme.of(context);
+    final spacing = 8.0;
+
+    return FilledContainer(
+      color: theme.scaffoldBackgroundColor,
+      width: flipSize(context).width,
+      height: flipSize(context).height,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FilledContainer(
+            height: flipTitleSize - spacing - 3,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            color: theme.colorScheme.primaryContainer,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      metadata.icon,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FittedText(
+                        metadata.title,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxHeight: 25,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  metadata.description,
+                  style: theme.textTheme.bodyMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: spacing),
+          Row(
+            children: [
+              Expanded(
+                child: FilledContainer(
+                    margin: const EdgeInsets.all(12),
+                    radius: 18,
+                    padding: const EdgeInsets.all(6),
+                    height: flipSquareSize * metadata.rowSpan -
+                        12 * 2, // minus margin
+                    child: flipContent),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Returns the [ReorderableItem] used by the reorderable grid.
   ReorderableItem buildReorderableItem({required BuildContext context}) {
@@ -93,6 +189,10 @@ class DashboardTileShell extends ConsumerWidget {
       ),
       child: GestureDetector(
         onTap: () {
+          if (!tile.canFlip) {
+            tile.onTap();
+            return;
+          }
           Navigator.of(context).push(
             PageRouteBuilder(
               opaque: false,
