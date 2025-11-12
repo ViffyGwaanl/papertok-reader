@@ -421,6 +421,31 @@ class ReadingTimeDao extends BaseDao {
     }
     return result;
   }
+
+  Future<List<Map<String, dynamic>>> selectBookDailyReadingTime({
+    required int bookId,
+    required int days,
+  }) async {
+    final startDate = DateTime.now().subtract(Duration(days: days - 1));
+
+    return rawQueryList(
+      '''
+      SELECT DATE(date) as day, SUM(reading_time) as total_time
+      FROM $table
+      WHERE book_id = ? AND DATE(date) >= DATE(?)
+      GROUP BY day
+      ORDER BY day ASC
+      ''',
+      arguments: [
+        bookId,
+        startDate.toIso8601String().substring(0, 10),
+      ],
+      mapper: (row) => {
+        'day': row['day'] as String,
+        'total_time': row['total_time'] as int? ?? 0,
+      },
+    );
+  }
 }
 
 final readingTimeDao = ReadingTimeDao();
