@@ -18,11 +18,13 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:heroine/heroine.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:window_manager/window_manager.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 late AudioHandler audioHandler;
+final heroineController = HeroineController();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -161,7 +163,7 @@ class _MyAppState extends ConsumerState<MyApp>
               //   PointerDeviceKind.mouse,
               // },
             ),
-            navigatorObservers: [FlutterSmartDialog.observer],
+            navigatorObservers: [FlutterSmartDialog.observer, heroineController],
             builder: FlutterSmartDialog.init(),
             navigatorKey: navigatorKey,
             locale: prefsNotifier.locale,
