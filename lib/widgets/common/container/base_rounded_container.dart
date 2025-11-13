@@ -37,14 +37,16 @@ abstract class BaseRoundedContainer extends StatelessWidget {
       duration: animationDuration,
       curve: animationCurve,
       margin: margin,
-      padding: padding,
       width: width,
       height: height,
       constraints: constraints,
       decoration: decoration(context, borderRadius),
       child: ClipRSuperellipse(
         borderRadius: borderRadius,
-        child: child,
+        child: Container(
+          padding: padding,
+          child: child,
+        ),
       ),
     );
   }
