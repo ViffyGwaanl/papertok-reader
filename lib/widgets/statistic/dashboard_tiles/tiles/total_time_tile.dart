@@ -10,15 +10,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class TotalTimeTile extends StatisticsDashboardTileBase {
-  const TotalTimeTile()
-      : super(const StatisticsDashboardTileMetadata(
-          type: StatisticsDashboardTileType.totalTime,
-          title: 'Lifetime reading', // TODO(l10n)
-          description: 'Hours and minutes logged in Anx Reader.', // TODO(l10n)
-          columnSpan: 2,
-          rowSpan: 1,
-          icon: Icons.timer_outlined,
-        ));
+  const TotalTimeTile();
+
+  @override
+  get metadata => StatisticsDashboardTileMetadata(
+        type: StatisticsDashboardTileType.totalTime,
+        title: 'Lifetime reading', // TODO(l10n)
+        description: 'Hours and minutes logged in Anx Reader.', // TODO(l10n)
+        columnSpan: 2,
+        rowSpan: 1,
+        icon: Icons.timer_outlined,
+      );
 
   @override
   Widget buildCorner(BuildContext context, WidgetRef ref) {

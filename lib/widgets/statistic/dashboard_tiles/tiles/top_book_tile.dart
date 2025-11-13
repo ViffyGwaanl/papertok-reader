@@ -13,15 +13,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class TopBookTile extends StatisticsDashboardTileBase {
-  const TopBookTile()
-      : super(const StatisticsDashboardTileMetadata(
-          type: StatisticsDashboardTileType.topBook,
-          title: 'Top book', // TODO(l10n)
-          description: 'Most read title in the current period.', // TODO(l10n)
-          columnSpan: 4,
-          rowSpan: 2,
-          icon: Icons.bookmark_added_outlined,
-        ));
+  const TopBookTile();
+
+  @override
+  get metadata => StatisticsDashboardTileMetadata(
+        type: StatisticsDashboardTileType.topBook,
+        title: 'Top book', // TODO(l10n)
+        description: 'Most read title in the current period.', // TODO(l10n)
+        columnSpan: 4,
+        rowSpan: 2,
+        icon: Icons.bookmark_added_outlined,
+      );
 
   @override
   Widget buildCorner(BuildContext context, WidgetRef ref) {

@@ -12,16 +12,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PeriodSummaryTile extends StatisticsDashboardTileBase {
-  const PeriodSummaryTile()
-      : super(const StatisticsDashboardTileMetadata(
-          type: StatisticsDashboardTileType.periodSummary,
-          title: 'Current period', // TODO(l10n)
-          description:
-              'Highlights for the selected period below.', // TODO(l10n)
-          columnSpan: 2,
-          rowSpan: 1,
-          icon: Icons.bar_chart_rounded,
-        ));
+  const PeriodSummaryTile();
+
+  @override
+  get metadata => StatisticsDashboardTileMetadata(
+        type: StatisticsDashboardTileType.periodSummary,
+        title: 'Current period', // TODO(l10n)
+        description: 'Highlights for the selected period below.', // TODO(l10n)
+        columnSpan: 2,
+        rowSpan: 1,
+        icon: Icons.bar_chart_rounded,
+      );
 
   @override
   Widget buildCorner(BuildContext context, WidgetRef ref) {

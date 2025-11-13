@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:anx_reader/l10n/generated/l10n.dart';
+import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/service/vibration_service.dart';
@@ -14,9 +16,9 @@ import 'package:staggered_reorderable/staggered_reorderable.dart';
 
 /// Base class for all statistics dashboard tiles.
 abstract class StatisticsDashboardTileBase {
-  const StatisticsDashboardTileBase(this.metadata);
+  const StatisticsDashboardTileBase();
 
-  final StatisticsDashboardTileMetadata metadata;
+  StatisticsDashboardTileMetadata get metadata;
 
   StatisticsDashboardTileType get type => metadata.type;
 
@@ -30,6 +32,8 @@ abstract class StatisticsDashboardTileBase {
   /// Builds an optional icon widget for the tile.
   /// Override this method to provide a custom icon.
   Widget buildCorner(BuildContext context, WidgetRef ref) => SizedBox.shrink();
+
+  L10n get l10n => L10n.of(navigatorKey.currentContext!);
 
   Widget buildTile(BuildContext context, WidgetRef ref) {
     return FilledContainer(

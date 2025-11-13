@@ -8,15 +8,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class LibraryTotalsTile extends StatisticsDashboardTileBase {
-  const LibraryTotalsTile()
-      : super(const StatisticsDashboardTileMetadata(
-          type: StatisticsDashboardTileType.libraryTotals,
-          title: 'Library totals', // TODO(l10n)
-          description: 'Books, reading days, and notes overview.', // TODO(l10n)
-          columnSpan: 4,
-          rowSpan: 1,
-          icon: Icons.menu_book_outlined,
-        ));
+  const LibraryTotalsTile();
+
+  @override
+  get metadata => StatisticsDashboardTileMetadata(
+        type: StatisticsDashboardTileType.libraryTotals,
+        title: 'Library Totals', // TODO(l10n)
+        description: 'Books, reading days, and notes overview.', // TODO(l10n)
+        columnSpan: 4,
+        rowSpan: 1,
+        icon: Icons.menu_book_outlined,
+      );
 
   @override
   Widget buildContent(
