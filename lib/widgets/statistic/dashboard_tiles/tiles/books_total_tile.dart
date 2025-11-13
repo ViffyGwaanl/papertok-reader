@@ -11,15 +11,17 @@ class BooksTotalTile extends StatisticsDashboardTileBase {
   const BooksTotalTile();
 
   @override
-  StatisticsDashboardTileMetadata get metadata =>
-      const StatisticsDashboardTileMetadata(
-        type: StatisticsDashboardTileType.booksTotal,
-        title: 'Books read', // TODO(l10n)
-        description: 'Lifetime total number of finished books.', // TODO(l10n)
-        columnSpan: 1,
-        rowSpan: 1,
-        icon: Icons.auto_stories_outlined,
-      );
+  StatisticsDashboardTileMetadata get metadata {
+    final l10n = l10nLocal;
+    return StatisticsDashboardTileMetadata(
+      type: StatisticsDashboardTileType.booksTotal,
+      title: l10n.tileBooksReadTitle,
+      description: l10n.tileBooksReadDescription,
+      columnSpan: 1,
+      rowSpan: 1,
+      icon: Icons.auto_stories_outlined,
+    );
+  }
 
   @override
   Widget buildContent(BuildContext context, WidgetRef ref) {
@@ -32,7 +34,7 @@ class BooksTotalTile extends StatisticsDashboardTileBase {
         builder: (count) {
           return DashboardMiniMetric(
             value: count,
-            label: 'books', // TODO(l10n)
+            label: l10nLocal.tileBooksReadUnit,
             icon: metadata.icon,
           );
         });

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:anx_reader/enums/hint_key.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
@@ -25,7 +26,8 @@ class StatisticsDashboard extends ConsumerWidget {
             hintKey: HintKey.statisticsDashboardRearrange,
             margin: const EdgeInsets.only(bottom: 10),
             child: Text(
-                'Tap and hold a card to rearrange or add cards')), // TODO(l10n)
+              L10n.of(context).statisticsDashboardHint,
+            )),
         workingTiles.isEmpty
             ? _buildEmptyState(context, () => notifier.reorder)
             : LayoutBuilder(
@@ -72,13 +74,14 @@ class StatisticsDashboard extends ConsumerWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-            'No cards yet. Tap “Add card” to get started.'), // TODO(l10n)
+        Text(
+          L10n.of(context).statisticsDashboardEmpty,
+        ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           onPressed: onAddPressed,
           icon: const Icon(Icons.add),
-          label: const Text('Add card'), // TODO(l10n)
+          label: Text(L10n.of(context).statisticsDashboardAddCard),
         ),
       ],
     );

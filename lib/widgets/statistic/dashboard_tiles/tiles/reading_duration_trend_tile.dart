@@ -1,3 +1,4 @@
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/reading_duration_trend_provider.dart';
 import 'package:anx_reader/utils/date/convert_seconds.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
@@ -11,14 +12,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 abstract class _BaseReadingDurationTile extends StatisticsDashboardTileBase {
   const _BaseReadingDurationTile({
     required this.type,
-    required this.titleText,
-    required this.descriptionText,
+    required this.titleBuilder,
+    required this.descriptionBuilder,
     required this.days,
   });
 
   final StatisticsDashboardTileType type;
-  final String titleText;
-  final String descriptionText;
+  final String Function(L10n l10n) titleBuilder;
+  final String Function(L10n l10n) descriptionBuilder;
   final int days;
 
   ReadingDurationSeries _selectSeries(ReadingDurationTrendData data) {
@@ -31,15 +32,17 @@ abstract class _BaseReadingDurationTile extends StatisticsDashboardTileBase {
   }
 
   @override
-  StatisticsDashboardTileMetadata get metadata =>
-      StatisticsDashboardTileMetadata(
-        type: type,
-        title: titleText,
-        description: descriptionText,
-        columnSpan: 2,
-        rowSpan: 1,
-        icon: Icons.timeline,
-      );
+  StatisticsDashboardTileMetadata get metadata {
+    final l10n = l10nLocal;
+    return StatisticsDashboardTileMetadata(
+      type: type,
+      title: titleBuilder(l10n),
+      description: descriptionBuilder(l10n),
+      columnSpan: 2,
+      rowSpan: 1,
+      icon: Icons.timeline,
+    );
+  }
 
   @override
   Widget buildContent(BuildContext context, WidgetRef ref) {
@@ -55,23 +58,21 @@ abstract class _BaseReadingDurationTile extends StatisticsDashboardTileBase {
 }
 
 class ReadingDurationLast7Tile extends _BaseReadingDurationTile {
-  const ReadingDurationLast7Tile()
+   ReadingDurationLast7Tile()
       : super(
           type: StatisticsDashboardTileType.readingDurationLast7,
-          titleText: 'Past 7 days', // TODO(l10n)
-          descriptionText:
-              'Rolling 7-day cumulative reading time.', // TODO(l10n)
+          titleBuilder: (l10n) => l10n.tileReadingDuration7Title,
+          descriptionBuilder: (l10n) => l10n.tileReadingDuration7Description,
           days: 7,
         );
 }
 
 class ReadingDurationLast30Tile extends _BaseReadingDurationTile {
-  const ReadingDurationLast30Tile()
+   ReadingDurationLast30Tile()
       : super(
           type: StatisticsDashboardTileType.readingDurationLast30,
-          titleText: 'Past 30 days', // TODO(l10n)
-          descriptionText:
-              'Rolling 30-day cumulative reading time.', // TODO(l10n)
+          titleBuilder: (l10n) => l10n.tileReadingDuration30Title,
+          descriptionBuilder: (l10n) => l10n.tileReadingDuration30Description,
           days: 30,
         );
 }
@@ -90,7 +91,7 @@ class _ReadingDurationTileBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          totalLabel, // TODO(l10n)
+          L10n.of(context).tileReadingDurationLogged(totalLabel),
           style: theme.textTheme.bodyMedium,
         ),
         const SizedBox(height: 8),

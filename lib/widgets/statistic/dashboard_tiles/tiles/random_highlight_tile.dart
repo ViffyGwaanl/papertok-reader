@@ -1,3 +1,4 @@
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book_note.dart';
 import 'package:anx_reader/providers/random_highlight_provider.dart';
 import 'package:anx_reader/utils/date/relative_time_formatter.dart';
@@ -12,15 +13,17 @@ class RandomHighlightTile extends StatisticsDashboardTileBase {
   const RandomHighlightTile();
 
   @override
-  StatisticsDashboardTileMetadata get metadata =>
-      const StatisticsDashboardTileMetadata(
-        type: StatisticsDashboardTileType.randomHighlight,
-        title: 'Highlight of the day', // TODO(l10n)
-        description: 'Shows a random highlight from your notes.', // TODO(l10n)
-        columnSpan: 2,
-        rowSpan: 2,
-        icon: Icons.format_quote,
-      );
+  StatisticsDashboardTileMetadata get metadata {
+    final l10n = l10nLocal;
+    return StatisticsDashboardTileMetadata(
+      type: StatisticsDashboardTileType.randomHighlight,
+      title: l10n.tileRandomHighlightTitle,
+      description: l10n.tileRandomHighlightDescription,
+      columnSpan: 2,
+      rowSpan: 2,
+      icon: Icons.format_quote,
+    );
+  }
 
   @override
   Widget buildCorner(BuildContext context, WidgetRef ref) {
@@ -90,7 +93,7 @@ class _HighlightCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                data.book?.title ?? 'Unknown book', // TODO(l10n)
+                data.book?.title ?? L10n.of(context).randomHighlightUnknownBook,
                 style: theme.textTheme.labelLarge,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -113,7 +116,7 @@ class _HighlightCard extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Refresh', // TODO(l10n)
+              tooltip: L10n.of(context).commonRefresh,
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh),
               visualDensity: VisualDensity.compact,
@@ -139,13 +142,13 @@ class _EmptyHighlight extends StatelessWidget {
         const Icon(Icons.sticky_note_2_outlined, size: 32),
         const SizedBox(height: 8),
         Text(
-          'No highlights yet.', // TODO(l10n)
+          L10n.of(context).randomHighlightEmptyState,
           style: theme.textTheme.bodyMedium,
         ),
         TextButton.icon(
           onPressed: onRefresh,
           icon: const Icon(Icons.refresh),
-          label: const Text('Refresh'), // TODO(l10n)
+          label: Text(L10n.of(context).commonRefresh),
         ),
       ],
     );

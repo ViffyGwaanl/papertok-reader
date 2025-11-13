@@ -29,6 +29,7 @@ class _StatisticDashboardTitleState
     final tilesState = ref.watch(dashboardTilesProvider);
     final notifier = ref.read(dashboardTilesProvider.notifier);
     final availableTiles = notifier.availableTiles;
+    final l10n = L10n.of(context);
 
     void showAddTileSheet() {
       if (availableTiles.isEmpty) return;
@@ -53,7 +54,7 @@ class _StatisticDashboardTitleState
               IconButton(
                 onPressed: availableTiles.isEmpty ? null : showAddTileSheet,
                 icon: const Icon(Icons.add),
-                tooltip: 'Add card', // TODO(l10n)
+                tooltip: l10n.statisticsDashboardAddCard,
               ),
               // IconButton(
               //   onPressed: notifier.discardChanges,
@@ -64,7 +65,7 @@ class _StatisticDashboardTitleState
               IconButton(
                 onPressed: notifier.saveLayout,
                 icon: const Icon(Icons.save),
-                tooltip: 'Save', // TODO(l10n) commonSave
+                tooltip: l10n.commonSave,
               ),
             ],
           ),
@@ -112,6 +113,7 @@ class _AddTileSheetContentState extends ConsumerState<AddTileSheetContent> {
         }
       });
     }
+    final l10n = L10n.of(context);
 
     return FilledContainer(
       color: Theme.of(context).scaffoldBackgroundColor,
@@ -123,7 +125,7 @@ class _AddTileSheetContentState extends ConsumerState<AddTileSheetContent> {
             child: Row(
               children: [
                 Text(
-                  'Add Dashboard Tile',
+                  l10n.statisticsDashboardAddTileTitle,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -201,7 +203,11 @@ class _AddTileSheetContentState extends ConsumerState<AddTileSheetContent> {
                 },
                 icon: const Icon(Icons.add),
                 label: Text(
-                  'Add ${dashboardTileRegistry[availableTiles[validIndex]]!.metadata.title}',
+                  l10n.statisticsDashboardAddTileButton(
+                    dashboardTileRegistry[availableTiles[validIndex]]!
+                        .metadata
+                        .title,
+                  ),
                   style: const TextStyle(fontSize: 16),
                 ),
               ),

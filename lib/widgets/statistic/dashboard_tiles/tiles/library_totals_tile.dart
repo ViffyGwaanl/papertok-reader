@@ -11,14 +11,17 @@ class LibraryTotalsTile extends StatisticsDashboardTileBase {
   const LibraryTotalsTile();
 
   @override
-  get metadata => StatisticsDashboardTileMetadata(
-        type: StatisticsDashboardTileType.libraryTotals,
-        title: 'Library Totals', // TODO(l10n)
-        description: 'Books, reading days, and notes overview.', // TODO(l10n)
-        columnSpan: 4,
-        rowSpan: 1,
-        icon: Icons.menu_book_outlined,
-      );
+  StatisticsDashboardTileMetadata get metadata {
+    final l10n = l10nLocal;
+    return StatisticsDashboardTileMetadata(
+      type: StatisticsDashboardTileType.libraryTotals,
+      title: l10n.tileLibraryTotalsTitle,
+      description: l10n.tileLibraryTotalsDescription,
+      columnSpan: 4,
+      rowSpan: 1,
+      icon: Icons.menu_book_outlined,
+    );
+  }
 
   @override
   Widget buildContent(
@@ -85,7 +88,7 @@ class _NumberTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 30),
-          SizedBox(height: 2),
+          const SizedBox(height: 2),
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium,

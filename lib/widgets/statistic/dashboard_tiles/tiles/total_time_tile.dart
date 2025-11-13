@@ -15,8 +15,8 @@ class TotalTimeTile extends StatisticsDashboardTileBase {
   @override
   get metadata => StatisticsDashboardTileMetadata(
         type: StatisticsDashboardTileType.totalTime,
-        title: 'Lifetime reading', // TODO(l10n)
-        description: 'Hours and minutes logged in Anx Reader.', // TODO(l10n)
+        title: l10nLocal.tileTotalTimeTitle,
+        description: l10nLocal.tileTotalTimeDescription,
         columnSpan: 2,
         rowSpan: 1,
         icon: Icons.timer_outlined,

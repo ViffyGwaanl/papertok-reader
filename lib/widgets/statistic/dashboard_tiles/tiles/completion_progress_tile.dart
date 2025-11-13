@@ -1,3 +1,4 @@
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/providers/reading_completion_provider.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
@@ -11,16 +12,17 @@ class CompletionProgressTile extends StatisticsDashboardTileBase {
   const CompletionProgressTile();
 
   @override
-  StatisticsDashboardTileMetadata get metadata =>
-      const StatisticsDashboardTileMetadata(
-        type: StatisticsDashboardTileType.completionProgress,
-        title: 'Almost finished', // TODO(l10n)
-        description:
-            'Books that are close to completion with a progress ring.', // TODO(l10n)
-        columnSpan: 4,
-        rowSpan: 2,
-        icon: Icons.emoji_events_outlined,
-      );
+  StatisticsDashboardTileMetadata get metadata {
+    final l10n = l10nLocal;
+    return StatisticsDashboardTileMetadata(
+      type: StatisticsDashboardTileType.completionProgress,
+      title: l10n.tileCompletionProgressTitle,
+      description: l10n.tileCompletionProgressDescription,
+      columnSpan: 4,
+      rowSpan: 2,
+      icon: Icons.emoji_events_outlined,
+    );
+  }
 
   @override
   String get title => metadata.title;
@@ -58,6 +60,7 @@ class _CompletionContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = L10n.of(context);
     final average = books.isEmpty
         ? 0.0
         : books.fold<double>(0, (acc, book) => acc + book.readingPercentage) /
@@ -71,7 +74,7 @@ class _CompletionContent extends StatelessWidget {
           child: books.isEmpty
               ? Center(
                   child: Text(
-                    'No books near the finish line.', // TODO(l10n)
+                    l10n.tileCompletionProgressEmptyState,
                     style: theme.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -110,7 +113,7 @@ class _CompletionContent extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Keep pushing through the final chapters!', // TODO(l10n)
+                      l10n.tileCompletionProgressMotivation,
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
@@ -149,7 +152,7 @@ class _CompletionRing extends StatelessWidget {
                 style: theme.textTheme.headlineSmall,
               ),
               Text(
-                'avg progress', // TODO(l10n)
+                L10n.of(context).tileCompletionProgressAverageLabel,
                 style: theme.textTheme.labelSmall,
               ),
             ],

@@ -11,15 +11,17 @@ class ReadingDaysTile extends StatisticsDashboardTileBase {
   const ReadingDaysTile();
 
   @override
-  StatisticsDashboardTileMetadata get metadata =>
-      const StatisticsDashboardTileMetadata(
-        type: StatisticsDashboardTileType.readingDaysTotal,
-        title: 'Active days', // TODO(l10n)
-        description: 'Number of days you opened a book.', // TODO(l10n)
-        columnSpan: 1,
-        rowSpan: 1,
-        icon: Icons.calendar_today_outlined,
-      );
+  StatisticsDashboardTileMetadata get metadata {
+    final l10n = l10nLocal;
+    return StatisticsDashboardTileMetadata(
+      type: StatisticsDashboardTileType.readingDaysTotal,
+      title: l10n.tileReadingDaysTitle,
+      description: l10n.tileReadingDaysDescription,
+      columnSpan: 1,
+      rowSpan: 1,
+      icon: Icons.calendar_today_outlined,
+    );
+  }
 
   @override
   Widget buildContent(BuildContext context, WidgetRef ref) {
@@ -31,7 +33,7 @@ class ReadingDaysTile extends StatisticsDashboardTileBase {
       mock: 28,
       builder: (count) => DashboardMiniMetric(
         value: count,
-        label: 'days', // TODO(l10n)
+        label: l10nLocal.tileReadingDaysUnit,
         icon: metadata.icon,
       ),
     );

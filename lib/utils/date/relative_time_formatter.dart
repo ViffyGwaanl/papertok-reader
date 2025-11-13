@@ -1,32 +1,38 @@
+import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/main.dart';
+
 class RelativeTimeFormatter {
   const RelativeTimeFormatter._();
 
+  static L10n get _l10n => L10n.of(navigatorKey.currentContext!);
+
   static String format(DateTime? timestamp) {
-    if (timestamp == null) return '--'; // TODO(l10n)
+    final l10n = _l10n;
+    if (timestamp == null) return l10n.relativeTimeUnknown;
 
     final now = DateTime.now();
     final diff = now.difference(timestamp);
 
-    if (diff.inSeconds < 60) return 'just now'; // TODO(l10n)
+    if (diff.inSeconds < 60) return l10n.relativeTimeJustNow;
     if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m ago'; // TODO(l10n)
+      return l10n.relativeTimeMinutesAgo(diff.inMinutes);
     }
     if (diff.inHours < 24) {
-      return '${diff.inHours}h ago'; // TODO(l10n)
+      return l10n.relativeTimeHoursAgo(diff.inHours);
     }
-    if (diff.inDays == 1) return 'yesterday'; // TODO(l10n)
+    if (diff.inDays == 1) return l10n.relativeTimeYesterday;
     if (diff.inDays < 30) {
-      return '${diff.inDays}d ago'; // TODO(l10n)
+      return l10n.relativeTimeDaysAgo(diff.inDays);
     }
     if (diff.inDays < 365) {
       final months = (diff.inDays / 30).floor();
       return months <= 1
-          ? 'last month' // TODO(l10n)
-          : '${months}mo ago'; // TODO(l10n)
+          ? l10n.relativeTimeLastMonth
+          : l10n.relativeTimeMonthsAgo(months);
     }
     final years = (diff.inDays / 365).floor();
     return years <= 1
-        ? 'last year' // TODO(l10n)
-        : '${years}y ago'; // TODO(l10n)
+        ? l10n.relativeTimeLastYear
+        : l10n.relativeTimeYearsAgo(years);
   }
 }

@@ -43,19 +43,19 @@ const List<StatisticsDashboardTileType> defaultStatisticsDashboardTiles = [
   StatisticsDashboardTileType.topBook,
 ];
 
-const Map<StatisticsDashboardTileType, StatisticsDashboardTileBase>
+final Map<StatisticsDashboardTileType, StatisticsDashboardTileBase>
     dashboardTileRegistry = {
-  StatisticsDashboardTileType.totalTime: TotalTimeTile(),
-  StatisticsDashboardTileType.libraryTotals: LibraryTotalsTile(),
-  StatisticsDashboardTileType.periodSummary: PeriodSummaryTile(),
-  StatisticsDashboardTileType.booksTotal: BooksTotalTile(),
-  StatisticsDashboardTileType.readingDaysTotal: ReadingDaysTile(),
-  StatisticsDashboardTileType.notesTotal: NotesTotalTile(),
-  StatisticsDashboardTileType.readingStreak: ReadingStreakTile(),
-  StatisticsDashboardTileType.randomHighlight: RandomHighlightTile(),
+  StatisticsDashboardTileType.totalTime: const TotalTimeTile(),
+  StatisticsDashboardTileType.libraryTotals: const LibraryTotalsTile(),
+  StatisticsDashboardTileType.periodSummary: const PeriodSummaryTile(),
+  StatisticsDashboardTileType.booksTotal: const BooksTotalTile(),
+  StatisticsDashboardTileType.readingDaysTotal: const ReadingDaysTile(),
+  StatisticsDashboardTileType.notesTotal: const NotesTotalTile(),
+  StatisticsDashboardTileType.readingStreak: const ReadingStreakTile(),
+  StatisticsDashboardTileType.randomHighlight: const RandomHighlightTile(),
   StatisticsDashboardTileType.readingDurationLast7: ReadingDurationLast7Tile(),
   StatisticsDashboardTileType.readingDurationLast30:
-      ReadingDurationLast30Tile(),
-  StatisticsDashboardTileType.completionProgress: CompletionProgressTile(),
-  StatisticsDashboardTileType.topBook: TopBookTile(),
+       ReadingDurationLast30Tile(),
+  StatisticsDashboardTileType.completionProgress: const CompletionProgressTile(),
+  StatisticsDashboardTileType.topBook: const TopBookTile(),
 };

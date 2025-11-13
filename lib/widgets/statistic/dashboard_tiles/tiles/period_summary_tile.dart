@@ -17,8 +17,8 @@ class PeriodSummaryTile extends StatisticsDashboardTileBase {
   @override
   get metadata => StatisticsDashboardTileMetadata(
         type: StatisticsDashboardTileType.periodSummary,
-        title: 'Current period', // TODO(l10n)
-        description: 'Highlights for the selected period below.', // TODO(l10n)
+        title: l10nLocal.tilePeriodSummaryTitle,
+        description: l10nLocal.tilePeriodSummaryDescription,
         columnSpan: 2,
         rowSpan: 1,
         icon: Icons.bar_chart_rounded,

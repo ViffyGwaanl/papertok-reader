@@ -11,16 +11,17 @@ class NotesTotalTile extends StatisticsDashboardTileBase {
   const NotesTotalTile();
 
   @override
-  StatisticsDashboardTileMetadata get metadata =>
-      const StatisticsDashboardTileMetadata(
-        type: StatisticsDashboardTileType.notesTotal,
-        title: 'Highlights', // TODO(l10n)
-        description:
-            'Number of highlights and notes you created.', // TODO(l10n)
-        columnSpan: 1,
-        rowSpan: 1,
-        icon: Icons.note_alt_outlined,
-      );
+  StatisticsDashboardTileMetadata get metadata {
+    final l10n = l10nLocal;
+    return StatisticsDashboardTileMetadata(
+      type: StatisticsDashboardTileType.notesTotal,
+      title: l10n.tileNotesTotalTitle,
+      description: l10n.tileNotesTotalDescription,
+      columnSpan: 1,
+      rowSpan: 1,
+      icon: Icons.note_alt_outlined,
+    );
+  }
 
   @override
   Widget buildContent(BuildContext context, WidgetRef ref) {
@@ -32,7 +33,7 @@ class NotesTotalTile extends StatisticsDashboardTileBase {
       mock: 120,
       builder: (count) => DashboardMiniMetric(
         value: count,
-        label: 'notes', // TODO(l10n)
+        label: l10nLocal.tileNotesTotalUnit,
         icon: metadata.icon,
       ),
     );

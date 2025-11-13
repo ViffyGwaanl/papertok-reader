@@ -1,3 +1,4 @@
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/reading_streak_provider.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
@@ -10,16 +11,17 @@ class ReadingStreakTile extends StatisticsDashboardTileBase {
   const ReadingStreakTile();
 
   @override
-  StatisticsDashboardTileMetadata get metadata =>
-      const StatisticsDashboardTileMetadata(
-        type: StatisticsDashboardTileType.readingStreak,
-        title: 'Reading streak', // TODO(l10n)
-        description:
-            'Track your current and best reading streaks for motivation.', // TODO(l10n)
-        columnSpan: 2,
-        rowSpan: 2,
-        icon: Icons.local_fire_department_outlined,
-      );
+  StatisticsDashboardTileMetadata get metadata {
+    final l10n = l10nLocal;
+    return StatisticsDashboardTileMetadata(
+      type: StatisticsDashboardTileType.readingStreak,
+      title: l10n.tileReadingStreakTitle,
+      description: l10n.tileReadingStreakDescription,
+      columnSpan: 2,
+      rowSpan: 2,
+      icon: Icons.local_fire_department_outlined,
+    );
+  }
 
   @override
   Widget buildContent(BuildContext context, WidgetRef ref) {
@@ -47,9 +49,13 @@ class _ReadingStreakContent extends StatelessWidget {
     final hasReadToday = _isSameDay(data.lastReadingDay, DateTime.now());
     final fireColor =
         hasReadToday ? theme.colorScheme.primary : theme.colorScheme.outline;
+    final l10n = L10n.of(context);
     final encouragement = hasReadToday
-        ? 'You are on fire today.' // TODO(l10n)
-        : 'Spend a few minutes reading today to keep the chain.'; // TODO(l10n)
+        ? l10n.tileReadingStreakEncouragementActive
+        : l10n.tileReadingStreakEncouragementInactive;
+    final subtitle = hasReadToday
+        ? l10n.tileReadingStreakSubtitleActive
+        : l10n.tileReadingStreakSubtitleInactive;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,17 +65,23 @@ class _ReadingStreakContent extends StatelessWidget {
           children: [
             Icon(Icons.local_fire_department, color: fireColor),
             const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${data.currentStreak} day streak', // TODO(l10n)
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: fireColor,
-                    fontWeight: FontWeight.bold,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.tileReadingStreakCurrent(data.currentStreak),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: fireColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
             )
           ],
         ),
@@ -78,8 +90,8 @@ class _ReadingStreakContent extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _StatPill(
-              label: 'Best streak', // TODO(l10n)
-              value: '${data.longestStreak}d',
+              label: l10n.tileReadingStreakBestLabel,
+              value: l10n.tileReadingStreakCurrent(data.longestStreak),
             ),
           ],
         ),

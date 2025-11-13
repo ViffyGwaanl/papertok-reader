@@ -18,8 +18,8 @@ class TopBookTile extends StatisticsDashboardTileBase {
   @override
   get metadata => StatisticsDashboardTileMetadata(
         type: StatisticsDashboardTileType.topBook,
-        title: 'Top book', // TODO(l10n)
-        description: 'Most read title in the current period.', // TODO(l10n)
+        title: l10nLocal.tileTopBookTitle,
+        description: l10nLocal.tileTopBookDescription,
         columnSpan: 4,
         rowSpan: 2,
         icon: Icons.bookmark_added_outlined,
