@@ -1,25 +1,24 @@
 import 'package:anx_reader/providers/reading_duration_trend_provider.dart';
 import 'package:anx_reader/utils/date/convert_seconds.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
+import 'package:anx_reader/widgets/statistic/book_reading_chart.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 abstract class _BaseReadingDurationTile extends StatisticsDashboardTileBase {
   const _BaseReadingDurationTile({
-    required this.childType,
-    required this.childTitle,
-    required this.description,
+    required this.type,
+    required this.titleText,
+    required this.descriptionText,
     required this.days,
   });
 
-  final StatisticsDashboardTileType childType;
-  final String childTitle;
-  final String description;
+  final StatisticsDashboardTileType type;
+  final String titleText;
+  final String descriptionText;
   final int days;
 
   ReadingDurationSeries _selectSeries(ReadingDurationTrendData data) {
@@ -34,9 +33,9 @@ abstract class _BaseReadingDurationTile extends StatisticsDashboardTileBase {
   @override
   StatisticsDashboardTileMetadata get metadata =>
       StatisticsDashboardTileMetadata(
-        type: childType,
-        title: childTitle,
-        description: description,
+        type: type,
+        title: titleText,
+        description: descriptionText,
         columnSpan: 2,
         rowSpan: 1,
         icon: Icons.timeline,
@@ -58,9 +57,10 @@ abstract class _BaseReadingDurationTile extends StatisticsDashboardTileBase {
 class ReadingDurationLast7Tile extends _BaseReadingDurationTile {
   const ReadingDurationLast7Tile()
       : super(
-          childType: StatisticsDashboardTileType.readingDurationLast7,
-          childTitle: 'Past 7 days', // TODO(l10n)
-          description: 'Rolling 7-day cumulative reading time.', // TODO(l10n)
+          type: StatisticsDashboardTileType.readingDurationLast7,
+          titleText: 'Past 7 days', // TODO(l10n)
+          descriptionText:
+              'Rolling 7-day cumulative reading time.', // TODO(l10n)
           days: 7,
         );
 }
@@ -68,9 +68,10 @@ class ReadingDurationLast7Tile extends _BaseReadingDurationTile {
 class ReadingDurationLast30Tile extends _BaseReadingDurationTile {
   const ReadingDurationLast30Tile()
       : super(
-          childType: StatisticsDashboardTileType.readingDurationLast30,
-          childTitle: 'Past 30 days', // TODO(l10n)
-          description: 'Rolling 30-day cumulative reading time.', // TODO(l10n)
+          type: StatisticsDashboardTileType.readingDurationLast30,
+          titleText: 'Past 30 days', // TODO(l10n)
+          descriptionText:
+              'Rolling 30-day cumulative reading time.', // TODO(l10n)
           days: 30,
         );
 }
@@ -94,89 +95,27 @@ class _ReadingDurationTileBody extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: _TrendChart(series: series),
+          child: BookReadingChart(
+            cumulativeValues: series.cumulativeSeconds,
+            dailySeconds: _dailyAmounts(series.cumulativeSeconds),
+            dates: series.dates,
+          ),
         ),
       ],
     );
   }
-}
 
-class _TrendChart extends StatelessWidget {
-  const _TrendChart({required this.series});
-
-  final ReadingDurationSeries series;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-    final maxY = (series.maxSeconds * 1.1).clamp(1, double.infinity);
-
-    return LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: (series.cumulativeSeconds.length - 1).toDouble(),
-        minY: 0,
-        maxY: maxY.toDouble(),
-        borderData: FlBorderData(show: false),
-        gridData: FlGridData(show: false),
-        titlesData: FlTitlesData(show: false),
-        lineTouchData: LineTouchData(
-          enabled: true,
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipItems: (spots) {
-              final formatter = DateFormat('M/d');
-              return spots.map((spot) {
-                final index = spot.x.toInt();
-                final dateLabel = formatter.format(series.dates[index]);
-                final daySeconds = _dailyAmount(index);
-                return LineTooltipItem(
-                  '$dateLabel · ${convertSeconds(daySeconds)}',
-                  TextStyle(
-                    color: primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              }).toList();
-            },
-          ),
-        ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: List.generate(
-              series.cumulativeSeconds.length,
-              (index) => FlSpot(
-                index.toDouble(),
-                series.cumulativeSeconds[index].toDouble(),
-              ),
-            ),
-            isCurved: true,
-            color: primary,
-            barWidth: 2,
-            dotData: FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: [
-                  primary.withOpacity(0.3),
-                  primary.withOpacity(0.05),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  int _dailyAmount(int index) {
-    if (index <= 0) {
-      return series.cumulativeSeconds[index];
+  List<int> _dailyAmounts(List<int> cumulative) {
+    if (cumulative.isEmpty) return const [];
+    final daily = <int>[];
+    for (var i = 0; i < cumulative.length; i++) {
+      if (i == 0) {
+        daily.add(cumulative[i]);
+      } else {
+        final delta = cumulative[i] - cumulative[i - 1];
+        daily.add(delta < 0 ? 0 : delta);
+      }
     }
-    final value =
-        series.cumulativeSeconds[index] - series.cumulativeSeconds[index - 1];
-    return value < 0 ? 0 : value;
+    return daily;
   }
 }

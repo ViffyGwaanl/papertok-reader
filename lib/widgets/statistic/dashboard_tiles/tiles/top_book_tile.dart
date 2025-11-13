@@ -99,9 +99,9 @@ class TopBookTile extends StatisticsDashboardTileBase {
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
                               child: BookReadingChart(
-                                readingTimes: bookReadingData.readingTimes,
-                                xLabels: bookReadingData.formattedLabels,
-                                maxReadingTime: bookReadingData.maxReadingTime,
+                                cumulativeValues: bookReadingData.readingTimes,
+                                dailySeconds: bookReadingData.readingTimes,
+                                dates: bookReadingData.dates,
                               ),
                             ),
                           );
