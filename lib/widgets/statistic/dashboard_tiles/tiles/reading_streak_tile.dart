@@ -44,9 +44,15 @@ class _ReadingStreakContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
+    final hasReadToday = _isSameDay(data.lastReadingDay, DateTime.now());
     final fireColor =
-        data.currentStreak > 0 ? primary : theme.colorScheme.outline;
+        hasReadToday ? theme.colorScheme.primary : theme.colorScheme.outline;
+    final encouragement = hasReadToday
+        ? 'Great job! Keep the streak alive.' // TODO(l10n)
+        : 'No reading logged today. Open a book to relight the flame.'; // TODO(l10n)
+    final subtitle = hasReadToday
+        ? 'You are on fire today.' // TODO(l10n)
+        : 'Spend a few minutes reading today to keep the chain.'; // TODO(l10n)
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,18 +62,27 @@ class _ReadingStreakContent extends StatelessWidget {
           children: [
             Icon(Icons.local_fire_department, color: fireColor),
             const SizedBox(width: 8),
-            Text(
-              '${data.currentStreak} day streak', // TODO(l10n)
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(color: fireColor, fontWeight: FontWeight.bold),
-            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${data.currentStreak} day streak', // TODO(l10n)
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: fireColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            )
           ],
         ),
         const SizedBox(height: 8),
         Text(
-          data.currentStreak > 0
-              ? 'Don\'t break the chain!' // TODO(l10n)
-              : 'Tap a book today to restart.', // TODO(l10n)
+          encouragement,
           style: theme.textTheme.bodyMedium,
         ),
         const Spacer(),
@@ -78,25 +93,17 @@ class _ReadingStreakContent extends StatelessWidget {
               label: 'Best streak', // TODO(l10n)
               value: '${data.longestStreak}d',
             ),
-            _StatPill(
-              label: 'Last read', // TODO(l10n)
-              value: _lastReadLabel(data.lastReadingDay),
-            ),
           ],
         ),
       ],
     );
   }
 
-  String _lastReadLabel(DateTime? lastDay) {
-    if (lastDay == null) return '--';
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dayOnly = DateTime(lastDay.year, lastDay.month, lastDay.day);
-    final diff = today.difference(dayOnly).inDays;
-    if (diff == 0) return 'Today'; // TODO(l10n)
-    if (diff == 1) return 'Yesterday'; // TODO(l10n)
-    return '$diff d ago'; // TODO(l10n)
+  bool _isSameDay(DateTime? date1, DateTime? date2) {
+    if (date1 == null || date2 == null) return false;
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 }
 

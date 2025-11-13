@@ -41,13 +41,9 @@ class PeriodSummaryTile extends StatisticsDashboardTileBase {
                         ? l10n.statisticYear
                         : l10n.statisticAll;
 
-            return Text(
+            return cornerText(
+              context,
               periodLabel,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 80,
-                    fontWeight: FontWeight.bold,
-                  ),
             );
           });
     });

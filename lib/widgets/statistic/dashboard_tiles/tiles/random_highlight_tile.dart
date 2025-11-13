@@ -1,5 +1,6 @@
 import 'package:anx_reader/models/book_note.dart';
 import 'package:anx_reader/providers/random_highlight_provider.dart';
+import 'package:anx_reader/utils/date/relative_time_formatter.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
@@ -71,24 +72,18 @@ class _HighlightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final quote = data.note.content.trim();
+    final timestamp = RelativeTimeFormatter.format(data.note.updateTime);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(
-          alignment: Alignment.topRight,
-          child: IconButton(
-            tooltip: 'Refresh', // TODO(l10n)
-            onPressed: onRefresh,
-            icon: const Icon(Icons.refresh),
-            visualDensity: VisualDensity.compact,
-          ),
-        ),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '“${data.note.content.trim()}”',
+                '“$quote”',
                 style: theme.textTheme.titleMedium,
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
@@ -107,6 +102,23 @@ class _HighlightCard extends StatelessWidget {
                 ),
             ],
           ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                timestamp,
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Refresh', // TODO(l10n)
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
         ),
       ],
     );

@@ -21,7 +21,8 @@ enum StatisticsDashboardTileType {
   notesTotal,
   readingStreak,
   randomHighlight,
-  readingDurationTrend,
+  readingDurationLast7,
+  readingDurationLast30,
   completionProgress,
   topBook,
 }
@@ -35,7 +36,8 @@ const List<StatisticsDashboardTileType> defaultStatisticsDashboardTiles = [
   StatisticsDashboardTileType.readingDaysTotal,
   StatisticsDashboardTileType.notesTotal,
   StatisticsDashboardTileType.readingStreak,
-  StatisticsDashboardTileType.readingDurationTrend,
+  StatisticsDashboardTileType.readingDurationLast7,
+  StatisticsDashboardTileType.readingDurationLast30,
   StatisticsDashboardTileType.randomHighlight,
   StatisticsDashboardTileType.completionProgress,
   StatisticsDashboardTileType.topBook,
@@ -51,7 +53,9 @@ const Map<StatisticsDashboardTileType, StatisticsDashboardTileBase>
   StatisticsDashboardTileType.notesTotal: NotesTotalTile(),
   StatisticsDashboardTileType.readingStreak: ReadingStreakTile(),
   StatisticsDashboardTileType.randomHighlight: RandomHighlightTile(),
-  StatisticsDashboardTileType.readingDurationTrend: ReadingDurationTrendTile(),
+  StatisticsDashboardTileType.readingDurationLast7: ReadingDurationLast7Tile(),
+  StatisticsDashboardTileType.readingDurationLast30:
+      ReadingDurationLast30Tile(),
   StatisticsDashboardTileType.completionProgress: CompletionProgressTile(),
   StatisticsDashboardTileType.topBook: TopBookTile(),
 };

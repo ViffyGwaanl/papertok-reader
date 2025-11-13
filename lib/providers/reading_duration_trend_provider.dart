@@ -9,11 +9,13 @@ class ReadingDurationSeries {
     required this.labels,
     required this.cumulativeSeconds,
     required this.totalSeconds,
+    required this.dates,
   });
 
   final List<String> labels;
   final List<int> cumulativeSeconds;
   final int totalSeconds;
+  final List<DateTime> dates;
 
   int get maxSeconds => cumulativeSeconds.isEmpty ? 0 : cumulativeSeconds.last;
 }
@@ -38,17 +40,24 @@ class ReadingDurationTrendData {
 
     List<String> labels(int days) =>
         List.generate(days, (index) => '${index + 1}');
+    final now = DateTime.now();
+    List<DateTime> dates(int days) => List.generate(
+          days,
+          (index) => now.subtract(Duration(days: (days - 1) - index)),
+        );
 
     return ReadingDurationTrendData(
       lastSevenDays: ReadingDurationSeries(
         labels: labels(7),
         cumulativeSeconds: sample(7, 600),
         totalSeconds: 7 * 600,
+        dates: dates(7),
       ),
       lastThirtyDays: ReadingDurationSeries(
         labels: labels(30),
         cumulativeSeconds: sample(30, 300),
         totalSeconds: 30 * 300,
+        dates: dates(30),
       ),
     );
   }
@@ -78,6 +87,7 @@ class ReadingDurationTrend extends _$ReadingDurationTrend {
         await readingTimeDao.selectDailyReadingTimeSince(startDate);
     final labels = <String>[];
     final cumulative = <int>[];
+    final dates = <DateTime>[];
     var runningTotal = 0;
     final formatter = DateFormat('MM/dd');
 
@@ -87,6 +97,7 @@ class ReadingDurationTrend extends _$ReadingDurationTrend {
       final total = aggregation[day] ?? 0;
       runningTotal += total;
       cumulative.add(runningTotal);
+      dates.add(day);
 
       final shouldShowLabel = days == 7
           ? true
@@ -98,6 +109,7 @@ class ReadingDurationTrend extends _$ReadingDurationTrend {
       labels: labels,
       cumulativeSeconds: cumulative,
       totalSeconds: runningTotal,
+      dates: dates,
     );
   }
 

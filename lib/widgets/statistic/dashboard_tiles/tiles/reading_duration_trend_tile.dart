@@ -1,6 +1,5 @@
 import 'package:anx_reader/providers/reading_duration_trend_provider.dart';
 import 'package:anx_reader/utils/date/convert_seconds.dart';
-import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
@@ -8,19 +7,38 @@ import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_regi
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
-class ReadingDurationTrendTile extends StatisticsDashboardTileBase {
-  const ReadingDurationTrendTile();
+abstract class _BaseReadingDurationTile extends StatisticsDashboardTileBase {
+  const _BaseReadingDurationTile({
+    required this.childType,
+    required this.childTitle,
+    required this.description,
+    required this.days,
+  });
+
+  final StatisticsDashboardTileType childType;
+  final String childTitle;
+  final String description;
+  final int days;
+
+  ReadingDurationSeries _selectSeries(ReadingDurationTrendData data) {
+    return days == 7 ? data.lastSevenDays : data.lastThirtyDays;
+  }
+
+  @override
+  Widget buildCorner(BuildContext context, WidgetRef ref) {
+    return cornerText(context, '$days ');
+  }
 
   @override
   StatisticsDashboardTileMetadata get metadata =>
-      const StatisticsDashboardTileMetadata(
-        type: StatisticsDashboardTileType.readingDurationTrend,
-        title: 'Pace tracker', // TODO(l10n)
-        description:
-            'Cumulative reading time across the last 7 and 30 days.', // TODO(l10n)
-        columnSpan: 4,
-        rowSpan: 2,
+      StatisticsDashboardTileMetadata(
+        type: childType,
+        title: childTitle,
+        description: description,
+        columnSpan: 2,
+        rowSpan: 1,
         icon: Icons.timeline,
       );
 
@@ -30,59 +48,53 @@ class ReadingDurationTrendTile extends StatisticsDashboardTileBase {
     return AsyncSkeletonWrapper<ReadingDurationTrendData>(
       asyncValue: asyncValue,
       mock: ReadingDurationTrendData.mock(),
-      builder: (data) => _ReadingDurationTrendContent(data: data),
+      builder: (data) => _ReadingDurationTileBody(
+        series: _selectSeries(data),
+      ),
     );
   }
 }
 
-class _ReadingDurationTrendContent extends StatefulWidget {
-  const _ReadingDurationTrendContent({required this.data});
-
-  final ReadingDurationTrendData data;
-
-  @override
-  State<_ReadingDurationTrendContent> createState() =>
-      _ReadingDurationTrendContentState();
+class ReadingDurationLast7Tile extends _BaseReadingDurationTile {
+  const ReadingDurationLast7Tile()
+      : super(
+          childType: StatisticsDashboardTileType.readingDurationLast7,
+          childTitle: 'Past 7 days', // TODO(l10n)
+          description: 'Rolling 7-day cumulative reading time.', // TODO(l10n)
+          days: 7,
+        );
 }
 
-class _ReadingDurationTrendContentState
-    extends State<_ReadingDurationTrendContent> {
-  int selectedDays = 7;
+class ReadingDurationLast30Tile extends _BaseReadingDurationTile {
+  const ReadingDurationLast30Tile()
+      : super(
+          childType: StatisticsDashboardTileType.readingDurationLast30,
+          childTitle: 'Past 30 days', // TODO(l10n)
+          description: 'Rolling 30-day cumulative reading time.', // TODO(l10n)
+          days: 30,
+        );
+}
+
+class _ReadingDurationTileBody extends StatelessWidget {
+  const _ReadingDurationTileBody({required this.series});
+
+  final ReadingDurationSeries series;
 
   @override
   Widget build(BuildContext context) {
-    final series = selectedDays == 7
-        ? widget.data.lastSevenDays
-        : widget.data.lastThirtyDays;
-
     final theme = Theme.of(context);
     final totalLabel = convertSeconds(series.totalSeconds);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AnxSegmentedButton<int>(
-          segments: const [
-            SegmentButtonItem(value: 7, label: '7d'),
-            SegmentButtonItem(value: 30, label: '30d'),
-          ],
-          selected: {selectedDays},
-          onSelectionChanged: (selection) {
-            setState(() {
-              selectedDays = selection.first;
-            });
-          },
-        ),
-        const SizedBox(height: 8),
         Text(
-          '$totalLabel logged', // TODO(l10n)
+          totalLabel, // TODO(l10n)
           style: theme.textTheme.bodyMedium,
         ),
+        const SizedBox(height: 8),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: _TrendChart(series: series),
-          ),
+          child: _TrendChart(series: series),
         ),
       ],
     );
@@ -108,44 +120,18 @@ class _TrendChart extends StatelessWidget {
         maxY: maxY.toDouble(),
         borderData: FlBorderData(show: false),
         gridData: FlGridData(show: false),
-        titlesData: FlTitlesData(
-          leftTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 28,
-              getTitlesWidget: (value, meta) {
-                final index = value.toInt();
-                if (index < 0 || index >= series.labels.length) {
-                  return const SizedBox.shrink();
-                }
-                final label = series.labels[index];
-                return SideTitleWidget(
-                  meta: meta,
-                  child: Text(
-                    label,
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
+        titlesData: FlTitlesData(show: false),
         lineTouchData: LineTouchData(
           enabled: true,
           touchTooltipData: LineTouchTooltipData(
-            // tooltipBgColor: theme.colorScheme.surfaceVariant,
             getTooltipItems: (spots) {
+              final formatter = DateFormat('M/d');
               return spots.map((spot) {
                 final index = spot.x.toInt();
-                final seconds = series.cumulativeSeconds[index];
+                final dateLabel = formatter.format(series.dates[index]);
+                final daySeconds = _dailyAmount(index);
                 return LineTooltipItem(
-                  convertSeconds(seconds),
+                  '$dateLabel · ${convertSeconds(daySeconds)}',
                   TextStyle(
                     color: primary,
                     fontWeight: FontWeight.bold,
@@ -183,5 +169,14 @@ class _TrendChart extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  int _dailyAmount(int index) {
+    if (index <= 0) {
+      return series.cumulativeSeconds[index];
+    }
+    final value =
+        series.cumulativeSeconds[index] - series.cumulativeSeconds[index - 1];
+    return value < 0 ? 0 : value;
   }
 }

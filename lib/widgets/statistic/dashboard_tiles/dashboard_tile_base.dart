@@ -121,6 +121,17 @@ abstract class StatisticsDashboardTileBase {
     );
   }
 
+  Widget cornerText(BuildContext context, String text) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            fontSize: 80,
+            fontWeight: FontWeight.bold,
+          ),
+    );
+  }
+
   Widget flipScaffold(BuildContext context, WidgetRef ref, Widget flipContent) {
     final theme = Theme.of(context);
     final spacing = 8.0;
