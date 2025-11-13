@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:anx_reader/l10n/generated/l10n.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
@@ -33,7 +33,7 @@ abstract class StatisticsDashboardTileBase {
   /// Override this method to provide a custom icon.
   Widget buildCorner(BuildContext context, WidgetRef ref) => SizedBox.shrink();
 
-  L10n get l10n => L10n.of(navigatorKey.currentContext!);
+  L10n get l10nLocal => L10n.of(navigatorKey.currentContext!);
 
   Widget buildTile(BuildContext context, WidgetRef ref) {
     return FilledContainer(
