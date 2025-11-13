@@ -171,7 +171,6 @@ abstract class StatisticsDashboardTileBase {
                 child: FilledContainer(
                     margin: const EdgeInsets.all(12),
                     radius: 18,
-                    padding: const EdgeInsets.all(6),
                     height: flipSquareSize * metadata.rowSpan -
                         12 * 2, // minus margin
                     child: flipContent),
