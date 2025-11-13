@@ -13,6 +13,7 @@ import 'package:anx_reader/page/home_page/notes_page.dart';
 import 'package:anx_reader/page/home_page/settings_page.dart';
 import 'package:anx_reader/page/home_page/statistics_page.dart';
 import 'package:anx_reader/service/receive_file/receive_share.dart';
+import 'package:anx_reader/service/vibration_service.dart';
 import 'package:anx_reader/utils/check_update.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
@@ -178,6 +179,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     ];
 
     void onBottomTap(int index, bool fromRail) {
+      VibrationService.heavy();
       if (navBarItems[index]['identifier'] == 'ai' && !fromRail) {
         showCupertinoSheet(
             context: context, builder: (context) => const AiPage());
