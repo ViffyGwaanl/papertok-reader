@@ -24,7 +24,8 @@ class StatisticsDashboard extends ConsumerWidget {
             icon: const Icon(Icons.drag_handle),
             hintKey: HintKey.statisticsDashboardRearrange,
             margin: const EdgeInsets.only(bottom: 10),
-            child: Text('Tap and hold a card to rearrange or add cards')), // TODO(l10n)
+            child: Text(
+                'Tap and hold a card to rearrange or add cards')), // TODO(l10n)
         workingTiles.isEmpty
             ? _buildEmptyState(context, () => notifier.reorder)
             : LayoutBuilder(
