@@ -48,9 +48,6 @@ class _ReadingStreakContent extends StatelessWidget {
     final fireColor =
         hasReadToday ? theme.colorScheme.primary : theme.colorScheme.outline;
     final encouragement = hasReadToday
-        ? 'Great job! Keep the streak alive.' // TODO(l10n)
-        : 'No reading logged today. Open a book to relight the flame.'; // TODO(l10n)
-    final subtitle = hasReadToday
         ? 'You are on fire today.' // TODO(l10n)
         : 'Spend a few minutes reading today to keep the chain.'; // TODO(l10n)
 
@@ -72,20 +69,11 @@ class _ReadingStreakContent extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall,
-                ),
               ],
             )
           ],
         ),
         const SizedBox(height: 8),
-        Text(
-          encouragement,
-          style: theme.textTheme.bodyMedium,
-        ),
-        const Spacer(),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -94,6 +82,11 @@ class _ReadingStreakContent extends StatelessWidget {
               value: '${data.longestStreak}d',
             ),
           ],
+        ),
+        const Spacer(),
+        Text(
+          encouragement,
+          style: theme.textTheme.bodyMedium,
         ),
       ],
     );
