@@ -11,7 +11,6 @@ import 'package:anx_reader/utils/date/week_of_year.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/common/container/outlined_container.dart';
-import 'package:anx_reader/widgets/highlight_digit.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
 import 'package:anx_reader/widgets/statistic/statistic_card.dart';
 import 'package:anx_reader/widgets/statistic/statistics_dashboard_title.dart';
@@ -74,15 +73,14 @@ class _StatisticPageState extends State<StatisticPage> {
                       return Row(
                         children: [
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // const TotalReadTime(),
-                                // const SizedBox(height: 20),
-                                // baseStatistic(context),
-                                StatisticsDashboard(),
-                                const StatisticCard(),
-                              ],
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  StatisticsDashboard(),
+                                  const StatisticCard(),
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(width: 20),
@@ -100,10 +98,6 @@ class _StatisticPageState extends State<StatisticPage> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // SafeArea(bottom: false, child: const TotalReadTime()),
-                          // const SizedBox(height: 20),
-                          // baseStatistic(context),
-                          // const SizedBox(height: 30),
                           Expanded(
                             child: ListView(
                                 padding: const EdgeInsets.only(bottom: 80),
@@ -125,39 +119,6 @@ class _StatisticPageState extends State<StatisticPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Row baseStatistic(BuildContext context) {
-    TextStyle digitStyle = const TextStyle(
-      fontSize: 24,
-      fontWeight: FontWeight.bold,
-    );
-
-    TextStyle textStyle = const TextStyle(
-      fontSize: 16,
-    );
-    return Row(
-      children: [
-        Expanded(
-            child: highlightDigit(
-                context,
-                L10n.of(context).statisticBooksRead(totalNumberOfBook),
-                textStyle,
-                digitStyle)),
-        Expanded(
-            child: highlightDigit(
-                context,
-                L10n.of(context).statisticDaysOfReading(totalNumberOfDate),
-                textStyle,
-                digitStyle)),
-        Expanded(
-            child: highlightDigit(
-                context,
-                L10n.of(context).statisticNotes(totalNumberOfNotes),
-                textStyle,
-                digitStyle)),
-      ],
     );
   }
 }

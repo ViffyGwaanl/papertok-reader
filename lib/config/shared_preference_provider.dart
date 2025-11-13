@@ -24,7 +24,7 @@ import 'package:anx_reader/models/font_model.dart';
 import 'package:anx_reader/models/read_theme.dart';
 import 'package:anx_reader/models/reading_info.dart';
 import 'package:anx_reader/models/reading_rules.dart';
-import 'package:anx_reader/models/statistics_dashboard_tile.dart';
+import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:anx_reader/models/window_info.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/utils/get_current_language_code.dart';
@@ -49,8 +49,7 @@ class Prefs extends ChangeNotifier {
   static const String _chapterSplitSelectedRuleKey =
       'chapterSplitSelectedRuleId';
   static const String _chapterSplitCustomRulesKey = 'chapterSplitCustomRules';
-  static const String _statisticsDashboardTilesKey =
-      'statistics_dashboard_tiles';
+  static const String _statisticsDashboardTilesKey = 'statisticsDashboardTiles';
 
   Future<void> initPrefs() async {
     prefs = await SharedPreferences.getInstance();

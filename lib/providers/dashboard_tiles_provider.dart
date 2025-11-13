@@ -1,5 +1,4 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

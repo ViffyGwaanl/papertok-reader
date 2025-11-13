@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:anx_reader/models/statistics_dashboard_tile.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:flutter/material.dart';
