@@ -3,13 +3,21 @@
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
 ## 1.10.0
+- Feat: More data display in the statistics interface
+- Feat: Statistic data display blocks support sorting, adding, and removing
+- Feat: Statistic data display blocks support clicking to open the back side
 - Feat: Translation can leverage context for more accurate understanding and expression
+- Feat: Add haptic feedback
 - Feat: More granular reading data statistics
 - Fix: Smoother page turn animation
 - Fix: Optimize context menu styles
 - UI: Optimize part of the interface design
 
+- Feat: 统计界面添加更多数据展示
+- Feat: 统计数据展示块支持排序、新增、移除
+- Feat: 统计数据展示块支持点击打开背面
 - Feat: 翻译内容可以结合上下文进行更准确的理解和表达
+- Feat: 添加震动反馈
 - Feat: 更精细的阅读数据统计
 - Fix: 更流畅的滑动翻页动画
 - Fix: 优化上下文菜单样式
