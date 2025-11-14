@@ -242,14 +242,18 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         if (state == AppLifecycleState.paused ||
             state == AppLifecycleState.hidden ||
             state == AppLifecycleState.detached) {
-          epubPlayerKey.currentState?.saveReadingProgress();
-          readingTimeDao.insertReadingTime(
-            ReadingTime(
-              bookId: _book.id,
-              readingTime: _readTimeWatch.elapsed.inSeconds,
-            ),
-            startedAt: _sessionStart,
-          );
+          final elapsedSeconds = _readTimeWatch.elapsed.inSeconds;
+          if (elapsedSeconds > 5) {
+            epubPlayerKey.currentState?.saveReadingProgress();
+            readingTimeDao.insertReadingTime(
+              ReadingTime(
+                bookId: _book.id,
+                readingTime: elapsedSeconds,
+              ),
+              startedAt: _sessionStart,
+            );
+          }
+          _readTimeWatch.reset();
           _sessionStart = null;
         }
         break;
