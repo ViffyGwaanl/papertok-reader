@@ -73,7 +73,7 @@ class _HintBannerState extends State<HintBanner>
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 12, 32, 12),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         if (widget.icon != null) ...[
                           IconTheme(
