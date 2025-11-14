@@ -8,7 +8,7 @@ class RelativeTimeFormatter {
 
   static String format(DateTime? timestamp) {
     final l10n = _l10n;
-    if (timestamp == null) return l10n.relativeTimeUnknown;
+    if (timestamp == null) return '--';
 
     final now = DateTime.now();
     final diff = now.difference(timestamp);

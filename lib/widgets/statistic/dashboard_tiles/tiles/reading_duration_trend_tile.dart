@@ -91,7 +91,7 @@ class _ReadingDurationTileBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          L10n.of(context).tileReadingDurationLogged(totalLabel),
+          totalLabel,
           style: theme.textTheme.bodyMedium,
         ),
         const SizedBox(height: 8),
