@@ -111,6 +111,16 @@ class _AppearanceSettingState extends State<AppearanceSetting> {
                   });
                 },
               ),
+              SettingsTile.switchTile(
+                title: Text(L10n.of(context).reduceVibrationFeedback),
+                leading: const Icon(Icons.vibration),
+                initialValue: Prefs().reduceVibrationFeedback,
+                onToggle: (bool value) {
+                  setState(() {
+                    Prefs().reduceVibrationFeedback = value;
+                  });
+                },
+              ),
             ]),
         SettingsSection(
             title: Text(L10n.of(context).settingsBookshelfCover),

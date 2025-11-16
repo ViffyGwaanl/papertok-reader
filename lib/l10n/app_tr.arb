@@ -662,5 +662,6 @@
   "relativeTimeLastYear": "geçen yıl",
   "relativeTimeYearsAgo": "{years} yıl önce",
   "tileLibraryTotalsTitle": "Kütüphane toplamı",
-  "tileLibraryTotalsDescription": "Kitaplar, okuma günleri ve notların özeti."
+  "tileLibraryTotalsDescription": "Kitaplar, okuma günleri ve notların özeti.",
+  "reduceVibrationFeedback": "Titreşim geri bildirimini azaltın"
 }

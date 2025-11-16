@@ -662,5 +662,6 @@
   "relativeTimeLastYear": "去年",
   "relativeTimeYearsAgo": "{years, plural, other{{years} 年前}}",
   "tileLibraryTotalsTitle": "图书馆总览",
-  "tileLibraryTotalsDescription": "书籍、阅读天数与笔记概览。"
+  "tileLibraryTotalsDescription": "书籍、阅读天数与笔记概览。",
+  "reduceVibrationFeedback": "减少振动反馈"
 }

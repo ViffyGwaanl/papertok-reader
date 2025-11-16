@@ -662,5 +662,6 @@
   "relativeTimeLastYear": "昨年",
   "relativeTimeYearsAgo": "{years}年前",
   "tileLibraryTotalsTitle": "ライブラリ合計",
-  "tileLibraryTotalsDescription": "本・読書日数・ノートの概要です。"
+  "tileLibraryTotalsDescription": "本・読書日数・ノートの概要です。",
+  "reduceVibrationFeedback": "振動フィードバックを軽減する"
 }

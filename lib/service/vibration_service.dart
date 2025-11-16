@@ -1,3 +1,4 @@
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:vibration/vibration.dart';
 import 'package:vibration/vibration_presets.dart';
@@ -11,6 +12,10 @@ class VibrationService {
   /// Main entry point. Pick a [VibrationType] and this will route it to either
   /// the platform haptics API or a vibration preset.
   static Future<void> vibrate(VibrationType type) async {
+    if (_shouldSuppressFeedback()) {
+      return;
+    }
+
     if (_hapticsTypeMap.containsKey(type)) {
       await _playHaptics(
         _hapticsTypeMap[type]!,
@@ -66,6 +71,9 @@ class VibrationService {
   /// Wrapper for the underlying preset call so test pages can still request a
   /// specific [VibrationPreset].
   static Future<void> vibrateWithPreset(VibrationPreset preset) async {
+    if (_shouldSuppressFeedback()) {
+      return;
+    }
     await _playPreset(preset);
   }
 
@@ -76,6 +84,10 @@ class VibrationService {
     int repeat = -1,
     int amplitude = -1,
   }) async {
+    if (_shouldSuppressFeedback()) {
+      return;
+    }
+
     if (pattern.isEmpty) {
       await _fallbackPulse();
       return;
@@ -218,6 +230,10 @@ class VibrationService {
     } catch (_) {
       return false;
     }
+  }
+
+  static bool _shouldSuppressFeedback() {
+    return Prefs().reduceVibrationFeedback;
   }
 
   static const Map<VibrationType, HapticsType> _hapticsTypeMap = {

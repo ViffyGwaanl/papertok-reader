@@ -662,5 +662,6 @@
   "relativeTimeLastYear": "no ano passado",
   "relativeTimeYearsAgo": "{years, plural, one{há 1 ano} other{há {years} anos}}",
   "tileLibraryTotalsTitle": "Totais da biblioteca",
-  "tileLibraryTotalsDescription": "Visão geral de livros, dias de leitura e notas."
+  "tileLibraryTotalsDescription": "Visão geral de livros, dias de leitura e notas.",
+  "reduceVibrationFeedback": "Reduza o feedback de vibração"
 }

@@ -662,5 +662,6 @@
   "relativeTimeLastYear": "작년",
   "relativeTimeYearsAgo": "{years}년 전",
   "tileLibraryTotalsTitle": "라이브러리 합계",
-  "tileLibraryTotalsDescription": "책, 독서 일수, 노트의 개요입니다."
+  "tileLibraryTotalsDescription": "책, 독서 일수, 노트의 개요입니다.",
+  "reduceVibrationFeedback": "진동 피드백 감소"
 }

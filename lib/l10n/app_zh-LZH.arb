@@ -662,5 +662,6 @@
   "relativeTimeLastYear": "去年",
   "relativeTimeYearsAgo": "{years} 年前",
   "tileLibraryTotalsTitle": "藏書總覽",
-  "tileLibraryTotalsDescription": "書、讀日與筆記之統。"
+  "tileLibraryTotalsDescription": "書、讀日與筆記之統。",
+  "reduceVibrationFeedback": "減震反饋"
 }

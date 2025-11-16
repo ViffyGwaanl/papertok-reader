@@ -662,5 +662,6 @@
   "relativeTimeLastYear": "в прошлом году",
   "relativeTimeYearsAgo": "{years, plural, one{{years} год назад} few{{years} года назад} many{{years} лет назад} other{{years} года назад}}",
   "tileLibraryTotalsTitle": "Итоги библиотеки",
-  "tileLibraryTotalsDescription": "Сводка по книгам, дням чтения и заметкам."
+  "tileLibraryTotalsDescription": "Сводка по книгам, дням чтения и заметкам.",
+  "reduceVibrationFeedback": "Уменьшите вибрацию"
 }
