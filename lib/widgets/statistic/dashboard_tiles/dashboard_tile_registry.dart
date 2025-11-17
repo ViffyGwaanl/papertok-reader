@@ -8,6 +8,7 @@ import 'package:anx_reader/widgets/statistic/dashboard_tiles/tiles/random_highli
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/tiles/reading_days_tile.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/tiles/reading_duration_trend_tile.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/tiles/reading_streak_tile.dart';
+import 'package:anx_reader/widgets/statistic/dashboard_tiles/tiles/continue_reading_tile.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/tiles/top_book_tile.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/tiles/total_time_tile.dart';
 
@@ -25,10 +26,12 @@ enum StatisticsDashboardTileType {
   readingDurationLast30,
   completionProgress,
   topBook,
+  continueReading,
 }
 
 /// Default order for dashboard tiles when the user has not customized the layout.
 const List<StatisticsDashboardTileType> defaultStatisticsDashboardTiles = [
+  StatisticsDashboardTileType.continueReading,
   StatisticsDashboardTileType.readingDaysTotal,
   StatisticsDashboardTileType.booksTotal,
   StatisticsDashboardTileType.periodSummary,
@@ -56,4 +59,5 @@ final Map<StatisticsDashboardTileType, StatisticsDashboardTileBase>
   StatisticsDashboardTileType.completionProgress:
       const CompletionProgressTile(),
   StatisticsDashboardTileType.topBook: const TopBookTile(),
+  StatisticsDashboardTileType.continueReading: const ContinueReadingTile(),
 };

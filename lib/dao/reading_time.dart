@@ -367,6 +367,18 @@ class ReadingTimeDao extends BaseDao {
     return _attachBooks(rows);
   }
 
+  Future<Map<String, dynamic>?> selectLatestReadingRecord() async {
+    return await rawQuerySingle(
+      '''
+      SELECT book_id, date, reading_time 
+      FROM $table 
+      ORDER BY datetime(date) DESC, id DESC 
+      LIMIT 1
+      ''',
+      mapper: (row) => row,
+    );
+  }
+
   Future<void> deleteReadingTimeByBookId(List<int> bookIds) async {
     if (bookIds.isEmpty) return;
 

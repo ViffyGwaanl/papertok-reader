@@ -111,7 +111,7 @@ abstract class StatisticsDashboardTileBase {
     );
   }
 
-  void onTap() {}
+  void onTap(BuildContext context, WidgetRef ref) {}
 
   Widget cornerIcon(BuildContext context, IconData iconData) {
     return Icon(
@@ -255,7 +255,7 @@ class DashboardTileShell extends ConsumerWidget {
       child: GestureDetector(
         onTap: () {
           if (!tile.canFlip) {
-            tile.onTap();
+            tile.onTap(context, ref);
             return;
           }
           VibrationService.medium();
