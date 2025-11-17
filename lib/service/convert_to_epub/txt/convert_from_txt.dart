@@ -7,7 +7,6 @@ import 'package:anx_reader/service/convert_to_epub/create_epub.dart';
 import 'package:anx_reader/service/convert_to_epub/section.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:charset/charset.dart';
-import 'package:meta/meta.dart';
 
 String readFileWithEncoding(File file) {
   bool checkGarbled(String content) {
@@ -52,50 +51,19 @@ String _normalizeLineBreaks(String input) {
   return input.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 }
 
-int _inferSectionLevel(String title) {
-  final simplified = title.replaceAll(RegExp(r'[\s\u3000]+'), ' ').trim();
-
-  final hasVolumeKeyword = RegExp(
-    r'(卷|册|合集|季|part|volume|vol\.?|book\b)',
-    caseSensitive: false,
-  ).hasMatch(simplified);
-
-  if (hasVolumeKeyword) {
-    return 1;
-  }
-
-  final hasChapterKeyword = RegExp(
-    r'(章|节|回|话|折|集|章回|chapter|chap\b|episode|section|\bch\b)',
-    caseSensitive: false,
-  ).hasMatch(simplified);
-
-  if (hasChapterKeyword) {
-    return 2;
-  }
-
-  final prologueKeyword = RegExp(r'(序|序章|序言|前言|楔子|引子)', caseSensitive: false);
-  if (prologueKeyword.hasMatch(simplified)) {
-    return 1;
-  }
-
-  return 2;
-}
-
-@visibleForTesting
-int inferSectionLevelForTest(String title) => _inferSectionLevel(title);
-
 List<Section> _buildSectionsFromMatches({
   required String content,
   required List<RegExpMatch> matches,
   required String fallbackTitle,
 }) {
   final sections = <Section>[];
+  const singleLevel = 1;
 
   final firstMatch = matches.first;
   if (firstMatch.start > 0) {
     final intro = content.substring(0, firstMatch.start).trim();
     if (intro.isNotEmpty) {
-      sections.add(Section('', intro, 1));
+      sections.add(Section('', intro, singleLevel));
     }
   }
 
@@ -110,13 +78,11 @@ List<Section> _buildSectionsFromMatches({
     final rawBody = content.substring(startPos, endPos);
     final body = rawBody.trim();
 
-    final level = _inferSectionLevel(title);
-
-    sections.add(Section(title, body, level));
+    sections.add(Section(title, body, singleLevel));
   }
 
   if (sections.isEmpty) {
-    sections.add(Section(fallbackTitle, content.trim(), 2));
+    sections.add(Section(fallbackTitle, content.trim(), singleLevel));
   }
 
   return sections;
@@ -124,8 +90,9 @@ List<Section> _buildSectionsFromMatches({
 
 List<Section> _fallbackChunking(String filename, String content) {
   final sections = <Section>[];
+  const singleLevel = 1;
   if (content.length <= 20000) {
-    sections.add(Section(filename, content.trim(), 2));
+    sections.add(Section(filename, content.trim(), singleLevel));
     return sections;
   }
 
@@ -134,7 +101,7 @@ List<Section> _fallbackChunking(String filename, String content) {
     final endIndex = startIndex + 20000;
     if (endIndex >= content.length) {
       sections.add(Section('No.${sections.length + 1}',
-          content.substring(startIndex).trim(), 2));
+          content.substring(startIndex).trim(), singleLevel));
       break;
     }
 
@@ -142,7 +109,7 @@ List<Section> _fallbackChunking(String filename, String content) {
     final chapterEndIndex = nextNewline == -1 ? content.length : nextNewline;
 
     sections.add(Section('No.${sections.length + 1}',
-        content.substring(startIndex, chapterEndIndex).trim(), 2));
+        content.substring(startIndex, chapterEndIndex).trim(), singleLevel));
     startIndex = chapterEndIndex + 1;
   }
 
