@@ -26,6 +26,7 @@ import 'package:flutter_reorderable_grid_view/widgets/custom_draggable.dart';
 import 'package:flutter_reorderable_grid_view/widgets/reorderable_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:path/path.dart' as p;
 
 class BookshelfPage extends ConsumerStatefulWidget {
   const BookshelfPage({super.key, this.controller});
@@ -43,6 +44,19 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
 
   @override
   bool get wantKeepAlive => true;
+
+  Future<File> _copyToTempFile({
+    required String sourcePath,
+    required String fileName,
+  }) async {
+    final tempDir = await getAnxTempDir();
+    final targetPath = p.join(tempDir.path, fileName);
+    final targetFile = File(targetPath);
+    if (await targetFile.exists()) {
+      await targetFile.delete();
+    }
+    return File(sourcePath).copy(targetPath);
+  }
 
   Future<void> _importBook() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -62,10 +76,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
     // So we need to save the files to the temp directory.
     if (!Platform.isAndroid) {
       fileList = await Future.wait(files.map((file) async {
-        Directory tempDir = await getAnxTempDir();
-        File tempFile = File('${tempDir.path}/${file.name}');
-        await File(file.path!).copy(tempFile.path);
-        return tempFile;
+        return _copyToTempFile(sourcePath: file.path!, fileName: file.name);
       }).toList());
     } else {
       fileList = files.map((file) => File(file.path!)).toList();
@@ -183,9 +194,10 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
       onDragDone: (detail) async {
         List<File> files = [];
         for (var file in detail.files) {
-          final tempFilePath = '${(await getAnxTempDir()).path}/${file.name}';
-          await File(file.path).copy(tempFilePath);
-          files.add(File(tempFilePath));
+          files.add(await _copyToTempFile(
+            sourcePath: file.path,
+            fileName: file.name,
+          ));
         }
         importBookList(files, context, ref);
         setState(() {
