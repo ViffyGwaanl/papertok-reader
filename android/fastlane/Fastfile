@@ -3,83 +3,60 @@ import "../../Fastfile"
 default_platform(:android)
 
 platform :android do
-
-  # Build flutter Android app
-  lane :build do |options|
+  # Ensure required Play Store credentials exist
+  private_lane :prepare_play_store do
     verify_env(envs: [
       "APP_PACKAGE_NAME"
     ])
 
-    # Verify 'firebase_app_distribution_service_account.json' file exists
     unless File.exist?(google_service_account_json_path)
-      UI.user_error!("google_service_account.json file not found. Please add it to the root of the flutter project. See https://docs.fastlane.tools/actions/supply/")
+      UI.user_error!("google_service_account.json file not found. Please add it to the root of the flutter project or set GOOGLE_SERVICE_ACCOUNT_JSON_PATH. See https://docs.fastlane.tools/actions/supply/")
     end
+  end
 
-    # Verify version number is correct
-    if !is_ci && (!options[:version_number])
-      version_number = get_version_from_pubspec()
-      continue = UI.confirm("Deploying version #{version_number} (from pubspec.yaml) to Play Store. Continue?")
+  # Build Android bundle or apk with consistent versioning
+  private_lane :build_android do
+    prepare_play_store
 
-      unless continue
-        UI.user_error!("Aborted")
-      end
-    end
+    build_type = "appbundle"
 
-    build_flutter_app(
-      type: options[:type] || "appbundle",
-      no_codesign: options[:no_codesign],
-      config_only: options[:config_only],
-      build_number: options[:build_number],
-      version_number: options[:version_number],
-      store: "playstore"
-    )
+    commit = last_git_commit
+    puts "*** Starting Android #{build_type} build for commit(#{commit[:abbreviated_commit_hash]}) ***"
+
+    fetch_dependencies
+
+    build_command = "flutter build #{build_type} --release"
+
+    sh_on_root(command: build_command)
+
+    {
+      build_type: build_type
+    }
+  end
+
+  # Build flutter Android app
+  lane :build do
+    build_android
   end
 
   # Release to Play Store using Fastlane Supply (https://docs.fastlane.tools/actions/supply/)
   desc "Release to Play Store"
   lane :release_play_store do |options|
-    begin
-      build(
-        no_codesign: options[:no_codesign],
-        config_only: options[:config_only],
-        build_number: options[:build_number],
-        version_number: options[:version_number]
-      )
+    build_android
 
-      supply(
-        track: 'internal',
-        # Uncomment this if getting error "Only releases with status draft may be created on draft app."
-        # release_status: 'draft',
-        aab: "../build/app/outputs/bundle/release/app-release.aab",
-        json_key: google_service_account_json_path,
-        skip_upload_apk: true, # Upload the aab instead of apk
-        skip_upload_metadata: true,
-        skip_upload_changelogs: true,
-        skip_upload_images: true,
-        skip_upload_screenshots: true
-      )
-    end
+    supply(
+      track: options[:track] || 'internal',
+      # Uncomment this if getting error "Only releases with status draft may be created on draft app."
+      release_status: 'draft',
+      aab: "../build/app/outputs/bundle/release/app-release.aab",
+      json_key: google_service_account_json_path,
+      package_name: ENV["APP_PACKAGE_NAME"],
+      skip_upload_apk: true, # Upload the aab instead of apk
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
   end
 
-  # Release to Play Store using Firebase App Distribution (https://docs.fastlane.tools/actions/firebase_app_distribution/)
-  desc "Release to Play Store using Firebase App Distribution"
-  lane :release_play_store_using_firebase do |options|
-    begin
-      build(
-        type: 'apk',
-        no_codesign: options[:no_codesign],
-        config_only: options[:config_only],
-        build_number: options[:build_number],
-        version_number: options[:version_number]
-      )
-
-      firebase_app_distribution(
-        app: ENV["FIREBASE_APP_ID"],
-        android_artifact_path: "#{root_path}/build/app/outputs/flutter-apk/app-release.apk",
-        service_credentials_file: google_service_account_json_path,
-        # Use the following to enable debug mode
-        debug: true
-      )
-    end
-  end
 end

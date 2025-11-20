@@ -1,1 +1,1 @@
-package_name(ENV["APP_PACKAGE_NAME"]) # e.g. com.krausefx.app
+package_name("com.anxcye.anx_reader")
