@@ -88,6 +88,7 @@ jobs:
       - name: Build and Release to Play Store
         run: |
           cd android
+          bundle install --path vendor/bundle
           bundle exec fastlane android release_play_store track:${TRACK}
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON_PATH: google_service_account.json

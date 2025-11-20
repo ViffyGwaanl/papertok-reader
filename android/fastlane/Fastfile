@@ -5,10 +5,6 @@ default_platform(:android)
 platform :android do
   # Ensure required Play Store credentials exist
   private_lane :prepare_play_store do
-    verify_env(envs: [
-      "APP_PACKAGE_NAME"
-    ])
-
     unless File.exist?(google_service_account_json_path)
       UI.user_error!("google_service_account.json file not found. Please add it to the root of the flutter project or set GOOGLE_SERVICE_ACCOUNT_JSON_PATH. See https://docs.fastlane.tools/actions/supply/")
     end
@@ -18,20 +14,11 @@ platform :android do
   private_lane :build_android do
     prepare_play_store
 
-    build_type = "appbundle"
-
-    commit = last_git_commit
-    puts "*** Starting Android #{build_type} build for commit(#{commit[:abbreviated_commit_hash]}) ***"
-
     fetch_dependencies
 
-    build_command = "flutter build #{build_type} --release"
+    build_command = "flutter build appbundle --release"
 
     sh_on_root(command: build_command)
-
-    {
-      build_type: build_type
-    }
   end
 
   # Build flutter Android app
@@ -50,7 +37,6 @@ platform :android do
       release_status: 'draft',
       aab: "../build/app/outputs/bundle/release/app-release.aab",
       json_key: google_service_account_json_path,
-      package_name: ENV["APP_PACKAGE_NAME"],
       skip_upload_apk: true, # Upload the aab instead of apk
       skip_upload_metadata: true,
       skip_upload_changelogs: true,
