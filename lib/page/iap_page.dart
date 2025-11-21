@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/iap/iap_service.dart';
+import 'package:anx_reader/utils/log/common.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -128,6 +129,8 @@ class _IAPPageState extends State<IAPPage> {
         if (purchaseDetails.status == PurchaseStatus.error) {
           // Handle error
           setState(() {
+            AnxLog.severe(
+                'Purchase error: ${purchaseDetails.error?.message}, code: ${purchaseDetails.error?.code}, details: ${purchaseDetails.error?.details}');
             _purchaseError = purchaseDetails.error?.message ??
                 'Unknown error occurred during purchase';
             _isLoading = false;
@@ -165,6 +168,7 @@ class _IAPPageState extends State<IAPPage> {
     try {
       await _iapService.buy(productDetails);
     } catch (e) {
+      AnxLog.severe('Error during purchase: $e');
       setState(() {
         _purchaseError = e.toString();
       });
@@ -176,6 +180,7 @@ class _IAPPageState extends State<IAPPage> {
     try {
       await _iapService.restorePurchases();
     } catch (e) {
+      AnxLog.severe('Error during restore purchases: $e');
       setState(() {
         _purchaseError = e.toString();
       });
