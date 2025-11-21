@@ -16,7 +16,7 @@ platform :android do
 
     fetch_dependencies
 
-    build_command = "flutter build appbundle --release"
+    build_command = "flutter build appbundle --release --dart-define=isPlayStore=true"
 
     sh_on_root(command: build_command)
   end
