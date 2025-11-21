@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/service/iap/iap_service.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:anx_reader/service/iap/iap_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class IAPPage extends StatefulWidget {
@@ -15,7 +15,6 @@ class IAPPage extends StatefulWidget {
 }
 
 class _IAPPageState extends State<IAPPage> {
-  final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   final IAPService _iapService = IAPService();
 
   StreamSubscription<List<PurchaseDetails>>? _subscription;
@@ -44,7 +43,7 @@ class _IAPPageState extends State<IAPPage> {
     });
 
     // Check if store is available
-    final available = await _inAppPurchase.isAvailable();
+    final available = await _iapService.isAvailable();
     setState(() {
       _isAvailable = available;
     });
@@ -52,12 +51,12 @@ class _IAPPageState extends State<IAPPage> {
     if (!available) {
       setState(() {
         _isLoading = false;
-        _purchaseError = 'App Store is not available';
+        _purchaseError = '${_iapService.storeName} is not available';
       });
       return;
     }
 
-    _subscription = _inAppPurchase.purchaseStream.listen(
+    _subscription = _iapService.purchaseUpdates.listen(
       _listenToPurchaseUpdated,
       onDone: () => _subscription?.cancel(),
       onError: (error) {
@@ -76,11 +75,11 @@ class _IAPPageState extends State<IAPPage> {
   }
 
   Future<void> _loadProducts() async {
-    final Set<String> productIds = {IAPService.kLifetimeProductId};
+    // final Set<String> productIds = {IAPService.kLifetimeProductId};
 
     try {
       final ProductDetailsResponse response =
-          await _inAppPurchase.queryProductDetails(productIds);
+          await _iapService.queryProductDetails();
 
       if (response.error != null) {
         setState(() {
@@ -101,7 +100,7 @@ class _IAPPageState extends State<IAPPage> {
       if (response.productDetails.isEmpty) {
         setState(() {
           _purchaseError =
-              'No product information found, please ensure products are correctly configured in App Store';
+              'No product information found, please ensure products are correctly configured in ${_iapService.storeName}';
         });
         return;
       }
@@ -143,7 +142,7 @@ class _IAPPageState extends State<IAPPage> {
         }
 
         if (purchaseDetails.pendingCompletePurchase) {
-          await _inAppPurchase.completePurchase(purchaseDetails);
+          await _iapService.completePurchase(purchaseDetails);
         }
       }
     }
@@ -162,12 +161,9 @@ class _IAPPageState extends State<IAPPage> {
     }
 
     final ProductDetails productDetails = _products.first;
-    final PurchaseParam purchaseParam = PurchaseParam(
-      productDetails: productDetails,
-    );
 
     try {
-      await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+      await _iapService.buy(productDetails);
     } catch (e) {
       setState(() {
         _purchaseError = e.toString();
@@ -178,7 +174,7 @@ class _IAPPageState extends State<IAPPage> {
   // Restore purchases
   Future<void> _restorePurchases() async {
     try {
-      await _inAppPurchase.restorePurchases();
+      await _iapService.restorePurchases();
     } catch (e) {
       setState(() {
         _purchaseError = e.toString();
