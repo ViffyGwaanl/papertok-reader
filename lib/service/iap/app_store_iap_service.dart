@@ -50,11 +50,10 @@ class AppStoreIAPService extends BaseIAPService {
 
   @override
   Future<void> buy(ProductDetails productDetails) async {
-
-      final paymentWrapper = SKPaymentQueueWrapper();
-      final transactions = await paymentWrapper.transactions();
-      await Future.wait(transactions
-          .map((transaction) => paymentWrapper.finishTransaction(transaction)));
+    final paymentWrapper = SKPaymentQueueWrapper();
+    final transactions = await paymentWrapper.transactions();
+    await Future.wait(transactions
+        .map((transaction) => paymentWrapper.finishTransaction(transaction)));
 
     final purchaseParam = PurchaseParam(productDetails: productDetails);
     await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);

@@ -146,7 +146,6 @@ class Iap extends _$Iap {
   Future<void> buy() async {
     final current = state.valueOrNull;
     if (current == null || current.isPurchasing) return;
-    
 
     var products = current.products;
     if (products.isEmpty) {
