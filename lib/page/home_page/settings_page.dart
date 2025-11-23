@@ -1,6 +1,7 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/iap_page.dart';
 import 'package:anx_reader/page/settings_page/more_settings_page.dart';
+import 'package:anx_reader/providers/iap.dart';
 import 'package:anx_reader/service/iap/iap_service.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
@@ -23,6 +24,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       widget.controller ?? ScrollController();
   @override
   Widget build(BuildContext context) {
+    final iapStatusText = ref.watch(iapProvider).maybeWhen(
+          data: (state) => state.status.title(context),
+          orElse: () => L10n.of(context).iapStatusUnknown,
+        );
     return Scaffold(
       body: SingleChildScrollView(
         controller: _scrollController,
@@ -66,7 +71,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ListTile(
                   title: Text(L10n.of(context).iapPageTitle),
                   leading: const Icon(Icons.star_outline),
-                  subtitle: Text(IAPService().statusTitle(context)),
+                  subtitle: Text(iapStatusText),
                   onTap: () {
                     Navigator.push(
                         context,

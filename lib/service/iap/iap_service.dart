@@ -1,40 +1,25 @@
 import 'dart:io';
 
-import 'package:flutter/widgets.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import 'package:anx_reader/service/iap/app_store_iap_service.dart';
 import 'package:anx_reader/service/iap/base_iap_service.dart';
 import 'package:anx_reader/service/iap/play_store_iap_service.dart';
 
-export 'package:anx_reader/service/iap/base_iap_service.dart' show IAPStatus;
+export 'package:anx_reader/service/iap/base_iap_service.dart'
+    show IAPStatus, IapPlatformSnapshot, IapStatusTitle;
 
 class NoopIAPService extends BaseIAPService {
   NoopIAPService({required super.trialDays});
 
   @override
-  bool get isInitialized => true;
-
-  @override
-  bool get isPurchased => false;
-
-  @override
-  bool get isOriginalUser => false;
-
-  @override
-  DateTime? get purchaseDate => null;
-
-  @override
-  DateTime get originalDate => DateTime.fromMillisecondsSinceEpoch(0);
-
-  @override
   String get storeName => 'In-App Purchase';
 
   @override
-  Future<void> initialize() async {}
+  String get productId => 'noop';
 
   @override
-  Future<void> refresh() async {}
+  Future<void> initialize() async {}
 
   @override
   Future<bool> isAvailable() async => false;
@@ -56,6 +41,17 @@ class NoopIAPService extends BaseIAPService {
   @override
   Stream<List<PurchaseDetails>> get purchaseUpdates =>
       const Stream<List<PurchaseDetails>>.empty();
+
+  @override
+  Future<IapPlatformSnapshot> loadSnapshot() async {
+    return IapPlatformSnapshot(
+      hasPurchase: false,
+      isPurchaseStatusReliable: true,
+      trialStartDate: DateTime.fromMillisecondsSinceEpoch(0),
+      purchaseDate: null,
+      isOriginalUser: false,
+    );
+  }
 }
 
 class IAPService {
@@ -70,10 +66,11 @@ class IAPService {
 
   final BaseIAPService _delegate;
 
+  BaseIAPService get delegate => _delegate;
+
   static BaseIAPService _buildDelegate() {
     if (Platform.isIOS || Platform.isMacOS) {
       return AppStoreIAPService(
-        maxValidationInterval: kMaxValidationInterval,
         trialDays: kTrialDays,
       );
     }
@@ -88,8 +85,6 @@ class IAPService {
   }
 
   Future<void> initialize() => _delegate.initialize();
-
-  Future<void> refresh() => _delegate.refresh();
 
   Future<bool> isAvailable() => _delegate.isAvailable();
 
@@ -107,12 +102,8 @@ class IAPService {
   Stream<List<PurchaseDetails>> get purchaseUpdates =>
       _delegate.purchaseUpdates;
 
-  bool get isPurchased => _delegate.isPurchased;
-  bool get isFeatureAvailable => _delegate.isFeatureAvailable;
-  int get trialDaysLeft => _delegate.trialDaysLeft;
-  IAPStatus get iapStatus => _delegate.iapStatus;
-  DateTime? get purchaseDate => _delegate.purchaseDate;
-  DateTime get originalDate => _delegate.originalDate;
-  String statusTitle(BuildContext context) => _delegate.statusTitle(context);
+  Future<IapPlatformSnapshot> loadSnapshot() => _delegate.loadSnapshot();
+
   String get storeName => _delegate.storeName;
+  String get productId => _delegate.productId;
 }

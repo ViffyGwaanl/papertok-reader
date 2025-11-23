@@ -1,17 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/iap/base_iap_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:asn1lib/asn1lib.dart';
 // import 'package:http/http.dart' as http;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
+import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
 
 class AppStoreIAPService extends BaseIAPService {
   AppStoreIAPService({
-    required this.maxValidationInterval,
     required super.trialDays,
   })  : _inAppPurchase = InAppPurchase.instance,
         _parsedReceipt = {
@@ -21,12 +20,9 @@ class AppStoreIAPService extends BaseIAPService {
           'environment': 'Sandbox',
           'status': 0,
         };
-
-  final int maxValidationInterval;
   final InAppPurchase _inAppPurchase;
   Map<String, dynamic> _parsedReceipt;
-  bool _isInitialized = false;
-  String productId = 'anx_reader_lifetime';
+  final String _productId = 'anx_reader_lifetime';
   List<String> originalUserVersions = [
     '1.4.0',
     '1.4.1',
@@ -37,10 +33,10 @@ class AppStoreIAPService extends BaseIAPService {
     '2092',
   ];
   @override
-  bool get isInitialized => _isInitialized;
+  String get storeName => 'App Store';
 
   @override
-  String get storeName => 'App Store';
+  String get productId => _productId;
 
   @override
   Stream<List<PurchaseDetails>> get purchaseUpdates =>
@@ -54,6 +50,12 @@ class AppStoreIAPService extends BaseIAPService {
 
   @override
   Future<void> buy(ProductDetails productDetails) async {
+
+      final paymentWrapper = SKPaymentQueueWrapper();
+      final transactions = await paymentWrapper.transactions();
+      await Future.wait(transactions
+          .map((transaction) => paymentWrapper.finishTransaction(transaction)));
+
     final purchaseParam = PurchaseParam(productDetails: productDetails);
     await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
   }
@@ -75,87 +77,42 @@ class AppStoreIAPService extends BaseIAPService {
 
   @override
   Future<void> initialize() async {
+    await _loadReceipt();
+  }
+
+  @override
+  Future<IapPlatformSnapshot> loadSnapshot() async {
+    await _loadReceipt();
+
+    final hasPurchase = _hasActivePurchase(_parsedReceipt);
+    final purchaseDate = _extractPurchaseDate(_parsedReceipt);
+    final originalDate = _getOriginalDate(_parsedReceipt);
+    final originalUser = _isOriginalUser(_parsedReceipt);
+
+    return IapPlatformSnapshot(
+      hasPurchase: hasPurchase,
+      isPurchaseStatusReliable: true,
+      trialStartDate: originalDate,
+      purchaseDate: purchaseDate,
+      isOriginalUser: originalUser,
+    );
+  }
+
+  Future<void> _loadReceipt() async {
     try {
       final receiptBase64 = await _getReceiptBase64();
       if (receiptBase64.isEmpty) {
         AnxLog.warning('IAP: Empty receipt during initialization');
-        _isInitialized = true;
         return;
       }
 
       _parsedReceipt = _parseReceiptLocally(receiptBase64);
-      _isInitialized = true;
 
-      AnxLog.info(
-          'IAP: initialize: ${jsonEncode(_parsedReceipt, toEncodable: (object) {
-        if (object is DateTime) {
-          return object.toIso8601String();
-        }
-        return object;
-      })}');
+      AnxLog.info('IAP: receipt loaded, $_parsedReceipt');
     } catch (e) {
-      AnxLog.severe('IAP: Error initializing: $e');
-      _isInitialized = false;
+      AnxLog.severe('IAP: Error loading receipt: $e');
     }
   }
-
-  @override
-  Future<void> refresh() async {
-    try {
-      final receiptBase64 = await _getReceiptBase64();
-      if (receiptBase64.isEmpty) {
-        return;
-      }
-      _parsedReceipt = _parseReceiptLocally(receiptBase64);
-      _isInitialized = true;
-    } catch (e) {
-      AnxLog.severe('IAP: Error refreshing receipt: $e');
-    }
-  }
-
-  @override
-  bool get isPurchased {
-    try {
-      final lastCheckTime = Prefs().iapLastCheckTime;
-      final cachedStatus = Prefs().iapPurchaseStatus;
-
-      final timeSinceLastCheck =
-          DateTime.now().difference(lastCheckTime).inMilliseconds.abs();
-      if (timeSinceLastCheck < maxValidationInterval && cachedStatus) {
-        return true;
-      }
-
-      if (!_isInitialized) return false;
-      final inApp = _parsedReceipt['receipt']?['in_app'];
-      final status = (inApp != null && inApp.isNotEmpty) || isOriginalUser;
-      Prefs().iapPurchaseStatus = status;
-      Prefs().iapLastCheckTime = DateTime.now();
-      return status;
-    } catch (e) {
-      AnxLog.severe('IAP: Error checking isPurchased: $e');
-      return false;
-    }
-  }
-
-  @override
-  bool get isOriginalUser => _isOriginalUser();
-
-  @override
-  DateTime? get purchaseDate {
-    try {
-      final inApp = _parsedReceipt['receipt']?['in_app'];
-      if (inApp != null && inApp.isNotEmpty) {
-        return inApp.first['purchase_date'];
-      }
-      return null;
-    } catch (e) {
-      AnxLog.severe('IAP: Error getting purchase date: $e');
-      return null;
-    }
-  }
-
-  @override
-  DateTime get originalDate => _getOriginalDate();
 
   Future<String> _getReceiptBase64() async {
     try {
@@ -429,11 +386,10 @@ class AppStoreIAPService extends BaseIAPService {
     return result;
   }
 
-  bool _isOriginalUser() {
+  bool _isOriginalUser([Map<String, dynamic>? receipt]) {
     try {
-      final receipt = _parsedReceipt;
-      final originalUserVersion =
-          receipt['receipt']['original_application_version'];
+      final r = receipt ?? _parsedReceipt;
+      final originalUserVersion = r['receipt']['original_application_version'];
 
       if (originalUserVersion != null &&
           originalUserVersions.contains(originalUserVersion.toString())) {
@@ -446,12 +402,35 @@ class AppStoreIAPService extends BaseIAPService {
     }
   }
 
-  DateTime _getOriginalDate() {
-    final receipt = _parsedReceipt;
-    final originalDate = receipt['receipt']['original_purchase_date'];
+  DateTime _getOriginalDate([Map<String, dynamic>? receipt]) {
+    final r = receipt ?? _parsedReceipt;
+    final originalDate = r['receipt']['original_purchase_date'];
     if (originalDate == null || originalDate is! DateTime) {
       return DateTime.fromMillisecondsSinceEpoch(0);
     }
     return originalDate;
+  }
+
+  bool _hasActivePurchase(Map<String, dynamic> receipt) {
+    try {
+      final inApp = receipt['receipt']?['in_app'];
+      return inApp != null && inApp.isNotEmpty;
+    } catch (e) {
+      AnxLog.severe('IAP: Error checking active purchase: $e');
+      return false;
+    }
+  }
+
+  DateTime? _extractPurchaseDate(Map<String, dynamic> receipt) {
+    try {
+      final inApp = receipt['receipt']?['in_app'];
+      if (inApp != null && inApp.isNotEmpty) {
+        return inApp.first['purchase_date'] as DateTime?;
+      }
+      return null;
+    } catch (e) {
+      AnxLog.severe('IAP: Error getting purchase date: $e');
+      return null;
+    }
   }
 }

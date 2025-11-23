@@ -10,58 +10,9 @@ enum IAPStatus {
   unknown,
 }
 
-abstract class BaseIAPService {
-  BaseIAPService({required this.trialDays});
-
-  final int trialDays;
-
-  bool get isInitialized;
-  bool get isPurchased;
-  bool get isOriginalUser;
-
-  DateTime get originalDate;
-  DateTime? get purchaseDate;
-
-  String get storeName;
-
-  Future<void> initialize();
-  Future<void> refresh();
-  Future<bool> isAvailable();
-  Future<ProductDetailsResponse> queryProductDetails();
-  Future<void> buy(ProductDetails productDetails);
-  Future<void> completePurchase(PurchaseDetails purchaseDetails);
-  Future<void> restorePurchases();
-  Stream<List<PurchaseDetails>> get purchaseUpdates;
-
-  int get trialDaysLeft {
-    if (!isInitialized) {
-      return 0;
-    }
-    final startDate = originalDate;
-    final diff = DateTime.now().difference(startDate).inDays;
-    return trialDays - diff;
-  }
-
-  bool get isFeatureAvailable => isPurchased || trialDaysLeft > 0;
-
-  IAPStatus get iapStatus {
-    if (!isInitialized) {
-      return IAPStatus.unknown;
-    }
-    if (isPurchased) {
-      return IAPStatus.purchased;
-    }
-    if (isOriginalUser) {
-      return IAPStatus.originalUser;
-    }
-    if (trialDaysLeft > 0) {
-      return IAPStatus.trial;
-    }
-    return IAPStatus.trialExpired;
-  }
-
-  String statusTitle(BuildContext context) {
-    switch (iapStatus) {
+extension IapStatusTitle on IAPStatus {
+  String title(BuildContext context) {
+    switch (this) {
       case IAPStatus.purchased:
         return L10n.of(context).iapStatusPurchased;
       case IAPStatus.trial:
@@ -74,4 +25,53 @@ abstract class BaseIAPService {
         return L10n.of(context).iapStatusUnknown;
     }
   }
+}
+
+/// A snapshot of platform-specific information returned by the store layer.
+///
+/// The provider uses this data to derive user-facing state and cache updates.
+class IapPlatformSnapshot {
+  IapPlatformSnapshot({
+    required this.hasPurchase,
+    required this.isPurchaseStatusReliable,
+    required this.trialStartDate,
+    required this.purchaseDate,
+    required this.isOriginalUser,
+  });
+
+  /// Whether the platform reported an active purchase.
+  /// Can be null when the platform cannot answer (e.g., Play without restore).
+  final bool? hasPurchase;
+
+  /// Whether [hasPurchase] is authoritative enough to write back to prefs.
+  final bool isPurchaseStatusReliable;
+
+  /// Trial start date (install date on Play, original purchase date on App Store).
+  final DateTime? trialStartDate;
+
+  /// Latest known purchase date, if any.
+  final DateTime? purchaseDate;
+
+  /// Whether this is considered an “original user” (legacy free users on iOS).
+  final bool isOriginalUser;
+}
+
+abstract class BaseIAPService {
+  BaseIAPService({required this.trialDays});
+
+  final int trialDays;
+
+  String get storeName;
+  String get productId;
+
+  Future<void> initialize();
+  Future<bool> isAvailable();
+  Future<ProductDetailsResponse> queryProductDetails();
+  Future<void> buy(ProductDetails productDetails);
+  Future<void> restorePurchases();
+  Future<void> completePurchase(PurchaseDetails purchaseDetails);
+  Stream<List<PurchaseDetails>> get purchaseUpdates;
+
+  /// Pulls the latest platform information (receipt/installation info/etc.).
+  Future<IapPlatformSnapshot> loadSnapshot();
 }

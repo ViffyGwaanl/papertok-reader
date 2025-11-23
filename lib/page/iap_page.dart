@@ -1,210 +1,56 @@
-import 'dart:async';
-
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/models/iap_state.dart';
 import 'package:anx_reader/service/iap/iap_service.dart';
+import 'package:anx_reader/providers/iap.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class IAPPage extends StatefulWidget {
+class IAPPage extends ConsumerWidget {
   const IAPPage({super.key});
 
   @override
-  State<IAPPage> createState() => _IAPPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final iapAsync = ref.watch(iapProvider);
 
-class _IAPPageState extends State<IAPPage> {
-  final IAPService _iapService = IAPService();
-
-  StreamSubscription<List<PurchaseDetails>>? _subscription;
-  List<ProductDetails> _products = [];
-  bool _isAvailable = false;
-  bool _isLoading = true;
-  String _purchaseError = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _initInAppPurchase();
-  }
-
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
-  }
-
-  // Initialize in-app purchase
-  Future<void> _initInAppPurchase() async {
-    // Initialize IAP service
-    _iapService.initialize().then((value) {
-      setState(() {});
-    });
-
-    // Check if store is available
-    final available = await _iapService.isAvailable();
-    setState(() {
-      _isAvailable = available;
-    });
-
-    if (!available) {
-      setState(() {
-        _isLoading = false;
-        _purchaseError = '${_iapService.storeName} is not available';
-      });
-      return;
-    }
-
-    _subscription = _iapService.purchaseUpdates.listen(
-      _listenToPurchaseUpdated,
-      onDone: () => _subscription?.cancel(),
-      onError: (error) {
-        setState(() {
-          _purchaseError = error.toString();
-          _isLoading = false;
-        });
-      },
-    );
-
-    await _loadProducts();
-
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _loadProducts() async {
-    // final Set<String> productIds = {IAPService.kLifetimeProductId};
-
-    try {
-      final ProductDetailsResponse response =
-          await _iapService.queryProductDetails();
-
-      if (response.error != null) {
-        setState(() {
-          _purchaseError =
-              'Error connecting to store: ${response.error!.message}';
-        });
-        return;
-      }
-
-      if (response.notFoundIDs.isNotEmpty) {
-        setState(() {
-          _purchaseError =
-              'Product IDs not found: ${response.notFoundIDs.join(", ")}';
-        });
-        return;
-      }
-
-      if (response.productDetails.isEmpty) {
-        setState(() {
-          _purchaseError =
-              'No product information found, please ensure products are correctly configured in ${_iapService.storeName}';
-        });
-        return;
-      }
-
-      setState(() {
-        _products = response.productDetails;
-      });
-    } catch (e) {
-      setState(() {
-        _purchaseError = 'Error loading product information: $e';
-      });
-    }
-  }
-
-  // Handle purchase updates
-  Future<void> _listenToPurchaseUpdated(
-      List<PurchaseDetails> purchaseDetailsList) async {
-    for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
-      if (purchaseDetails.status == PurchaseStatus.pending) {
-        // Show loading indicator
-        setState(() {
-          _isLoading = true;
-        });
-      } else {
-        if (purchaseDetails.status == PurchaseStatus.error) {
-          // Handle error
-          setState(() {
-            AnxLog.severe(
-                'Purchase error: ${purchaseDetails.error?.message}, code: ${purchaseDetails.error?.code}, details: ${purchaseDetails.error?.details}');
-            _purchaseError = purchaseDetails.error?.message ??
-                'Unknown error occurred during purchase';
-            _isLoading = false;
-          });
-        } else if (purchaseDetails.status == PurchaseStatus.purchased ||
-            purchaseDetails.status == PurchaseStatus.restored) {
-          // Purchase or restore successful
-          await _iapService.refresh();
-          setState(() {
-            _isLoading = false;
-          });
-        }
-
-        if (purchaseDetails.pendingCompletePurchase) {
-          await _iapService.completePurchase(purchaseDetails);
-        }
-      }
-    }
-  }
-
-  // Execute purchase
-  Future<void> _buy() async {
-    if (_isLoading) {
-      return;
-    }
-    if (_products.isEmpty) {
-      setState(() {
-        _purchaseError = 'No products available for purchase';
-      });
-      return;
-    }
-
-    final ProductDetails productDetails = _products.first;
-
-    try {
-      await _iapService.buy(productDetails);
-    } catch (e) {
-      AnxLog.severe('Error during purchase: $e');
-      setState(() {
-        _purchaseError = e.toString();
-      });
-    }
-  }
-
-  // Restore purchases
-  Future<void> _restorePurchases() async {
-    try {
-      await _iapService.restorePurchases();
-    } catch (e) {
-      AnxLog.severe('Error during restore purchases: $e');
-      setState(() {
-        _purchaseError = e.toString();
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(L10n.of(context).iapPageTitle),
-        actions: [
-          TextButton(
-            onPressed: _restorePurchases,
-            child: Text(L10n.of(context).iapPageRestore),
-          ),
-        ],
+    return iapAsync.when(
+      loading: () => Scaffold(
+        appBar: AppBar(
+          title: Text(L10n.of(context).iapPageTitle),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
       ),
-      body: _buildContent(),
+      error: (error, s) {
+        AnxLog.severe('IAP: Error loading IAP state: $error', s);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(L10n.of(context).iapPageTitle),
+          ),
+          body: Center(child: Text(error.toString())),
+        );
+      },
+      data: (iapState) => Scaffold(
+        appBar: AppBar(
+          title: Text(L10n.of(context).iapPageTitle),
+          actions: [
+            TextButton(
+              onPressed: () => ref.read(iapProvider.notifier).restore(),
+              child: Text(L10n.of(context).iapPageRestore),
+            ),
+          ],
+        ),
+        body: _buildContent(context, ref, iapState),
+      ),
     );
   }
 
-  Widget _buildContent() {
-    List<Map<String, dynamic>> content = [
+  Widget _buildContent(BuildContext context, WidgetRef ref, IapState state) {
+    final notifier = ref.read(iapProvider.notifier);
+    final List<Map<String, dynamic>> content = [
       {
         'icon': Icons.auto_awesome,
         'title': L10n.of(context).iapPageFeatureAi,
@@ -236,6 +82,12 @@ class _IAPPageState extends State<IAPPage> {
         'desc': L10n.of(context).iapPageFeatureRichDesc,
       },
     ];
+
+    final isBusy =
+        state.isPurchasing || state.isRestoring || state.isRefreshing;
+    final priceText =
+        state.products.isNotEmpty ? state.products.first.price : '';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
@@ -246,11 +98,8 @@ class _IAPPageState extends State<IAPPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // User status card
-                  _buildStatusCard(),
+                  _buildStatusCard(context, state),
                   const SizedBox(height: 20),
-
-                  // Feature introduction
                   Text(
                     L10n.of(context).iapPageWhyChoose,
                     style: const TextStyle(
@@ -266,6 +115,7 @@ class _IAPPageState extends State<IAPPage> {
                                 width: constraints.maxWidth /
                                     (constraints.maxWidth ~/ 400),
                                 child: _buildFeatureItem(
+                                  context,
                                   item['icon'],
                                   item['title'],
                                   item['desc'],
@@ -276,7 +126,6 @@ class _IAPPageState extends State<IAPPage> {
                   }),
                   const SizedBox(height: 30),
                   Text(L10n.of(context).iapPageRestoreHint),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -304,94 +153,89 @@ class _IAPPageState extends State<IAPPage> {
               ),
             ),
           ),
-          SafeArea(
-              minimum: const EdgeInsets.only(bottom: 10.0),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (!_iapService.isPurchased && _isAvailable)
-                      Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: Text(
-                          L10n.of(context).iapPageLifetimeHint(
-                              _products.isEmpty ? '' : _products.first.price),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!state.isPurchased && state.isAvailable) ...[
+                Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: Text(
+                    L10n.of(context).iapPageLifetimeHint(
+                        state.products.isEmpty ? '' : priceText),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  bottom:
+                      state.errorMessage?.isEmpty ?? true,
+                  child: ElevatedButton(
+                    onPressed: isBusy ? null : notifier.buy,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
+                    child: isBusy
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          )
+                        : Text(
+                            L10n.of(context).iapPageOneTimePurchase,
+                            style: const TextStyle(
+                                fontSize: 18, color: Colors.white),
                           ),
-                        ),
-                      ),
-
-                    if (!_iapService.isPurchased &&
-                        _isAvailable &&
-                        _products.isNotEmpty)
-                      ElevatedButton(
-                        onPressed: _buy,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                        ),
-                        child: _isLoading
-                            ? Center(
-                                child: CircularProgressIndicator(
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                ),
-                              )
-                            : Text(
-                                L10n.of(context).iapPageOneTimePurchase,
-                                style: const TextStyle(
-                                    fontSize: 18, color: Colors.white),
-                              ),
-                      ),
-
-                    // Display error message
-                    if (_purchaseError.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20.0),
-                        child: Text(
-                          _purchaseError,
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                  ])),
+                  ),
+                ),
+              ],
+              if (state.errorMessage != null && state.errorMessage!.isNotEmpty)
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 20.0),
+                    child: Text(
+                      state.errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatusCard() {
+  Widget _buildStatusCard(BuildContext context, IapState state) {
     Color cardColor;
     IconData statusIcon;
     String statusDescription;
     String? timeInfo;
 
-    switch (_iapService.iapStatus) {
+    switch (state.status) {
       case IAPStatus.purchased:
         statusIcon = Icons.verified;
         statusDescription = L10n.of(context).iapPageStatusPurchased;
         cardColor = Colors.green;
-        // Get purchase date
-        final purchaseDate = _iapService.purchaseDate;
-        if (purchaseDate != null) {
+        if (state.purchaseDate != null) {
           timeInfo = L10n.of(context).iapPageDatePurchased(
-            _formatDate(purchaseDate),
+            _formatDate(state.purchaseDate!),
           );
         }
         break;
       case IAPStatus.trial:
         statusIcon = Icons.access_time;
-        statusDescription = L10n.of(context).iapPageStatusTrial(
-          _iapService.trialDaysLeft.toString(),
-        );
+        statusDescription =
+            L10n.of(context).iapPageStatusTrial(state.trialDaysLeft.toString());
         cardColor = Colors.blue;
-        // Get trial start date
-        final originalDate = _iapService.originalDate;
-        if (originalDate.millisecondsSinceEpoch > 0) {
+        if (state.trialStartDate != null &&
+            state.trialStartDate!.millisecondsSinceEpoch > 0) {
           timeInfo = L10n.of(context).iapPageDateTrialStart(
-            _formatDate(originalDate),
+            _formatDate(state.trialStartDate!),
           );
         }
         break;
@@ -399,11 +243,10 @@ class _IAPPageState extends State<IAPPage> {
         statusIcon = Icons.timer_off;
         statusDescription = L10n.of(context).iapPageStatusTrialExpired;
         cardColor = Colors.orange;
-        // Get trial start date
-        final originalDate = _iapService.originalDate;
-        if (originalDate.millisecondsSinceEpoch > 0) {
+        if (state.trialStartDate != null &&
+            state.trialStartDate!.millisecondsSinceEpoch > 0) {
           timeInfo = L10n.of(context).iapPageDateTrialStart(
-            _formatDate(originalDate),
+            _formatDate(state.trialStartDate!),
           );
         }
         break;
@@ -411,11 +254,10 @@ class _IAPPageState extends State<IAPPage> {
         statusIcon = Icons.stars;
         statusDescription = L10n.of(context).iapPageStatusOriginal;
         cardColor = Colors.purple;
-        // Get original user date
-        final originalDate = _iapService.originalDate;
-        if (originalDate.millisecondsSinceEpoch > 0) {
+        if (state.trialStartDate != null &&
+            state.trialStartDate!.millisecondsSinceEpoch > 0) {
           timeInfo = L10n.of(context).iapPageDateOriginal(
-            _formatDate(originalDate),
+            _formatDate(state.trialStartDate!),
           );
         }
         break;
@@ -426,8 +268,7 @@ class _IAPPageState extends State<IAPPage> {
         break;
     }
 
-    return Card(
-      elevation: 4,
+    return FilledContainer(
       color:
           cardColor.blend(Theme.of(context).colorScheme.surfaceContainer, 85),
       child: Padding(
@@ -441,7 +282,7 @@ class _IAPPageState extends State<IAPPage> {
             ),
             const SizedBox(height: 10),
             Text(
-              _iapService.statusTitle(context),
+              state.status.title(context),
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -464,11 +305,11 @@ class _IAPPageState extends State<IAPPage> {
                 textAlign: TextAlign.center,
               ),
             ],
-            if (_iapService.iapStatus == IAPStatus.trial)
+            if (state.status == IAPStatus.trial)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: LinearProgressIndicator(
-                  value: _iapService.trialDaysLeft / IAPService.kTrialDays,
+                  value: state.trialDaysLeft / IAPService.kTrialDays,
                   backgroundColor: Colors.grey.shade300,
                   valueColor: AlwaysStoppedAnimation<Color>(
                       Theme.of(context).primaryColor),
@@ -484,7 +325,8 @@ class _IAPPageState extends State<IAPPage> {
     return date.toIso8601String().substring(0, 10);
   }
 
-  Widget _buildFeatureItem(IconData icon, String title, String description) {
+  Widget _buildFeatureItem(
+      BuildContext context, IconData icon, String title, String description) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
