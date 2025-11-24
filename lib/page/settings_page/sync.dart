@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:anx_reader/dao/database.dart';
@@ -5,14 +6,11 @@ import 'package:anx_reader/enums/sync_protocol.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/providers/sync.dart';
-import 'package:anx_reader/providers/iap.dart';
 import 'package:anx_reader/service/sync/sync_client_factory.dart';
-import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/save_file_to_download.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
 import 'package:anx_reader/utils/get_path/databases_path.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
-import 'package:anx_reader/utils/get_path/shared_prefs_path.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/sync_test_helper.dart';
 import 'package:anx_reader/utils/toast/common.dart';
@@ -30,6 +28,8 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:path/path.dart' as path;
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
+
+const String _prefsBackupFileName = 'anx_shared_prefs.json';
 
 class SyncSetting extends ConsumerStatefulWidget {
   const SyncSetting({super.key});
@@ -142,8 +142,13 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
     _showDataDialog(L10n.of(context).exporting);
 
+    final File prefsBackupFile = await _createPrefsBackupFile();
+
     RootIsolateToken token = RootIsolateToken.instance!;
-    final zipPath = await compute(createZipFile, token);
+    final zipPath = await compute(createZipFile, {
+      'token': token,
+      'prefsBackupFilePath': prefsBackupFile.path,
+    });
 
     final file = File(zipPath);
     SmartDialog.dismiss();
@@ -154,7 +159,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       // );
       // final filePath = await FlutterFileDialog.saveFile(params: params);
       String fileName =
-          'AnxReader-Backup-${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}-v2.zip';
+          'AnxReader-Backup-${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}-v3.zip';
 
       String? filePath = await saveFileToDownload(
           sourceFilePath: file.path,
@@ -232,14 +237,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
           await getAnxDataBasesDir());
       DBHelper().initDB();
 
-      _copyFileSync(File('$extractPath/${getSharedPrefsFileName()}'),
-          await getAnxShredPrefsFile());
-
-      if (EnvVar.enableInAppPurchase) {
-        Prefs().iapPurchaseStatus = false;
-        Prefs().iapLastCheckTime = DateTime.fromMillisecondsSinceEpoch(0);
-        ref.read(iapProvider.notifier).refresh(userInitiated: true);
-      }
+      await _restorePrefsFromBackup(extractPath);
 
       AnxLog.info('importData: import success');
       AnxToast.show(
@@ -252,15 +250,6 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       SmartDialog.dismiss();
       await Directory(extractPath).delete(recursive: true);
     }
-  }
-
-  void _copyFileSync(File source, File destination) {
-    if (!destination.existsSync()) {
-      destination.createSync(recursive: true);
-    } else {
-      destination.delete();
-    }
-    source.copySync(destination.path);
   }
 
   void _copyDirectorySync(Directory source, Directory destination) {
@@ -284,7 +273,10 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
   }
 }
 
-Future<String> createZipFile(RootIsolateToken token) async {
+Future<String> createZipFile(Map<String, dynamic> params) async {
+  RootIsolateToken token = params['token'];
+  final String prefsBackupFilePath = params['prefsBackupFilePath'];
+  final File prefsBackupFile = File(prefsBackupFilePath);
   BackgroundIsolateBinaryMessenger.ensureInitialized(token);
   final date =
       '${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}';
@@ -297,7 +289,8 @@ Future<String> createZipFile(RootIsolateToken token) async {
     getBgimgDir(path: docPath),
     await getAnxDataBasesDir(),
     // await getAnxSharedPrefsDir(),
-    await getAnxShredPrefsFile(),
+    // await getAnxShredPrefsFile(),
+    prefsBackupFile,
   ];
 
   AnxLog.info('exportData: directoryList: $directoryList');
@@ -312,6 +305,9 @@ Future<String> createZipFile(RootIsolateToken token) async {
     }
   }
   encoder.close();
+  if (await prefsBackupFile.exists()) {
+    await prefsBackupFile.delete();
+  }
   return zipPath;
 }
 
@@ -327,6 +323,32 @@ Future<void> extractZipFile(Map<String, String> params) async {
   } finally {
     await input.close();
   }
+}
+
+Future<File> _createPrefsBackupFile() async {
+  final Directory tempDir = await getAnxTempDir();
+  final File backupFile = File('${tempDir.path}/$_prefsBackupFileName');
+  final Map<String, dynamic> prefsMap = await Prefs().buildPrefsBackupMap();
+  await backupFile.writeAsString(jsonEncode(prefsMap));
+  return backupFile;
+}
+
+Future<bool> _restorePrefsFromBackup(String extractPath) async {
+  final File backupFile = File('$extractPath/$_prefsBackupFileName');
+  if (!await backupFile.exists()) {
+    return false;
+  }
+  try {
+    final dynamic decoded = jsonDecode(await backupFile.readAsString());
+    if (decoded is Map<String, dynamic>) {
+      await Prefs().applyPrefsBackupMap(decoded);
+      return true;
+    }
+    AnxLog.info('importData: prefs backup has unexpected format');
+  } catch (e) {
+    AnxLog.info('importData: failed to restore prefs backup: $e');
+  }
+  return false;
 }
 
 void showWebdavDialog(BuildContext context) {

@@ -34,6 +34,17 @@ import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const String prefsBackupVersionKey = '__prefsBackupVersion';
+const int prefsBackupSchemaVersion = 1;
+const String _prefsBackupEntryTypeKey = 'type';
+const String _prefsBackupEntryValueKey = 'value';
+
+const Set<String> _prefsImportSkipKeys = {
+  'iapPurchaseStatus',
+  'iapLastCheckTime',
+};
+
+
 class Prefs extends ChangeNotifier {
   late SharedPreferences prefs;
   static final Prefs _instance = Prefs._internal();
@@ -54,6 +65,97 @@ class Prefs extends ChangeNotifier {
   Future<void> initPrefs() async {
     prefs = await SharedPreferences.getInstance();
     saveBeginDate();
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> buildPrefsBackupMap() async {
+    Map<String, Object?>? encodePrefsBackupEntry(Object? value) {
+      if (value is bool) {
+        return <String, Object?>{
+          _prefsBackupEntryTypeKey: 'bool',
+          _prefsBackupEntryValueKey: value,
+        };
+      }
+      if (value is int) {
+        return <String, Object?>{
+          _prefsBackupEntryTypeKey: 'int',
+          _prefsBackupEntryValueKey: value,
+        };
+      }
+      if (value is double) {
+        return <String, Object?>{
+          _prefsBackupEntryTypeKey: 'double',
+          _prefsBackupEntryValueKey: value,
+        };
+      }
+      if (value is String) {
+        return <String, Object?>{
+          _prefsBackupEntryTypeKey: 'string',
+          _prefsBackupEntryValueKey: value,
+        };
+      }
+      if (value is List) {
+        final bool allStrings =
+            value.every((dynamic element) => element is String);
+        if (allStrings) {
+          return <String, Object?>{
+            _prefsBackupEntryTypeKey: 'stringList',
+            _prefsBackupEntryValueKey:
+                List<String>.from(value, growable: false),
+          };
+        }
+      }
+      return null;
+    }
+
+    final Map<String, dynamic> backup = <String, dynamic>{
+      prefsBackupVersionKey: prefsBackupSchemaVersion,
+    };
+    for (final String key in prefs.getKeys()) {
+      final Object? value = prefs.get(key);
+      final Map<String, Object?>? encoded = encodePrefsBackupEntry(value);
+      if (encoded != null) {
+        backup[key] = encoded;
+      }
+    }
+    return backup;
+  }
+
+  Future<void> applyPrefsBackupMap(Map<String, dynamic> backup) async {
+    for (final MapEntry<String, dynamic> entry in backup.entries) {
+      final String key = entry.key;
+      if (key == prefsBackupVersionKey || _prefsImportSkipKeys.contains(key)) {
+        continue;
+      }
+      final dynamic entryValue = entry.value;
+      if (entryValue is! Map) continue;
+      final dynamic type = entryValue[_prefsBackupEntryTypeKey];
+      final dynamic value = entryValue[_prefsBackupEntryValueKey];
+      if (type is! String) continue;
+      switch (type) {
+        case 'bool':
+          if (value is bool) await prefs.setBool(key, value);
+          break;
+        case 'int':
+          if (value is int) await prefs.setInt(key, value);
+          break;
+        case 'double':
+          if (value is num) await prefs.setDouble(key, value.toDouble());
+          break;
+        case 'string':
+          if (value is String) await prefs.setString(key, value);
+          break;
+        case 'stringList':
+          if (value is List) {
+            final List<String> list =
+                value.map((dynamic v) => v as String).toList();
+            await prefs.setStringList(key, list);
+          }
+          break;
+        default:
+          continue;
+      }
+    }
     notifyListeners();
   }
 
