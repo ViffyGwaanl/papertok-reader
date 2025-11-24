@@ -24,10 +24,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       widget.controller ?? ScrollController();
   @override
   Widget build(BuildContext context) {
-    final iapStatusText = ref.watch(iapProvider).maybeWhen(
-          data: (state) => state.status.title(context),
-          orElse: () => L10n.of(context).iapStatusUnknown,
-        );
     return Scaffold(
       body: SingleChildScrollView(
         controller: _scrollController,
@@ -71,7 +67,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ListTile(
                   title: Text(L10n.of(context).iapPageTitle),
                   leading: const Icon(Icons.star_outline),
-                  subtitle: Text(iapStatusText),
+                  subtitle: Text(ref.watch(iapProvider).maybeWhen(
+                        data: (state) => state.status.title(context),
+                        orElse: () => L10n.of(context).iapStatusUnknown,
+                      )),
                   onTap: () {
                     Navigator.push(
                         context,
