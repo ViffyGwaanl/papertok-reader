@@ -1056,7 +1056,8 @@ export class Paginator extends HTMLElement {
         : 0
 
       // Prefer native smooth scroll (runs on compositor and can keep 120Hz on Safari)
-      const supportsSmooth = 'scrollBehavior' in document.documentElement.style && !window.chrome
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      const supportsSmooth = 'scrollBehavior' in document.documentElement.style && isSafari
       if (supportsSmooth && !opts.forceJsAnimation) {
         this.#justAnchored = true
         element.style.scrollBehavior = 'smooth'
