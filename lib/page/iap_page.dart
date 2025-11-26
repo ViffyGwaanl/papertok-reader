@@ -177,7 +177,7 @@ class IAPPage extends ConsumerWidget {
                 SafeArea(
                   bottom: state.errorMessage?.isEmpty ?? true,
                   minimum: EdgeInsets.only(
-                      bottom: state.errorMessage?.isEmpty ?? true ? 20 : 0) ,
+                      bottom: state.errorMessage?.isEmpty ?? true ? 20 : 0),
                   child: ElevatedButton(
                     onPressed: isBusy ? null : notifier.buy,
                     style: ElevatedButton.styleFrom(
