@@ -275,7 +275,7 @@ class _BookNotesPageState extends ConsumerState<BookNotesPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Merge chapters', // TODO: i18n
+                        L10n.of(context).notesExportMergeChapters,
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
@@ -286,7 +286,7 @@ class _BookNotesPageState extends ConsumerState<BookNotesPage> {
                   ],
                 ),
                 Text(
-                  'When enabled, notes from the same chapter share a single heading.', // TODO: i18n
+                  L10n.of(context).notesExportMergeChaptersDescription,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
