@@ -94,6 +94,7 @@ class TopBookTile extends StatisticsDashboardTileBase {
                         asyncValue: ref.watch(
                           bookDailyReadingProvider(bookId: book.id),
                         ),
+                        mock: BookDailyReadingData.mock(),
                         builder: (bookReadingData) {
                           return Expanded(
                             child: Padding(
