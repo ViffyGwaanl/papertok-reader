@@ -144,7 +144,7 @@ class VibrationService {
     final canUseHaptics = await _safeCanUseHaptics();
     if (canUseHaptics) {
       try {
-        await Haptics.vibrate(type);
+        await Haptics.vibrate(type, usage: HapticsUsage.media);
         return;
       } catch (_) {
         // Fall through to vibration fallback.
