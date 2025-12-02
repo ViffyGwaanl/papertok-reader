@@ -39,6 +39,7 @@ class CurrentChapterContentTool
     };
   }
 }
+
 final AiToolDefinition currentChapterContentToolDefinition = AiToolDefinition(
   id: 'current_chapter_content',
   displayNameBuilder: (L10n l10n) => 'Current Chapter Content',
