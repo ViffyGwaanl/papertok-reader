@@ -43,7 +43,7 @@ jobs:
           if [[ "${{ inputs.is_alpha }}" == "true" ]]; then
             echo "TRACK=internal" >> $GITHUB_ENV
           elif [[ "${{ inputs.is_beta }}" == "true" ]]; then
-            echo "TRACK=beta" >> $GITHUB_ENV
+            echo "TRACK=alpha" >> $GITHUB_ENV
           else
             echo "TRACK=production" >> $GITHUB_ENV
           fi
