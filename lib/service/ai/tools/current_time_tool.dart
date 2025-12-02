@@ -52,8 +52,7 @@ class CurrentTimeTool
 
 final AiToolDefinition currentTimeToolDefinition = AiToolDefinition(
   id: 'current_time',
-  displayNameBuilder: (L10n l10n) => 'Current Time',
-  descriptionBuilder: (L10n l10n) =>
-      'Retrieve the device current time to reference timestamps in replies.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolCurrentTimeName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolCurrentTimeDescription,
   build: (context) => CurrentTimeTool().tool,
 );

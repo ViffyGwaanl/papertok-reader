@@ -82,8 +82,7 @@ class NotesSearchTool
 
 final AiToolDefinition notesSearchToolDefinition = AiToolDefinition(
   id: 'notes_search',
-  displayNameBuilder: (L10n l10n) => 'Notes Search',
-  descriptionBuilder: (L10n l10n) =>
-      'Search user notes and highlights by keyword, book, or time range.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolNotesSearchName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolNotesSearchDescription,
   build: (context) => NotesSearchTool(context.notesRepository).tool,
 );

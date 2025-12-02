@@ -64,9 +64,8 @@ class BookContentSearchTool
 
 final AiToolDefinition bookContentSearchToolDefinition = AiToolDefinition(
   id: 'book_content_search',
-  displayNameBuilder: (L10n l10n) => 'Book Content Search',
-  descriptionBuilder: (L10n l10n) =>
-      'Search within a specific book by keyword and return matched chapters/snippets.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolBookContentSearchName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolBookContentSearchDescription,
   build: (context) =>
       BookContentSearchTool(context.bookContentSearchRepository).tool,
 );

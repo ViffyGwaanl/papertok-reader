@@ -74,8 +74,8 @@ class CurrentReadingMetadataTool
 
 final AiToolDefinition currentReadingMetadataToolDefinition = AiToolDefinition(
   id: 'current_reading_metadata',
-  displayNameBuilder: (L10n l10n) => 'Current Reading Metadata',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolCurrentReadingMetadataName,
   descriptionBuilder: (L10n l10n) =>
-      'Fetch metadata about the active reading session such as progress and chapter.',
+      l10n.aiToolCurrentReadingMetadataDescription,
   build: (context) => CurrentReadingMetadataTool(context.ref).tool,
 );

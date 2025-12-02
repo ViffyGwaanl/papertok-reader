@@ -70,8 +70,7 @@ class CurrentBookTocTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
 
 final AiToolDefinition currentBookTocToolDefinition = AiToolDefinition(
   id: 'current_book_toc',
-  displayNameBuilder: (L10n l10n) => 'Current Book TOC',
-  descriptionBuilder: (L10n l10n) =>
-      'Get the table of contents for the active book including current position.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolCurrentBookTocName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolCurrentBookTocDescription,
   build: (context) => CurrentBookTocTool(context.ref).tool,
 );

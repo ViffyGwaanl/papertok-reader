@@ -74,8 +74,7 @@ class CalculatorTool
 
 final AiToolDefinition calculatorToolDefinition = AiToolDefinition(
   id: 'calculator',
-  displayNameBuilder: (L10n l10n) => 'Calculator',
-  descriptionBuilder: (L10n l10n) =>
-      'Evaluate arithmetic expressions when you need a numeric answer.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolCalculatorName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolCalculatorDescription,
   build: (context) => CalculatorTool().tool,
 );

@@ -42,9 +42,9 @@ class CurrentChapterContentTool
 
 final AiToolDefinition currentChapterContentToolDefinition = AiToolDefinition(
   id: 'current_chapter_content',
-  displayNameBuilder: (L10n l10n) => 'Current Chapter Content',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolCurrentChapterContentName,
   descriptionBuilder: (L10n l10n) =>
-      'Pull the plain-text content of the chapter the user is reading.',
+      l10n.aiToolCurrentChapterContentDescription,
   build: (context) =>
       CurrentChapterContentTool(context.ref, const ChapterContentRepository())
           .tool,

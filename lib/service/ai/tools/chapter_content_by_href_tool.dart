@@ -59,9 +59,8 @@ class ChapterContentByHrefTool
 
 final AiToolDefinition chapterContentByHrefToolDefinition = AiToolDefinition(
   id: 'chapter_content_by_href',
-  displayNameBuilder: (L10n l10n) => 'Chapter Content By Href',
-  descriptionBuilder: (L10n l10n) =>
-      'Retrieve the plain-text body of a chapter when you know its TOC href.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolChapterContentByHrefName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolChapterContentByHrefDescription,
   build: (context) => ChapterContentByHrefTool(
     context.ref,
     const ChapterContentRepository(),

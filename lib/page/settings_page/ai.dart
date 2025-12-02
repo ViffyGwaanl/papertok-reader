@@ -436,7 +436,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
         ],
       ),
       SettingsSection(
-        title: const Text('AI Tools'), //TODO
+        title: Text(l10n.settingsAiTools),
         tiles: [
           toolsTile,
         ],

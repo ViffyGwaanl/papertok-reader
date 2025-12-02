@@ -247,9 +247,8 @@ class BookshelfOrganizeTool
 
 final AiToolDefinition bookshelfOrganizeToolDefinition = AiToolDefinition(
   id: 'bookshelf_organize',
-  displayNameBuilder: (L10n l10n) => 'Bookshelf Organize',
-  descriptionBuilder: (L10n l10n) =>
-      'Draft bookshelf re-organization plans that the user can review and apply.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolBookshelfOrganizeName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolBookshelfOrganizeDescription,
   build: (context) =>
       BookshelfOrganizeTool(context.booksRepository, context.groupsRepository)
           .tool,

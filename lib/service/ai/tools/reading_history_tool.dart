@@ -80,8 +80,7 @@ class ReadingHistoryTool
 
 final AiToolDefinition readingHistoryToolDefinition = AiToolDefinition(
   id: 'reading_history',
-  displayNameBuilder: (L10n l10n) => 'Reading History',
-  descriptionBuilder: (L10n l10n) =>
-      'Retrieve historical reading sessions for habit analysis.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolReadingHistoryName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolReadingHistoryDescription,
   build: (context) => ReadingHistoryTool(context.readingHistoryRepository).tool,
 );

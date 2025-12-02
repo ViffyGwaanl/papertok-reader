@@ -53,8 +53,7 @@ class MindmapTool extends RepositoryTool<MindmapInput, Map<String, dynamic>> {
 
 final AiToolDefinition mindmapToolDefinition = AiToolDefinition(
   id: 'mindmap_draw',
-  displayNameBuilder: (L10n l10n) => 'Mindmap',
-  descriptionBuilder: (L10n l10n) =>
-      'Transform a hierarchical bullet outline into the JSON used for mind maps.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolMindmapName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolMindmapDescription,
   build: (context) => MindmapTool().tool,
 );

@@ -74,8 +74,7 @@ class BookshelfLookupTool
 
 final AiToolDefinition bookshelfLookupToolDefinition = AiToolDefinition(
   id: 'bookshelf_lookup',
-  displayNameBuilder: (L10n l10n) => 'Bookshelf Lookup',
-  descriptionBuilder: (L10n l10n) =>
-      'View the user bookshelf with titles, authors, progress, and grouping.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolBookshelfLookupName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolBookshelfLookupDescription,
   build: (context) => BookshelfLookupTool(context.booksRepository).tool,
 );
