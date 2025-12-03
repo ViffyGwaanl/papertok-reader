@@ -90,27 +90,27 @@ class TopBookTile extends StatisticsDashboardTileBase {
                       ],
                     ),
                     const SizedBox(height: 10),
-                      AsyncSkeletonWrapper(
-                          asyncValue: ref.watch(
-                            bookDailyReadingProvider(bookId: book.id),
-                          ),
-                          mock: BookDailyReadingData.mock(),
-                          builder: (bookReadingData, ready) {
-                            return ready
-                                ? Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: BookReadingChart(
-                                        cumulativeValues:
-                                            bookReadingData.readingTimes,
-                                        dailySeconds:
-                                            bookReadingData.readingTimes,
-                                        dates: bookReadingData.dates,
-                                      ),
+                    AsyncSkeletonWrapper(
+                        asyncValue: ref.watch(
+                          bookDailyReadingProvider(bookId: book.id),
+                        ),
+                        mock: BookDailyReadingData.mock(),
+                        builder: (bookReadingData, ready) {
+                          return ready
+                              ? Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: BookReadingChart(
+                                      cumulativeValues:
+                                          bookReadingData.readingTimes,
+                                      dailySeconds:
+                                          bookReadingData.readingTimes,
+                                      dates: bookReadingData.dates,
                                     ),
-                                  )
-                                : const SizedBox.shrink();
-                          }),
+                                  ),
+                                )
+                              : const SizedBox.shrink();
+                        }),
                   ]),
             ),
           ],
