@@ -312,7 +312,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
             child: HintBanner(
               hintKey: HintKey.editBookDetails,
               margin: EdgeInsets.only(right: 10),
-                          child: Text(L10n.of(context).bookDetailEditHint),
+              child: Text(L10n.of(context).bookDetailEditHint),
             ),
           ),
           // const Spacer(),
