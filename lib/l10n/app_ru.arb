@@ -695,5 +695,18 @@
   "aiToolCurrentChapterContentName": "Содержимое текущей главы",
   "aiToolCurrentChapterContentDescription": "Получает текст главы, которую читает пользователь.",
   "aiToolChapterContentByHrefName": "Содержимое главы по Href",
-  "aiToolChapterContentByHrefDescription": "Получает текст главы, если известен её Href в оглавлении."
+  "aiToolChapterContentByHrefDescription": "Получает текст главы, если известен её Href в оглавлении.",
+  "bookDetailEditHint": "Нажмите «Редактировать», чтобы сменить обложку, название, теги и другое",
+  "tagsSectionTitle": "Теги",
+  "tagsEmptyHint": "Нет тегов",
+  "tagsEditHint": "Нажмите «Редактировать», чтобы добавить теги",
+  "tagNewPlaceholder": "Новый тег",
+  "tagAddButton": "Добавить",
+  "tagEditTitle": "Редактировать тег",
+  "tagNamePlaceholder": "Имя тега",
+  "tagsEditOrRemoveHint": "Долгое нажатие или правый клик, чтобы изменить или удалить тег\\nЦвет показывает, привязан ли тег к книге",
+  "bookshelfFilterFinished": "Завершено",
+  "bookshelfFilterReading": "Читаю",
+  "bookshelfFilterNotStarted": "Не начато",
+  "bookshelfFilterTagsTooltip": "Фильтровать теги"
 }

@@ -695,5 +695,18 @@
   "aiToolCurrentChapterContentName": "當前章節内容",
   "aiToolCurrentChapterContentDescription": "取得用户正在阅读章節的纯文本。",
   "aiToolChapterContentByHrefName": "按 Href 取得章節",
-  "aiToolChapterContentByHrefDescription": "在已知目錄 Href 时取得章節内容。"
+  "aiToolChapterContentByHrefDescription": "在已知目錄 Href 时取得章節内容。",
+  "bookDetailEditHint": "點擊編輯按鈕可修改封面、標題、標籤等資訊",
+  "tagsSectionTitle": "標籤",
+  "tagsEmptyHint": "暫無標籤",
+  "tagsEditHint": "點擊編輯按鈕新增標籤",
+  "tagNewPlaceholder": "新標籤",
+  "tagAddButton": "新增",
+  "tagEditTitle": "編輯標籤",
+  "tagNamePlaceholder": "標籤名稱",
+  "tagsEditOrRemoveHint": "長按或右鍵編輯或刪除標籤\\n顏色表示標籤是否已關聯到書籍",
+  "bookshelfFilterFinished": "已讀完",
+  "bookshelfFilterReading": "閱讀中",
+  "bookshelfFilterNotStarted": "未開始",
+  "bookshelfFilterTagsTooltip": "篩選標籤"
 }

@@ -695,5 +695,18 @@
   "aiToolCurrentChapterContentName": "محتوى الفصل الحالي",
   "aiToolCurrentChapterContentDescription": "اجلب النص الصريح للفصل الذي يقرأه المستخدم.",
   "aiToolChapterContentByHrefName": "محتوى فصل عبر Href",
-  "aiToolChapterContentByHrefDescription": "اجلب نص الفصل عندما تعرف رابط الفهرس الخاص به."
+  "aiToolChapterContentByHrefDescription": "اجلب نص الفصل عندما تعرف رابط الفهرس الخاص به.",
+  "bookDetailEditHint": "اضغط زر التعديل لتغيير الغلاف والعنوان والوسوم والمزيد",
+  "tagsSectionTitle": "الوسوم",
+  "tagsEmptyHint": "لا توجد وسوم",
+  "tagsEditHint": "اضغط زر التعديل لإضافة وسوم",
+  "tagNewPlaceholder": "وسم جديد",
+  "tagAddButton": "إضافة",
+  "tagEditTitle": "تعديل الوسم",
+  "tagNamePlaceholder": "اسم الوسم",
+  "tagsEditOrRemoveHint": "اضغط مطولًا أو بزر الفأرة الأيمن لتحرير أو حذف الوسوم\\nالألوان توضح ما إذا كان الوسم مرتبطًا بالكتاب",
+  "bookshelfFilterFinished": "مكتمل",
+  "bookshelfFilterReading": "جارٍ القراءة",
+  "bookshelfFilterNotStarted": "لم تبدأ",
+  "bookshelfFilterTagsTooltip": "تصفية الوسوم"
 }

@@ -695,5 +695,18 @@
   "aiToolCurrentChapterContentName": "Aktueller Kapitelinhalt",
   "aiToolCurrentChapterContentDescription": "Hole den Klartext des Kapitels, das der Nutzer liest.",
   "aiToolChapterContentByHrefName": "Kapitelinhalt per Href",
-  "aiToolChapterContentByHrefDescription": "Hole den Klartext eines Kapitels, wenn dessen TOC-Href bekannt ist."
+  "aiToolChapterContentByHrefDescription": "Hole den Klartext eines Kapitels, wenn dessen TOC-Href bekannt ist.",
+  "bookDetailEditHint": "Tippe auf Bearbeiten, um Cover, Titel, Tags usw. zu ändern",
+  "tagsSectionTitle": "Tags",
+  "tagsEmptyHint": "Keine Tags",
+  "tagsEditHint": "Drücke Bearbeiten, um Tags hinzuzufügen",
+  "tagNewPlaceholder": "Neuer Tag",
+  "tagAddButton": "Hinzufügen",
+  "tagEditTitle": "Tag bearbeiten",
+  "tagNamePlaceholder": "Tag-Name",
+  "tagsEditOrRemoveHint": "Zum Bearbeiten oder Löschen eines Tags lange drücken oder Rechtsklick\\nFarben zeigen, ob der Tag dem Buch zugeordnet ist",
+  "bookshelfFilterFinished": "Abgeschlossen",
+  "bookshelfFilterReading": "Wird gelesen",
+  "bookshelfFilterNotStarted": "Nicht begonnen",
+  "bookshelfFilterTagsTooltip": "Tags filtern"
 }

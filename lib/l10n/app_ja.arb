@@ -695,5 +695,18 @@
   "aiToolCurrentChapterContentName": "現在の章の内容",
   "aiToolCurrentChapterContentDescription": "ユーザーが読んでいる章の本文を取得します。",
   "aiToolChapterContentByHrefName": "Hrefで章内容取得",
-  "aiToolChapterContentByHrefDescription": "目次のHrefが分かっている章の本文を取得します。"
+  "aiToolChapterContentByHrefDescription": "目次のHrefが分かっている章の本文を取得します。",
+  "bookDetailEditHint": "編集をタップして表紙・タイトル・タグなどを変更",
+  "tagsSectionTitle": "タグ",
+  "tagsEmptyHint": "タグなし",
+  "tagsEditHint": "編集ボタンを押してタグを追加",
+  "tagNewPlaceholder": "新しいタグ",
+  "tagAddButton": "追加",
+  "tagEditTitle": "タグを編集",
+  "tagNamePlaceholder": "タグ名",
+  "tagsEditOrRemoveHint": "タグを長押しまたは右クリックで編集/削除\\n色はタグがこの本に付いているかを示します",
+  "bookshelfFilterFinished": "読了",
+  "bookshelfFilterReading": "読書中",
+  "bookshelfFilterNotStarted": "未開始",
+  "bookshelfFilterTagsTooltip": "タグで絞り込む"
 }

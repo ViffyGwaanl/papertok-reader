@@ -312,7 +312,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
             child: HintBanner(
               hintKey: HintKey.editBookDetails,
               margin: EdgeInsets.only(right: 10),
-              child: Text('点击编辑可以修改书籍封面，标题标签等信息'), // TODO: l10n
+                          child: Text(L10n.of(context).bookDetailEditHint),
             ),
           ),
           // const Spacer(),
@@ -524,7 +524,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Tags', // TODO: l10n
+                    L10n.of(context).tagsSectionTitle,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
@@ -534,10 +534,9 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                             HintBanner(
                               margin: const EdgeInsets.symmetric(vertical: 8),
                               hintKey: HintKey.addTags,
-                              child: Text(
-                                  'Press the edit button to add tags'), // TODO: l10n
+                              child: Text(L10n.of(context).tagsEditHint),
                             ),
-                            const Text('No tags'), //TODO: l10n
+                            Text(L10n.of(context).tagsEmptyHint),
                           ],
                         )
                       : Column(
@@ -567,7 +566,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                 Row(
                   children: [
                     Text(
-                      'Tags', // TODO: l10n
+                      L10n.of(context).tagsSectionTitle,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const Spacer(),
@@ -575,11 +574,11 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                       width: 180,
                       child: TextField(
                         controller: _newTagController,
-                        decoration: const InputDecoration(
-                          hintText: 'New tag', // TODO: l10n
+                        decoration: InputDecoration(
+                          hintText: L10n.of(context).tagNewPlaceholder,
                           isDense: true,
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                         ),
                         onSubmitted: (value) async {
                           if (value.trim().isEmpty) return;
@@ -598,7 +597,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                         ref.read(bookListProvider.notifier).refresh();
                         _newTagController.clear();
                       },
-                      child: const Text('Add'), // TODO: l10n
+                      child: Text(L10n.of(context).tagAddButton),
                     ),
                   ],
                 ),
@@ -607,8 +606,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                   HintBanner(
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     hintKey: HintKey.editOrRemoveTags,
-                    child: Text(
-                        'Long press or right-click to edit or delete tags\nColors indicate whether the tag is attached to the book'),
+                    child: Text(L10n.of(context).tagsEditOrRemoveHint),
                   ),
                 Wrap(
                   spacing: 8,

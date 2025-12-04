@@ -108,7 +108,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
     Widget buildFilterBar() {
       final statusChips = [
         _StatusChip(
-          label: 'Finished', // TODO: l10n
+          label: L10n.of(context).bookshelfFilterFinished,
           selected: statusFilter == ReadingStatusFilter.finished,
           onTap: () {
             ref
@@ -118,7 +118,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
           },
         ),
         _StatusChip(
-          label: 'Reading', // TODO: l10n
+          label: L10n.of(context).bookshelfFilterReading,
           selected: statusFilter == ReadingStatusFilter.reading,
           onTap: () {
             ref
@@ -128,7 +128,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
           },
         ),
         _StatusChip(
-          label: 'Not started', // TODO: l10n
+          label: L10n.of(context).bookshelfFilterNotStarted,
           selected: statusFilter == ReadingStatusFilter.notStarted,
           onTap: () {
             ref
@@ -264,7 +264,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
             IconButton(
               key: _tagButtonKey,
               icon: const Icon(Icons.local_offer_outlined),
-              tooltip: 'Filter tags', // TODO: l10n
+              tooltip: L10n.of(context).bookshelfFilterTagsTooltip,
               onPressed: showTagMenu,
             ),
           ],

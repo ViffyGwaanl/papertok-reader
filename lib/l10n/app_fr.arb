@@ -695,5 +695,18 @@
   "aiToolCurrentChapterContentName": "Contenu du chapitre actuel",
   "aiToolCurrentChapterContentDescription": "Récupère le texte du chapitre que lit l’utilisateur.",
   "aiToolChapterContentByHrefName": "Contenu par Href",
-  "aiToolChapterContentByHrefDescription": "Récupère le texte d’un chapitre lorsque tu connais son Href dans le sommaire."
+  "aiToolChapterContentByHrefDescription": "Récupère le texte d’un chapitre lorsque tu connais son Href dans le sommaire.",
+  "bookDetailEditHint": "Appuyez sur Modifier pour changer la couverture, le titre, les tags et plus",
+  "tagsSectionTitle": "Tags",
+  "tagsEmptyHint": "Aucun tag",
+  "tagsEditHint": "Appuyez sur Modifier pour ajouter des tags",
+  "tagNewPlaceholder": "Nouveau tag",
+  "tagAddButton": "Ajouter",
+  "tagEditTitle": "Modifier le tag",
+  "tagNamePlaceholder": "Nom du tag",
+  "tagsEditOrRemoveHint": "Appui long ou clic droit pour modifier ou supprimer des tags\\nLes couleurs indiquent si le tag est associé au livre",
+  "bookshelfFilterFinished": "Terminé",
+  "bookshelfFilterReading": "En cours de lecture",
+  "bookshelfFilterNotStarted": "Non commencé",
+  "bookshelfFilterTagsTooltip": "Filtrer les tags"
 }

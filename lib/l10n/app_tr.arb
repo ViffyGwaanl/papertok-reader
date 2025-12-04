@@ -695,5 +695,18 @@
   "aiToolCurrentChapterContentName": "Güncel Bölüm İçeriği",
   "aiToolCurrentChapterContentDescription": "Kullanıcının okumakta olduğu bölümün düz metnini alır.",
   "aiToolChapterContentByHrefName": "Href ile Bölüm İçeriği",
-  "aiToolChapterContentByHrefDescription": "İçindekiler bağlantısı bilindiğinde bölüm metnini alır."
+  "aiToolChapterContentByHrefDescription": "İçindekiler bağlantısı bilindiğinde bölüm metnini alır.",
+  "bookDetailEditHint": "Kapak, başlık, etiketler ve daha fazlası için Düzenle’ye dokunun",
+  "tagsSectionTitle": "Etiketler",
+  "tagsEmptyHint": "Etiket yok",
+  "tagsEditHint": "Etiket eklemek için Düzenle’ye tıklayın",
+  "tagNewPlaceholder": "Yeni etiket",
+  "tagAddButton": "Ekle",
+  "tagEditTitle": "Etiketi düzenle",
+  "tagNamePlaceholder": "Etiket adı",
+  "tagsEditOrRemoveHint": "Etiketi düzenlemek/silmek için uzun basın veya sağ tıklayın\\nRenkler etiketin kitaba bağlı olup olmadığını gösterir",
+  "bookshelfFilterFinished": "Bitti",
+  "bookshelfFilterReading": "Okunuyor",
+  "bookshelfFilterNotStarted": "Başlanmadı",
+  "bookshelfFilterTagsTooltip": "Etiket filtrele"
 }

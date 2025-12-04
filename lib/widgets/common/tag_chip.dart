@@ -76,6 +76,7 @@ class TagChip extends StatelessWidget {
     required Future<void> Function(String newName) onRename,
     required Future<void> Function() onDelete,
   }) async {
+    final l10n = L10n.of(context);
     final controller = TextEditingController(text: initialName);
     await showDialog(
       context: context,
@@ -93,8 +94,8 @@ class TagChip extends StatelessWidget {
           ),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              hintText: 'Tag name', // TODO: l10n
+            decoration: InputDecoration(
+              hintText: l10n.tagNamePlaceholder,
             ),
           ),
           actions: [
@@ -105,7 +106,7 @@ class TagChip extends StatelessWidget {
                 await onRename(newName);
                 if (context.mounted) Navigator.of(dialogContext).pop();
               },
-              child: Text(L10n.of(context).commonSave),
+              child: Text(l10n.commonSave),
             ),
           ],
         );

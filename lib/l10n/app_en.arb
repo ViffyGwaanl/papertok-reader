@@ -695,5 +695,18 @@
   "aiToolCurrentChapterContentName": "Current Chapter Content",
   "aiToolCurrentChapterContentDescription": "Pull the plain-text content of the chapter the user is reading.",
   "aiToolChapterContentByHrefName": "Chapter Content By Href",
-  "aiToolChapterContentByHrefDescription": "Retrieve the plain-text body of a chapter when you know its TOC href."
+  "aiToolChapterContentByHrefDescription": "Retrieve the plain-text body of a chapter when you know its TOC href.",
+  "bookDetailEditHint": "Tap Edit to change cover, title, tags, and more",
+  "tagsSectionTitle": "Tags",
+  "tagsEmptyHint": "No tags",
+  "tagsEditHint": "Press the edit button to add tags",
+  "tagNewPlaceholder": "New tag",
+  "tagAddButton": "Add",
+  "tagEditTitle": "Edit tag",
+  "tagNamePlaceholder": "Tag name",
+  "tagsEditOrRemoveHint": "Long press or right-click to edit or delete tags\\nColors indicate whether the tag is attached to the book",
+  "bookshelfFilterFinished": "Finished",
+  "bookshelfFilterReading": "Reading",
+  "bookshelfFilterNotStarted": "Not started",
+  "bookshelfFilterTagsTooltip": "Filter tags"
 }
