@@ -704,6 +704,7 @@
   "tagAddButton": "追加",
   "tagEditTitle": "タグを編集",
   "tagNamePlaceholder": "タグ名",
+  "tagColorTooltip": "タグの色を選択",
   "tagsEditOrRemoveHint": "タグを長押しまたは右クリックで編集/削除\n色はタグがこの本に付いているかを示します",
   "bookshelfFilterFinished": "読了",
   "bookshelfFilterReading": "読書中",

@@ -704,6 +704,7 @@
   "tagAddButton": "Ekle",
   "tagEditTitle": "Etiketi düzenle",
   "tagNamePlaceholder": "Etiket adı",
+  "tagColorTooltip": "Etiket rengini seç",
   "tagsEditOrRemoveHint": "Etiketi düzenlemek/silmek için uzun basın veya sağ tıklayın\nRenkler etiketin kitaba bağlı olup olmadığını gösterir",
   "bookshelfFilterFinished": "Bitti",
   "bookshelfFilterReading": "Okunuyor",

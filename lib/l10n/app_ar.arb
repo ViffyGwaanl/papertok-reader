@@ -704,6 +704,7 @@
   "tagAddButton": "إضافة",
   "tagEditTitle": "تعديل الوسم",
   "tagNamePlaceholder": "اسم الوسم",
+  "tagColorTooltip": "اختر لون الوسم",
   "tagsEditOrRemoveHint": "اضغط مطولًا أو بزر الفأرة الأيمن لتحرير أو حذف الوسوم\nالألوان توضح ما إذا كان الوسم مرتبطًا بالكتاب",
   "bookshelfFilterFinished": "مكتمل",
   "bookshelfFilterReading": "جارٍ القراءة",

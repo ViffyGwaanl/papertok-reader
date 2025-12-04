@@ -11,14 +11,14 @@ class TagList extends _$TagList {
     return tagDao.fetchAllTags();
   }
 
-  Future<int> createTag(String name) async {
-    final id = await tagDao.insertTag(name);
+  Future<int> createTag(String name, {int? color}) async {
+    final id = await tagDao.insertTag(name, color: color);
     await _refresh();
     return id;
   }
 
-  Future<void> renameTag(int id, String newName) async {
-    await tagDao.renameTag(id, newName);
+  Future<void> updateTag(int id, {String? newName, int? color}) async {
+    await tagDao.updateTag(id, newName: newName, color: color);
     await _refresh();
   }
 
@@ -43,6 +43,11 @@ class BookTagState {
   });
 
   bool isAttached(int tagId) => attachedIds.contains(tagId);
+
+  Tag resolveWithColor(Tag tag, int Function(String) fallback) {
+    if (tag.color != null) return tag;
+    return tag.copyWith(color: fallback(tag.name));
+  }
 }
 
 @riverpod
@@ -65,8 +70,8 @@ class BookTagEditor extends _$BookTagEditor {
     await _refresh();
   }
 
-  Future<void> createAndAttach(String name) async {
-    final tagId = await tagDao.insertTag(name);
+  Future<void> createAndAttach(String name, {required int color}) async {
+    final tagId = await tagDao.insertTag(name, color: color);
     await bookTagDao.addRelation(bookId: bookId, tagId: tagId);
     ref.invalidate(tagListProvider);
     await _refresh();

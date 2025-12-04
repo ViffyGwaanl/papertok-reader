@@ -704,6 +704,7 @@
   "tagAddButton": "추가",
   "tagEditTitle": "태그 편집",
   "tagNamePlaceholder": "태그 이름",
+  "tagColorTooltip": "태그 색상 선택",
   "tagsEditOrRemoveHint": "태그를 길게 누르거나 우클릭해 편집/삭제\n색상은 태그가 책에 연결되었는지 표시합니다",
   "bookshelfFilterFinished": "완독",
   "bookshelfFilterReading": "읽는 중",

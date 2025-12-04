@@ -10,7 +10,7 @@ class TagDao extends BaseDao {
     return queryList(
       _stylesTable,
       mapper: Tag.fromDb,
-      where: 'ABS(font_size - ?) < 0.0001',
+      where: 'ABS(font_size - ?) < 0.0001 AND font_family IS NOT NULL',
       whereArgs: [_tagSentinel],
       orderBy: 'LOWER(font_family) ASC',
     );
@@ -37,7 +37,8 @@ class TagDao extends BaseDao {
     );
   }
 
-  Future<int> insertTag(String name) async {
+  Future<int> insertTag(String name, {int? color}) async {
+    final sanitizedColor = color == null ? null : (color & 0x00FFFFFF);
     final db = await database;
     return db.transaction((txn) async {
       final existing = await txn.rawQuery(
@@ -54,15 +55,18 @@ class TagDao extends BaseDao {
       return txn.insert(_stylesTable, {
         'font_size': _tagSentinel,
         'font_family': name,
+        if (sanitizedColor != null) 'line_height': sanitizedColor.toDouble(),
       });
     });
   }
 
-  Future<void> renameTag(int id, String newName) async {
+  Future<void> updateTag(int id, {String? newName, int? color}) async {
+    final sanitizedColor = color == null ? null : (color & 0x00FFFFFF);
     await update(
       _stylesTable,
       {
-        'font_family': newName,
+        if (newName != null) 'font_family': newName,
+        if (sanitizedColor != null) 'line_height': sanitizedColor.toDouble(),
       },
       where: 'id = ? AND ABS(font_size - ?) < 0.0001',
       whereArgs: [id, _tagSentinel],

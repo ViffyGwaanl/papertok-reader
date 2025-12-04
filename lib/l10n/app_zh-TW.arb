@@ -704,6 +704,7 @@
   "tagAddButton": "新增",
   "tagEditTitle": "編輯標籤",
   "tagNamePlaceholder": "標籤名稱",
+  "tagColorTooltip": "選擇標籤顏色",
   "tagsEditOrRemoveHint": "長按或右鍵編輯或刪除標籤\n顏色表示標籤是否已關聯到書籍",
   "bookshelfFilterFinished": "已讀完",
   "bookshelfFilterReading": "閱讀中",

@@ -704,6 +704,7 @@
   "tagAddButton": "Hinzufügen",
   "tagEditTitle": "Tag bearbeiten",
   "tagNamePlaceholder": "Tag-Name",
+  "tagColorTooltip": "Tag-Farbe wählen",
   "tagsEditOrRemoveHint": "Zum Bearbeiten oder Löschen eines Tags lange drücken oder Rechtsklick\nFarben zeigen, ob der Tag dem Buch zugeordnet ist",
   "bookshelfFilterFinished": "Abgeschlossen",
   "bookshelfFilterReading": "Wird gelesen",

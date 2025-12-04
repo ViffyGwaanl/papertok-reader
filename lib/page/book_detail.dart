@@ -17,9 +17,12 @@ import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/utils/date/convert_seconds.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:anx_reader/utils/color/hash_color.dart';
+import 'package:anx_reader/utils/color/rgb.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/common/color_picker_sheet.dart';
 import 'package:anx_reader/widgets/common/tag_chip.dart';
 import 'package:anx_reader/widgets/highlight_digit.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
@@ -43,6 +46,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
   late Book _book;
   bool _isCollapsed = false;
   final TextEditingController _newTagController = TextEditingController();
+  int? _pendingTagColor;
 
   @override
   void initState() {
@@ -490,10 +494,18 @@ class _BookDetailState extends ConsumerState<BookDetail> {
               await TagChip.showEditDialog(
                 context: context,
                 initialName: tag.name,
+                initialColor: tag.color ?? hashColor(tag.name).toARGB32(),
                 onRename: (newName) async {
                   await ref
                       .read(tagListProvider.notifier)
-                      .renameTag(tag.id, newName);
+                      .updateTag(tag.id, newName: newName);
+                  ref.read(bookListProvider.notifier).refresh();
+                  ref.invalidate(bookTagEditorProvider(widget.book.id));
+                },
+                onColorChange: (color) async {
+                  await ref
+                      .read(tagListProvider.notifier)
+                      .updateTag(tag.id, color: color);
                   ref.read(bookListProvider.notifier).refresh();
                   ref.invalidate(bookTagEditorProvider(widget.book.id));
                 },
@@ -548,6 +560,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                                   .map(
                                     (tag) => TagChip(
                                       label: tag.name,
+                                      color: tag.color,
                                       selected: true,
                                       dense: true,
                                     ),
@@ -580,22 +593,65 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
                         ),
+                        onChanged: (_) {
+                          setState(() {
+                            final text = _newTagController.text.trim();
+                            _pendingTagColor = text.isEmpty
+                                ? null
+                                : sanitizeRgb(hashColor(text).toARGB32());
+                          });
+                        },
                         onSubmitted: (value) async {
                           if (value.trim().isEmpty) return;
-                          await notifier.createAndAttach(value.trim());
+                          final color = sanitizeRgb(_pendingTagColor ??
+                              hashColor(value.trim()).toARGB32());
+                          await notifier.createAndAttach(value.trim(),
+                              color: color);
                           ref.read(bookListProvider.notifier).refresh();
                           _newTagController.clear();
+                          _pendingTagColor = null;
+                          setState(() {});
                         },
                       ),
                     ),
                     const SizedBox(width: 8),
+                    Builder(builder: (context) {
+                      final currentText = _newTagController.text.trim();
+                      final defaultColor = sanitizeRgb(_pendingTagColor ??
+                          (currentText.isEmpty
+                              ? hashColor('tag').toARGB32()
+                              : hashColor(currentText).toARGB32()));
+                      return IconButton(
+                        tooltip: L10n.of(context).tagColorTooltip,
+                        icon: Icon(Icons.circle,
+                            color: Color(defaultColor | 0xFF000000)),
+                        onPressed: currentText.isEmpty
+                            ? null
+                            : () async {
+                                final picked = await showRgbColorPicker(
+                                  context: context,
+                                  initialColor: defaultColor,
+                                );
+                                if (picked != null) {
+                                  setState(() {
+                                    _pendingTagColor = picked;
+                                  });
+                                }
+                              },
+                      );
+                    }),
+                    const SizedBox(width: 4),
                     OutlinedButton(
                       onPressed: () async {
                         final value = _newTagController.text.trim();
                         if (value.isEmpty) return;
-                        await notifier.createAndAttach(value);
+                        final color = sanitizeRgb(
+                            _pendingTagColor ?? hashColor(value).toARGB32());
+                        await notifier.createAndAttach(value, color: color);
                         ref.read(bookListProvider.notifier).refresh();
                         _newTagController.clear();
+                        _pendingTagColor = null;
+                        setState(() {});
                       },
                       child: Text(L10n.of(context).tagAddButton),
                     ),
@@ -614,6 +670,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                   children: state.tags
                       .map((tag) => TagChip(
                             label: tag.name,
+                            color: tag.color,
                             selected: state.isAttached(tag.id),
                             onTap: () => toggle(tag),
                             onLongPress: () => showTagEditDialog(tag),

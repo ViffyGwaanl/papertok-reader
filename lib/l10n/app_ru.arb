@@ -704,6 +704,7 @@
   "tagAddButton": "Добавить",
   "tagEditTitle": "Редактировать тег",
   "tagNamePlaceholder": "Имя тега",
+  "tagColorTooltip": "Выбрать цвет тега",
   "tagsEditOrRemoveHint": "Долгое нажатие или правый клик, чтобы изменить или удалить тег\nЦвет показывает, привязан ли тег к книге",
   "bookshelfFilterFinished": "Завершено",
   "bookshelfFilterReading": "Читаю",

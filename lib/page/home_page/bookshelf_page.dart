@@ -14,6 +14,7 @@ import 'package:anx_reader/providers/tags.dart';
 import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/page/search/search_page.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
+import 'package:anx_reader/utils/color/hash_color.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/widgets/bookshelf/book_bottom_sheet.dart';
 import 'package:anx_reader/widgets/bookshelf/book_folder.dart';
@@ -139,6 +140,33 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
         ),
       ];
 
+      Future<void> showTagEditDialog(Tag tag) async {
+        await TagChip.showEditDialog(
+          context: context,
+          initialName: tag.name,
+          initialColor: tag.color ?? hashColor(tag.name).toARGB32(),
+          onRename: (newName) async {
+            await ref
+                .read(tagListProvider.notifier)
+                .updateTag(tag.id, newName: newName);
+            ref.read(bookListProvider.notifier).refresh();
+          },
+          onColorChange: (color) async {
+            await ref
+                .read(tagListProvider.notifier)
+                .updateTag(tag.id, color: color & 0x00FFFFFF);
+            ref.read(bookListProvider.notifier).refresh();
+          },
+          onDelete: () async {
+            await ref.read(tagListProvider.notifier).deleteTag(tag.id);
+            if (selectedTags.contains(tag.id)) {
+              ref.read(tagSelectionProvider.notifier).toggle(tag.id);
+            }
+            ref.read(bookListProvider.notifier).refresh();
+          },
+        );
+      }
+
       Future<void> showTagMenu() async {
         final tags = tagsAsync.when(
           data: (value) => value,
@@ -196,6 +224,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
                             for (final tag in tags)
                               TagChip(
                                 label: tag.name,
+                                color: tag.color,
                                 selected: liveSelected.contains(tag.id),
                                 onTap: () {
                                   setStateMenu(() {
@@ -209,6 +238,11 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
                                       .read(tagSelectionProvider.notifier)
                                       .toggle(tag.id);
                                   ref.read(bookListProvider.notifier).refresh();
+                                },
+                                onLongPress: () {
+                                  Navigator.of(context).pop();
+                                  Future.microtask(
+                                      () => showTagEditDialog(tag));
                                 },
                                 dense: true,
                               ),
@@ -234,6 +268,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
                     padding: const EdgeInsets.only(left: 8),
                     child: TagChip(
                       label: tag.name,
+                      color: tag.color,
                       selected: true,
                       onTap: () {
                         ref.read(tagSelectionProvider.notifier).toggle(tag.id);

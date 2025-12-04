@@ -1,17 +1,20 @@
 class Tag {
   final int id;
   final String name;
+  final int? color; // RGB stored as int
 
-  const Tag({required this.id, required this.name});
+  const Tag({required this.id, required this.name, this.color});
 
-  Tag copyWith({int? id, String? name}) {
+  Tag copyWith({int? id, String? name, int? color}) {
     return Tag(id: id ?? this.id, name: name ?? this.name);
   }
 
   factory Tag.fromDb(Map<String, dynamic> row) {
+    final colorValue = row['line_height'] as num?;
     return Tag(
       id: row['id'] as int,
       name: row['font_family'] as String? ?? '',
+      color: colorValue?.toInt(),
     );
   }
 }

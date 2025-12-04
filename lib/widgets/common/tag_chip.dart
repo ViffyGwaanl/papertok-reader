@@ -1,11 +1,15 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/widgets/common/color_picker_sheet.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:flutter/material.dart';
+import 'package:anx_reader/utils/color/hash_color.dart';
+import 'package:anx_reader/utils/color/rgb.dart';
 
 class TagChip extends StatelessWidget {
   const TagChip({
     super.key,
     required this.label,
+    this.color,
     this.selected = false,
     this.onTap,
     this.onLongPress,
@@ -13,26 +17,17 @@ class TagChip extends StatelessWidget {
   });
 
   final String label;
+  final int? color;
   final bool selected;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final bool dense;
 
-  static const _palette = [
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.pink,
-    Colors.teal,
-    Colors.indigo,
-    Colors.deepPurple,
-    Colors.cyan,
-  ];
-
   Color _colorForLabel(String value) {
-    final hash = value.hashCode;
-    final index = hash == 0 ? 0 : hash.abs() % _palette.length;
-    return _palette[index];
+    if (color != null) {
+      return Color(color! | 0xFF000000);
+    }
+    return hashColor(value);
   }
 
   @override
@@ -73,7 +68,9 @@ class TagChip extends StatelessWidget {
   static Future<void> showEditDialog({
     required BuildContext context,
     required String initialName,
+    required int? initialColor, // RGB
     required Future<void> Function(String newName) onRename,
+    required Future<void> Function(int colorRgb) onColorChange,
     required Future<void> Function() onDelete,
   }) async {
     final l10n = L10n.of(context);
@@ -81,34 +78,56 @@ class TagChip extends StatelessWidget {
     await showDialog(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(L10n.of(context).commonEdit),
-              DeleteConfirm(delete: () async {
-                await onDelete();
-                if (context.mounted) Navigator.of(dialogContext).pop();
-              }),
-            ],
-          ),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: l10n.tagNamePlaceholder,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                final newName = controller.text.trim();
-                if (newName.isEmpty) return;
-                await onRename(newName);
-                if (context.mounted) Navigator.of(dialogContext).pop();
-              },
-              child: Text(l10n.commonSave),
-            ),
-          ],
+        int colorRgb =
+            sanitizeRgb(initialColor ?? hashColor(initialName).toARGB32());
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(l10n.tagEditTitle),
+                  DeleteConfirm(delete: () async {
+                    await onDelete();
+                    if (context.mounted) Navigator.of(dialogContext).pop();
+                  }),
+                ],
+              ),
+              content: TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: l10n.tagNamePlaceholder,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  tooltip: l10n.tagColorTooltip,
+                  icon: Icon(Icons.circle, color: colorFromRgb(colorRgb)),
+                  onPressed: () async {
+                    final picked = await showRgbColorPicker(
+                      context: context,
+                      initialColor: colorRgb,
+                    );
+                    if (picked != null) {
+                      setStateDialog(() {
+                        colorRgb = sanitizeRgb(picked);
+                      });
+                      await onColorChange(colorRgb);
+                    }
+                  },
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final newName = controller.text.trim();
+                    if (newName.isEmpty) return;
+                    await onRename(newName);
+                    if (context.mounted) Navigator.of(dialogContext).pop();
+                  },
+                  child: Text(l10n.commonSave),
+                ),
+              ],
+            );
+          },
         );
       },
     );
