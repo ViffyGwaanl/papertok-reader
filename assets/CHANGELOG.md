@@ -3,6 +3,9 @@
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
 ## 1.10.1
+- Feat: Support adding tags to books
+- Feat: Support filtering books by tags
+- Feat: Support filtering books by reading progress
 - Feat: When backing up/restoring, support cross-platform backup/restore (need to use the new version of the App for backup and restore)
 - Feat: When exporting notes, you can sort by chapter order or time order
 - Feat: When viewing notes, you can remember the last sorting method
@@ -13,6 +16,9 @@
 - Fix: Optimize page turn smoothness on Android and Windows devices
 - Fix: Reduce cache usage on iOS devices
 
+- Feat: 支持为书籍添加标签
+- Feat：支持通过标签筛选书籍
+- Feat：支持按阅读进度筛选书籍
 - Feat: 备份/恢复时,支持跨平台备份/恢复(需要用新版App进行备份和恢复)
 - Feat: 笔记导出时可以按章节顺序或时间顺序排序
 - Feat：查看笔记时可以记忆上次的排序方式
