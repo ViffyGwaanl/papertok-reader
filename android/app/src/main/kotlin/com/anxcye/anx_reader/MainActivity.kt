@@ -1,12 +1,19 @@
 package com.anxcye.anx_reader
 
 import android.content.pm.PackageManager
+import android.content.Intent
 import android.os.Build
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : AudioServiceActivity() {
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Ensure the latest intent is stored so plugins relying on Activity#getIntent can read it.
+        setIntent(intent)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

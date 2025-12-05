@@ -11,6 +11,7 @@ void receiveShareIntent(WidgetRef ref) {
 
   // receive sharing intent
   Future<void> handleShare(SharedMedia? media) async {
+    AnxLog.info('share: Receive share intent called, ${media?.content}');
     if (media == null ||
         media.attachments == null ||
         media.attachments!.isEmpty) {
