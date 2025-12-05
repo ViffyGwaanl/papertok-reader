@@ -47,7 +47,7 @@ class TagChip extends StatelessWidget {
       onSecondaryTap: onLongPress,
       child: Container(
         padding: dense
-            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
+            ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
             : const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: bgColor,

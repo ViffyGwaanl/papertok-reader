@@ -244,7 +244,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
                                   Future.microtask(
                                       () => showTagEditDialog(tag));
                                 },
-                                dense: true,
+                                dense: false,
                               ),
                           ],
                         ),
@@ -609,6 +609,8 @@ class _StatusChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
+        labelPadding: const EdgeInsets.all(0),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         label: Text(label),
         selected: selected,
         onSelected: (_) => onTap(),

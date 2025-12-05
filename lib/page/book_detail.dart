@@ -674,7 +674,7 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                             selected: state.isAttached(tag.id),
                             onTap: () => toggle(tag),
                             onLongPress: () => showTagEditDialog(tag),
-                            dense: true,
+                            dense: false,
                           ))
                       .toList(),
                 ),
