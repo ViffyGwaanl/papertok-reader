@@ -3,6 +3,7 @@
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
 ## 1.10.1
+- Feat: Optimize widow/orphan line display (allow single line content to be displayed when there is a large remaining space on the previous page)
 - Feat: AI can add tags to books, change bookmark colors, etc.
 - Feat: Support custom tag colors
 - Feat: Support adding tags to books
@@ -18,6 +19,7 @@
 - Fix: Optimize page turn smoothness on Android and Windows devices
 - Fix: Reduce cache usage on iOS devices
 
+- Feat: 优化孤行显示效果（在前一页剩余空间较大时，允许显示单行内容）
 - Feat: 支持AI为书籍添加标签，更改书签颜色等
 - Feat: 支持自定义标签颜色
 - Feat: 支持为书籍添加标签

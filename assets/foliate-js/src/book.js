@@ -282,7 +282,7 @@ const setSelectionHandler = (view, doc, index) => {
   else {
     doc.addEventListener('contextmenu', e => {
       // if (e.pointerType === 'mouse') {
-        handleSelection(view, doc, index);
+      handleSelection(view, doc, index);
       // }
     });
   }
@@ -479,7 +479,7 @@ const getCSS = ({ fontSize,
     background-clip: content-box !important;`
 
 
-    // Some CSS selectors are inspired by https://github.com/readest/foliate-js
+  // Some CSS selectors are inspired by https://github.com/readest/foliate-js
   return `
     @namespace epub "http://www.idpf.org/2007/ops";
     @font-face {
@@ -495,6 +495,7 @@ const getCSS = ({ fontSize,
         background-color: transparent !important;
         letter-spacing: ${letterSpacing}px;
         font-size: ${fontSize}em;
+        orphans: 1;
     }
 
     body {
@@ -657,15 +658,15 @@ const readingFeaturesDocHandler = (doc) => {
   // handle vertical writing mode, replace “”‘’ with 『』「」
   if (style.writingMode.startsWith('vertical') || reader.view.renderer.writingMode.startsWith('vertical')) {
     const replaceQuotes = (node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          node.textContent = node.textContent
-            .replace(/“/g, '『')
-            .replace(/”/g, '』')
-            .replace(/‘/g, '「')
-            .replace(/’/g, '」');
-        } else {
-          node.childNodes.forEach(child => replaceQuotes(child));
-        }
+      if (node.nodeType === Node.TEXT_NODE) {
+        node.textContent = node.textContent
+          .replace(/“/g, '『')
+          .replace(/”/g, '』')
+          .replace(/‘/g, '「')
+          .replace(/’/g, '」');
+      } else {
+        node.childNodes.forEach(child => replaceQuotes(child));
+      }
     };
     doc.body.childNodes.forEach(node => {
       replaceQuotes(node);
