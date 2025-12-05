@@ -581,78 +581,88 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                       L10n.of(context).tagsSectionTitle,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const Spacer(),
-                    SizedBox(
-                      width: 180,
-                      child: TextField(
-                        controller: _newTagController,
-                        decoration: InputDecoration(
-                          hintText: L10n.of(context).tagNewPlaceholder,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                        ),
-                        onChanged: (_) {
-                          setState(() {
-                            final text = _newTagController.text.trim();
-                            _pendingTagColor =
-                                text.isEmpty ? null : hashColor(text);
-                          });
-                        },
-                        onSubmitted: (value) async {
-                          if (value.trim().isEmpty) return;
-                          final color =
-                              _pendingTagColor ?? hashColor(value.trim());
-                          await notifier.createAndAttach(
-                            value.trim(),
-                            color: color,
-                          );
-                          ref.read(bookListProvider.notifier).refresh();
-                          _newTagController.clear();
-                          _pendingTagColor = null;
-                          setState(() {});
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Builder(builder: (context) {
-                      final currentText = _newTagController.text.trim();
-                      final defaultColor = _pendingTagColor ??
-                          (currentText.isEmpty
-                              ? hashColor('tag')
-                              : hashColor(currentText));
-                      return IconButton(
-                        tooltip: L10n.of(context).tagColorTooltip,
-                        icon: Icon(Icons.circle, color: defaultColor),
-                        onPressed: currentText.isEmpty
-                            ? null
-                            : () async {
-                                final picked = await showRgbColorPicker(
-                                  context: context,
-                                  initialColor: defaultColor,
-                                  allowAlpha: false,
-                                );
-                                if (picked != null) {
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Flexible(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 180),
+                              child: TextField(
+                                controller: _newTagController,
+                                decoration: InputDecoration(
+                                  hintText: L10n.of(context).tagNewPlaceholder,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                ),
+                                onChanged: (_) {
                                   setState(() {
-                                    _pendingTagColor = picked;
+                                    final text = _newTagController.text.trim();
+                                    _pendingTagColor =
+                                        text.isEmpty ? null : hashColor(text);
                                   });
-                                }
-                              },
-                      );
-                    }),
-                    const SizedBox(width: 4),
-                    OutlinedButton(
-                      onPressed: () async {
-                        final value = _newTagController.text.trim();
-                        if (value.isEmpty) return;
-                        final color = _pendingTagColor ?? hashColor(value);
-                        await notifier.createAndAttach(value, color: color);
-                        ref.read(bookListProvider.notifier).refresh();
-                        _newTagController.clear();
-                        _pendingTagColor = null;
-                        setState(() {});
-                      },
-                      child: Text(L10n.of(context).tagAddButton),
+                                },
+                                onSubmitted: (value) async {
+                                  if (value.trim().isEmpty) return;
+                                  final color = _pendingTagColor ??
+                                      hashColor(value.trim());
+                                  await notifier.createAndAttach(
+                                    value.trim(),
+                                    color: color,
+                                  );
+                                  ref.read(bookListProvider.notifier).refresh();
+                                  _newTagController.clear();
+                                  _pendingTagColor = null;
+                                  setState(() {});
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Builder(builder: (context) {
+                            final currentText = _newTagController.text.trim();
+                            final defaultColor = _pendingTagColor ??
+                                (currentText.isEmpty
+                                    ? hashColor('tag')
+                                    : hashColor(currentText));
+                            return IconButton(
+                              tooltip: L10n.of(context).tagColorTooltip,
+                              icon: Icon(Icons.circle, color: defaultColor),
+                              onPressed: currentText.isEmpty
+                                  ? null
+                                  : () async {
+                                      final picked = await showRgbColorPicker(
+                                        context: context,
+                                        initialColor: defaultColor,
+                                        allowAlpha: false,
+                                      );
+                                      if (picked != null) {
+                                        setState(() {
+                                          _pendingTagColor = picked;
+                                        });
+                                      }
+                                    },
+                            );
+                          }),
+                          const SizedBox(width: 4),
+                          OutlinedButton(
+                            onPressed: () async {
+                              final value = _newTagController.text.trim();
+                              if (value.isEmpty) return;
+                              final color =
+                                  _pendingTagColor ?? hashColor(value);
+                              await notifier.createAndAttach(value,
+                                  color: color);
+                              ref.read(bookListProvider.notifier).refresh();
+                              _newTagController.clear();
+                              _pendingTagColor = null;
+                              setState(() {});
+                            },
+                            child: Text(L10n.of(context).tagAddButton),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/hint_key.dart';
@@ -195,18 +196,23 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
 
         final liveSelected = {...selectedTags};
 
+        final boxMaxWidth = max(MediaQuery.of(context).size.width * 0.8, 500.0);
+
         await showMenu<int>(
+          color: Colors.transparent,
+          shadowColor: Colors.transparent,
           context: context,
           position: position,
-          constraints: const BoxConstraints(maxHeight: 360, maxWidth: 260),
+          constraints: BoxConstraints(maxHeight: 360, maxWidth: boxMaxWidth),
           items: [
             PopupMenuItem<int>(
               enabled: false,
               padding: EdgeInsets.zero,
-              child: Center(
-                child: Container(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: FilledContainer(
                   constraints:
-                      const BoxConstraints(maxHeight: 340, maxWidth: 240),
+                      BoxConstraints(maxHeight: 340, maxWidth: boxMaxWidth),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   child: StatefulBuilder(
@@ -285,8 +291,8 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
       );
 
       return Container(
-        height: 35,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 45,
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Row(
           children: [
             const SizedBox(width: 8),
