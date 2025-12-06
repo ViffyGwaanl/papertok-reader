@@ -55,7 +55,6 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
 
   @override
   void dispose() {
-    _scrollController.dispose();
     _editTagController.dispose();
     super.dispose();
   }
