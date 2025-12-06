@@ -3,6 +3,7 @@
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
 ## 1.10.1
+- Feat: Choose bookshelf folder style (2x2 grid/stacked)
 - Feat: Optimize widow/orphan line display (allow single line content to be displayed when there is a large remaining space on the previous page)
 - Feat: AI can add tags to books, change bookmark colors, etc.
 - Feat: Support custom tag colors
@@ -20,6 +21,7 @@
 - Fix: Reduce cache usage on iOS devices
 - Fix: Files can be imported through the "Open With" option
 
+- Feat: 可以选择书架文件夹样式（2*2宫格/重叠）
 - Feat: 优化孤行显示效果（在前一页剩余空间较大时，允许显示单行内容）
 - Feat: 支持AI为书籍添加标签，更改书签颜色等
 - Feat: 支持自定义标签颜色
