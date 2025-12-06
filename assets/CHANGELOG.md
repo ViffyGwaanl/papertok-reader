@@ -20,6 +20,8 @@
 - Fix: Optimize page turn smoothness on Android and Windows devices
 - Fix: Reduce cache usage on iOS devices
 - Fix: Files can be imported through the "Open With" option
+- Fix: When displaying tags, they can be displayed in order
+- UI: Optimize part of the interface design
 
 - Feat: 可以选择书架文件夹样式（2*2宫格/重叠）
 - Feat: 优化孤行显示效果（在前一页剩余空间较大时，允许显示单行内容）
@@ -38,6 +40,8 @@
 - Fix: 优化 Android、Windows 设备翻页流畅度
 - Fix: 减少 iOS 设备缓存使用
 - Fix: 可以通过打开方式导入文件
+- Fix: 展示标签时，能够按顺序展示
+- UI: 优化部分界面设计
 
 ## 1.10.0
 - Feat: More data display in the statistics interface
