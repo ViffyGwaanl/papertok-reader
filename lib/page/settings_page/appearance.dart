@@ -151,18 +151,20 @@ class _AppearanceSettingState extends State<AppearanceSetting> {
               )),
               CustomSettingsTile(
                   child: ListTile(
-                title: const Text('Bookshelf folder style //todo'),
+                title: Text(L10n.of(context).settingsBookshelfFolderStyle),
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: AnxSegmentedButton<BookshelfFolderStyle>(
-                    segments: const [
+                    segments: [
                       SegmentButtonItem(
-                        label: 'Overlap //todo',
+                        label: L10n.of(context)
+                            .settingsBookshelfFolderStyleOverlap,
                         value: BookshelfFolderStyle.stacked,
                         icon: Icon(Icons.layers),
                       ),
                       SegmentButtonItem(
-                        label: '2x2 Grid //todo',
+                        label:
+                            L10n.of(context).settingsBookshelfFolderStyleGrid,
                         value: BookshelfFolderStyle.grid2x2,
                         icon: Icon(Icons.grid_view),
                       ),
