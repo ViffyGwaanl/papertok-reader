@@ -290,8 +290,8 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
       );
 
       return Container(
-        height: 45,
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        height: 40,
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 5),
         child: Row(
           children: [
             const SizedBox(width: 8),
@@ -619,7 +619,7 @@ class _StatusChip extends StatelessWidget {
         label: Text(label),
         selected: selected,
         onSelected: (_) => onTap(),
-        backgroundColor: Theme.of(context).colorScheme.primary.withAlpha(25),
+        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
         checkmarkColor: Theme.of(context).colorScheme.primary,
       ),
     );

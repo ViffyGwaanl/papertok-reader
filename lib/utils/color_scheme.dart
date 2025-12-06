@@ -34,6 +34,7 @@ ThemeData colorSchema(
           onPrimary: Colors.white,
           secondary: Colors.grey,
           onSecondary: Colors.white,
+          secondaryContainer: Colors.white,
           surface: Colors.white,
           onSurface: Colors.black,
         )
