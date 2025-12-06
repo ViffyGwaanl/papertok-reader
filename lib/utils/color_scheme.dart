@@ -32,9 +32,12 @@ ThemeData colorSchema(
       ? const ColorScheme.light(
           primary: Colors.black,
           onPrimary: Colors.white,
+          primaryContainer: Colors.grey,
+          onPrimaryContainer: Colors.black,
           secondary: Colors.grey,
           onSecondary: Colors.white,
-          secondaryContainer: Colors.white,
+          secondaryContainer: Colors.black12,
+          onSecondaryContainer: Colors.black,
           surface: Colors.white,
           onSurface: Colors.black,
         )
