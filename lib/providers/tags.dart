@@ -10,8 +10,7 @@ part 'tags.g.dart';
 int _compareTagName(Tag a, Tag b) {
   String toPinyin(String value) {
     try {
-      return PinyinHelper.getPinyin(value,
-          format: PinyinFormat.WITHOUT_TONE);
+      return PinyinHelper.getPinyin(value, format: PinyinFormat.WITHOUT_TONE);
     } catch (_) {
       return value;
     }
