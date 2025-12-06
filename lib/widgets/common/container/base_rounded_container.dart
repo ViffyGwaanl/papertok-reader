@@ -36,7 +36,7 @@ abstract class BaseRoundedContainer extends StatelessWidget {
     return AnimatedContainer(
       duration: animationDuration,
       curve: animationCurve,
-      margin: margin,
+      margin: margin?.add(const EdgeInsets.all(1)) ?? const EdgeInsets.all(1),
       width: width,
       height: height,
       constraints: constraints,

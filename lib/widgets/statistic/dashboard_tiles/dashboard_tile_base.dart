@@ -145,7 +145,7 @@ abstract class StatisticsDashboardTileBase {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           FilledContainer(
-            height: flipTitleSize - spacing - 3,
+            height: flipTitleSize - spacing - 5,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             color: theme.colorScheme.primaryContainer,
             child: Column(
@@ -184,9 +184,8 @@ abstract class StatisticsDashboardTileBase {
           Row(
             children: [
               Expanded(
-                child: FilledContainer(
+                child: Container(
                     margin: const EdgeInsets.all(12),
-                    radius: 18,
                     height: flipSquareSize * metadata.rowSpan -
                         12 * 2, // minus margin
                     child: flipContent),

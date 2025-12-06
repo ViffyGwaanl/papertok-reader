@@ -123,7 +123,7 @@ class _ContinueReadingContent extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 subtitle,
                 style: theme.textTheme.labelSmall,
