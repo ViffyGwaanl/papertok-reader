@@ -1,3 +1,5 @@
+import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/enums/bookshelf_folder_style.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/models/tb_group.dart';
 import 'package:anx_reader/providers/book_list.dart';
@@ -5,8 +7,10 @@ import 'package:anx_reader/providers/tb_groups.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
 import 'package:anx_reader/widgets/bookshelf/book_item.dart';
 import 'package:anx_reader/widgets/bookshelf/book_opened_folder.dart';
+import 'package:anx_reader/widgets/common/container/outlined_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 class BookFolder extends ConsumerStatefulWidget {
   const BookFolder({
@@ -25,6 +29,8 @@ class _BookFolderState extends ConsumerState<BookFolder> {
 
   @override
   Widget build(BuildContext context) {
+    final folderStyle = context.watch<Prefs>().bookshelfFolderStyle;
+
     void onAcceptBook(DragTargetDetails<Book> details) {
       int targetGroupId;
       if (widget.books.first.groupId == 0) {
@@ -96,49 +102,91 @@ class _BookFolderState extends ConsumerState<BookFolder> {
       onWillAcceptWithDetails: (data) => onWillAcceptBook(data),
       onLeave: (data) => onLeaveBook(data),
       builder: (context, candidateData, rejectedData) {
-        double topPosition = -10;
+        int count = -1;
+
+        Widget buildStackedPreview() {
+          return Stack(
+            children: [
+              ...(widget.books.take(4).toList()).map((book) {
+                count++;
+                return Positioned.fill(
+                  right: 0,
+                  top: 30 - count * 20.0,
+                  child: Transform.scale(
+                    scale: 1 - (count * 0.08),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                          width: 1,
+                        ),
+                      ),
+                      child: BookCover(book: book),
+                    ),
+                  ),
+                );
+              }),
+            ].reversed.toList(),
+          );
+        }
+
+        Widget buildGridPreview() {
+          final previewBooks = widget.books.take(4).toList();
+          return OutlinedContainer(
+            color: Colors.transparent,
+            outlineColor: Theme.of(context).colorScheme.outlineVariant,
+            padding: const EdgeInsets.all(6),
+            radius: 10,
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 1 / 1.6,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 6,
+              ),
+              itemCount: 4,
+              itemBuilder: (context, index) {
+                if (index >= previewBooks.length) {
+                  return SizedBox.shrink();
+                }
+                final book = previewBooks[index];
+                return BookCover(book: book);
+              },
+            ),
+          );
+        }
+
+        Widget folderPreview;
+        switch (folderStyle) {
+          case BookshelfFolderStyle.grid2x2:
+            folderPreview = buildGridPreview();
+            break;
+          case BookshelfFolderStyle.stacked:
+            folderPreview = buildStackedPreview();
+        }
+
         return scaleTransition(
           Column(
             children: [
               Expanded(
                 child: InkWell(
                   onTap: () => openFolder(groupName),
-                  child: Stack(
-                    children: [
-                      ...(widget.books.length >= 4
-                              ? widget.books.sublist(0, 3)
-                              : widget.books)
-                          .reversed
-                          .map((book) {
-                        topPosition += 10;
-                        return Positioned.fill(
-                          right: 0,
-                          top: topPosition,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
-                                width: 1,
-                              ),
-                            ),
-                            child: BookCover(book: book),
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
+                  child: folderPreview,
                 ),
               ),
-              Text(
-                groupName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+              SizedBox(
+                height: 50,
+                child: Text(
+                  groupName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -1,5 +1,6 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:anx_reader/widgets/settings/simple_dialog.dart';
 import 'package:anx_reader/widgets/settings/theme_mode.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
+import 'package:anx_reader/enums/bookshelf_folder_style.dart';
 
 const List<Map<String, String>> languageOptions = [
   {'system': 'System'},
@@ -145,6 +147,33 @@ class _AppearanceSettingState extends State<AppearanceSetting> {
                       ),
                     ),
                   ],
+                ),
+              )),
+              CustomSettingsTile(
+                  child: ListTile(
+                title: const Text('Bookshelf folder style //todo'),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: AnxSegmentedButton<BookshelfFolderStyle>(
+                    segments: const [
+                      SegmentButtonItem(
+                        label: 'Overlap //todo',
+                        value: BookshelfFolderStyle.stacked,
+                        icon: Icon(Icons.layers),
+                      ),
+                      SegmentButtonItem(
+                        label: '2x2 Grid //todo',
+                        value: BookshelfFolderStyle.grid2x2,
+                        icon: Icon(Icons.grid_view),
+                      ),
+                    ],
+                    selected: {Prefs().bookshelfFolderStyle},
+                    onSelectionChanged: (value) {
+                      setState(() {
+                        Prefs().bookshelfFolderStyle = value.first;
+                      });
+                    },
+                  ),
                 ),
               )),
               // SettingsTile.switchTile(

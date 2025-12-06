@@ -13,7 +13,12 @@ class OutlinedContainer extends BaseRoundedContainer {
     super.constraints,
     super.animationDuration,
     super.animationCurve,
+    this.color,
+    this.outlineColor,
   });
+
+  final Color? color;
+  final Color? outlineColor;
 
   @override
   ShapeDecoration decoration(
@@ -21,9 +26,9 @@ class OutlinedContainer extends BaseRoundedContainer {
     BorderRadiusGeometry borderRadius,
   ) {
     return buildShapeDecoration(
-      color: Theme.of(context).colorScheme.surface,
+      color: color ?? Theme.of(context).colorScheme.surface,
       borderSide: BorderSide(
-          color: Theme.of(context).colorScheme.outline,
+          color: outlineColor ?? Theme.of(context).colorScheme.outline,
           width: 1,
           strokeAlign: BorderSide.strokeAlignOutside),
       borderRadius: borderRadius,

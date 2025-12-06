@@ -4,6 +4,7 @@ import 'dart:core';
 import 'package:anx_reader/enums/ai_prompts.dart';
 import 'package:anx_reader/enums/bgimg_alignment.dart';
 import 'package:anx_reader/enums/bgimg_type.dart';
+import 'package:anx_reader/enums/bookshelf_folder_style.dart';
 import 'package:anx_reader/enums/convert_chinese_mode.dart';
 import 'package:anx_reader/enums/excerpt_share_template.dart';
 import 'package:anx_reader/enums/hint_key.dart';
@@ -902,6 +903,18 @@ class Prefs extends ChangeNotifier {
 
   double get bookCoverWidth {
     return prefs.getDouble('bookCoverWidth') ?? 120;
+  }
+
+  set bookshelfFolderStyle(BookshelfFolderStyle style) {
+    prefs.setString('bookshelfFolderStyle', style.code);
+    notifyListeners();
+  }
+
+  BookshelfFolderStyle get bookshelfFolderStyle {
+    return BookshelfFolderStyle.fromCode(
+      prefs.getString('bookshelfFolderStyle') ??
+          BookshelfFolderStyle.stacked.code,
+    );
   }
 
   set openBookAnimation(bool status) {
