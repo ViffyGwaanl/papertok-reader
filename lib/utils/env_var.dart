@@ -8,7 +8,6 @@ class EnvVar {
       String.fromEnvironment('isPlayStore', defaultValue: 'false') == 'true';
   static const bool isFdroid =
       String.fromEnvironment('isFdroid', defaultValue: 'false') == 'true';
-   
 
   static bool get _isChineseMainlandLocale =>
       Platform.localeName == 'zh_Hans_CN';
