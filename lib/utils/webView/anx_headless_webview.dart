@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/utils/log/common.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -13,14 +12,14 @@ class AnxHeadlessWebView {
   final URLRequest initialUrlRequest;
   final InAppWebViewSettings? initialSettings;
   final void Function(InAppWebViewController controller)? onWebViewCreated;
-  final void Function(InAppWebViewController controller, WebUri? url)?
+  final void Function(InAppWebViewController controller, Uri? url)?
       onLoadStop;
   final void Function(
           InAppWebViewController controller, ConsoleMessage consoleMessage)?
       onConsoleMessage;
-  final void Function(InAppWebViewController controller, WebUri? url, int code,
+  final void Function(InAppWebViewController controller, Uri? url, int code,
       String message)? onLoadError;
-  final void Function(InAppWebViewController controller, WebUri? url,
+  final void Function(InAppWebViewController controller, Uri? url,
       int statusCode, String description)? onLoadHttpError;
   final WebViewEnvironment? webViewEnvironment;
 
