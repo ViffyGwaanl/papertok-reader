@@ -12,8 +12,7 @@ class AnxHeadlessWebView {
   final URLRequest initialUrlRequest;
   final InAppWebViewSettings? initialSettings;
   final void Function(InAppWebViewController controller)? onWebViewCreated;
-  final void Function(InAppWebViewController controller, Uri? url)?
-      onLoadStop;
+  final void Function(InAppWebViewController controller, Uri? url)? onLoadStop;
   final void Function(
           InAppWebViewController controller, ConsoleMessage consoleMessage)?
       onConsoleMessage;
