@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/foundation.dart';
@@ -36,7 +38,7 @@ class AnxHeadlessWebView {
   Future<void> run() async {
     bool useOverlay = false;
     try {
-      if (TargetPlatform.ohos == defaultTargetPlatform) {
+      if (Platform.operatingSystem == 'ohos') {
         useOverlay = true;
       }
     } catch (e) {
