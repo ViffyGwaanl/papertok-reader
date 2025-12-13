@@ -169,7 +169,7 @@ Future<void> openAboutDialog() async {
                   title: Text(L10n.of(context).aboutPrivacyPolicy),
                   onTap: () async {
                     launchUrl(
-                      Uri.parse('https://anx.anxcye.com/privacy.html'),
+                      Uri.parse('https://anx.anxcye.com/privacy'),
                       mode: LaunchMode.externalApplication,
                     );
                   },
@@ -178,7 +178,7 @@ Future<void> openAboutDialog() async {
                   title: Text(L10n.of(context).aboutTermsOfUse),
                   onTap: () async {
                     launchUrl(
-                      Uri.parse('https://anx.anxcye.com/terms.html'),
+                      Uri.parse('https://anx.anxcye.com/terms'),
                       mode: LaunchMode.externalApplication,
                     );
                   },
