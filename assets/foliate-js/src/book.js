@@ -1272,6 +1272,7 @@ class Reader {
     const totalPages = currentSectionPages / (nextSectionStart - currentSectionStart)
 
     const getFractionByHref = (href) => {
+      if (!href) return 0;
       href = href.split('#')[0]
       const section = sectionFractions.find(s => s.href === href)
       return section ? section.fraction : 0
