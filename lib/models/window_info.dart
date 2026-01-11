@@ -10,6 +10,7 @@ abstract class WindowInfo with _$WindowInfo {
     required double y,
     required double width,
     required double height,
+    @Default(false) bool isMaximized,
   }) = _WindowInfo;
 
   factory WindowInfo.fromJson(Map<String, dynamic> json) =>
