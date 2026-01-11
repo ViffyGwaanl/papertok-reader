@@ -40,12 +40,19 @@ Future<void> main() async {
       Prefs().windowInfo.y,
     );
 
+    final isMaximized = Prefs().windowInfo.isMaximized;
+
     WindowManager.instance.setTitle('Anx Reader');
-    if (size.width > 0 && size.height > 0) {
+
+    if (isMaximized) {
+      await WindowManager.instance.maximize();
+    } else if (size.width > 0 && size.height > 0) {
       await WindowManager.instance.setPosition(offset);
       await WindowManager.instance.setSize(size);
     }
-    await WindowManager.instance.show();
+
+    // await WindowManager.instance.show();
+
     await WindowManager.instance.focus();
   }
 
@@ -108,6 +115,16 @@ class _MyAppState extends ConsumerState<MyApp>
   }
 
   @override
+  Future<void> onWindowMaximize() async {
+    await _updateWindowInfo();
+  }
+
+  @override
+  Future<void> onWindowUnmaximize() async {
+    await _updateWindowInfo();
+  }
+
+  @override
   Future<void> onWindowResized() async {
     await _updateWindowInfo();
   }
@@ -118,12 +135,14 @@ class _MyAppState extends ConsumerState<MyApp>
     }
     final windowOffset = await windowManager.getPosition();
     final windowSize = await windowManager.getSize();
+    final isMaximized = await windowManager.isMaximized();
 
     Prefs().windowInfo = WindowInfo(
       x: windowOffset.dx,
       y: windowOffset.dy,
       width: windowSize.width,
       height: windowSize.height,
+      isMaximized: isMaximized
     );
     AnxLog.info('onWindowClose: Offset: $windowOffset, Size: $windowSize');
   }
