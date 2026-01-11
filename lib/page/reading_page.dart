@@ -488,6 +488,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   @override
   Widget build(BuildContext context) {
     var aiButton = IconButton(
+      tooltip: L10n.of(context).aiChat,
       icon: const Icon(Icons.auto_awesome),
       onPressed: () async {
         if (MediaQuery.of(context).size.width > 600 && _aiChat != null) {
@@ -532,6 +533,27 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                   actions: [
                     aiButton,
                     IconButton(
+                      icon: const Icon(Icons.copy),
+                      tooltip: L10n.of(context).readingPageCopyChapterContent,
+                      onPressed: () async {
+                        try {
+                          var content = await epubPlayerKey.currentState
+                              ?.theChapterContent();
+                          var len = content?.length ?? 0;
+                          if (len > 0) {
+                            await Clipboard.setData(
+                                ClipboardData(text: content!));
+                          }
+                          AnxToast.show(L10n.of(context)
+                              .readingPageCopiedCharacters(len));
+                        } catch (e) {
+                          AnxToast.show(
+                              L10n.of(context).readingPageErrorCopyingContent);
+                        }
+                      },
+                    ),
+                    IconButton(
+                        tooltip: L10n.of(context).readingPageBookmark,
                         onPressed: () {
                           if (bookmarkExists) {
                             epubPlayerKey.currentState!.removeAnnotation(
@@ -545,6 +567,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                             ? const Icon(Icons.bookmark)
                             : const Icon(Icons.bookmark_border)),
                     IconButton(
+                      tooltip: L10n.of(context).readingPageBookDetails,
                       icon: const Icon(EvaIcons.more_vertical),
                       onPressed: () {
                         Navigator.push(
