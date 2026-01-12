@@ -66,13 +66,32 @@ class TtsHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       ));
     }
 
-    mediaItem.add(MediaItem(
+    final item = MediaItem(
       id: epubPlayerKey.currentState!.chapterTitle,
       title: epubPlayerKey.currentState!.chapterTitle,
       album: epubPlayerKey.currentState!.book.title,
       artist: epubPlayerKey.currentState!.book.author,
+      // Use -1 to tell system not to render a progress bar.
+      duration: const Duration(milliseconds: -1),
       artUri: Uri.tryParse(
           'file://${epubPlayerKey.currentState!.book.coverFullPath}'),
+    );
+
+    // Ensure system receives queue + active index for control center metadata.
+    queue.add([item]);
+    mediaItem.add(item);
+    playbackState.add(playbackState.value.copyWith(
+      controls: [
+        MediaControl.skipToPrevious,
+        MediaControl.pause,
+        MediaControl.stop,
+        MediaControl.skipToNext,
+      ],
+      processingState: AudioProcessingState.ready,
+      playing: true,
+      queueIndex: 0,
+      updatePosition: Duration.zero,
+      bufferedPosition: Duration.zero,
     ));
     if (tts.ttsStateNotifier.value == TtsStateEnum.paused) {
       tts.updateTtsState(TtsStateEnum.playing);
@@ -87,6 +106,7 @@ class TtsHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   Future<void> pause() async {
     playbackState.add(playbackState.value.copyWith(
       controls: [MediaControl.play, MediaControl.stop],
+      queueIndex: queue.value.isNotEmpty ? 0 : null,
       processingState: AudioProcessingState.ready,
       playing: false,
     ));
@@ -99,6 +119,7 @@ class TtsHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   Future<void> stop() async {
     playbackState.add(playbackState.value.copyWith(
       controls: [],
+      queueIndex: null,
       processingState: AudioProcessingState.idle,
       playing: false,
     ));
@@ -106,6 +127,16 @@ class TtsHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     tts.updateTtsState(TtsStateEnum.stopped);
     await tts.stop();
     epubPlayerKey.currentState?.ttsStop();
+  }
+
+  @override
+  Future<void> skipToNext() async {
+    await playNext();
+  }
+
+  @override
+  Future<void> skipToPrevious() async {
+    await playPrevious();
   }
 
   Future<void> playPrevious() async {

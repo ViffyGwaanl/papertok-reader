@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 Future<Directory> getAnxCacheDir() async {
   switch (AnxPlatform.type) {
     case AnxPlatformEnum.android:
+    case AnxPlatformEnum.ohos:
     case AnxPlatformEnum.windows:
     case AnxPlatformEnum.macos:
     case AnxPlatformEnum.ios:

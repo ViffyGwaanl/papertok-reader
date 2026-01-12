@@ -4,6 +4,7 @@ import 'package:anx_reader/dao/book_note.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book_note.dart';
 import 'package:anx_reader/page/reading_page.dart';
+import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/book_share/excerpt_share_service.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
@@ -300,6 +301,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
           if (!widget.footnote)
             InkWell(
               onTap: () async {
+                epubPlayerKey.currentState?.setSelectionClearLocked(true);
                 await onColorSelected(annoColor, close: false);
                 final targetId = noteId ?? widget.id;
                 if (targetId != null) {
@@ -314,24 +316,25 @@ class ExcerptMenuState extends State<ExcerptMenu> {
               ),
             ),
           // AI chat
-          InkWell(
-            onTap: () {
-              widget.onClose();
-              final key = readingPageKey.currentState;
-              if (key != null) {
-                key.showAiChat(
-                  content: widget.annoContent,
-                  sendImmediate: false,
-                );
-                key.aiChatKey.currentState?.inputController.text =
-                    widget.annoContent;
-              }
-            },
-            child: IconAndText(
-              icon: const Icon(EvaIcons.message_circle_outline),
-              text: L10n.of(context).navBarAI,
+          if (EnvVar.enableAIFeature)
+            InkWell(
+              onTap: () {
+                widget.onClose();
+                final key = readingPageKey.currentState;
+                if (key != null) {
+                  key.showAiChat(
+                    content: widget.annoContent,
+                    sendImmediate: false,
+                  );
+                  key.aiChatKey.currentState?.inputController.text =
+                      widget.annoContent;
+                }
+              },
+              child: IconAndText(
+                icon: const Icon(EvaIcons.message_circle_outline),
+                text: L10n.of(context).navBarAI,
+              ),
             ),
-          ),
           // share
           InkWell(
             onTap: () {

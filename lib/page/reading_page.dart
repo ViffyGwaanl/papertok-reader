@@ -16,6 +16,7 @@ import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/service/ai/prompt_generate.dart';
+import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ui/status_bar.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
@@ -531,7 +532,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                     },
                   ),
                   actions: [
-                    aiButton,
+                    if (EnvVar.enableAIFeature) aiButton,
                     IconButton(
                       icon: const Icon(Icons.copy),
                       tooltip: L10n.of(context).readingPageCopyChapterContent,

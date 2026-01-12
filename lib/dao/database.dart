@@ -118,6 +118,7 @@ class DBHelper {
     switch (AnxPlatform.type) {
       case AnxPlatformEnum.macos:
       case AnxPlatformEnum.android:
+      case AnxPlatformEnum.ohos:
         final databasePath = await getAnxDataBasesPath();
         final path = join(databasePath, 'app_database.db');
         return await openDatabase(

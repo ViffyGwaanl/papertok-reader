@@ -17,6 +17,7 @@ Future<String?> saveFileToDownload(
   switch (AnxPlatform.type) {
     case AnxPlatformEnum.android:
     case AnxPlatformEnum.ios:
+    case AnxPlatformEnum.ohos:
       SaveFileDialogParams params = SaveFileDialogParams(
         sourceFilePath: sourceFilePath,
         data: bytes,

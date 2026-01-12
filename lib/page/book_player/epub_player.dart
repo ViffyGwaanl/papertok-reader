@@ -98,6 +98,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   bool bookmarkExists = false;
   WritingModeEnum writingMode = WritingModeEnum.horizontalTb;
   String? _lastSelectionContextText;
+  bool _selectionClearLocked = false;
+  bool _selectionClearPending = false;
 
   // to know anytime if we are on top of navigation stack
   bool get _isTopOfNavigationStack =>
@@ -135,6 +137,15 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     await webViewController.evaluateJavascript(source: '''
       goToPercent($value); 
       ''');
+  }
+
+  void setSelectionClearLocked(bool locked) {
+    _selectionClearLocked = locked;
+    if (!locked && _selectionClearPending) {
+      _selectionClearPending = false;
+      _lastSelectionContextText = null;
+      removeOverlay();
+    }
   }
 
   void changeTheme(ReadTheme readTheme) {
@@ -639,6 +650,10 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     controller.addJavaScriptHandler(
         handlerName: 'onSelectionCleared',
         callback: (args) {
+          if (_selectionClearLocked) {
+            _selectionClearPending = true;
+            return;
+          }
           _lastSelectionContextText = null;
           removeOverlay();
         });
@@ -805,6 +820,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   }
 
   void removeOverlay() {
+    _selectionClearLocked = false;
+    _selectionClearPending = false;
     if (contextMenuEntry == null || contextMenuEntry?.mounted == false) return;
     contextMenuEntry?.remove();
     contextMenuEntry = null;

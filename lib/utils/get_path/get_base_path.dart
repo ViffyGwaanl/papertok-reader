@@ -10,6 +10,7 @@ Future<String> getAnxDocumentsPath() async {
   final directory = await getApplicationDocumentsDirectory();
   switch (AnxPlatform.type) {
     case AnxPlatformEnum.android:
+    case AnxPlatformEnum.ohos:
       return directory.path;
     case AnxPlatformEnum.windows:
       // return '${directory.path}\\AnxReader';

@@ -32,14 +32,16 @@ class DatabaseSyncManager {
     required String remoteDbFileName,
     void Function(int received, int total)? onProgress,
   }) async {
-    final cacheDir = await getAnxCacheDir();
     final databasesPath = await getAnxDataBasesPath();
+    final cacheDir = AnxPlatform.isOhos
+        ? '${await getAnxDataBasesPath()}/cache'
+        : (await getAnxCacheDir()).path;
     final localDbPath = join(databasesPath, 'app_database.db');
 
     // Generate temp file name (use timestamp to ensure uniqueness)
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final tempDbName = '$_tempDbPrefix$timestamp.db';
-    final tempDbPath = join(cacheDir.path, tempDbName);
+    final tempDbPath = join(cacheDir, tempDbName);
 
     try {
       AnxLog.info('DatabaseSync: Starting safe database download');

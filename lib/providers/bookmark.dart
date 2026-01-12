@@ -75,7 +75,7 @@ class Bookmark extends _$Bookmark {
       }
 
       final db = DBHelper().database;
-      db.then((database) {
+      db.then((Database database) {
         database.delete(
           'tb_notes',
           where: 'id = ?',

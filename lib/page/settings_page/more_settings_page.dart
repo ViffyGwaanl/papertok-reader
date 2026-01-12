@@ -10,6 +10,7 @@ import 'package:anx_reader/page/settings_page/settings_page.dart';
 import 'package:anx_reader/page/settings_page/storege.dart';
 import 'package:anx_reader/page/settings_page/sync.dart';
 import 'package:anx_reader/page/settings_page/translate.dart';
+import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -117,15 +118,16 @@ class _SubMoreSettingsState extends State<SubMoreSettings> {
                   L10n.of(context).settingsTranslate,
                 ],
               },
-              {
-                "title": L10n.of(context).settingsAi,
-                "icon": Icons.auto_awesome,
-                "sections": const AISettings(),
-                "subtitles": [
-                  L10n.of(context).settingsAiServices,
-                  L10n.of(context).settingsAiPrompt,
-                ],
-              },
+              if (EnvVar.enableAIFeature)
+                {
+                  "title": L10n.of(context).settingsAi,
+                  "icon": Icons.auto_awesome,
+                  "sections": const AISettings(),
+                  "subtitles": [
+                    L10n.of(context).settingsAiServices,
+                    L10n.of(context).settingsAiPrompt,
+                  ],
+                },
               {
                 "title": L10n.of(context).storage,
                 "icon": Icons.storage_outlined,
