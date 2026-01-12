@@ -1,10 +1,10 @@
-import 'dart:io';
 
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/iap_state.dart';
 import 'package:anx_reader/service/iap/iap_service.dart';
 import 'package:anx_reader/providers/iap.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
@@ -127,9 +127,9 @@ class IAPPage extends ConsumerWidget {
                     );
                   }),
                   const SizedBox(height: 30),
-                  if (Platform.isMacOS || Platform.isIOS)
+                  if (AnxPlatform.isMacOS || AnxPlatform.isIOS)
                     Text(L10n.of(context).iapPageRestoreHint),
-                  if (Platform.isAndroid)
+                  if (AnxPlatform.isAndroid)
                     Text(L10n.of(context).iapPageRestoreHintPlayStore),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,

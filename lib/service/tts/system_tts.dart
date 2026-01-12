@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/page/reading_page.dart';
@@ -37,9 +37,9 @@ class SystemTts extends BaseTts {
     ttsStateNotifier.value = newState;
   }
 
-  bool get isIOS => !kIsWeb && Platform.isIOS;
-  bool get isAndroid => !kIsWeb && Platform.isAndroid;
-  bool get isWindows => !kIsWeb && Platform.isWindows;
+  bool get isIOS => AnxPlatform.isIOS;
+  bool get isAndroid => AnxPlatform.isAndroid;
+  bool get isWindows => AnxPlatform.isWindows;
   bool get isWeb => kIsWeb;
 
   @override

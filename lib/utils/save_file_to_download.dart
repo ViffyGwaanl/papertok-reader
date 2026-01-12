@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/utils/get_path/get_download_path.dart';
 import 'package:file_picker/file_picker.dart';
@@ -13,9 +14,9 @@ Future<String?> saveFileToDownload(
   String downloadPath = await getDownloadPath();
   String fileSavePath = '$downloadPath/$fileName';
 
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
-    case TargetPlatform.iOS:
+  switch (AnxPlatform.type) {
+    case AnxPlatformEnum.android:
+    case AnxPlatformEnum.ios:
       SaveFileDialogParams params = SaveFileDialogParams(
         sourceFilePath: sourceFilePath,
         data: bytes,
@@ -24,7 +25,7 @@ Future<String?> saveFileToDownload(
       );
       final filePath = await FlutterFileDialog.saveFile(params: params);
       return filePath;
-    case TargetPlatform.macOS:
+    case AnxPlatformEnum.macos:
       String? outputFile = await FilePicker.platform.saveFile(
         fileName: fileName,
       );
@@ -35,7 +36,7 @@ Future<String?> saveFileToDownload(
         return outputFile;
       }
       return outputFile;
-    case TargetPlatform.windows:
+    case AnxPlatformEnum.windows:
       final file = File(fileSavePath);
 
       if (!await file.exists()) {
@@ -45,7 +46,5 @@ Future<String?> saveFileToDownload(
       bytes ??= await File(sourceFilePath!).readAsBytes();
       await file.writeAsBytes(bytes);
       return fileSavePath;
-    default:
-      throw Exception('Unsupported platform');
-  }
+    }
 }

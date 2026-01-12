@@ -1,4 +1,5 @@
 import 'dart:io' as io;
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/dao/database.dart';
 import 'package:anx_reader/service/sync/sync_client_base.dart';
 import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
@@ -125,7 +126,7 @@ class DatabaseSyncManager {
       Database? db;
       try {
         // Platform-specific database opening
-        if (io.Platform.isWindows) {
+        if (AnxPlatform.isWindows) {
           sqfliteFfiInit();
           db = await databaseFactoryFfi.openDatabase(
             dbPath,

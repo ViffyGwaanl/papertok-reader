@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/book.dart';
@@ -32,6 +31,7 @@ import 'package:anx_reader/providers/toc_search.dart';
 import 'package:anx_reader/service/tts/models/tts_sentence.dart';
 import 'package:anx_reader/utils/coordinates_to_part.dart';
 import 'package:anx_reader/utils/js/convert_dart_color_to_js.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/models/book_note.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/webView/gererate_url.dart';
@@ -791,7 +791,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   }
 
   Future<void> onWebViewCreated(InAppWebViewController controller) async {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    if (AnxPlatform.isAndroid) {
       await InAppWebViewController.setWebContentsDebuggingEnabled(true);
     }
     webViewController = controller;
@@ -1023,7 +1023,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       onConsoleMessage: webviewConsoleMessage,
     );
 
-    if (!Platform.isIOS) {
+    if (!AnxPlatform.isIOS) {
       return SizedBox.expand(child: webView);
     }
 

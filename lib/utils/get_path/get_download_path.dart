@@ -1,27 +1,25 @@
 import 'dart:io';
+import 'package:anx_reader/utils/platform_utils.dart';
 
-import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 
 // from localsend
 Future<String> getDownloadPath() async {
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
+  switch (AnxPlatform.type) {
+    case AnxPlatformEnum.android:
       var status = await Permission.manageExternalStorage.status;
       if (!status.isGranted) {
         await Permission.manageExternalStorage.request();
       }
       return '/storage/emulated/0/Download';
-    case TargetPlatform.iOS:
+    case AnxPlatformEnum.ios:
       return (await path.getApplicationDocumentsDirectory()).path;
-    case TargetPlatform.linux:
-    case TargetPlatform.macOS:
-    case TargetPlatform.windows:
-    case TargetPlatform.fuchsia:
+    case AnxPlatformEnum.macos:
+    case AnxPlatformEnum.windows:
       var downloadDir = await path.getDownloadsDirectory();
       if (downloadDir == null) {
-        if (defaultTargetPlatform == TargetPlatform.windows) {
+        if (AnxPlatform.isWindows) {
           downloadDir =
               Directory('${Platform.environment['HOMEPATH']}/Downloads');
           if (!downloadDir.existsSync()) {

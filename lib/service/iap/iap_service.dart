@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:in_app_purchase/in_app_purchase.dart';
 
@@ -69,13 +69,13 @@ class IAPService {
   BaseIAPService get delegate => _delegate;
 
   static BaseIAPService _buildDelegate() {
-    if (Platform.isIOS || Platform.isMacOS) {
+    if (AnxPlatform.isIOS || AnxPlatform.isMacOS) {
       return AppStoreIAPService(
         trialDays: kTrialDays,
       );
     }
 
-    if (Platform.isAndroid) {
+    if (AnxPlatform.isAndroid) {
       return PlayStoreIAPService(
         trialDays: kTrialDays,
       );

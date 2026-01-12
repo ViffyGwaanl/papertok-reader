@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/database.dart';
@@ -29,7 +29,7 @@ final heroineController = HeroineController();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Prefs().initPrefs();
-  if (Platform.isWindows) {
+  if (AnxPlatform.isWindows) {
     await windowManager.ensureInitialized();
     final size = Size(
       Prefs().windowInfo.width,
@@ -130,7 +130,7 @@ class _MyAppState extends ConsumerState<MyApp>
   }
 
   Future<void> _updateWindowInfo() async {
-    if (!Platform.isWindows) {
+    if (!AnxPlatform.isWindows) {
       return;
     }
     final windowOffset = await windowManager.getPosition();
@@ -157,7 +157,7 @@ class _MyAppState extends ConsumerState<MyApp>
             .syncData(SyncDirection.both, ref, trigger: SyncTrigger.auto);
       }
     } else if (state == AppLifecycleState.resumed) {
-      if (Platform.isIOS) {
+      if (AnxPlatform.isIOS) {
         Server().start();
       }
     }

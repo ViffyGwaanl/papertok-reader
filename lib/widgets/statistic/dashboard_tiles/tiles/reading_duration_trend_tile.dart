@@ -17,6 +17,7 @@ abstract class _BaseReadingDurationTile extends StatisticsDashboardTileBase {
     required this.days,
   });
 
+  @override
   final StatisticsDashboardTileType type;
   final String Function(L10n l10n) titleBuilder;
   final String Function(L10n l10n) descriptionBuilder;

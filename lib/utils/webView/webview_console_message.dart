@@ -1,6 +1,6 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/utils/log/common.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -42,8 +42,7 @@ void handleWebviewVersion(String message) {
     int appleWebkitVersion =
         int.tryParse(message.split('AppleWebKit/')[1].split('.')[0]) ?? -1;
 
-    bool isApple = defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS;
+    bool isApple = AnxPlatform.isIOS || AnxPlatform.isMacOS;
 
     if ((!isApple && (webviewVersion < minWebviewVersion)) ||
         (isApple && (appleWebkitVersion < 605))) {

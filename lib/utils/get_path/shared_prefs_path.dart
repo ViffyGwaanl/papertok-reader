@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
-import 'package:flutter/foundation.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:path_provider/path_provider.dart';
 
 // Future<Directory> getAnxSharedPrefsDir() async {
@@ -19,39 +19,35 @@ import 'package:path_provider/path_provider.dart';
 // }
 
 String getSharedPrefsFileName() {
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
+  switch (AnxPlatform.type) {
+    case AnxPlatformEnum.android:
       return 'FlutterSharedPreferences.xml';
-    case TargetPlatform.windows:
+    case AnxPlatformEnum.windows:
       return 'shared_preferences.json';
-    case TargetPlatform.macOS:
-    case TargetPlatform.iOS:
+    case AnxPlatformEnum.macos:
+    case AnxPlatformEnum.ios:
       return 'com.anxcye.anxReader.plist';
-    default:
-      throw Exception('Unsupported platform');
-  }
+    }
 }
 
 Future<File> getAnxShredPrefsFile() async {
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
+  switch (AnxPlatform.type) {
+    case AnxPlatformEnum.android:
       final docPath = await getAnxDocumentsPath();
       final sharedPrefsDirPath =
           '${docPath.split('/app_flutter')[0]}/shared_prefs';
       return File('$sharedPrefsDirPath/${getSharedPrefsFileName()}');
 
-    case TargetPlatform.windows:
+    case AnxPlatformEnum.windows:
       return File(
           "${(await getApplicationSupportDirectory()).path}\\${getSharedPrefsFileName()}");
-    case TargetPlatform.macOS:
+    case AnxPlatformEnum.macos:
       final baseDir =
           '${(await getAnxDocumentsPath()).split('Documents')[0]}Library/Preferences';
       return File("$baseDir/${getSharedPrefsFileName()}");
-    case TargetPlatform.iOS:
+    case AnxPlatformEnum.ios:
       final baseDir =
           '${((await getApplicationDocumentsDirectory()).path).split('Documents')[0]}Library/Preferences';
       return File("$baseDir/${getSharedPrefsFileName()}");
-    default:
-      throw Exception('Unsupported platform');
-  }
+    }
 }

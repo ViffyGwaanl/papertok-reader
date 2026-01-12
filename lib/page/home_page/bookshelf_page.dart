@@ -16,6 +16,7 @@ import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/page/search/search_page.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
 import 'package:anx_reader/utils/color/hash_color.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/widgets/bookshelf/book_bottom_sheet.dart';
 import 'package:anx_reader/widgets/bookshelf/book_folder.dart';
@@ -88,7 +89,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
     // FilePicker on Windows will return files with original path,
     // but on Android it will return files with temporary path.
     // So we need to save the files to the temp directory.
-    if (!Platform.isAndroid) {
+    if (!AnxPlatform.isAndroid) {
       fileList = await Future.wait(files.map((file) async {
         return _copyToTempFile(sourcePath: file.path!, fileName: file.name);
       }).toList());

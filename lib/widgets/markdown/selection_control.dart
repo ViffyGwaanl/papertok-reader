@@ -1,16 +1,14 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 
 TextSelectionControls selectionControls() {
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.iOS:
-    case TargetPlatform.macOS:
+  switch (AnxPlatform.type) {
+    case AnxPlatformEnum.ios:
+    case AnxPlatformEnum.macos:
       return CupertinoTextSelectionControls();
-    case TargetPlatform.android:
-    case TargetPlatform.fuchsia:
-    case TargetPlatform.linux:
-    case TargetPlatform.windows:
+    case AnxPlatformEnum.android:
+    case AnxPlatformEnum.windows:
       return MaterialTextSelectionControls();
   }
 }

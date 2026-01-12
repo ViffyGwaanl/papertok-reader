@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:anx_reader/dao/database.dart';
@@ -18,6 +17,7 @@ import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
 import 'package:anx_reader/utils/load_default_font.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/providers/iap.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
@@ -27,7 +27,6 @@ import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -116,11 +115,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
     loadDefaultFont();
 
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+    if (AnxPlatform.isWindows) {
       await _checkWindowsWebview();
     }
 
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (AnxPlatform.isAndroid || AnxPlatform.isIOS) {
       receiveShareIntent(ref);
     }
 

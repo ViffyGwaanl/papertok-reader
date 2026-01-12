@@ -1,5 +1,6 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/utils/save_file_to_download.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/toast/common.dart';
@@ -105,7 +106,7 @@ class SaveImg {
     String name,
   ) async {
     try {
-      if (defaultTargetPlatform != TargetPlatform.android) return true;
+      if (!AnxPlatform.isAndroid) return true;
       final deviceInfoPlugin = DeviceInfoPlugin();
       final deviceInfo = await deviceInfoPlugin.androidInfo;
       final sdkInt = deviceInfo.version.sdkInt;
@@ -163,16 +164,14 @@ class SaveImg {
   ) async {
     String picName =
         "AnxReader_${name}_${DateTime.now().toString().replaceAll(RegExp(r'[- :]'), '').split('.').first}";
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
+    switch (AnxPlatform.type) {
+      case AnxPlatformEnum.android:
         return await androidImgSaver(img, extension, picName);
-      case TargetPlatform.windows:
-      case TargetPlatform.macOS:
+      case AnxPlatformEnum.windows:
+      case AnxPlatformEnum.macos:
         return await windowsImgSaver(img, extension, picName);
-      case TargetPlatform.iOS:
+      case AnxPlatformEnum.ios:
         return await iosImgSaver(img, extension, name);
-      default:
-        throw Exception('Unsupported platform');
-    }
+      }
   }
 }

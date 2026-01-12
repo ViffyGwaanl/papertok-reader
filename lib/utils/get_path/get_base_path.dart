@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -7,22 +8,20 @@ String documentPath = '';
 
 Future<String> getAnxDocumentsPath() async {
   final directory = await getApplicationDocumentsDirectory();
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
+  switch (AnxPlatform.type) {
+    case AnxPlatformEnum.android:
       return directory.path;
-    case TargetPlatform.windows:
+    case AnxPlatformEnum.windows:
       // return '${directory.path}\\AnxReader';
       return (await getApplicationSupportDirectory()).path;
-    case TargetPlatform.linux:
-      final path = '${directory.path}/AnxReader';
-      return path;
-    case TargetPlatform.macOS:
+    // case TargetPlatform.linux:
+    //   final path = '${directory.path}/AnxReader';
+    //   return path;
+    case AnxPlatformEnum.macos:
       return directory.path;
-    case TargetPlatform.iOS:
+    case AnxPlatformEnum.ios:
       return (await getApplicationSupportDirectory()).path;
-    default:
-      throw Exception('Unsupported platform');
-  }
+    }
 }
 
 Future<Directory> getAnxDocumentDir() async {
