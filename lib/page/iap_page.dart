@@ -1,4 +1,3 @@
-
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/iap_state.dart';
 import 'package:anx_reader/service/iap/iap_service.dart';

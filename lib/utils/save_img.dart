@@ -172,6 +172,6 @@ class SaveImg {
         return await windowsImgSaver(img, extension, picName);
       case AnxPlatformEnum.ios:
         return await iosImgSaver(img, extension, name);
-      }
+    }
   }
 }

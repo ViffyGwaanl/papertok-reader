@@ -21,7 +21,7 @@ Future<String> getAnxDocumentsPath() async {
       return directory.path;
     case AnxPlatformEnum.ios:
       return (await getApplicationSupportDirectory()).path;
-    }
+  }
 }
 
 Future<Directory> getAnxDocumentDir() async {

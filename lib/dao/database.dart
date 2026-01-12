@@ -147,7 +147,7 @@ class DBHelper {
             onUpgrade: onUpgradeDatabase,
           ),
         );
-      }
+    }
   }
 
   static Future<void> close() async {

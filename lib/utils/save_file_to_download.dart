@@ -46,5 +46,5 @@ Future<String?> saveFileToDownload(
       bytes ??= await File(sourceFilePath!).readAsBytes();
       await file.writeAsBytes(bytes);
       return fileSavePath;
-    }
+  }
 }

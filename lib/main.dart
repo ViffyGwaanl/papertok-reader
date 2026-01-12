@@ -138,12 +138,11 @@ class _MyAppState extends ConsumerState<MyApp>
     final isMaximized = await windowManager.isMaximized();
 
     Prefs().windowInfo = WindowInfo(
-      x: windowOffset.dx,
-      y: windowOffset.dy,
-      width: windowSize.width,
-      height: windowSize.height,
-      isMaximized: isMaximized
-    );
+        x: windowOffset.dx,
+        y: windowOffset.dy,
+        width: windowSize.width,
+        height: windowSize.height,
+        isMaximized: isMaximized);
     AnxLog.info('onWindowClose: Offset: $windowOffset, Size: $windowSize');
   }
 

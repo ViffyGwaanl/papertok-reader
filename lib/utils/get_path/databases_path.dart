@@ -15,7 +15,7 @@ Future<String> getAnxDataBasesPath() async {
     case AnxPlatformEnum.ios:
       final documentsPath = await getAnxDocumentsPath();
       return '$documentsPath${Platform.pathSeparator}databases';
-    }
+  }
 }
 
 Future<Directory> getAnxDataBasesDir() async {

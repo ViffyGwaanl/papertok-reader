@@ -27,7 +27,7 @@ String getSharedPrefsFileName() {
     case AnxPlatformEnum.macos:
     case AnxPlatformEnum.ios:
       return 'com.anxcye.anxReader.plist';
-    }
+  }
 }
 
 Future<File> getAnxShredPrefsFile() async {
@@ -49,5 +49,5 @@ Future<File> getAnxShredPrefsFile() async {
       final baseDir =
           '${((await getApplicationDocumentsDirectory()).path).split('Documents')[0]}Library/Preferences';
       return File("$baseDir/${getSharedPrefsFileName()}");
-    }
+  }
 }

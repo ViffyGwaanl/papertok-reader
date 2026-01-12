@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-enum AnxPlatformEnum { android, ios, macos, windows/*, ohos*/ }
+enum AnxPlatformEnum { android, ios, macos, windows /*, ohos*/ }
 
 class AnxPlatform {
   static AnxPlatformEnum get type {

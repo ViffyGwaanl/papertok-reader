@@ -10,5 +10,5 @@ Future<Directory> getAnxCacheDir() async {
     case AnxPlatformEnum.macos:
     case AnxPlatformEnum.ios:
       return await getApplicationCacheDirectory();
-    }
+  }
 }
