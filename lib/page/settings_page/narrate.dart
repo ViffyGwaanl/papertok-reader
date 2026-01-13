@@ -344,11 +344,28 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                     )
                   : Center(
                       child: AnxFilledButton(
-                        onPressed: () {
+                        onPressed: () async {
                           setState(() {
                             _showVoiceList = true;
                           });
-                          ref.refresh(ttsVoicesProvider);
+                          final voices = await ref.refresh(ttsVoicesProvider.future);
+                          if (selectedVoiceModel == null && voices.isNotEmpty) {
+                            final currentLocale = Localizations.localeOf(context);
+                            final currentLangCode = currentLocale.languageCode;
+                            
+                            // Try to find a voice matching current language
+                            TtsVoice? match = voices.firstWhere(
+                              (v) => v.locale.toLowerCase().startsWith(currentLangCode.toLowerCase()),
+                              orElse: () => voices.firstWhere(
+                                // Fallback to English
+                                (v) => v.locale.toLowerCase().startsWith('en'),
+                                // Fallback to first available
+                                orElse: () => voices.first,
+                              ),
+                            );
+                            
+                            _selectVoiceModel(match.shortName);
+                          }
                         },
                         child:
                             Text(L10n.of(context).settingsNarrateGetVoiceList),
