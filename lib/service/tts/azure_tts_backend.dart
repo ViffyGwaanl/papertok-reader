@@ -26,8 +26,7 @@ class AzureTtsBackend extends OnlineTtsBackend {
       'Microsoft Azure provides 500,000 characters of free TTS usage per month. You need to apply for a Microsoft Azure TTS resource key to use this service.';
 
   @override
-  String get helpLink =>
-      'https://anx.anxcye.com/docs/tts/azure';
+  String get helpLink => 'https://anx.anxcye.com/docs/tts/azure';
 
   @override
   List<String> get configFields => ['key', 'region'];
