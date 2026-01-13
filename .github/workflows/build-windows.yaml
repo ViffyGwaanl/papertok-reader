@@ -69,6 +69,7 @@ jobs:
         shell: bash
 
       - name: Sign Windows zip
+        if: ${{ env.IS_ALPHA != 'true' }}
         uses: signpath/github-action-submit-signing-request@v1.1
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -99,6 +100,7 @@ jobs:
         shell: bash
 
       - name: Sign Windows exe
+        if: ${{ env.IS_ALPHA != 'true' }}
         uses: signpath/github-action-submit-signing-request@v1.1
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -109,6 +111,13 @@ jobs:
           github-artifact-id: ${{ steps.upload-unsigned-exe.outputs.artifact-id }}
           wait-for-completion: true
           output-artifact-directory: 'build/windows'
+
+      - name: Prepare unsigned artifacts for alpha
+        if: ${{ env.IS_ALPHA == 'true' }}
+        run: |
+          cp build/windows/unsigned/app.zip build/windows/app.zip
+          cp build/windows/unsigned/app.exe build/windows/app.exe
+        shell: bash
 
       - name: Rename builds
         run: |
