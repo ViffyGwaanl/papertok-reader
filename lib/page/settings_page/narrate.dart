@@ -334,33 +334,29 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
         ),
 
         // Voice List Section - Inlined
-        if (_showVoiceList) ...[
-          SettingsSection(
-            title: Text(L10n.of(context).settingsNarrateTtsVoiceModels),
-            tiles: [
-              CustomSettingsTile(
-                child: Column(
-                  children: [..._buildVoiceListContent()],
-                ),
-              )
-            ],
-          )
-        ] else ...[
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _showVoiceList = true;
-                  });
-                  ref.refresh(ttsVoicesProvider);
-                },
-                child: Text(L10n.of(context).settingsNarrateGetVoiceList),
-              ),
-            ),
-          ),
-        ]
+        SettingsSection(
+          title: Text(L10n.of(context).settingsNarrateTtsVoiceModels),
+          tiles: [
+            CustomSettingsTile(
+              child: _showVoiceList
+                  ? Column(
+                      children: [..._buildVoiceListContent()],
+                    )
+                  : Center(
+                      child: AnxFilledButton(
+                        onPressed: () {
+                          setState(() {
+                            _showVoiceList = true;
+                          });
+                          ref.refresh(ttsVoicesProvider);
+                        },
+                        child:
+                            Text(L10n.of(context).settingsNarrateGetVoiceList),
+                      ),
+                    ),
+            )
+          ],
+        )
       ],
     );
   }
