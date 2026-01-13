@@ -2,6 +2,19 @@
 - Feat: Books on the shelf can be displayed using their original cover aspect ratio
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
+## 1.11.0
+- Feat: Support using Azure TTS service for narration
+- Feat: Support previewing synthesized voice models
+- Feat: In scroll page mode, you can turn pages across chapters by dragging up and down @Spixz
+- Feat: Windows can remember whether the window is maximized @TimurCravtov
+- Fix: Fixed the issue where Epub files could not be imported when the directory did not exist @ZzhouR
+
+- Feat: 支持使用 Azure TTS 服务进行朗读
+- Feat：支持试听语音模型合成效果
+- Feat：滚动翻页模式下可以通过上下拖动来跨章节翻页 @Spixz
+- Feat：Windows可以记忆是否最大化窗口 @TimurCravtov
+- Fix：修复Epub文件目录不存在时无法导入的问题 @ZzhouR
+
 ## 1.10.1
 - Feat: Choose bookshelf folder style (2x2 grid/stacked)
 - Feat: Optimize widow/orphan line display (allow single line content to be displayed when there is a large remaining space on the previous page)
