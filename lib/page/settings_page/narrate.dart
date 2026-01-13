@@ -1,12 +1,21 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/service/tts/edge_tts_api.dart';
+import 'package:anx_reader/providers/tts_providers.dart';
+import 'package:anx_reader/service/tts/azure_tts_backend.dart';
+import 'package:anx_reader/service/tts/models/tts_voice.dart';
+import 'package:anx_reader/service/tts/online_tts.dart';
+import 'package:anx_reader/service/tts/online_tts_backend.dart';
+import 'package:anx_reader/service/tts/system_tts.dart';
+import 'package:anx_reader/service/tts/tts_factory.dart';
 import 'package:anx_reader/service/tts/tts_handler.dart';
-import 'package:anx_reader/utils/tts_model_list.dart';
+import 'package:anx_reader/utils/get_current_language_code.dart';
+import 'package:anx_reader/widgets/common/anx_filled_button.dart';
+import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class NarrateSettings extends ConsumerStatefulWidget {
   const NarrateSettings({super.key});
@@ -17,16 +26,69 @@ class NarrateSettings extends ConsumerStatefulWidget {
 
 class _NarrateSettingsState extends ConsumerState<NarrateSettings>
     with SingleTickerProviderStateMixin {
-  List<Map<String, dynamic>> data = ttsModelList;
   String? selectedVoiceModel;
-  Map<String, List<Map<String, dynamic>>> groupedVoices = {};
+  Map<String, List<TtsVoice>> groupedVoices = {};
   Set<String> expandedGroups = {};
   final ScrollController _scrollController = ScrollController();
   String? _highlightedModel;
   late AnimationController _highlightAnimationController;
   late Animation<Color?> _highlightAnimation;
-  Map<String, dynamic>? _currentModelDetails;
+  TtsVoice? _currentModelDetails;
   String? _currentModelLanguageGroup;
+
+  final Map<String, GlobalKey> _languageKeys = {};
+  final TextEditingController _testTextController = TextEditingController();
+  bool _showVoiceList = true;
+
+  Map<String, bool> _modelLoadingStates = {};
+  bool _mainTestLoading = false;
+
+  Future<void> _testSpeak(String text, String? voiceShortName,
+      {bool isMainButton = false}) async {
+    if (isMainButton) {
+      if (_mainTestLoading) return;
+      setState(() {
+        _mainTestLoading = true;
+      });
+    } else if (voiceShortName != null) {
+      if (_modelLoadingStates[voiceShortName] == true) return;
+      setState(() {
+        _modelLoadingStates[voiceShortName] = true;
+      });
+    }
+
+    try {
+      final tts = TtsFactory().current;
+      await tts.stop();
+      if (tts is OnlineTts) {
+        if (voiceShortName != null) {
+          await tts.speakWithVoice(text, voiceShortName);
+        } else {
+          await tts.speak(content: text);
+        }
+      } else if (tts is SystemTts) {
+        await tts.speak(content: text);
+      }
+    } catch (e) {
+      // Handle error (maybe show toast)
+      print('Test speak error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          if (isMainButton) {
+            _mainTestLoading = false;
+          } else if (voiceShortName != null) {
+            _modelLoadingStates[voiceShortName] = false;
+          }
+        });
+      }
+    }
+  }
+
+  OnlineTtsBackend? _getBackend(String id) {
+    if (id == 'azure') return AzureTtsBackend();
+    return null;
+  }
 
   @override
   void initState() {
@@ -38,8 +100,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
     );
 
     selectedVoiceModel = Prefs().ttsVoiceModel;
-
-    _groupVoicesByLanguage();
+    _testTextController.text = "Hello, this is a test.";
   }
 
   @override
@@ -57,21 +118,20 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
           });
         }
       });
-
-    _updateCurrentModelDetails();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _highlightAnimationController.dispose();
+    _testTextController.dispose();
     super.dispose();
   }
 
-  void _updateCurrentModelDetails() {
+  void _updateCurrentModelDetails(List<TtsVoice> voices) {
     if (selectedVoiceModel != null) {
-      for (var voice in data) {
-        if (voice['ShortName'] == selectedVoiceModel) {
+      for (var voice in voices) {
+        if (voice.shortName == selectedVoiceModel) {
           _currentModelDetails = voice;
           break;
         }
@@ -79,7 +139,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
 
       for (var entry in groupedVoices.entries) {
         for (var voice in entry.value) {
-          if (voice['ShortName'] == selectedVoiceModel) {
+          if (voice.shortName == selectedVoiceModel) {
             _currentModelLanguageGroup = entry.key;
             break;
           }
@@ -100,37 +160,16 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
       });
     }
 
-    Future.delayed(const Duration(milliseconds: 300), () {
-      List<String> languageGroups = groupedVoices.keys.toList();
-      int groupIndex = languageGroups.indexOf(_currentModelLanguageGroup!);
-
-      if (groupIndex == -1) return;
-
-      double scrollPosition = 0;
-
-      for (int i = 0; i < groupIndex; i++) {
-        String lang = languageGroups[i];
-        scrollPosition += 50;
-
-        if (expandedGroups.contains(lang)) {
-          scrollPosition += groupedVoices[lang]!.length * 80;
-        }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final key = _languageKeys[_currentModelLanguageGroup];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          alignment: 0.1, // Align near top
+        );
       }
-
-      List<Map<String, dynamic>> voicesInGroup =
-          groupedVoices[_currentModelLanguageGroup]!;
-      int modelIndex = voicesInGroup
-          .indexWhere((voice) => voice['ShortName'] == selectedVoiceModel);
-
-      if (modelIndex != -1) {
-        scrollPosition += modelIndex * 80;
-      }
-
-      _scrollController.animateTo(
-        scrollPosition,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
 
       setState(() {
         _highlightedModel = selectedVoiceModel;
@@ -140,11 +179,11 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
     });
   }
 
-  void _groupVoicesByLanguage() {
+  void _groupVoicesByLanguage(List<TtsVoice> voices) {
     groupedVoices.clear();
 
-    for (var voice in data) {
-      String locale = voice['Locale'] as String;
+    for (var voice in voices) {
+      String locale = voice.locale; // TtsVoice ensures non-null
       String languageName = _getLanguageNameFromLocale(locale);
 
       if (!groupedVoices.containsKey(languageName)) {
@@ -156,91 +195,57 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
   }
 
   String _getLanguageNameFromLocale(String locale) {
-    Map<String, String> languageMap = {
-      'af': 'Afrikaans (Afrikaans)',
-      'am': 'አማርኛ (Amharic)',
-      'ar': 'العربية (Arabic)',
-      'az': 'Azərbaycan (Azerbaijani)',
-      'bg': 'Български (Bulgarian)',
-      'bs': 'Bosanski (Bosnian)',
-      'iu': 'ᐃᓄᒃᑎᑐᑦ (Inuktitut)',
-      'zu': 'IsiZulu (Zulu)',
-      'bn': 'বাংলা (Bengali)',
-      'ca': 'Català (Catalan)',
-      'cs': 'Čeština (Czech)',
-      'cy': 'Cymraeg (Welsh)',
-      'da': 'Dansk (Danish)',
-      'de': 'Deutsch (German)',
-      'el': 'Ελληνικά (Greek)',
-      'en': 'English (English)',
-      'es': 'Español (Spanish)',
-      'et': 'Eesti (Estonian)',
-      'eu': 'Euskara (Basque)',
-      'fa': 'فارسی (Persian)',
-      'fi': 'Suomi (Finnish)',
-      'fil': 'Filipino (Filipino)',
-      'fr': 'Français (French)',
-      'ga': 'Gaeilge (Irish)',
-      'gl': 'Galego (Galician)',
-      'gu': 'ગુજરાતી (Gujarati)',
-      'he': 'עברית (Hebrew)',
-      'hi': 'हिन्दी (Hindi)',
-      'hr': 'Hrvatski (Croatian)',
-      'hu': 'Magyar (Hungarian)',
-      'hy': 'Հայերեն (Armenian)',
-      'id': 'Indonesia (Indonesian)',
-      'is': 'Íslenska (Icelandic)',
-      'it': 'Italiano (Italian)',
-      'ja': '日本語 (Japanese)',
-      'jv': 'Basa Jawa (Javanese)',
-      'ka': 'ქართული (Georgian)',
-      'kk': 'Қазақ (Kazakh)',
-      'km': 'ខ្មែរ (Khmer)',
-      'kn': 'ಕನ್ನಡ (Kannada)',
-      'ko': '한국어 (Korean)',
-      'lo': 'ລາວ (Lao)',
-      'lt': 'Lietuvių (Lithuanian)',
-      'lv': 'Latviešu (Latvian)',
-      'mk': 'Македонски (Macedonian)',
-      'ml': 'മലയാളം (Malayalam)',
-      'mn': 'Монгол (Mongolian)',
-      'mr': 'मराठी (Marathi)',
-      'ms': 'Melayu (Malay)',
-      'mt': 'Malti (Maltese)',
-      'my': 'မြန်မာ (Burmese)',
-      'nb': 'Norsk Bokmål (Norwegian Bokmål)',
-      'ne': 'नेपाली (Nepali)',
-      'nl': 'Nederlands (Dutch)',
-      'nn': 'Nynorsk (Norwegian Nynorsk)',
-      'or': 'ଓଡ଼ିଆ (Odia)',
-      'pa': 'ਪੰਜਾਬੀ (Punjabi)',
-      'pl': 'Polski (Polish)',
-      'ps': 'پښتو (Pashto)',
-      'pt': 'Português (Portuguese)',
-      'ro': 'Română (Romanian)',
-      'ru': 'Русский (Russian)',
-      'si': 'සිංහල (Sinhala)',
-      'sk': 'Slovenčina (Slovak)',
-      'sl': 'Slovenščina (Slovenian)',
-      'so': 'Soomaali (Somali)',
-      'sq': 'Shqip (Albanian)',
-      'sr': 'Српски (Serbian)',
-      'su': 'Basa Sunda (Sundanese)',
-      'sv': 'Svenska (Swedish)',
-      'sw': 'Kiswahili (Swahili)',
-      'ta': 'தமிழ் (Tamil)',
-      'te': 'తెలుగు (Telugu)',
-      'th': 'ไทย (Thai)',
-      'tr': 'Türkçe (Turkish)',
-      'uk': 'Українська (Ukrainian)',
-      'ur': 'اردو (Urdu)',
-      'uz': "O'zbek (Uzbek)",
-      'vi': 'Tiếng Việt (Vietnamese)',
-      'yue': '粵語 (Cantonese)',
-      'zh': '中文 (Chinese)',
+    if (locale.isEmpty) return 'Unknown';
+    String langCode = locale.split('-')[0].toLowerCase();
+
+    const Map<String, String> languageMap = {
+      'ar': 'العربية', // Arabic
+      'bg': 'Български', // Bulgarian
+      'ca': 'Català', // Catalan
+      'cs': 'Čeština', // Czech
+      'da': 'Dansk', // Danish
+      'de': 'Deutsch', // German
+      'el': 'Ελληνικά', // Greek
+      'en': 'English', // English
+      'es': 'Español', // Spanish
+      'et': 'Eesti', // Estonian
+      'fi': 'Suomi', // Finnish
+      'fr': 'Français', // French
+      'gl': 'Galego', // Galician
+      'gu': 'ગુજરાતી', // Gujarati
+      'he': 'עברית', // Hebrew
+      'hi': 'हिन्दी', // Hindi
+      'hr': 'Hrvatski', // Croatian
+      'hu': 'Magyar', // Hungarian
+      'id': 'Bahasa Indonesia', // Indonesian
+      'it': 'Italiano', // Italian
+      'ja': '日本語', // Japanese
+      'ko': '한국어', // Korean
+      'lt': 'Lietuvių', // Lithuanian
+      'lv': 'Latviešu', // Latvian
+      'ms': 'Bahasa Melayu', // Malay
+      'mt': 'Malti', // Maltese
+      'nb': 'Norsk bokmål', // Norwegian Bokmål
+      'nl': 'Nederlands', // Dutch
+      'pl': 'Polski', // Polish
+      'pt': 'Português', // Portuguese
+      'ro': 'Română', // Romanian
+      'ru': 'Русский', // Russian
+      'sk': 'Slovenčina', // Slovak
+      'sl': 'Slovenščina', // Slovenian
+      'sv': 'Svenska', // Swedish
+      'ta': 'தமிழ்', // Tamil
+      'te': 'తెలుగు', // Telugu
+      'th': 'ไทย', // Thai
+      'tr': 'Türkçe', // Turkish
+      'uk': 'Українська', // Ukrainian
+      'ur': 'اردو', // Urdu
+      'vi': 'Tiếng Việt', // Vietnamese
+      'zh': '中文', // Chinese
+      'yue': '粵語', // Cantonese
+      'wuu': '吳語', // Wu Chinese
     };
 
-    String langCode = locale.split('-')[0];
     return languageMap[langCode] ?? locale;
   }
 
@@ -258,8 +263,6 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
     setState(() {
       selectedVoiceModel = shortName;
       Prefs().ttsVoiceModel = shortName;
-      EdgeTTSApi.voice = shortName;
-      _updateCurrentModelDetails();
     });
   }
 
@@ -278,81 +281,223 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
     if (_currentModelDetails == null) {
       return L10n.of(context).settingsNarrateVoiceModelNotSelected;
     }
-
-    String shortName = _currentModelDetails!['ShortName'] as String;
-    String personName = shortName.split('-').last;
-    if (personName.endsWith('Neural')) {
-      personName = personName.substring(0, personName.length - 6);
-    }
-
-    return personName;
+    return _currentModelDetails!.name;
   }
 
   String _getCurrentModelLanguageName() {
     if (_currentModelDetails == null) return '';
-
-    String locale = _currentModelDetails!['Locale'] as String;
-    return _getLanguageNameFromLocale(locale);
+    return _currentModelDetails!.locale;
   }
 
   String _getCurrentModelGender() {
     if (_currentModelDetails == null) return '';
-
-    return _currentModelDetails!['Gender'] as String;
+    return _currentModelDetails!.gender;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final ttsServiceId = ref.watch(ttsServiceProvider);
+
+    // Listen to config changes to hide voice list
+    ref.listen(onlineTtsConfigProvider(ttsServiceId), (prev, next) {
+      if (prev != next) {
+        setState(() {
+          _showVoiceList = false;
+        });
+      }
+    });
+
+    return ListView(
+      controller: _scrollController,
+      padding: const EdgeInsets.only(bottom: 50.0), // Add padding for bottom
       children: [
-        SettingsSection(title: Text(L10n.of(context).ttsType), tiles: [
-          SettingsTile.switchTile(
-              title: Text(L10n.of(context).ttsTypeSystem),
-              initialValue: Prefs().isSystemTts,
-              onToggle: (value) async {
-                await TtsHandler().switchTtsType(value);
-                setState(() {});
-              }),
-          SettingsTile.switchTile(
-              title: Text(L10n.of(context).allowMixing),
-              description: Text(L10n.of(context).enableMixTip),
-              initialValue: Prefs().allowMixWithOtherAudio,
-              onToggle: (value) {
-                Prefs().allowMixWithOtherAudio = value;
-                setState(() {});
-              }),
-        ]),
-        Visibility(
-          visible: !Prefs().isSystemTts,
-          child: Expanded(
-            child: _buildVoiceModelSelector(),
-          ),
+        SettingsSection(
+          title: Text('TTS Settings'),
+          tiles: [
+            SettingsTile.switchTile(
+                title: Text(L10n.of(context).allowMixing),
+                description: Text(L10n.of(context).enableMixTip),
+                initialValue: Prefs().allowMixWithOtherAudio,
+                onToggle: (value) {
+                  Prefs().allowMixWithOtherAudio = value;
+                  setState(() {});
+                }),
+          ],
         ),
+        SettingsSection(
+          title: Text(L10n.of(context).ttsType),
+          tiles: [
+            CustomSettingsTile(child: _buildServiceSelection(ttsServiceId)),
+            if (ttsServiceId != 'system')
+              CustomSettingsTile(child: _buildConfigSection(ttsServiceId)),
+          ],
+        ),
+
+        // Voice List Section - Inlined
+        if (_showVoiceList) ...[
+          SettingsSection(
+            title: Text('TTS Voice Models'),
+            tiles: [
+              CustomSettingsTile(
+                child: Column(
+                  children: [..._buildVoiceListContent()],
+                ),
+              )
+            ],
+          )
+        ] else ...[
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _showVoiceList = true;
+                  });
+                  ref.refresh(ttsVoicesProvider);
+                },
+                child: Text("Get Voice List"),
+              ),
+            ),
+          ),
+        ]
       ],
     );
   }
 
-  Widget _buildVoiceModelSelector() {
-    return ListView(
-      controller: _scrollController,
-      children: [
-        _buildCurrentModelSection(),
-        const Divider(),
-        ..._buildVoiceModelList(),
-      ],
+  Widget _buildServiceSelection(String currentServiceId) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: DropdownButtonFormField<String>(
+        value: currentServiceId,
+        decoration: InputDecoration(
+          labelText: 'TTS Service',
+          border: OutlineInputBorder(),
+        ),
+        items: const [
+          DropdownMenuItem(value: 'system', child: Text('System TTS')),
+          DropdownMenuItem(value: 'azure', child: Text('Microsoft Azure')),
+        ],
+        onChanged: (value) async {
+          if (value != null && value != currentServiceId) {
+            await TtsHandler().switchTtsType(value);
+            ref.read(ttsServiceProvider.notifier).setService(value);
+
+            if (value == 'system') {
+              _showVoiceList = true;
+              ref.refresh(ttsVoicesProvider);
+            } else {
+              // If online, maybe require manual fetch or check if configured
+              _showVoiceList = false;
+            }
+
+            // Sync selected voice model for the new service
+            selectedVoiceModel = Prefs().ttsVoiceModel;
+
+            setState(() {});
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildConfigSection(String serviceId) {
+    final backend = _getBackend(serviceId);
+    if (backend == null) return const SizedBox.shrink();
+
+    final config = ref.watch(onlineTtsConfigProvider(serviceId));
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(backend.helpText),
+          GestureDetector(
+            onTap: () => launchUrl(Uri.parse(backend.helpLink)),
+            child: Text(
+              'Click here for help',
+              style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  decoration: TextDecoration.underline),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ...backend.configFields.map((field) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: TextField(
+                controller: TextEditingController(text: config[field])
+                  ..selection = TextSelection.collapsed(
+                      offset: config[field]?.length ?? 0),
+                decoration: InputDecoration(
+                  labelText: field.toUpperCase(),
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  ref
+                      .read(onlineTtsConfigProvider(serviceId).notifier)
+                      .updateConfig(field, value);
+                },
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildVoiceListContent() {
+    final voicesAsync = ref.watch(ttsVoicesProvider);
+
+    return voicesAsync.when(
+      data: (voices) {
+        if (voices.isEmpty) {
+          return [
+            Center(child: Text('No voices found. Check your configuration.'))
+          ];
+        }
+
+        _groupVoicesByLanguage(voices);
+        _updateCurrentModelDetails(voices);
+
+        return [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: TextField(
+              controller: _testTextController,
+              decoration: InputDecoration(
+                labelText: 'Test Text',
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.all(5.0),
+                  child: AnxFilledButton.icon(
+                    type: AnxButtonType.text,
+                    isLoading: _mainTestLoading,
+                    icon: Icon(Icons.play_arrow),
+                    label: Text('Test'),
+                    onPressed: () => _testSpeak(
+                        _testTextController.text, selectedVoiceModel,
+                        isMainButton: true),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          _buildCurrentModelSection(),
+          Divider(thickness: 4, color: Theme.of(context).colorScheme.surface),
+          ..._buildVoiceModelList(),
+        ];
+      },
+      loading: () => [const Center(child: CircularProgressIndicator())],
+      error: (err, stack) => [Center(child: Text('Error: $err'))],
     );
   }
 
   Widget _buildCurrentModelSection() {
+    // Reuse existing UI logic
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        clipBehavior: Clip.antiAlias,
+      child: FilledContainer(
         child: InkWell(
           onTap: _scrollToSelectedModel,
           child: Padding(
@@ -444,25 +589,37 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
   List<Widget> _buildVoiceModelList() {
     List<Widget> voiceModelList = [];
 
-    for (var language in groupedVoices.entries) {
+    String currentLangCode = getCurrentLanguageCode();
+    String currentLangName = _getLanguageNameFromLocale(currentLangCode);
+
+    var sortedEntries = groupedVoices.entries.toList()
+      ..sort((a, b) {
+        if (a.key == currentLangName) return -1;
+        if (b.key == currentLangName) return 1;
+        return a.key.compareTo(b.key);
+      });
+
+    for (var language in sortedEntries) {
       String languageName = language.key;
-      List<Map<String, dynamic>> voicesInLanguage = language.value;
+      List<TtsVoice> voicesInLanguage = language.value;
+
+      // Assign key for auto-scroll
+      final GlobalKey key =
+          _languageKeys.putIfAbsent(languageName, () => GlobalKey());
 
       voiceModelList.add(
         Column(
           children: [
-            Container(
-              color: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHighest
-                  .withAlpha(100),
+            FilledContainer(
+              radius: 5,
+              key: key,
               child: ListTile(
                 title: Text(
                   languageName,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 trailing: Icon(
@@ -476,21 +633,13 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
             ),
             if (expandedGroups.contains(languageName))
               ...voicesInLanguage.map((voice) {
-                String shortName = voice['ShortName'] as String;
-                String friendlyName = voice['FriendlyName'] as String;
-                String gender = voice['Gender'] as String;
-
-                String displayName = friendlyName.split(' - ').last;
-                if (displayName.contains('(')) {
-                  displayName = displayName.split('(')[0].trim();
-                }
-
-                String personName = shortName.split('-').last;
-                if (personName.endsWith('Neural')) {
-                  personName = personName.substring(0, personName.length - 6);
-                }
+                String shortName = voice.shortName;
+                String friendlyName = voice.name;
+                String gender = voice.gender;
+                String displayName = friendlyName;
 
                 bool isHighlighted = _highlightedModel == shortName;
+                bool isSelected = selectedVoiceModel == shortName;
 
                 return AnimatedBuilder(
                   animation: _highlightAnimation,
@@ -502,7 +651,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                       child: child,
                     );
                   },
-                  child: ListTile(
+                  child: ExpansionTile(
                     leading: CircleAvatar(
                       backgroundColor:
                           Theme.of(context).colorScheme.primaryContainer,
@@ -512,31 +661,47 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                       ),
                     ),
                     title: Text(
-                      personName,
+                      displayName,
                       style: TextStyle(
-                        fontWeight: selectedVoiceModel == shortName
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
-                    subtitle: Text(gender == 'Male'
-                        ? L10n.of(context).settingsNarrateVoiceModelMale
-                        : L10n.of(context).settingsNarrateVoiceModelFemale),
-                    trailing: Radio<String>(
-                      value: shortName,
-                      groupValue: selectedVoiceModel,
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      onChanged: (value) {
-                        if (value != null) {
-                          _selectVoiceModel(value);
-                        }
-                      },
-                    ),
-                    onTap: () => _selectVoiceModel(shortName),
+                    subtitle: Text('$gender · ${voice.locale}'),
+                    trailing: isSelected
+                        ? Icon(Icons.check,
+                            color: Theme.of(context).primaryColor)
+                        : null,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          AnxFilledButton.icon(
+                            type: AnxButtonType.text,
+                            isLoading: _modelLoadingStates[shortName] ?? false,
+                            icon: Icon(Icons.play_arrow),
+                            label: Text("Test"),
+                            onPressed: () =>
+                                _testSpeak(_testTextController.text, shortName),
+                          ),
+                          AnxFilledButton(
+                            type: AnxButtonType.outlined,
+                            child: Text("Use"),
+                            onPressed: () {
+                              _selectVoiceModel(shortName);
+                            },
+                          )
+                        ],
+                      )
+                    ],
                   ),
                 );
               }),
-            const Divider(height: 1),
+            Divider(
+              height: 1,
+              thickness: 4,
+              color: Theme.of(context).colorScheme.surface,
+            ),
           ],
         ),
       );

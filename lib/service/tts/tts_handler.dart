@@ -9,15 +9,37 @@ import 'package:flutter/material.dart';
 class TtsHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   final TtsFactory _ttsFactory = TtsFactory();
 
-  TtsHandler() {
+  static final TtsHandler _instance = TtsHandler._internal();
+
+  factory TtsHandler() {
+    return _instance;
+  }
+
+  TtsHandler._internal() {
     _initAudioSession();
   }
 
   BaseTts get tts => _ttsFactory.current;
 
+  Function? _getCurrentText;
+  Function? _getNextText;
+  Function? _getPrevText;
+
   Future<void> init(Function getCurrentText, Function getNextText,
       Function getPrevText) async {
+    _getCurrentText = getCurrentText;
+    _getNextText = getNextText;
+    _getPrevText = getPrevText;
     await tts.init(getCurrentText, getNextText, getPrevText);
+  }
+
+  Future<void> switchTtsType(String serviceId) async {
+    await _ttsFactory.switchTtsType(serviceId);
+    if (_getCurrentText != null &&
+        _getNextText != null &&
+        _getPrevText != null) {
+      await tts.init(_getCurrentText!, _getNextText!, _getPrevText!);
+    }
   }
 
   Future<void> _initAudioSession() async {
@@ -145,10 +167,6 @@ class TtsHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
   Future<void> playNext() async {
     await tts.next();
-  }
-
-  Future<void> switchTtsType(bool useSystemTts) async {
-    await _ttsFactory.switchTtsType(useSystemTts);
   }
 
   ValueNotifier<TtsStateEnum> get ttsStateNotifier => tts.ttsStateNotifier;

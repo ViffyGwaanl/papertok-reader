@@ -32,7 +32,6 @@ import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/utils/get_current_language_code.dart';
 import 'package:anx_reader/utils/log/common.dart';
-import 'package:anx_reader/utils/tts_model_list.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -456,45 +455,54 @@ class Prefs extends ChangeNotifier {
   }
 
   set ttsVoiceModel(String shortName) {
-    prefs.setString('ttsVoiceModel', shortName);
+    prefs.setString('ttsVoiceModel_$ttsService', shortName);
     notifyListeners();
   }
 
   void removeTtsVoiceModel() {
-    prefs.remove('ttsVoiceModel');
+    prefs.remove('ttsVoiceModel_$ttsService');
     notifyListeners();
   }
 
   String get ttsVoiceModel {
-    String? model = prefs.getString('ttsVoiceModel');
-    if (model == null) {
-      final languageCode = getCurrentLanguageCode().toLowerCase();
+    return prefs.getString('ttsVoiceModel_$ttsService') ?? '';
+  }
 
-      final data = ttsModelList;
+  set ttsService(String serviceId) {
+    prefs.setString('ttsService', serviceId);
+    notifyListeners();
+  }
 
-      for (var voice in data) {
-        String voiceLocale = voice['Locale'] as String;
-        if (voiceLocale.toLowerCase().startsWith(languageCode.toLowerCase())) {
-          model = voice['ShortName'] as String;
-          break;
-        }
-      }
+  String get ttsService {
+    String? service = prefs.getString('ttsService');
+    if (service != null) return service;
 
-      if (model == null || model.isEmpty) {
-        for (var voice in data) {
-          String voiceLocale = voice['Locale'] as String;
-          if (voiceLocale.startsWith('en-')) {
-            model = voice['ShortName'] as String;
-            break;
-          }
-        }
-      }
-
-      if (model == null || model.isEmpty) {
-        model = 'en-US-JennyNeural';
-      }
+    // Migration/Fallback
+    bool isSystem = prefs.getBool('isSystemTts') ??
+        true; // Default to system if nothing set
+    if (!isSystem) {
+      // Check if there was an online service set
+      String? online = prefs.getString('onlineTtsService');
+      if (online != null) return online;
     }
-    return model;
+    return 'system';
+  }
+
+  Map<String, String> getOnlineTtsConfig(String serviceId) {
+    String? json = prefs.getString('onlineTtsConfig_$serviceId');
+    if (json == null) return {};
+    try {
+      Map<String, dynamic> decoded = jsonDecode(json);
+      return decoded.map((key, value) => MapEntry(key, value.toString()));
+    } catch (e) {
+      return {};
+    }
+  }
+
+  Future<void> saveOnlineTtsConfig(
+      String serviceId, Map<String, String> config) async {
+    await prefs.setString('onlineTtsConfig_$serviceId', jsonEncode(config));
+    notifyListeners();
   }
 
   set pageTurnStyle(PageTurn style) {
@@ -991,10 +999,6 @@ class Prefs extends ChangeNotifier {
       return ReadingInfoModel();
     }
     return ReadingInfoModel.fromJson(jsonDecode(readingInfoJson));
-  }
-
-  bool get isSystemTts {
-    return prefs.getBool('isSystemTts') ?? false;
   }
 
   set isSystemTts(bool status) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:anx_reader/service/tts/models/tts_voice.dart';
 import 'package:flutter/material.dart';
 
 enum TtsStateEnum { playing, stopped, paused, continued }
@@ -38,4 +39,6 @@ abstract class BaseTts {
   bool get isPlaying;
 
   String? get currentVoiceText;
+
+  Future<List<TtsVoice>> getVoices();
 }

@@ -4,6 +4,7 @@ import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/tts/base_tts.dart';
+import 'package:anx_reader/service/tts/models/tts_voice.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -211,6 +212,28 @@ class SystemTts extends BaseTts {
     await stop();
     speak();
     restarting = false;
+  }
+
+  @override
+  Future<List<TtsVoice>> getVoices() async {
+    try {
+      dynamic voices = await flutterTts.getVoices;
+      if (voices is List) {
+        return voices.map((e) {
+          final map = Map<String, dynamic>.from(e);
+          return TtsVoice(
+              shortName: map['name'] ?? '',
+              name: map['name'] ?? '',
+              locale: map['locale'] ?? '',
+              gender:
+                  '', // System voices typically don't provide gender in a standard way across platforms
+              rawData: map);
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
   }
 
   @override

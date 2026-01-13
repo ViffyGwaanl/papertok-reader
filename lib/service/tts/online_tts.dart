@@ -5,20 +5,22 @@ import 'dart:typed_data';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/tts/base_tts.dart';
-import 'package:anx_reader/service/tts/edge_tts_api.dart';
+import 'package:anx_reader/service/tts/online_tts_backend.dart';
+import 'package:anx_reader/service/tts/azure_tts_backend.dart';
 import 'package:anx_reader/service/tts/models/tts_segment.dart';
 import 'package:anx_reader/service/tts/models/tts_sentence.dart';
+import 'package:anx_reader/service/tts/models/tts_voice.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
-class EdgeTts extends BaseTts {
-  static final EdgeTts _instance = EdgeTts._internal();
+class OnlineTts extends BaseTts {
+  static final OnlineTts _instance = OnlineTts._internal();
 
-  factory EdgeTts() {
+  factory OnlineTts() {
     return _instance;
   }
 
-  EdgeTts._internal();
+  OnlineTts._internal();
 
   static const int _queueCapacity = 10;
 
@@ -40,6 +42,23 @@ class EdgeTts extends BaseTts {
   Future<void>? _queueFillFuture;
   bool _isFetchingAudio = false;
   bool _needsLocationSync = true;
+
+  OnlineTtsBackend? _currentBackend;
+
+  OnlineTtsBackend get backend {
+    String serviceId = Prefs().ttsService;
+    // Instantiate backend based on serviceId.
+    // Currently only Azure is supported.
+    if (_currentBackend?.serviceId != serviceId) {
+      if (serviceId == 'azure') {
+        _currentBackend = AzureTtsBackend();
+      } else {
+        // Default to Azure if unknown or fallback
+        _currentBackend = AzureTtsBackend();
+      }
+    }
+    return _currentBackend!;
+  }
 
   @override
   final ValueNotifier<TtsStateEnum> ttsStateNotifier =
@@ -84,10 +103,13 @@ class EdgeTts extends BaseTts {
   String? get currentVoiceText => _currentVoiceText;
 
   @override
+  Future<List<TtsVoice>> getVoices() async {
+    return await backend.getVoices();
+  }
+
+  @override
   Future<void> init(Function getCurrentText, Function getNextText,
       Function getPrevText) async {
-    // if (isInit) return;
-
     getHereFunction = getCurrentText;
     getNextTextFunction = getNextText;
     getPrevTextFunction = getPrevText;
@@ -204,12 +226,10 @@ class EdgeTts extends BaseTts {
     if (segment.isReady) return true;
     if (_shouldStop) return false;
 
-    EdgeTTSApi.pitch = pitch;
-    EdgeTTSApi.rate = rate;
-    EdgeTTSApi.volume = volume;
-
     try {
-      final bytes = await EdgeTTSApi.getAudio(segment.sentence.text);
+      final bytes = await backend.speak(
+          segment.sentence.text, Prefs().ttsVoiceModel, rate, pitch);
+
       if (bytes.isEmpty) {
         segment.audio = Uint8List(0);
         segment.isSilent = true;
@@ -259,7 +279,7 @@ class EdgeTts extends BaseTts {
 
         if (!_shouldStop) unawaited(_fetchAudioForQueue());
       } catch (e) {
-        debugPrint('EdgeTts queue fill error: $e');
+        debugPrint('OnlineTts queue fill error: $e');
       } finally {
         _queueFillFuture = null;
         if (!completer.isCompleted) {
@@ -413,6 +433,22 @@ class EdgeTts extends BaseTts {
     await stop();
     _needsLocationSync = false;
     await speak();
+  }
+
+  Future<void> speakWithVoice(String content, String voice) async {
+    _shouldStop = false;
+    await stop();
+    final audioPlayer = await _ensurePlayer();
+
+    try {
+      final bytes = await backend.speak(content, voice, rate, pitch);
+      if (bytes.isNotEmpty) {
+        final source = BytesSource(bytes, mimeType: 'audio/mp3');
+        await audioPlayer.play(source);
+      }
+    } catch (e) {
+      debugPrint('SpeakWithVoice error: $e');
+    }
   }
 
   @override
