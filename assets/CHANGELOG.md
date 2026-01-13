@@ -5,12 +5,14 @@
 ## 1.11.0
 - Feat: Support using Azure TTS service for narration
 - Feat: Support previewing synthesized voice models
+- Feat: Optimize online TTS narration stability
 - Feat: In scroll page mode, you can turn pages across chapters by dragging up and down @Spixz
 - Feat: Windows can remember whether the window is maximized @TimurCravtov
 - Fix: Fixed the issue where Epub files could not be imported when the directory did not exist @ZzhouR
 
 - Feat: 支持使用 Azure TTS 服务进行朗读
 - Feat：支持试听语音模型合成效果
+- Feat: 优化在线 TTS 朗读稳定性
 - Feat：滚动翻页模式下可以通过上下拖动来跨章节翻页 @Spixz
 - Feat：Windows可以记忆是否最大化窗口 @TimurCravtov
 - Fix：修复Epub文件目录不存在时无法导入的问题 @ZzhouR
