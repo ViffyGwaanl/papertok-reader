@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/tts/models/tts_voice.dart';
 import 'package:anx_reader/service/tts/online_tts_backend.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 
 class AzureTtsBackend extends OnlineTtsBackend {
@@ -22,8 +24,8 @@ class AzureTtsBackend extends OnlineTtsBackend {
   String get name => 'Azure TTS';
 
   @override
-  String get helpText =>
-      'Microsoft Azure provides 500,000 characters of free TTS usage per month. You need to apply for a Microsoft Azure TTS resource key to use this service.';
+  String helpText(BuildContext context) =>
+      L10n.of(context).settingsNarrateAzureHelpText;
 
   @override
   String get helpLink => 'https://anx.anxcye.com/docs/tts/azure';

@@ -725,5 +725,15 @@
   "bookshelfFilterFinished": "已讀完",
   "bookshelfFilterReading": "閱讀中",
   "bookshelfFilterNotStarted": "未開始",
-  "bookshelfFilterTagsTooltip": "篩選標籤"
+  "bookshelfFilterTagsTooltip": "篩選標籤",
+  "settingsNarrateTtsService": "TTS 服務",
+  "settingsNarrateAzureTts": "微軟 Azure",
+  "settingsNarrateSystemTts": "系統 TTS",
+  "settingsNarrateTtsVoiceModels": "TTS 語音模型",
+  "settingsNarrateGetVoiceList": "獲取語音列表",
+  "settingsNarrateNoVoicesFound": "未找到語音。請檢查您的配置。",
+  "settingsNarrateTestText": "測試文本",
+  "settingsNarrateUseVoice": "使用",
+  "settingsNarrateClickForHelp": "點擊查看幫助",
+  "settingsNarrateAzureHelpText": "微軟 Azure 每月提供 50 萬字元的免費 TTS 使用額度。您需要申請 Microsoft Azure TTS 資源密鑰才能使用此服務。"
 }

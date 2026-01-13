@@ -725,5 +725,15 @@
   "bookshelfFilterFinished": "已读完",
   "bookshelfFilterReading": "正在读",
   "bookshelfFilterNotStarted": "未开始",
-  "bookshelfFilterTagsTooltip": "筛选标签"
+  "bookshelfFilterTagsTooltip": "筛选标签",
+  "settingsNarrateTtsService": "TTS 服务",
+  "settingsNarrateAzureTts": "微软 Azure",
+  "settingsNarrateSystemTts": "系统 TTS",
+  "settingsNarrateTtsVoiceModels": "TTS 语音模型",
+  "settingsNarrateGetVoiceList": "获取语音列表",
+  "settingsNarrateNoVoicesFound": "未找到语音。请检查您的配置。",
+  "settingsNarrateTestText": "测试文本",
+  "settingsNarrateUseVoice": "使用",
+  "settingsNarrateClickForHelp": "点击查看帮助",
+  "settingsNarrateAzureHelpText": "微软 Azure 每月提供 50 万字符的免费 TTS 使用额度。您需要申请 Microsoft Azure TTS 资源密钥才能使用此服务。"
 }

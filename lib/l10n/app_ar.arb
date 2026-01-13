@@ -725,5 +725,15 @@
   "bookshelfFilterFinished": "مكتمل",
   "bookshelfFilterReading": "جارٍ القراءة",
   "bookshelfFilterNotStarted": "لم تبدأ",
-  "bookshelfFilterTagsTooltip": "تصفية الوسوم"
+  "bookshelfFilterTagsTooltip": "تصفية الوسوم",
+  "settingsNarrateTtsService": "TTS Service",
+  "settingsNarrateAzureTts": "Microsoft Azure",
+  "settingsNarrateSystemTts": "System TTS",
+  "settingsNarrateTtsVoiceModels": "TTS Voice Models",
+  "settingsNarrateGetVoiceList": "Get Voice List",
+  "settingsNarrateNoVoicesFound": "No voices found. Check your configuration.",
+  "settingsNarrateTestText": "Test Text",
+  "settingsNarrateUseVoice": "Use",
+  "settingsNarrateClickForHelp": "Click here for help",
+  "settingsNarrateAzureHelpText": "Microsoft Azure provides 500,000 characters of free TTS usage per month. You need to apply for a Microsoft Azure TTS resource key to use this service."
 }

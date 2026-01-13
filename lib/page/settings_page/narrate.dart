@@ -312,7 +312,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
       padding: const EdgeInsets.only(bottom: 50.0), // Add padding for bottom
       children: [
         SettingsSection(
-          title: Text('TTS Settings'),
+          title: Text(L10n.of(context).settingsNarrateTtsService),
           tiles: [
             SettingsTile.switchTile(
                 title: Text(L10n.of(context).allowMixing),
@@ -336,7 +336,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
         // Voice List Section - Inlined
         if (_showVoiceList) ...[
           SettingsSection(
-            title: Text('TTS Voice Models'),
+            title: Text(L10n.of(context).settingsNarrateTtsVoiceModels),
             tiles: [
               CustomSettingsTile(
                 child: Column(
@@ -356,7 +356,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                   });
                   ref.refresh(ttsVoicesProvider);
                 },
-                child: Text("Get Voice List"),
+                child: Text(L10n.of(context).settingsNarrateGetVoiceList),
               ),
             ),
           ),
@@ -371,12 +371,16 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
       child: DropdownButtonFormField<String>(
         value: currentServiceId,
         decoration: InputDecoration(
-          labelText: 'TTS Service',
+          labelText: L10n.of(context).settingsNarrateTtsService,
           border: OutlineInputBorder(),
         ),
-        items: const [
-          DropdownMenuItem(value: 'system', child: Text('System TTS')),
-          DropdownMenuItem(value: 'azure', child: Text('Microsoft Azure')),
+        items: [
+          DropdownMenuItem(
+              value: 'system',
+              child: Text(L10n.of(context).settingsNarrateSystemTts)),
+          DropdownMenuItem(
+              value: 'azure',
+              child: Text(L10n.of(context).settingsNarrateAzureTts)),
         ],
         onChanged: (value) async {
           if (value != null && value != currentServiceId) {
@@ -412,11 +416,11 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(backend.helpText),
+          Text(backend.helpText(context)),
           GestureDetector(
             onTap: () => launchUrl(Uri.parse(backend.helpLink)),
             child: Text(
-              'Click here for help',
+              L10n.of(context).settingsNarrateClickForHelp,
               style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   decoration: TextDecoration.underline),
@@ -454,7 +458,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
       data: (voices) {
         if (voices.isEmpty) {
           return [
-            Center(child: Text('No voices found. Check your configuration.'))
+            Center(child: Text(L10n.of(context).settingsNarrateNoVoicesFound))
           ];
         }
 
@@ -467,14 +471,14 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
             child: TextField(
               controller: _testTextController,
               decoration: InputDecoration(
-                labelText: 'Test Text',
+                labelText: L10n.of(context).settingsNarrateTestText,
                 suffixIcon: Padding(
                   padding: const EdgeInsets.all(5.0),
                   child: AnxFilledButton.icon(
                     type: AnxButtonType.text,
                     isLoading: _mainTestLoading,
                     icon: Icon(Icons.play_arrow),
-                    label: Text('Test'),
+                    label: Text(L10n.of(context).commonTest),
                     onPressed: () => _testSpeak(
                         _testTextController.text, selectedVoiceModel,
                         isMainButton: true),
@@ -640,6 +644,11 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
 
                 bool isHighlighted = _highlightedModel == shortName;
                 bool isSelected = selectedVoiceModel == shortName;
+                String localizationedGender = gender == 'Female'
+                    ? L10n.of(context).settingsNarrateVoiceModelFemale
+                    : gender == 'Male'
+                        ? L10n.of(context).settingsNarrateVoiceModelMale
+                        : gender;
 
                 return AnimatedBuilder(
                   animation: _highlightAnimation,
@@ -667,7 +676,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                             isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
-                    subtitle: Text('$gender · ${voice.locale}'),
+                    subtitle: Text('$localizationedGender · ${voice.locale}'),
                     trailing: isSelected
                         ? Icon(Icons.check,
                             color: Theme.of(context).primaryColor)
@@ -680,13 +689,14 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                             type: AnxButtonType.text,
                             isLoading: _modelLoadingStates[shortName] ?? false,
                             icon: Icon(Icons.play_arrow),
-                            label: Text("Test"),
+                            label: Text(L10n.of(context).commonTest),
                             onPressed: () =>
                                 _testSpeak(_testTextController.text, shortName),
                           ),
                           AnxFilledButton(
                             type: AnxButtonType.outlined,
-                            child: Text("Use"),
+                            child:
+                                Text(L10n.of(context).settingsNarrateUseVoice),
                             onPressed: () {
                               _selectVoiceModel(shortName);
                             },
