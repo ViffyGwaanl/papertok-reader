@@ -81,6 +81,11 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: 'build/windows'
       
+      - name: Prepare unsigned zip for alpha
+        if: ${{ env.IS_ALPHA == 'true' }}
+        run: cp build/windows/unsigned/app.zip build/windows/app.zip
+        shell: bash
+
       - name: Build unsigned Windows exe
         shell: pwsh
         run: ./scripts/build_windows_exe.ps1
@@ -112,11 +117,9 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: 'build/windows'
 
-      - name: Prepare unsigned artifacts for alpha
+      - name: Prepare unsigned exe for alpha
         if: ${{ env.IS_ALPHA == 'true' }}
-        run: |
-          cp build/windows/unsigned/app.zip build/windows/app.zip
-          cp build/windows/unsigned/app.exe build/windows/app.exe
+        run: cp build/windows/unsigned/app.exe build/windows/app.exe
         shell: bash
 
       - name: Rename builds
