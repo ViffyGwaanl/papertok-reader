@@ -23,6 +23,11 @@ class AppStoreIAPService extends BaseIAPService {
   final InAppPurchase _inAppPurchase;
   Map<String, dynamic> _parsedReceipt;
   final String _productId = 'anx_reader_lifetime';
+  
+  /// Track if receipt refresh has failed, so we can fall back to cache
+  bool _receiptRefreshFailed = false;
+  bool get receiptRefreshFailed => _receiptRefreshFailed;
+  
   List<String> originalUserVersions = [
     '1.4.0',
     '1.4.1',
@@ -65,7 +70,24 @@ class AppStoreIAPService extends BaseIAPService {
   }
 
   @override
-  Future<void> restorePurchases() {
+  Future<void> restorePurchases() async {
+    AnxLog.info('IAP: Starting restore purchases');
+    
+    // Clear any pending transactions that might be blocking the restore
+    try {
+      final paymentWrapper = SKPaymentQueueWrapper();
+      final transactions = await paymentWrapper.transactions();
+      if (transactions.isNotEmpty) {
+        AnxLog.info('IAP: Clearing ${transactions.length} pending transaction(s) before restore');
+        await Future.wait(
+          transactions.map((transaction) => paymentWrapper.finishTransaction(transaction)),
+        );
+      }
+    } catch (e) {
+      AnxLog.warning('IAP: Error clearing pending transactions: $e');
+      // Continue with restore even if clearing fails
+    }
+    
     return _inAppPurchase.restorePurchases();
   }
 
@@ -90,10 +112,12 @@ class AppStoreIAPService extends BaseIAPService {
 
     return IapPlatformSnapshot(
       hasPurchase: hasPurchase,
-      isPurchaseStatusReliable: true,
+      // If receipt refresh failed, we can't reliably determine purchase status
+      isPurchaseStatusReliable: !_receiptRefreshFailed,
       trialStartDate: originalDate,
       purchaseDate: purchaseDate,
       isOriginalUser: originalUser,
+      receiptRefreshFailed: _receiptRefreshFailed,
     );
   }
 
@@ -113,15 +137,37 @@ class AppStoreIAPService extends BaseIAPService {
     }
   }
 
-  Future<String> _getReceiptBase64() async {
+  Future<String> _getReceiptBase64({int retryCount = 0}) async {
+    const maxRetries = 2;
+    
     try {
       final iosPlatformAddition = _inAppPurchase
           .getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
       final receiptBase64 =
           await iosPlatformAddition.refreshPurchaseVerificationData();
-      return receiptBase64?.localVerificationData ?? '';
+      
+      if (receiptBase64?.localVerificationData.isNotEmpty == true) {
+        _receiptRefreshFailed = false;
+        return receiptBase64!.localVerificationData;
+      }
+      
+      // Empty receipt but no exception - might be first install without purchase
+      AnxLog.info('IAP: Receipt refresh returned empty data');
+      return '';
     } catch (e) {
-      AnxLog.severe('IAP: Error getting receipt base64: $e');
+      AnxLog.severe('IAP: Error getting receipt base64 (attempt ${retryCount + 1}): $e');
+      
+      // Retry with exponential backoff
+      if (retryCount < maxRetries) {
+        final delay = Duration(milliseconds: 500 * (retryCount + 1));
+        AnxLog.info('IAP: Retrying receipt refresh after ${delay.inMilliseconds}ms');
+        await Future.delayed(delay);
+        return _getReceiptBase64(retryCount: retryCount + 1);
+      }
+      
+      // All retries failed, mark as failed so we can fall back to cache
+      _receiptRefreshFailed = true;
+      AnxLog.warning('IAP: Receipt refresh failed after $maxRetries retries, will trust cache');
       return '';
     }
   }

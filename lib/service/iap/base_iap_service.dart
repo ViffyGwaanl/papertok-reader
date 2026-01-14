@@ -37,6 +37,7 @@ class IapPlatformSnapshot {
     required this.trialStartDate,
     required this.purchaseDate,
     required this.isOriginalUser,
+    this.receiptRefreshFailed = false,
   });
 
   /// Whether the platform reported an active purchase.
@@ -54,6 +55,10 @@ class IapPlatformSnapshot {
 
   /// Whether this is considered an “original user” (legacy free users on iOS).
   final bool isOriginalUser;
+  
+  /// Whether receipt refresh failed (iOS only). When true, the provider
+  /// should trust cached purchase status instead of clearing it.
+  final bool receiptRefreshFailed;
 }
 
 abstract class BaseIAPService {
