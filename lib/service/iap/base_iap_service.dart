@@ -55,7 +55,7 @@ class IapPlatformSnapshot {
 
   /// Whether this is considered an “original user” (legacy free users on iOS).
   final bool isOriginalUser;
-  
+
   /// Whether receipt refresh failed (iOS only). When true, the provider
   /// should trust cached purchase status instead of clearing it.
   final bool receiptRefreshFailed;

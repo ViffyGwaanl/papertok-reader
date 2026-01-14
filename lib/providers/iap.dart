@@ -184,7 +184,7 @@ class Iap extends _$Iap {
   Future<void> restore() async {
     final current = state.valueOrNull;
     if (current == null) return;
-    
+
     _updateState(
       (c) => c.copyWith(
         isRestoring: true,
@@ -192,18 +192,18 @@ class Iap extends _$Iap {
         purchaseFlowStatus: IapPurchaseFlowStatus.idle,
       ),
     );
-    
+
     try {
       await _iapService.restorePurchases();
-      
+
       // Wait for purchase stream to respond with a timeout
       // The purchase updates will be handled by _handlePurchaseUpdates
       await Future.delayed(const Duration(seconds: 5));
-      
+
       // Check if we got any restore result
       final afterState = state.valueOrNull;
-      if (afterState != null && 
-          afterState.isRestoring && 
+      if (afterState != null &&
+          afterState.isRestoring &&
           afterState.purchaseFlowStatus == IapPurchaseFlowStatus.idle) {
         // No purchase update received after restore - no purchases found
         AnxLog.warning('IAP: Restore completed but no purchases found');
@@ -211,7 +211,8 @@ class Iap extends _$Iap {
           (c) => c.copyWith(
             isRestoring: false,
             purchaseFlowStatus: IapPurchaseFlowStatus.error,
-            errorMessage: 'No purchases found to restore. If you have purchased, please check your Apple ID and network connection.',
+            errorMessage:
+                'No purchases found to restore. If you have purchased, please check your Apple ID and network connection.',
           ),
         );
       }
@@ -305,7 +306,7 @@ class Iap extends _$Iap {
 
     var purchased = current.isPurchased;
     final cachedPurchased = Prefs().iapPurchaseStatus;
-    
+
     AnxLog.info(
       'IAP: refreshEntitlement: policy=$policy, '
       'snapshot.hasPurchase=${snapshot.hasPurchase}, '
@@ -313,7 +314,7 @@ class Iap extends _$Iap {
       'receiptRefreshFailed=${snapshot.receiptRefreshFailed}, '
       'cachedPurchased=$cachedPurchased',
     );
-    
+
     if (snapshot.hasPurchase == true && snapshot.isPurchaseStatusReliable) {
       purchased = true;
       _writePurchaseCache(true, now);
@@ -321,7 +322,8 @@ class Iap extends _$Iap {
     } else if (snapshot.receiptRefreshFailed && cachedPurchased) {
       // Receipt refresh failed but user has cached purchase - trust the cache
       // and attempt restore to verify. Don't clear their purchase status.
-      AnxLog.info('IAP: Receipt refresh failed, trusting cached purchase status');
+      AnxLog.info(
+          'IAP: Receipt refresh failed, trusting cached purchase status');
       purchased = true;
       // Don't update cache timestamp to trigger another check later
     } else if (policy == _RefreshPolicy.full) {
