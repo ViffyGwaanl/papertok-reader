@@ -67,7 +67,11 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
           await tts.speak(content: text);
         }
       } else if (tts is SystemTts) {
-        await tts.speak(content: text);
+        if (voiceShortName != null) {
+          await tts.speakWithVoice(text, voiceShortName);
+        } else {
+          await tts.speak(content: text);
+        }
       }
     } catch (e) {
       // Handle error (maybe show toast)

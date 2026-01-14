@@ -135,6 +135,44 @@ class SystemTts extends BaseTts {
     if (voice != null) {}
   }
 
+  /// Apply the voice by shortName
+  Future<void> _applyVoice(String? voiceShortName) async {
+    if (voiceShortName == null || voiceShortName.isEmpty) {
+      return;
+    }
+
+    try {
+      // Get all voices to find the matching one
+      final voices = await flutterTts.getVoices;
+      if (voices is List) {
+        for (var voice in voices) {
+          final map = Map<String, dynamic>.from(voice);
+          if (map['name'] == voiceShortName) {
+            // flutter_tts setVoice expects a Map with 'name' and 'locale'
+            await flutterTts.setVoice({
+              'name': map['name'],
+              'locale': map['locale'],
+            });
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      // Fallback: try to set voice directly (some platforms support this)
+      // Ignore errors if voice not found
+    }
+  }
+
+  /// For testing a specific voice in settings (matching OnlineTts API)
+  Future<void> speakWithVoice(String content, String voiceShortName) async {
+    await stop();
+    await flutterTts.setVolume(volume);
+    await flutterTts.setSpeechRate(rate);
+    await flutterTts.setPitch(pitch);
+    await _applyVoice(voiceShortName);
+    await flutterTts.speak(content);
+  }
+
   @override
   Future<void> speak({String? content}) async {
     await setAwaitOptions();
@@ -145,6 +183,9 @@ class SystemTts extends BaseTts {
     await flutterTts.setVolume(volume);
     await flutterTts.setSpeechRate(rate);
     await flutterTts.setPitch(pitch);
+
+    // Apply the saved voice model
+    await _applyVoice(Prefs().ttsVoiceModel);
 
     await flutterTts.speak(_currentVoiceText!);
 
