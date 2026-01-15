@@ -3,6 +3,7 @@
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
 ## 1.11.0
+- Feat: Support setting whether to automatically hide the bottom navigation bar
 - Feat: Support using Azure TTS service for narration
 - Feat: Support previewing synthesized voice models
 - Feat: Optimize online TTS narration stability
@@ -13,6 +14,7 @@
 - Fix: feat: add note filtering function to prepare for book review function
 - Fix: fix the issue of missing context menu when selecting across pages on iOS
 
+- Feat: 支持设置是否自动隐藏地步导航栏
 - Feat: 支持使用 Azure TTS 服务进行朗读
 - Feat：支持试听语音模型合成效果
 - Feat: 优化在线 TTS 朗读稳定性
