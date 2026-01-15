@@ -14,7 +14,7 @@
 - Fix: feat: add note filtering function to prepare for book review function
 - Fix: fix the issue of missing context menu when selecting across pages on iOS
 
-- Feat: 支持设置是否自动隐藏地步导航栏
+- Feat: 支持设置是否自动隐藏底部导航栏
 - Feat: 支持使用 Azure TTS 服务进行朗读
 - Feat：支持试听语音模型合成效果
 - Feat: 优化在线 TTS 朗读稳定性
