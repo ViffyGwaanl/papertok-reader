@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "Dil",
   "settingsAppearanceOpenBookAnimation": "Kitap Açma Animasyonu",
   "settingsAppearanceBottomNavigatorShow": "Alt Gezinti Çubuğu",
+  "settingsAdvancedAutoHideBottomBar": "Alt gezinme çubuğunu otomatik gizle",
   "readingContents": "İçindekiler",
   "statisticToPresent": "Şu Ana Kadar",
   "statisticBooksRead": "{count, plural, =0{Hiç kitap okunmadı} =1{1 kitap okundu} other{{count} kitap okundu} }",

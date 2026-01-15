@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "اللغة",
   "settingsAppearanceOpenBookAnimation": "رسوم متحركة لفتح الكتاب",
   "settingsAppearanceBottomNavigatorShow": "شريط التنقل السفلي",
+  "settingsAdvancedAutoHideBottomBar": "إخفاء شريط التنقل السفلي تلقائيًا",
   "readingContents": "المحتويات",
   "statisticToPresent": "حتى الآن",
   "statisticBooksRead": "{count, plural, zero{لم تتم قراءة أي كتب} =1{تمت قراءة كتاب واحد} two{تمت قراءة كتابين} few{تمت قراءة {count} كتب} many{تمت قراءة {count} كتابًا} other{تمت قراءة {count} كتاب}}",

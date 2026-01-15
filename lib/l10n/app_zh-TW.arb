@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "語言",
   "settingsAppearanceOpenBookAnimation": "開啟書籍動畫",
   "settingsAppearanceBottomNavigatorShow": "顯示底部導覽列",
+  "settingsAdvancedAutoHideBottomBar": "自動隱藏底部導航欄",
   "readingContents": "目錄",
   "statisticToPresent": "至今",
   "statisticBooksRead": "{count, plural, =0{尚未閱讀任何書籍} other{已閱讀 {count} 本書}}",

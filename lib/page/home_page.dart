@@ -262,12 +262,14 @@ class _HomePageState extends ConsumerState<HomePage> {
             body: BottomBar(
               body: (_, controller) =>
                   pages(_currentIndex, constraints, controller),
-              hideOnScroll: true,
+              hideOnScroll: Prefs().autoHideBottomBar,
               scrollOpposite: false,
               curve: Curves.easeIn,
               barColor: Colors.transparent,
               iconDecoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
+                color: Prefs().autoHideBottomBar
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(500),
               ),
               child: ClipRRect(

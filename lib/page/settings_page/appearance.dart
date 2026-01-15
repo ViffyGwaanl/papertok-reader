@@ -115,6 +115,15 @@ class _AppearanceSettingState extends State<AppearanceSetting> {
                 },
               ),
               SettingsTile.switchTile(
+                title: Text(L10n.of(context).settingsAdvancedAutoHideBottomBar),
+                leading: const Icon(Icons.vertical_align_bottom),
+                initialValue: Prefs().autoHideBottomBar,
+                onToggle: (value) {
+                  Prefs().autoHideBottomBar = value;
+                  setState(() {});
+                },
+              ),
+              SettingsTile.switchTile(
                 title: Text(L10n.of(context).reduceVibrationFeedback),
                 leading: const Icon(Icons.vibration),
                 initialValue: Prefs().reduceVibrationFeedback,

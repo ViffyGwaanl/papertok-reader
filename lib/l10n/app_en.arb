@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "Language",
   "settingsAppearanceOpenBookAnimation": "Open Book Animation",
   "settingsAppearanceBottomNavigatorShow": "Bottom Navigator",
+  "settingsAdvancedAutoHideBottomBar": "Auto hide bottom navigation bar",
   "readingContents": "Contents",
   "statisticToPresent": "To Present",
   "statisticBooksRead": "{count, plural, zero{No books read} one{1 book read} other{{count} books read} }",

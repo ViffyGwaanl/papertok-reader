@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "言語",
   "settingsAppearanceOpenBookAnimation": "本を開くアニメーション",
   "settingsAppearanceBottomNavigatorShow": "下部ナビゲーター",
+  "settingsAdvancedAutoHideBottomBar": "下部ナビゲーションバーを自動的に隠す",
   "readingContents": "目次",
   "statisticToPresent": "現在まで",
   "statisticBooksRead": "{count, plural, =0{読んだ本はありません} other{{count}冊読みました} }",

@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "语言",
   "settingsAppearanceOpenBookAnimation": "打开书的动画",
   "settingsAppearanceBottomNavigatorShow": "底部导航栏",
+  "settingsAdvancedAutoHideBottomBar": "自动隐藏底部导航栏",
   "readingContents": "目录",
   "statisticToPresent": "至今",
   "statisticBooksRead": "{count, plural, other{{count}本书}}",

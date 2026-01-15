@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "語文",
   "settingsAppearanceOpenBookAnimation": "展卷之動效",
   "settingsAppearanceBottomNavigatorShow": "下方導引欄",
+  "settingsAdvancedAutoHideBottomBar": "自動隱下方導引欄",
   "readingContents": "目次",
   "statisticToPresent": "迄今",
   "statisticBooksRead": "{count, plural, other{{count}卷書}}",

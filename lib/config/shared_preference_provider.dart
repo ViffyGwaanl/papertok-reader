@@ -380,6 +380,15 @@ class Prefs extends ChangeNotifier {
     return prefs.getBool('hideStatusBar') ?? true;
   }
 
+  set autoHideBottomBar(bool status) {
+    prefs.setBool('autoHideBottomBar', status);
+    notifyListeners();
+  }
+
+  bool get autoHideBottomBar {
+    return prefs.getBool('autoHideBottomBar') ?? false;
+  }
+
   set awakeTime(int minutes) {
     prefs.setInt('awakeTime', minutes);
     notifyListeners();

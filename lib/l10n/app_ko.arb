@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "언어",
   "settingsAppearanceOpenBookAnimation": "책 열기 애니메이션",
   "settingsAppearanceBottomNavigatorShow": "하단 네비게이터",
+  "settingsAdvancedAutoHideBottomBar": "하단 내비게이션 바 자동 숨기기",
   "readingContents": "목차",
   "statisticToPresent": "현재까지",
   "statisticBooksRead": "{count, plural, =0{읽은 책이 없습니다} other{{count}권 읽었습니다} }",

@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "Sprache",
   "settingsAppearanceOpenBookAnimation": "Buchöffnungsanimation",
   "settingsAppearanceBottomNavigatorShow": "Untere Navigationsleiste",
+  "settingsAdvancedAutoHideBottomBar": "Untere Navigationsleiste automatisch ausblenden",
   "readingContents": "Inhalt",
   "statisticToPresent": "Bis heute",
   "statisticBooksRead": "{count, plural, =0{Keine Bücher gelesen} =1{1 Buch gelesen} other{{count} Bücher gelesen}}",

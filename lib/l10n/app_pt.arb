@@ -23,6 +23,7 @@
   "settingsAppearanceLanguage": "Idioma",
   "settingsAppearanceOpenBookAnimation": "Animação de Abertura do Livro",
   "settingsAppearanceBottomNavigatorShow": "Navegador Inferior",
+  "settingsAdvancedAutoHideBottomBar": "Ocultar automaticamente a barra de navegação inferior",
   "readingContents": "Conteúdos",
   "statisticToPresent": "Até o Presente",
   "statisticBooksRead": "{count, plural, =0{Nenhum livro lido} =1{1 livro lido} other{{count} livros lidos} }",
