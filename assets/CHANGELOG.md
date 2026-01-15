@@ -10,6 +10,7 @@
 - Feat: Windows can remember whether the window is maximized @TimurCravtov
 - Fix: Fixed the issue where Epub files could not be imported when the directory did not exist @ZzhouR
 - Fix: feat: add gesture handling to ignore bookmark actions from top screen touch
+- Fix: feat: add note filtering function to prepare for book review function
 
 - Feat: 支持使用 Azure TTS 服务进行朗读
 - Feat：支持试听语音模型合成效果
@@ -18,6 +19,7 @@
 - Feat：Windows可以记忆是否最大化窗口 @TimurCravtov
 - Fix：修复Epub文件目录不存在时无法导入的问题 @ZzhouR
 - Fix: 添加手势处理，忽略来自屏幕顶部触摸的书签操作
+- Fix: 添加笔记过滤功能，为书评功能做好准备
 
 ## 1.10.1
 - Feat: Choose bookshelf folder style (2x2 grid/stacked)
