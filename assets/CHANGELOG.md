@@ -9,6 +9,7 @@
 - Feat: In scroll page mode, you can turn pages across chapters by dragging up and down @Spixz
 - Feat: Windows can remember whether the window is maximized @TimurCravtov
 - Fix: Fixed the issue where Epub files could not be imported when the directory did not exist @ZzhouR
+- Fix: feat: add gesture handling to ignore bookmark actions from top screen touch
 
 - Feat: 支持使用 Azure TTS 服务进行朗读
 - Feat：支持试听语音模型合成效果
@@ -16,6 +17,7 @@
 - Feat：滚动翻页模式下可以通过上下拖动来跨章节翻页 @Spixz
 - Feat：Windows可以记忆是否最大化窗口 @TimurCravtov
 - Fix：修复Epub文件目录不存在时无法导入的问题 @ZzhouR
+- Fix: 添加手势处理，忽略来自屏幕顶部触摸的书签操作
 
 ## 1.10.1
 - Feat: Choose bookshelf folder style (2x2 grid/stacked)
