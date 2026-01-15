@@ -11,6 +11,7 @@
 - Fix: Fixed the issue where Epub files could not be imported when the directory did not exist @ZzhouR
 - Fix: feat: add gesture handling to ignore bookmark actions from top screen touch
 - Fix: feat: add note filtering function to prepare for book review function
+- Fix: fix the issue of missing context menu when selecting across pages on iOS
 
 - Feat: 支持使用 Azure TTS 服务进行朗读
 - Feat：支持试听语音模型合成效果
@@ -20,6 +21,7 @@
 - Fix：修复Epub文件目录不存在时无法导入的问题 @ZzhouR
 - Fix: 添加手势处理，忽略来自屏幕顶部触摸的书签操作
 - Fix: 添加笔记过滤功能，为书评功能做好准备
+- Fix: 解决 iOS 跨页选择时上下文菜单缺失的问题
 
 ## 1.10.1
 - Feat: Choose bookshelf folder style (2x2 grid/stacked)
