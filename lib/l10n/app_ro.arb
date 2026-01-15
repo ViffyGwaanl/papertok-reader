@@ -23,6 +23,7 @@
 	"settingsAppearanceLanguage": "Language",
 	"settingsAppearanceOpenBookAnimation": "Open Book Animation",
 	"settingsAppearanceBottomNavigatorShow": "Bottom Navigator",
+	"settingsAdvancedAutoHideBottomBar": "Ascunde automat bara de navigare inferioară",
 	"readingContents": "Contents",
 	"statisticToPresent": "Până în prezent",
 	"statisticBooksRead": "{count, plural, zero{Nicio carte citită} one{1 carte citită} other{{count} cărți citite} }",
