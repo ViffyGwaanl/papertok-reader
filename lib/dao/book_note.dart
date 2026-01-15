@@ -6,6 +6,17 @@ class BookNoteDao extends BaseDao {
 
   static const String table = 'tb_notes';
 
+  /// Annotation types for highlight/underline notes (excludes book reviews)
+  static const List<String> annotationTypes = [
+    'highlight',
+    'underline',
+    'bookmark'
+  ];
+
+  /// Helper to build type filter SQL
+  static String get _typeFilter =>
+      "type IN ('${annotationTypes.join("', '")}')";
+
   Future<int> save(BookNote bookNote) async {
     if (bookNote.id != null) {
       await updateBookNoteById(bookNote);
@@ -28,7 +39,7 @@ class BookNoteDao extends BaseDao {
     return queryList(
       table,
       mapper: BookNote.fromDb,
-      where: 'cfi = ? AND book_id = ?',
+      where: 'cfi = ? AND book_id = ? AND $_typeFilter',
       whereArgs: [cfi, bookId],
       orderBy: 'update_time ASC',
     );
@@ -38,7 +49,7 @@ class BookNoteDao extends BaseDao {
     return queryList(
       table,
       mapper: BookNote.fromDb,
-      where: 'book_id = ?',
+      where: 'book_id = ? AND $_typeFilter',
       whereArgs: [bookId],
       orderBy: 'update_time DESC',
     );
@@ -70,7 +81,7 @@ class BookNoteDao extends BaseDao {
 
   Future<List<Map<String, int>>> selectAllBookIdAndNotes() async {
     return rawQueryList(
-      'SELECT book_id, COUNT(id) AS number_of_notes FROM $table GROUP BY book_id ORDER BY number_of_notes DESC',
+      'SELECT book_id, COUNT(id) AS number_of_notes FROM $table WHERE $_typeFilter GROUP BY book_id ORDER BY number_of_notes DESC',
       mapper: (row) => <String, int>{
         'bookId': row['book_id'] as int? ?? 0,
         'numberOfNotes': row['number_of_notes'] as int? ?? 0,
@@ -80,7 +91,7 @@ class BookNoteDao extends BaseDao {
 
   Future<Map<String, int>> selectNumberOfNotesAndBooks() async {
     final result = await rawQuerySingle(
-      'SELECT COUNT(id) AS number_of_notes, COUNT(DISTINCT book_id) AS number_of_books FROM $table',
+      'SELECT COUNT(id) AS number_of_notes, COUNT(DISTINCT book_id) AS number_of_books FROM $table WHERE $_typeFilter',
       mapper: (row) => <String, int>{
         'numberOfNotes': row['number_of_notes'] as int? ?? 0,
         'numberOfBooks': row['number_of_books'] as int? ?? 0,
@@ -103,7 +114,7 @@ class BookNoteDao extends BaseDao {
     if (query.isEmpty) {
       return Future.value(const []);
     }
-    return searchBookNotesAdvanced(keyword: query);
+    return searchBookNotesAdvanced(keyword: query, types: annotationTypes);
   }
 
   Future<List<BookNote>> searchBookNotesAdvanced({
@@ -112,10 +123,17 @@ class BookNoteDao extends BaseDao {
     DateTime? from,
     DateTime? to,
     int? limit,
+    List<String>? types,
   }) async {
     final where = <String>[];
     final whereArgs = <Object?>[];
     final query = keyword?.trim();
+
+    // Filter by types (defaults to annotation types if not specified)
+    final filterTypes = types ?? annotationTypes;
+    if (filterTypes.isNotEmpty) {
+      where.add("type IN ('${filterTypes.join("', '")}')");
+    }
 
     if (query != null && query.isNotEmpty) {
       where.add('(content LIKE ? OR reader_note LIKE ? OR chapter LIKE ?)');
@@ -150,7 +168,7 @@ class BookNoteDao extends BaseDao {
 
   Future<BookNote?> selectRandomNote() async {
     return rawQuerySingle(
-      'SELECT * FROM $table ORDER BY RANDOM() LIMIT 1',
+      'SELECT * FROM $table WHERE $_typeFilter ORDER BY RANDOM() LIMIT 1',
       mapper: BookNote.fromDb,
     );
   }
