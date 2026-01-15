@@ -629,10 +629,10 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           final rawContextText = location['contextText']?.toString();
           _lastSelectionContextText =
               (rawContextText?.trim().isEmpty ?? true) ? null : rawContextText;
-          double left = location['pos']['left'];
-          double top = location['pos']['top'];
-          double right = location['pos']['right'];
-          double bottom = location['pos']['bottom'];
+          double left = (location['pos']['left'] as num).toDouble();
+          double top = (location['pos']['top'] as num).toDouble();
+          double right = (location['pos']['right'] as num).toDouble();
+          double bottom = (location['pos']['bottom'] as num).toDouble();
           showContextMenu(
             context,
             left,
@@ -667,10 +667,10 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           final rawContextText = annotation['contextText']?.toString();
           _lastSelectionContextText =
               (rawContextText?.trim().isEmpty ?? true) ? null : rawContextText;
-          double left = annotation['pos']['left'];
-          double top = annotation['pos']['top'];
-          double right = annotation['pos']['right'];
-          double bottom = annotation['pos']['bottom'];
+          double left = (annotation['pos']['left'] as num).toDouble();
+          double top = (annotation['pos']['top'] as num).toDouble();
+          double right = (annotation['pos']['right'] as num).toDouble();
+          double bottom = (annotation['pos']['bottom'] as num).toDouble();
           showContextMenu(
             context,
             left,
