@@ -782,6 +782,7 @@ class Reader {
     cfi: null,
     id: null,
   }
+  #ignoreBookmarkGesture = false
   constructor() {
     this.#footnoteHandler.addEventListener('before-render', e => {
       const { view } = e.detail
@@ -1145,6 +1146,13 @@ class Reader {
 
     this.#bookMarkExists = !!document.getElementById('bookmark-icon');
     this.#upTriggered = false;
+
+    // Check if touch started from the top 10% of the screen
+    // If so, disable bookmark gesture to avoid conflict with system control center
+    const touch = e.touch;
+    const screenHeight = window.innerHeight;
+    const startY = touch?.screenY ?? touch?.clientY ?? 0;
+    this.#ignoreBookmarkGesture = startY < screenHeight * 0.1;
   }
 
   #onTouchMove = ({ detail: e }) => {
@@ -1155,8 +1163,11 @@ class Reader {
       const deltaY = e.touchState.delta.y;
 
       if (deltaY > 0) {
-        mainView.style.transform = `translateY(${Math.sqrt(deltaY * 50)}px)`;
-        this.#showBookmarkIcon(deltaY);
+        // Only show bookmark pull-down UI if touch did not start from top 10%
+        if (!this.#ignoreBookmarkGesture) {
+          mainView.style.transform = `translateY(${Math.sqrt(deltaY * 50)}px)`;
+          this.#showBookmarkIcon(deltaY);
+        }
       } else if (deltaY < -60) {
         if (!this.#upTriggered) {
           this.#upTriggered = true;
@@ -1191,12 +1202,15 @@ class Reader {
       if (deltaY < -60) {
         // console.log('UP');
       } else if (deltaY > 60) {
-        if (this.#bookMarkExists) {
-          this.#hideBookmarkIcon();
-          this.handleBookmark(true);
-        } else {
-          this.#showBookmarkIcon(deltaY);
-          this.handleBookmark(false);
+        // Only handle bookmark if touch did not start from top 10% of screen
+        if (!this.#ignoreBookmarkGesture) {
+          if (this.#bookMarkExists) {
+            this.#hideBookmarkIcon();
+            this.handleBookmark(true);
+          } else {
+            this.#showBookmarkIcon(deltaY);
+            this.handleBookmark(false);
+          }
         }
       } else {
         this.#hideBookmarkIcon();
