@@ -22,6 +22,7 @@ class TagsListTool
           description: 'List all tags with id, name, rgb.',
           inputJsonSchema: const {
             'type': 'object',
+            'properties': {},
           },
           timeout: const Duration(seconds: 5),
         );
