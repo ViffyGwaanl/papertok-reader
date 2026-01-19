@@ -271,10 +271,10 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
   }
 
   IconData _getGenderIcon(String gender) {
-    switch (gender) {
-      case 'Female':
+    switch (gender.toLowerCase()) {
+      case 'female':
         return Icons.female;
-      case 'Male':
+      case 'male':
         return Icons.male;
       default:
         return Icons.person;
@@ -665,9 +665,9 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
 
                 bool isHighlighted = _highlightedModel == shortName;
                 bool isSelected = selectedVoiceModel == shortName;
-                String localizationedGender = gender == 'Female'
+                String localizationedGender = gender.toLowerCase() == 'female'
                     ? L10n.of(context).settingsNarrateVoiceModelFemale
-                    : gender == 'Male'
+                    : gender.toLowerCase() == 'male'
                         ? L10n.of(context).settingsNarrateVoiceModelMale
                         : gender;
 

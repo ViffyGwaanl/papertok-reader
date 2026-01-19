@@ -265,9 +265,8 @@ class SystemTts extends BaseTts {
           return TtsVoice(
               shortName: map['name'] ?? '',
               name: map['name'] ?? '',
-              locale: map['locale'] ?? '',
-              gender:
-                  '', // System voices typically don't provide gender in a standard way across platforms
+              locale: map['locale']?.replaceAll('_', '-') ?? '',
+              gender: map['gender']?.toString().toLowerCase() ?? '',
               rawData: map);
         }).toList();
       }
