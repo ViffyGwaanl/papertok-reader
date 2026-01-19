@@ -482,10 +482,10 @@ class Sync extends _$Sync {
   Future<void> _prepareDbForUpload(String localPath) async {
     // Only execute on OHOS platform
     if (!AnxPlatform.isOhos) return;
-    
+
     // Only for database files
     if (!localPath.endsWith('.db')) return;
-    
+
     try {
       await DBHelper().database.then((db) async {
         await db.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
@@ -503,7 +503,7 @@ class Sync extends _$Sync {
   ]) async {
     // Prepare database for upload (WAL checkpoint on OHOS)
     await _prepareDbForUpload(localPath);
-    
+
     changeState(state.copyWith(
       direction: SyncDirection.upload,
       fileName: localPath.split('/').last,
