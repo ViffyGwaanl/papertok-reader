@@ -399,6 +399,7 @@ class Sync extends _$Sync {
     try {
       switch (direction) {
         case SyncDirection.upload:
+          await _prepareDbForUpload(localDbPath);
           DBHelper.close();
           await uploadFile(localDbPath, 'anx/$remoteDbFileName');
           await DBHelper().initDB();
@@ -436,6 +437,7 @@ class Sync extends _$Sync {
         case SyncDirection.both:
           if (remoteDb == null ||
               remoteDb.mTime!.isBefore(localDb.lastModifiedSync())) {
+            await _prepareDbForUpload(localDbPath);
             DBHelper.close();
             await uploadFile(localDbPath, 'anx/$remoteDbFileName');
             await DBHelper().initDB();
@@ -501,9 +503,6 @@ class Sync extends _$Sync {
     String remotePath, [
     bool replace = true,
   ]) async {
-    // Prepare database for upload (WAL checkpoint on OHOS)
-    await _prepareDbForUpload(localPath);
-
     changeState(state.copyWith(
       direction: SyncDirection.upload,
       fileName: localPath.split('/').last,
