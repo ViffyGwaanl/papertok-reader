@@ -15,6 +15,7 @@ import 'package:anx_reader/service/sync/sync_client_base.dart';
 import 'package:anx_reader/service/database_sync_manager.dart';
 import 'package:anx_reader/dao/database.dart';
 import 'package:anx_reader/utils/get_path/databases_path.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -475,11 +476,34 @@ class Sync extends _$Sync {
     }
   }
 
+  /// Prepare database for upload by executing WAL checkpoint
+  /// Only needed on OHOS platform where WAL mode creates -wal and -shm files
+  /// This merges all WAL data into the main .db file for cross-platform compatibility
+  Future<void> _prepareDbForUpload(String localPath) async {
+    // Only execute on OHOS platform
+    if (!AnxPlatform.isOhos) return;
+    
+    // Only for database files
+    if (!localPath.endsWith('.db')) return;
+    
+    try {
+      await DBHelper().database.then((db) async {
+        await db.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
+        AnxLog.info('Sync: WAL checkpoint completed before upload');
+      });
+    } catch (e) {
+      AnxLog.warning('Sync: WAL checkpoint failed: $e');
+    }
+  }
+
   Future<void> uploadFile(
     String localPath,
     String remotePath, [
     bool replace = true,
   ]) async {
+    // Prepare database for upload (WAL checkpoint on OHOS)
+    await _prepareDbForUpload(localPath);
+    
     changeState(state.copyWith(
       direction: SyncDirection.upload,
       fileName: localPath.split('/').last,
