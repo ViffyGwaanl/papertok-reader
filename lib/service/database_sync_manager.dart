@@ -10,7 +10,8 @@ import 'package:anx_reader/main.dart';
 import 'package:path/path.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite/sqflite.dart';
+// import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Database safe sync manager
 /// Provides safe database download, validation and recovery mechanisms
@@ -124,27 +125,23 @@ class DatabaseSyncManager {
             'Database file too small: ${fileSize}B');
       }
 
+      // First, ensure the database is converted from WAL mode to DELETE mode
+      // This is necessary because downloaded databases may be in WAL mode
+      // and SQLite can't open them properly without the WAL files
+      if (!AnxPlatform.isOhos) {
+        await _ensureDeleteJournalMode(dbPath);
+      }
+
       // Initialize FFI for desktop platforms
       Database? db;
       try {
         // Platform-specific database opening
-        if (AnxPlatform.isWindows) {
-          sqfliteFfiInit();
-          db = await databaseFactoryFfi.openDatabase(
-            dbPath,
-            options: OpenDatabaseOptions(
-              readOnly: true,
-              singleInstance: false,
-            ),
-          );
-        } else {
-          // Android/iOS
-          db = await openDatabase(
-            dbPath,
-            readOnly: true,
-            singleInstance: false,
-          );
-        }
+        // Open in read-write mode to allow SQLite to handle any WAL recovery
+        db = await openDatabase(
+          dbPath,
+          readOnly: false,
+          singleInstance: false,
+        );
 
         // Basic integrity check
         final integrityResult = await db.rawQuery('PRAGMA integrity_check');
@@ -213,12 +210,47 @@ class DatabaseSyncManager {
     // Ensure database is closed
     await DBHelper.close();
 
+    // Clean up local WAL files before replacement (OHOS)
+    if (AnxPlatform.isOhos) {
+      await DBHelper.cleanupWalFiles(localDbPath);
+    }
+
     // Use file move operation for atomic replacement
     final tempFile = io.File(tempDbPath);
     await tempFile.copy(localDbPath);
 
+    // On non-OHOS platforms, convert WAL mode to DELETE mode if needed
+    if (!AnxPlatform.isOhos) {
+      await _ensureDeleteJournalMode(localDbPath);
+    }
+
     // Re-initialize database
     await DBHelper().initDB();
+  }
+
+  /// Ensure the database uses DELETE journal mode (not WAL)
+  /// This ensures the database is a single file without -wal/-shm files
+  static Future<void> _ensureDeleteJournalMode(String dbPath) async {
+    Database? db;
+    try {
+      db = await openDatabase(dbPath, singleInstance: false);
+
+      // Check current journal mode
+      final result = await db.rawQuery('PRAGMA journal_mode');
+      final currentMode = result.first.values.first.toString().toLowerCase();
+
+      if (currentMode == 'wal') {
+        // Checkpoint to merge WAL data
+        await db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+        // Switch to DELETE mode
+        await db.execute('PRAGMA journal_mode=DELETE');
+        AnxLog.info('DatabaseSync: Converted from WAL to DELETE journal mode');
+      }
+    } catch (e) {
+      AnxLog.warning('DatabaseSync: Failed to set journal mode: $e');
+    } finally {
+      await db?.close();
+    }
   }
 
   /// Recover database from backup

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' as io;
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
@@ -134,13 +135,13 @@ class Sync extends _$Sync {
     final localDbPath = join(databasePath, 'app_database.db');
     io.File localDb = io.File(localDbPath);
 
-    AnxLog.info(
-        'localDbTime: ${localDb.lastModifiedSync()}, remoteDbTime: ${remoteDb?.mTime}');
+    // Use getLatestModTime to include WAL file modification time
+    final localDbTime = DBHelper.getLatestModTime(localDbPath);
+    AnxLog.info('localDbTime: $localDbTime, remoteDbTime: ${remoteDb?.mTime}');
 
     // Less than 5s difference, no sync needed
     if (remoteDb != null &&
-        localDb.lastModifiedSync().difference(remoteDb.mTime!).inSeconds.abs() <
-            5) {
+        localDbTime.difference(remoteDb.mTime!).inSeconds.abs() < 5) {
       return null;
     }
 
@@ -398,7 +399,13 @@ class Sync extends _$Sync {
     try {
       switch (direction) {
         case SyncDirection.upload:
-          DBHelper.close();
+          // Checkpoint WAL to ensure all data is in the main db file
+          await DBHelper.checkpointWal();
+          await DBHelper.close();
+          // Clean up WAL files on OHOS to ensure single file upload
+          if (AnxPlatform.isOhos) {
+            await DBHelper.cleanupWalFiles(localDbPath);
+          }
           await uploadFile(localDbPath, 'anx/$remoteDbFileName');
           await DBHelper().initDB();
           break;
@@ -435,7 +442,13 @@ class Sync extends _$Sync {
         case SyncDirection.both:
           if (remoteDb == null ||
               remoteDb.mTime!.isBefore(localDb.lastModifiedSync())) {
-            DBHelper.close();
+            // Checkpoint WAL to ensure all data is in the main db file
+            await DBHelper.checkpointWal();
+            await DBHelper.close();
+            // Clean up WAL files on OHOS to ensure single file upload
+            if (AnxPlatform.isOhos) {
+              await DBHelper.cleanupWalFiles(localDbPath);
+            }
             await uploadFile(localDbPath, 'anx/$remoteDbFileName');
             await DBHelper().initDB();
           } else if (remoteDb.mTime!.isAfter(localDb.lastModifiedSync())) {
