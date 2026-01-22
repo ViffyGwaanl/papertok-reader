@@ -9,6 +9,17 @@ import 'package:flutter/material.dart';
 
 class AiTranslateProvider extends TranslateServiceProvider {
   @override
+  TranslateService get service => TranslateService.ai;
+
+  @override
+  String get label => 'AI';
+
+  /// AI translation uses native language names (e.g., "简体中文", "English")
+  /// instead of ISO codes for better prompt understanding.
+  @override
+  String mapLanguageCode(LangListEnum lang) => lang.nativeName;
+
+  @override
   Widget translate(
     String text,
     LangListEnum from,
@@ -17,8 +28,8 @@ class AiTranslateProvider extends TranslateServiceProvider {
   }) {
     final prompt = generatePromptTranslate(
       text,
-      to.nativeName,
-      from.nativeName,
+      mapLanguageCode(to),
+      mapLanguageCode(from),
       contextText: contextText,
     );
 
@@ -38,8 +49,8 @@ class AiTranslateProvider extends TranslateServiceProvider {
     try {
       final payload = generatePromptTranslate(
         text,
-        to.nativeName,
-        from.nativeName,
+        mapLanguageCode(to),
+        mapLanguageCode(from),
         contextText: contextText,
       );
 
@@ -65,15 +76,5 @@ class AiTranslateProvider extends TranslateServiceProvider {
             L10n.of(navigatorKey.currentContext!).settingsTranslateAiTip,
       ),
     ];
-  }
-
-  @override
-  Map<String, dynamic> getConfig() {
-    return {};
-  }
-
-  @override
-  Future<void> saveConfig(Map<String, dynamic> config) async {
-    return;
   }
 }

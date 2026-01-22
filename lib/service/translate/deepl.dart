@@ -7,13 +7,35 @@ import 'package:anx_reader/utils/log/common.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
-String deeplUrl = 'https://api-free.deepl.com/v2/translate';
-
-String getDeepLUrl(Map<String, dynamic> config) {
-  return config['api_url'] ?? deeplUrl;
-}
+const _deeplApiUrl = 'https://api-free.deepl.com/v2/translate';
 
 class DeepLTranslateProvider extends TranslateServiceProvider {
+  @override
+  TranslateService get service => TranslateService.deepl;
+
+  @override
+  String get label => 'DeepL API';
+
+  /// DeepL uses uppercase language codes (e.g., ZH, EN, JA).
+  @override
+  String mapLanguageCode(LangListEnum lang) {
+    const Map<String, String> codeMap = {
+      'zh-CN': 'ZH',
+      'zh-TW': 'ZH',
+      'en': 'EN',
+      'ja': 'JA',
+      'de': 'DE',
+      'fr': 'FR',
+      'es': 'ES',
+      'it': 'IT',
+      'nl': 'NL',
+      'pl': 'PL',
+      'pt': 'PT',
+      'ru': 'RU',
+    };
+    return codeMap[lang.code] ?? lang.code.toUpperCase();
+  }
+
   @override
   Widget translate(
     String text,
@@ -45,21 +67,20 @@ class DeepLTranslateProvider extends TranslateServiceProvider {
 
       final Map<String, dynamic> params = {
         'text': [text],
-        'target_lang': _mapLanguageCode(to.code),
+        'target_lang': mapLanguageCode(to),
       };
 
       if (from != LangListEnum.auto) {
-        params['source_lang'] = _mapLanguageCode(from.code);
+        params['source_lang'] = mapLanguageCode(from);
       }
-      var dio = Dio();
 
       final headers = {
         'Authorization': 'DeepL-Auth-Key ${config['api_key']}',
         'Content-Type': 'application/json',
       };
 
-      final response = await dio.post(
-        getDeepLUrl(config),
+      final response = await Dio().post(
+        config['api_url'] ?? _deeplApiUrl,
         data: params,
         options: Options(
           headers: headers,
@@ -87,25 +108,6 @@ class DeepLTranslateProvider extends TranslateServiceProvider {
     }
   }
 
-  String _mapLanguageCode(String isoCode) {
-    final Map<String, String> codeMap = {
-      'zh-CN': 'ZH',
-      'zh-TW': 'ZH',
-      'en': 'EN',
-      'ja': 'JA',
-      'de': 'DE',
-      'fr': 'FR',
-      'es': 'ES',
-      'it': 'IT',
-      'nl': 'NL',
-      'pl': 'PL',
-      'pt': 'PT',
-      'ru': 'RU',
-    };
-
-    return codeMap[isoCode] ?? isoCode.toUpperCase();
-  }
-
   @override
   List<ConfigItem> getConfigItems() {
     return [
@@ -113,7 +115,7 @@ class DeepLTranslateProvider extends TranslateServiceProvider {
         key: 'api_url',
         label: 'DeepL API URL',
         type: ConfigItemType.text,
-        defaultValue: deeplUrl,
+        defaultValue: _deeplApiUrl,
       ),
       ConfigItem(
         key: 'api_key',
@@ -127,17 +129,12 @@ class DeepLTranslateProvider extends TranslateServiceProvider {
 
   @override
   Map<String, dynamic> getConfig() {
-    final config = Prefs().getTranslateServiceConfig(TranslateService.deepl);
-
-    return config ??
-        {
-          'api_key': '',
-          'api_url': deeplUrl,
-        };
+    final config = Prefs().getTranslateServiceConfig(service);
+    return config ?? {'api_key': '', 'api_url': _deeplApiUrl};
   }
 
   @override
-  Future<void> saveConfig(Map<String, dynamic> config) async {
-    Prefs().saveTranslateServiceConfig(TranslateService.deepl, config);
+  void saveConfig(Map<String, dynamic> config) {
+    Prefs().saveTranslateServiceConfig(service, config);
   }
 }

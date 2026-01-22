@@ -5,25 +5,55 @@ import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/translate/ai.dart';
 import 'package:anx_reader/service/translate/deepl.dart';
-import 'package:anx_reader/service/translate/google.dart';
+import 'package:anx_reader/service/translate/google_api.dart';
 import 'package:anx_reader/service/translate/microsoft.dart';
+import 'package:anx_reader/service/translate/microsoft_api.dart';
+import 'package:anx_reader/service/translate/web_view.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 enum TranslateService {
-  google('Google'),
-  microsoft('Microsoft'),
-  deepl('DeepL'),
-  ai('AI');
+  bingWeb,
+  googleWeb,
+  microsoftApi,
+  googleApi,
+  deepl,
+  ai,
+  microsoft;
 
-  const TranslateService(this.label);
+  TranslateServiceProvider get provider {
+    switch (this) {
+      case TranslateService.bingWeb:
+        return BingWebTranslateProvider();
+      case TranslateService.googleWeb:
+        return GoogleWebTranslateProvider();
+      case TranslateService.microsoftApi:
+        return MicrosoftApiTranslateProvider();
+      case TranslateService.googleApi:
+        return GoogleApiTranslateProvider();
+      case TranslateService.deepl:
+        return DeepLTranslateProvider();
+      case TranslateService.ai:
+        return AiTranslateProvider();
+      case TranslateService.microsoft:
+        return MicrosoftTranslateProvider();
+    }
+  }
 
-  final String label;
+  /// Get the display label from the provider.
+  String get label => provider.label;
+
+  /// Check if the service is a WebView provider.
+  bool get isWebView => provider is WebViewTranslateProvider;
 }
 
 TranslateService getTranslateService(String name) {
-  return TranslateService.values.firstWhere((e) => e.name == name);
+  try {
+    return TranslateService.values.firstWhere((e) => e.name == name);
+  } catch (e) {
+    return TranslateService.bingWeb;
+  }
 }
 
 enum ConfigItemType {
@@ -69,7 +99,20 @@ class ConfigItem {
   }
 }
 
+/// Base class for all translation service providers.
+/// Subclasses must implement [service], [label], [translate], and [translateStream].
 abstract class TranslateServiceProvider {
+  /// The service enum value this provider corresponds to.
+  TranslateService get service;
+
+  /// The display label for this service.
+  String get label;
+
+  /// Override this method if the service uses a different code format.
+  /// Default implementation returns [lang.code].
+  String mapLanguageCode(LangListEnum lang) => lang.code;
+
+  /// Returns the widget for displaying the translation result.
   Widget translate(
     String text,
     LangListEnum from,
@@ -77,6 +120,7 @@ abstract class TranslateServiceProvider {
     String? contextText,
   });
 
+  /// Returns a stream of translation results.
   Stream<String> translateStream(
     String text,
     LangListEnum from,
@@ -84,7 +128,7 @@ abstract class TranslateServiceProvider {
     String? contextText,
   });
 
-  /// Only translate text with retries, return the final result or throw an exception if all attempts fail.
+  /// Translate text only (no widget), with retry logic.
   Future<String> translateTextOnly(
     String text,
     LangListEnum from,
@@ -103,7 +147,6 @@ abstract class TranslateServiceProvider {
           contextText: contextText,
         )) {
           lastResult = result;
-          // Skip intermediate results like "..."
           if (result != '...' && result.trim().isNotEmpty) {
             return result;
           }
@@ -127,12 +170,16 @@ abstract class TranslateServiceProvider {
     throw Exception('Translation failed after all retry attempts');
   }
 
-  List<ConfigItem> getConfigItems();
+  /// Returns the configuration items for the settings UI.
+  List<ConfigItem> getConfigItems() => [];
 
-  Map<String, dynamic> getConfig();
+  /// Returns the current configuration.
+  Map<String, dynamic> getConfig() => {};
 
-  void saveConfig(Map<String, dynamic> config);
+  /// Saves the configuration.
+  void saveConfig(Map<String, dynamic> config) {}
 
+  /// Helper to convert a stream to a widget with copy button.
   Widget convertStreamToWidget(Stream<String> stream) {
     return StreamBuilder<String>(
       stream: stream,
@@ -170,20 +217,9 @@ abstract class TranslateServiceProvider {
   }
 }
 
-class TranslateFactory {
-  static TranslateServiceProvider getProvider(TranslateService service) {
-    switch (service) {
-      case TranslateService.google:
-        return GoogleTranslateProvider();
-      case TranslateService.microsoft:
-        return MicrosoftTranslateProvider();
-      case TranslateService.deepl:
-        return DeepLTranslateProvider();
-      case TranslateService.ai:
-        return AiTranslateProvider();
-    }
-  }
-}
+// ============================================================================
+// Helper functions (use service.provider instead of TranslateFactory)
+// ============================================================================
 
 Widget translateText(String text,
     {TranslateService? service, String? contextText}) {
@@ -191,7 +227,7 @@ Widget translateText(String text,
   final from = Prefs().translateFrom;
   final to = Prefs().translateTo;
 
-  return TranslateFactory.getProvider(service).translate(
+  return service.provider.translate(
     text,
     from,
     to,
@@ -200,16 +236,16 @@ Widget translateText(String text,
 }
 
 List<ConfigItem> getTranslateServiceConfigItems(TranslateService service) {
-  return TranslateFactory.getProvider(service).getConfigItems();
+  return service.provider.getConfigItems();
 }
 
 Map<String, dynamic> getTranslateServiceConfig(TranslateService service) {
-  return TranslateFactory.getProvider(service).getConfig();
+  return service.provider.getConfig();
 }
 
 void saveTranslateServiceConfig(
     TranslateService service, Map<String, dynamic> config) {
-  return TranslateFactory.getProvider(service).saveConfig(config);
+  return service.provider.saveConfig(config);
 }
 
 Future<String> translateTextOnly(String text,
@@ -218,7 +254,7 @@ Future<String> translateTextOnly(String text,
   final from = Prefs().translateFrom;
   final to = Prefs().translateTo;
 
-  return await TranslateFactory.getProvider(service).translateTextOnly(
+  return await service.provider.translateTextOnly(
     text,
     from,
     to,

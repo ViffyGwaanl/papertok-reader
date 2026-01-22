@@ -1,16 +1,22 @@
-import 'dart:convert';
-
 import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
-const urlMicrosoft =
+const _urlMicrosoft =
     'https://api-edge.cognitive.microsofttranslator.com/translate';
-const urlMicrosoftAuth = 'https://edge.microsoft.com/translate/auth';
+const _urlMicrosoftAuth = 'https://edge.microsoft.com/translate/auth';
 
+/// Legacy Microsoft Translate provider using reverse-engineered Edge API.
+/// Deprecated: Will be removed on 2026-03-01.
 class MicrosoftTranslateProvider extends TranslateServiceProvider {
+  @override
+  TranslateService get service => TranslateService.microsoft;
+
+  @override
+  String get label => 'Microsoft (将于2026-03-01移除)';
+
   @override
   Widget translate(
     String text,
@@ -32,17 +38,17 @@ class MicrosoftTranslateProvider extends TranslateServiceProvider {
   }) async* {
     try {
       yield "...";
-      final token = await getMicrosoftKey();
+      final token = await _getMicrosoftKey();
 
       final params = {
         'api-version': '3.0',
-        'from': from == LangListEnum.auto ? '' : from.code,
-        'to': to.code,
+        'from': from == LangListEnum.auto ? '' : mapLanguageCode(from),
+        'to': mapLanguageCode(to),
       };
       final body = [
         {'Text': text},
       ];
-      final uri = Uri.parse(urlMicrosoft).replace(queryParameters: params);
+      final uri = Uri.parse(_urlMicrosoft).replace(queryParameters: params);
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -57,37 +63,9 @@ class MicrosoftTranslateProvider extends TranslateServiceProvider {
     }
   }
 
-  @override
-  List<ConfigItem> getConfigItems() {
-    return [];
-  }
-
-  @override
-  Map<String, dynamic> getConfig() {
-    return {};
-  }
-
-  @override
-  Future<void> saveConfig(Map<String, dynamic> config) async {
-    return;
-  }
-
-  Future<String> getMicrosoftKey() async {
-    String microsoftKey = '';
-    num microsoftKeyExpired = 0;
-    if (microsoftKey.isNotEmpty &&
-        microsoftKeyExpired > DateTime.now().millisecondsSinceEpoch ~/ 1000) {
-      return microsoftKey;
-    }
-    final response = await Dio().get(urlMicrosoftAuth);
-    microsoftKey = response.data;
-    // parse jwt token
-    String jwt = microsoftKey.split('.')[1];
-    jwt = jwt.replaceAll('-', '+').replaceAll('_', '/');
-    jwt = jwt.padRight(jwt.length + (4 - jwt.length % 4) % 4, '=');
-
-    final jwtJson = jsonDecode(utf8.decode(base64Url.decode(jwt)));
-    microsoftKeyExpired = jwtJson['exp'];
+  Future<String> _getMicrosoftKey() async {
+    final response = await Dio().get(_urlMicrosoftAuth);
+    String microsoftKey = response.data;
     return microsoftKey;
   }
 }
