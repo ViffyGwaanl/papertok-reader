@@ -115,7 +115,8 @@ class DeepLTranslateProvider extends TranslateServiceProvider {
         key: 'tip',
         label: 'Tip',
         type: ConfigItemType.tip,
-        defaultValue: 'DeepL API Free plan has a free quota of 500k chars/month.',
+        defaultValue:
+            'DeepL API Free plan has a free quota of 500k chars/month.',
         link: 'https://anx.anxcye.com/docs/translate/deepl',
       ),
       ConfigItem(

@@ -88,7 +88,8 @@ class MicrosoftApiTranslateProvider extends TranslateServiceProvider {
         key: 'tip',
         label: 'Tip',
         type: ConfigItemType.tip,
-        defaultValue: 'Microsoft Azure Translate has a free quota of 2M chars/month.',
+        defaultValue:
+            'Microsoft Azure Translate has a free quota of 2M chars/month.',
         link: 'https://anx.anxcye.com/docs/translate/azure',
       ),
       ConfigItem(
