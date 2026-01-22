@@ -3,23 +3,27 @@
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
 ## 1.11.0
-- Feat: Support setting whether to automatically hide the bottom navigation bar
+- Feat: Support setting whether to automatically hide the bottom navigation bar on the home page
 - Feat: Support using Azure TTS service for narration
 - Feat: Support previewing synthesized voice models
 - Feat: Optimize online TTS narration stability
 - Feat: In scroll page mode, you can turn pages across chapters by dragging up and down @Spixz
 - Feat: Windows can remember whether the window is maximized @TimurCravtov
+- Feat: Add Microsoft Azure, Google Cloud translation service support
+- Feat: Plan to remove unstable translation services (2026-03-01)
 - Fix: Fixed the issue where Epub files could not be imported when the directory did not exist @ZzhouR
 - Fix: feat: add gesture handling to ignore bookmark actions from top screen touch
 - Fix: feat: add note filtering function to prepare for book review function
 - Fix: fix the issue of missing context menu when selecting across pages on iOS
 
-- Feat: 支持设置是否自动隐藏底部导航栏
+- Feat: 支持设置是否自动隐藏主界面底部导航栏
 - Feat: 支持使用 Azure TTS 服务进行朗读
 - Feat：支持试听语音模型合成效果
 - Feat: 优化在线 TTS 朗读稳定性
 - Feat：滚动翻页模式下可以通过上下拖动来跨章节翻页 @Spixz
 - Feat：Windows可以记忆是否最大化窗口 @TimurCravtov
+- Feat: 添加 Microsoft Azure，Google Cloud 翻译服务支持
+- Feat：计划移除不稳定的翻译服务（2026-03-01）
 - Fix：修复Epub文件目录不存在时无法导入的问题 @ZzhouR
 - Fix: 添加手势处理，忽略来自屏幕顶部触摸的书签操作
 - Fix: 添加笔记过滤功能，为书评功能做好准备
