@@ -13,9 +13,6 @@ class DeepLTranslateProvider extends TranslateServiceProvider {
   @override
   TranslateService get service => TranslateService.deepl;
 
-  @override
-  String get label => 'DeepL API';
-
   /// DeepL uses uppercase language codes (e.g., ZH, EN, JA).
   @override
   String mapLanguageCode(LangListEnum lang) {
@@ -35,6 +32,9 @@ class DeepLTranslateProvider extends TranslateServiceProvider {
     };
     return codeMap[lang.code] ?? lang.code.toUpperCase();
   }
+
+  @override
+  String getLabel(BuildContext context) => L10n.of(context).translateDeepL;
 
   @override
   Widget translate(
@@ -109,14 +109,13 @@ class DeepLTranslateProvider extends TranslateServiceProvider {
   }
 
   @override
-  List<ConfigItem> getConfigItems() {
+  List<ConfigItem> getConfigItems(BuildContext context) {
     return [
       ConfigItem(
         key: 'tip',
-        label: 'Tip',
+        label: L10n.of(context).translateTip,
         type: ConfigItemType.tip,
-        defaultValue:
-            'DeepL API Free plan has a free quota of 500k chars/month.',
+        defaultValue: L10n.of(context).translateDeepLHelpText,
         link: 'https://anx.anxcye.com/docs/translate/deepl',
       ),
       ConfigItem(

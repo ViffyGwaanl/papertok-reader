@@ -157,7 +157,7 @@ class TranslationConfig extends StatelessWidget {
                 });
               },
               child: Text(
-                Prefs().translateService.label,
+                Prefs().translateService.getLabel(context),
                 style: currentServiceTextStyle,
               ),
             ),
@@ -234,7 +234,7 @@ class FullTextTranslationConfig extends StatelessWidget {
                 });
               },
               child: Text(
-                Prefs().fullTextTranslateService.label,
+                Prefs().fullTextTranslateService.getLabel(context),
                 style: currentServiceTextStyle,
               ),
             ),
@@ -292,7 +292,7 @@ class TranslateServicePicker extends StatelessWidget {
     return ListView.builder(
       itemCount: TranslateService.values.length,
       itemBuilder: (context, index) => ListTile(
-        title: Text(TranslateService.values[index].label),
+        title: Text(TranslateService.values[index].getLabel(context)),
         onTap: () {
           Prefs().translateService = TranslateService.values[index];
           Navigator.pop(context);
@@ -313,7 +313,7 @@ class FullTextTranslateServicePicker extends StatelessWidget {
     return ListView.builder(
       itemCount: services.length,
       itemBuilder: (context, index) => ListTile(
-        title: Text(services[index].label),
+        title: Text(services[index].getLabel(context)),
         onTap: () {
           Prefs().fullTextTranslateService = services[index];
           Navigator.pop(context);
@@ -582,7 +582,7 @@ class _TranslateSettingItemState extends State<TranslateSettingItem> {
 
   @override
   Widget build(BuildContext context) {
-    final configItems = getTranslateServiceConfigItems(widget.service);
+    final configItems = getTranslateServiceConfigItems(context, widget.service);
 
     return Card(
       margin: const EdgeInsets.all(10),
@@ -595,7 +595,7 @@ class _TranslateSettingItemState extends State<TranslateSettingItem> {
         children: [
           ListTile(
             leading: const Icon(Icons.translate_outlined),
-            title: Text(widget.service.label),
+            title: Text(widget.service.getLabel(context)),
             onTap: () {
               setState(() {
                 isExpanded = !isExpanded;

@@ -12,7 +12,7 @@ class AiTranslateProvider extends TranslateServiceProvider {
   TranslateService get service => TranslateService.ai;
 
   @override
-  String get label => 'AI';
+  String getLabel(BuildContext context) => L10n.of(context).navBarAI;
 
   /// AI translation uses native language names (e.g., "简体中文", "English")
   /// instead of ISO codes for better prompt understanding.
@@ -66,7 +66,7 @@ class AiTranslateProvider extends TranslateServiceProvider {
   }
 
   @override
-  List<ConfigItem> getConfigItems() {
+  List<ConfigItem> getConfigItems(BuildContext context) {
     return [
       ConfigItem(
         key: 'tip',

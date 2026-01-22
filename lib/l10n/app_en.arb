@@ -736,5 +736,18 @@
   "settingsNarrateTestText": "Test Text",
   "settingsNarrateUseVoice": "Use",
   "settingsNarrateClickForHelp": "Click here for help",
-  "settingsNarrateAzureHelpText": "Microsoft Azure provides 500,000 characters of free TTS usage per month. You need to apply for a Microsoft Azure TTS resource key to use this service."
+  "settingsNarrateAzureHelpText": "Microsoft Azure provides a free quota of 500,000 characters per month for TTS. You need to apply for a Microsoft Azure TTS resource key to use this service.",
+  "translateBingWeb": "Bing Web Translate",
+  "translateGoogleWeb": "Google Web Translate",
+  "translateMicrosoftAzure": "Microsoft Azure API",
+  "translateGoogleCloud": "Google Cloud API",
+  "translateDeepL": "DeepL API",
+  "translateTip": "Tip",
+  "translateAzureHelpText": "Microsoft Azure Translate has a free quota of 2M chars/month.",
+  "translateGoogleHelpText": "Google Cloud Translation API has a free quota of 500k chars/month.",
+  "translateDeepLHelpText": "DeepL API Free plan has a free quota of 500k chars/month.",
+  "translateAzureApiKeyDescription": "Azure Cognitive Services API Key",
+  "translateGoogleApiKeyDescription": "Google Cloud Translation API Key",
+  "translateAzureRegionDescription": "Azure Region (e.g. global, westus)",
+  "translateMicrosoftLegacy": "Microsoft (To be removed on 2026-03-01)"
 }

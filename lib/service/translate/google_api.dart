@@ -1,4 +1,5 @@
 import 'package:anx_reader/enums/lang_list.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:dio/dio.dart';
@@ -13,7 +14,8 @@ class GoogleApiTranslateProvider extends TranslateServiceProvider {
   TranslateService get service => TranslateService.googleApi;
 
   @override
-  String get label => 'Google API';
+  String getLabel(BuildContext context) =>
+      L10n.of(context).translateGoogleCloud;
 
   @override
   Widget translate(
@@ -79,20 +81,19 @@ class GoogleApiTranslateProvider extends TranslateServiceProvider {
   }
 
   @override
-  List<ConfigItem> getConfigItems() {
+  List<ConfigItem> getConfigItems(BuildContext context) {
     return [
       ConfigItem(
         key: 'tip',
-        label: 'Tip',
+        label: L10n.of(context).translateTip,
         type: ConfigItemType.tip,
-        defaultValue:
-            'Google Cloud Translation API has a free quota of 500k chars/month.',
+        defaultValue: L10n.of(context).translateGoogleHelpText,
         link: 'https://anx.anxcye.com/docs/translate/google',
       ),
       ConfigItem(
         key: 'api_key',
         label: 'API Key',
-        description: 'Google Cloud Translation API Key',
+        description: L10n.of(context).translateGoogleApiKeyDescription,
         type: ConfigItemType.password,
         defaultValue: '',
       ),

@@ -1,4 +1,5 @@
 import 'package:anx_reader/enums/lang_list.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:dio/dio.dart';
@@ -13,7 +14,8 @@ class MicrosoftApiTranslateProvider extends TranslateServiceProvider {
   TranslateService get service => TranslateService.microsoftApi;
 
   @override
-  String get label => 'Microsoft Azure API';
+  String getLabel(BuildContext context) =>
+      L10n.of(context).translateMicrosoftAzure;
 
   @override
   Widget translate(
@@ -82,27 +84,26 @@ class MicrosoftApiTranslateProvider extends TranslateServiceProvider {
   }
 
   @override
-  List<ConfigItem> getConfigItems() {
+  List<ConfigItem> getConfigItems(BuildContext context) {
     return [
       ConfigItem(
         key: 'tip',
-        label: 'Tip',
+        label: L10n.of(context).translateTip,
         type: ConfigItemType.tip,
-        defaultValue:
-            'Microsoft Azure Translate has a free quota of 2M chars/month.',
+        defaultValue: L10n.of(context).translateAzureHelpText,
         link: 'https://anx.anxcye.com/docs/translate/azure',
       ),
       ConfigItem(
         key: 'api_key',
         label: 'API Key',
-        description: 'Azure Cognitive Services API Key',
+        description: L10n.of(context).translateAzureApiKeyDescription,
         type: ConfigItemType.password,
         defaultValue: '',
       ),
       ConfigItem(
         key: 'region',
         label: 'Region',
-        description: 'Azure Region (e.g. global, westus)',
+        description: L10n.of(context).translateAzureRegionDescription,
         type: ConfigItemType.text,
         defaultValue: 'global',
       ),

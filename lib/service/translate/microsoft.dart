@@ -1,4 +1,5 @@
 import 'package:anx_reader/enums/lang_list.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:dio/dio.dart';
@@ -15,7 +16,8 @@ class MicrosoftTranslateProvider extends TranslateServiceProvider {
   TranslateService get service => TranslateService.microsoft;
 
   @override
-  String get label => 'Microsoft (将于2026-03-01移除)';
+  String getLabel(BuildContext context) =>
+      L10n.of(context).translateMicrosoftLegacy;
 
   @override
   Widget translate(

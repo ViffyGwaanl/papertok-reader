@@ -1,3 +1,4 @@
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:flutter/foundation.dart';
@@ -91,7 +92,7 @@ class BingWebTranslateProvider extends WebViewTranslateProvider {
   TranslateService get service => TranslateService.bingWeb;
 
   @override
-  String get label => 'Bing 网页翻译';
+  String getLabel(BuildContext context) => L10n.of(context).translateBingWeb;
 
   /// Bing uses 'auto-detect' for auto language detection.
   @override
@@ -111,7 +112,7 @@ class GoogleWebTranslateProvider extends WebViewTranslateProvider {
   TranslateService get service => TranslateService.googleWeb;
 
   @override
-  String get label => 'Google 网页翻译';
+  String getLabel(BuildContext context) => L10n.of(context).translateGoogleWeb;
 
   /// Google uses 'auto' for auto language detection.
   @override

@@ -42,7 +42,7 @@ enum TranslateService {
   }
 
   /// Get the display label from the provider.
-  String get label => provider.label;
+  String getLabel(BuildContext context) => provider.getLabel(context);
 
   /// Check if the service is a WebView provider.
   bool get isWebView => provider is WebViewTranslateProvider;
@@ -108,11 +108,16 @@ abstract class TranslateServiceProvider {
   TranslateService get service;
 
   /// The display label for this service.
-  String get label;
+  String getLabel(BuildContext context);
 
   /// Override this method if the service uses a different code format.
   /// Default implementation returns [lang.code].
   String mapLanguageCode(LangListEnum lang) => lang.code;
+
+  /// Get the configuration items for this service.
+  List<ConfigItem> getConfigItems(BuildContext context) {
+    return [];
+  }
 
   /// Returns the widget for displaying the translation result.
   Widget translate(
@@ -171,9 +176,6 @@ abstract class TranslateServiceProvider {
 
     throw Exception('Translation failed after all retry attempts');
   }
-
-  /// Returns the configuration items for the settings UI.
-  List<ConfigItem> getConfigItems() => [];
 
   /// Returns the current configuration.
   Map<String, dynamic> getConfig() => {};
@@ -237,8 +239,9 @@ Widget translateText(String text,
   );
 }
 
-List<ConfigItem> getTranslateServiceConfigItems(TranslateService service) {
-  return service.provider.getConfigItems();
+List<ConfigItem> getTranslateServiceConfigItems(
+    BuildContext context, TranslateService service) {
+  return service.provider.getConfigItems(context);
 }
 
 Map<String, dynamic> getTranslateServiceConfig(TranslateService service) {
