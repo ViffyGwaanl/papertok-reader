@@ -13,7 +13,7 @@ class MicrosoftApiTranslateProvider extends TranslateServiceProvider {
   TranslateService get service => TranslateService.microsoftApi;
 
   @override
-  String get label => 'Microsoft API';
+  String get label => 'Microsoft Azure API';
 
   @override
   Widget translate(
@@ -84,6 +84,13 @@ class MicrosoftApiTranslateProvider extends TranslateServiceProvider {
   @override
   List<ConfigItem> getConfigItems() {
     return [
+      ConfigItem(
+        key: 'tip',
+        label: 'Tip',
+        type: ConfigItemType.tip,
+        defaultValue: 'Microsoft Azure Translate has a free quota of 2M chars/month.',
+        link: 'https://anx.anxcye.com/docs/translate/azure',
+      ),
       ConfigItem(
         key: 'api_key',
         label: 'API Key',

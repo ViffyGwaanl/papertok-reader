@@ -112,6 +112,13 @@ class DeepLTranslateProvider extends TranslateServiceProvider {
   List<ConfigItem> getConfigItems() {
     return [
       ConfigItem(
+        key: 'tip',
+        label: 'Tip',
+        type: ConfigItemType.tip,
+        defaultValue: 'DeepL API Free plan has a free quota of 500k chars/month.',
+        link: 'https://anx.anxcye.com/docs/translate/deepl',
+      ),
+      ConfigItem(
         key: 'api_url',
         label: 'DeepL API URL',
         type: ConfigItemType.text,

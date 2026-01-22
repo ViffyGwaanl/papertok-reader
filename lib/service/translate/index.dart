@@ -77,6 +77,7 @@ class ConfigItem {
   final ConfigItemType type;
   final dynamic defaultValue;
   final List<Map<String, dynamic>>? options;
+  final String? link;
 
   ConfigItem({
     required this.key,
@@ -85,6 +86,7 @@ class ConfigItem {
     required this.type,
     this.defaultValue,
     this.options,
+    this.link,
   });
 
   Map<String, dynamic> toJson() {

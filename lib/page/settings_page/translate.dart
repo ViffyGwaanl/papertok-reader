@@ -9,6 +9,7 @@ import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TranslateSetting extends StatefulWidget {
   const TranslateSetting({super.key});
@@ -532,16 +533,38 @@ class _TranslateSettingItemState extends State<TranslateSettingItem> {
       case ConfigItemType.tip:
         return Padding(
           padding: const EdgeInsets.only(bottom: 8.0),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.info_outline,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.defaultValue.toString(),
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Text(
-                  item.defaultValue.toString(),
+              if (item.link != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 28.0, top: 4.0),
+                  child: GestureDetector(
+                    onTap: () => launchUrl(Uri.parse(item.link!),
+                        mode: LaunchMode.externalApplication),
+                    child: Text(
+                      L10n.of(context).settingsNarrateClickForHelp,
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        decoration: TextDecoration.underline,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
         );

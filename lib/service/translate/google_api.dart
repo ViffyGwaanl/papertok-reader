@@ -82,6 +82,13 @@ class GoogleApiTranslateProvider extends TranslateServiceProvider {
   List<ConfigItem> getConfigItems() {
     return [
       ConfigItem(
+        key: 'tip',
+        label: 'Tip',
+        type: ConfigItemType.tip,
+        defaultValue: 'Google Cloud Translation API has a free quota of 500k chars/month.',
+        link: 'https://anx.anxcye.com/docs/translate/google',
+      ),
+      ConfigItem(
         key: 'api_key',
         label: 'API Key',
         description: 'Google Cloud Translation API Key',
