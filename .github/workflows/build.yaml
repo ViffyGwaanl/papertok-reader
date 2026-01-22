@@ -85,7 +85,8 @@ jobs:
   #     KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
   release:
-    needs: [setup, build-android, build-ios, build-windows, build-macos, build-appstore, build-playstore]
+    # needs: [setup, build-android, build-ios, build-windows, build-macos, build-appstore, build-playstore]
+    needs: [setup, build-android, build-ios, build-windows, build-macos, build-appstore]
     uses: ./.github/workflows/release.yaml
     with:
       tag: ${{ needs.setup.outputs.tag }}
