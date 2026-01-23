@@ -38,16 +38,17 @@ class _TranslationMenuState extends State<TranslationMenu> {
     // Use addPostFrameCallback to ensure the UI is rendered first
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _translationInitialized) return;
-      
+
       // Debounce: Delay the translation call to ensure context has stopped updating
       _debounceTimer?.cancel();
       _debounceTimer = Timer(const Duration(milliseconds: 300), () {
         if (!mounted || _translationInitialized) return;
-        
+
         setState(() {
-          final effectiveContextText = (widget.contextText?.trim().isEmpty ?? true)
-              ? null
-              : widget.contextText;
+          final effectiveContextText =
+              (widget.contextText?.trim().isEmpty ?? true)
+                  ? null
+                  : widget.contextText;
           _translationWidget = translateText(
             widget.content,
             contextText: effectiveContextText,
@@ -141,10 +142,11 @@ class _TranslationMenuState extends State<TranslationMenu> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Show translation widget if initialized, otherwise show loading placeholder
-                    _translationWidget ?? const SizedBox(
-                      height: 20,
-                      child: Center(child: Text('...')),
-                    ),
+                    _translationWidget ??
+                        const SizedBox(
+                          height: 20,
+                          child: Center(child: Text('...')),
+                        ),
                     const Divider(),
                     AxisFlex(
                       mainAxisSize: MainAxisSize.min,

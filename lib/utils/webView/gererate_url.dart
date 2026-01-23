@@ -16,6 +16,7 @@ String generateUrl(
   String? fontPath,
   String? backgroundColor,
   bool? importing,
+  bool isDarkMode = false,
 }) {
   String indexHtmlPath =
       "http://127.0.0.1:${Server().port}/foliate-js/index.html";
@@ -30,6 +31,15 @@ String generateUrl(
 
   textColor = convertDartColorToJs(textColor);
   backgroundColor = convertDartColorToJs(backgroundColor);
+
+  // Choose day or night background image automatically based on theme
+  String bgimgUrl = Prefs().bgimg.url;
+  if (Prefs().autoAdjustReadingTheme && isDarkMode) {
+    final bgimg = Prefs().bgimg;
+    if (bgimg.nightUrl != null) {
+      bgimgUrl = bgimg.nightUrl!;
+    }
+  }
 
   // const importing = $importing
   // const url = '${replaceSingleQuote(url)}'
@@ -79,7 +89,7 @@ String generateUrl(
     'maxColumnCount': bookStyle.maxColumnCount,
     'writingMode': Prefs().writingMode.code,
     'textAlign': Prefs().textAlignment.code,
-    'backgroundImage': Prefs().bgimg.url,
+    'backgroundImage': bgimgUrl,
     'allowScript': Prefs().enableJsForEpub,
     'customCSS': Prefs().customCSS,
     'customCSSEnabled': Prefs().customCSSEnabled,

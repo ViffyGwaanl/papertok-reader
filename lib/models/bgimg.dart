@@ -11,6 +11,7 @@ abstract class BgimgModel with _$BgimgModel {
   const factory BgimgModel({
     required BgimgType type,
     required String path,
+    String? nightPath,
     required BgimgAlignment alignment,
   }) = _BgimgModel;
 
@@ -25,5 +26,15 @@ abstract class BgimgModel with _$BgimgModel {
           'http://127.0.0.1:${Server().port}/bgimg/assets/$path',
         BgimgType.localFile =>
           'http://127.0.0.1:${Server().port}/bgimg/local/$path',
+      };
+
+  String? get nightUrl => switch (type) {
+        BgimgType.none => null,
+        BgimgType.assets => nightPath != null
+            ? 'http://127.0.0.1:${Server().port}/bgimg/assets/$nightPath'
+            : null,
+        BgimgType.localFile => nightPath != null
+            ? 'http://127.0.0.1:${Server().port}/bgimg/local/$nightPath'
+            : null,
       };
 }
