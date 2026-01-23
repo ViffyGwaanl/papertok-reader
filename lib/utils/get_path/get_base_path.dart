@@ -19,7 +19,7 @@ Future<String> getAnxDocumentsPath() async {
     //   final path = '${directory.path}/AnxReader';
     //   return path;
     case AnxPlatformEnum.macos:
-      return directory.path;
+      return (await getApplicationSupportDirectory()).path;
     case AnxPlatformEnum.ios:
       return (await getApplicationSupportDirectory()).path;
   }

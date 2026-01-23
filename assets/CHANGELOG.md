@@ -11,6 +11,7 @@
 - Feat: Windows can remember whether the window is maximized @TimurCravtov
 - Feat: Add Microsoft Azure, Google Cloud translation service support
 - Feat: Plan to remove unstable translation services (2026-03-01)
+- Feat: macOS data path migration to Application Support with automatic data transfer
 - Fix: Fixed the issue where Epub files could not be imported when the directory did not exist @ZzhouR
 - Fix: feat: add gesture handling to ignore bookmark actions from top screen touch
 - Fix: feat: add note filtering function to prepare for book review function
@@ -26,6 +27,7 @@
 - Feat：Windows可以记忆是否最大化窗口 @TimurCravtov
 - Feat: 添加 Microsoft Azure，Google Cloud 翻译服务支持
 - Feat：计划移除不稳定的翻译服务（2026-03-01）
+- Feat: macOS 数据存储路径迁移至 Application Support 并支持自动数据迁移
 - Fix：修复Epub文件目录不存在时无法导入的问题 @ZzhouR
 - Fix: 添加手势处理，忽略来自屏幕顶部触摸的书签操作
 - Fix: 添加笔记过滤功能，为书评功能做好准备

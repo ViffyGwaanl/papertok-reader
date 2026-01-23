@@ -749,5 +749,11 @@
   "translateAzureApiKeyDescription": "Azure Cognitive Services API-Schlüssel",
   "translateGoogleApiKeyDescription": "Google Cloud Translation API-Schlüssel",
   "translateAzureRegionDescription": "Azure-Region (z.B. global, westus)",
-  "translateMicrosoftLegacy": "Microsoft (Wird am 01.03.2026 entfernt)"
+  "translateMicrosoftLegacy": "Microsoft (Wird am 01.03.2026 entfernt)",
+  "migrationInProgress": "Daten werden migriert...",
+  "migrationComplete": "Migration abgeschlossen",
+  "migrationFailed": "Migration fehlgeschlagen",
+  "migrationDoNotClose": "Bitte schließen Sie die App während der Migration nicht",
+  "migrationCurrentItem": "Migrieren von",
+  "migrationPreparing": "Vorbereitung..."
 }

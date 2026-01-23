@@ -749,5 +749,11 @@
   "translateAzureApiKeyDescription": "Azure Cognitive Services API 키",
   "translateGoogleApiKeyDescription": "Google Cloud Translation API 키",
   "translateAzureRegionDescription": "Azure 지역 (예: global, westus)",
-  "translateMicrosoftLegacy": "Microsoft (2026-03-01 제거 예정)"
+  "translateMicrosoftLegacy": "Microsoft (2026-03-01 제거 예정)",
+  "migrationInProgress": "데이터 마이그레이션 중...",
+  "migrationComplete": "마이그레이션 완료",
+  "migrationFailed": "마이그레이션 실패",
+  "migrationDoNotClose": "마이그레이션 중에 앱을 닫지 마십시오",
+  "migrationCurrentItem": "마이그레이션 중",
+  "migrationPreparing": "준비 중..."
 }

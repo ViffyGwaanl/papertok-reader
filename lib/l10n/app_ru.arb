@@ -749,5 +749,11 @@
   "translateAzureApiKeyDescription": "Ключ API Azure Cognitive Services",
   "translateGoogleApiKeyDescription": "Ключ API Google Cloud Translation",
   "translateAzureRegionDescription": "Регион Azure (напр. global, westus)",
-  "translateMicrosoftLegacy": "Microsoft (Будет удалено 01.03.2026)"
+  "translateMicrosoftLegacy": "Microsoft (Будет удалено 01.03.2026)",
+  "migrationInProgress": "Миграция данных...",
+  "migrationComplete": "Миграция завершена",
+  "migrationFailed": "Ошибка миграции",
+  "migrationDoNotClose": "Пожалуйста, не закрывайте приложение во время миграции",
+  "migrationCurrentItem": "Миграция",
+  "migrationPreparing": "Подготовка..."
 }
