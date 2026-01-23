@@ -19,6 +19,8 @@
 - Fix: fix the issue of missing context menu when selecting across pages on iOS
 - Fix: fix the issue where HarmonyOS could not sync with other systems
 - Fix: fix the issue where some AI services could not be used
+- Feat: Support auto select day/night background image
+- Feat: Support group day/night background image
 
 - Feat: 支持设置是否自动隐藏主界面底部导航栏
 - Feat: 支持使用 Azure TTS 服务进行朗读
@@ -36,6 +38,8 @@
 - Fix: 解决 iOS 跨页选择时上下文菜单缺失的问题
 - Fix: 解决 HarmonyOS 无法与其他系统同步的问题
 - Fix: 解决部分 AI 服务无法使用的问题
+- Feat: 支持自动选择白天/黑夜的背景图片
+- Feat: 支持日夜模式背景图片编组
 
 ## 1.10.1
 - Feat: Choose bookshelf folder style (2x2 grid/stacked)

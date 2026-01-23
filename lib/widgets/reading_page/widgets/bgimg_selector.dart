@@ -150,8 +150,7 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
                           child: nightImage,
                         )
                       : Container(
-                          color:
-                              Theme.of(context).colorScheme.surfaceContainer,
+                          color: Theme.of(context).colorScheme.surfaceContainer,
                         ),
                 ),
               ),
