@@ -755,5 +755,16 @@
   "migrationFailed": "فشلت الهجرة",
   "migrationDoNotClose": "يرجى عدم إغلاق التطبيق أثناء الهجرة",
   "migrationCurrentItem": "يتم ترحيل",
-  "migrationPreparing": "جارٍ التحضير..."
+  "migrationPreparing": "جارٍ التحضير...",
+  "storageCustomLocation": "موقع التخزين المخصص",
+  "storageCurrentPath": "المسار الحالي",
+  "storageNewPath": "المسار الجديد",
+  "storageSelectPath": "حدد موقعًا جديدًا",
+  "storageMigrateData": "بدء الهجرة",
+  "storageResetPath": "إعادة التعيين إلى الافتراضي",
+  "storagePathNotEmpty": "يرجى تحديد مجلد فارغ",
+  "storageMigrationSuccess": "اكتملت الهجرة. يرجى إعادة تشغيل التطبيق.",
+  "storageMigrationFailed": "فشلت الهجرة. تبقى البيانات في الموقع الأصلي.",
+  "storagePathPermissionLost": "لم يعد مسار التخزين المخصص متاحًا. تمت إعادة تعيين البيانات إلى الموقع الافتراضي.",
+  "storagePathNoPermission": "لا يوجد إذن كتابة للمجلد المحدد"
 }

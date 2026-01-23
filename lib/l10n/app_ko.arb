@@ -755,5 +755,16 @@
   "migrationFailed": "마이그레이션 실패",
   "migrationDoNotClose": "마이그레이션 중에 앱을 닫지 마십시오",
   "migrationCurrentItem": "마이그레이션 중",
-  "migrationPreparing": "준비 중..."
+  "migrationPreparing": "준비 중...",
+  "storageCustomLocation": "사용자 지정 저장 위치",
+  "storageCurrentPath": "현재 경로",
+  "storageNewPath": "새 경로",
+  "storageSelectPath": "새 위치 선택",
+  "storageMigrateData": "마이그레이션 시작",
+  "storageResetPath": "기본값으로 재설정",
+  "storagePathNotEmpty": "빈 폴더를 선택하십시오",
+  "storageMigrationSuccess": "마이그레이션이 완료되었습니다. 앱을 다시 시작하십시오.",
+  "storageMigrationFailed": "마이그레이션에 실패했습니다. 데이터가 원래 위치에 남아 있습니다.",
+  "storagePathPermissionLost": "사용자 지정 저장 경로에 더 이상 액세스할 수 없습니다. 데이터가 기본 위치로 재설정되었습니다.",
+  "storagePathNoPermission": "선택한 폴더에 대한 쓰기 권한이 없습니다"
 }

@@ -755,5 +755,16 @@
   "migrationFailed": "Migrazione fallita",
   "migrationDoNotClose": "Si prega di non chiudere l'app durante la migrazione",
   "migrationCurrentItem": "Migrazione di",
-  "migrationPreparing": "Preparazione..."
+  "migrationPreparing": "Preparazione...",
+  "storageCustomLocation": "Posizione di archiviazione personalizzata",
+  "storageCurrentPath": "Percorso attuale",
+  "storageNewPath": "Nuovo percorso",
+  "storageSelectPath": "Seleziona nuova posizione",
+  "storageMigrateData": "Avvia migrazione",
+  "storageResetPath": "Ripristina predefiniti",
+  "storagePathNotEmpty": "Seleziona una cartella vuota",
+  "storageMigrationSuccess": "Migrazione completata. Riavvia l'app.",
+  "storageMigrationFailed": "Migrazione non riuscita. I dati rimangono nella posizione originale.",
+  "storagePathPermissionLost": "Il percorso di archiviazione personalizzato non è più accessibile. I dati sono stati ripristinati nella posizione predefinita.",
+  "storagePathNoPermission": "Nessun permesso di scrittura per la cartella selezionata"
 }

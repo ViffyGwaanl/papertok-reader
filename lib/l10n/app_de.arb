@@ -755,5 +755,16 @@
   "migrationFailed": "Migration fehlgeschlagen",
   "migrationDoNotClose": "Bitte schließen Sie die App während der Migration nicht",
   "migrationCurrentItem": "Migrieren von",
-  "migrationPreparing": "Vorbereitung..."
+  "migrationPreparing": "Vorbereitung...",
+  "storageCustomLocation": "Benutzerdefinierter Speicherort",
+  "storageCurrentPath": "Aktueller Pfad",
+  "storageNewPath": "Neuer Pfad",
+  "storageSelectPath": "Neuen Standort auswählen",
+  "storageMigrateData": "Migration starten",
+  "storageResetPath": "Auf Standard zurücksetzen",
+  "storagePathNotEmpty": "Bitte wählen Sie einen leeren Ordner aus",
+  "storageMigrationSuccess": "Migration abgeschlossen. Bitte starten Sie die App neu.",
+  "storageMigrationFailed": "Migration fehlgeschlagen. Die Daten verbleiben am ursprünglichen Speicherort.",
+  "storagePathPermissionLost": "Der benutzerdefinierte Speicherpfad ist nicht mehr zugänglich. Die Daten wurden auf den Standardspeicherort zurückgesetzt.",
+  "storagePathNoPermission": "Keine Schreibberechtigung für den ausgewählten Ordner"
 }

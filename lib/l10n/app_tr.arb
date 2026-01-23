@@ -755,5 +755,16 @@
   "migrationFailed": "Taşıma Başarısız",
   "migrationDoNotClose": "Lütfen taşıma sırasında uygulamayı kapatmayın",
   "migrationCurrentItem": "Taşınıyor",
-  "migrationPreparing": "Hazırlanıyor..."
+  "migrationPreparing": "Hazırlanıyor...",
+  "storageCustomLocation": "Özel Depolama Konumu",
+  "storageCurrentPath": "Mevcut Yol",
+  "storageNewPath": "Yeni Yol",
+  "storageSelectPath": "Yeni Konum Seç",
+  "storageMigrateData": "Migrasyonu Başlat",
+  "storageResetPath": "Varsayılana Sıfırla",
+  "storagePathNotEmpty": "Lütfen boş bir klasör seçin",
+  "storageMigrationSuccess": "Migrasyon tamamlandı. Lütfen uygulamayı yeniden başlatın.",
+  "storageMigrationFailed": "Migrasyon başarısız oldu. Veriler orijinal konumda kaldı.",
+  "storagePathPermissionLost": "Özel depolama yoluna artık erişilemiyor. Veriler varsayılan konuma sıfırlandı.",
+  "storagePathNoPermission": "Seçilen klasör için yazma izni yok"
 }

@@ -1,12 +1,19 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/storage_info.dart';
+
+import 'package:anx_reader/utils/get_path/get_base_path.dart';
+import 'package:anx_reader/utils/get_path/storage_migration.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
+import 'package:anx_reader/widgets/common/anx_filled_button.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,16 +28,134 @@ class _StorageSettingsState extends ConsumerState<StorageSettings>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  // Custom storage location state
+  String? _selectedNewPath;
+  bool _isMigrating = false;
+  String _migrationCurrentItem = '';
+  int _migrationProgress = 0;
+  int _migrationTotal = 6;
+  String? _currentStoragePath;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadCurrentPath();
+  }
+
+  Future<void> _loadCurrentPath() async {
+    final path = await getAnxDocumentsPath();
+    if (mounted) {
+      setState(() {
+        _currentStoragePath = path;
+      });
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectNewPath() async {
+    final result = await FilePicker.platform.getDirectoryPath();
+    if (result == null) return;
+
+    // Check if directory is empty
+    final isEmpty = await isDirectoryEmpty(result);
+    if (!isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(L10n.of(context).storagePathNotEmpty),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Check write permission by creating a test file
+    try {
+      final testFile =
+          File('$result${Platform.pathSeparator}.anx_permission_test');
+      await testFile.writeAsString('test');
+      await testFile.delete();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(L10n.of(context).storagePathNoPermission),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _selectedNewPath = result;
+    });
+  }
+
+  Future<void> _startMigration() async {
+    if (_selectedNewPath == null || _currentStoragePath == null) return;
+
+    setState(() {
+      _isMigrating = true;
+      _migrationProgress = 0;
+      _migrationCurrentItem = '';
+    });
+
+    final success = await performStorageMigration(
+      sourcePath: _currentStoragePath!,
+      destinationPath: _selectedNewPath!,
+      onProgress: (currentItem, progress, total) {
+        if (mounted) {
+          setState(() {
+            _migrationCurrentItem = currentItem;
+            _migrationProgress = progress;
+            _migrationTotal = total;
+          });
+        }
+      },
+    );
+
+    if (mounted) {
+      setState(() {
+        _isMigrating = false;
+      });
+
+      if (success) {
+        Prefs().customStoragePath = _selectedNewPath;
+        setState(() {
+          _currentStoragePath = _selectedNewPath;
+          _selectedNewPath = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(L10n.of(context).storageMigrationSuccess),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(L10n.of(context).storageMigrationFailed),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _resetToDefaultPath() async {
+    final defaultPath = await getDefaultStoragePath();
+    if (_currentStoragePath == defaultPath) return;
+
+    setState(() {
+      _selectedNewPath = defaultPath;
+    });
   }
 
   @override
@@ -122,6 +247,107 @@ class _StorageSettingsState extends ConsumerState<StorageSettings>
           ),
         ],
       ),
+
+      // Custom storage location (Windows only)
+      if (AnxPlatform.isWindows)
+        SettingsSection(
+          title: Text(L10n.of(context).storageCustomLocation),
+          tiles: [
+            CustomSettingsTile(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Current storage path
+                  ListTile(
+                    title: Text(L10n.of(context).storageCurrentPath),
+                    subtitle: Text(
+                      _currentStoragePath ?? '...',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  // Selected new path (if any)
+                  if (_selectedNewPath != null) ...[
+                    ListTile(
+                      title: Text(L10n.of(context).storageNewPath),
+                      subtitle: Text(
+                        _selectedNewPath!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          setState(() {
+                            _selectedNewPath = null;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                  // Action buttons
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        if (_selectedNewPath == null)
+                          Expanded(
+                            child: AnxFilledButton(
+                              onPressed: _selectNewPath,
+                              child: Text(L10n.of(context).storageSelectPath),
+                            ),
+                          )
+                        else
+                          Expanded(
+                            child: AnxFilledButton(
+                              onPressed: _isMigrating ? null : _startMigration,
+                              isLoading: _isMigrating,
+                              child: Text(L10n.of(context).storageMigrateData),
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        if (Prefs().customStoragePath != null &&
+                            _selectedNewPath == null)
+                          AnxFilledButton.outlined(
+                            onPressed:
+                                _isMigrating ? null : _resetToDefaultPath,
+                            child: Text(L10n.of(context).storageResetPath),
+                          ),
+                      ],
+                    ),
+                  ),
+                  // Migration progress
+                  if (_isMigrating) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        children: [
+                          LinearProgressIndicator(
+                            value: _migrationTotal > 0
+                                ? _migrationProgress / _migrationTotal
+                                : null,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _migrationCurrentItem.isNotEmpty
+                                ? '${L10n.of(context).migrationCurrentItem}: $_migrationCurrentItem'
+                                : L10n.of(context).migrationPreparing,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Text(
+                            '$_migrationProgress / $_migrationTotal',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
 
       // Tab view for data files details
       SettingsSection(

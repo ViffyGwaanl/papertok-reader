@@ -755,5 +755,16 @@
   "migrationFailed": "移行に失敗しました",
   "migrationDoNotClose": "移行中はアプリを閉じないでください",
   "migrationCurrentItem": "移行中",
-  "migrationPreparing": "準備中..."
+  "migrationPreparing": "準備中...",
+  "storageCustomLocation": "カスタム保存場所",
+  "storageCurrentPath": "現在のパス",
+  "storageNewPath": "新しいパス",
+  "storageSelectPath": "新しい場所を選択",
+  "storageMigrateData": "移行を開始",
+  "storageResetPath": "デフォルトにリセット",
+  "storagePathNotEmpty": "空のフォルダーを選択してください",
+  "storageMigrationSuccess": "移行が完了しました。アプリを再起動してください。",
+  "storageMigrationFailed": "移行に失敗しました。データは元の場所に残っています。",
+  "storagePathPermissionLost": "カスタム保存パスにアクセスできなくなりました。データはデフォルトの場所にリセットされました。",
+  "storagePathNoPermission": "選択したフォルダーに書き込み権限がありません"
 }

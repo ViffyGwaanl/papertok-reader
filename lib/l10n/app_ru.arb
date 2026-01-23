@@ -755,5 +755,16 @@
   "migrationFailed": "Ошибка миграции",
   "migrationDoNotClose": "Пожалуйста, не закрывайте приложение во время миграции",
   "migrationCurrentItem": "Миграция",
-  "migrationPreparing": "Подготовка..."
+  "migrationPreparing": "Подготовка...",
+  "storageCustomLocation": "Пользовательское место хранения",
+  "storageCurrentPath": "Текущий путь",
+  "storageNewPath": "Новый путь",
+  "storageSelectPath": "Выбрать новое место",
+  "storageMigrateData": "Начать миграцию",
+  "storageResetPath": "Сброс по умолчанию",
+  "storagePathNotEmpty": "Пожалуйста, выберите пустую папку",
+  "storageMigrationSuccess": "Миграция завершена. Пожалуйста, перезапустите приложение.",
+  "storageMigrationFailed": "Миграция не удалась. Данные остаются в исходном месте.",
+  "storagePathPermissionLost": "Пользовательский путь хранения больше не доступен. Данные были сброшены в место по умолчанию.",
+  "storagePathNoPermission": "Нет разрешения на запись в выбранную папку"
 }

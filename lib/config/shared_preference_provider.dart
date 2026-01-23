@@ -775,6 +775,18 @@ class Prefs extends ChangeNotifier {
     return WindowInfo.fromJson(jsonDecode(windowInfoJson));
   }
 
+  /// Custom storage path for Windows/macOS
+  String? get customStoragePath => prefs.getString('customStoragePath');
+
+  set customStoragePath(String? value) {
+    if (value == null) {
+      prefs.remove('customStoragePath');
+    } else {
+      prefs.setString('customStoragePath', value);
+    }
+    notifyListeners();
+  }
+
   void saveAiConfig(String identifier, Map<String, String> config) {
     prefs.setString('aiConfig_$identifier', jsonEncode(config));
     notifyListeners();

@@ -755,5 +755,16 @@
   "migrationFailed": "Migração falhou",
   "migrationDoNotClose": "Por favor, não feche o aplicativo durante a migração",
   "migrationCurrentItem": "Migrando",
-  "migrationPreparing": "Preparando..."
+  "migrationPreparing": "Preparando...",
+  "storageCustomLocation": "Local de armazenamento personalizado",
+  "storageCurrentPath": "Caminho atual",
+  "storageNewPath": "Novo caminho",
+  "storageSelectPath": "Selecionar novo local",
+  "storageMigrateData": "Iniciar migração",
+  "storageResetPath": "Redefinir para o padrão",
+  "storagePathNotEmpty": "Por favor, selecione uma pasta vazia",
+  "storageMigrationSuccess": "Migração concluída. Reinicie o aplicativo.",
+  "storageMigrationFailed": "Falha na migração. Os dados permanecem no local original.",
+  "storagePathPermissionLost": "O caminho de armazenamento personalizado não está mais acessível. Os dados foram redefinidos para o local padrão.",
+  "storagePathNoPermission": "Sem permissão de gravação para a pasta selecionada"
 }

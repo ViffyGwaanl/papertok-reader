@@ -755,5 +755,16 @@
   "migrationFailed": "Migration Failed",
   "migrationDoNotClose": "Please do not close the app during migration",
   "migrationCurrentItem": "Migrating",
-  "migrationPreparing": "Preparing..."
+  "migrationPreparing": "Preparing...",
+  "storageCustomLocation": "Custom Storage Location",
+  "storageCurrentPath": "Current Path",
+  "storageNewPath": "New Path",
+  "storageSelectPath": "Select New Location",
+  "storageMigrateData": "Start Migration",
+  "storageResetPath": "Reset to Default",
+  "storagePathNotEmpty": "Please select an empty folder",
+  "storageMigrationSuccess": "Migration completed. Please restart the app.",
+  "storageMigrationFailed": "Migration failed. Data remains in the original location.",
+  "storagePathPermissionLost": "Custom storage path is no longer accessible. Data has been reset to default location.",
+  "storagePathNoPermission": "No write permission for the selected folder"
 }

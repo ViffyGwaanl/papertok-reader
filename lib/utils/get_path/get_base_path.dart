@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:flutter/foundation.dart';
@@ -6,18 +8,47 @@ import 'package:path_provider/path_provider.dart';
 
 String documentPath = '';
 
+/// Check if a path is accessible (can read and write)
+Future<bool> _isPathAccessible(String path) async {
+  try {
+    final dir = Directory(path);
+    if (!dir.existsSync()) return false;
+
+    // Try to create and delete a test file to verify write permission
+    final testFile = File('$path${Platform.pathSeparator}.anx_permission_test');
+    await testFile.writeAsString('test');
+    await testFile.delete();
+    return true;
+  } catch (e) {
+    AnxLog.warning('Path not accessible: $path, error: $e');
+    return false;
+  }
+}
+
 Future<String> getAnxDocumentsPath() async {
+  // Windows only: Check for custom storage path first
+  if (AnxPlatform.isWindows) {
+    final customPath = Prefs().customStoragePath;
+    if (customPath != null) {
+      // Verify the path is still accessible (permission may have been revoked)
+      if (await _isPathAccessible(customPath)) {
+        return customPath;
+      } else {
+        // Permission lost, clear the custom path
+        AnxLog.warning(
+            'Custom storage path no longer accessible, resetting to default');
+        Prefs().customStoragePath = null;
+      }
+    }
+  }
+
   final directory = await getApplicationDocumentsDirectory();
   switch (AnxPlatform.type) {
     case AnxPlatformEnum.android:
     case AnxPlatformEnum.ohos:
       return directory.path;
     case AnxPlatformEnum.windows:
-      // return '${directory.path}\\AnxReader';
       return (await getApplicationSupportDirectory()).path;
-    // case TargetPlatform.linux:
-    //   final path = '${directory.path}/AnxReader';
-    //   return path;
     case AnxPlatformEnum.macos:
       return (await getApplicationSupportDirectory()).path;
     case AnxPlatformEnum.ios:

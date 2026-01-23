@@ -755,5 +755,16 @@
   "migrationFailed": "迁移失败",
   "migrationDoNotClose": "迁移过程中请勿关闭应用",
   "migrationCurrentItem": "正在迁移",
-  "migrationPreparing": "正在准备..."
+  "migrationPreparing": "正在准备...",
+  "storageCustomLocation": "自定义存储位置",
+  "storageCurrentPath": "当前路径",
+  "storageNewPath": "新路径",
+  "storageSelectPath": "选择新位置",
+  "storageMigrateData": "开始迁移",
+  "storageResetPath": "恢复默认",
+  "storagePathNotEmpty": "请选择一个空文件夹",
+  "storageMigrationSuccess": "迁移完成，请重启应用。",
+  "storageMigrationFailed": "迁移失败，数据仍在原位置。",
+  "storagePathPermissionLost": "自定义存储路径已不可访问，数据已重置到默认位置。",
+  "storagePathNoPermission": "所选文件夹无写入权限"
 }

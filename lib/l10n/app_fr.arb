@@ -755,5 +755,16 @@
   "migrationFailed": "Migration échouée",
   "migrationDoNotClose": "Veuillez ne pas fermer l'application pendant la migration",
   "migrationCurrentItem": "Migration de",
-  "migrationPreparing": "Préparation..."
+  "migrationPreparing": "Préparation...",
+  "storageCustomLocation": "Emplacement de stockage personnalisé",
+  "storageCurrentPath": "Chemin actuel",
+  "storageNewPath": "Nouveau chemin",
+  "storageSelectPath": "Sélectionner un nouvel emplacement",
+  "storageMigrateData": "Démarrer la migration",
+  "storageResetPath": "Réinitialiser par défaut",
+  "storagePathNotEmpty": "Veuillez sélectionner un dossier vide",
+  "storageMigrationSuccess": "Migration terminée. Veuillez redémarrer l'application.",
+  "storageMigrationFailed": "Échec de la migration. Les données restent à l'emplacement d'origine.",
+  "storagePathPermissionLost": "Le chemin de stockage personnalisé n'est plus accessible. Les données ont été réinitialisées à l'emplacement par défaut.",
+  "storagePathNoPermission": "Pas d'autorisation d'écriture pour le dossier sélectionné"
 }

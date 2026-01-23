@@ -755,5 +755,16 @@
 	"migrationFailed": "Migrare eșuată",
 	"migrationDoNotClose": "Vă rugăm să nu închideți aplicația în timpul migrării",
 	"migrationCurrentItem": "Migrarea",
-	"migrationPreparing": "Se pregătește..."
+	"migrationPreparing": "Se pregătește...",
+	"storageCustomLocation": "Locație de stocare personalizată",
+	"storageCurrentPath": "Calea curentă",
+	"storageNewPath": "Cale nouă",
+	"storageSelectPath": "Selectați o locație nouă",
+	"storageMigrateData": "Începeți migrarea",
+	"storageResetPath": "Revenire la setările implicite",
+	"storagePathNotEmpty": "Vă rugăm să selectați un folder gol",
+	"storageMigrationSuccess": "Migrarea a fost finalizată. Vă rugăm să reporniți aplicația.",
+	"storageMigrationFailed": "Migrarea a eșuat. Datele rămân în locația inițială.",
+	"storagePathPermissionLost": "Calea de stocare personalizată nu mai este accesibilă. Datele au fost resetate la locația implicită.",
+	"storagePathNoPermission": "Nu există permisiunea de scriere pentru folderul selectat"
 }
