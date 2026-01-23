@@ -917,8 +917,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: master
-      resolved-ref: "464b871cb9360c620eeca32a1aada0afb376bb97"
+      ref: "88d20d282354d6d211f15f721b9c43796edd1b68"
+      resolved-ref: "88d20d282354d6d211f15f721b9c43796edd1b68"
       url: "https://github.com/Anxcye/flutter_tts.git"
     source: git
     version: "4.2.3"
