@@ -4,6 +4,7 @@ import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
+import 'dart:async';
 
 class TranslationMenu extends StatefulWidget {
   const TranslationMenu({
@@ -23,13 +24,43 @@ class TranslationMenu extends StatefulWidget {
 }
 
 class _TranslationMenuState extends State<TranslationMenu> {
+  Widget? _translationWidget;
+  Timer? _debounceTimer;
+  bool _translationInitialized = false;
+
   @override
   void initState() {
     super.initState();
+    _initializeTranslation();
+  }
+
+  void _initializeTranslation() {
+    // Use addPostFrameCallback to ensure the UI is rendered first
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _translationInitialized) return;
+      
+      // Debounce: Delay the translation call to ensure context has stopped updating
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+        if (!mounted || _translationInitialized) return;
+        
+        setState(() {
+          final effectiveContextText = (widget.contextText?.trim().isEmpty ?? true)
+              ? null
+              : widget.contextText;
+          _translationWidget = translateText(
+            widget.content,
+            contextText: effectiveContextText,
+          );
+          _translationInitialized = true;
+        });
+      });
+    });
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -83,9 +114,6 @@ class _TranslationMenuState extends State<TranslationMenu> {
   @override
   Widget build(BuildContext context) {
     // print('Building TranslationMenu');
-    final effectiveContextText = (widget.contextText?.trim().isEmpty ?? true)
-        ? null
-        : widget.contextText;
     return Expanded(
       child: AnimatedSize(
         duration: const Duration(milliseconds: 300),
@@ -112,9 +140,10 @@ class _TranslationMenuState extends State<TranslationMenu> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    translateText(
-                      widget.content,
-                      contextText: effectiveContextText,
+                    // Show translation widget if initialized, otherwise show loading placeholder
+                    _translationWidget ?? const SizedBox(
+                      height: 20,
+                      child: Center(child: Text('...')),
                     ),
                     const Divider(),
                     AxisFlex(
