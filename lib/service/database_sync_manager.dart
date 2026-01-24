@@ -129,7 +129,7 @@ class DatabaseSyncManager {
       // This is necessary because downloaded databases may be in WAL mode
       // and SQLite can't open them properly without the WAL files
       if (!AnxPlatform.isOhos) {
-        await _ensureDeleteJournalMode(dbPath);
+        await DBHelper.fixDatabaseHeader(dbPath);
       }
 
       // Initialize FFI for desktop platforms
@@ -141,6 +141,11 @@ class DatabaseSyncManager {
           dbPath,
           readOnly: false,
           singleInstance: false,
+          onConfigure: (db) async {
+            if (!AnxPlatform.isOhos) {
+              await db.execute('PRAGMA journal_mode=DELETE');
+            }
+          },
         );
 
         // Basic integrity check
@@ -210,47 +215,16 @@ class DatabaseSyncManager {
     // Ensure database is closed
     await DBHelper.close();
 
-    // Clean up local WAL files before replacement (OHOS)
-    if (AnxPlatform.isOhos) {
-      await DBHelper.cleanupWalFiles(localDbPath);
-    }
+    // Clean up local WAL files before replacement
+    // This is critical on ALL platforms to avoid stale WAL/SHM files conflicting with the new DB
+    await DBHelper.cleanupWalFiles(localDbPath);
 
     // Use file move operation for atomic replacement
     final tempFile = io.File(tempDbPath);
     await tempFile.copy(localDbPath);
 
-    // On non-OHOS platforms, convert WAL mode to DELETE mode if needed
-    if (!AnxPlatform.isOhos) {
-      await _ensureDeleteJournalMode(localDbPath);
-    }
-
     // Re-initialize database
     await DBHelper().initDB();
-  }
-
-  /// Ensure the database uses DELETE journal mode (not WAL)
-  /// This ensures the database is a single file without -wal/-shm files
-  static Future<void> _ensureDeleteJournalMode(String dbPath) async {
-    Database? db;
-    try {
-      db = await openDatabase(dbPath, singleInstance: false);
-
-      // Check current journal mode
-      final result = await db.rawQuery('PRAGMA journal_mode');
-      final currentMode = result.first.values.first.toString().toLowerCase();
-
-      if (currentMode == 'wal') {
-        // Checkpoint to merge WAL data
-        await db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
-        // Switch to DELETE mode
-        await db.execute('PRAGMA journal_mode=DELETE');
-        AnxLog.info('DatabaseSync: Converted from WAL to DELETE journal mode');
-      }
-    } catch (e) {
-      AnxLog.warning('DatabaseSync: Failed to set journal mode: $e');
-    } finally {
-      await db?.close();
-    }
   }
 
   /// Recover database from backup
@@ -258,6 +232,9 @@ class DatabaseSyncManager {
       String backupPath, String localDbPath) async {
     try {
       await DBHelper.close();
+      // Ensure clean state before recovery
+      await DBHelper.cleanupWalFiles(localDbPath);
+
       await io.File(backupPath).copy(localDbPath);
       await DBHelper().initDB();
 

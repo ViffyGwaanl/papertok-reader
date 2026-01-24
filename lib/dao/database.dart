@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
@@ -158,21 +159,13 @@ class DBHelper {
   }
 
   /// Checkpoint WAL to merge data into main database file
-  /// On OHOS, this closes and reopens the database since PRAGMA is not supported
   /// Returns true if checkpoint was successful or not needed
   static Future<bool> checkpointWal() async {
-    if (AnxPlatform.isOhos) {
-      // OHOS doesn't support PRAGMA commands via execute()
-      // Close and reopen the database to flush WAL data
-      await close();
-      await DBHelper().initDB();
-      AnxLog.info('Database: WAL flushed by reopening (OHOS)');
-      return true;
-    }
-
     try {
       final db = await DBHelper().database;
-      await db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+      // Use rawQuery instead of execute for PRAGMA wal_checkpoint
+      // because it returns a result row which can cause issues with execute()
+      await db.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
       AnxLog.info('Database: WAL checkpoint completed');
       return true;
     } catch (e) {
@@ -203,6 +196,107 @@ class DBHelper {
       AnxLog.info('Database: WAL files cleaned up');
     } catch (e) {
       AnxLog.warning('Database: Failed to cleanup WAL files: $e');
+    }
+  }
+
+  /// Create a snapshot of the database for upload using VACUUM INTO
+  /// This avoids closing the database or locking it for long periods
+  static Future<String> prepareUploadSnapshot() async {
+    try {
+      final db = await DBHelper().database;
+      final cacheDir = await getAnxCacheDir();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final snapshotPath = join(cacheDir.path, 'snapshot_aaaa_$timestamp.db');
+
+      // Ensure any existing file is removed
+      final snapshotFile = File(snapshotPath);
+      if (snapshotFile.existsSync()) {
+        await snapshotFile.delete();
+      }
+
+      // VACUUM INTO creates a transactionally consistent copy
+      // It works even if the DB is in WAL mode and open
+      try {
+        // Use string interpolation instead of binding for VACUUM INTO
+        // as some SQLite wrappers/versions don't support bindings in VACUUM statements
+        final escapedPath = snapshotPath.replaceAll("'", "''");
+        await db.execute("VACUUM INTO '$escapedPath'");
+      } catch (e) {
+        AnxLog.warning('Database: VACUUM INTO failed ($e)');
+
+        // Fallback strategy
+        if (AnxPlatform.isOhos) {
+          AnxLog.info('Database: Using OHOS fallback (Checkpoint+Copy)');
+          // Fallback for OHOS or older SQLite versions that don't support VACUUM INTO
+          // 1. Force Checkpoint
+          await db.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
+
+          // 2. Copy file manually
+          final databasePath = await getAnxDataBasesPath();
+          final dbPath = join(databasePath, 'app_database.db');
+          await File(dbPath).copy(snapshotPath);
+        } else {
+          // On non-OHOS platforms, VACUUM INTO should work.
+          // If it failed, rethrow to avoid masking the issue with a blocking operation
+          AnxLog.severe(
+              'Database: VACUUM INTO failed on non-OHOS platform. Check path permissions.');
+          rethrow;
+        }
+      }
+
+      AnxLog.info('Database: Created snapshot at $snapshotPath');
+
+      // Ensure the snapshot has a clean header (Legacy mode)
+      // This guarantees the uploaded file is compatible with all platforms
+      await fixDatabaseHeader(snapshotPath);
+
+      return snapshotPath;
+    } catch (e) {
+      AnxLog.severe('Database: Failed to create snapshot: $e');
+      rethrow;
+    }
+  }
+
+  /// Directly patch the database file header to switch from WAL mode to Legacy mode
+  /// WAL mode sets the file format byte (offset 18) and version byte (offset 19) to 2
+  /// We need to reset them to 1 (Legacy) to allow opening without -wal file
+  static Future<void> fixDatabaseHeader(String dbPath) async {
+    try {
+      final file = File(dbPath);
+      if (!file.existsSync()) return;
+
+      // 1. Check header first to avoid expensive read/write if not needed
+      bool needsPatch = false;
+      final raf = await file.open(mode: FileMode.read);
+      try {
+        if (await raf.length() > 20) {
+          await raf.setPosition(18);
+          final writeVersion = await raf.readByte();
+          final readVersion = await raf.readByte();
+
+          if (writeVersion == 2 || readVersion == 2) {
+            needsPatch = true;
+            AnxLog.info(
+                'Database: Detected WAL mode in header (v$writeVersion/v$readVersion), patching to Legacy mode');
+          }
+        }
+      } finally {
+        await raf.close();
+      }
+
+      // 2. Patch if needed logic (Read-Modify-Write)
+      if (needsPatch) {
+        final bytes = await file.readAsBytes();
+        if (bytes.length > 20) {
+          bytes[18] = 1; // Write version: 1 (Legacy)
+          bytes[19] = 1; // Read version: 1 (Legacy)
+
+          await file.writeAsBytes(bytes, flush: true);
+          AnxLog.info('Database: patched header 18, 19 to 1 successfully');
+        }
+      }
+    } catch (e) {
+      AnxLog.warning('Database: Failed to patch database header: $e');
     }
   }
 

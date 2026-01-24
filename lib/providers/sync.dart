@@ -399,15 +399,17 @@ class Sync extends _$Sync {
     try {
       switch (direction) {
         case SyncDirection.upload:
-          // Checkpoint WAL to ensure all data is in the main db file
-          await DBHelper.checkpointWal();
-          await DBHelper.close();
-          // Clean up WAL files on OHOS to ensure single file upload
-          if (AnxPlatform.isOhos) {
-            await DBHelper.cleanupWalFiles(localDbPath);
+          // Use VACUUM INTO to create a snapshot, avoiding database locking/closing
+          final snapshotPath = await DBHelper.prepareUploadSnapshot();
+          try {
+            await uploadFile(snapshotPath, 'anx/$remoteDbFileName');
+          } finally {
+            // Clean up snapshot file
+            final snapshotFile = io.File(snapshotPath);
+            if (snapshotFile.existsSync()) {
+              await snapshotFile.delete();
+            }
           }
-          await uploadFile(localDbPath, 'anx/$remoteDbFileName');
-          await DBHelper().initDB();
           break;
 
         case SyncDirection.download:
@@ -442,15 +444,17 @@ class Sync extends _$Sync {
         case SyncDirection.both:
           if (remoteDb == null ||
               remoteDb.mTime!.isBefore(localDb.lastModifiedSync())) {
-            // Checkpoint WAL to ensure all data is in the main db file
-            await DBHelper.checkpointWal();
-            await DBHelper.close();
-            // Clean up WAL files on OHOS to ensure single file upload
-            if (AnxPlatform.isOhos) {
-              await DBHelper.cleanupWalFiles(localDbPath);
+            // Use VACUUM INTO to create a snapshot, avoiding database locking/closing
+            final snapshotPath = await DBHelper.prepareUploadSnapshot();
+            try {
+              await uploadFile(snapshotPath, 'anx/$remoteDbFileName');
+            } finally {
+              // Clean up snapshot file
+              final snapshotFile = io.File(snapshotPath);
+              if (snapshotFile.existsSync()) {
+                await snapshotFile.delete();
+              }
             }
-            await uploadFile(localDbPath, 'anx/$remoteDbFileName');
-            await DBHelper().initDB();
           } else if (remoteDb.mTime!.isAfter(localDb.lastModifiedSync())) {
             // Use safe database download method
             final result = await DatabaseSyncManager.safeDownloadDatabase(
