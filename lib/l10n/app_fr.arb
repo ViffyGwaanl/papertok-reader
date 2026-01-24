@@ -773,5 +773,11 @@
   "storageMigrationSuccess": "Migration terminée. Veuillez redémarrer l'application.",
   "storageMigrationFailed": "Échec de la migration. Les données restent à l'emplacement d'origine.",
   "storagePathPermissionLost": "Le chemin de stockage personnalisé n'est plus accessible. Les données ont été réinitialisées à l'emplacement par défaut.",
-  "storagePathNoPermission": "Pas d'autorisation d'écriture pour le dossier sélectionné"
+  "storagePathNoPermission": "Pas d'autorisation d'écriture pour le dossier sélectionné",
+  "bookBottomSheetReplaceFile": "Remplacer le fichier",
+  "bookBottomSheetOriginalFileSize": "Taille du fichier original : {size}",
+  "bookBottomSheetNewFileSize": "Taille du nouveau fichier : {size}",
+  "bookBottomSheetReplaceWarning": "Le remplacement du fichier peut entraîner le déplacement ou la perte des surlignages car le contenu du livre peut être différent",
+  "bookBottomSheetUnsupportedFileFormat": "Format de fichier non pris en charge : {extension}",
+  "bookBottomSheetReplaceFailed": "Le remplacement a échoué : {error}"
 }

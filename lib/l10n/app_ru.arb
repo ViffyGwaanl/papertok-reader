@@ -773,5 +773,11 @@
   "storageMigrationSuccess": "Миграция завершена. Пожалуйста, перезапустите приложение.",
   "storageMigrationFailed": "Миграция не удалась. Данные остаются в исходном месте.",
   "storagePathPermissionLost": "Пользовательский путь хранения больше не доступен. Данные были сброшены в место по умолчанию.",
-  "storagePathNoPermission": "Нет разрешения на запись в выбранную папку"
+  "storagePathNoPermission": "Нет разрешения на запись в выбранную папку",
+  "bookBottomSheetReplaceFile": "Заменить файл",
+  "bookBottomSheetOriginalFileSize": "Размер исходного файла: {size}",
+  "bookBottomSheetNewFileSize": "Размер нового файла: {size}",
+  "bookBottomSheetReplaceWarning": "Замена файла может привести к смещению или потере выделений, так как содержимое книги может отличаться",
+  "bookBottomSheetUnsupportedFileFormat": "Неподдерживаемый формат файла: {extension}",
+  "bookBottomSheetReplaceFailed": "Ошибка замены: {error}"
 }

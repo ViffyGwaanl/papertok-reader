@@ -773,5 +773,11 @@
   "storageMigrationSuccess": "اكتملت الهجرة. يرجى إعادة تشغيل التطبيق.",
   "storageMigrationFailed": "فشلت الهجرة. تبقى البيانات في الموقع الأصلي.",
   "storagePathPermissionLost": "لم يعد مسار التخزين المخصص متاحًا. تمت إعادة تعيين البيانات إلى الموقع الافتراضي.",
-  "storagePathNoPermission": "لا يوجد إذن كتابة للمجلد المحدد"
+  "storagePathNoPermission": "لا يوجد إذن كتابة للمجلد المحدد",
+  "bookBottomSheetReplaceFile": "استبدال الملف",
+  "bookBottomSheetOriginalFileSize": "حجم الملف الأصلي: {size}",
+  "bookBottomSheetNewFileSize": "حجم الملف الجديد: {size}",
+  "bookBottomSheetReplaceWarning": "استبدال الملف قد يتسبب في إزاحة أو فقدان الإبرازات لأن محتوى الكتاب قد يكون مختلفًا",
+  "bookBottomSheetUnsupportedFileFormat": "تنسيق الملف غير مدعوم: {extension}",
+  "bookBottomSheetReplaceFailed": "فشل الاستبدال: {error}"
 }

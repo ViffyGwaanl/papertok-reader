@@ -773,5 +773,11 @@
   "storageMigrationSuccess": "Migration completed. Please restart the app.",
   "storageMigrationFailed": "Migration failed. Data remains in the original location.",
   "storagePathPermissionLost": "Custom storage path is no longer accessible. Data has been reset to default location.",
-  "storagePathNoPermission": "No write permission for the selected folder"
+  "storagePathNoPermission": "No write permission for the selected folder",
+  "bookBottomSheetReplaceFile": "Replace File",
+  "bookBottomSheetOriginalFileSize": "Original file size: {size}",
+  "bookBottomSheetNewFileSize": "New file size: {size}",
+  "bookBottomSheetReplaceWarning": "Replacing the file may cause highlights to be displaced or lost because the book content might be different",
+  "bookBottomSheetUnsupportedFileFormat": "Unsupported file format: {extension}",
+  "bookBottomSheetReplaceFailed": "Replacement failed: {error}"
 }

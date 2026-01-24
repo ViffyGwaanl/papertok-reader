@@ -772,6 +772,12 @@
   "storagePathNotEmpty": "請選擇一個空文件夾",
   "storageMigrationSuccess": "遷移完成，請重啟應用。",
   "storageMigrationFailed": "遷移失敗，數據仍在原位置。",
-  "storagePathPermissionLost": "自定義存儲路徑已不可訪問，數據已重置到默認位置。",
-  "storagePathNoPermission": "所選文件夾無寫入權限"
+  "storagePathPermissionLost": "自訂儲存路徑已不可存取，資料已重設至預設位置。",
+  "storagePathNoPermission": "所選資料夾無寫入權限",
+  "bookBottomSheetReplaceFile": "替換檔案",
+  "bookBottomSheetOriginalFileSize": "原檔案大小: {size}",
+  "bookBottomSheetNewFileSize": "新檔案大小: {size}",
+  "bookBottomSheetReplaceWarning": "替換後由於書籍內容可能不同，劃線可能錯位或消失",
+  "bookBottomSheetUnsupportedFileFormat": "不支持的檔案格式: {extension}",
+  "bookBottomSheetReplaceFailed": "替換失敗: {error}"
 }

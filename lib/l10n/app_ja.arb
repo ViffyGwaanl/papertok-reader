@@ -772,6 +772,12 @@
   "storagePathNotEmpty": "空のフォルダーを選択してください",
   "storageMigrationSuccess": "移行が完了しました。アプリを再起動してください。",
   "storageMigrationFailed": "移行に失敗しました。データは元の場所に残っています。",
-  "storagePathPermissionLost": "カスタム保存パスにアクセスできなくなりました。データはデフォルトの場所にリセットされました。",
-  "storagePathNoPermission": "選択したフォルダーに書き込み権限がありません"
+  "storagePathPermissionLost": "カスタム保存先パスにアクセスできなくなりました。データはデフォルトの場所にリセットされました。",
+  "storagePathNoPermission": "選択されたフォルダへの書き込み権限がありません",
+  "bookBottomSheetReplaceFile": "ファイルを置換",
+  "bookBottomSheetOriginalFileSize": "元のファイルサイズ: {size}",
+  "bookBottomSheetNewFileSize": "新しいファイルサイズ: {size}",
+  "bookBottomSheetReplaceWarning": "ファイルを置換すると、本の内容が異なる可能性があるため、ハイライトがずれたり失われたりする可能性があります",
+  "bookBottomSheetUnsupportedFileFormat": "サポートされていないファイル形式: {extension}",
+  "bookBottomSheetReplaceFailed": "置換に失敗しました: {error}"
 }

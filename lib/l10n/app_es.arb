@@ -773,5 +773,11 @@
   "storageMigrationSuccess": "Migración completada. Por favor, reinicia la aplicación.",
   "storageMigrationFailed": "Migración fallida. Los datos permanecen en la ubicación original.",
   "storagePathPermissionLost": "La ruta de almacenamiento personalizada ya no es accesible. Los datos se han restablecido a la ubicación predeterminada.",
-  "storagePathNoPermission": "Sin permiso de escritura para la carpeta seleccionada"
+  "storagePathNoPermission": "Sin permiso de escritura para la carpeta seleccionada",
+  "bookBottomSheetReplaceFile": "Reemplazar archivo",
+  "bookBottomSheetOriginalFileSize": "Tamaño del archivo original: {size}",
+  "bookBottomSheetNewFileSize": "Tamaño del archivo nuevo: {size}",
+  "bookBottomSheetReplaceWarning": "Reemplazar el archivo puede causar que los resaltados se desplacen o se pierdan porque el contenido del libro puede ser diferente",
+  "bookBottomSheetUnsupportedFileFormat": "Formato de archivo no soportado: {extension}",
+  "bookBottomSheetReplaceFailed": "Error al reemplazar: {error}"
 }

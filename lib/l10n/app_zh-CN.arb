@@ -773,5 +773,11 @@
   "storageMigrationSuccess": "迁移完成，请重启应用。",
   "storageMigrationFailed": "迁移失败，数据仍在原位置。",
   "storagePathPermissionLost": "自定义存储路径已不可访问，数据已重置到默认位置。",
-  "storagePathNoPermission": "所选文件夹无写入权限"
+  "storagePathNoPermission": "所选文件夹无写入权限",
+  "bookBottomSheetReplaceFile": "替换文件",
+  "bookBottomSheetOriginalFileSize": "原文件大小: {size}",
+  "bookBottomSheetNewFileSize": "新文件大小: {size}",
+  "bookBottomSheetReplaceWarning": "替换后由于书籍内容可能不同划线可能错位或者消失",
+  "bookBottomSheetUnsupportedFileFormat": "不支持的文件格式: {extension}",
+  "bookBottomSheetReplaceFailed": "替换失败: {error}"
 }

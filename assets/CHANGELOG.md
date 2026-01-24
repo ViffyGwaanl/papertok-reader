@@ -23,6 +23,7 @@
 - Feat: Support auto select day/night background image
 - Feat: Support group day/night background
 - Fix: Fix app crash when disabling AI on home page
+- Feat: Support replacing book file (maintaining reading progress and notes)
 - UI: Optimize part of the interface design
 
 - Feat: 支持选中即标注功能
@@ -45,6 +46,7 @@
 - Feat: 支持自动选择白天/黑夜的背景图片
 - Feat: 支持日夜模式背景图片编组
 - Fix: 修复主界面关闭AI时App崩溃的问题
+- Feat: 支持替换书籍文件（保留阅读进度和笔记）
 - UI: 优化部分界面设计
 
 ## 1.10.1
