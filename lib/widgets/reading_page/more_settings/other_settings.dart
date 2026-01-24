@@ -142,6 +142,20 @@ class _OtherSettingsState extends State<OtherSettings> {
       );
     }
 
+    Widget autoMarkSelection() {
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        trailing: Switch(
+          value: Prefs().autoMarkSelection,
+          onChanged: (bool value) => setState(() {
+            Prefs().autoMarkSelection = value;
+          }),
+        ),
+        title: Text(L10n.of(context).readingPageAutoMarkSelection),
+        subtitle: Text(L10n.of(context).readingPageAutoMarkSelectionTips),
+      );
+    }
+
     ListTile autoAdjustReadingTheme() {
       return ListTile(
         contentPadding: EdgeInsets.zero,
@@ -192,6 +206,7 @@ class _OtherSettingsState extends State<OtherSettings> {
           swapPageTurnArea(),
           autoAdjustReadingTheme(),
           autoTranslateSelection(),
+          autoMarkSelection(),
           autoSummaryPreviousContent(),
           screenTimeout(),
           pageTurningControl(),

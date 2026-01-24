@@ -120,6 +120,8 @@
   "notesTips_2": "Aggiungi una nota mentre leggi!",
   "readingPageChapterPages": "Pagine Capitolo",
   "readingPageCurrentPage": "Pagina Corrente",
+  "readingPageAutoMarkSelection": "Auto-mark selection",
+  "readingPageAutoMarkSelectionTips": "Automatically highlight selected text with the last used style",
   "readingPageAutoTranslateSelection": "Traduci Automaticamente Selezione",
   "translateError": "Errore di Traduzione",
   "readingPageSummaryTheChapter": "Riassumi il capitolo",

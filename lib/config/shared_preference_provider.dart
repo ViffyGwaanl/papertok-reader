@@ -595,6 +595,15 @@ class Prefs extends ChangeNotifier {
     return prefs.getBool('autoTranslateSelection') ?? true;
   }
 
+  set autoMarkSelection(bool status) {
+    prefs.setBool('autoMarkSelection', status);
+    notifyListeners();
+  }
+
+  bool get autoMarkSelection {
+    return prefs.getBool('autoMarkSelection') ?? false;
+  }
+
   set fullTextTranslateService(TranslateService service) {
     prefs.setString('fullTextTranslateService', service.name);
     notifyListeners();

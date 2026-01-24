@@ -120,6 +120,8 @@
   "notesTips_2": "Okurken bir not ekleyin!",
   "readingPageChapterPages": "Bölüm Sayfaları",
   "readingPageCurrentPage": "Geçerli Sayfa",
+  "readingPageAutoMarkSelection": "Auto-mark selection",
+  "readingPageAutoMarkSelectionTips": "Automatically highlight selected text with the last used style",
   "readingPageAutoTranslateSelection": "Otomatik Çeviri Seçimi",
   "translateError": "Çeviri Hatası",
   "readingPageSummaryTheChapter": "Bölümü özetle",

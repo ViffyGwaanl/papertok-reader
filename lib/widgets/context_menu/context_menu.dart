@@ -9,7 +9,10 @@ import 'package:anx_reader/widgets/context_menu/translation_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
-void showContextMenu(
+import 'package:anx_reader/dao/book_note.dart';
+import 'package:anx_reader/models/book_note.dart';
+
+Future<void> showContextMenu(
     BuildContext context,
     double left,
     double top,
@@ -20,9 +23,33 @@ void showContextMenu(
     int? annoId,
     bool footnote,
     Axis axis,
-    {String? contextText}) {
+    {String? contextText}) async {
   final playerKey = epubPlayerKey.currentState;
   if (playerKey == null) return;
+  bool isNewNote = false;
+
+  if (Prefs().autoMarkSelection && annoId == null) {
+    // Auto-highlight logic
+    final String type = Prefs().annotationType;
+    final String color = Prefs().annotationColor;
+
+    final BookNote bookNote = BookNote(
+      bookId: playerKey.book.id,
+      content: annoContent,
+      cfi: annoCfi,
+      chapter: playerKey.chapterTitle,
+      type: type,
+      color: color,
+      createTime: DateTime.now(),
+      updateTime: DateTime.now(),
+    );
+
+    final id = await bookNoteDao.save(bookNote);
+    bookNote.setId(id);
+    playerKey.addAnnotation(bookNote);
+    annoId = id;
+    isNewNote = true;
+  }
 
   final renderBox =
       epubPlayerKey.currentContext?.findRenderObject() as RenderBox?;
@@ -126,7 +153,7 @@ void showContextMenu(
       onClose: onClose,
       menuConstraints: menuConstraints,
       initialPlacement: initialPlacement,
-      showTranslationDefault: Prefs().autoTranslateSelection,
+      showTranslationDefault: !isNewNote && Prefs().autoTranslateSelection,
       horizontalMargin: horizontalMargin,
       verticalMargin: verticalMargin,
       gap: gap,

@@ -120,6 +120,8 @@
   "notesTips_2": "在閱讀時新增筆記！",
   "readingPageChapterPages": "本章頁數",
   "readingPageCurrentPage": "目前頁碼",
+  "readingPageAutoMarkSelection": "選中即標註",
+  "readingPageAutoMarkSelectionTips": "開啟後選擇一段文本直接按上次的樣式劃線",
   "readingPageAutoTranslateSelection": "自動翻譯選取範圍",
   "translateError": "翻譯錯誤",
   "readingPageSummaryTheChapter": "總結本章",

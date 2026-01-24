@@ -120,6 +120,8 @@
   "notesTips_2": "読書中にノートを追加してください！",
   "readingPageChapterPages": "章のページ数",
   "readingPageCurrentPage": "現在のページ",
+  "readingPageAutoMarkSelection": "Auto-mark selection",
+  "readingPageAutoMarkSelectionTips": "Automatically highlight selected text with the last used style",
   "readingPageAutoTranslateSelection": "選択範囲の自動翻訳",
   "translateError": "翻訳エラー",
   "readingPageSummaryTheChapter": "章を要約",

@@ -120,6 +120,8 @@
   "notesTips_2": "Добавляйте заметки во время чтения!",
   "readingPageChapterPages": "Страницы главы",
   "readingPageCurrentPage": "Текущая страница",
+  "readingPageAutoMarkSelection": "Auto-mark selection",
+  "readingPageAutoMarkSelectionTips": "Automatically highlight selected text with the last used style",
   "readingPageAutoTranslateSelection": "Автоперевод выделенного",
   "translateError": "Ошибка перевода",
   "readingPageSummaryTheChapter": "Сделать краткое содержание главы",

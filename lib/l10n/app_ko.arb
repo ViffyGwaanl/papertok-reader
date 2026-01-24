@@ -120,6 +120,8 @@
   "notesTips_2": "읽는 동안 노트를 추가하세요!",
   "readingPageChapterPages": "챕터 페이지",
   "readingPageCurrentPage": "현재 페이지",
+  "readingPageAutoMarkSelection": "Auto-mark selection",
+  "readingPageAutoMarkSelectionTips": "Automatically highlight selected text with the last used style",
   "readingPageAutoTranslateSelection": "선택 영역 자동 번역",
   "translateError": "번역 오류",
   "readingPageSummaryTheChapter": "챕터 요약",

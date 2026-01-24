@@ -120,6 +120,8 @@
   "notesTips_2": "在书中划线，记录你的思绪！",
   "readingPageChapterPages": "本章页数",
   "readingPageCurrentPage": "当前页",
+  "readingPageAutoMarkSelection": "选中即标注",
+  "readingPageAutoMarkSelectionTips": "开启后选择一段文本直接按上次的样式划线",
   "readingPageAutoTranslateSelection": "自动翻译选中的内容",
   "translateError": "翻译错误",
   "readingPageSummaryTheChapter": "总结本章内容",

@@ -120,6 +120,8 @@
   "notesTips_2": "於書中筆劃，記下君之思緒！",
   "readingPageChapterPages": "本章頁數",
   "readingPageCurrentPage": "當下之頁",
+  "readingPageAutoMarkSelection": "Auto-mark selection",
+  "readingPageAutoMarkSelectionTips": "Automatically highlight selected text with the last used style",
   "readingPageAutoTranslateSelection": "自動翻譯所選之文",
   "translateError": "翻譯有誤",
   "readingPageSummaryTheChapter": "概括本章內容",

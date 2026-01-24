@@ -120,6 +120,8 @@
   "notesTips_2": "أضف ملاحظة أثناء القراءة!",
   "readingPageChapterPages": "صفحات الفصل",
   "readingPageCurrentPage": "الصفحة الحالية",
+  "readingPageAutoMarkSelection": "Auto-mark selection",
+  "readingPageAutoMarkSelectionTips": "Automatically highlight selected text with the last used style",
   "readingPageAutoTranslateSelection": "ترجمة التحديد تلقائيًا",
   "translateError": "خطأ في الترجمة",
   "readingPageSummaryTheChapter": "تلخيص الفصل",
