@@ -723,6 +723,7 @@
   "bookDetailEditHint": "Tap Edit to change cover, title, tags, and more",
   "tagsSectionTitle": "Etichete",
   "tagsEmptyHint": "Fără etichete",
+  "noTagFilter": "Fără etichetă",
   "tagsEditHint": "Apasă pe butonul de editare pentru a adăuga etichete",
   "tagNewPlaceholder": "Etichetă nouă",
   "tagAddButton": "Adaugă",

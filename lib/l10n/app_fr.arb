@@ -723,6 +723,7 @@
   "bookDetailEditHint": "Appuyez sur Modifier pour changer la couverture, le titre, les tags et plus",
   "tagsSectionTitle": "Tags",
   "tagsEmptyHint": "Aucun tag",
+  "noTagFilter": "Sans tag",
   "tagsEditHint": "Appuyez sur Modifier pour ajouter des tags",
   "tagNewPlaceholder": "Nouveau tag",
   "tagAddButton": "Ajouter",

@@ -723,6 +723,7 @@
   "bookDetailEditHint": "Tap Edit to change cover, title, tags, and more",
   "tagsSectionTitle": "Tags",
   "tagsEmptyHint": "No tags",
+  "noTagFilter": "Untagged",
   "tagsEditHint": "Press the edit button to add tags",
   "tagNewPlaceholder": "New tag",
   "tagAddButton": "Add",

@@ -3,6 +3,7 @@
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
 ## 1.11.0
+- Feat: Support "No Tag" filter in books filter menu
 - Feat: Support select to mark
 - Feat: Support setting whether to automatically hide the bottom navigation bar on the home page
 - Feat: Support using Azure TTS service for narration
@@ -26,6 +27,7 @@
 - Feat: Support replacing book file (maintaining reading progress and notes)
 - UI: Optimize part of the interface design
 
+- Feat: 标签筛选菜单支持“无标签”筛选
 - Feat: 支持选中即标注功能
 - Feat: 支持设置是否自动隐藏主界面底部导航栏
 - Feat: 支持使用 Azure TTS 服务进行朗读

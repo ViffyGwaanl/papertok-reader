@@ -723,6 +723,7 @@
   "bookDetailEditHint": "Нажмите «Редактировать», чтобы сменить обложку, название, теги и другое",
   "tagsSectionTitle": "Теги",
   "tagsEmptyHint": "Нет тегов",
+  "noTagFilter": "Без тегов",
   "tagsEditHint": "Нажмите «Редактировать», чтобы добавить теги",
   "tagNewPlaceholder": "Новый тег",
   "tagAddButton": "Добавить",

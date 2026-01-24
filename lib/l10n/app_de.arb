@@ -723,6 +723,7 @@
   "bookDetailEditHint": "Tippe auf Bearbeiten, um Cover, Titel, Tags usw. zu ändern",
   "tagsSectionTitle": "Tags",
   "tagsEmptyHint": "Keine Tags",
+  "noTagFilter": "Ohne Tags",
   "tagsEditHint": "Drücke Bearbeiten, um Tags hinzuzufügen",
   "tagNewPlaceholder": "Neuer Tag",
   "tagAddButton": "Hinzufügen",

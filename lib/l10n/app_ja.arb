@@ -723,6 +723,7 @@
   "bookDetailEditHint": "編集をタップして表紙・タイトル・タグなどを変更",
   "tagsSectionTitle": "タグ",
   "tagsEmptyHint": "タグなし",
+  "noTagFilter": "タグなし",
   "tagsEditHint": "編集ボタンを押してタグを追加",
   "tagNewPlaceholder": "新しいタグ",
   "tagAddButton": "追加",

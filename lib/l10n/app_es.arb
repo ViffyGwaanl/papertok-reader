@@ -723,6 +723,7 @@
   "bookDetailEditHint": "Pulsa Editar para cambiar portada, título, etiquetas y más",
   "tagsSectionTitle": "Etiquetas",
   "tagsEmptyHint": "Sin etiquetas",
+  "noTagFilter": "Sin etiqueta",
   "tagsEditHint": "Pulsa Editar para añadir etiquetas",
   "tagNewPlaceholder": "Etiqueta nueva",
   "tagAddButton": "Añadir",

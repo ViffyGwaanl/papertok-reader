@@ -723,6 +723,7 @@
   "bookDetailEditHint": "Kapak, başlık, etiketler ve daha fazlası için Düzenle’ye dokunun",
   "tagsSectionTitle": "Etiketler",
   "tagsEmptyHint": "Etiket yok",
+  "noTagFilter": "Etiketsiz",
   "tagsEditHint": "Etiket eklemek için Düzenle’ye tıklayın",
   "tagNewPlaceholder": "Yeni etiket",
   "tagAddButton": "Ekle",

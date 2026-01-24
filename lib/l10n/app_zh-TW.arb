@@ -723,6 +723,7 @@
   "bookDetailEditHint": "點擊編輯按鈕可修改封面、標題、標籤等資訊",
   "tagsSectionTitle": "標籤",
   "tagsEmptyHint": "暫無標籤",
+  "noTagFilter": "無標籤",
   "tagsEditHint": "點擊編輯按鈕新增標籤",
   "tagNewPlaceholder": "新標籤",
   "tagAddButton": "新增",

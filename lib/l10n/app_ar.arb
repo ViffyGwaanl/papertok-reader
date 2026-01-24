@@ -723,6 +723,7 @@
   "bookDetailEditHint": "اضغط زر التعديل لتغيير الغلاف والعنوان والوسوم والمزيد",
   "tagsSectionTitle": "الوسوم",
   "tagsEmptyHint": "لا توجد وسوم",
+  "noTagFilter": "بدون وسوم",
   "tagsEditHint": "اضغط زر التعديل لإضافة وسوم",
   "tagNewPlaceholder": "وسم جديد",
   "tagAddButton": "إضافة",

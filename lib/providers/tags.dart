@@ -7,6 +7,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'tags.g.dart';
 
+/// Special ID for filtering books without any tags.
+const int kNoTagFilterId = -1;
+
 int _compareTagName(Tag a, Tag b) {
   String toPinyin(String value) {
     try {
@@ -119,6 +122,14 @@ class TagSelection extends _$TagSelection {
     if (next.contains(tagId)) {
       next.remove(tagId);
     } else {
+      // Mutual exclusion: no-tag filter and regular tag filters are exclusive
+      if (tagId == kNoTagFilterId) {
+        // Selecting "no tag" clears all other tags
+        next.clear();
+      } else {
+        // Selecting a regular tag clears "no tag"
+        next.remove(kNoTagFilterId);
+      }
       next.add(tagId);
     }
     state = next;

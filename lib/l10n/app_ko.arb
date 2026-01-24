@@ -723,6 +723,7 @@
   "bookDetailEditHint": "편집을 눌러 표지, 제목, 태그 등을 변경하세요",
   "tagsSectionTitle": "태그",
   "tagsEmptyHint": "태그 없음",
+  "noTagFilter": "태그 없음",
   "tagsEditHint": "편집 버튼을 눌러 태그를 추가하세요",
   "tagNewPlaceholder": "새 태그",
   "tagAddButton": "추가",

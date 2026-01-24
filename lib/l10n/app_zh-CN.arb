@@ -723,6 +723,7 @@
   "bookDetailEditHint": "点击编辑按钮可修改封面、标题、标签等信息",
   "tagsSectionTitle": "标签",
   "tagsEmptyHint": "暂无标签",
+  "noTagFilter": "无标签",
   "tagsEditHint": "点击编辑按钮添加标签",
   "tagNewPlaceholder": "新标签",
   "tagAddButton": "添加",
