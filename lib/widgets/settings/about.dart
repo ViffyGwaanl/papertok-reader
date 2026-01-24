@@ -183,6 +183,15 @@ Future<void> openAboutDialog() async {
                     );
                   },
                 ),
+                ListTile(
+                  title: Text(L10n.of(context).aboutHelp),
+                  onTap: () async {
+                    launchUrl(
+                      Uri.parse('https://anx.anxcye.com/docs'),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                ),
                 const Divider(),
                 if (EnvVar.showBeian) ...[
                   GestureDetector(
@@ -194,52 +203,55 @@ Future<void> openAboutDialog() async {
                   ),
                   const Divider(),
                 ],
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    linkIcon(
-                        icon: Icon(
-                          IonIcons.earth,
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
-                        url: 'https://anx.anxcye.com',
-                        mode: LaunchMode.externalApplication),
-                    linkIcon(
-                        icon: Icon(
-                          IonIcons.logo_github,
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
-                        url: 'https://github.com/Anxcye/anx-reader',
-                        mode: LaunchMode.externalApplication),
-                    if (EnvVar.showTelegramLink)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       linkIcon(
                           icon: Icon(
-                            Icons.telegram,
+                            IonIcons.earth,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
-                          url: 'https://t.me/AnxReader',
+                          url: 'https://anx.anxcye.com',
                           mode: LaunchMode.externalApplication),
-                    linkIcon(
-                        icon: Image.asset(
-                          'assets/images/xiaohongshu.png',
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
-                        url:
-                            'https://www.xiaohongshu.com/user/profile/5d403f3e00000000100151ff',
-                        mode: LaunchMode.externalApplication),
-                    linkIcon(
-                        icon: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Image.asset(
-                            'assets/images/qq.png',
+                      linkIcon(
+                          icon: Icon(
+                            IonIcons.logo_github,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
-                        ),
-                        // qq group url is so crazy
-                        url:
-                            'http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=8BYItJOMz4RCQJoHAAei7FV-nGB0iT8O&authKey=MD6a7gI%2FENiMr32rQRTLx2BpzTaa1wO9Qfmhx9ETcaLS%2FdcOFeptvVH9FWfvUpL2&noverify=0&group_code=1042905699',
-                        mode: LaunchMode.externalApplication),
-                  ],
+                          url: 'https://github.com/Anxcye/anx-reader',
+                          mode: LaunchMode.externalApplication),
+                      if (EnvVar.showTelegramLink)
+                        linkIcon(
+                            icon: Icon(
+                              Icons.telegram,
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
+                            url: 'https://t.me/AnxReader',
+                            mode: LaunchMode.externalApplication),
+                      linkIcon(
+                          icon: Image.asset(
+                            'assets/images/xiaohongshu.png',
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                          url:
+                              'https://www.xiaohongshu.com/user/profile/5d403f3e00000000100151ff',
+                          mode: LaunchMode.externalApplication),
+                      linkIcon(
+                          icon: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Image.asset(
+                              'assets/images/qq.png',
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
+                          ),
+                          // qq group url is so crazy
+                          url:
+                              'http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=8BYItJOMz4RCQJoHAAei7FV-nGB0iT8O&authKey=MD6a7gI%2FENiMr32rQRTLx2BpzTaa1wO9Qfmhx9ETcaLS%2FdcOFeptvVH9FWfvUpL2&noverify=0&group_code=1042905699',
+                          mode: LaunchMode.externalApplication),
+                    ],
+                  ),
                 ),
               ],
             ),
