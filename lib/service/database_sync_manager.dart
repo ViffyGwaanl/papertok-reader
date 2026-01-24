@@ -141,11 +141,6 @@ class DatabaseSyncManager {
           dbPath,
           readOnly: false,
           singleInstance: false,
-          onConfigure: (db) async {
-            if (!AnxPlatform.isOhos) {
-              await db.execute('PRAGMA journal_mode=DELETE');
-            }
-          },
         );
 
         // Basic integrity check
