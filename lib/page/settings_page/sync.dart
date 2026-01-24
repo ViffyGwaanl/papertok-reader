@@ -419,7 +419,6 @@ void showWebdavDialog(BuildContext context) {
         title: Text(title),
         contentPadding: const EdgeInsets.all(20),
         children: [
-
           buildTextField(
               L10n.of(context).settingsSyncWebdavUrl, webdavUrlController),
           buildTextField(L10n.of(context).settingsSyncWebdavUsername,
