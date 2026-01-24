@@ -3,6 +3,7 @@
 - Feat: 书架上的书籍可以选择使用原始封面比例
 
 ## 1.11.0
+- Feat: Support select to mark
 - Feat: Support setting whether to automatically hide the bottom navigation bar on the home page
 - Feat: Support using Azure TTS service for narration
 - Feat: Support previewing synthesized voice models
@@ -22,7 +23,9 @@
 - Feat: Support auto select day/night background image
 - Feat: Support group day/night background
 - Fix: Fix app crash when disabling AI on home page
+- UI: Optimize part of the interface design
 
+- Feat: 支持选中即标注功能
 - Feat: 支持设置是否自动隐藏主界面底部导航栏
 - Feat: 支持使用 Azure TTS 服务进行朗读
 - Feat：支持试听语音模型合成效果
@@ -42,6 +45,7 @@
 - Feat: 支持自动选择白天/黑夜的背景图片
 - Feat: 支持日夜模式背景图片编组
 - Fix: 修复主界面关闭AI时App崩溃的问题
+- UI: 优化部分界面设计
 
 ## 1.10.1
 - Feat: Choose bookshelf folder style (2x2 grid/stacked)
