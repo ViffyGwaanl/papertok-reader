@@ -410,7 +410,42 @@ export class Paginator extends HTMLElement {
   #touchScrolled
   #loadingNext = false
   #loadingPrev = false
+  #momentumDisabled = false
+  #prevOverflowScrolling = ''
+  #prevOverflowX = ''
+  #prevOverflowY = ''
+  #momentumTimer = null
   #pendingRelocate = null
+  #cancelMomentumTimer() {
+    if (this.#momentumTimer) {
+      clearTimeout(this.#momentumTimer)
+      this.#momentumTimer = null
+    }
+  }
+  #disableMomentum() {
+    this.#cancelMomentumTimer()
+    if (this.#momentumDisabled) return
+    const style = this.#container.style
+    this.#prevOverflowScrolling = style.webkitOverflowScrolling
+    this.#prevOverflowX = style.overflowX
+    this.#prevOverflowY = style.overflowY
+    style.webkitOverflowScrolling = 'auto'
+    if (this.scrollProp === 'scrollLeft') style.overflowX = 'hidden'
+    else style.overflowY = 'hidden'
+    this.#momentumDisabled = true
+  }
+  #restoreMomentum() {
+    this.#cancelMomentumTimer()
+    if (!this.#momentumDisabled) return
+    const style = this.#container.style
+    style.webkitOverflowScrolling = this.#prevOverflowScrolling || 'touch'
+    style.overflowX = this.#prevOverflowX || ''
+    style.overflowY = this.#prevOverflowY || ''
+    this.#prevOverflowScrolling = ''
+    this.#prevOverflowX = ''
+    this.#prevOverflowY = ''
+    this.#momentumDisabled = false
+  }
   constructor() {
     super()
     this.#root.innerHTML = `<style>
@@ -738,7 +773,8 @@ export class Paginator extends HTMLElement {
     const velocity = this.#vertical ? vy : vx
     const { pages, size } = this
     if (!pages || size === 0) {
-      if (!pages || size === 0) return
+      this.#restoreMomentum()
+      return
     }
     const currentOffset = this.#container[this.scrollProp]
     const signedOffset = this.#rtl ? -currentOffset : currentOffset
@@ -760,7 +796,8 @@ export class Paginator extends HTMLElement {
       baseDuration * (distance / (size || 1) + 0.2)))
 
     const pageArg = this.#rtl ? -page : page
-    return this.#scrollToPage(pageArg, 'snap', { animate: true, duration, initialVelocity: velocity }).then(() => {
+    this.#disableMomentum()
+    return this.#scrollToPage(pageArg, 'snap', { animate: true, duration, restoreMomentum: true, momentumDelay: 20, initialVelocity: velocity }).then(() => {
       const dir = page <= 0 ? -1 : page >= pages - 1 ? 1 : null
       if (dir) return this.#goTo({
         index: this.#adjacentIndex(dir),
@@ -873,6 +910,7 @@ export class Paginator extends HTMLElement {
 
     if (verticalDrag && horizontalAxis) {
       e.preventDefault()
+      this.#disableMomentum()
       if (state.lockedOffset == null)
         state.lockedOffset = state.startScroll ?? this.#container.scrollLeft
       this.#container.scrollLeft = state.lockedOffset
@@ -913,6 +951,7 @@ export class Paginator extends HTMLElement {
     if (verticalLocked) {
       // restore original horizontal position and skip snapping to avoid accidental page turns
       this.#container.scrollLeft = state.lockedOffset
+      this.#restoreMomentum()
       this.#touchState = null
       if (this.#pendingRelocate) {
         const detail = this.#pendingRelocate
@@ -975,7 +1014,15 @@ export class Paginator extends HTMLElement {
     const finish = () => {
       this.#afterScroll(reason)
       this.#ignoreNativeScroll = false
+      if (reason === 'snap' || opts.restoreMomentum) {
+        const delay = opts.momentumDelay ?? 20
+        this.#cancelMomentumTimer()
+        this.#momentumTimer = setTimeout(() => {
+          this.#restoreMomentum()
+        }, delay)
+      }
     }
+    if (reason === 'snap' || opts.disableMomentum) this.#disableMomentum()
 
     const previousBehavior = element.style.scrollBehavior
     if (shouldAnimate) element.style.scrollBehavior = 'auto'
@@ -1052,6 +1099,7 @@ export class Paginator extends HTMLElement {
         element.style.scrollBehavior = previousBehavior
       }).catch(err => {
         this.#ignoreNativeScroll = false
+        this.#restoreMomentum()
         element.style.scrollBehavior = previousBehavior
         throw err
       })
@@ -1131,12 +1179,12 @@ export class Paginator extends HTMLElement {
   }
   #handleScrollBoundaries() {
     // if (!this.scrolled || this.#locked) return
-
+    
     // // Only trigger transitions when very close to boundaries (95% through)
     // const threshold = Math.min(50, this.size * 0.05) // Small threshold or 5% of size
     // const atEnd = this.viewSize - this.end <= threshold
     // const atStart = this.start <= threshold
-
+    
     // // Only auto-load if we're actually at the boundary, not just approaching
     // if (atEnd && !this.#loadingNext) {
     //   const nextIndex = this.#adjacentIndex(1)
@@ -1155,7 +1203,7 @@ export class Paginator extends HTMLElement {
     //     }, 200)
     //   }
     // }
-
+    
     // if (atStart && !this.#loadingPrev) {
     //   const prevIndex = this.#adjacentIndex(-1)
     //   if (prevIndex != null) {
@@ -1265,7 +1313,7 @@ export class Paginator extends HTMLElement {
     this.#locked = true
     const prev = dir === -1
     const shouldGo = await (prev ? this.#scrollPrev(distance) : this.#scrollNext(distance))
-
+    
     if (shouldGo) await this.#goTo({
       index: this.#adjacentIndex(dir),
       anchor: prev ? () => 1 : () => 0,
@@ -1330,6 +1378,7 @@ export class Paginator extends HTMLElement {
       cancelAnimationFrame(this.#pendingScrollFrame)
       this.#pendingScrollFrame = null
     }
+    this.#restoreMomentum()
     this.#pendingRelocate = null
   }
 }
