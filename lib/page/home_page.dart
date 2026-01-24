@@ -267,6 +267,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           return Scaffold(
             extendBody: true,
             body: BottomBar(
+              width: 330,
               body: (_, controller) =>
                   pages(currentIndex, constraints, controller),
               hideOnScroll: Prefs().autoHideBottomBar,
