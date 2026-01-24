@@ -227,28 +227,29 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
                                 L10n.of(context).tagsEmptyHint,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
-                            // "No tag" virtual option
-                            TagChip(
-                              label: L10n.of(context).noTagFilter,
-                              color: Colors.grey,
-                              selected: liveSelected.contains(kNoTagFilterId),
-                              onTap: () {
-                                setStateMenu(() {
-                                  if (liveSelected.contains(kNoTagFilterId)) {
-                                    liveSelected.remove(kNoTagFilterId);
-                                  } else {
-                                    // Mutual exclusion: clear other tags when selecting "no tag"
-                                    liveSelected.clear();
-                                    liveSelected.add(kNoTagFilterId);
-                                  }
-                                });
-                                ref
-                                    .read(tagSelectionProvider.notifier)
-                                    .toggle(kNoTagFilterId);
-                                ref.read(bookListProvider.notifier).refresh();
-                              },
-                              dense: false,
-                            ),
+                            // "No tag" virtual option - only show when there are tags
+                            if (tags.isNotEmpty)
+                              TagChip(
+                                label: L10n.of(context).noTagFilter,
+                                color: Colors.grey,
+                                selected: liveSelected.contains(kNoTagFilterId),
+                                onTap: () {
+                                  setStateMenu(() {
+                                    if (liveSelected.contains(kNoTagFilterId)) {
+                                      liveSelected.remove(kNoTagFilterId);
+                                    } else {
+                                      // Mutual exclusion: clear other tags when selecting "no tag"
+                                      liveSelected.clear();
+                                      liveSelected.add(kNoTagFilterId);
+                                    }
+                                  });
+                                  ref
+                                      .read(tagSelectionProvider.notifier)
+                                      .toggle(kNoTagFilterId);
+                                  ref.read(bookListProvider.notifier).refresh();
+                                },
+                                dense: false,
+                              ),
                             for (final tag in tags)
                               TagChip(
                                 label: tag.name,
