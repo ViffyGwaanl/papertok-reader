@@ -265,40 +265,43 @@ class _BookDetailState extends ConsumerState<BookDetail> {
               top: 5 + top,
               child: SizedBox(
                 width: width - 190,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextFormField(
-                      autofocus: true,
-                      initialValue: widget.book.title,
-                      enabled: isEditing,
-                      style: bookTitleStyle,
-                      maxLines: null,
-                      minLines: 1,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        isCollapsed: true,
+                height: 140,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        autofocus: true,
+                        initialValue: widget.book.title,
+                        enabled: isEditing,
+                        style: bookTitleStyle,
+                        maxLines: null,
+                        minLines: 1,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isCollapsed: true,
+                        ),
+                        onChanged: (value) {
+                          widget.book.title = value.replaceAll('\n', ' ');
+                        },
                       ),
-                      onChanged: (value) {
-                        widget.book.title = value.replaceAll('\n', ' ');
-                      },
-                    ),
-                    const SizedBox(height: 5),
-                    TextFormField(
-                      initialValue: widget.book.author,
-                      enabled: isEditing,
-                      style: bookAuthorStyle,
-                      maxLines: null,
-                      minLines: 1,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        isCollapsed: true,
+                      const SizedBox(height: 5),
+                      TextFormField(
+                        initialValue: widget.book.author,
+                        enabled: isEditing,
+                        style: bookAuthorStyle,
+                        maxLines: null,
+                        minLines: 1,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isCollapsed: true,
+                        ),
+                        onChanged: (value) {
+                          widget.book.author = value;
+                        },
                       ),
-                      onChanged: (value) {
-                        widget.book.author = value;
-                      },
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -788,10 +791,11 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                   backgroundColor: _isCollapsed
                       ? Theme.of(context).colorScheme.surface.withAlpha(80)
                       : Colors.transparent,
-                  flexibleSpace: FlexibleSpaceBar(
-                    title: AnimatedOpacity(
-                      opacity: _isCollapsed ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 300),
+                  title: AnimatedOpacity(
+                    opacity: _isCollapsed ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
                       child: Text(
                         widget.book.title,
                         style: const TextStyle(fontSize: 16),
@@ -799,8 +803,8 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    centerTitle: true,
                   ),
+                  centerTitle: true,
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
