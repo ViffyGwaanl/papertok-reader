@@ -44,7 +44,7 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  int _currentIndex = 0;
+  String _currentTab = 'bookshelf';
 
   bool? _expanded;
 
@@ -130,23 +130,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget pages(
-      int index,
-      BoxConstraints constraints,
-      ScrollController? controller,
-    ) {
-      final page = [
-        BookshelfPage(controller: controller),
-        if (Prefs().bottomNavigatorShowStatistics)
-          StatisticPage(controller: controller),
-        if (Prefs().bottomNavigatorShowAI && EnvVar.enableAIFeature)
-          AiChatStream(),
-        if (Prefs().bottomNavigatorShowNote) NotesPage(controller: controller),
-        SettingsPage(controller: controller),
-      ];
-      return page[index];
-    }
-
     List<Map<String, dynamic>> navBarItems = [
       {
         'icon': EvaIcons.book_open,
@@ -178,6 +161,30 @@ class _HomePageState extends ConsumerState<HomePage> {
       },
     ];
 
+    int currentIndex = navBarItems
+        .indexWhere((element) => element['identifier'] == _currentTab);
+    if (currentIndex == -1) {
+      currentIndex = 0;
+      _currentTab = 'bookshelf';
+    }
+
+    Widget pages(
+      int index,
+      BoxConstraints constraints,
+      ScrollController? controller,
+    ) {
+      final page = [
+        BookshelfPage(controller: controller),
+        if (Prefs().bottomNavigatorShowStatistics)
+          StatisticPage(controller: controller),
+        if (Prefs().bottomNavigatorShowAI && EnvVar.enableAIFeature)
+          AiChatStream(),
+        if (Prefs().bottomNavigatorShowNote) NotesPage(controller: controller),
+        SettingsPage(controller: controller),
+      ];
+      return page[index];
+    }
+
     void onBottomTap(int index, bool fromRail) {
       VibrationService.heavy();
       if (navBarItems[index]['identifier'] == 'ai' && !fromRail) {
@@ -186,7 +193,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         return;
       }
       setState(() {
-        _currentIndex = index;
+        _currentTab = navBarItems[index]['identifier'];
       });
     }
 
@@ -238,7 +245,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         ),
                         groupAlignment: 1,
                         extended: false,
-                        selectedIndex: _currentIndex,
+                        selectedIndex: currentIndex,
                         onDestinationSelected: (int index) =>
                             onBottomTap(index, true),
                         destinations: railBarItems,
@@ -249,19 +256,19 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                 ),
-                Expanded(child: pages(_currentIndex, constraints, null)),
+                Expanded(child: pages(currentIndex, constraints, null)),
               ],
             ),
           );
         } else {
-          if (navBarItems[_currentIndex]['identifier'] == 'ai') {
-            _currentIndex = 0;
+          if (navBarItems[currentIndex]['identifier'] == 'ai') {
+            currentIndex = 0;
           }
           return Scaffold(
             extendBody: true,
             body: BottomBar(
               body: (_, controller) =>
-                  pages(_currentIndex, constraints, controller),
+                  pages(currentIndex, constraints, controller),
               hideOnScroll: Prefs().autoHideBottomBar,
               scrollOpposite: false,
               curve: Curves.easeIn,
@@ -295,7 +302,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       type: BottomNavigationBarType.fixed,
                       landscapeLayout:
                           BottomNavigationBarLandscapeLayout.linear,
-                      currentIndex: _currentIndex,
+                      currentIndex: currentIndex,
                       onTap: (int index) => onBottomTap(index, false),
                       items: bottomBarItems,
                       backgroundColor: Colors.transparent,

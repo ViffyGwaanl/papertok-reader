@@ -20,7 +20,8 @@
 - Fix: fix the issue where HarmonyOS could not sync with other systems
 - Fix: fix the issue where some AI services could not be used
 - Feat: Support auto select day/night background image
-- Feat: Support group day/night background image
+- Feat: Support group day/night background
+- Fix: Fix app crash when disabling AI on home page
 
 - Feat: 支持设置是否自动隐藏主界面底部导航栏
 - Feat: 支持使用 Azure TTS 服务进行朗读
@@ -40,6 +41,7 @@
 - Fix: 解决部分 AI 服务无法使用的问题
 - Feat: 支持自动选择白天/黑夜的背景图片
 - Feat: 支持日夜模式背景图片编组
+- Fix: 修复主界面关闭AI时App崩溃的问题
 
 ## 1.10.1
 - Feat: Choose bookshelf folder style (2x2 grid/stacked)
