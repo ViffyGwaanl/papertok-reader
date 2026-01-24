@@ -119,7 +119,7 @@ class _TranslateSettingState extends State<TranslateSetting> {
         SettingsSection(
           title: Text(L10n.of(context).translationServiceConfiguration),
           tiles: [
-            for (var service in TranslateService.values)
+            for (var service in TranslateService.activeValues)
               CustomSettingsTile(
                 child: TranslateSettingItem(service: service),
               ),
@@ -290,14 +290,17 @@ class TranslateServicePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      itemCount: TranslateService.values.length,
-      itemBuilder: (context, index) => ListTile(
-        title: Text(TranslateService.values[index].getLabel(context)),
-        onTap: () {
-          Prefs().translateService = TranslateService.values[index];
-          Navigator.pop(context);
-        },
-      ),
+      itemCount: TranslateService.activeValues.length,
+      itemBuilder: (context, index) {
+        final service = TranslateService.activeValues.elementAt(index);
+        return ListTile(
+          title: Text(service.getLabel(context)),
+          onTap: () {
+            Prefs().translateService = service;
+            Navigator.pop(context);
+          },
+        );
+      },
     );
   }
 }
@@ -308,7 +311,7 @@ class FullTextTranslateServicePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final services =
-        TranslateService.values.where((s) => !s.isWebView).toList();
+        TranslateService.activeValues.where((s) => !s.isWebView).toList();
 
     return ListView.builder(
       itemCount: services.length,
