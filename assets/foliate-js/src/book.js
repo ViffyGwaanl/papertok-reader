@@ -279,25 +279,56 @@ const setSelectionHandler = (view, doc, index) => {
     }
   }
 
-  else {
+  else if (navigator.userAgent.includes('Phone; OpenHarmony')) {
     doc.addEventListener('contextmenu', e => {
-      // if (e.pointerType === 'mouse') {
-      handleSelection(view, doc, index);
-      // }
+      e.preventDefault();
     });
 
-    if (navigator.userAgent.includes('Phone; OpenHarmony')) {
-      let debounceTimerId;
-      doc.addEventListener('selectionchange', () => {
-        const selRange = getSelectionRange(doc.getSelection());
-        if (!selRange) return;
+    var debounceTimerId = undefined;
+    doc.addEventListener('selectionchange', () => {
+      const selRange = getSelectionRange(doc.getSelection());
+      if (!selRange) return;
 
-        clearTimeout(debounceTimerId);
-        debounceTimerId = setTimeout(() => {
-          handleSelection(view, doc, index);
-        }, 500);
-      });
-    }
+      clearTimeout(debounceTimerId);
+      // Wait for selection to settle (e.g. 600ms after last change)
+      // This handles the case where pointerup/touchend is swallowed by native handles
+      debounceTimerId = setTimeout(() => {
+        handleSelection(view, doc, index);
+      }, 600);
+    });
+  } else { // Android
+    let hasNativeSelectionStarted = false;
+
+    doc.addEventListener('pointerdown', () => {
+      hasNativeSelectionStarted = false;
+    });
+
+    // When the native selection handles appear, the browser loses control of the pointer
+    // This event signals that the user has started dragging handles
+    doc.addEventListener('pointercancel', () => {
+      hasNativeSelectionStarted = true;
+    });
+
+    doc.addEventListener('contextmenu', e => {
+      // Allow mouse context menu (if any)
+      if (e.pointerType === 'mouse') {
+        handleSelection(view, doc, index);
+        return;
+      }
+
+      // If we haven't lost pointer control yet (no pointercancel),
+      // this is the "early" long-press event during drag start.
+      // We block it to prevent the custom menu from interfering with the drag.
+      if (!hasNativeSelectionStarted) {
+        e.preventDefault();
+        return;
+      }
+
+      // If we have entered native selection mode (pointercancel happened),
+      // this contextmenu event is likely triggered by the system or user interaction
+      // after the selection phase (e.g. on release). We handle it.
+      handleSelection(view, doc, index);
+    });
   }
   // doc.addEventListener('selectionchange', () => handleSelection(view, doc, index));
 

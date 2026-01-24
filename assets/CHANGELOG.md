@@ -23,6 +23,7 @@
 - Feat: Support group day/night background
 - Fix: Fix app crash when disabling AI on home page
 - Feat: Support replacing book file (maintaining reading progress and notes)
+- Fix: Optimize Android, HarmonyOS text selection logic
 - UI: Optimize part of the interface design
 
 - Feat: 标签筛选菜单支持“无标签”筛选
@@ -47,6 +48,7 @@
 - Feat: 支持日夜模式背景图片编组
 - Fix: 修复主界面关闭AI时App崩溃的问题
 - Feat: 支持替换书籍文件（保留阅读进度和笔记）
+- Fix: 优化 Android，HarmonyOS 文本选择逻辑
 - UI: 优化部分界面设计
 
 ## 1.10.1
