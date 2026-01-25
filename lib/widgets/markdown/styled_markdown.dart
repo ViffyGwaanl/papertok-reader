@@ -23,7 +23,8 @@ class StyledMarkdown extends StatelessWidget {
       selectionControls: selectionControls(),
       child: GptMarkdown(data,
           followLinkColor: true,
-          onLinkTap: (href, text) => launchUrlString(href),
+          onLinkTap: (href, text) =>
+              launchUrlString(href, mode: LaunchMode.externalApplication),
           linkBuilder: (context, text, url, style) => Text.rich(
                 text,
                 style: style.copyWith(

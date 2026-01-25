@@ -439,7 +439,8 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
         children: [
           Text(backend.helpText(context)),
           GestureDetector(
-            onTap: () => launchUrl(Uri.parse(backend.helpLink)),
+            onTap: () => launchUrl(Uri.parse(backend.helpLink),
+                mode: LaunchMode.externalApplication),
             child: Text(
               L10n.of(context).settingsNarrateClickForHelp,
               style: TextStyle(
