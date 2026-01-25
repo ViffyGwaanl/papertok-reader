@@ -40,7 +40,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
   final TextEditingController _testTextController = TextEditingController();
   bool _showVoiceList = true;
 
-  Map<String, bool> _modelLoadingStates = {};
+  final Map<String, bool> _modelLoadingStates = {};
   bool _mainTestLoading = false;
 
   Future<void> _testSpeak(String text, String? voiceShortName,
@@ -390,7 +390,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: DropdownButtonFormField<String>(
-        value: currentServiceId,
+        initialValue: currentServiceId,
         decoration: InputDecoration(
           labelText: L10n.of(context).settingsNarrateTtsService,
           border: OutlineInputBorder(),
