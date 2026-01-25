@@ -5,7 +5,6 @@ import 'package:anx_reader/utils/log/common.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sqflite/sqflite.dart';
 
-
 part 'bookmark.g.dart';
 
 @Riverpod(keepAlive: true)
