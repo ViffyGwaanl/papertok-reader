@@ -331,8 +331,7 @@ Future<void> _showChangelog(BuildContext context) async {
   final lastVersion = Prefs().lastAppVersion ?? currentVersion;
 
   showCupertinoSheet(
-    context: navigatorKey.currentContext ?? context,
-    pageBuilder: (sheetContext) => ChangelogScreen(
+    context: navigatorKey.currentContext ?? context, builder: (sheetContext) => ChangelogScreen(
       lastVersion: lastVersion,
       currentVersion: currentVersion,
       onComplete: () {
@@ -347,8 +346,7 @@ Future<void> _showOnboarding(BuildContext context) async {
   final currentVersion = await getAppVersion();
 
   showCupertinoSheet(
-    context: navigatorKey.currentContext ?? context,
-    pageBuilder: (sheetContext) => Scaffold(
+    context: navigatorKey.currentContext ?? context, builder: (sheetContext) => Scaffold(
       body: OnboardingScreen(
         onComplete: () {
           Prefs().lastAppVersion = currentVersion;

@@ -189,7 +189,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       VibrationService.heavy();
       if (navBarItems[index]['identifier'] == 'ai' && !fromRail) {
         showCupertinoSheet(
-            context: context, pageBuilder: (context) => const AiPage());
+            context: context, builder: (context) => const AiPage());
         return;
       }
       setState(() {
