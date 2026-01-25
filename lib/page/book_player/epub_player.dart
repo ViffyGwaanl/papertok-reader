@@ -8,7 +8,6 @@ import 'package:anx_reader/enums/reading_info.dart';
 import 'package:anx_reader/enums/translation_mode.dart';
 import 'package:anx_reader/enums/writing_mode.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/models/book_style.dart';
@@ -148,17 +147,6 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     }
   }
 
-  String get bgimgUrl {
-    if (Prefs().autoAdjustReadingTheme) {
-      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-      final bgimg = Prefs().bgimg;
-      if (isDarkMode && bgimg.nightUrl != null) {
-        return bgimg.nightUrl!;
-      }
-    }
-    return Prefs().bgimg.url;
-  }
-
   void changeTheme(ReadTheme readTheme) {
     textColor = readTheme.textColor;
     backgroundColor = readTheme.backgroundColor;
@@ -193,7 +181,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         maxColumnCount: ${style.maxColumnCount},
         writingMode: '${Prefs().writingMode.code}',
         textAlign: '${Prefs().textAlignment.code}',
-        backgroundImage: '$bgimgUrl',
+        backgroundImage: '${Prefs().bgimg.url}',
         customCSS: `${Prefs().customCSS.replaceAll('`', '\\`')}`,
         customCSSEnabled: ${Prefs().customCSSEnabled},
       })
@@ -1042,6 +1030,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             initialCfi,
             backgroundColor: backgroundColor,
             textColor: textColor,
+            isDarkMode: Theme.of(context).brightness == Brightness.dark,
           ),
         ),
       ),

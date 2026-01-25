@@ -249,6 +249,7 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
                   bottom: 0,
                   child: Center(
                     child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () async {
                         // Actually swap file contents
                         ref.read(bgimgProvider.notifier).swapBgimg(bgimgModel);
