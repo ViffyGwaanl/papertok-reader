@@ -13,6 +13,8 @@ import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:anx_reader/utils/toast/common.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AISettings extends ConsumerStatefulWidget {
   const AISettings({super.key});
@@ -145,6 +147,25 @@ class _AISettingsState extends ConsumerState<AISettings> {
                 },
               ),
             ),
+          CustomSettingsTile(
+            child: GestureDetector(
+              onTap: () async {
+                if (!await launchUrl(
+                    Uri.parse('https://anx.anxcye.com/docs/ai/'),
+                    mode: LaunchMode.externalApplication)) {
+                  AnxToast.show(L10n.of(context).commonFailed);
+                }
+              },
+              child: Text(
+                L10n.of(context).settingsNarrateClickForHelp,
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  decoration: TextDecoration.underline,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
