@@ -10,7 +10,7 @@ import 'package:anx_reader/main.dart';
 import 'package:path/path.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Database safe sync manager
@@ -136,12 +136,23 @@ class DatabaseSyncManager {
       Database? db;
       try {
         // Platform-specific database opening
-        // Open in read-write mode to allow SQLite to handle any WAL recovery
-        db = await openDatabase(
-          dbPath,
-          readOnly: false,
-          singleInstance: false,
-        );
+        if (AnxPlatform.isWindows) {
+          sqfliteFfiInit();
+          db = await databaseFactoryFfi.openDatabase(
+            dbPath,
+            options: OpenDatabaseOptions(
+              readOnly: false,
+              singleInstance: false,
+            ),
+          );
+        } else {
+          // Android/iOS
+          db = await openDatabase(
+            dbPath,
+            readOnly: false,
+            singleInstance: false,
+          );
+        }
 
         // Basic integrity check
         final integrityResult = await db.rawQuery('PRAGMA integrity_check');
