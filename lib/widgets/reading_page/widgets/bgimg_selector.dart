@@ -24,17 +24,7 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
   static const double _diagonalOffset = 32.0; // pixel value
 
   void applyBgimg(BgimgModel bgimgModel, {bool useNight = false}) {
-    // Decide which image to apply based on whether night mode is selected
-    if (useNight && bgimgModel.nightPath != null) {
-      // Create a model using the night image as the main image
-      final nightModel = bgimgModel.copyWith(
-        path: bgimgModel.nightPath!,
-        nightPath: bgimgModel.path,
-      );
-      Prefs().bgimg = nightModel;
-    } else {
-      Prefs().bgimg = bgimgModel;
-    }
+    Prefs().bgimg = bgimgModel;
     epubPlayerKey.currentState?.changeStyle(null);
   }
 

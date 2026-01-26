@@ -33,6 +33,7 @@ String generateUrl(
   backgroundColor = convertDartColorToJs(backgroundColor);
 
   // Choose day or night background image automatically based on theme
+  print(Prefs().bgimg.toJson());
   String bgimgUrl = Prefs().bgimg.url;
   if (Prefs().autoAdjustReadingTheme && isDarkMode) {
     final bgimg = Prefs().bgimg;
@@ -40,6 +41,8 @@ String generateUrl(
       bgimgUrl = bgimg.nightUrl!;
     }
   }
+  print('isDarkMode: $isDarkMode');
+  print('bgimgUrl: $bgimgUrl');
 
   // const importing = $importing
   // const url = '${replaceSingleQuote(url)}'

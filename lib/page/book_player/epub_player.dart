@@ -165,6 +165,14 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
   void changeStyle(BookStyle? bookStyle) {
     styleTimer?.cancel();
+    String bgimgUrl = Prefs().bgimg.url;
+    if (Prefs().autoAdjustReadingTheme && isDarkMode) {
+      final bgimg = Prefs().bgimg;
+      if (bgimg.nightUrl != null) {
+        bgimgUrl = bgimg.nightUrl!;
+      }
+    }
+
     styleTimer = Timer(const Duration(milliseconds: 300), () {
       if (!mounted) return;
       BookStyle style = bookStyle ?? Prefs().bookStyle;
@@ -182,7 +190,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         maxColumnCount: ${style.maxColumnCount},
         writingMode: '${Prefs().writingMode.code}',
         textAlign: '${Prefs().textAlignment.code}',
-        backgroundImage: '${Prefs().bgimg.url}',
+        backgroundImage: '$bgimgUrl',
         customCSS: `${Prefs().customCSS.replaceAll('`', '\\`')}`,
         customCSSEnabled: ${Prefs().customCSSEnabled},
       })
@@ -892,6 +900,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     isInspectable: kDebugMode,
     useHybridComposition: true,
   );
+
+  bool get isDarkMode =>
+      Theme.of(navigatorKey.currentContext!).brightness == Brightness.dark;
 
   void changeReadingInfo() {
     setState(() {});
