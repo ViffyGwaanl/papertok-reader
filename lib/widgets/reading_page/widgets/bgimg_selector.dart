@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/enums/bgimg_theme_mode.dart';
 import 'package:anx_reader/enums/bgimg_type.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/bgimg.dart';
@@ -24,7 +25,11 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
   static const double _diagonalOffset = 32.0; // pixel value
 
   void applyBgimg(BgimgModel bgimgModel, {bool useNight = false}) {
-    Prefs().bgimg = bgimgModel;
+    // Save user's selected mode
+    final updatedBgimg = bgimgModel.copyWith(
+      selectedMode: useNight ? BgimgThemeMode.night : BgimgThemeMode.day,
+    );
+    Prefs().bgimg = updatedBgimg;
     epubPlayerKey.currentState?.changeStyle(null);
   }
 

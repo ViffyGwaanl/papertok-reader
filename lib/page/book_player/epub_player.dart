@@ -165,13 +165,10 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
   void changeStyle(BookStyle? bookStyle) {
     styleTimer?.cancel();
-    String bgimgUrl = Prefs().bgimg.url;
-    if (Prefs().autoAdjustReadingTheme && isDarkMode) {
-      final bgimg = Prefs().bgimg;
-      if (bgimg.nightUrl != null) {
-        bgimgUrl = bgimg.nightUrl!;
-      }
-    }
+    String bgimgUrl = Prefs().bgimg.getEffectiveUrl(
+          isDarkMode: isDarkMode,
+          autoAdjust: Prefs().autoAdjustReadingTheme,
+        );
 
     styleTimer = Timer(const Duration(milliseconds: 300), () {
       if (!mounted) return;
