@@ -778,7 +778,10 @@
   "bookBottomSheetReplaceFile": "Заменить файл",
   "bookBottomSheetOriginalFileSize": "Размер исходного файла: {size}",
   "bookBottomSheetNewFileSize": "Размер нового файла: {size}",
-  "bookBottomSheetReplaceWarning": "Замена файла может привести к смещению или потере выделений, так как содержимое книги может отличаться",
-  "bookBottomSheetUnsupportedFileFormat": "Неподдерживаемый формат файла: {extension}",
-  "bookBottomSheetReplaceFailed": "Ошибка замены: {error}"
+   "bookBottomSheetReplaceWarning": "Замена файла может привести к смещению или потере выделений, так как содержимое книги может отличаться",
+   "bookBottomSheetUnsupportedFileFormat": "Неподдерживаемый формат файла: {extension}",
+   "bookBottomSheetReplaceFailed": "Ошибка замены: {error}",
+   "historyBack": "Назад",
+   "historyForward": "Вперёд",
+   "historyClose": "Закрыть"
 }

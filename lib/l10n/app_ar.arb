@@ -778,7 +778,10 @@
   "bookBottomSheetReplaceFile": "استبدال الملف",
   "bookBottomSheetOriginalFileSize": "حجم الملف الأصلي: {size}",
   "bookBottomSheetNewFileSize": "حجم الملف الجديد: {size}",
-  "bookBottomSheetReplaceWarning": "استبدال الملف قد يتسبب في إزاحة أو فقدان الإبرازات لأن محتوى الكتاب قد يكون مختلفًا",
-  "bookBottomSheetUnsupportedFileFormat": "تنسيق الملف غير مدعوم: {extension}",
-  "bookBottomSheetReplaceFailed": "فشل الاستبدال: {error}"
+   "bookBottomSheetReplaceWarning": "استبدال الملف قد يتسبب في إزاحة أو فقدان الإبرازات لأن محتوى الكتاب قد يكون مختلفًا",
+   "bookBottomSheetUnsupportedFileFormat": "تنسيق الملف غير مدعوم: {extension}",
+   "bookBottomSheetReplaceFailed": "فشل الاستبدال: {error}",
+   "historyBack": "رجوع",
+   "historyForward": "تقدم",
+   "historyClose": "إغلاق"
 }

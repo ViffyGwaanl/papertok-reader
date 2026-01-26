@@ -778,7 +778,10 @@
   "bookBottomSheetReplaceFile": "Substituir arquivo",
   "bookBottomSheetOriginalFileSize": "Tamanho do arquivo original: {size}",
   "bookBottomSheetNewFileSize": "Tamanho do novo arquivo: {size}",
-  "bookBottomSheetReplaceWarning": "Substituir o arquivo pode fazer com que os destaques sejam deslocados ou perdidos porque o conteúdo do livro pode ser diferente",
-  "bookBottomSheetUnsupportedFileFormat": "Formato de arquivo não suportado: {extension}",
-  "bookBottomSheetReplaceFailed": "Falha na substituição: {error}"
+   "bookBottomSheetReplaceWarning": "Substituir o arquivo pode fazer com que os destaques sejam deslocados ou perdidos porque o conteúdo do livro pode ser diferente",
+   "bookBottomSheetUnsupportedFileFormat": "Formato de arquivo não suportado: {extension}",
+   "bookBottomSheetReplaceFailed": "Falha na substituição: {error}",
+   "historyBack": "Voltar",
+   "historyForward": "Avançar",
+   "historyClose": "Fechar"
 }

@@ -778,7 +778,10 @@
   "bookBottomSheetReplaceFile": "Remplacer le fichier",
   "bookBottomSheetOriginalFileSize": "Taille du fichier original : {size}",
   "bookBottomSheetNewFileSize": "Taille du nouveau fichier : {size}",
-  "bookBottomSheetReplaceWarning": "Le remplacement du fichier peut entraîner le déplacement ou la perte des surlignages car le contenu du livre peut être différent",
-  "bookBottomSheetUnsupportedFileFormat": "Format de fichier non pris en charge : {extension}",
-  "bookBottomSheetReplaceFailed": "Le remplacement a échoué : {error}"
+   "bookBottomSheetReplaceWarning": "Le remplacement du fichier peut entraîner le déplacement ou la perte des surlignages car le contenu du livre peut être différent",
+   "bookBottomSheetUnsupportedFileFormat": "Format de fichier non pris en charge : {extension}",
+   "bookBottomSheetReplaceFailed": "Le remplacement a échoué : {error}",
+   "historyBack": "Retour",
+   "historyForward": "Avant",
+   "historyClose": "Fermer"
 }

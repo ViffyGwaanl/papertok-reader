@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.12.0
+- Feat(reader): Add glassmorphism history navigation capsule in reader
+- Feat(reader): Support manual control of history navigation visibility (no auto-hide)
+- UI(reader): Optimize reading history navigation button design
+
+- Feat(reader): 添加阅读器历史导航玻璃拟态胶囊
+- Feat(reader): 支持手动控制历史导航显隐（不自动隐藏）
+- UI(reader): 优化阅读历史导航按钮设计
+
 ## 1.11.0
 - Feat: Support "No Tag" filter in books filter menu
 - Feat: Support select to mark

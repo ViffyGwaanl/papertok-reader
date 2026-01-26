@@ -778,7 +778,10 @@
   "bookBottomSheetReplaceFile": "Înlocuiește fișierul",
   "bookBottomSheetOriginalFileSize": "Dimensiune fișier original: {size}",
   "bookBottomSheetNewFileSize": "Dimensiune fișier nou: {size}",
-  "bookBottomSheetReplaceWarning": "Înlocuirea fișierului poate cauza deplasarea sau pierderea evidențierilor deoarece conținutul cărții poate fi diferit",
-  "bookBottomSheetUnsupportedFileFormat": "Format fișier neacceptat: {extension}",
-  "bookBottomSheetReplaceFailed": "Înlocuirea a eșuat: {error}"
+   "bookBottomSheetReplaceWarning": "Înlocuirea fișierului poate cauza deplasarea sau pierderea evidențierilor deoarece conținutul cărții poate fi diferit",
+   "bookBottomSheetUnsupportedFileFormat": "Format fișier neacceptat: {extension}",
+   "bookBottomSheetReplaceFailed": "Înlocuirea a eșuat: {error}",
+   "historyBack": "Înapoi",
+   "historyForward": "Înainte",
+   "historyClose": "Închide"
 }

@@ -778,7 +778,10 @@
   "bookBottomSheetReplaceFile": "易档",
   "bookBottomSheetOriginalFileSize": "原档小大: {size}",
   "bookBottomSheetNewFileSize": "新档小大: {size}",
-  "bookBottomSheetReplaceWarning": "易档恐致批注错位或失，盖书文异也",
-  "bookBottomSheetUnsupportedFileFormat": "不受援之档格: {extension}",
-  "bookBottomSheetReplaceFailed": "易败: {error}"
+   "bookBottomSheetReplaceWarning": "易档恐致批注错位或失，盖书文异也",
+   "bookBottomSheetUnsupportedFileFormat": "不受援之档格: {extension}",
+   "bookBottomSheetReplaceFailed": "易败: {error}",
+   "historyBack": "退",
+   "historyForward": "進",
+   "historyClose": "闔"
 }

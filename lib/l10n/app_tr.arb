@@ -778,7 +778,10 @@
   "bookBottomSheetReplaceFile": "Dosyayı Değiştir",
   "bookBottomSheetOriginalFileSize": "Orijinal dosya boyutu: {size}",
   "bookBottomSheetNewFileSize": "Yeni dosya boyutu: {size}",
-  "bookBottomSheetReplaceWarning": "Dosyayı değiştirmek, kitap içeriği farklı olabileceğinden vurgulamaların kaymasına veya kaybolmasına neden olabilir",
-  "bookBottomSheetUnsupportedFileFormat": "Desteklenmeyen dosya formatı: {extension}",
-  "bookBottomSheetReplaceFailed": "Değiştirme başarısız: {error}"
+   "bookBottomSheetReplaceWarning": "Dosyayı değiştirmek, kitap içeriği farklı olabileceğinden vurgulamaların kaymasına veya kaybolmasına neden olabilir",
+   "bookBottomSheetUnsupportedFileFormat": "Desteklenmeyen dosya formatı: {extension}",
+   "bookBottomSheetReplaceFailed": "Değiştirme başarısız: {error}",
+   "historyBack": "Geri",
+   "historyForward": "İleri",
+   "historyClose": "Kapat"
 }

@@ -780,5 +780,8 @@
   "bookBottomSheetNewFileSize": "New file size: {size}",
   "bookBottomSheetReplaceWarning": "Replacing the file may cause highlights to be displaced or lost because the book content might be different",
   "bookBottomSheetUnsupportedFileFormat": "Unsupported file format: {extension}",
-  "bookBottomSheetReplaceFailed": "Replacement failed: {error}"
+  "bookBottomSheetReplaceFailed": "Replacement failed: {error}",
+  "historyBack": "Back",
+  "historyForward": "Forward", 
+  "historyClose": "Close"
 }

@@ -778,7 +778,10 @@
   "bookBottomSheetReplaceFile": "ファイルを置換",
   "bookBottomSheetOriginalFileSize": "元のファイルサイズ: {size}",
   "bookBottomSheetNewFileSize": "新しいファイルサイズ: {size}",
-  "bookBottomSheetReplaceWarning": "ファイルを置換すると、本の内容が異なる可能性があるため、ハイライトがずれたり失われたりする可能性があります",
-  "bookBottomSheetUnsupportedFileFormat": "サポートされていないファイル形式: {extension}",
-  "bookBottomSheetReplaceFailed": "置換に失敗しました: {error}"
+   "bookBottomSheetReplaceWarning": "ファイルを置換すると、本の内容が異なる可能性があるため、ハイライトがずれたり失われたりする可能性があります",
+   "bookBottomSheetUnsupportedFileFormat": "サポートされていないファイル形式: {extension}",
+   "bookBottomSheetReplaceFailed": "置換に失敗しました: {error}",
+   "historyBack": "戻る",
+   "historyForward": "進む",
+   "historyClose": "閉じる"
 }

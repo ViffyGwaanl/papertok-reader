@@ -778,7 +778,10 @@
   "bookBottomSheetReplaceFile": "파일 교체",
   "bookBottomSheetOriginalFileSize": "원본 파일 크기: {size}",
   "bookBottomSheetNewFileSize": "새 파일 크기: {size}",
-  "bookBottomSheetReplaceWarning": "책 내용이 다를 수 있어 파일을 교체하면 하이라이트가 어긋나거나 사라질 수 있습니다",
-  "bookBottomSheetUnsupportedFileFormat": "지원되지 않는 파일 형식: {extension}",
-  "bookBottomSheetReplaceFailed": "교체 실패: {error}"
+   "bookBottomSheetReplaceWarning": "책 내용이 다를 수 있어 파일을 교체하면 하이라이트가 어긋나거나 사라질 수 있습니다",
+   "bookBottomSheetUnsupportedFileFormat": "지원되지 않는 파일 형식: {extension}",
+   "bookBottomSheetReplaceFailed": "교체 실패: {error}",
+   "historyBack": "뒤로",
+   "historyForward": "앞으로",
+   "historyClose": "닫기"
 }
