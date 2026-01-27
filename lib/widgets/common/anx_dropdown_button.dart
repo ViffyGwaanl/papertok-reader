@@ -56,10 +56,10 @@ class AnxDropdownButton<T> extends StatelessWidget {
                 const SizedBox(width: 8),
               ],
               Text(
-                  item.label,
-                  style: textStyle,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                item.label,
+                style: textStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         );

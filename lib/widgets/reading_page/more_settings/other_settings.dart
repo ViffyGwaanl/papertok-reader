@@ -160,32 +160,41 @@ class _OtherSettingsState extends State<OtherSettings> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
-                SizedBox(
-                  height: 280,
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 2.0,
-                      crossAxisSpacing: 8.0,
-                      mainAxisSpacing: 8.0,
+                Column(
+                  children: [
+                  for (int row = 0; row < 3; row++)
+                    Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                      for (int col = 0; col < 3; col++)
+                        Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                          right: col < 2 ? 8.0 : 0,
+                          ),
+                          child: Builder(
+                          builder: (context) {
+                            int index = row * 3 + col;
+                            List<int> config = Prefs().customPageTurnConfig;
+                            return PageTurnDropdown(
+                            value: PageTurningType.values[config[index]],
+                            onChanged: (type) {
+                              if (type != null) {
+                              setState(() {
+                                onCustomConfigChanged(index, type);
+                              });
+                              }
+                            },
+                            );
+                          },
+                          ),
+                        ),
+                        ),
+                      ],
                     ),
-                    itemCount: 9,
-                    itemBuilder: (context, index) {
-                      List<int> config = Prefs().customPageTurnConfig;
-                      return PageTurnDropdown(
-                        value: PageTurningType.values[config[index]],
-                        onChanged: (type) {
-                          if (type != null) {
-                            setState(() {
-                              onCustomConfigChanged(index, type);
-                            });
-                          }
-                        },
-                      );
-                    },
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ],
