@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "Falha na substituição: {error}",
    "historyBack": "Voltar",
    "historyForward": "Avançar",
-   "historyClose": "Fechar"
+   "historyClose": "Fechar",
+   "useBookStyles": "Usar estilos do livro",
+   "useBookStylesDescription": "Quando ativado, o aplicativo usará os estilos definidos no livro em vez de suas configurações personalizadas para altura da linha, peso da fonte, recuo de texto, espaçamento entre letras e espaçamento entre parágrafos"
 }

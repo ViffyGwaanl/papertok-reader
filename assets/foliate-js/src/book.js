@@ -505,7 +505,8 @@ const getCSS = ({ fontSize,
   backgroundImage,
   flow,
   customCSS,
-  customCSSEnabled
+  customCSSEnabled,
+  useBookStyles
 }) => {
 
   const fontFamily = fontName === 'book' ? '' :
@@ -537,8 +538,8 @@ const getCSS = ({ fontSize,
         color: ${fontColor} !important;
         ${backgroundImageCSS}
         background-color: transparent !important;
-        letter-spacing: ${letterSpacing}px;
-        font-size: ${fontSize}em;
+        ${useBookStyles ? '' : `letter-spacing: ${letterSpacing}px;`}
+        ${useBookStyles ? '' : `font-size: ${fontSize}em;`}
         orphans: 1;  
         widows: 1;
     }
@@ -579,15 +580,15 @@ const getCSS = ({ fontSize,
     }
 
     h1, h2, h3, h4, h5, h6 {
-        line-height: ${spacing} !important;
+        ${useBookStyles ? '' : `line-height: ${spacing} !important;`}
     }
 
     p, li, blockquote, dd, div:not(:has(*:not(b, a, em, i, strong, u, span))), font {
         color: ${fontColor} !important;
-        line-height: ${spacing} !important;
-        font-weight: ${fontWeight} !important;
-        text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign};
-        ${textIndent < 0 ? '' : 'text-indent: ' + textIndent + 'em !important;'}
+        ${useBookStyles ? '' : `line-height: ${spacing} !important;`}
+        ${useBookStyles ? '' : `font-weight: ${fontWeight} !important;`}
+        ${useBookStyles ? '' : `text-align: ${textAlign === 'auto' ? (justify ? 'justify' : 'start') : textAlign};`}
+        ${useBookStyles || textIndent < 0 ? '' : 'text-indent: ' + textIndent + 'em !important;'}
         -webkit-hyphens: ${hyphenate ? 'auto' : 'manual'};
         hyphens: ${hyphenate ? 'auto' : 'manual'};
         -webkit-hyphenate-limit-before: 3;
@@ -595,8 +596,8 @@ const getCSS = ({ fontSize,
         -webkit-hyphenate-limit-lines: 2;
         hanging-punctuation: allow-end last;
         widows: 2;
-        margin-block-start: ${paragraphSpacing / 2}em !important;
-        margin-block-end: ${paragraphSpacing / 2}em !important;
+        ${useBookStyles ? '' : `margin-block-start: ${paragraphSpacing / 2}em !important;`}
+        ${useBookStyles ? '' : `margin-block-end: ${paragraphSpacing / 2}em !important;`}
     }
 
     .anx-text-center,
@@ -790,6 +791,7 @@ const replaceFootnote = (view) => {
     customCSS: style.customCSS,
     customCSSEnabled: style.customCSSEnabled,
     writingMode: style.writingMode,
+    useBookStyles: style.useBookStyles,
   }
   renderer.setStyles(getCSS(footNoteStyle))
   // set background color of dialog
@@ -1422,7 +1424,8 @@ const setStyle = (oldStyle) => {
     backgroundImage: style.backgroundImage,
     flow: turn.scroll,
     customCSS: style.customCSS,
-    customCSSEnabled: style.customCSSEnabled
+    customCSSEnabled: style.customCSSEnabled,
+    useBookStyles: style.useBookStyles
   }
   reader.view.renderer.setStyles?.(getCSS(newStyle))
 

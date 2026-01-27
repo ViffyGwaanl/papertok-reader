@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "Sostituzione fallita: {error}",
    "historyBack": "Indietro",
    "historyForward": "Avanti",
-   "historyClose": "Chiudi"
+   "historyClose": "Chiudi",
+   "useBookStyles": "Usa stili del libro",
+   "useBookStylesDescription": "Quando abilitato, l'app utilizzerà gli stili definiti nel libro invece delle tue impostazioni personalizzate per altezza della riga, peso del carattere, rientro del testo, spaziatura tra lettere e spaziatura tra paragrafi"
 }

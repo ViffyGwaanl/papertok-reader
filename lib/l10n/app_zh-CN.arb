@@ -788,6 +788,8 @@
   "bookBottomSheetReplaceWarning": "替换后由于书籍内容可能不同划线可能错位或者消失",
   "bookBottomSheetUnsupportedFileFormat": "不支持的文件格式: {extension}",
   "bookBottomSheetReplaceFailed": "替换失败: {error}",
+  "useBookStyles": "使用书籍中的样式",
+  "useBookStylesDescription": "启用后，应用将使用书籍中定义的样式，而不是您的自定义设置（行间距、字重、首行缩进、字间距和段落间距）",
   "historyBack": "后退",
   "historyForward": "前进",
   "historyClose": "关闭"

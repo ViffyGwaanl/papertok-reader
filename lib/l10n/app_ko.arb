@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "교체 실패: {error}",
    "historyBack": "뒤로",
    "historyForward": "앞으로",
-   "historyClose": "닫기"
+   "historyClose": "닫기",
+   "useBookStyles": "책의 스타일 사용",
+   "useBookStylesDescription": "활성화하면 줄 간격, 글꼴 두께, 들여쓰기, 자간, 단락 간격에 대한 사용자 지정 설정 대신 책에 정의된 스타일을 사용합니다"
 }

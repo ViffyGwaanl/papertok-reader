@@ -234,6 +234,7 @@ class StyleWidgetState extends State<StyleWidget> {
   }
 
   Row lineHeightAndParagraphSpacingSlider() {
+    bool enabled = !Prefs().useBookStyles;
     return Row(
       children: [
         IconAndText(
@@ -242,15 +243,18 @@ class StyleWidgetState extends State<StyleWidget> {
         ),
         Expanded(
           child: Slider(
-              padding: EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               value: bookStyle.lineHeight,
-              onChanged: (double value) {
-                setState(() {
-                  bookStyle.lineHeight = value;
-                  widget.epubPlayerKey.currentState!.changeStyle(bookStyle);
-                  Prefs().saveBookStyleToPrefs(bookStyle);
-                });
-              },
+              onChanged: enabled
+                  ? (double value) {
+                      setState(() {
+                        bookStyle.lineHeight = value;
+                        widget.epubPlayerKey.currentState!
+                            .changeStyle(bookStyle);
+                        Prefs().saveBookStyleToPrefs(bookStyle);
+                      });
+                    }
+                  : null,
               min: 0,
               max: 3,
               divisions: 10,
@@ -262,15 +266,17 @@ class StyleWidgetState extends State<StyleWidget> {
         ),
         Expanded(
           child: Slider(
-            padding: EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             value: bookStyle.paragraphSpacing,
-            onChanged: (double value) {
-              setState(() {
-                bookStyle.paragraphSpacing = value;
-                widget.epubPlayerKey.currentState!.changeStyle(bookStyle);
-                Prefs().saveBookStyleToPrefs(bookStyle);
-              });
-            },
+            onChanged: enabled
+                ? (double value) {
+                    setState(() {
+                      bookStyle.paragraphSpacing = value;
+                      widget.epubPlayerKey.currentState!.changeStyle(bookStyle);
+                      Prefs().saveBookStyleToPrefs(bookStyle);
+                    });
+                  }
+                : null,
             min: 0,
             max: 5,
             divisions: 10,
@@ -282,6 +288,7 @@ class StyleWidgetState extends State<StyleWidget> {
   }
 
   Row fontSizeSlider() {
+    bool enabled = !Prefs().useBookStyles;
     return Row(
       children: [
         IconAndText(
@@ -291,13 +298,15 @@ class StyleWidgetState extends State<StyleWidget> {
         Expanded(
           child: Slider(
             value: bookStyle.fontSize,
-            onChanged: (double value) {
-              setState(() {
-                bookStyle.fontSize = value;
-                widget.epubPlayerKey.currentState!.changeStyle(bookStyle);
-                Prefs().saveBookStyleToPrefs(bookStyle);
-              });
-            },
+            onChanged: enabled
+                ? (double value) {
+                    setState(() {
+                      bookStyle.fontSize = value;
+                      widget.epubPlayerKey.currentState!.changeStyle(bookStyle);
+                      Prefs().saveBookStyleToPrefs(bookStyle);
+                    });
+                  }
+                : null,
             min: 0.5,
             max: 3.0,
             divisions: 25,

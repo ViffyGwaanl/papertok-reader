@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "Înlocuirea a eșuat: {error}",
    "historyBack": "Înapoi",
    "historyForward": "Înainte",
-   "historyClose": "Închide"
+   "historyClose": "Închide",
+   "useBookStyles": "Utilizează stilurile cărții",
+   "useBookStylesDescription": "Când este activat, aplicația va folosi stilurile definite în carte în loc de setările dvs. personalizate pentru înălțimea liniei, grosimea fontului, indentare, spațierea literelor și spațierea paragrafelor"
 }

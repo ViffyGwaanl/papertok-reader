@@ -789,6 +789,8 @@
    "bookBottomSheetUnsupportedFileFormat": "تنسيق الملف غير مدعوم: {extension}",
    "bookBottomSheetReplaceFailed": "فشل الاستبدال: {error}",
    "historyBack": "رجوع",
-   "historyForward": "تقدم",
-   "historyClose": "إغلاق"
+   "historyForward": "للأمام",
+   "historyClose": "إغلاق",
+   "useBookStyles": "استخدام أنماط الكتاب",
+   "useBookStylesDescription": "عند التمكين، سيستخدم التطبيق الأنماط المحددة في الكتاب بدلاً من إعداداتك المخصصة لارتفاع السطر ووزن الخط والمسافة البادئة والتباعد بين الأحرف والفقرات"
 }

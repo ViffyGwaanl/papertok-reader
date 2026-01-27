@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "Le remplacement a échoué : {error}",
    "historyBack": "Retour",
    "historyForward": "Avant",
-   "historyClose": "Fermer"
+   "historyClose": "Fermer",
+   "useBookStyles": "Utiliser les styles du livre",
+   "useBookStylesDescription": "Lorsqu'activé, l'application utilisera les styles définis dans le livre au lieu de vos paramètres personnalisés pour la hauteur de ligne, le poids de la police, l'indentation, l'espacement des lettres et l'espacement des paragraphes"
 }

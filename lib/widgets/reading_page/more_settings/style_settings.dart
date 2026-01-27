@@ -9,6 +9,55 @@ import 'package:anx_reader/widgets/reading_page/more_settings/custom_css_editor.
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
 
+// Reusable style slider widget that can be disabled
+class StyleSlider extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+  final double min;
+  final double max;
+  final int divisions;
+  final String Function(double) labelFormatter;
+  final bool enabled;
+
+  const StyleSlider({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.labelFormatter,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconAndText(
+          icon: Icon(icon),
+          text: label,
+        ),
+        Expanded(
+          child: Slider(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            value: value,
+            onChanged: enabled ? onChanged : null,
+            min: min,
+            max: max,
+            divisions: divisions,
+            label: labelFormatter(value),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class StyleSettings extends StatefulWidget {
   const StyleSettings({super.key});
 
@@ -19,89 +68,89 @@ class StyleSettings extends StatefulWidget {
 class _StyleSettingsState extends State<StyleSettings> {
   @override
   Widget build(BuildContext context) {
+    Widget useBookStylesSwitch() {
+      return SwitchListTile(
+        title: Text(L10n.of(context).useBookStyles),
+        subtitle: Text(
+          L10n.of(context).useBookStylesDescription,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        value: Prefs().useBookStyles,
+        onChanged: (bool value) {
+          setState(() {
+            Prefs().useBookStyles = value;
+            epubPlayerKey.currentState?.changeStyle(Prefs().bookStyle);
+          });
+        },
+      );
+    }
+
     Widget textIndent(BookStyle bookStyle, StateSetter setState) {
-      return Row(children: [
-        IconAndText(
-          icon: const Icon(Icons.format_indent_increase),
-          text: L10n.of(context).readingPageIndent,
-        ),
-        Expanded(
-          child: Slider(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            value: bookStyle.indent,
-            onChanged: (double value) {
-              setState(() {
-                bookStyle.indent = value;
-                epubPlayerKey.currentState?.changeStyle(bookStyle);
-                Prefs().saveBookStyleToPrefs(bookStyle);
-              });
-            },
-            min: -0.5,
-            max: 8,
-            divisions: 17,
-            label: bookStyle.indent < 0
-                ? L10n.of(context).readingPageIndentNoChange
-                : bookStyle.indent.toStringAsFixed(1),
-          ),
-        ),
-      ]);
+      bool enabled = !Prefs().useBookStyles;
+      return StyleSlider(
+        icon: Icons.format_indent_increase,
+        label: L10n.of(context).readingPageIndent,
+        value: bookStyle.indent,
+        onChanged: (double value) {
+          setState(() {
+            bookStyle.indent = value;
+            epubPlayerKey.currentState?.changeStyle(bookStyle);
+            Prefs().saveBookStyleToPrefs(bookStyle);
+          });
+        },
+        min: -0.5,
+        max: 8,
+        divisions: 17,
+        labelFormatter: (value) => value < 0
+            ? L10n.of(context).readingPageIndentNoChange
+            : value.toStringAsFixed(1),
+        enabled: enabled,
+      );
     }
 
     Widget sideMarginSlider(BookStyle bookStyle, StateSetter setState) {
-      return Row(children: [
-        Prefs().writingMode == WritingModeEnum.verticalRl
-            ? IconAndText(
-                icon: const Icon(Bootstrap.arrows_vertical),
-                text: L10n.of(context).readingPageVerticleMargin,
-              )
-            : IconAndText(
-                icon: const Icon(Bootstrap.arrows),
-                text: L10n.of(context).readingPageSideMargin,
-              ),
-        Expanded(
-          child: Slider(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            value: bookStyle.sideMargin,
-            onChanged: (double value) {
-              setState(() {
-                bookStyle.sideMargin = value;
-                epubPlayerKey.currentState?.changeStyle(bookStyle);
-                Prefs().saveBookStyleToPrefs(bookStyle);
-              });
-            },
-            min: 0,
-            max: 20,
-            divisions: 20,
-            label: bookStyle.sideMargin.toStringAsFixed(1),
-          ),
-        )
-      ]);
+      return StyleSlider(
+        icon: Prefs().writingMode == WritingModeEnum.verticalRl
+            ? Bootstrap.arrows_vertical
+            : Bootstrap.arrows,
+        label: Prefs().writingMode == WritingModeEnum.verticalRl
+            ? L10n.of(context).readingPageVerticleMargin
+            : L10n.of(context).readingPageSideMargin,
+        value: bookStyle.sideMargin,
+        onChanged: (double value) {
+          setState(() {
+            bookStyle.sideMargin = value;
+            epubPlayerKey.currentState?.changeStyle(bookStyle);
+            Prefs().saveBookStyleToPrefs(bookStyle);
+          });
+        },
+        min: 0,
+        max: 20,
+        divisions: 20,
+        labelFormatter: (value) => value.toStringAsFixed(1),
+        enabled: true, // Side margin is always enabled
+      );
     }
 
     Widget letterSpacingSlider(BookStyle bookStyle, StateSetter setState) {
-      return Row(children: [
-        IconAndText(
-          icon: const Icon(Icons.compare_arrows),
-          text: L10n.of(context).readingPageLetterSpacing,
-        ),
-        Expanded(
-          child: Slider(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            value: bookStyle.letterSpacing,
-            onChanged: (double value) {
-              setState(() {
-                bookStyle.letterSpacing = value;
-                epubPlayerKey.currentState?.changeStyle(bookStyle);
-                Prefs().saveBookStyleToPrefs(bookStyle);
-              });
-            },
-            min: -3,
-            max: 7,
-            divisions: 10,
-            label: (bookStyle.letterSpacing).toString(),
-          ),
-        ),
-      ]);
+      bool enabled = !Prefs().useBookStyles;
+      return StyleSlider(
+        icon: Icons.compare_arrows,
+        label: L10n.of(context).readingPageLetterSpacing,
+        value: bookStyle.letterSpacing,
+        onChanged: (double value) {
+          setState(() {
+            bookStyle.letterSpacing = value;
+            epubPlayerKey.currentState?.changeStyle(bookStyle);
+            Prefs().saveBookStyleToPrefs(bookStyle);
+          });
+        },
+        min: -3,
+        max: 7,
+        divisions: 10,
+        labelFormatter: (value) => value.toString(),
+        enabled: enabled,
+      );
     }
 
     Row topBottomMarginSlider(BookStyle bookStyle, StateSetter setState) {
@@ -117,7 +166,7 @@ class _StyleSettingsState extends State<StyleSettings> {
               ),
         Expanded(
           child: Slider(
-            padding: EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             value: bookStyle.topMargin,
             onChanged: (double value) {
               setState(() {
@@ -143,7 +192,7 @@ class _StyleSettingsState extends State<StyleSettings> {
               ),
         Expanded(
           child: Slider(
-            padding: EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             value: bookStyle.bottomMargin,
             onChanged: (double value) {
               setState(() {
@@ -162,29 +211,24 @@ class _StyleSettingsState extends State<StyleSettings> {
     }
 
     Widget fontWeightSlider(BookStyle bookStyle, StateSetter setState) {
-      return Row(children: [
-        IconAndText(
-          icon: const Icon(Icons.format_bold),
-          text: L10n.of(context).readingPageFontWeight,
-        ),
-        Expanded(
-          child: Slider(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            value: bookStyle.fontWeight,
-            onChanged: (double value) {
-              setState(() {
-                bookStyle.fontWeight = value;
-                epubPlayerKey.currentState?.changeStyle(bookStyle);
-                Prefs().saveBookStyleToPrefs(bookStyle);
-              });
-            },
-            min: 100,
-            max: 900,
-            divisions: 8,
-            label: bookStyle.fontWeight.toString(),
-          ),
-        ),
-      ]);
+      bool enabled = !Prefs().useBookStyles;
+      return StyleSlider(
+        icon: Icons.format_bold,
+        label: L10n.of(context).readingPageFontWeight,
+        value: bookStyle.fontWeight,
+        onChanged: (double value) {
+          setState(() {
+            bookStyle.fontWeight = value;
+            epubPlayerKey.currentState?.changeStyle(bookStyle);
+            Prefs().saveBookStyleToPrefs(bookStyle);
+          });
+        },
+        min: 100,
+        max: 900,
+        divisions: 8,
+        labelFormatter: (value) => value.toString(),
+        enabled: enabled,
+      );
     }
 
     Widget textAlignment() {
@@ -271,6 +315,8 @@ class _StyleSettingsState extends State<StyleSettings> {
       padding: const EdgeInsets.all(8.0),
       child: Column(
         children: [
+          useBookStylesSwitch(),
+          const Divider(),
           sliders(),
           const SizedBox(height: 16),
           const Divider(),

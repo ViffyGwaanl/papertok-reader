@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "替換失敗: {error}",
    "historyBack": "後退",
    "historyForward": "前進",
-   "historyClose": "關閉"
+   "historyClose": "關閉",
+   "useBookStyles": "使用書籍中的樣式",
+   "useBookStylesDescription": "啟用後，應用將使用書籍中定義的樣式，而不是您的自定義設置（行間距、字重、首行縮進、字間距和段落間距）"
 }

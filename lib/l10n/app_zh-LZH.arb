@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "易败: {error}",
    "historyBack": "退",
    "historyForward": "進",
-   "historyClose": "闔"
+   "historyClose": "闔",
+   "useBookStyles": "用書式",
+   "useBookStylesDescription": "啟後，應用書中定式，而非君之客製設（行距、字重、首縮、字距及段距）"
 }

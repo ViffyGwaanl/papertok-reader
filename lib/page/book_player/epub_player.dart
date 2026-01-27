@@ -191,6 +191,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         backgroundImage: '$bgimgUrl',
         customCSS: `${Prefs().customCSS.replaceAll('`', '\\`')}`,
         customCSSEnabled: ${Prefs().customCSSEnabled},
+        useBookStyles: ${Prefs().useBookStyles},
       })
       ''');
     });

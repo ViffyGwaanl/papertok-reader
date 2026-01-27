@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "Değiştirme başarısız: {error}",
    "historyBack": "Geri",
    "historyForward": "İleri",
-   "historyClose": "Kapat"
+   "historyClose": "Kapat",
+   "useBookStyles": "Kitap stillerini kullan",
+   "useBookStylesDescription": "Etkinleştirildiğinde, uygulama satır yüksekliği, yazı tipi kalınlığı, metin girintisi, harf aralığı ve paragraf aralığı için özel ayarlarınız yerine kitapta tanımlanan stilleri kullanacaktır"
 }

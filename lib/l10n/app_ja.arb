@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "置換に失敗しました: {error}",
    "historyBack": "戻る",
    "historyForward": "進む",
-   "historyClose": "閉じる"
+   "historyClose": "閉じる",
+   "useBookStyles": "書籍のスタイルを使用",
+   "useBookStylesDescription": "有効にすると、行間、フォントの太さ、字下げ、字間、段落間隔のカスタム設定ではなく、書籍で定義されたスタイルを使用します"
 }

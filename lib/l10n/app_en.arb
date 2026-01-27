@@ -788,6 +788,8 @@
   "bookBottomSheetReplaceWarning": "Replacing the file may cause highlights to be displaced or lost because the book content might be different",
   "bookBottomSheetUnsupportedFileFormat": "Unsupported file format: {extension}",
   "bookBottomSheetReplaceFailed": "Replacement failed: {error}",
+  "useBookStyles": "Use Book Styles",
+  "useBookStylesDescription": "When enabled, the app will use the styling defined in the book instead of your custom settings for line height, font weight, text indent, letter spacing, and paragraph spacing",
   "historyBack": "Back",
   "historyForward": "Forward", 
   "historyClose": "Close"

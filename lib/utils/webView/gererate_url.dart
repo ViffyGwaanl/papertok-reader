@@ -89,6 +89,7 @@ String generateUrl(
     'allowScript': Prefs().enableJsForEpub,
     'customCSS': Prefs().customCSS,
     'customCSSEnabled': Prefs().customCSSEnabled,
+    'useBookStyles': Prefs().useBookStyles,
   };
 
   Map<String, dynamic> readingRules = {

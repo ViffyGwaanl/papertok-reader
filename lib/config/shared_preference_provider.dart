@@ -998,6 +998,15 @@ class Prefs extends ChangeNotifier {
     return prefs.getBool('onlySyncWhenWifi') ?? false;
   }
 
+  set useBookStyles(bool status) {
+    prefs.setBool('useBookStyles', status);
+    notifyListeners();
+  }
+
+  bool get useBookStyles {
+    return prefs.getBool('useBookStyles') ?? false;
+  }
+
   set bottomNavigatorShowNote(bool status) {
     prefs.setBool('bottomNavigatorShowNote', status);
     notifyListeners();

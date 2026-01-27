@@ -790,5 +790,7 @@
    "bookBottomSheetReplaceFailed": "Ersetzen fehlgeschlagen: {error}",
    "historyBack": "Zurück",
    "historyForward": "Vorwärts",
-   "historyClose": "Schließen"
+   "historyClose": "Schließen",
+   "useBookStyles": "Buchstile verwenden",
+   "useBookStylesDescription": "Wenn aktiviert, verwendet die App die im Buch definierten Stile anstelle Ihrer benutzerdefinierten Einstellungen für Zeilenhöhe, Schriftbreite, Texteinzug, Zeichenabstand und Absatzabstand"
 }
