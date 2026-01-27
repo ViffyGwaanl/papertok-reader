@@ -162,38 +162,41 @@ class _OtherSettingsState extends State<OtherSettings> {
                 const SizedBox(height: 8),
                 Column(
                   children: [
-                  for (int row = 0; row < 3; row++)
-                    Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
-                      children: [
-                      for (int col = 0; col < 3; col++)
-                        Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                          right: col < 2 ? 8.0 : 0,
-                          ),
-                          child: Builder(
-                          builder: (context) {
-                            int index = row * 3 + col;
-                            List<int> config = Prefs().customPageTurnConfig;
-                            return PageTurnDropdown(
-                            value: PageTurningType.values[config[index]],
-                            onChanged: (type) {
-                              if (type != null) {
-                              setState(() {
-                                onCustomConfigChanged(index, type);
-                              });
-                              }
-                            },
-                            );
-                          },
-                          ),
+                    for (int row = 0; row < 3; row++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            for (int col = 0; col < 3; col++)
+                              Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    right: col < 2 ? 8.0 : 0,
+                                  ),
+                                  child: Builder(
+                                    builder: (context) {
+                                      int index = row * 3 + col;
+                                      List<int> config =
+                                          Prefs().customPageTurnConfig;
+                                      return PageTurnDropdown(
+                                        value: PageTurningType
+                                            .values[config[index]],
+                                        onChanged: (type) {
+                                          if (type != null) {
+                                            setState(() {
+                                              onCustomConfigChanged(
+                                                  index, type);
+                                            });
+                                          }
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        ),
-                      ],
-                    ),
-                    ),
+                      ),
                   ],
                 ),
               ],
