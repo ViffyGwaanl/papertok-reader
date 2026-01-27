@@ -37,10 +37,10 @@ packages:
     dependency: transitive
     description:
       name: anthropic_sdk_dart
-      sha256: f74644f4638ae30d0dc25fcffd62fd917355834419a8d01a7e5a6b691e6a4874
+      sha256: "30162d70384f38f98f22e2402776f28d260b721fef684893dbed2a3108e72428"
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.3"
+    version: "0.3.1"
   archive:
     dependency: "direct main"
     description:
@@ -963,10 +963,10 @@ packages:
     dependency: transitive
     description:
       name: gcloud
-      sha256: caa415a0145ec8afac457322872c3e8b38379a88800d2944c53798ea8fbce386
+      sha256: "19e8f105b1087371f37d567d1b6335260d84f970e70bf1c2e9c3616c0247f9f2"
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.19"
+    version: "0.9.0"
   glob:
     dependency: transitive
     description:
@@ -975,14 +975,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.3"
-  google_generative_ai:
-    dependency: transitive
-    description:
-      name: google_generative_ai
-      sha256: "71f613d0247968992ad87a0eb21650a566869757442ba55a31a81be6746e0d1f"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.4.7"
   google_identity_services_web:
     dependency: transitive
     description:
@@ -991,14 +983,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.3+1"
+  googleai_dart:
+    dependency: transitive
+    description:
+      name: googleai_dart
+      sha256: "22f8bb5e621067f4c9cd2f88db240bbd7f1ea54b960c55c348104c74794a97a7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   googleapis:
     dependency: transitive
     description:
       name: googleapis
-      sha256: "5c9e0f25be1dec13d8d2158263141104c51b5ba83487537c17a2330581e505ee"
+      sha256: "692fb9e90c321b61a7a2123de0353ec8a20691cd979db2553d8d732f710f6535"
       url: "https://pub.dev"
     source: hosted
-    version: "14.0.0"
+    version: "15.0.0"
   googleapis_auth:
     dependency: transitive
     description:
@@ -1203,43 +1203,42 @@ packages:
     dependency: "direct main"
     description:
       name: langchain
-      sha256: "85ecefa1537f9718dab109d437a7421bf084bb0b1c558ed38091127855c97725"
+      sha256: b7035e0903953cb065734499296e66d9fa0f6e15934aa2f57389b9fb6b001aab
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.9"
+    version: "0.8.1"
   langchain_anthropic:
     dependency: "direct main"
     description:
       name: langchain_anthropic
-      sha256: "6db606f77d661f121db6a765e7ddf954548939edb2ba4dc35300b897058e485f"
+      sha256: e78c81064733f6dbc67b5ea06cc62454581bede69a4f06abe7ebf1347716be78
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.1+3"
+    version: "0.3.1"
   langchain_core:
     dependency: "direct main"
     description:
       name: langchain_core
-      sha256: "4499c01dcf49bb046376661ab447d660c4e36671d52e9cabc8c7225d373643d9"
+      sha256: fce3cd0e31dcbac80d209f6361207936a58b05506b800f13227cbe83f6e3e721
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.9"
+    version: "0.4.1"
   langchain_google:
     dependency: "direct main"
     description:
       name: langchain_google
-      sha256: fb181729821b6060a59d894b3c834a371187547e7af7f311b9ec33e126afee4f
+      sha256: "37e4917c42361149b41fe883e7ff9b0fc136ec7b2c6e4545c6d886e22656ec94"
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.5+2"
+    version: "0.7.1+2"
   langchain_openai:
     dependency: "direct main"
     description:
-      path: "packages/langchain_openai"
-      ref: bb06c17ca667a906e3e37154b0bda95023d0c9bd
-      resolved-ref: bb06c17ca667a906e3e37154b0bda95023d0c9bd
-      url: "https://github.com/Anxcye/langchain_dart.git"
-    source: git
-    version: "0.7.6+2"
+      name: langchain_openai
+      sha256: "23ed96ece5bc27ec95d1b720bce61267e6db578d24134ddf80b715184e932330"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.8.1+1"
   langchain_tiktoken:
     dependency: transitive
     description:
@@ -1393,14 +1392,13 @@ packages:
     source: hosted
     version: "2.1.0"
   openai_dart:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "packages/openai_dart"
-      ref: bb06c17ca667a906e3e37154b0bda95023d0c9bd
-      resolved-ref: bb06c17ca667a906e3e37154b0bda95023d0c9bd
-      url: "https://github.com/Anxcye/langchain_dart.git"
-    source: git
-    version: "0.5.5"
+      name: openai_dart
+      sha256: "037605a210cb3b1d8ac72b11a4ace26f25ee9267aaf981d2af1d7f0524adcbf5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.2"
   package_config:
     dependency: transitive
     description:
@@ -2261,10 +2259,10 @@ packages:
     dependency: transitive
     description:
       name: vertex_ai
-      sha256: ba3d3da4be82268810cb90d7873c576e7fa174f096df46a6a58d938d58254e8f
+      sha256: "469f3d7e5bc9c7d9ef7e7c42ec31a514ff0c31979aa30fdb0d85e2cabefa4528"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.2"
+    version: "0.2.0+1"
   vibration:
     dependency: "direct main"
     description:
@@ -2325,18 +2323,18 @@ packages:
     dependency: transitive
     description:
       name: web_socket
-      sha256: "3c12d96c0c9a4eec095246debcea7b86c0324f22df69893d538fcc6f1b8cce83"
+      sha256: "34d64019aa8e36bf9842ac014bb5d2f5586ca73df5e4d9bf5c936975cae6982c"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.6"
+    version: "1.0.1"
   web_socket_channel:
     dependency: "direct main"
     description:
       name: web_socket_channel
-      sha256: "0b8e2457400d8a859b7b2030786835a28a8e80836ef64402abef392ff4f1d0e5"
+      sha256: d645757fb0f4773d602444000a8131ff5d48c9e47adfe9772652dd1a4f2d45c8
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.2"
+    version: "3.0.3"
   webdav_client:
     dependency: "direct main"
     description:
