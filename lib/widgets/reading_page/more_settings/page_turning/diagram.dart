@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 enum PageTurningType {
+  none,
   next,
   prev,
   menu,
@@ -38,7 +39,9 @@ Widget getPageTurningDiagram(
                     ? Colors.blue.withAlpha(100)
                     : types[index] == PageTurningType.menu
                         ? Colors.green.withAlpha(100)
-                        : Colors.white,
+                        : types[index] == PageTurningType.none
+                            ? Colors.grey.withAlpha(100)
+                            : Colors.white,
             child: Center(
               child: iconPosition.contains(index)
                   ? Icon(

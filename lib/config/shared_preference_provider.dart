@@ -934,6 +934,31 @@ class Prefs extends ChangeNotifier {
     return prefs.getBool('swapPageTurnArea') ?? false;
   }
 
+  set pageTurnMode(String mode) {
+    prefs.setString('pageTurnMode', mode);
+    notifyListeners();
+  }
+
+  String get pageTurnMode {
+    return prefs.getString('pageTurnMode') ?? 'simple';
+  }
+
+  set customPageTurnConfig(List<int> config) {
+    prefs.setString('customPageTurnConfig', config.join(','));
+    notifyListeners();
+  }
+
+  List<int> get customPageTurnConfig {
+    String? configStr = prefs.getString('customPageTurnConfig');
+    if (configStr == null) {
+      // Default: left column = prev (1), middle column = menu (3), right column = next (2)
+      // Index mapping: 0=none, 1=next, 2=prev, 3=menu
+      // Grid layout: 0,1,2,3,4,5,6,7,8 (row by row)
+      return [2, 3, 1, 2, 3, 1, 2, 3, 1]; // prev, menu, next for all rows
+    }
+    return configStr.split(',').map((e) => int.parse(e)).toList();
+  }
+
   set bookCoverWidth(double width) {
     prefs.setDouble('bookCoverWidth', width);
     notifyListeners();

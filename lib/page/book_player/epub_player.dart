@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/book.dart';
 import 'package:anx_reader/dao/book_note.dart';
+import 'package:anx_reader/enums/page_turn_mode.dart';
 import 'package:anx_reader/enums/reading_info.dart';
 import 'package:anx_reader/enums/translation_mode.dart';
 import 'package:anx_reader/enums/writing_mode.dart';
@@ -512,17 +513,28 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     final x = location['x'];
     final y = location['y'];
     final part = coordinatesToPart(x, y);
-    final currentPageTurningType = Prefs().pageTurningType;
-    final pageTurningType = pageTurningTypes[currentPageTurningType];
 
-    var action = pageTurningType[part];
+    PageTurningType action;
+    final pageTurnMode = PageTurnMode.fromCode(Prefs().pageTurnMode);
 
-    if (Prefs().swapPageTurnArea) {
-      if (action == PageTurningType.prev) {
-        action = PageTurningType.next;
-      } else if (action == PageTurningType.next) {
-        action = PageTurningType.prev;
+    if (pageTurnMode == PageTurnMode.simple) {
+      // Use predefined page turning types
+      final currentPageTurningType = Prefs().pageTurningType;
+      final pageTurningType = pageTurningTypes[currentPageTurningType];
+      action = pageTurningType[part];
+
+      // Apply swap if enabled
+      if (Prefs().swapPageTurnArea) {
+        if (action == PageTurningType.prev) {
+          action = PageTurningType.next;
+        } else if (action == PageTurningType.next) {
+          action = PageTurningType.prev;
+        }
       }
+    } else {
+      // Use custom configuration
+      final customConfig = Prefs().customPageTurnConfig;
+      action = PageTurningType.values[customConfig[part]];
     }
 
     switch (action) {
@@ -534,6 +546,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         break;
       case PageTurningType.menu:
         widget.showOrHideAppBarAndBottomBar(true);
+        break;
+      case PageTurningType.none:
         break;
     }
   }
