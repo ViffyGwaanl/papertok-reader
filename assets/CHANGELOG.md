@@ -7,6 +7,7 @@
 - Feat(reader): Support custom page turn area configuration with 3x3 grid
 - Feat(reader): Add "Use Book Styles" toggle to preserve original book styling
 - UI(reader): Optimize reading history navigation button design
+- Fix(reader): Fix image loading issue in non-standard EPUBs with missing manifest entries
 
 - Feat(reader): 添加阅读器历史导航玻璃拟态胶囊
 - Feat(reader): 支持手动控制历史导航显隐（不自动隐藏）
@@ -14,6 +15,7 @@
 - Feat(reader): 支持自定义翻页区域配置（3x3网格）
 - Feat(reader): 添加"使用书籍样式"开关，保留书籍原始样式
 - UI(reader): 优化阅读历史导航按钮设计
+- Fix(reader): 修复不规范 EPUB（manifest 缺失资源声明）中图片无法加载的问题
 
 ## 1.11.0
 - Feat: Support "No Tag" filter in books filter menu

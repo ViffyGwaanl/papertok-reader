@@ -677,7 +677,30 @@ class Loader {
         if (isExternal(href)) return href
         const path = resolveURL(href, base)
         const item = this.manifest.find(item => item.href === path)
-        if (!item) return href
+        if (!item) {
+            // Fallback for non-standard EPUBs with missing manifest entries
+            // Try to load the resource directly if it exists
+            const parent = parents[parents.length - 1]
+            if (this.#cache.has(path)) return this.ref(path, parent)
+            try {
+                const blob = await this.loadBlob(path)
+                if (blob) {
+                    // Infer media type from file extension
+                    const ext = path.split('.').pop()?.toLowerCase()
+                    const mediaType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+                        : ext === 'png' ? 'image/png'
+                        : ext === 'gif' ? 'image/gif'
+                        : ext === 'svg' ? 'image/svg+xml'
+                        : ext === 'webp' ? 'image/webp'
+                        : ext === 'css' ? 'text/css'
+                        : 'application/octet-stream'
+                    return this.createURL(path, blob, mediaType, parent)
+                }
+            } catch (e) {
+                console.warn(`Failed to load resource not in manifest: ${path}`, e)
+            }
+            return href
+        }
         return this.loadItem(item, parents.concat(base))
     }
     async loadReplaced(item, parents = []) {
