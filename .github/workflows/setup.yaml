@@ -60,7 +60,7 @@ jobs:
       - name: Read Xcode version
         id: get_xcode_version
         run: |
-          XCODE_VERSION=26.0
+          XCODE_VERSION=26.2
           echo "xcode_version=${XCODE_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Get version from tag and determine release type
