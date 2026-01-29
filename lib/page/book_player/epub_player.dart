@@ -1077,7 +1077,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         case ReadingInfoEnum.batteryAndTime:
           return batteryAndTimeWidget();
         case ReadingInfoEnum.none:
-          return const SizedBox();
+          return const SizedBox(width: 30);
       }
     }
 
