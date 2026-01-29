@@ -16,6 +16,7 @@
 - Fix(reader): Fix AI quick prompt chips overlapping issue
 - Fix(reader): Fix PDF files with invalid TOC destinations failing to open
 - Fix(reader): Fix reading info center alignment in header and footer
+- Fix(reader): Fix search results scroll position not being preserved when returning from a result
 - Fix(sync): Fix WebDAV sync showing multiple direction selection dialogs
 - Fix(ai_services): update Gemini service URL and model version
 - Fix(window): Fix window becoming inaccessible after disconnecting secondary display
@@ -35,6 +36,7 @@
 - Fix(reader): 修复AI快速提示重叠问题
 - Fix(reader): 修复包含无效目录的 PDF 文件无法打开的问题
 - Fix(reader): 修复页眉页脚阅读信息居中对齐问题
+- Fix(reader): 修复点击搜索结果后重新打开搜索抽屉时滚动位置丢失的问题
 - Fix(sync): 修复 WebDAV 同步时出现多个方向选择弹窗的问题
 - Fix(ai_services): 更新 Gemini 服务 URL 和模型版本
 - Fix(window): 修复断开副屏后窗口位置不可访问的问题

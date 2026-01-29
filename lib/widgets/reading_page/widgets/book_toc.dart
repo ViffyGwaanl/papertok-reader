@@ -27,6 +27,7 @@ class BookToc extends ConsumerStatefulWidget {
 
 class _BookTocState extends ConsumerState<BookToc> {
   final TextEditingController searchBarController = TextEditingController();
+  final ScrollController searchResultsScrollController = ScrollController();
   late List<TocItem> tocItems;
   List<_VisibleTocEntry> _visibleItems = const [];
   final Set<String> _expandedItemKeys = {};
@@ -36,16 +37,28 @@ class _BookTocState extends ConsumerState<BookToc> {
   String? _lastAutoScrolledHref;
   String? _pendingScrollKey;
   bool _pendingScrollAnimated = false;
+  bool _hasRestoredScrollPosition = false;
 
   @override
   void initState() {
     super.initState();
     searchBarController.text = ref.read(tocSearchProvider).query ?? '';
+    // Add listener to save scroll position
+    searchResultsScrollController.addListener(_saveScrollPosition);
+  }
+
+  void _saveScrollPosition() {
+    if (searchResultsScrollController.hasClients) {
+      ref.read(tocSearchProvider.notifier).updateScrollOffset(
+            searchResultsScrollController.offset,
+          );
+    }
   }
 
   @override
   void dispose() {
     searchBarController.dispose();
+    searchResultsScrollController.dispose();
     super.dispose();
   }
 
@@ -246,6 +259,28 @@ class _BookTocState extends ConsumerState<BookToc> {
         ? null
         : tocSearchState.progress.clamp(0.0, 1.0);
 
+    // Restore scroll position when search results are available (only once)
+    if (isSearchActive &&
+        searchResults.isNotEmpty &&
+        !_hasRestoredScrollPosition &&
+        tocSearchState.scrollOffset > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && searchResultsScrollController.hasClients) {
+          final targetOffset = tocSearchState.scrollOffset.clamp(
+            0.0,
+            searchResultsScrollController.position.maxScrollExtent,
+          );
+          searchResultsScrollController.jumpTo(targetOffset);
+          _hasRestoredScrollPosition = true;
+        }
+      });
+    }
+
+    // Reset the flag when search becomes inactive
+    if (!isSearchActive && _hasRestoredScrollPosition) {
+      _hasRestoredScrollPosition = false;
+    }
+
     final currentHref = widget.epubPlayerKey.currentState?.chapterHref ?? '';
     final currentPath = currentHref.isEmpty
         ? <TocItem>[]
@@ -320,6 +355,7 @@ class _BookTocState extends ConsumerState<BookToc> {
           child: searchResults.isEmpty
               ? const SizedBox()
               : ListView.builder(
+                  controller: searchResultsScrollController,
                   itemCount: searchResults.length,
                   itemBuilder: (context, index) {
                     return searchResultWidget(

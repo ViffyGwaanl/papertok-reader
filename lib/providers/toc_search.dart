@@ -11,12 +11,14 @@ class TocSearchState {
     this.progress = 0.0,
     this.results = const [],
     this.isSearching = false,
+    this.scrollOffset = 0.0,
   });
 
   final String? query;
   final double progress;
   final List<SearchResultModel> results;
   final bool isSearching;
+  final double scrollOffset;
 
   bool get isActive => query != null && query!.isNotEmpty;
 
@@ -25,12 +27,14 @@ class TocSearchState {
     double? progress,
     List<SearchResultModel>? results,
     bool? isSearching,
+    double? scrollOffset,
   }) {
     return TocSearchState(
       query: identical(query, _noValue) ? this.query : query as String?,
       progress: progress ?? this.progress,
       results: results ?? this.results,
       isSearching: isSearching ?? this.isSearching,
+      scrollOffset: scrollOffset ?? this.scrollOffset,
     );
   }
 }
@@ -64,6 +68,10 @@ class TocSearch extends _$TocSearch {
     state = state.copyWith(
       results: List<SearchResultModel>.unmodifiable(updated),
     );
+  }
+
+  void updateScrollOffset(double offset) {
+    state = state.copyWith(scrollOffset: offset);
   }
 
   void clear() {
