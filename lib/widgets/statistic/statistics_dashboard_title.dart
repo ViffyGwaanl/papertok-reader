@@ -194,7 +194,7 @@ class _AddTileSheetContentState extends ConsumerState<AddTileSheetContent> {
             padding: const EdgeInsets.all(16.0),
             child: SizedBox(
               width: double.infinity,
-              child: AnxFilledButton.icon(
+              child: AnxButton.icon(
                 disabled:
                     notifier.workingTiles.contains(availableTiles[validIndex]),
                 onPressed: () {

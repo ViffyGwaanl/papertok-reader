@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 enum AnxButtonType { filled, outlined, text }
 
-class AnxFilledButton extends StatelessWidget {
-  const AnxFilledButton({
+class AnxButton extends StatelessWidget {
+  const AnxButton({
     super.key,
     required this.onPressed,
     required this.child,
@@ -20,7 +20,7 @@ class AnxFilledButton extends StatelessWidget {
   })  : icon = null,
         label = null;
 
-  const AnxFilledButton.icon({
+  const AnxButton.icon({
     super.key,
     required this.onPressed,
     required this.icon,
@@ -37,7 +37,7 @@ class AnxFilledButton extends StatelessWidget {
     this.clipBehavior = Clip.none,
   }) : child = null;
 
-  const AnxFilledButton.text({
+  const AnxButton.text({
     super.key,
     required this.onPressed,
     required this.child,
@@ -54,7 +54,7 @@ class AnxFilledButton extends StatelessWidget {
         label = null,
         type = AnxButtonType.text;
 
-  const AnxFilledButton.outlined({
+  const AnxButton.outlined({
     super.key,
     required this.onPressed,
     required this.child,

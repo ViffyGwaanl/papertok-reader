@@ -347,7 +347,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                       children: [..._buildVoiceListContent()],
                     )
                   : Center(
-                      child: AnxFilledButton(
+                      child: AnxButton(
                         onPressed: () async {
                           setState(() {
                             _showVoiceList = true;
@@ -496,7 +496,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                 labelText: L10n.of(context).settingsNarrateTestText,
                 suffixIcon: Padding(
                   padding: const EdgeInsets.all(5.0),
-                  child: AnxFilledButton.icon(
+                  child: AnxButton.icon(
                     type: AnxButtonType.text,
                     isLoading: _mainTestLoading,
                     icon: Icon(Icons.play_arrow),
@@ -707,7 +707,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          AnxFilledButton.icon(
+                          AnxButton.icon(
                             type: AnxButtonType.text,
                             isLoading: _modelLoadingStates[shortName] ?? false,
                             icon: Icon(Icons.play_arrow),
@@ -715,7 +715,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                             onPressed: () =>
                                 _testSpeak(_testTextController.text, shortName),
                           ),
-                          AnxFilledButton(
+                          AnxButton(
                             type: AnxButtonType.outlined,
                             child:
                                 Text(L10n.of(context).settingsNarrateUseVoice),

@@ -292,14 +292,14 @@ class _StorageSettingsState extends ConsumerState<StorageSettings>
                       children: [
                         if (_selectedNewPath == null)
                           Expanded(
-                            child: AnxFilledButton(
+                            child: AnxButton(
                               onPressed: _selectNewPath,
                               child: Text(L10n.of(context).storageSelectPath),
                             ),
                           )
                         else
                           Expanded(
-                            child: AnxFilledButton(
+                            child: AnxButton(
                               onPressed: _isMigrating ? null : _startMigration,
                               isLoading: _isMigrating,
                               child: Text(L10n.of(context).storageMigrateData),
@@ -308,7 +308,7 @@ class _StorageSettingsState extends ConsumerState<StorageSettings>
                         const SizedBox(width: 8),
                         if (Prefs().customStoragePath != null &&
                             _selectedNewPath == null)
-                          AnxFilledButton.outlined(
+                          AnxButton.outlined(
                             onPressed:
                                 _isMigrating ? null : _resetToDefaultPath,
                             child: Text(L10n.of(context).storageResetPath),
