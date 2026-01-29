@@ -2,7 +2,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/providers/total_reading_time.dart';
-import 'package:anx_reader/widgets/common/anx_filled_button.dart';
+import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/highlight_digit.dart';

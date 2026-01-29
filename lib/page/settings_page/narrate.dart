@@ -9,7 +9,7 @@ import 'package:anx_reader/service/tts/system_tts.dart';
 import 'package:anx_reader/service/tts/tts_factory.dart';
 import 'package:anx_reader/service/tts/tts_handler.dart';
 import 'package:anx_reader/utils/get_current_language_code.dart';
-import 'package:anx_reader/widgets/common/anx_filled_button.dart';
+import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
