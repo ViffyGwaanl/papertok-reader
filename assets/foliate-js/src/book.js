@@ -506,7 +506,8 @@ const getCSS = ({ fontSize,
   flow,
   customCSS,
   customCSSEnabled,
-  useBookStyles
+  useBookStyles,
+  headingFontSize
 }) => {
 
   const fontFamily = fontName === 'book' ? '' :
@@ -579,9 +580,32 @@ const getCSS = ({ fontSize,
         ${fontFamily}
     }
 
-    h1, h2, h3, h4, h5, h6 {
-        ${useBookStyles ? '' : `line-height: ${spacing} !important;`}
+    ${useBookStyles ? '' : `
+    h1 { 
+        font-size: calc(2em * ${headingFontSize}) !important; 
+        line-height: ${spacing} !important;
     }
+    h2 { 
+        font-size: calc(1.5em * ${headingFontSize}) !important; 
+        line-height: ${spacing} !important;
+    }
+    h3 { 
+        font-size: calc(1.17em * ${headingFontSize}) !important; 
+        line-height: ${spacing} !important;
+    }
+    h4 { 
+        font-size: calc(1em * ${headingFontSize}) !important; 
+        line-height: ${spacing} !important;
+    }
+    h5 { 
+        font-size: calc(0.83em * ${headingFontSize}) !important; 
+        line-height: ${spacing} !important;
+    }
+    h6 { 
+        font-size: calc(0.67em * ${headingFontSize}) !important; 
+        line-height: ${spacing} !important;
+    }
+    `}
 
     p, li, blockquote, dd, div:not(:has(*:not(b, a, em, i, strong, u, span))), font {
         color: ${fontColor} !important;
@@ -792,6 +816,7 @@ const replaceFootnote = (view) => {
     customCSSEnabled: style.customCSSEnabled,
     writingMode: style.writingMode,
     useBookStyles: style.useBookStyles,
+    headingFontSize: style.headingFontSize,
   }
   renderer.setStyles(getCSS(footNoteStyle))
   // set background color of dialog
@@ -1425,7 +1450,8 @@ const setStyle = (oldStyle) => {
     flow: turn.scroll,
     customCSS: style.customCSS,
     customCSSEnabled: style.customCSSEnabled,
-    useBookStyles: style.useBookStyles
+    useBookStyles: style.useBookStyles,
+    headingFontSize: style.headingFontSize
   }
   reader.view.renderer.setStyles?.(getCSS(newStyle))
 

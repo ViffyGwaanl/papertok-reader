@@ -13,6 +13,7 @@ class BookStyle {
   double bottomMargin;
   double indent;
   int maxColumnCount;
+  double headingFontSize;
 
   BookStyle({
     this.fontSize = 1.4,
@@ -27,6 +28,7 @@ class BookStyle {
     this.bottomMargin = 50.0,
     this.indent = 0,
     this.maxColumnCount = 0,
+    this.headingFontSize = 1.0,
   });
 
   BookStyle copyWith({
@@ -42,6 +44,7 @@ class BookStyle {
     double? bottomMargin,
     double? indent,
     int? maxColumnCount,
+    double? headingFontSize,
   }) {
     return BookStyle(
       fontSize: fontSize ?? this.fontSize,
@@ -56,6 +59,7 @@ class BookStyle {
       bottomMargin: bottomMargin ?? this.bottomMargin,
       indent: indent ?? this.indent,
       maxColumnCount: maxColumnCount ?? this.maxColumnCount,
+      headingFontSize: headingFontSize ?? this.headingFontSize,
     );
   }
 
@@ -73,6 +77,7 @@ class BookStyle {
       'bottomMargin': bottomMargin,
       'indent': indent,
       'maxColumnCount': maxColumnCount,
+      'headingFontSize': headingFontSize,
     };
   }
 
@@ -90,7 +95,8 @@ class BookStyle {
       "topMargin": $topMargin,
       "bottomMargin": $bottomMargin,
       "indent": $indent,
-      "maxColumnCount": $maxColumnCount
+      "maxColumnCount": $maxColumnCount,
+      "headingFontSize": $headingFontSize
     }
     ''';
   }
@@ -149,6 +155,11 @@ class BookStyle {
           : data['maxColumnCount'] is String
               ? int.parse(data['maxColumnCount'])
               : data['maxColumnCount'],
+      headingFontSize: data['headingFontSize'] == null
+          ? 1.5
+          : data['headingFontSize'] is String
+              ? double.parse(data['headingFontSize'])
+              : data['headingFontSize'],
     );
   }
 }

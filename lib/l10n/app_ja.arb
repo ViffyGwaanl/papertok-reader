@@ -140,6 +140,7 @@
   "readingPageTopMargin": "上マージン",
   "readingPageBottomMargin": "下マージン",
   "readingPageFontWeight": "フォントの太さ",
+  "headingFontSize": "見出しサイズ",
   "readingPageLetterSpacing": "文字間隔",
   "bookDetailSave": "保存",
   "bookDetailEdit": "編集",

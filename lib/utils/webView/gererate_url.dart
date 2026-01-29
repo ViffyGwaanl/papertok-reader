@@ -90,6 +90,7 @@ String generateUrl(
     'customCSS': Prefs().customCSS,
     'customCSSEnabled': Prefs().customCSSEnabled,
     'useBookStyles': Prefs().useBookStyles,
+    'headingFontSize': bookStyle.headingFontSize,
   };
 
   Map<String, dynamic> readingRules = {

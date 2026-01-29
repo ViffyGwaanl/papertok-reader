@@ -140,6 +140,7 @@
   "readingPageTopMargin": "Верхнее поле",
   "readingPageBottomMargin": "Нижнее поле",
   "readingPageFontWeight": "Толщина шрифта",
+  "headingFontSize": "Размер заголовка",
   "readingPageLetterSpacing": "Межбуквенный интервал",
   "bookDetailSave": "Сохранить",
   "bookDetailEdit": "Изменить",

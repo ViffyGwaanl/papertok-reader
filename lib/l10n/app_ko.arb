@@ -140,6 +140,7 @@
   "readingPageTopMargin": "상단 여백",
   "readingPageBottomMargin": "하단 여백",
   "readingPageFontWeight": "폰트 굵기",
+  "headingFontSize": "제목 크기",
   "readingPageLetterSpacing": "글자 간격",
   "bookDetailSave": "저장",
   "bookDetailEdit": "편집",

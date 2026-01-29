@@ -140,6 +140,7 @@
   "readingPageTopMargin": "上边距",
   "readingPageBottomMargin": "下边距",
   "readingPageFontWeight": "字重",
+  "headingFontSize": "标题大小",
   "readingPageLetterSpacing": "字间距",
   "bookDetailSave": "保存",
   "bookDetailEdit": "编辑",

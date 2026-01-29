@@ -140,6 +140,7 @@
   "readingPageTopMargin": "Marge Supérieure",
   "readingPageBottomMargin": "Marge Inférieure",
   "readingPageFontWeight": "Épaisseur de Police",
+  "headingFontSize": "Taille du Titre",
   "readingPageLetterSpacing": "Espacement des Lettres",
   "bookDetailSave": "Enregistrer",
   "bookDetailEdit": "Modifier",

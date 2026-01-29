@@ -1,6 +1,7 @@
 # Changelog
 
 ## 1.12.0
+- Feat(reader): Add heading font size adjustment slider
 - Feat(reader): Add glassmorphism history navigation capsule in reader
 - Feat(reader): Support manual control of history navigation visibility (no auto-hide)
 - Feat(reader): Support manually selecting and remembering day/night background image preference
@@ -24,6 +25,7 @@
 - Fix(ai_services): update Gemini service URL and model version
 - Fix(window): Fix window becoming inaccessible after disconnecting secondary display
 
+- Feat(reader): 添加标题字体大小调节滑块
 - Feat(reader): 添加阅读器历史导航玻璃拟态胶囊
 - Feat(reader): 支持手动控制历史导航显隐（不自动隐藏）
 - Feat(reader): 支持手动选择并记忆日夜背景图偏好
