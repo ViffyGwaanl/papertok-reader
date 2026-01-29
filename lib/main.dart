@@ -15,6 +15,7 @@ import 'package:anx_reader/utils/color_scheme.dart';
 import 'package:anx_reader/utils/error/common.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:anx_reader/utils/window_position_validator.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
@@ -35,31 +36,10 @@ MigrationCheckResult? _migrationCheckResult;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Prefs().initPrefs();
-  if (AnxPlatform.isWindows) {
-    await windowManager.ensureInitialized();
-    final size = Size(
-      Prefs().windowInfo.width,
-      Prefs().windowInfo.height,
-    );
-    final offset = Offset(
-      Prefs().windowInfo.x,
-      Prefs().windowInfo.y,
-    );
 
-    final isMaximized = Prefs().windowInfo.isMaximized;
-
-    WindowManager.instance.setTitle('Anx Reader');
-
-    if (isMaximized) {
-      await WindowManager.instance.maximize();
-    } else if (size.width > 0 && size.height > 0) {
-      await WindowManager.instance.setPosition(offset);
-      await WindowManager.instance.setSize(size);
-    }
-
-    // await WindowManager.instance.show();
-
-    await WindowManager.instance.focus();
+  // Initialize desktop window with validated position
+  if (AnxPlatform.isWindows || AnxPlatform.isMacOS) {
+    await initializeDesktopWindow();
   }
 
   // Check if migration is needed before initializing paths
@@ -144,7 +124,7 @@ class _MyAppState extends ConsumerState<MyApp>
   }
 
   Future<void> _updateWindowInfo() async {
-    if (!AnxPlatform.isWindows) {
+    if (!AnxPlatform.isWindows && !AnxPlatform.isMacOS) {
       return;
     }
     final windowOffset = await windowManager.getPosition();

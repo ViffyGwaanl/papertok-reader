@@ -9,11 +9,13 @@
 - Feat(bookshelf): Support displaying book title and author on default cover with responsive scaling
 - Feat(ai): Support unlimited custom AI prompts with horizontal scrollable quick access
 - Feat(sync): Add comprehensive WebDAV test (create, upload, download, delete) for connection validation
+- Feat(window): Support window position and size memory on macOS
 - UI(reader): Optimize reading history navigation button design
 - Fix(reader): Fix image loading issue in non-standard EPUBs with missing manifest entries
 - Fix(reader): Fix AI quick prompt chips overlapping issue
 - Fix(sync): Fix WebDAV sync showing multiple direction selection dialogs
 - Fix(ai_services): update Gemini service URL and model version
+- Fix(window): Fix window becoming inaccessible after disconnecting secondary display
 
 - Feat(reader): 添加阅读器历史导航玻璃拟态胶囊
 - Feat(reader): 支持手动控制历史导航显隐（不自动隐藏）
@@ -23,11 +25,13 @@
 - Feat(bookshelf): 支持在默认封面上显示书名和作者，支持响应式缩放
 - Feat(ai): 支持无限制自定义AI提示词，快捷访问支持横向滚动
 - Feat(sync): 添加 WebDAV 完整测试功能（创建、上传、下载、删除），全面验证连接
+- Feat(window): 支持 macOS 记忆窗口位置和大小
 - UI(reader): 优化阅读历史导航按钮设计
 - Fix(reader): 修复不规范 EPUB（manifest 缺失资源声明）中图片无法加载的问题
 - Fix(reader): 修复AI快速提示重叠问题
 - Fix(sync): 修复 WebDAV 同步时出现多个方向选择弹窗的问题
 - Fix(ai_services): 更新 Gemini 服务 URL 和模型版本
+- Fix(window): 修复断开副屏后窗口位置不可访问的问题
 
 ## 1.11.0
 - Feat: Support "No Tag" filter in books filter menu
