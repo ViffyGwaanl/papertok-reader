@@ -50,8 +50,7 @@ List<AiServiceOption> buildDefaultAiServices() {
       identifier: 'gemini',
       title: 'Gemini',
       logo: 'assets/images/gemini.png',
-      defaultUrl:
-          'https://generativelanguage.googleapis.com',
+      defaultUrl: 'https://generativelanguage.googleapis.com',
       defaultApiKey: 'YOUR_API_KEY',
       defaultModel: 'gemini-2.5-flash',
     ),
