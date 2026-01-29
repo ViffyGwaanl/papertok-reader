@@ -775,6 +775,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                       Expanded(
                         child: MouseRegion(
                           onHover: (PointerHoverEvent detail) {
+                            if (!Prefs().showMenuOnHover) return;
                             var y = detail.position.dy;
                             if (y < 30 ||
                                 y > MediaQuery.of(context).size.height - 30) {

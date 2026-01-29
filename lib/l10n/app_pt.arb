@@ -528,6 +528,8 @@
   "skipDuplicateFiles": "Pular Arquivos Duplicados",
   "readingPageSwapPageTurnArea": "Trocar Área de Virar Página",
   "readingPageSwapPageTurnAreaTips": "Transformar a área anterior em área seguinte",
+  "readingPageShowMenuOnHover": "Mostrar Menu ao Passar o Mouse",
+  "readingPageShowMenuOnHoverTips": "Mostrar automaticamente o menu ao passar o mouse sobre a borda superior ou inferior da janela para facilitar o acesso",
   "pageTurnModeSimple": "Simples",
   "pageTurnModeCustom": "Personalizado",
   "customPageTurnConfig": "Configuração Personalizada",

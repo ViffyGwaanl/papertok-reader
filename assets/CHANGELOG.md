@@ -6,6 +6,7 @@
 - Feat(reader): Support manually selecting and remembering day/night background image preference
 - Feat(reader): Support custom page turn area configuration with 3x3 grid
 - Feat(reader): Add "Use Book Styles" toggle to preserve original book styling
+- Feat(reader): Add toggle for mouse hover menu display at top/bottom edges
 - Feat(bookshelf): Support displaying book title and author on default cover with responsive scaling
 - Feat(ai): Support unlimited custom AI prompts with horizontal scrollable quick access
 - Feat(ai): Support toggling AI panel position between right side and bottom in large screen mode
@@ -27,6 +28,7 @@
 - Feat(reader): 支持手动选择并记忆日夜背景图偏好
 - Feat(reader): 支持自定义翻页区域配置（3x3网格）
 - Feat(reader): 添加"使用书籍样式"开关，保留书籍原始样式
+- Feat(reader): 添加鼠标悬浮在顶部/底部时显示菜单的开关
 - Feat(bookshelf): 支持在默认封面上显示书名和作者，支持响应式缩放
 - Feat(ai): 支持无限制自定义AI提示词，快捷访问支持横向滚动
 - Feat(ai): 支持切换 AI 面板位置（右侧/底部），适用于大屏模式

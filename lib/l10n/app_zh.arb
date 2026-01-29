@@ -528,6 +528,8 @@
   "skipDuplicateFiles": "跳过重复文件",
   "readingPageSwapPageTurnArea": "交换翻页区域",
   "readingPageSwapPageTurnAreaTips": "将向前翻页区域改为向后翻页",
+  "readingPageShowMenuOnHover": "鼠标悬浮显示菜单",
+  "readingPageShowMenuOnHoverTips": "当鼠标悬浮在窗口顶部或底部时自动弹出菜单，便于操作",
   "pageTurnModeSimple": "简单",
   "pageTurnModeCustom": "自定义",
   "customPageTurnConfig": "自定义翻页区域",

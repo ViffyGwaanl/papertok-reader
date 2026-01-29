@@ -528,6 +528,8 @@
   "skipDuplicateFiles": "重複ファイルをスキップ",
   "readingPageSwapPageTurnArea": "ページめくり領域を交換",
   "readingPageSwapPageTurnAreaTips": "前のエリアを次のエリアに変換",
+  "readingPageShowMenuOnHover": "マウスホバーでメニュー表示",
+  "readingPageShowMenuOnHoverTips": "ウィンドウの上部または下部にマウスをホバーすると、自動的にメニューが表示されます",
   "pageTurnModeSimple": "シンプル",
   "pageTurnModeCustom": "カスタム",
   "customPageTurnConfig": "カスタムページめくり",

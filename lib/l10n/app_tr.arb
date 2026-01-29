@@ -530,6 +530,8 @@
   "skipDuplicateFiles": "Yinelenen Dosyaları Atla",
   "readingPageSwapPageTurnArea": "Sayfa çevirme alanını değiştir",
   "readingPageSwapPageTurnAreaTips": "İleri sayfa çevirme alanını geri sayfa çevirme olarak değiştir",
+  "readingPageShowMenuOnHover": "Fare Üzerine Geldiğinde Menüyü Göster",
+  "readingPageShowMenuOnHoverTips": "Pencerenin üst veya alt kenarının üzerine fare geldiğinde menüyü otomatik olarak gösterir",
   "pageTurnModeSimple": "Basit",
   "pageTurnModeCustom": "Özel",
   "customPageTurnConfig": "Özel Sayfa Çevirme",

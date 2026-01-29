@@ -528,6 +528,8 @@
   "skipDuplicateFiles": "Doppelte Dateien überspringen",
   "readingPageSwapPageTurnArea": "Seitenumblätterungsbereich tauschen",
   "readingPageSwapPageTurnAreaTips": "Vorwärts-Umblätterungsbereich zu Rückwärts-Umblätterung ändern",
+  "readingPageShowMenuOnHover": "Menü bei Mauszeiger anzeigen",
+  "readingPageShowMenuOnHoverTips": "Menü wird automatisch angezeigt, wenn der Mauszeiger über den oberen oder unteren Fensterrand bewegt wird",
   "pageTurnModeSimple": "Einfach",
   "pageTurnModeCustom": "Benutzerdefiniert",
   "customPageTurnConfig": "Benutzerdefinierte Seitenumblätterung",

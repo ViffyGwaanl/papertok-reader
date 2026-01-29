@@ -530,6 +530,8 @@
   "skipDuplicateFiles": "Пропустить дублирующие файлы",
   "readingPageSwapPageTurnArea": "Поменять область перелистывания",
   "readingPageSwapPageTurnAreaTips": "Сделать область 'назад' областью 'вперед'",
+  "readingPageShowMenuOnHover": "Показывать меню при наведении мыши",
+  "readingPageShowMenuOnHoverTips": "Автоматически показывать меню при наведении мыши на верхний или нижний край окна для удобного доступа",
   "pageTurnModeSimple": "Простой",
   "pageTurnModeCustom": "Настраиваемый",
   "customPageTurnConfig": "Настраиваемое перелистывание",

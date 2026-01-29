@@ -530,6 +530,8 @@
   "skipDuplicateFiles": "Omite fișierele duplicate",
   "readingPageSwapPageTurnArea": "Swap Page Turn Area",
   "readingPageSwapPageTurnAreaTips": "Turn the previous area into next area",
+  "readingPageShowMenuOnHover": "Show Menu on Mouse Hover",
+  "readingPageShowMenuOnHoverTips": "Automatically show menu when hovering over the top or bottom edge of the window for easy access",
   "pageTurnModeSimple": "Simplu",
   "pageTurnModeCustom": "Personalizat",
   "customPageTurnConfig": "Configurare Personalizată",

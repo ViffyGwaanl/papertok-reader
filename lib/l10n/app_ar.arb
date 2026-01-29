@@ -528,6 +528,8 @@
   "skipDuplicateFiles": "تخطي الملفات المكررة",
   "readingPageSwapPageTurnArea": "تبديل منطقة تقليب الصفحات",
   "readingPageSwapPageTurnAreaTips": "تغيير منطقة التقليب للأمام إلى التقليب للخلف",
+  "readingPageShowMenuOnHover": "إظهار القائمة عند تمرير الماوس",
+  "readingPageShowMenuOnHoverTips": "إظهار القائمة تلقائيًا عند تمرير الماوس فوق الحافة العلوية أو السفلية للنافذة لسهولة الوصول",
   "pageTurnModeSimple": "بسيط",
   "pageTurnModeCustom": "مخصص",
   "customPageTurnConfig": "تكوين مخصص لتقليب الصفحات",

@@ -287,6 +287,20 @@ class _OtherSettingsState extends State<OtherSettings> {
       );
     }
 
+    ListTile showMenuOnHover() {
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(L10n.of(context).readingPageShowMenuOnHover),
+        subtitle: Text(L10n.of(context).readingPageShowMenuOnHoverTips),
+        trailing: Switch(
+          value: Prefs().showMenuOnHover,
+          onChanged: (bool value) => setState(() {
+            Prefs().showMenuOnHover = value;
+          }),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -296,6 +310,7 @@ class _OtherSettingsState extends State<OtherSettings> {
           // if (PageTurnMode.fromCode(Prefs().pageTurnMode) ==
           //     PageTurnMode.simple)
           swapPageTurnArea(),
+          showMenuOnHover(),
           autoAdjustReadingTheme(),
           autoTranslateSelection(),
           autoMarkSelection(),

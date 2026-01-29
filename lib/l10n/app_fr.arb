@@ -528,6 +528,8 @@
   "skipDuplicateFiles": "Ignorer les Fichiers Dupliqués",
   "readingPageSwapPageTurnArea": "Échanger la Zone de Changement de Page",
   "readingPageSwapPageTurnAreaTips": "Transformer la zone précédente en zone suivante",
+  "readingPageShowMenuOnHover": "Afficher le Menu au Survol",
+  "readingPageShowMenuOnHoverTips": "Afficher automatiquement le menu lors du survol du bord supérieur ou inférieur de la fenêtre pour un accès facile",
   "pageTurnModeSimple": "Simple",
   "pageTurnModeCustom": "Personnalisé",
   "customPageTurnConfig": "Configuration Personnalisée",

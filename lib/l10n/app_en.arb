@@ -528,6 +528,8 @@
   "skipDuplicateFiles": "Skip Duplicate Files",
   "readingPageSwapPageTurnArea": "Swap Page Turn Area",
   "readingPageSwapPageTurnAreaTips": "Turn the previous area into next area",
+  "readingPageShowMenuOnHover": "Mouse Hover to Show Menu",
+  "readingPageShowMenuOnHoverTips": "Automatically show menu when hovering over the top or bottom edge of the window for easy access",
   "pageTurnModeSimple": "Simple",
   "pageTurnModeCustom": "Custom",
   "customPageTurnConfig": "Custom Page Turn Config",

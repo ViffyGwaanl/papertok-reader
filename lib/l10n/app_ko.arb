@@ -528,6 +528,8 @@
   "skipDuplicateFiles": "중복 파일 건너뛰기",
   "readingPageSwapPageTurnArea": "페이지 넘김 영역 교환",
   "readingPageSwapPageTurnAreaTips": "이전 영역을 다음 영역으로 변환",
+  "readingPageShowMenuOnHover": "마우스 호버 시 메뉴 표시",
+  "readingPageShowMenuOnHoverTips": "창 상단 또는 하단에 마우스를 올리면 자동으로 메뉴가 표시됩니다",
   "pageTurnModeSimple": "간단",
   "pageTurnModeCustom": "사용자 정의",
   "customPageTurnConfig": "사용자 정의 페이지 넘김",

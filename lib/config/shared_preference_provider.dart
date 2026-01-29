@@ -959,6 +959,15 @@ class Prefs extends ChangeNotifier {
     return prefs.getBool('swapPageTurnArea') ?? false;
   }
 
+  set showMenuOnHover(bool status) {
+    prefs.setBool('showMenuOnHover', status);
+    notifyListeners();
+  }
+
+  bool get showMenuOnHover {
+    return prefs.getBool('showMenuOnHover') ?? true;
+  }
+
   set pageTurnMode(String mode) {
     prefs.setString('pageTurnMode', mode);
     notifyListeners();

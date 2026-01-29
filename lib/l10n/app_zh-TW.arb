@@ -528,6 +528,8 @@
   "skipDuplicateFiles": "略過重複檔案",
   "readingPageSwapPageTurnArea": "交換翻頁區域",
   "readingPageSwapPageTurnAreaTips": "將上一頁的點選區域換成下一頁",
+  "readingPageShowMenuOnHover": "滑鼠懸停顯示選單",
+  "readingPageShowMenuOnHoverTips": "當滑鼠懸停在視窗頂部或底部時自動彈出選單，便於操作",
   "pageTurnModeSimple": "簡單",
   "pageTurnModeCustom": "自訂",
   "customPageTurnConfig": "自訂翻頁區域",
