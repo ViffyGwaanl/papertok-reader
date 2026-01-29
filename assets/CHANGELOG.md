@@ -9,6 +9,7 @@
 - UI(reader): Optimize reading history navigation button design
 - Fix(reader): Fix image loading issue in non-standard EPUBs with missing manifest entries
 - Fix(sync): Fix WebDAV sync showing multiple direction selection dialogs
+- Fix(ai_services): update Gemini service URL and model version
 
 - Feat(reader): 添加阅读器历史导航玻璃拟态胶囊
 - Feat(reader): 支持手动控制历史导航显隐（不自动隐藏）
@@ -18,6 +19,7 @@
 - UI(reader): 优化阅读历史导航按钮设计
 - Fix(reader): 修复不规范 EPUB（manifest 缺失资源声明）中图片无法加载的问题
 - Fix(sync): 修复 WebDAV 同步时出现多个方向选择弹窗的问题
+- Fix(ai_services): 更新 Gemini 服务 URL 和模型版本
 
 ## 1.11.0
 - Feat: Support "No Tag" filter in books filter menu
