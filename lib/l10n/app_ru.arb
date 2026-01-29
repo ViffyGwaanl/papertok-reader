@@ -295,6 +295,8 @@
   "aiQuickPromptAnalyzeText": "Пожалуйста, проанализируйте",
   "aiQuickPromptSuggest": "Предложить",
   "aiQuickPromptSuggestText": "Есть предложения?",
+  "aiShowAtBottom": "Показать внизу",
+  "aiShowAtRight": "Показать справа",
   "settingsReading": "Чтение",
   "settingsBookshelf": "Полка с книгами",
   "settingsBookshelfCover": "Обложка книги",

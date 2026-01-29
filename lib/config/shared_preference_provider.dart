@@ -15,6 +15,7 @@ import 'package:anx_reader/enums/sync_protocol.dart';
 import 'package:anx_reader/enums/translation_mode.dart';
 import 'package:anx_reader/enums/writing_mode.dart';
 import 'package:anx_reader/enums/text_alignment.dart';
+import 'package:anx_reader/enums/ai_panel_position.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/bgimg.dart';
@@ -1455,6 +1456,16 @@ class Prefs extends ChangeNotifier {
 
   set textAlignment(TextAlignmentEnum alignment) {
     prefs.setString('textAlignment', alignment.code);
+    notifyListeners();
+  }
+
+  AiPanelPositionEnum get aiPanelPosition {
+    return AiPanelPositionEnum.fromCode(
+        prefs.getString('aiPanelPosition') ?? 'right');
+  }
+
+  set aiPanelPosition(AiPanelPositionEnum position) {
+    prefs.setString('aiPanelPosition', position.code);
     notifyListeners();
   }
 }

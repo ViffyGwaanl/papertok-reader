@@ -803,5 +803,7 @@
    "settingsAiUserPromptsEmpty": "Noch keine Benutzer-Prompts vorhanden. Klicken Sie auf die Schaltfläche oben, um einen hinzuzufügen",
    "commonInputCannotBeEmpty": "Eingabe darf nicht leer sein",
    "commonAddSuccess": "Erfolgreich hinzugefügt",
-   "commonSaveSuccess": "Erfolgreich gespeichert"
+   "commonSaveSuccess": "Erfolgreich gespeichert",
+   "aiShowAtBottom": "Unten anzeigen",
+   "aiShowAtRight": "Rechts anzeigen"
 }

@@ -295,6 +295,8 @@
   "aiQuickPromptAnalyzeText": "Lütfen analiz et",
   "aiQuickPromptSuggest": "Öner",
   "aiQuickPromptSuggestText": "Önerin var mı?",
+  "aiShowAtBottom": "Altta göster",
+  "aiShowAtRight": "Sağda göster",
   "settingsReading": "Okuma",
   "settingsBookshelf": "Kitaplık",
   "settingsBookshelfCover": "Kitap kapağı",

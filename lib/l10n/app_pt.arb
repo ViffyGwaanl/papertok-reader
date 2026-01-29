@@ -803,5 +803,7 @@
    "settingsAiUserPromptsEmpty": "Ainda não há prompts de usuário. Clique no botão acima para adicionar um",
    "commonInputCannotBeEmpty": "A entrada não pode estar vazia",
    "commonAddSuccess": "Adicionado com sucesso",
-   "commonSaveSuccess": "Salvo com sucesso"
+   "commonSaveSuccess": "Salvo com sucesso",
+   "aiShowAtBottom": "Mostrar na parte inferior",
+   "aiShowAtRight": "Mostrar à direita"
 }

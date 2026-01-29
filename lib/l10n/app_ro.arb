@@ -295,6 +295,8 @@
   "aiQuickPromptAnalyzeText": "Please analyze",
   "aiQuickPromptSuggest": "Suggest",
   "aiQuickPromptSuggestText": "Any suggestions?",
+  "aiShowAtBottom": "Afișează jos",
+  "aiShowAtRight": "Afișează dreapta",
   "settingsReading": "Reading",
   "settingsBookshelf": "Bookshelf",
   "settingsBookshelfCover": "Book cover",

@@ -803,5 +803,7 @@
    "settingsAiUserPromptsEmpty": "ユーザープロンプトがまだありません。上のボタンをクリックして追加してください",
    "commonInputCannotBeEmpty": "入力を空にすることはできません",
    "commonAddSuccess": "追加しました",
-   "commonSaveSuccess": "保存しました"
+   "commonSaveSuccess": "保存しました",
+   "aiShowAtBottom": "下部に表示",
+   "aiShowAtRight": "右側に表示"
 }

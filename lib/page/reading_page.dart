@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/reading_time.dart';
 import 'package:anx_reader/dao/theme.dart';
+import 'package:anx_reader/enums/ai_panel_position.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
@@ -27,6 +28,7 @@ import 'package:anx_reader/widgets/reading_page/progress_widget.dart';
 import 'package:anx_reader/widgets/reading_page/tts_widget.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:anx_reader/widgets/reading_page/toc_widget.dart';
+import 'package:anx_reader/widgets/common/axis_flex.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -75,6 +77,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   final aiChatKey = GlobalKey<AiChatStreamState>();
   static const double _aiChatMinWidth = 240;
   double _aiChatWidth = 300;
+  static const double _aiChatMinHeight = 200;
+  double _aiChatHeight = 300;
   bool _isResizingAiChat = false;
   bool bookmarkExists = false;
 
@@ -360,6 +364,14 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     return math.max(_aiChatMinWidth, maxWidth);
   }
 
+  double _aiChatMaxHeight(BuildContext context) {
+    final totalHeight = MediaQuery.of(context).size.height;
+    final maxByPercentage = totalHeight * 0.60;
+    final maxByRemaining = totalHeight - 320;
+    final maxHeight = math.min(maxByPercentage, maxByRemaining);
+    return math.max(_aiChatMinHeight, maxHeight);
+  }
+
   void _beginAiChatResize(double globalDx) {
     setState(() {
       _isResizingAiChat = true;
@@ -385,6 +397,23 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     }
   }
 
+  void _beginAiChatResizeVertical(double globalDy) {
+    setState(() {
+      _isResizingAiChat = true;
+    });
+  }
+
+  void _applyAiChatResizeDeltaVertical(double delta, BuildContext context) {
+    final maxHeight = _aiChatMaxHeight(context);
+    final updated =
+        (_aiChatHeight - delta).clamp(_aiChatMinHeight, maxHeight).toDouble();
+    if (updated != _aiChatHeight) {
+      setState(() {
+        _aiChatHeight = updated;
+      });
+    }
+  }
+
   Future<void> onLoadEnd() async {
     if (Prefs().autoSummaryPreviousContent) {
       final previousContent =
@@ -404,11 +433,63 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     }
   }
 
-  Future<void> showAiChat({
-    String? content,
-    bool sendImmediate = false,
-  }) async {
-    List<AiQuickPromptChip> quickPrompts = [
+  List<Widget> _buildAiChatTrailing(BuildContext context) {
+    return [
+      IconButton(
+        onPressed: () {
+          setState(() {
+            Prefs().aiPanelPosition =
+                Prefs().aiPanelPosition == AiPanelPositionEnum.right
+                    ? AiPanelPositionEnum.bottom
+                    : AiPanelPositionEnum.right;
+            // Rebuild the _aiChat widget to update the button
+            _rebuildAiChat();
+          });
+        },
+        icon: Icon(
+          Prefs().aiPanelPosition == AiPanelPositionEnum.right
+              ? Icons.arrow_downward
+              : Icons.arrow_forward,
+        ),
+        tooltip: Prefs().aiPanelPosition == AiPanelPositionEnum.right
+            ? L10n.of(context).aiShowAtBottom
+            : L10n.of(context).aiShowAtRight,
+      ),
+      IconButton(
+        onPressed: () {
+          setState(() {
+            _aiChat = null;
+          });
+        },
+        icon: const Icon(Icons.close),
+      ),
+    ];
+  }
+
+  void _rebuildAiChat() {
+    if (_aiChat == null) return;
+    final maxWidth = _aiChatMaxWidth(context);
+    final maxHeight = _aiChatMaxHeight(context);
+    _aiChatWidth = _aiChatWidth.clamp(_aiChatMinWidth, maxWidth);
+    _aiChatHeight = _aiChatHeight.clamp(_aiChatMinHeight, maxHeight);
+    _aiChat = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: AiChatStream(
+            key: aiChatKey,
+            initialMessage: null,
+            sendImmediate: false,
+            quickPromptChips: _getAiQuickPromptChips(),
+            trailing: _buildAiChatTrailing(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<AiQuickPromptChip> _getAiQuickPromptChips() {
+    return [
       AiQuickPromptChip(
         icon: EvaIcons.book,
         label: L10n.of(context).settingsAiPromptSummaryTheChapter,
@@ -435,6 +516,13 @@ class ReadingPageState extends ConsumerState<ReadingPage>
               ))
           .toList(),
     ];
+  }
+
+  Future<void> showAiChat({
+    String? content,
+    bool sendImmediate = false,
+  }) async {
+    List<AiQuickPromptChip> quickPrompts = _getAiQuickPromptChips();
     if (MediaQuery.of(navigatorKey.currentContext!).size.width < 600) {
       showModalBottomSheet(
           context: navigatorKey.currentContext!,
@@ -460,7 +548,9 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     } else {
       setState(() {
         final maxWidth = _aiChatMaxWidth(navigatorKey.currentContext!);
+        final maxHeight = _aiChatMaxHeight(navigatorKey.currentContext!);
         _aiChatWidth = _aiChatWidth.clamp(_aiChatMinWidth, maxWidth);
+        _aiChatHeight = _aiChatHeight.clamp(_aiChatMinHeight, maxHeight);
         _aiChat = Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -470,16 +560,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                 initialMessage: content,
                 sendImmediate: sendImmediate,
                 quickPromptChips: quickPrompts,
-                trailing: [
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _aiChat = null;
-                      });
-                    },
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
+                trailing: _buildAiChatTrailing(navigatorKey.currentContext!),
               ),
             ),
           ],
@@ -685,7 +766,11 @@ class ReadingPageState extends ConsumerState<ReadingPage>
               ),
               body: Stack(
                 children: [
-                  Row(
+                  AxisFlex(
+                    axis: Prefs().aiPanelPosition == AiPanelPositionEnum.right
+                        ? Axis.horizontal
+                        : Axis.vertical,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
                         child: MouseRegion(
@@ -728,32 +813,89 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                       if (_aiChat != null)
                         GestureDetector(
                           behavior: HitTestBehavior.translucent,
-                          onHorizontalDragStart: (details) {
-                            _beginAiChatResize(details.globalPosition.dx);
-                          },
-                          onHorizontalDragUpdate: (details) {
-                            _applyAiChatResizeDelta(
-                              details.delta.dx,
-                              context,
-                            );
-                          },
-                          onHorizontalDragEnd: (_) {
-                            _endAiChatResize();
-                          },
-                          onHorizontalDragCancel: () {
-                            _endAiChatResize();
-                          },
+                          onHorizontalDragStart: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.right
+                              ? (details) {
+                                  _beginAiChatResize(details.globalPosition.dx);
+                                }
+                              : null,
+                          onHorizontalDragUpdate: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.right
+                              ? (details) {
+                                  _applyAiChatResizeDelta(
+                                    details.delta.dx,
+                                    context,
+                                  );
+                                }
+                              : null,
+                          onHorizontalDragEnd: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.right
+                              ? (_) {
+                                  _endAiChatResize();
+                                }
+                              : null,
+                          onHorizontalDragCancel: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.right
+                              ? () {
+                                  _endAiChatResize();
+                                }
+                              : null,
+                          onVerticalDragStart: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.bottom
+                              ? (details) {
+                                  _beginAiChatResizeVertical(
+                                      details.globalPosition.dy);
+                                }
+                              : null,
+                          onVerticalDragUpdate: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.bottom
+                              ? (details) {
+                                  _applyAiChatResizeDeltaVertical(
+                                    details.delta.dy,
+                                    context,
+                                  );
+                                }
+                              : null,
+                          onVerticalDragEnd: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.bottom
+                              ? (_) {
+                                  _endAiChatResize();
+                                }
+                              : null,
+                          onVerticalDragCancel: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.bottom
+                              ? () {
+                                  _endAiChatResize();
+                                }
+                              : null,
                           child: MouseRegion(
-                              cursor: SystemMouseCursors.resizeColumn,
-                              child: VerticalDivider(
-                                width: 2,
-                                thickness: 1,
-                              )),
+                            cursor: Prefs().aiPanelPosition ==
+                                    AiPanelPositionEnum.right
+                                ? SystemMouseCursors.resizeColumn
+                                : SystemMouseCursors.resizeRow,
+                            child: Prefs().aiPanelPosition ==
+                                    AiPanelPositionEnum.right
+                                ? VerticalDivider(
+                                    width: 2,
+                                    thickness: 1,
+                                  )
+                                : Divider(
+                                    height: 2,
+                                    thickness: 1,
+                                  ),
+                          ),
                         ),
                       if (_aiChat != null)
                         SizedBox(
                           key: const ValueKey('ai-chat-panel'),
-                          width: _aiChatWidth,
+                          width: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.right
+                              ? _aiChatWidth
+                              : null,
+                          height: Prefs().aiPanelPosition ==
+                                  AiPanelPositionEnum.bottom
+                              ? _aiChatHeight
+                              : null,
                           child: _aiChat,
                         )
                     ],

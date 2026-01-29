@@ -803,5 +803,7 @@
    "settingsAiUserPromptsEmpty": "尚無用者提詞，點上方紐以增",
    "commonInputCannotBeEmpty": "輸不可空",
    "commonAddSuccess": "增成",
-   "commonSaveSuccess": "存成"
+   "commonSaveSuccess": "存成",
+   "aiShowAtBottom": "示於底",
+   "aiShowAtRight": "示於右"
 }

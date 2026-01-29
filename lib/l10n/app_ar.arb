@@ -803,5 +803,7 @@
    "settingsAiUserPromptsEmpty": "لا توجد مطالبات مستخدم حتى الآن. انقر على الزر أعلاه لإضافة واحدة",
    "commonInputCannotBeEmpty": "لا يمكن أن يكون الإدخال فارغًا",
    "commonAddSuccess": "تمت الإضافة بنجاح",
-   "commonSaveSuccess": "تم الحفظ بنجاح"
+   "commonSaveSuccess": "تم الحفظ بنجاح",
+   "aiShowAtBottom": "عرض في الأسفل",
+   "aiShowAtRight": "عرض على اليمين"
 }

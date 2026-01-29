@@ -803,5 +803,7 @@
    "settingsAiUserPromptsEmpty": "還沒有用戶提示詞，點擊上方按鈕新增",
    "commonInputCannotBeEmpty": "輸入不能為空",
    "commonAddSuccess": "新增成功",
-   "commonSaveSuccess": "儲存成功"
+   "commonSaveSuccess": "儲存成功",
+   "aiShowAtBottom": "在底部顯示",
+   "aiShowAtRight": "在右側顯示"
 }

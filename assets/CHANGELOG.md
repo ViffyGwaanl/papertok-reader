@@ -8,6 +8,7 @@
 - Feat(reader): Add "Use Book Styles" toggle to preserve original book styling
 - Feat(bookshelf): Support displaying book title and author on default cover with responsive scaling
 - Feat(ai): Support unlimited custom AI prompts with horizontal scrollable quick access
+- Feat(ai): Support toggling AI panel position between right side and bottom in large screen mode
 - Feat(sync): Add comprehensive WebDAV test (create, upload, download, delete) for connection validation
 - Feat(window): Support window position and size memory on macOS
 - Feat(import): Use original filename when book metadata title is missing or invalid
@@ -28,6 +29,7 @@
 - Feat(reader): 添加"使用书籍样式"开关，保留书籍原始样式
 - Feat(bookshelf): 支持在默认封面上显示书名和作者，支持响应式缩放
 - Feat(ai): 支持无限制自定义AI提示词，快捷访问支持横向滚动
+- Feat(ai): 支持切换 AI 面板位置（右侧/底部），适用于大屏模式
 - Feat(sync): 添加 WebDAV 完整测试功能（创建、上传、下载、删除），全面验证连接
 - Feat(window): 支持 macOS 记忆窗口位置和大小
 - Feat(import): 当书籍元数据标题缺失或无效时，使用原始文件名
