@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "نمط مجلد الرف",
   "settingsBookshelfFolderStyleOverlap": "تراكب",
   "settingsBookshelfFolderStyleGrid": "شبكة 2x2",
+  "settingsBookshelfDefaultCoverShowTitle": "إظهار العنوان على الغلاف الافتراضي",
+  "settingsBookshelfDefaultCoverShowAuthor": "إظهار المؤلف على الغلاف الافتراضي",
   "aiCachedBy": "تم التخزين المؤقت بواسطة {service}",
   "aiRegenerate": "إعادة إنشاء",
   "storagePermissionDenied": "تم رفض إذن التخزين",

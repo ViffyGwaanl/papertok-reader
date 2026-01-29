@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "書架檔案夾樣式",
   "settingsBookshelfFolderStyleOverlap": "重疊",
   "settingsBookshelfFolderStyleGrid": "2x2 方格",
+  "settingsBookshelfDefaultCoverShowTitle": "於默認封面上顯書名",
+  "settingsBookshelfDefaultCoverShowAuthor": "於默認封面上顯作者",
   "aiCachedBy": "緩存來自 {service}",
   "aiRegenerate": "重新生成",
   "storagePermissionDenied": "存儲許可未授權",

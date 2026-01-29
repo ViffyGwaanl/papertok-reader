@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "Kitaplık klasör stili",
   "settingsBookshelfFolderStyleOverlap": "Üst üste",
   "settingsBookshelfFolderStyleGrid": "2x2 Izgara",
+  "settingsBookshelfDefaultCoverShowTitle": "Varsayılan kapakta başlığı göster",
+  "settingsBookshelfDefaultCoverShowAuthor": "Varsayılan kapakta yazarı göster",
   "aiCachedBy": "{service} tarafından önbelleklendi",
   "aiRegenerate": "Yeniden Oluştur",
   "storagePermissionDenied": "Depolama izni reddedildi",

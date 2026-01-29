@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "Estilo da pasta da estante",
   "settingsBookshelfFolderStyleOverlap": "Sobreposição",
   "settingsBookshelfFolderStyleGrid": "Grade 2x2",
+  "settingsBookshelfDefaultCoverShowTitle": "Mostrar título na capa padrão",
+  "settingsBookshelfDefaultCoverShowAuthor": "Mostrar autor na capa padrão",
   "aiCachedBy": "Armazenado em cache por {service}",
   "aiRegenerate": "Regenerar",
   "storagePermissionDenied": "Permissão de armazenamento negada",

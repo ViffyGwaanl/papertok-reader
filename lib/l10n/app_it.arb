@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "Stile cartella libreria",
   "settingsBookshelfFolderStyleOverlap": "Sovrapposto",
   "settingsBookshelfFolderStyleGrid": "Griglia 2x2",
+  "settingsBookshelfDefaultCoverShowTitle": "Mostra titolo sulla copertina predefinita",
+  "settingsBookshelfDefaultCoverShowAuthor": "Mostra autore sulla copertina predefinita",
   "aiCachedBy": "Memorizzato da {service}",
   "aiRegenerate": "Rigenera",
   "storagePermissionDenied": "Permesso di archiviazione negato",

@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "Estilo de carpeta de estantería",
   "settingsBookshelfFolderStyleOverlap": "Superpuesto",
   "settingsBookshelfFolderStyleGrid": "Cuadrícula 2x2",
+  "settingsBookshelfDefaultCoverShowTitle": "Mostrar título en portada predeterminada",
+  "settingsBookshelfDefaultCoverShowAuthor": "Mostrar autor en portada predeterminada",
   "aiCachedBy": "En caché por {service}",
   "aiRegenerate": "Regenerar",
   "storagePermissionDenied": "Permiso de almacenamiento denegado",

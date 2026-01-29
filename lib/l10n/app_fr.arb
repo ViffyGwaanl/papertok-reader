@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "Style de dossier de bibliothèque",
   "settingsBookshelfFolderStyleOverlap": "Superposition",
   "settingsBookshelfFolderStyleGrid": "Grille 2x2",
+  "settingsBookshelfDefaultCoverShowTitle": "Afficher le titre sur la couverture par défaut",
+  "settingsBookshelfDefaultCoverShowAuthor": "Afficher l'auteur sur la couverture par défaut",
   "aiCachedBy": "Mis en cache par {service}",
   "aiRegenerate": "Régénérer",
   "storagePermissionDenied": "Autorisation de stockage refusée",

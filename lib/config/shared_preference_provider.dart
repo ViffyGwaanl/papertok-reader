@@ -980,6 +980,24 @@ class Prefs extends ChangeNotifier {
     );
   }
 
+  set showBookTitleOnDefaultCover(bool status) {
+    prefs.setBool('showBookTitleOnDefaultCover', status);
+    notifyListeners();
+  }
+
+  bool get showBookTitleOnDefaultCover {
+    return prefs.getBool('showBookTitleOnDefaultCover') ?? true;
+  }
+
+  set showAuthorOnDefaultCover(bool status) {
+    prefs.setBool('showAuthorOnDefaultCover', status);
+    notifyListeners();
+  }
+
+  bool get showAuthorOnDefaultCover {
+    return prefs.getBool('showAuthorOnDefaultCover') ?? true;
+  }
+
   set openBookAnimation(bool status) {
     prefs.setBool('openBookAnimation', status);
     notifyListeners();

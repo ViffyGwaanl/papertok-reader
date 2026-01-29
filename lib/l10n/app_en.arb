@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "Bookshelf folder style",
   "settingsBookshelfFolderStyleOverlap": "Overlap",
   "settingsBookshelfFolderStyleGrid": "2x2 Grid",
+  "settingsBookshelfDefaultCoverShowTitle": "Show title on default cover",
+  "settingsBookshelfDefaultCoverShowAuthor": "Show author on default cover",
   "aiCachedBy": "Cached by {service}",
   "aiRegenerate": "Regenerate",
   "storagePermissionDenied": "Storage permission denied",

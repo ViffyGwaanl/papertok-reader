@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "书架文件夹样式",
   "settingsBookshelfFolderStyleOverlap": "重叠",
   "settingsBookshelfFolderStyleGrid": "2x2 宫格",
+  "settingsBookshelfDefaultCoverShowTitle": "在默认封面上显示书名",
+  "settingsBookshelfDefaultCoverShowAuthor": "在默认封面上显示作者",
   "aiCachedBy": "缓存来自 {service}",
   "aiRegenerate": "重新生成",
   "storagePermissionDenied": "存储权限未授权",

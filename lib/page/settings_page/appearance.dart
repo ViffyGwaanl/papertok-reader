@@ -189,6 +189,28 @@ class _AppearanceSettingState extends State<AppearanceSetting> {
                   ),
                 ),
               )),
+              SettingsTile.switchTile(
+                title: Text(
+                    L10n.of(context).settingsBookshelfDefaultCoverShowTitle),
+                leading: const Icon(Icons.title),
+                initialValue: Prefs().showBookTitleOnDefaultCover,
+                onToggle: (bool value) {
+                  setState(() {
+                    Prefs().showBookTitleOnDefaultCover = value;
+                  });
+                },
+              ),
+              SettingsTile.switchTile(
+                title: Text(
+                    L10n.of(context).settingsBookshelfDefaultCoverShowAuthor),
+                leading: const Icon(Icons.person),
+                initialValue: Prefs().showAuthorOnDefaultCover,
+                onToggle: (bool value) {
+                  setState(() {
+                    Prefs().showAuthorOnDefaultCover = value;
+                  });
+                },
+              ),
               // SettingsTile.switchTile(
               //   title: Text(
               //       L10n.of(context).settingsAdvancedUseOriginalCoverRatio),

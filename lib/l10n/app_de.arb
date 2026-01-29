@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "Ordnerstil im Bücherregal",
   "settingsBookshelfFolderStyleOverlap": "Überlappend",
   "settingsBookshelfFolderStyleGrid": "2x2-Raster",
+  "settingsBookshelfDefaultCoverShowTitle": "Titel auf Standardcover anzeigen",
+  "settingsBookshelfDefaultCoverShowAuthor": "Autor auf Standardcover anzeigen",
   "aiCachedBy": "Gecached von {service}",
   "aiRegenerate": "Neu generieren",
   "storagePermissionDenied": "Speicherberechtigung verweigert",

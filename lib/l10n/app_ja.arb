@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "本棚フォルダのスタイル",
   "settingsBookshelfFolderStyleOverlap": "オーバーラップ",
   "settingsBookshelfFolderStyleGrid": "2x2 グリッド",
+  "settingsBookshelfDefaultCoverShowTitle": "デフォルトカバーにタイトルを表示",
+  "settingsBookshelfDefaultCoverShowAuthor": "デフォルトカバーに著者を表示",
   "aiCachedBy": "{service}によってキャッシュ済み",
   "aiRegenerate": "再生成",
   "storagePermissionDenied": "ストレージ権限が拒否されました",

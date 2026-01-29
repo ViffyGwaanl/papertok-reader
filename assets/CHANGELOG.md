@@ -6,6 +6,7 @@
 - Feat(reader): Support manually selecting and remembering day/night background image preference
 - Feat(reader): Support custom page turn area configuration with 3x3 grid
 - Feat(reader): Add "Use Book Styles" toggle to preserve original book styling
+- Feat(bookshelf): Support displaying book title and author on default cover with responsive scaling
 - UI(reader): Optimize reading history navigation button design
 - Fix(reader): Fix image loading issue in non-standard EPUBs with missing manifest entries
 - Fix(sync): Fix WebDAV sync showing multiple direction selection dialogs
@@ -16,6 +17,7 @@
 - Feat(reader): 支持手动选择并记忆日夜背景图偏好
 - Feat(reader): 支持自定义翻页区域配置（3x3网格）
 - Feat(reader): 添加"使用书籍样式"开关，保留书籍原始样式
+- Feat(bookshelf): 支持在默认封面上显示书名和作者，支持响应式缩放
 - UI(reader): 优化阅读历史导航按钮设计
 - Fix(reader): 修复不规范 EPUB（manifest 缺失资源声明）中图片无法加载的问题
 - Fix(sync): 修复 WebDAV 同步时出现多个方向选择弹窗的问题

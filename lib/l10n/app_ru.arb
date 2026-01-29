@@ -302,6 +302,8 @@
   "settingsBookshelfFolderStyle": "Стиль папки на полке",
   "settingsBookshelfFolderStyleOverlap": "Перекрытие",
   "settingsBookshelfFolderStyleGrid": "Сетка 2x2",
+  "settingsBookshelfDefaultCoverShowTitle": "Показать название на обложке по умолчанию",
+  "settingsBookshelfDefaultCoverShowAuthor": "Показать автора на обложке по умолчанию",
   "aiCachedBy": "Кэшировано {service}",
   "aiRegenerate": "Обновить",
   "storagePermissionDenied": "Доступ к хранилищу запрещён",
