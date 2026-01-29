@@ -5,6 +5,14 @@ abstract class SyncClientBase {
   /// Test connection to the remote server
   Future<void> ping();
 
+  /// Test full capabilities (create, upload, download, delete)
+  /// This performs a comprehensive test by:
+  /// 1. Creating a test directory
+  /// 2. Uploading a test file
+  /// 3. Downloading and verifying content
+  /// 4. Cleaning up test files
+  Future<void> testFullCapabilities();
+
   /// Create a directory at the given path
   Future<void> mkdirAll(String path);
 

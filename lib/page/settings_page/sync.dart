@@ -430,7 +430,7 @@ void showWebdavDialog(BuildContext context) {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton.icon(
-                onPressed: () => SyncTestHelper.handleTestConnection(
+                onPressed: () => SyncTestHelper.handleFullTestConnection(
                   context,
                   protocol: SyncProtocol.webdav,
                   config: {

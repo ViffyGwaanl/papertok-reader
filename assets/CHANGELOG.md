@@ -8,6 +8,7 @@
 - Feat(reader): Add "Use Book Styles" toggle to preserve original book styling
 - Feat(bookshelf): Support displaying book title and author on default cover with responsive scaling
 - Feat(ai): Support unlimited custom AI prompts with horizontal scrollable quick access
+- Feat(sync): Add comprehensive WebDAV test (create, upload, download, delete) for connection validation
 - UI(reader): Optimize reading history navigation button design
 - Fix(reader): Fix image loading issue in non-standard EPUBs with missing manifest entries
 - Fix(reader): Fix AI quick prompt chips overlapping issue
@@ -21,6 +22,7 @@
 - Feat(reader): 添加"使用书籍样式"开关，保留书籍原始样式
 - Feat(bookshelf): 支持在默认封面上显示书名和作者，支持响应式缩放
 - Feat(ai): 支持无限制自定义AI提示词，快捷访问支持横向滚动
+- Feat(sync): 添加 WebDAV 完整测试功能（创建、上传、下载、删除），全面验证连接
 - UI(reader): 优化阅读历史导航按钮设计
 - Fix(reader): 修复不规范 EPUB（manifest 缺失资源声明）中图片无法加载的问题
 - Fix(reader): 修复AI快速提示重叠问题

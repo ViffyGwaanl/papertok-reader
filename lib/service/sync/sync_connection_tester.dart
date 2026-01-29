@@ -6,7 +6,7 @@ import 'package:anx_reader/utils/log/common.dart';
 
 /// Utility class for testing sync connections
 class SyncConnectionTester {
-  /// Test connection result
+  /// Test connection result (simple ping test)
   static Future<SyncTestResult> testConnection({
     required SyncProtocol protocol,
     required Map<String, dynamic> config,
@@ -31,6 +31,35 @@ class SyncConnectionTester {
       final errorMessage = '${getErrorMessage(e)}\n$e';
       AnxLog.severe(
           '${protocol.displayName} connection test failed: $errorMessage');
+      return SyncTestResult.failure(errorMessage);
+    }
+  }
+
+  /// Test full connection with CRUD operations (create, upload, download, delete)
+  static Future<SyncTestResult> testFullConnection({
+    required SyncProtocol protocol,
+    required Map<String, dynamic> config,
+  }) async {
+    try {
+      // Create client with temporary configuration
+      final client = SyncClientFactory.createClient(protocol, config);
+
+      // Verify if configuration is complete
+      if (!client.isConfigured) {
+        return SyncTestResult.failure(L10n.of(navigatorKey.currentContext!)
+            .configurationInformationIsIncomplete);
+      }
+
+      // Execute full capabilities test
+      await client.testFullCapabilities();
+
+      AnxLog.info('${protocol.displayName} full connection test successful');
+      return SyncTestResult.success(
+          L10n.of(navigatorKey.currentContext!).connectionSuccessful);
+    } catch (e) {
+      final errorMessage = '${getErrorMessage(e)}\n$e';
+      AnxLog.severe(
+          '${protocol.displayName} full connection test failed: $errorMessage');
       return SyncTestResult.failure(errorMessage);
     }
   }

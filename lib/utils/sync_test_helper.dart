@@ -5,6 +5,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:flutter/material.dart';
 
 class SyncTestHelper {
+  /// Handle simple connection test (ping only)
   static Future<void> handleTestConnection(
     BuildContext context, {
     required SyncProtocol protocol,
@@ -30,6 +31,58 @@ class SyncTestHelper {
 
     try {
       final result = await SyncConnectionTester.testConnection(
+        protocol: protocol,
+        config: config,
+      );
+
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      _showTestResult(navigatorKey.currentContext!, result);
+
+      onTestComplete?.call(result.isSuccess, result.message);
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      final result = SyncTestResult.failure(
+          L10n.of(navigatorKey.currentContext!)
+                  .unknownErrorWhenTestingConnection +
+              e.toString());
+      _showTestResult(navigatorKey.currentContext!, result);
+
+      onTestComplete?.call(false, result.message);
+    }
+  }
+
+  /// Handle full connection test (create, upload, download, delete)
+  static Future<void> handleFullTestConnection(
+    BuildContext context, {
+    required SyncProtocol protocol,
+    required Map<String, dynamic> config,
+    VoidCallback? onTestStart,
+    Function(bool success, String message)? onTestComplete,
+  }) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 20),
+            Text(L10n.of(context).testingConnection),
+          ],
+        ),
+      ),
+    );
+
+    onTestStart?.call();
+
+    try {
+      final result = await SyncConnectionTester.testFullConnection(
         protocol: protocol,
         config: config,
       );
