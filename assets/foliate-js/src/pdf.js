@@ -598,6 +598,7 @@ export const makePDF = async file => {
         const parsed = JSON.parse(href)
         const dest = typeof parsed === 'string'
             ? await pdf.getDestination(parsed) : parsed
+        if (!dest || !dest[0]) return { index: 0 }
         const index = await pdf.getPageIndex(dest[0])
         return { index }
     }
@@ -605,6 +606,7 @@ export const makePDF = async file => {
         const parsed = JSON.parse(href)
         const dest = typeof parsed === 'string'
             ? await pdf.getDestination(parsed) : parsed
+        if (!dest || !dest[0]) return [0, null]
         const index = await pdf.getPageIndex(dest[0])
         return [index, null]
     }
