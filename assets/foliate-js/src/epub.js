@@ -799,6 +799,22 @@ class Loader {
             //   `-webkit-column-break-${x}:`)
             // .replace(/break-(after|before|inside)\s*:\s*(avoid-)?page/gi, (_, x, y) =>
             //   `break-${x}: ${y ?? ''}column`)
+            // Replace font-size keyword values with pixel values so they can be calculated
+            .replace(/font-size\s*:\s*(xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large|smaller|larger)\s*([;!])/gi, (match, keyword, ending) => {
+                const keywordMap = {
+                    'xx-small': '9px',
+                    'x-small': '10px',
+                    'small': '13px',
+                    'medium': '16px',
+                    'large': '18px',
+                    'x-large': '24px',
+                    'xx-large': '32px',
+                    'xxx-large': '48px',
+                    'smaller': '13px',  // approximate relative value
+                    'larger': '18px'    // approximate relative value
+                }
+                return `font-size: ${keywordMap[keyword.toLowerCase()]}${ending}`
+            })
             // If px is used as the unit of font-size, it should be converted to em and the 
             // number should be divided by 16
             .replace(/(\d*\.?\d+)px/gi, (_, d) => `${parseFloat(d) / 16}em`)
