@@ -794,5 +794,14 @@
   "useBookStylesDescription": "When enabled, the app will use the styling defined in the book instead of your custom settings for line height, font weight, text indent, letter spacing, and paragraph spacing",
   "historyBack": "Back",
   "historyForward": "Forward", 
-  "historyClose": "Close"
+  "historyClose": "Close",
+  "settingsAiUserPrompts": "User Prompts",
+  "settingsAiUserPromptsAdd": "Add Prompt",
+  "settingsAiUserPromptsHint": "Prompts added here can be conveniently used in the AI window on the reading page",
+  "settingsAiUserPromptsName": "Prompt Name",
+  "settingsAiUserPromptsContent": "Prompt Content",
+  "settingsAiUserPromptsEmpty": "No user prompts yet. Click the button above to add one",
+  "commonInputCannotBeEmpty": "Input cannot be empty",
+  "commonAddSuccess": "Added successfully",
+  "commonSaveSuccess": "Saved successfully"
 }

@@ -794,5 +794,14 @@
    "historyForward": "Avançar",
    "historyClose": "Fechar",
    "useBookStyles": "Usar estilos do livro",
-   "useBookStylesDescription": "Quando ativado, o aplicativo usará os estilos definidos no livro em vez de suas configurações personalizadas para altura da linha, peso da fonte, recuo de texto, espaçamento entre letras e espaçamento entre parágrafos"
+   "useBookStylesDescription": "Quando ativado, o aplicativo usará os estilos definidos no livro em vez de suas configurações personalizadas para altura da linha, peso da fonte, recuo de texto, espaçamento entre letras e espaçamento entre parágrafos",
+   "settingsAiUserPrompts": "Prompts do usuário",
+   "settingsAiUserPromptsAdd": "Adicionar prompt",
+   "settingsAiUserPromptsHint": "Prompts adicionados aqui podem ser usados convenientemente na janela de IA da página de leitura",
+   "settingsAiUserPromptsName": "Nome do prompt",
+   "settingsAiUserPromptsContent": "Conteúdo do prompt",
+   "settingsAiUserPromptsEmpty": "Ainda não há prompts de usuário. Clique no botão acima para adicionar um",
+   "commonInputCannotBeEmpty": "A entrada não pode estar vazia",
+   "commonAddSuccess": "Adicionado com sucesso",
+   "commonSaveSuccess": "Salvo com sucesso"
 }

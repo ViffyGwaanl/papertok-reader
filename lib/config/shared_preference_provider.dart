@@ -26,6 +26,7 @@ import 'package:anx_reader/models/book_notes_state.dart';
 import 'package:anx_reader/models/read_theme.dart';
 import 'package:anx_reader/models/reading_info.dart';
 import 'package:anx_reader/models/reading_rules.dart';
+import 'package:anx_reader/models/user_prompt.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:anx_reader/models/window_info.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
@@ -63,6 +64,7 @@ class Prefs extends ChangeNotifier {
   static const String _chapterSplitCustomRulesKey = 'chapterSplitCustomRules';
   static const String _statisticsDashboardTilesKey = 'statisticsDashboardTiles';
   static const String _enabledAiToolsKey = 'enabledAiTools';
+  static const String _userPromptsKey = 'userPrompts';
 
   Future<void> initPrefs() async {
     prefs = await SharedPreferences.getInstance();
@@ -906,6 +908,28 @@ class Prefs extends ChangeNotifier {
 
   bool get autoAdjustReadingTheme {
     return prefs.getBool('autoAdjustReadingTheme') ?? false;
+  }
+
+  // User prompts - simple read/write methods
+  List<UserPrompt> get userPrompts {
+    final jsonString = prefs.getString(_userPromptsKey);
+    if (jsonString == null || jsonString.isEmpty) return [];
+
+    try {
+      final List<dynamic> jsonList = jsonDecode(jsonString);
+      return jsonList
+          .map((json) => UserPrompt.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      AnxLog.severe('Error loading user prompts: $e');
+      return [];
+    }
+  }
+
+  set userPrompts(List<UserPrompt> prompts) {
+    final jsonList = prompts.map((p) => p.toJson()).toList();
+    prefs.setString(_userPromptsKey, jsonEncode(jsonList));
+    notifyListeners();
   }
 
   set maxAiCacheCount(int count) {

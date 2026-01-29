@@ -794,5 +794,14 @@
    "historyForward": "前進",
    "historyClose": "關閉",
    "useBookStyles": "使用書籍中的樣式",
-   "useBookStylesDescription": "啟用後，應用將使用書籍中定義的樣式，而不是您的自定義設置（行間距、字重、首行縮進、字間距和段落間距）"
+   "useBookStylesDescription": "啟用後，應用將使用書籍中定義的樣式，而不是您的自定義設置（行間距、字重、首行縮進、字間距和段落間距）",
+   "settingsAiUserPrompts": "用戶提示詞",
+   "settingsAiUserPromptsAdd": "新增提示詞",
+   "settingsAiUserPromptsHint": "在此處新增的提示詞可以在閱讀介面的AI視窗便捷使用",
+   "settingsAiUserPromptsName": "提示詞名稱",
+   "settingsAiUserPromptsContent": "提示詞內容",
+   "settingsAiUserPromptsEmpty": "還沒有用戶提示詞，點擊上方按鈕新增",
+   "commonInputCannotBeEmpty": "輸入不能為空",
+   "commonAddSuccess": "新增成功",
+   "commonSaveSuccess": "儲存成功"
 }

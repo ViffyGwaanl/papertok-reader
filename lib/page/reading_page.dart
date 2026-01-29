@@ -424,6 +424,16 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         label: L10n.of(context).settingsAiPromptMindmap,
         prompt: generatePromptMindmap().buildString(),
       ),
+      // User custom prompts (enabled only)
+      ...Prefs()
+          .userPrompts
+          .where((p) => p.enabled)
+          .map((userPrompt) => AiQuickPromptChip(
+                icon: Icons.person_outline,
+                label: userPrompt.name,
+                prompt: userPrompt.content,
+              ))
+          .toList(),
     ];
     if (MediaQuery.of(navigatorKey.currentContext!).size.width < 600) {
       showModalBottomSheet(

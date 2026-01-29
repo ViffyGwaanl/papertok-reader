@@ -794,5 +794,14 @@
    "historyForward": "Vorwärts",
    "historyClose": "Schließen",
    "useBookStyles": "Buchstile verwenden",
-   "useBookStylesDescription": "Wenn aktiviert, verwendet die App die im Buch definierten Stile anstelle Ihrer benutzerdefinierten Einstellungen für Zeilenhöhe, Schriftbreite, Texteinzug, Zeichenabstand und Absatzabstand"
+   "useBookStylesDescription": "Wenn aktiviert, verwendet die App die im Buch definierten Stile anstelle Ihrer benutzerdefinierten Einstellungen für Zeilenhöhe, Schriftbreite, Texteinzug, Zeichenabstand und Absatzabstand",
+   "settingsAiUserPrompts": "Benutzer-Prompts",
+   "settingsAiUserPromptsAdd": "Prompt hinzufügen",
+   "settingsAiUserPromptsHint": "Hier hinzugefügte Prompts können bequem im AI-Fenster auf der Lesenseite verwendet werden",
+   "settingsAiUserPromptsName": "Prompt-Name",
+   "settingsAiUserPromptsContent": "Prompt-Inhalt",
+   "settingsAiUserPromptsEmpty": "Noch keine Benutzer-Prompts vorhanden. Klicken Sie auf die Schaltfläche oben, um einen hinzuzufügen",
+   "commonInputCannotBeEmpty": "Eingabe darf nicht leer sein",
+   "commonAddSuccess": "Erfolgreich hinzugefügt",
+   "commonSaveSuccess": "Erfolgreich gespeichert"
 }

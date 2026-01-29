@@ -794,5 +794,14 @@
    "historyForward": "進",
    "historyClose": "闔",
    "useBookStyles": "用書式",
-   "useBookStylesDescription": "啟後，應用書中定式，而非君之客製設（行距、字重、首縮、字距及段距）"
+   "useBookStylesDescription": "啟後，應用書中定式，而非君之客製設（行距、字重、首縮、字距及段距）",
+   "settingsAiUserPrompts": "用者提詞",
+   "settingsAiUserPromptsAdd": "增提詞",
+   "settingsAiUserPromptsHint": "於此增之提詞，可於讀介面AI窗便用",
+   "settingsAiUserPromptsName": "提詞名",
+   "settingsAiUserPromptsContent": "提詞容",
+   "settingsAiUserPromptsEmpty": "尚無用者提詞，點上方紐以增",
+   "commonInputCannotBeEmpty": "輸不可空",
+   "commonAddSuccess": "增成",
+   "commonSaveSuccess": "存成"
 }

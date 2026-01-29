@@ -635,44 +635,50 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         return Positioned(
           right: 16,
           bottom: 16,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: chips,
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.3,
+            child: SingleChildScrollView(
+              // scrollDirection: Axis.horizontal,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: chips,
+              ),
+            ),
           ),
         );
       }
 
       return Stack(
         children: [
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  L10n.of(context).tryAQuickPrompt,
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _suggestedPrompts
-                      .map(
-                        (prompt) => ActionChip(
-                          label: Text(prompt),
-                          onPressed: () {
-                            inputController.text = prompt;
-                            _sendMessage();
-                          },
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
-              ],
+          if (widget.quickPromptChips.isEmpty)
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    L10n.of(context).tryAQuickPrompt,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _suggestedPrompts
+                        .map(
+                          (prompt) => ActionChip(
+                            label: Text(prompt),
+                            onPressed: () {
+                              inputController.text = prompt;
+                              _sendMessage();
+                            },
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
+                ],
+              ),
             ),
-          ),
           buildQuickChipColumn(),
         ],
       );

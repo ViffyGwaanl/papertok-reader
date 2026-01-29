@@ -7,8 +7,10 @@
 - Feat(reader): Support custom page turn area configuration with 3x3 grid
 - Feat(reader): Add "Use Book Styles" toggle to preserve original book styling
 - Feat(bookshelf): Support displaying book title and author on default cover with responsive scaling
+- Feat(ai): Support unlimited custom AI prompts with horizontal scrollable quick access
 - UI(reader): Optimize reading history navigation button design
 - Fix(reader): Fix image loading issue in non-standard EPUBs with missing manifest entries
+- Fix(reader): Fix AI quick prompt chips overlapping issue
 - Fix(sync): Fix WebDAV sync showing multiple direction selection dialogs
 - Fix(ai_services): update Gemini service URL and model version
 
@@ -18,8 +20,10 @@
 - Feat(reader): 支持自定义翻页区域配置（3x3网格）
 - Feat(reader): 添加"使用书籍样式"开关，保留书籍原始样式
 - Feat(bookshelf): 支持在默认封面上显示书名和作者，支持响应式缩放
+- Feat(ai): 支持无限制自定义AI提示词，快捷访问支持横向滚动
 - UI(reader): 优化阅读历史导航按钮设计
 - Fix(reader): 修复不规范 EPUB（manifest 缺失资源声明）中图片无法加载的问题
+- Fix(reader): 修复AI快速提示重叠问题
 - Fix(sync): 修复 WebDAV 同步时出现多个方向选择弹窗的问题
 - Fix(ai_services): 更新 Gemini 服务 URL 和模型版本
 

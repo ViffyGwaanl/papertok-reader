@@ -794,5 +794,14 @@
    "historyForward": "للأمام",
    "historyClose": "إغلاق",
    "useBookStyles": "استخدام أنماط الكتاب",
-   "useBookStylesDescription": "عند التمكين، سيستخدم التطبيق الأنماط المحددة في الكتاب بدلاً من إعداداتك المخصصة لارتفاع السطر ووزن الخط والمسافة البادئة والتباعد بين الأحرف والفقرات"
+   "useBookStylesDescription": "عند التمكين، سيستخدم التطبيق الأنماط المحددة في الكتاب بدلاً من إعداداتك المخصصة لارتفاع السطر ووزن الخط والمسافة البادئة والتباعد بين الأحرف والفقرات",
+   "settingsAiUserPrompts": "مطالبات المستخدم",
+   "settingsAiUserPromptsAdd": "إضافة مطالبة",
+   "settingsAiUserPromptsHint": "يمكن استخدام المطالبات المضافة هنا بسهولة في نافذة الذكاء الاصطناعي في صفحة القراءة",
+   "settingsAiUserPromptsName": "اسم المطالبة",
+   "settingsAiUserPromptsContent": "محتوى المطالبة",
+   "settingsAiUserPromptsEmpty": "لا توجد مطالبات مستخدم حتى الآن. انقر على الزر أعلاه لإضافة واحدة",
+   "commonInputCannotBeEmpty": "لا يمكن أن يكون الإدخال فارغًا",
+   "commonAddSuccess": "تمت الإضافة بنجاح",
+   "commonSaveSuccess": "تم الحفظ بنجاح"
 }
