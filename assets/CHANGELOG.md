@@ -10,6 +10,7 @@
 - Feat(ai): Support unlimited custom AI prompts with horizontal scrollable quick access
 - Feat(sync): Add comprehensive WebDAV test (create, upload, download, delete) for connection validation
 - Feat(window): Support window position and size memory on macOS
+- Feat(import): Use original filename when book metadata title is missing or invalid
 - UI(reader): Optimize reading history navigation button design
 - Fix(reader): Fix image loading issue in non-standard EPUBs with missing manifest entries
 - Fix(reader): Fix AI quick prompt chips overlapping issue
@@ -26,6 +27,7 @@
 - Feat(ai): 支持无限制自定义AI提示词，快捷访问支持横向滚动
 - Feat(sync): 添加 WebDAV 完整测试功能（创建、上传、下载、删除），全面验证连接
 - Feat(window): 支持 macOS 记忆窗口位置和大小
+- Feat(import): 当书籍元数据标题缺失或无效时，使用原始文件名
 - UI(reader): 优化阅读历史导航按钮设计
 - Fix(reader): 修复不规范 EPUB（manifest 缺失资源声明）中图片无法加载的问题
 - Fix(reader): 修复AI快速提示重叠问题

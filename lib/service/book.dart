@@ -455,8 +455,18 @@ Future<void> saveBook(
   String cover, {
   Book? provideBook,
 }) async {
+  // Extract original filename (without extension)
+  final originalFileName = file.path.split('/').last;
+  final fileNameWithoutExt = originalFileName.contains('.')
+      ? originalFileName.substring(0, originalFileName.lastIndexOf('.'))
+      : originalFileName;
+
+  // Use original filename if title is invalid
+  final effectiveTitle =
+      (title == 'Unknown' || title.trim().isEmpty) ? fileNameWithoutExt : title;
+
   final newBookName =
-      '${title.length > 20 ? title.substring(0, 20) : title}-${DateTime.now().millisecondsSinceEpoch}'
+      '${effectiveTitle.length > 20 ? effectiveTitle.substring(0, 20) : effectiveTitle}-${DateTime.now().millisecondsSinceEpoch}'
           .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
           .replaceAll('\n', '')
           .replaceAll('\r', '')
@@ -480,7 +490,7 @@ Future<void> saveBook(
 
   Book book = Book(
       id: provideBook != null ? provideBook.id : -1,
-      title: provideBook?.title ?? title,
+      title: provideBook?.title ?? effectiveTitle,
       coverPath: dbCoverPath,
       filePath: dbFilePath,
       lastReadPosition: provideBook?.lastReadPosition ?? '',
