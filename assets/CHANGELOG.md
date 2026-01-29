@@ -25,6 +25,7 @@
 - Fix(sync): Fix WebDAV sync showing multiple direction selection dialogs
 - Fix(ai_services): update Gemini service URL and model version
 - Fix(window): Fix window becoming inaccessible after disconnecting secondary display
+- Fix(sync): Fix WebDAV sync failure on Android devices with older SQLite versions
 
 - Feat(reader): 添加标题字体大小调节滑块
 - Feat(reader): 添加阅读器历史导航玻璃拟态胶囊
@@ -50,6 +51,7 @@
 - Fix(sync): 修复 WebDAV 同步时出现多个方向选择弹窗的问题
 - Fix(ai_services): 更新 Gemini 服务 URL 和模型版本
 - Fix(window): 修复断开副屏后窗口位置不可访问的问题
+- Fix(sync): 修复 Android 旧版 SQLite 设备 WebDAV 同步失败问题
 
 ## 1.11.0
 - Feat: Support "No Tag" filter in books filter menu

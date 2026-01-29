@@ -223,24 +223,17 @@ class DBHelper {
       } catch (e) {
         AnxLog.warning('Database: VACUUM INTO failed ($e)');
 
-        // Fallback strategy
-        if (AnxPlatform.isOhos) {
-          AnxLog.info('Database: Using OHOS fallback (Checkpoint+Copy)');
-          // Fallback for OHOS or older SQLite versions that don't support VACUUM INTO
-          // 1. Force Checkpoint
-          await db.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
+        // Fallback strategy for platforms with older SQLite versions
+        // (SQLite 3.27.0+ required for VACUUM INTO support)
+        AnxLog.info('Database: Using fallback strategy (Checkpoint+Copy)');
 
-          // 2. Copy file manually
-          final databasePath = await getAnxDataBasesPath();
-          final dbPath = join(databasePath, 'app_database.db');
-          await File(dbPath).copy(snapshotPath);
-        } else {
-          // On non-OHOS platforms, VACUUM INTO should work.
-          // If it failed, rethrow to avoid masking the issue with a blocking operation
-          AnxLog.severe(
-              'Database: VACUUM INTO failed on non-OHOS platform. Check path permissions.');
-          rethrow;
-        }
+        // 1. Force Checkpoint to ensure all WAL data is written to main DB file
+        await db.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
+
+        // 2. Copy file manually
+        final databasePath = await getAnxDataBasesPath();
+        final dbPath = join(databasePath, 'app_database.db');
+        await File(dbPath).copy(snapshotPath);
       }
 
       AnxLog.info('Database: Created snapshot at $snapshotPath');
