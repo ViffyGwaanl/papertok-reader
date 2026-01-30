@@ -18,6 +18,7 @@
 - Feat(sync): Add comprehensive WebDAV test (create, upload, download, delete) for connection validation
 - Feat(window): Support window position and size memory on macOS
 - Feat(import): Use original filename when book metadata title is missing or invalid
+- Feat(import): Add detailed error message display for failed book imports with info dialog @navono
 - UI(reader): Optimize reading history navigation button design
 - Fix(reader): Fix image loading issue in non-standard EPUBs with missing manifest entries
 - Fix(reader): Fix AI quick prompt chips overlapping issue
@@ -29,6 +30,7 @@
 - Fix(ai_services): update Gemini service URL and model version
 - Fix(window): Fix window becoming inaccessible after disconnecting secondary display
 - Fix(sync): Fix WebDAV sync failure on Android devices with older SQLite versions
+- Fix(import): Fix cross-platform path handling issues on Windows @navono
 
 - Feat(reader): 添加代码语法高亮，支持 12 种主题, 60+ 编程语言
 - Perf(reader): 优化翻页流畅度，修复安卓设备惯性滚动问题
@@ -47,6 +49,7 @@
 - Feat(sync): 添加 WebDAV 完整测试功能（创建、上传、下载、删除），全面验证连接
 - Feat(window): 支持 macOS 记忆窗口位置和大小
 - Feat(import): 当书籍元数据标题缺失或无效时，使用原始文件名
+- Feat(import): 添加书籍导入失败时的详细错误信息显示和信息对话框 @navono
 - UI(reader): 优化阅读历史导航按钮设计
 - Fix(reader): 修复不规范 EPUB（manifest 缺失资源声明）中图片无法加载的问题
 - Fix(reader): 修复AI快速提示重叠问题
@@ -58,6 +61,7 @@
 - Fix(ai_services): 更新 Gemini 服务 URL 和模型版本
 - Fix(window): 修复断开副屏后窗口位置不可访问的问题
 - Fix(sync): 修复 Android 旧版 SQLite 设备 WebDAV 同步失败问题
+- Fix(import): 修复 Windows 平台路径处理问题 @navono
 
 ## 1.11.0
 - Feat: Support "No Tag" filter in books filter menu
