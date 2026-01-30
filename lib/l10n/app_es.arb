@@ -66,6 +66,8 @@
   "readingPageAuto": "Automático",
   "readingPageSingle": "Simple",
   "readingPageDouble": "Doble",
+  "readingPageColumnThreshold": "Umbral de Cambio de Columna",
+  "readingPageColumnThresholdTip": "Umbral de ancho para cambiar automáticamente entre diseño de una y dos columnas. Cuando el ancho de pantalla supera este valor, se utilizará el diseño de dos columnas (solo funciona en modo Automático)",
   "readingPageBionicReading": "Lectura Biónica",
   "readingPageBionicReadingTips": "¿Qué es la Lectura Biónica?",
   "readingPageHeaderSettings": "Configuración del Encabezado",

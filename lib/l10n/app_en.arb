@@ -66,6 +66,8 @@
   "readingPageAuto": "Auto",
   "readingPageSingle": "Single",
   "readingPageDouble": "Double",
+  "readingPageColumnThreshold": "Column Threshold",
+  "readingPageColumnThresholdTip": "Width threshold for auto switching between single/double columns. When screen width exceeds this value, double-column layout will be used (only works in Auto mode)",
   "readingPageBionicReading": "Bionic Reading",
   "readingPageBionicReadingTips": "What is Bionic Reading?",
   "readingPageHeaderSettings": "Header Settings",

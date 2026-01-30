@@ -66,6 +66,8 @@
   "readingPageAuto": "Авто",
   "readingPageSingle": "Одна",
   "readingPageDouble": "Две",
+  "readingPageColumnThreshold": "Порог переключения колонок",
+  "readingPageColumnThresholdTip": "Порог ширины для автоматического переключения между одноколоночным и двухколоночным макетом. Когда ширина экрана превышает это значение, будет использоваться двухколоночный макет (работает только в режиме Авто)",
   "readingPageBionicReading": "Бионическое чтение",
   "readingPageBionicReadingTips": "Что такое бионическое чтение?",
   "readingPageHeaderSettings": "Настройки верхнего колонтитула",

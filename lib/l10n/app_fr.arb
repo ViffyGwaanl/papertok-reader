@@ -66,6 +66,8 @@
   "readingPageAuto": "Auto",
   "readingPageSingle": "Simple",
   "readingPageDouble": "Double",
+  "readingPageColumnThreshold": "Seuil de Changement de Colonne",
+  "readingPageColumnThresholdTip": "Seuil de largeur pour basculer automatiquement entre disposition simple et double colonne. Lorsque la largeur d'écran dépasse cette valeur, la disposition à deux colonnes sera utilisée (ne fonctionne qu'en mode Auto)",
   "readingPageBionicReading": "Lecture Bionique",
   "readingPageBionicReadingTips": "Qu'est-ce que la Lecture Bionique ?",
   "readingPageHeaderSettings": "Paramètres d'En-tête",

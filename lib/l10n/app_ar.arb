@@ -66,6 +66,8 @@
   "readingPageAuto": "تلقائي",
   "readingPageSingle": "فردي",
   "readingPageDouble": "مزدوج",
+  "readingPageColumnThreshold": "عتبة تبديل الأعمدة",
+  "readingPageColumnThresholdTip": "عتبة العرض للتبديل التلقائي بين الأعمدة الفردية والمزدوجة. عندما يتجاوز عرض الشاشة هذه القيمة، سيتم استخدام التخطيط ذو العمودين (يعمل فقط في الوضع التلقائي)",
   "readingPageBionicReading": "القراءة البيونية",
   "readingPageBionicReadingTips": "ما هي القراءة البيونية؟",
   "readingPageHeaderSettings": "إعدادات رأس الصفحة",

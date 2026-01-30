@@ -66,6 +66,8 @@
   "readingPageAuto": "自動",
   "readingPageSingle": "單列",
   "readingPageDouble": "雙列",
+  "readingPageColumnThreshold": "列數切換閾值",
+  "readingPageColumnThresholdTip": "自動切換單雙列之寬度閾值，當屏寬大於設定值時，則用雙列佈局（僅於自動模式生效）",
   "readingPageBionicReading": "仿生讀法",
   "readingPageBionicReadingTips": "仿生讀法為何物？",
   "readingPageHeaderSettings": "頁首設置",

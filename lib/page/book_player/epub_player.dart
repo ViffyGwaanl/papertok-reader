@@ -186,6 +186,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         letterSpacing: ${style.letterSpacing},
         textIndent: ${style.indent},
         maxColumnCount: ${style.maxColumnCount},
+        columnThreshold: ${style.columnThreshold},
         writingMode: '${Prefs().writingMode.code}',
         textAlign: '${Prefs().textAlignment.code}',
         backgroundImage: '$bgimgUrl',

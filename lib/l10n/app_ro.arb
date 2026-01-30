@@ -66,6 +66,8 @@
   "readingPageAuto": "Auto",
   "readingPageSingle": "O coloană",
   "readingPageDouble": "Două coloane",
+  "readingPageColumnThreshold": "Pragul de schimbare a coloanelor",
+  "readingPageColumnThresholdTip": "Pragul de lățime pentru comutarea automată între aspect cu o coloană și două coloane. Când lățimea ecranului depășește această valoare, va fi folosit aspectul cu două coloane (funcționează doar în modul Auto)",
   "readingPageBionicReading": "Bionic Reading",
   "readingPageBionicReadingTips": "What is Bionic Reading?",
   "readingPageHeaderSettings": "Header Settings",

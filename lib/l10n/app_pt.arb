@@ -66,6 +66,8 @@
   "readingPageAuto": "Automático",
   "readingPageSingle": "Único",
   "readingPageDouble": "Duplo",
+  "readingPageColumnThreshold": "Limite de Mudança de Coluna",
+  "readingPageColumnThresholdTip": "Limite de largura para alternar automaticamente entre layout de uma e duas colunas. Quando a largura da tela exceder este valor, o layout de duas colunas será usado (funciona apenas no modo Automático)",
   "readingPageBionicReading": "Leitura Biônica",
   "readingPageBionicReadingTips": "O que é Leitura Biônica?",
   "readingPageHeaderSettings": "Configurações do Cabeçalho",

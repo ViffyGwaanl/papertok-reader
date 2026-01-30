@@ -66,6 +66,8 @@
   "readingPageAuto": "Otomatik",
   "readingPageSingle": "Tek",
   "readingPageDouble": "Çift",
+  "readingPageColumnThreshold": "Sütun Değiştirme Eşiği",
+  "readingPageColumnThresholdTip": "Tek ve çift sütun düzeni arasında otomatik geçiş için genişlik eşiği. Ekran genişliği bu değeri aştığında, çift sütun düzeni kullanılacaktır (yalnızca Otomatik modda çalışır)",
   "readingPageBionicReading": "Biyonik Okuma",
   "readingPageBionicReadingTips": "Biyonik Okuma nedir?",
   "readingPageHeaderSettings": "Üstbilgi Ayarları",

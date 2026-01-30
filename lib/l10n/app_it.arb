@@ -66,6 +66,8 @@
   "readingPageAuto": "Auto",
   "readingPageSingle": "Singola",
   "readingPageDouble": "Doppia",
+  "readingPageColumnThreshold": "Soglia di Cambio Colonna",
+  "readingPageColumnThresholdTip": "Soglia di larghezza per il passaggio automatico tra layout a colonna singola e doppia. Quando la larghezza dello schermo supera questo valore, verrà utilizzato il layout a due colonne (funziona solo in modalità Auto)",
   "readingPageBionicReading": "Lettura Bionica",
   "readingPageBionicReadingTips": "Cos'è la Lettura Bionica?",
   "readingPageHeaderSettings": "Impostazioni Intestazione",

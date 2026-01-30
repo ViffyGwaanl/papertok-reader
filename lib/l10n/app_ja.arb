@@ -66,6 +66,8 @@
   "readingPageAuto": "自動",
   "readingPageSingle": "単一",
   "readingPageDouble": "二重",
+  "readingPageColumnThreshold": "カラム切替閾値",
+  "readingPageColumnThresholdTip": "単一カラムと二重カラムを自動切替する幅の閾値。画面幅がこの値を超えると、二重カラムレイアウトが使用されます（自動モードでのみ有効）",
   "readingPageBionicReading": "バイオニック読書",
   "readingPageBionicReadingTips": "バイオニック読書とは？",
   "readingPageHeaderSettings": "ヘッダー設定",

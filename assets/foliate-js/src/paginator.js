@@ -382,7 +382,7 @@ class View {
 export class Paginator extends HTMLElement {
   static observedAttributes = [
     'flow', 'gap', 'top-margin', 'bottom-margin', 'background-color',
-    'max-inline-size', 'max-block-size', 'max-column-count', 'bgimg-url',
+    'max-inline-size', 'max-block-size', 'max-column-count', 'column-threshold', 'bgimg-url',
   ]
   #root = this.attachShadow({ mode: 'open' })
   #observer = new ResizeObserver(() => this.render())
@@ -568,6 +568,7 @@ export class Paginator extends HTMLElement {
       case 'bottom-margin':
       case 'gap':
       case 'max-column-count':
+      case 'column-threshold':
       case 'max-inline-size':
         // needs explicit `render()` as it doesn't necessarily resize
         this.#top.style.setProperty('--_' + name, value)
@@ -604,7 +605,7 @@ export class Paginator extends HTMLElement {
     const size = vertical ? height : width
 
     const style = getComputedStyle(this.#top)
-    const maxInlineSize = parseFloat(style.getPropertyValue('--_max-inline-size'))
+    const maxInlineSize = parseFloat(style.getPropertyValue('--_column-threshold')) || parseFloat(style.getPropertyValue('--_max-inline-size'))
     const maxColumnCount = parseInt(style.getPropertyValue('--_max-column-count'))
     const margin = parseFloat(style.getPropertyValue('--_top-margin'))
     this.#margin = margin

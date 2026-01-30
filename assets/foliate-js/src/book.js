@@ -1502,6 +1502,7 @@ const setStyle = (oldStyle) => {
   reader.view.renderer.setAttribute('gap', `${style.sideMargin}%`)
   reader.view.renderer.setAttribute('background-color', style.backgroundColor)
   reader.view.renderer.setAttribute('max-column-count', style.maxColumnCount)
+  reader.view.renderer.setAttribute('column-threshold', `${style.columnThreshold}px`)
   reader.view.renderer.setAttribute('bgimg-url', style.backgroundImage)
 
   turn.animated ? reader.view.renderer.setAttribute('animated', 'true')

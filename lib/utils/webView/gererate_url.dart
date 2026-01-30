@@ -83,6 +83,7 @@ String generateUrl(
     'hyphenate': false,
     'pageTurnStyle': Prefs().pageTurnStyle.name,
     'maxColumnCount': bookStyle.maxColumnCount,
+    'columnThreshold': bookStyle.columnThreshold,
     'writingMode': Prefs().writingMode.code,
     'textAlign': Prefs().textAlignment.code,
     'backgroundImage': bgimgUrl,

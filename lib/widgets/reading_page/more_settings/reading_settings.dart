@@ -175,6 +175,52 @@ class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
       );
     }
 
+    Widget columnThreshold() {
+      return StatefulBuilder(
+        builder: (context, setState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(L10n.of(context).readingPageColumnThreshold,
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(width: 8),
+                Text(
+                  '${Prefs().bookStyle.columnThreshold.toInt()}px',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            if (Prefs().bookStyle.maxColumnCount == 0)
+              Text(
+                L10n.of(context).readingPageColumnThresholdTip,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+              ),
+            Slider(
+              value: Prefs().bookStyle.columnThreshold,
+              min: 400,
+              max: 1200,
+              divisions: 40,
+              label: '${Prefs().bookStyle.columnThreshold.toInt()}px',
+              onChanged: Prefs().bookStyle.maxColumnCount == 0
+                  ? (value) {
+                      setState(() {
+                        final newBookStyle =
+                            Prefs().bookStyle.copyWith(columnThreshold: value);
+                        Prefs().saveBookStyleToPrefs(newBookStyle);
+                        epubPlayerKey.currentState?.changeStyle(newBookStyle);
+                      });
+                    }
+                  : null,
+            ),
+          ],
+        ),
+      );
+    }
+
     Widget writingMode() {
       return StatefulBuilder(
         builder: (context, setState) => Column(
@@ -662,6 +708,7 @@ class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
           writingMode(),
           translationMode(),
           columnCount(),
+          columnThreshold(),
           convertChinese(),
           const Divider(height: 15),
           codeHighlightTheme(),

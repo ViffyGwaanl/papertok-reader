@@ -66,6 +66,8 @@
   "readingPageAuto": "自動",
   "readingPageSingle": "單欄",
   "readingPageDouble": "雙欄",
+  "readingPageColumnThreshold": "欄數切換閾值",
+  "readingPageColumnThresholdTip": "自動切換單雙欄的寬度閾值，當螢幕寬度大於設定值時，使用雙欄佈局（僅在自動模式下生效）",
   "readingPageBionicReading": "仿生閱讀",
   "readingPageBionicReadingTips": "什麼是仿生閱讀？",
   "readingPageHeaderSettings": "頁首設定",

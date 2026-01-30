@@ -66,6 +66,8 @@
   "readingPageAuto": "자동",
   "readingPageSingle": "단일",
   "readingPageDouble": "더블",
+  "readingPageColumnThreshold": "열 전환 임계값",
+  "readingPageColumnThresholdTip": "단일 열과 이중 열을 자동 전환하는 너비 임계값입니다. 화면 너비가 이 값을 초과하면 이중 열 레이아웃이 사용됩니다 (자동 모드에서만 작동)",
   "readingPageBionicReading": "바이오닉 읽기",
   "readingPageBionicReadingTips": "바이오닉 읽기란?",
   "readingPageHeaderSettings": "헤더 설정",

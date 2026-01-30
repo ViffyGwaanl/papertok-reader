@@ -66,6 +66,8 @@
   "readingPageAuto": "Auto",
   "readingPageSingle": "Einzeln",
   "readingPageDouble": "Doppelt",
+  "readingPageColumnThreshold": "Spaltenumschalt-Schwellenwert",
+  "readingPageColumnThresholdTip": "Breitenschwellenwert für automatisches Umschalten zwischen einspaltigem und zweispaltigem Layout. Wenn die Bildschirmbreite diesen Wert überschreitet, wird ein zweispaltiges Layout verwendet (funktioniert nur im Auto-Modus)",
   "readingPageBionicReading": "Bionisches Lesen",
   "readingPageBionicReadingTips": "Was ist Bionisches Lesen?",
   "readingPageHeaderSettings": "Kopfzeileneinstellungen",
