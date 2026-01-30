@@ -32,6 +32,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as path;
 
 import 'book_player/book_player_server.dart';
 
@@ -142,8 +143,8 @@ void _showImportDialog(
 
   BuildContext context = navigatorKey.currentContext!;
 
-  Widget bookItem(String path, Widget icon,
-      {bool isDuplicate = false, String? duplicateTitle}) {
+  Widget bookItem(String filePath, Widget icon,
+      {bool isDuplicate = false, String? duplicateTitle, String? errorMessage}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -156,13 +157,34 @@ void _showImportDialog(
             ),
             Expanded(
               child: Text(
-                path.split('/').last,
+                path.basename(filePath),
                 style: TextStyle(
                   fontWeight: FontWeight.w300,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
+            if (errorMessage != null)
+              IconButton(
+                icon: const Icon(Icons.info_outline, size: 16),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text(L10n.of(context).commonError),
+                      content: SelectableText(errorMessage),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(L10n.of(context).commonOk),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
           ],
         ),
         if (isDuplicate && duplicateTitle != null)
@@ -173,6 +195,17 @@ void _showImportDialog(
               style: const TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
+              ),
+            ),
+          ),
+        if (errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 28, top: 2),
+            child: Text(
+              'Error: ${errorMessage.length > 50 ? "${errorMessage.substring(0, 50)}..." : errorMessage}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.red,
               ),
             ),
           ),
@@ -191,6 +224,8 @@ void _showImportDialog(
         bool finished = false;
 
         return StatefulBuilder(builder: (context, setState) {
+          Map<String, String> errorMessages = {};
+          
           return AlertDialog(
             title: Text(L10n.of(context).importNBooksSelected(fileList.length)),
             contentPadding: const EdgeInsets.all(16),
@@ -218,7 +253,11 @@ void _showImportDialog(
                             file.path,
                             errorFiles.contains(file.path)
                                 ? const Icon(Icons.error)
-                                : const Icon(Icons.done)),
+                                : const Icon(Icons.done),
+                            errorMessage: errorFiles.contains(file.path)
+                                ? errorMessages[file.path]
+                                : null,
+                          ),
 
                   // show unsupported files
                   if (unsupportedFiles.isNotEmpty) ...[
@@ -264,6 +303,9 @@ void _showImportDialog(
                                   : const Icon(Icons.done),
                               isDuplicate: true,
                               duplicateTitle: duplicateInfo[file.path]?.title,
+                              errorMessage: errorFiles.contains(file.path)
+                                  ? errorMessages[file.path]
+                                  : null,
                             ),
 
                   // select skip duplicates
@@ -313,7 +355,7 @@ void _showImportDialog(
                       }
 
                       for (var file in filesToImport) {
-                        AnxToast.show(file.path.split('/').last);
+                        AnxToast.show(path.basename(file.path));
                         setState(() {
                           currentHandlingFile = file.path;
                         });
@@ -322,9 +364,12 @@ void _showImportDialog(
                           setState(() {
                             currentHandlingFile = '';
                           });
-                        } catch (e) {
+                        } catch (e, stackTrace) {
+                          AnxLog.severe('Failed to import ${file.path}: $e');
+                          AnxLog.severe('Stack trace: $stackTrace');
                           setState(() {
                             errorFiles.add(file.path);
+                            errorMessages[file.path] = e.toString();
                           });
                         }
                       }
@@ -456,10 +501,7 @@ Future<void> saveBook(
   Book? provideBook,
 }) async {
   // Extract original filename (without extension)
-  final originalFileName = file.path.split('/').last;
-  final fileNameWithoutExt = originalFileName.contains('.')
-      ? originalFileName.substring(0, originalFileName.lastIndexOf('.'))
-      : originalFileName;
+  final fileNameWithoutExt = path.basenameWithoutExtension(file.path);
 
   // Use original filename if title is invalid
   final effectiveTitle =
