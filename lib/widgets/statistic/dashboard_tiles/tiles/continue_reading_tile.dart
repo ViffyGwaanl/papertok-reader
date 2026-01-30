@@ -71,8 +71,9 @@ class ContinueReadingTile extends StatisticsDashboardTileBase {
     final book = data?.book;
     if (book == null) return;
     final heroTag = 'continue_reading_${book.id}';
-    final cfi = book.lastReadPosition.isEmpty ? null : book.lastReadPosition;
-    pushToReadingPage(ref, context, book, cfi: cfi, heroTag: heroTag);
+    // Don't pass cfi parameter, let the book open from its saved position
+    // This allows reading progress to be saved (same behavior as bookshelf)
+    pushToReadingPage(ref, context, book, heroTag: heroTag);
   }
 }
 

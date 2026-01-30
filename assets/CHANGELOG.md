@@ -26,6 +26,7 @@
 - Fix(reader): Fix reading info center alignment in header and footer
 - Fix(reader): Fix search results scroll position not being preserved when returning from a result
 - Fix(reader): Fix font-size adjustment not working for CSS keyword values (medium, large, etc.)
+- Fix(statistics): Fix reading progress not being saved when opening books from continue reading tile
 - Fix(sync): Fix WebDAV sync showing multiple direction selection dialogs
 - Fix(ai_services): update Gemini service URL and model version
 - Fix(window): Fix window becoming inaccessible after disconnecting secondary display
@@ -48,6 +49,7 @@
 - Feat(ai): 支持切换 AI 面板位置（右侧/底部），适用于大屏模式
 - Feat(sync): 添加 WebDAV 完整测试功能（创建、上传、下载、删除），全面验证连接
 - Feat(window): 支持 macOS 记忆窗口位置和大小
+- Fix(statistics): 修复从继续阅读卡片打开书籍时阅读进度无法保存的问题
 - Feat(import): 当书籍元数据标题缺失或无效时，使用原始文件名
 - Feat(import): 添加书籍导入失败时的详细错误信息显示和信息对话框 @navono
 - UI(reader): 优化阅读历史导航按钮设计
