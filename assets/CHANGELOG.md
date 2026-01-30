@@ -33,6 +33,7 @@
 - Fix(window): Fix window becoming inaccessible after disconnecting secondary display
 - Fix(sync): Fix WebDAV sync failure on Android devices with older SQLite versions
 - Fix(import): Fix cross-platform path handling issues on Windows @navono
+- Fix(bookshelf): Fix replace book file feature not converting TXT files to EPUB before replacement
 
 - Feat(reader): 添加代码语法高亮，支持 12 种主题, 60+ 编程语言
 - Perf(reader): 优化翻页流畅度，修复安卓设备惯性滚动问题
@@ -66,6 +67,7 @@
 - Fix(window): 修复断开副屏后窗口位置不可访问的问题
 - Fix(sync): 修复 Android 旧版 SQLite 设备 WebDAV 同步失败问题
 - Fix(import): 修复 Windows 平台路径处理问题 @navono
+- Fix(bookshelf): 修复替换书籍文件功能未将 TXT 文件转换为 EPUB 的问题
 
 ## 1.11.0
 - Feat: Support "No Tag" filter in books filter menu

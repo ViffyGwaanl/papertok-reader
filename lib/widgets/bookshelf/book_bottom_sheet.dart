@@ -11,6 +11,7 @@ import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/providers/book_list.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/providers/sync_status.dart';
+import 'package:anx_reader/service/convert_to_epub/txt/convert_from_txt.dart';
 import 'package:anx_reader/service/md5_service.dart';
 import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
@@ -201,6 +202,14 @@ class BookBottomSheet extends ConsumerWidget {
 
       try {
         String extension = p.extension(newFile.name);
+        File fileToProcess = newFileObj;
+
+        // Convert TXT to EPUB if needed
+        if (extension.toLowerCase() == '.txt') {
+          fileToProcess = await convertFromTxt(newFileObj);
+          extension = '.epub';
+        }
+
         String title = book.title;
         String nameWithoutExtension =
             '${title.length > 20 ? title.substring(0, 20) : title}-${DateTime.now().millisecondsSinceEpoch}'
@@ -213,7 +222,7 @@ class BookBottomSheet extends ConsumerWidget {
         String newDestPath = getBasePath(newRelativePath);
 
         // Copy new file
-        await newFileObj.copy(newDestPath);
+        await fileToProcess.copy(newDestPath);
 
         // Calculate MD5
         String? newMd5 = await MD5Service.calculateFileMd5(newDestPath);
@@ -230,6 +239,13 @@ class BookBottomSheet extends ConsumerWidget {
           final oldFile = File(book.fileFullPath);
           if (await oldFile.exists()) {
             await oldFile.delete();
+          }
+        }
+
+        // Clean up temporary file if TXT conversion happened
+        if (fileToProcess != newFileObj) {
+          if (await fileToProcess.exists()) {
+            await fileToProcess.delete();
           }
         }
 
