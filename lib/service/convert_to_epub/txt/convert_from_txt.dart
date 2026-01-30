@@ -7,6 +7,7 @@ import 'package:anx_reader/service/convert_to_epub/create_epub.dart';
 import 'package:anx_reader/service/convert_to_epub/section.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:charset/charset.dart';
+import 'package:path/path.dart' as path;
 
 String readFileWithEncoding(File file) {
   bool checkGarbled(String content) {
@@ -117,10 +118,9 @@ List<Section> _fallbackChunking(String filename, String content) {
 }
 
 Future<File> convertFromTxt(File file) async {
-  var filename = file.path.split('/').last;
+  // Use path.basename to extract filename cross-platform (handles both / and \)
+  var filename = path.basenameWithoutExtension(file.path);
 
-  filename =
-      filename.split('.').sublist(0, filename.split('.').length - 1).join('.');
   final titleString =
       RegExp(r'(?<=《)[^》]+').firstMatch(filename)?.group(0) ?? filename;
   final authorString =
@@ -151,14 +151,26 @@ Future<File> convertFromTxt(File file) async {
 
   List<Section> sections;
   if (matches.isEmpty) {
+    AnxLog.info('Convert: No chapters matched, using fallback chunking');
     sections = _fallbackChunking(filename, content);
+    AnxLog.info('Convert: Created ${sections.length} sections via fallback');
   } else {
+    AnxLog.info('Convert: Building ${matches.length} sections from matches');
     sections = _buildSectionsFromMatches(
       content: content,
       matches: matches,
       fallbackTitle: filename,
     );
+    AnxLog.info('Convert: Created ${sections.length} sections');
   }
-  final epubFile = await createEpub(titleString, authorString, sections);
-  return epubFile;
+
+  AnxLog.info('Convert: Starting EPUB creation...');
+  try {
+    final epubFile = await createEpub(titleString, authorString, sections);
+    AnxLog.info('Convert: EPUB created successfully at ${epubFile.path}');
+    return epubFile;
+  } catch (e) {
+    AnxLog.severe('Convert: Failed to create EPUB: $e');
+    rethrow;
+  }
 }

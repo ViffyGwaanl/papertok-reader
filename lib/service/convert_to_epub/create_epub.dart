@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:anx_reader/service/convert_to_epub/generate_toc.dart';
 import 'package:anx_reader/service/convert_to_epub/section.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
+import 'package:anx_reader/utils/log/common.dart';
 import 'package:archive/archive_io.dart';
 import 'package:uuid/uuid.dart';
 
@@ -152,14 +153,19 @@ ${bodyContent.isEmpty ? '' : '$bodyContent\n'}
   // zip
   final zipFile = File('${cacheDir.path}/$titleString.epub');
   zipFile.createSync();
-  final encoder = ZipFileEncoder();
-  encoder.create(zipFile.path);
-  await encoder.addFile(mimetypeFile);
-  await encoder.addDirectory(metainfDir);
-  await encoder.addDirectory(oebpsDir);
-  await encoder.close();
+
+  try {
+    final encoder = ZipFileEncoder();
+    encoder.create(zipFile.path);
+    await encoder.addFile(mimetypeFile);
+    await encoder.addDirectory(metainfDir);
+    await encoder.addDirectory(oebpsDir);
+    await encoder.close();
+  } catch (e) {
+    AnxLog.severe('EPUB: ZIP compression failed: $e');
+    rethrow;
+  }
 
   epubDir.deleteSync(recursive: true);
-
   return zipFile;
 }
