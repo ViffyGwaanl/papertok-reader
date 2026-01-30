@@ -596,7 +596,7 @@ class Prefs extends ChangeNotifier {
   }
 
   bool get autoTranslateSelection {
-    return prefs.getBool('autoTranslateSelection') ?? true;
+    return prefs.getBool('autoTranslateSelection') ?? false;
   }
 
   set autoMarkSelection(bool status) {
