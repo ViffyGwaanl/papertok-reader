@@ -545,13 +545,42 @@ class Resources {
                 href: resolveHref(href),
             }))
 
-        this.cover = this.getItemByProperty('cover-image')
+        // Try to find cover image, store XHTML cover page separately
+        const coverCandidate = this.getItemByProperty('cover-image')
             // EPUB 2 compat
             ?? this.getItemByID($$$(opf, 'meta')
                 .find(filterAttribute('name', 'cover'))
                 ?.getAttribute('content'))
+            // Guide reference
             ?? this.getItemByHref(this.guide
                 ?.find(ref => ref.type.includes('cover'))?.href)
+            // Common cover ID patterns (case-insensitive)
+            ?? this.manifest.find(item => 
+                ['cover', 'cover-image', 'coverimage'].includes(item.id?.toLowerCase())
+                && item.mediaType?.startsWith('image/'))
+            // Cover in href (check multiple common patterns)
+            ?? this.manifest.find(item => {
+                const href = item.href?.toLowerCase()
+                return href && item.mediaType?.startsWith('image/')
+                    && (href.includes('/cover.') || href.includes('/cover_')
+                        || href.endsWith('cover.jpg') || href.endsWith('cover.png')
+                        || href.endsWith('cover.jpeg') || href.endsWith('cover.gif'))
+            })
+            // Titlepage image (often contains cover)
+            ?? this.manifest.find(item =>
+                item.id?.toLowerCase().includes('titlepage')
+                && item.mediaType?.startsWith('image/'))
+            // Last resort: first image in manifest
+            ?? this.manifest.find(item => item.mediaType?.startsWith('image/'))
+
+        // If cover is XHTML/HTML, store it separately for later parsing
+        if (coverCandidate?.mediaType?.includes('html')) {
+            this.coverPage = coverCandidate
+            this.cover = null
+        } else {
+            this.cover = coverCandidate
+            this.coverPage = null
+        }
 
         this.cfis = CFI.fromElements($$itemref)
     }
@@ -1048,9 +1077,76 @@ ${doc.querySelector('parsererror').innerText}`)
     }
     async getCover() {
         const cover = this.resources?.cover
-        return cover?.href
-            ? new Blob([await this.loadBlob(cover.href)], { type: cover.mediaType })
-            : null
+        if (cover?.href) {
+            return new Blob([await this.loadBlob(cover.href)], { type: cover.mediaType })
+        }
+        
+        // If cover is an XHTML/HTML page, try to extract image from it
+        const coverPage = this.resources?.coverPage
+        if (coverPage?.href) {
+            try {
+                const text = await this.loadText(coverPage.href)
+                const parser = new DOMParser()
+                const doc = parser.parseFromString(text, 'application/xhtml+xml')
+                
+                // Try to find image in various ways
+                // 1. Look for <img> tags
+                const img = doc.querySelector('img')
+                if (img) {
+                    const src = img.getAttribute('src')
+                    if (src) {
+                        const imgHref = resolveURL(src, coverPage.href)
+                        const imgItem = this.resources.getItemByHref(imgHref)
+                        if (imgItem) {
+                            return new Blob([await this.loadBlob(imgItem.href)], { type: imgItem.mediaType })
+                        }
+                    }
+                }
+                
+                // 2. Look for <image> tags in SVG
+                const svgImage = doc.querySelector('image')
+                if (svgImage) {
+                    const href = svgImage.getAttribute('href') || svgImage.getAttributeNS('http://www.w3.org/1999/xlink', 'href')
+                    if (href) {
+                        const imgHref = resolveURL(href, coverPage.href)
+                        const imgItem = this.resources.getItemByHref(imgHref)
+                        if (imgItem) {
+                            return new Blob([await this.loadBlob(imgItem.href)], { type: imgItem.mediaType })
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to extract cover from XHTML page:', e)
+            }
+        }
+        
+        // Last resort: try common cover file locations outside manifest
+        // This handles cases like Apple Books' iTunesArtwork
+        const fallbackPaths = [
+            'iTunesArtwork',        // Apple Books cover (JPEG without extension)
+            'cover.jpg',
+            'cover.jpeg',
+            'cover.png',
+            'cover.gif',
+        ]
+        
+        for (const path of fallbackPaths) {
+            try {
+                const blob = await this.loadBlob(path)
+                if (blob && blob.size > 0) {
+                    // Try to detect media type from content
+                    const type = path === 'iTunesArtwork' ? 'image/jpeg' 
+                        : path.endsWith('.png') ? 'image/png'
+                        : path.endsWith('.gif') ? 'image/gif'
+                        : 'image/jpeg'
+                    return new Blob([blob], { type })
+                }
+            } catch (e) {
+                // File doesn't exist, continue to next fallback
+            }
+        }
+        
+        return null
     }
     async getCalibreBookmarks() {
         const txt = await this.loadText('META-INF/calibre_bookmarks.txt')

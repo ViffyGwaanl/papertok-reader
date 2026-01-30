@@ -34,6 +34,7 @@
 - Fix(sync): Fix WebDAV sync failure on Android devices with older SQLite versions
 - Fix(import): Fix cross-platform path handling issues on Windows @navono
 - Fix(bookshelf): Fix replace book file feature not converting TXT files to EPUB before replacement
+- Fix(import): Enhance EPUB cover extraction with fallback strategies for non-standard formats
 
 - Feat(reader): 添加代码语法高亮，支持 12 种主题, 60+ 编程语言
 - Perf(reader): 优化翻页流畅度，修复安卓设备惯性滚动问题
@@ -68,6 +69,7 @@
 - Fix(sync): 修复 Android 旧版 SQLite 设备 WebDAV 同步失败问题
 - Fix(import): 修复 Windows 平台路径处理问题 @navono
 - Fix(bookshelf): 修复替换书籍文件功能未将 TXT 文件转换为 EPUB 的问题
+- Fix(import): 增强 EPUB 封面提取功能，支持非标准格式的多种回退策略
 
 ## 1.11.0
 - Feat: Support "No Tag" filter in books filter menu
