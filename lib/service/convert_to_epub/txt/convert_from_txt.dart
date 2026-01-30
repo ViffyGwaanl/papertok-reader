@@ -163,7 +163,7 @@ Future<File> convertFromTxt(File file) async {
     );
     AnxLog.info('Convert: Created ${sections.length} sections');
   }
-  
+
   AnxLog.info('Convert: Starting EPUB creation...');
   try {
     final epubFile = await createEpub(titleString, authorString, sections);
