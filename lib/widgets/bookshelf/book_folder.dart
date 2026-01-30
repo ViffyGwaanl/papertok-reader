@@ -111,7 +111,7 @@ class _BookFolderState extends ConsumerState<BookFolder> {
                 count++;
                 return Positioned.fill(
                   right: 0,
-                  top: 30 - count * 20.0,
+                  top: 30 - count * Prefs().bookCoverWidth * 0.12,
                   child: Transform.scale(
                     scale: 1 - (count * 0.08),
                     child: Container(
