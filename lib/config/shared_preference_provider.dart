@@ -16,6 +16,7 @@ import 'package:anx_reader/enums/translation_mode.dart';
 import 'package:anx_reader/enums/writing_mode.dart';
 import 'package:anx_reader/enums/text_alignment.dart';
 import 'package:anx_reader/enums/ai_panel_position.dart';
+import 'package:anx_reader/enums/code_highlight_theme.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/bgimg.dart';
@@ -1475,6 +1476,16 @@ class Prefs extends ChangeNotifier {
 
   set aiPanelPosition(AiPanelPositionEnum position) {
     prefs.setString('aiPanelPosition', position.code);
+    notifyListeners();
+  }
+
+  CodeHighlightThemeEnum get codeHighlightTheme {
+    return CodeHighlightThemeEnum.fromCode(
+        prefs.getString('codeHighlightTheme') ?? 'default');
+  }
+
+  set codeHighlightTheme(CodeHighlightThemeEnum theme) {
+    prefs.setString('codeHighlightTheme', theme.code);
     notifyListeners();
   }
 }

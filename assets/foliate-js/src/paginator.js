@@ -382,7 +382,7 @@ class View {
 export class Paginator extends HTMLElement {
   static observedAttributes = [
     'flow', 'gap', 'top-margin', 'bottom-margin', 'background-color',
-    'max-inline-size', 'max-block-size', 'max-column-count',
+    'max-inline-size', 'max-block-size', 'max-column-count', 'bgimg-url',
   ]
   #root = this.attachShadow({ mode: 'open' })
   #observer = new ResizeObserver(() => this.render())

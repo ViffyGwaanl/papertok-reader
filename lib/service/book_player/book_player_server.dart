@@ -125,8 +125,21 @@ class Server {
       }
       String content =
           await _loadAsset('assets/foliate-js/${uriPath.substring(12)}');
-      String contentType =
-          uriPath.endsWith('.html') ? 'text/html' : 'application/javascript';
+
+      // Determine content type based on file extension
+      String contentType;
+      if (uriPath.endsWith('.html')) {
+        contentType = 'text/html';
+      } else if (uriPath.endsWith('.css')) {
+        contentType = 'text/css';
+      } else if (uriPath.endsWith('.js')) {
+        contentType = 'application/javascript';
+      } else if (uriPath.endsWith('.json')) {
+        contentType = 'application/json';
+      } else {
+        contentType = 'application/octet-stream';
+      }
+
       return shelf.Response.ok(
         content,
         headers: {

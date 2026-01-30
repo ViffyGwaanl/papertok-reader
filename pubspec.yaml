@@ -160,10 +160,12 @@ flutter:
     - pubspec.yaml
     - assets/foliate-js/index.html
     - assets/foliate-js/dist/
-    # - assets/foliate-js/vendor/
-    - assets/foliate-js/src/vendor/pdfjs/
     - assets/foliate-js/src/
     - assets/foliate-js/src/vendor/
+    - assets/foliate-js/src/vendor/pdfjs/
+    - assets/foliate-js/src/vendor/prism/
+    - assets/foliate-js/src/vendor/prism/components/
+    - assets/foliate-js/src/vendor/prism/themes/
     - assets/images/
     - assets/images/book_share/
     - assets/images/bgimg/

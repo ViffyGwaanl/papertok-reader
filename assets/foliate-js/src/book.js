@@ -507,7 +507,8 @@ const getCSS = ({ fontSize,
   customCSS,
   customCSSEnabled,
   useBookStyles,
-  headingFontSize
+  headingFontSize,
+  codeHighlightTheme
 }) => {
 
   const fontFamily = fontName === 'book' ? '' :
@@ -660,9 +661,63 @@ const getCSS = ({ fontSize,
     [align="center"] { text-align: center; }
     [align="justify"] { text-align: justify; }
 
+    /* Code highlighting styles */
     pre {
         white-space: pre-wrap !important;
+        background: rgba(128, 128, 128, 0.1) !important;
+        border-radius: 6px !important;
+        padding: 1em !important;
+        overflow: visible !important;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+        font-size: 0.9em !important;
+        line-height: 1.5 !important;
+        margin: 0.5em 0 !important;
+        /* Allow code blocks to be split across columns/pages in WebKit */
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+        -webkit-column-break-inside: auto !important;
+        /* Force block formatting context to allow proper column breaks */
+        display: block !important;
+        /* Remove any max-height constraints */
+        max-height: none !important;
+        height: auto !important;
     }
+    
+    /* Individual lines within code can break across columns */
+    pre code {
+        display: block !important;
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+        -webkit-column-break-inside: auto !important;
+        overflow: visible !important;
+        max-height: none !important;
+        height: auto !important;
+        white-space: pre-wrap !important;
+    }
+    
+    /* Line wrapper for Safari column breaking */
+    .anx-code-line {
+        display: block !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        -webkit-column-break-inside: avoid !important;
+    }
+    
+    code {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+        font-size: 0.9em !important;
+        background: rgba(128, 128, 128, 0.15) !important;
+        padding: 0.2em 0.4em !important;
+        border-radius: 3px !important;
+    }
+    
+    pre > code {
+        background: transparent !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        font-size: 1em !important;
+    }
+    
     aside[epub|type~="endnote"],
     aside[epub|type~="footnote"],
     aside[epub|type~="note"],
@@ -881,6 +936,15 @@ class Reader {
       const list = this.annotations.get(index)
       if (list) for (const annotation of list)
         this.view.addAnnotation(annotation)
+      
+      // Apply code highlighting to newly created overlay content
+      if (style && style.codeHighlightTheme && style.codeHighlightTheme !== 'off') {
+        // Get the document from the overlayer
+        const overlayerObj = view.renderer?.getContents()?.find(x => x.index === index && x.overlayer)
+        if (overlayerObj && overlayerObj.doc) {
+          applyCodeHighlighting(style.codeHighlightTheme, overlayerObj.doc)
+        }
+      }
     })
 
     view.addEventListener('draw-annotation', e => {
@@ -1059,6 +1123,12 @@ class Reader {
     this.#saveOriginalContent()
 
     this.readingFeatures(readingRules)
+    
+    // Apply code highlighting to newly loaded content
+    if (style && style.codeHighlightTheme && style.codeHighlightTheme !== 'off') {
+      // console.log('Applying code highlighting to loaded document, theme:', style.codeHighlightTheme)
+      applyCodeHighlighting(style.codeHighlightTheme, doc)
+    }
   }
 
   #onRelocate({ detail }) {
@@ -1385,6 +1455,12 @@ const open = async (file, cfi) => {
   const reader = new Reader()
   globalThis.reader = reader
   await reader.open(file, cfi)
+  
+  // Initialize code highlighting if theme is set
+  if (style.codeHighlightTheme && style.codeHighlightTheme !== 'off') {
+    changeCodeHighlightTheme(style.codeHighlightTheme)
+  }
+  
   if (!importing) {
     callFlutter('onLoadEnd')
     onSetToc()
@@ -1534,12 +1610,14 @@ window.refreshToc = () => onSetToc()
 
 window.changeStyle = (newStyle) => {
   const oldStyle = style
-  style = {
-    ...style,
-    ...newStyle
-  }
+  style = { ...style, ...newStyle }
   console.log('changeStyle', JSON.stringify(style))
   setStyle(oldStyle)
+  
+  // Update code highlighting theme if changed
+  if (newStyle.codeHighlightTheme !== undefined) {
+    changeCodeHighlightTheme(newStyle.codeHighlightTheme)
+  }
 }
 
 window.goToHref = href => reader.view.goTo(href)
@@ -1708,6 +1786,367 @@ window.readingFeatures = (rules) => {
 
 window.pullUp = () => {
   callFlutter('onPullUp')
+}
+
+// Code highlighting management
+const CodeHighlighter = (() => {
+  // Private state
+  let currentTheme = null
+  let prismLoaded = false
+  let prismLoading = null // Promise for loading, to avoid duplicate loads
+  const LOAD_TIMEOUT = 10000 // 10 seconds timeout
+  const MAX_RETRIES = 2
+  const PRISM_BASE_PATH = '/foliate-js/src/vendor/prism'
+  
+  // Track which documents have been processed to avoid duplicate work
+  const processedDocs = new WeakSet()
+  
+  /**
+   * Load a script with timeout and retry support
+   */
+  const loadScript = (src, timeout = LOAD_TIMEOUT) => {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = src
+      
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Script load timeout: ${src}`))
+      }, timeout)
+      
+      script.onload = () => {
+        clearTimeout(timeoutId)
+        resolve()
+      }
+      
+      script.onerror = (error) => {
+        clearTimeout(timeoutId)
+        reject(new Error(`Failed to load script: ${src}`))
+      }
+      
+      document.head.appendChild(script)
+    })
+  }
+  
+  /**
+   * Load Prism.js library with retry support
+   */
+  const loadPrismLibrary = async (retryCount = 0) => {
+    if (prismLoaded) return true
+    
+    // If already loading, wait for that promise
+    if (prismLoading) {
+      return prismLoading
+    }
+    
+    prismLoading = (async () => {
+      try {
+        // Load Prism core
+        await loadScript(`${PRISM_BASE_PATH}/prism-core.min.js`)
+        // Load autoloader plugin
+        await loadScript(`${PRISM_BASE_PATH}/prism-autoloader.min.js`)
+        // Configure autoloader
+        if (window.Prism?.plugins?.autoloader) {
+          window.Prism.plugins.autoloader.languages_path = `${PRISM_BASE_PATH}/components/`
+        } else {
+          throw new Error('Prism autoloader not available after loading')
+        }
+        prismLoaded = true
+        return true
+      } catch (error) {
+        console.error('[CodeHighlighter] Load error:', error.message)
+        
+        if (retryCount < MAX_RETRIES) {
+          prismLoading = null
+          return loadPrismLibrary(retryCount + 1)
+        }
+        
+        console.error('[CodeHighlighter] Max retries reached, giving up')
+        prismLoading = null
+        return false
+      }
+    })()
+    
+    return prismLoading
+  }
+
+  /**
+   * Get theme CSS URL
+   */
+  const getThemeCssUrl = (theme) => {
+    if (!theme || theme === 'off') return null
+    const cssFile = theme === 'default' 
+      ? 'prism-default.min.css' 
+      : `prism-${theme}.min.css`
+    return new URL(`${PRISM_BASE_PATH}/themes/${cssFile}`, window.location.origin).href
+  }
+  
+  /**
+   * Inject or update theme CSS in a document
+   */
+  const injectThemeCss = (doc, theme) => {
+    if (!doc?.head) return false
+    
+    // Remove existing theme
+    const existingLink = doc.getElementById('prism-theme')
+    if (existingLink) {
+      existingLink.remove()
+    }
+    
+    if (!theme || theme === 'off') return true
+    
+    const cssUrl = getThemeCssUrl(theme)
+    if (!cssUrl) return false
+    
+    const link = doc.createElement('link')
+    link.id = 'prism-theme'
+    link.rel = 'stylesheet'
+    link.href = cssUrl
+    doc.head.appendChild(link)
+    
+    return true
+  }
+  
+  /**
+   * Detect programming language from element attributes and class names
+   */
+  const detectLanguage = (element) => {
+    // Check data-language attribute
+    const dataLang = element.getAttribute('data-language')
+    if (dataLang) return dataLang.toLowerCase()
+    
+    // Check class names for language-xxx pattern
+    const classMatch = element.className.match(/(?:^|\s)(?:language|lang)-(\w+)/)
+    if (classMatch) return classMatch[1].toLowerCase()
+    
+    // Check type attribute (some epub use this)
+    const typeAttr = element.getAttribute('type')
+    if (typeAttr) {
+      const typeMatch = typeAttr.match(/(?:text|application)\/(\w+)/)
+      if (typeMatch) return typeMatch[1].toLowerCase()
+    }
+    
+    // Check parent element for language hints
+    const parent = element.parentElement
+    if (parent) {
+      const parentLang = parent.getAttribute('data-language') || 
+                         parent.className.match(/(?:^|\s)(?:language|lang)-(\w+)/)?.[1]
+      if (parentLang) return parentLang.toLowerCase()
+    }
+    
+    // Default fallback - let Prism auto-detect or use plaintext
+    return null
+  }
+  
+  /**
+   * Highlight a single code block
+   */
+  const highlightBlock = (block, doc) => {
+    if (block.classList.contains('prism-highlighted')) return false
+    
+    try {
+      // Detect language
+      const lang = detectLanguage(block)
+      if (lang && !block.classList.contains(`language-${lang}`)) {
+        block.classList.add(`language-${lang}`)
+      }
+      
+      window.Prism.highlightElement(block)
+      block.classList.add('prism-highlighted')
+      return true
+    } catch (error) {
+      console.warn('[CodeHighlighter] Failed to highlight block:', error.message)
+      return false
+    }
+  }
+  
+  /**
+   * Convert <pre> blocks without <code> children to proper structure
+   */
+  const normalizePreBlock = (preBlock, doc) => {
+    if (preBlock.querySelector('code')) return null // Already has code child
+    if (preBlock.classList.contains('prism-highlighted')) return null
+    
+    const lang = detectLanguage(preBlock) || 'plaintext'
+    
+    // Create a code element and move content into it
+    const codeElement = doc.createElement('code')
+    codeElement.className = `language-${lang}`
+    codeElement.innerHTML = preBlock.innerHTML
+    preBlock.innerHTML = ''
+    preBlock.appendChild(codeElement)
+    preBlock.classList.add(`language-${lang}`)
+    
+    return codeElement
+  }
+  
+  /**
+   * Apply code highlighting to a document
+   * Uses requestIdleCallback for non-blocking processing of large code blocks
+   */
+  const applyHighlighting = async (theme, doc = document) => {
+    if (!theme || theme === 'off' || !doc) return
+    
+    // Skip if already processed and theme hasn't changed
+    if (processedDocs.has(doc) && theme === currentTheme) {
+      return
+    }
+    
+    // Find all code blocks
+    const preCodeBlocks = Array.from(doc.querySelectorAll('pre code'))
+    const preOnlyBlocks = Array.from(
+      doc.querySelectorAll('pre.snippet, pre.code, pre[class*="language-"], pre[data-language]')
+    )
+    
+    const totalBlocks = preCodeBlocks.length + preOnlyBlocks.length
+    if (totalBlocks === 0) {
+      processedDocs.add(doc)
+      return
+    }
+    
+    // Inject theme CSS for iframe documents
+    if (doc !== document) {
+      injectThemeCss(doc, theme)
+    }
+    
+    // Ensure Prism is loaded
+    const loaded = await loadPrismLibrary()
+    if (!loaded || !window.Prism) {
+      console.error('[CodeHighlighter] Prism not available, skipping highlighting')
+      return
+    }
+    
+    let highlightedCount = 0
+    
+    // Process pre-only blocks first (normalize to pre>code structure)
+    for (const preBlock of preOnlyBlocks) {
+      const codeElement = normalizePreBlock(preBlock, doc)
+      if (codeElement) {
+        preCodeBlocks.push(codeElement)
+      }
+    }
+    
+    // Highlight all code blocks
+    // For large numbers of blocks, use chunked processing to avoid blocking
+    const CHUNK_SIZE = 10
+    
+    for (let i = 0; i < preCodeBlocks.length; i += CHUNK_SIZE) {
+      const chunk = preCodeBlocks.slice(i, i + CHUNK_SIZE)
+      
+      for (const block of chunk) {
+        if (highlightBlock(block, doc)) {
+          highlightedCount++
+        }
+      }
+      
+      // Yield to the browser between chunks for large files
+      if (preCodeBlocks.length > CHUNK_SIZE && i + CHUNK_SIZE < preCodeBlocks.length) {
+        await new Promise(resolve => setTimeout(resolve, 0))
+      }
+    }
+    
+    processedDocs.add(doc)
+  }
+
+  /**
+   * Get all iframe documents from the reader view
+   */
+  const getAllIframeDocs = () => {
+    const iframeDocs = []
+    
+    // Get documents from the reader's view renderer
+    if (globalThis.reader?.view?.renderer?.getContents) {
+      const contents = globalThis.reader.view.renderer.getContents() || []
+      contents.forEach((content, index) => {
+        if (content?.doc) {
+          iframeDocs.push({ doc: content.doc, name: `view-content-${index}` })
+        }
+      })
+    }
+    
+    // Fallback: query iframes directly
+    document.querySelectorAll('iframe').forEach((iframe, index) => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document
+        if (doc && !iframeDocs.find(d => d.doc === doc)) {
+          iframeDocs.push({ doc, name: `iframe-${index}` })
+        }
+      } catch (e) {
+        // Cross-origin iframe, ignore
+      }
+    })
+    
+    return iframeDocs
+  }
+  
+  /**
+   * Change the code highlighting theme
+   */
+  const changeTheme = async (theme) => {
+    if (theme === currentTheme) return
+
+    const oldTheme = currentTheme
+    currentTheme = theme
+    
+    // Update main document
+    injectThemeCss(document, theme)
+    
+    if (theme === 'off') return
+    
+    // Update all iframe documents
+    const iframeDocs = getAllIframeDocs()
+    
+    for (const { doc, name } of iframeDocs) {
+      // Update theme CSS
+      injectThemeCss(doc, theme)
+      
+      // Clear processed flag to allow re-highlighting
+      processedDocs.delete(doc)
+      
+      // Clear prism-highlighted flags so blocks can be re-highlighted with new theme
+      doc.querySelectorAll('.prism-highlighted').forEach(el => {
+        el.classList.remove('prism-highlighted')
+      })
+      
+      // Re-apply highlighting
+      await applyHighlighting(theme, doc)
+    }
+  }
+  
+  /**
+   * Get current theme
+   */
+  const getTheme = () => currentTheme
+  
+  /**
+   * Check if Prism is loaded
+   */
+  const isLoaded = () => prismLoaded
+  
+  /**
+   * Reset processed state for a document (useful when content changes)
+   */
+  const resetDocument = (doc) => {
+    processedDocs.delete(doc)
+  }
+  
+  // Public API
+  return {
+    loadPrismLibrary,
+    applyHighlighting,
+    changeTheme,
+    getTheme,
+    isLoaded,
+    resetDocument,
+    injectThemeCss
+  }
+})()
+
+// Backward-compatible function aliases
+const applyCodeHighlighting = (theme, doc) => CodeHighlighter.applyHighlighting(theme, doc)
+const changeCodeHighlightTheme = (theme) => CodeHighlighter.changeTheme(theme)
+
+window.initCodeHighlighting = (theme) => {
+  changeCodeHighlightTheme(theme)
 }
 
 // get varible from url

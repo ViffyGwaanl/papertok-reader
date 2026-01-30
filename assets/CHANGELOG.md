@@ -1,6 +1,7 @@
 # Changelog
 
 ## 1.12.0
+- Feat(reader): Add code syntax highlighting with 12 themes, 60+ languages
 - Perf(reader): Optimize page turning smoothness and fix momentum scrolling issues on Android devices
 - Feat(reader): Add heading font size adjustment slider
 - Feat(reader): Add glassmorphism history navigation capsule in reader
@@ -28,6 +29,7 @@
 - Fix(window): Fix window becoming inaccessible after disconnecting secondary display
 - Fix(sync): Fix WebDAV sync failure on Android devices with older SQLite versions
 
+- Feat(reader): 添加代码语法高亮，支持 12 种主题, 60+ 编程语言
 - Perf(reader): 优化翻页流畅度，修复安卓设备惯性滚动问题
 - Feat(reader): 添加标题字体大小调节滑块
 - Feat(reader): 添加阅读器历史导航玻璃拟态胶囊

@@ -193,6 +193,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         customCSSEnabled: ${Prefs().customCSSEnabled},
         useBookStyles: ${Prefs().useBookStyles},
         headingFontSize: ${style.headingFontSize},
+        codeHighlightTheme: '${Prefs().codeHighlightTheme.code}',
       })
       ''');
     });
