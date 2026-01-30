@@ -46,7 +46,7 @@ abstract class WebViewTranslateProvider extends TranslateServiceProvider {
             child: Builder(
               builder: (context) {
                 return Material(
-                  color: Theme.of(context).cardColor.withOpacity(0.8),
+                  color: Theme.of(context).cardColor.withAlpha(200),
                   shape: const CircleBorder(),
                   child: IconButton(
                     icon: const Icon(Icons.open_in_new, size: 20),

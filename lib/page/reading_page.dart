@@ -513,8 +513,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                 icon: Icons.person_outline,
                 label: userPrompt.name,
                 prompt: userPrompt.content,
-              ))
-          .toList(),
+              )),
     ];
   }
 

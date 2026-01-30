@@ -559,7 +559,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
   // User prompts management methods
   AbstractSettingsTile userPromptsTile() {
     final userPrompts = ref.watch(userPromptsProvider);
-    final notifier = ref.read(userPromptsProvider.notifier);
+    ref.read(userPromptsProvider.notifier);
 
     return CustomSettingsTile(
       child: Column(
@@ -655,7 +655,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.withOpacity(0.3)),
+          border: Border.all(color: Colors.grey.withAlpha(100)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(

@@ -143,10 +143,8 @@ class WebdavClient extends SyncClientBase {
       if (await localTestFile.exists()) {
         await localTestFile.delete();
       }
-      if (downloadTestFile != null) {
-        if (await downloadTestFile.exists()) {
-          await downloadTestFile.delete();
-        }
+      if (await downloadTestFile.exists()) {
+        await downloadTestFile.delete();
       }
 
       AnxLog.info('WebDAV full test: All tests passed successfully');

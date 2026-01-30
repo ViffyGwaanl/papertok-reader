@@ -48,7 +48,7 @@ class _StatisticChartState extends ConsumerState<StatisticChart> {
       enabled: true,
       touchTooltipData: BarTouchTooltipData(
         getTooltipColor: (BarChartGroupData group) {
-          return Colors.white.withOpacity(0);
+          return Colors.white.withAlpha(0);
         },
         getTooltipItem: (group, groupIndex, rod, rodIndex) {
           if (touchedIndex != null && group.x.toInt() == touchedIndex) {
