@@ -21,19 +21,13 @@ Future<File> createEpub(
   // List<String> chapters,
   List<Section> sections,
 ) async {
-  print('EPUB: Starting creation for "$titleString" by "$authorString" with ${sections.length} sections');
-  
   // create epub
   final cacheDir = await getAnxTempDir();
-  print('EPUB: Cache dir: ${cacheDir.path}');
-  
   final epubDir = Directory('${cacheDir.path}/$titleString');
   if (epubDir.existsSync()) {
     epubDir.deleteSync(recursive: true);
-    print('EPUB: Deleted existing temp dir');
   }
   epubDir.createSync();
-  print('EPUB: Created temp dir: ${epubDir.path}');
 
   // mimetype
   final mimetypeFile = File('${epubDir.path}/mimetype');
@@ -113,7 +107,6 @@ Future<File> createEpub(
 }
 ''');
   // xhtml
-  print('EPUB: Creating XHTML files for ${sections.length} sections');
   final xhtmlDir = Directory('${oebpsDir.path}/xhtml');
   xhtmlDir.createSync();
   for (var i = 0; i < sections.length; i++) {
@@ -157,35 +150,21 @@ ${bodyContent.isEmpty ? '' : '$bodyContent\n'}
   }
 
   // zip
-  print('EPUB: Starting ZIP compression');
   final zipFile = File('${cacheDir.path}/$titleString.epub');
   zipFile.createSync();
-  print('EPUB: Created ZIP file: ${zipFile.path}');
   
   try {
     final encoder = ZipFileEncoder();
     encoder.create(zipFile.path);
-    print('EPUB: ZIP encoder created');
-    
     await encoder.addFile(mimetypeFile);
-    print('EPUB: Added mimetype');
-    
     await encoder.addDirectory(metainfDir);
-    print('EPUB: Added META-INF');
-    
     await encoder.addDirectory(oebpsDir);
-    print('EPUB: Added OEBPS');
-    
     await encoder.close();
-    print('EPUB: ZIP compression completed');
   } catch (e) {
-    print('EPUB: ZIP compression failed: $e');
+    AnxLog.severe('EPUB: ZIP compression failed: $e');
     rethrow;
   }
 
   epubDir.deleteSync(recursive: true);
-  print('EPUB: Cleaned up temp directory');
-  
-  print('EPUB: Successfully created EPUB at ${zipFile.path}');
   return zipFile;
 }
