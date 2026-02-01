@@ -92,6 +92,27 @@ jobs:
           generate_release_notes: false
           prerelease: ${{ inputs.is_beta == 'true' }}
 
+      - name: Format changelog for Telegram
+        if: ${{ inputs.is_beta == 'true' || (inputs.is_beta != 'true' && inputs.is_alpha != 'true') }}
+        id: format_changelog
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          MAIN_VERSION=${VERSION%%-*}
+          
+          # Format using the Node.js script (Node is pre-installed in GitHub Actions)
+          FORMATTED_NOTES=$(node scripts/format_telegram_message.js assets/CHANGELOG.md "$MAIN_VERSION" 2>&1) || {
+            echo "::warning::Format script failed, using original notes"
+            FORMATTED_NOTES='${{ inputs.release_notes }}'
+          }
+          
+          # Save to output
+          {
+            echo "formatted_notes<<EOF"
+            echo "$FORMATTED_NOTES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Send beta message
         if: ${{ inputs.is_beta == 'true' }}
         uses: appleboy/telegram-action@master
@@ -107,7 +128,7 @@ jobs:
             ⚠️ *This is a beta release for testing purposes. Please report any issues you encounter.*
             
             **What's New:**
-            ${{ inputs.release_notes }}
+            ${{ steps.format_changelog.outputs.formatted_notes }}
             
             📥 **Download:** https://github.com/Anxcye/anx-reader/releases/tag/${{ inputs.tag }}
 
@@ -124,7 +145,7 @@ jobs:
             🚀 **Version:** `${{ inputs.version }}`
             
             **What's New:**
-            ${{ inputs.release_notes }}
+            ${{ steps.format_changelog.outputs.formatted_notes }}
             
             📥 **Download:** https://github.com/Anxcye/anx-reader/releases/tag/${{ inputs.tag }}
 
