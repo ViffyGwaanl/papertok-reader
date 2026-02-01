@@ -467,18 +467,18 @@ class Prefs extends ChangeNotifier {
     return prefs.getDouble('ttsRate') ?? 0.6;
   }
 
-  set ttsVoiceModel(String shortName) {
-    prefs.setString('ttsVoiceModel_$ttsService', shortName);
+  void setTtsVoiceModel(String serviceId, String shortName) {
+    prefs.setString('ttsVoiceModel_$serviceId', shortName);
     notifyListeners();
   }
 
-  void removeTtsVoiceModel() {
-    prefs.remove('ttsVoiceModel_$ttsService');
+  void removeTtsVoiceModel(String serviceId) {
+    prefs.remove('ttsVoiceModel_$serviceId');
     notifyListeners();
   }
 
-  String get ttsVoiceModel {
-    return prefs.getString('ttsVoiceModel_$ttsService') ?? '';
+  String getTtsVoiceModel(String serviceId) {
+    return prefs.getString('ttsVoiceModel_$serviceId') ?? '';
   }
 
   set ttsService(String serviceId) {

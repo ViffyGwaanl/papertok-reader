@@ -54,7 +54,7 @@ class AzureTtsProvider extends TtsServiceProvider {
 
   @override
   Map<String, dynamic> getConfig() {
-    final config = Prefs().getOnlineTtsConfig(service.name);
+    final config = Prefs().getOnlineTtsConfig(serviceId);
     // Apply defaults if config is empty
     if (config.isEmpty || (config['key'] == null && config['region'] == null)) {
       return {'key': '', 'region': 'global'};
@@ -64,12 +64,12 @@ class AzureTtsProvider extends TtsServiceProvider {
 
   @override
   void saveConfig(Map<String, dynamic> config) {
-    Prefs().saveOnlineTtsConfig(service.name, config);
+    Prefs().saveOnlineTtsConfig(serviceId, config);
   }
 
   @override
   Future<Uint8List> speak(
-      String text, String voice, double rate, double pitch) async {
+      String text, String? voice, double rate, double pitch) async {
     final config = getConfig();
     final String? key = config['key']?.toString();
     final String? region = config['region']?.toString();
@@ -81,6 +81,7 @@ class AzureTtsProvider extends TtsServiceProvider {
     final String url =
         "https://$region.tts.speech.microsoft.com/cognitiveservices/v1";
 
+    final resolvedVoice = resolveVoice(voice);
     final response = await http.post(
       Uri.parse(url),
       headers: {
@@ -89,7 +90,7 @@ class AzureTtsProvider extends TtsServiceProvider {
         'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
         'User-Agent': 'AnxReader',
       },
-      body: _createSsml(text, voice, rate, pitch),
+      body: _createSsml(text, resolvedVoice, rate, pitch),
     );
 
     if (response.statusCode == 200) {

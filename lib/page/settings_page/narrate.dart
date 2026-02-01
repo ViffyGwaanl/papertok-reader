@@ -15,6 +15,7 @@ import 'package:anx_reader/widgets/settings/service_config_form.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class NarrateSettings extends ConsumerStatefulWidget {
@@ -74,8 +75,30 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
         }
       }
     } catch (e) {
-      // Handle error (maybe show toast)
       AnxLog.severe('TTS Test Speak Error: $e');
+      if (mounted) {
+        final errorColor = Theme.of(context).colorScheme.error;
+        SmartDialog.show(
+          useSystem: true,
+          animationType: SmartAnimationType.centerFade_otherSlide,
+          builder: (dialogContext) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.error, color: errorColor),
+                const SizedBox(width: 8),
+                Text(L10n.of(dialogContext).commonError),
+              ],
+            ),
+            content: Text(e.toString()),
+            actions: [
+              TextButton(
+                onPressed: () => SmartDialog.dismiss(),
+                child: Text(L10n.of(dialogContext).commonOk),
+              ),
+            ],
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -98,7 +121,9 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
       duration: const Duration(milliseconds: 1500),
     );
 
-    selectedVoiceModel = Prefs().ttsVoiceModel;
+    final serviceId = Prefs().ttsService;
+    selectedVoiceModel =
+        tts_svc.getTtsService(serviceId).provider.getSelectedVoice();
     _testTextController.text = "Hello, this is a test.";
   }
 
@@ -259,9 +284,17 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
   }
 
   void _selectVoiceModel(String shortName) {
+    final serviceId = ref.read(ttsServiceProvider);
+    final provider = tts_svc.getTtsService(serviceId).provider;
+    final hasVoiceField = provider.getConfig().containsKey('voice');
+    if (hasVoiceField) {
+      ref
+          .read(onlineTtsConfigProvider(serviceId).notifier)
+          .updateConfig('voice', shortName);
+    }
     setState(() {
       selectedVoiceModel = shortName;
-      Prefs().ttsVoiceModel = shortName;
+      provider.setSelectedVoice(shortName);
     });
   }
 
@@ -296,12 +329,14 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
   @override
   Widget build(BuildContext context) {
     final ttsServiceId = ref.watch(ttsServiceProvider);
+    final currentProvider = tts_svc.getTtsService(ttsServiceId).provider;
 
     // Listen to config changes to hide voice list
     ref.listen(onlineTtsConfigProvider(ttsServiceId), (prev, next) {
       if (prev != next) {
         setState(() {
           _showVoiceList = false;
+          selectedVoiceModel = currentProvider.getSelectedVoice();
         });
       }
     });
@@ -403,6 +438,9 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
           DropdownMenuItem(
               value: 'azure',
               child: Text(L10n.of(context).settingsNarrateAzureTts)),
+          DropdownMenuItem(
+              value: 'openai',
+              child: Text(L10n.of(context).settingsNarrateOpenAiTts)),
         ],
         onChanged: (value) async {
           if (value != null && value != currentServiceId) {
@@ -413,7 +451,8 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
             _showVoiceList = false;
 
             // Sync selected voice model for the new service
-            selectedVoiceModel = Prefs().ttsVoiceModel;
+            selectedVoiceModel =
+                tts_svc.getTtsService(value).provider.getSelectedVoice();
 
             setState(() {});
           }

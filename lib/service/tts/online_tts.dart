@@ -259,7 +259,7 @@ class OnlineTts extends BaseTts {
         final bytes = await backend
             .speak(
               segment.sentence.text,
-              Prefs().ttsVoiceModel,
+              null,
               rate,
               pitch,
             )
@@ -434,14 +434,10 @@ class OnlineTts extends BaseTts {
     await stop();
     final audioPlayer = await _ensurePlayer();
 
-    try {
-      final bytes = await backend.speak(content, voice, rate, pitch);
-      if (bytes.isNotEmpty) {
-        final source = BytesSource(bytes, mimeType: 'audio/mp3');
-        await audioPlayer.play(source);
-      }
-    } catch (e) {
-      AnxLog.severe('SpeakWithVoice error: $e');
+    final bytes = await backend.speak(content, voice, rate, pitch);
+    if (bytes.isNotEmpty) {
+      final source = BytesSource(bytes, mimeType: 'audio/mp3');
+      await audioPlayer.play(source);
     }
   }
 

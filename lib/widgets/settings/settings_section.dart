@@ -60,14 +60,8 @@ class SettingsSection extends AbstractSettingsSection {
   }
 
   Widget buildTileList() {
-    return ListView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      itemCount: tiles.length,
-      padding: EdgeInsets.zero,
-      itemBuilder: (BuildContext context, int index) {
-        return tiles[index];
-      },
+    return Column(
+      children: tiles,
     );
   }
 }

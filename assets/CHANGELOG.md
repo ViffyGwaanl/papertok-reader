@@ -1,6 +1,7 @@
 # Changelog
 
 ## 1.12.0
+- Feat(tts): Add OpenAI-compatible TTS service support (#653)
 - Feat(reader): Add code syntax highlighting with 12 themes, 60+ languages
 - Perf(reader): Optimize page turning smoothness and fix momentum scrolling issues on Android devices
 - Fix(reader): Change default auto-translate selection setting to disabled
@@ -38,6 +39,7 @@
 - Fix(bookshelf): Fix stacked view showing sharp corners when cover width is narrow (#727)
 
 - Feat(reader): 添加代码语法高亮，支持 12 种主题, 60+ 编程语言
+- Feat(tts): 增加 OpenAI 兼容 TTS 服务支持 (#653)
 - Perf(reader): 优化翻页流畅度，修复安卓设备惯性滚动问题
 - Fix(reader): 修改自动翻译选中文本的默认设置为关闭
 - Feat(reader): 添加标题字体大小调节滑块

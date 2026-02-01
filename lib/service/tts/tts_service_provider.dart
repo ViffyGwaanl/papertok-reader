@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/config/service_provider.dart';
 import 'package:anx_reader/service/tts/models/tts_voice.dart';
 import 'package:flutter/widgets.dart';
@@ -23,6 +24,8 @@ abstract class _TtsService {}
 ///   - [getConfigItems]: Configuration items.
 ///   - [getConfig] / [saveConfig]: Configuration management.
 abstract class TtsServiceProvider extends ServiceProvider<dynamic> {
+  String get serviceId => service.toString().split('.').last;
+
   /// The display label for this service.
   @override
   String getLabel(BuildContext context);
@@ -31,7 +34,7 @@ abstract class TtsServiceProvider extends ServiceProvider<dynamic> {
   /// Only required for online TTS services.
   /// System TTS doesn't use this method.
   Future<Uint8List> speak(
-      String text, String voice, double rate, double pitch) async {
+      String text, String? voice, double rate, double pitch) async {
     throw UnimplementedError('speak() not implemented for $service');
   }
 
@@ -46,5 +49,27 @@ abstract class TtsServiceProvider extends ServiceProvider<dynamic> {
   TtsVoice convertVoiceModel(dynamic voiceData) {
     throw UnimplementedError(
         'convertVoiceModel() not implemented for $service');
+  }
+
+  /// Get the currently selected voice for this service.
+  String getSelectedVoice() {
+    return Prefs().getTtsVoiceModel(serviceId);
+  }
+
+  /// Persist the selected voice for this service.
+  void setSelectedVoice(String voice) {
+    Prefs().setTtsVoiceModel(serviceId, voice);
+  }
+
+  /// Resolve the voice to use, optionally overriding the saved selection.
+  String resolveVoice(String? voiceOverride) {
+    if (voiceOverride != null && voiceOverride.isNotEmpty) {
+      return voiceOverride;
+    }
+    final selected = getSelectedVoice();
+    if (selected.isEmpty) {
+      throw Exception('No voice selected for $service');
+    }
+    return selected;
   }
 }

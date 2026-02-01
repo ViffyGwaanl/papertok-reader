@@ -1,5 +1,6 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/tts/azure_tts_backend.dart';
+import 'package:anx_reader/service/tts/openai_tts_backend.dart';
 import 'package:anx_reader/service/tts/tts_service_provider.dart';
 import 'package:flutter/material.dart';
 
@@ -7,7 +8,8 @@ import 'package:flutter/material.dart';
 /// Defines available TTS services (system TTS and online TTS services).
 enum TtsService {
   system,
-  azure;
+  azure,
+  openai;
   // Future services can be added here: google, aws, elevenlabs, etc.
 
   /// Get the provider for this TTS service.
@@ -17,6 +19,8 @@ enum TtsService {
         return SystemTtsProvider();
       case TtsService.azure:
         return AzureTtsProvider();
+      case TtsService.openai:
+        return OpenAiTtsProvider();
     }
   }
 
@@ -30,7 +34,8 @@ enum TtsService {
 /// Get TTS service from service ID string.
 TtsService getTtsService(String serviceId) {
   try {
-    return TtsService.values.firstWhere((e) => e.name == serviceId);
+    return TtsService.values
+        .firstWhere((e) => e.toString().split('.').last == serviceId);
   } catch (e) {
     return TtsService.system;
   }
