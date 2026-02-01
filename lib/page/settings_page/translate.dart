@@ -4,12 +4,12 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/settings/service_config_form.dart';
+import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:anx_reader/widgets/settings/settings_section.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class TranslateSetting extends StatefulWidget {
   const TranslateSetting({super.key});
@@ -402,178 +402,6 @@ class _TranslateSettingItemState extends State<TranslateSettingItem> {
     );
   }
 
-  Widget _buildConfigItem(ConfigItem item) {
-    switch (item.type) {
-      case ConfigItemType.text:
-      case ConfigItemType.password:
-        return TextField(
-          obscureText: item.type == ConfigItemType.password,
-          decoration: InputDecoration(
-            labelText: item.label,
-            helperText: item.description,
-            border: const OutlineInputBorder(),
-          ),
-          controller: TextEditingController(
-              text: _currentConfig[item.key]?.toString() ??
-                  item.defaultValue?.toString() ??
-                  ''),
-          onChanged: (value) {
-            _currentConfig[item.key] = value;
-          },
-        );
-
-      case ConfigItemType.number:
-        return TextField(
-          decoration: InputDecoration(
-            labelText: item.label,
-            helperText: item.description,
-            border: const OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
-          controller: TextEditingController(
-              text: _currentConfig[item.key]?.toString() ??
-                  item.defaultValue?.toString() ??
-                  ''),
-          onChanged: (value) {
-            _currentConfig[item.key] = int.tryParse(value) ?? 0;
-          },
-        );
-
-      case ConfigItemType.toggle:
-        return SwitchListTile(
-          title: Text(item.label),
-          subtitle: item.description != null ? Text(item.description!) : null,
-          value: _currentConfig[item.key] ?? item.defaultValue ?? false,
-          onChanged: (value) {
-            setState(() {
-              _currentConfig[item.key] = value;
-            });
-          },
-        );
-
-      case ConfigItemType.select:
-        if (item.options == null || item.options!.isEmpty) {
-          return const Text('None options');
-        }
-
-        final String currentValue = _currentConfig[item.key]?.toString() ??
-            item.defaultValue?.toString() ??
-            item.options!.first['value']?.toString() ??
-            '';
-
-        return DropdownButtonFormField<String>(
-          decoration: InputDecoration(
-            labelText: item.label,
-            helperText: item.description,
-            border: const OutlineInputBorder(),
-          ),
-          initialValue: currentValue,
-          items: item.options!.map((option) {
-            return DropdownMenuItem<String>(
-              value: option['value'].toString(),
-              child: Text(option['label'].toString()),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _currentConfig[item.key] = value;
-              });
-            }
-          },
-        );
-
-      case ConfigItemType.radio:
-        if (item.options == null || item.options!.isEmpty) {
-          return const Text('None options');
-        }
-
-        final currentValue = _currentConfig[item.key] ?? item.defaultValue;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                item.label,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            if (item.description != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text(item.description!),
-              ),
-            ...item.options!.map((option) {
-              return RadioListTile<dynamic>(
-                title: Text(option['label'].toString()),
-                value: option['value'],
-                groupValue: currentValue,
-                onChanged: (value) {
-                  setState(() {
-                    _currentConfig[item.key] = value;
-                  });
-                },
-              );
-            }),
-          ],
-        );
-
-      case ConfigItemType.checkbox:
-        return CheckboxListTile(
-          title: Text(item.label),
-          subtitle: item.description != null ? Text(item.description!) : null,
-          value: _currentConfig[item.key] ?? item.defaultValue ?? false,
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _currentConfig[item.key] = value;
-              });
-            }
-          },
-        );
-      case ConfigItemType.tip:
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.info_outline, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item.defaultValue.toString(),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-              if (item.link != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 28.0, top: 4.0),
-                  child: GestureDetector(
-                    onTap: () => launchUrl(Uri.parse(item.link!),
-                        mode: LaunchMode.externalApplication),
-                    child: Text(
-                      L10n.of(context).settingsNarrateClickForHelp,
-                      style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        decoration: TextDecoration.underline,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-    }
-  }
-
   void _saveConfig() {
     try {
       saveTranslateServiceConfig(widget.service, _currentConfig);
@@ -615,12 +443,13 @@ class _TranslateSettingItemState extends State<TranslateSettingItem> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ...configItems.map((item) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: _buildConfigItem(item),
-                          );
-                        }),
+                        ServiceConfigForm(
+                          configItems: configItems,
+                          initialConfig: _currentConfig,
+                          onConfigChanged: (newConfig) {
+                            _currentConfig = newConfig;
+                          },
+                        ),
                         const Divider(),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,

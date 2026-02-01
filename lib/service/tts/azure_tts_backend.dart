@@ -4,41 +4,75 @@ import 'dart:typed_data';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/tts/models/tts_voice.dart';
-import 'package:anx_reader/service/tts/online_tts_backend.dart';
+import 'package:anx_reader/service/tts/tts_service.dart';
+import 'package:anx_reader/service/tts/tts_service_provider.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 
-class AzureTtsBackend extends OnlineTtsBackend {
-  static final AzureTtsBackend _instance = AzureTtsBackend._internal();
+class AzureTtsProvider extends TtsServiceProvider {
+  static final AzureTtsProvider _instance = AzureTtsProvider._internal();
 
-  factory AzureTtsBackend() {
+  factory AzureTtsProvider() {
     return _instance;
   }
 
-  AzureTtsBackend._internal();
+  AzureTtsProvider._internal();
 
   @override
-  String get serviceId => 'azure';
+  TtsService get service => TtsService.azure;
 
   @override
-  String get name => 'Azure TTS';
+  String getLabel(BuildContext context) =>
+      L10n.of(context).settingsNarrateAzureTts;
 
   @override
-  String helpText(BuildContext context) =>
-      L10n.of(context).settingsNarrateAzureHelpText;
+  List<ConfigItem> getConfigItems(BuildContext context) {
+    return [
+      ConfigItem(
+        key: 'tip',
+        label: L10n.of(context).translateTip,
+        type: ConfigItemType.tip,
+        defaultValue: L10n.of(context).settingsNarrateAzureHelpText,
+        link: 'https://anx.anxcye.com/docs/tts/azure',
+      ),
+      ConfigItem(
+        key: 'key',
+        label: 'API Key',
+        description: 'Azure TTS API Key',
+        type: ConfigItemType.password,
+        defaultValue: '',
+      ),
+      ConfigItem(
+        key: 'region',
+        label: 'Region',
+        description: 'Azure TTS Region',
+        type: ConfigItemType.text,
+        defaultValue: 'global',
+      ),
+    ];
+  }
 
   @override
-  String get helpLink => 'https://anx.anxcye.com/docs/tts/azure';
+  Map<String, dynamic> getConfig() {
+    final config = Prefs().getOnlineTtsConfig(service.name);
+    // Apply defaults if config is empty
+    if (config.isEmpty || (config['key'] == null && config['region'] == null)) {
+      return {'key': '', 'region': 'global'};
+    }
+    return config;
+  }
 
   @override
-  List<String> get configFields => ['key', 'region'];
+  void saveConfig(Map<String, dynamic> config) {
+    Prefs().saveOnlineTtsConfig(service.name, config);
+  }
 
   @override
   Future<Uint8List> speak(
       String text, String voice, double rate, double pitch) async {
-    final config = Prefs().getOnlineTtsConfig(serviceId);
-    final String? key = config['key'];
-    final String? region = config['region'];
+    final config = getConfig();
+    final String? key = config['key']?.toString();
+    final String? region = config['region']?.toString();
 
     if (key == null || key.isEmpty || region == null || region.isEmpty) {
       throw Exception('Azure TTS config missing (key or region)');
@@ -98,9 +132,9 @@ $text
 
   @override
   Future<List<TtsVoice>> getVoices() async {
-    final config = Prefs().getOnlineTtsConfig(serviceId);
-    final String? key = config['key'];
-    final String? region = config['region'];
+    final config = getConfig();
+    final String? key = config['key']?.toString();
+    final String? region = config['region']?.toString();
 
     if (key == null || key.isEmpty || region == null || region.isEmpty) {
       return [];

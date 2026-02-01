@@ -2,6 +2,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/tts/base_tts.dart';
 import 'package:anx_reader/service/tts/online_tts.dart';
 import 'package:anx_reader/service/tts/system_tts.dart';
+import 'package:anx_reader/service/tts/tts_service.dart';
 import 'package:flutter/material.dart';
 
 class TtsFactory {
@@ -21,8 +22,8 @@ class TtsFactory {
   }
 
   BaseTts createTts() {
-    final String service = Prefs().ttsService;
-    return service == 'system' ? SystemTts() : OnlineTts();
+    TtsService service = getTtsService(Prefs().ttsService);
+    return service == TtsService.system ? SystemTts() : OnlineTts();
   }
 
   Future<void> switchTtsType(String serviceId) async {

@@ -1,22 +1,21 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/tts_providers.dart';
-import 'package:anx_reader/service/tts/azure_tts_backend.dart';
 import 'package:anx_reader/service/tts/models/tts_voice.dart';
 import 'package:anx_reader/service/tts/online_tts.dart';
-import 'package:anx_reader/service/tts/online_tts_backend.dart';
 import 'package:anx_reader/service/tts/system_tts.dart';
 import 'package:anx_reader/service/tts/tts_factory.dart';
 import 'package:anx_reader/service/tts/tts_handler.dart';
+import 'package:anx_reader/service/tts/tts_service.dart' as tts_svc;
 import 'package:anx_reader/utils/get_current_language_code.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/settings/service_config_form.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class NarrateSettings extends ConsumerStatefulWidget {
   const NarrateSettings({super.key});
@@ -39,7 +38,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
 
   final Map<String, GlobalKey> _languageKeys = {};
   final TextEditingController _testTextController = TextEditingController();
-  bool _showVoiceList = true;
+  bool _showVoiceList = false;
 
   final Map<String, bool> _modelLoadingStates = {};
   bool _mainTestLoading = false;
@@ -88,11 +87,6 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
         });
       }
     }
-  }
-
-  OnlineTtsBackend? _getBackend(String id) {
-    if (id == 'azure') return AzureTtsBackend();
-    return null;
   }
 
   @override
@@ -343,43 +337,49 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
           title: Text(L10n.of(context).settingsNarrateTtsVoiceModels),
           tiles: [
             CustomSettingsTile(
-              child: _showVoiceList
-                  ? Column(
-                      children: [..._buildVoiceListContent()],
-                    )
-                  : Center(
-                      child: AnxButton(
-                        onPressed: () async {
-                          setState(() {
-                            _showVoiceList = true;
-                          });
-                          final voices =
-                              await ref.refresh(ttsVoicesProvider.future);
-                          if (selectedVoiceModel == null && voices.isNotEmpty) {
-                            final currentLocale =
-                                Localizations.localeOf(context);
-                            final currentLangCode = currentLocale.languageCode;
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: _showVoiceList
+                    ? Column(
+                        children: [..._buildVoiceListContent()],
+                      )
+                    : Center(
+                        child: AnxButton(
+                          onPressed: () async {
+                            setState(() {
+                              _showVoiceList = true;
+                            });
+                            final voices =
+                                await ref.refresh(ttsVoicesProvider.future);
+                            if (selectedVoiceModel == null &&
+                                voices.isNotEmpty) {
+                              final currentLocale =
+                                  Localizations.localeOf(context);
+                              final currentLangCode =
+                                  currentLocale.languageCode;
 
-                            // Try to find a voice matching current language
-                            TtsVoice? match = voices.firstWhere(
-                              (v) => v.locale
-                                  .toLowerCase()
-                                  .startsWith(currentLangCode.toLowerCase()),
-                              orElse: () => voices.firstWhere(
-                                // Fallback to English
-                                (v) => v.locale.toLowerCase().startsWith('en'),
-                                // Fallback to first available
-                                orElse: () => voices.first,
-                              ),
-                            );
+                              // Try to find a voice matching current language
+                              TtsVoice? match = voices.firstWhere(
+                                (v) => v.locale
+                                    .toLowerCase()
+                                    .startsWith(currentLangCode.toLowerCase()),
+                                orElse: () => voices.firstWhere(
+                                  // Fallback to English
+                                  (v) =>
+                                      v.locale.toLowerCase().startsWith('en'),
+                                  // Fallback to first available
+                                  orElse: () => voices.first,
+                                ),
+                              );
 
-                            _selectVoiceModel(match.shortName);
-                          }
-                        },
-                        child:
-                            Text(L10n.of(context).settingsNarrateGetVoiceList),
+                              _selectVoiceModel(match.shortName);
+                            }
+                          },
+                          child: Text(
+                              L10n.of(context).settingsNarrateGetVoiceList),
+                        ),
                       ),
-                    ),
+              ),
             )
           ],
         )
@@ -409,13 +409,8 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
             await TtsHandler().switchTtsType(value);
             ref.read(ttsServiceProvider.notifier).setService(value);
 
-            if (value == 'system') {
-              _showVoiceList = true;
-              ref.refresh(ttsVoicesProvider);
-            } else {
-              // If online, maybe require manual fetch or check if configured
-              _showVoiceList = false;
-            }
+            // Hide voice list when switching services, require manual fetch
+            _showVoiceList = false;
 
             // Sync selected voice model for the new service
             selectedVoiceModel = Prefs().ttsVoiceModel;
@@ -428,48 +423,28 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
   }
 
   Widget _buildConfigSection(String serviceId) {
-    final backend = _getBackend(serviceId);
-    if (backend == null) return const SizedBox.shrink();
+    final service = tts_svc.getTtsService(serviceId);
+    if (service == tts_svc.TtsService.system) return const SizedBox.shrink();
+
+    final provider = service.provider;
+    final configItems = provider.getConfigItems(context);
+    if (configItems.isEmpty) return const SizedBox.shrink();
 
     final config = ref.watch(onlineTtsConfigProvider(serviceId));
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(backend.helpText(context)),
-          GestureDetector(
-            onTap: () => launchUrl(Uri.parse(backend.helpLink),
-                mode: LaunchMode.externalApplication),
-            child: Text(
-              L10n.of(context).settingsNarrateClickForHelp,
-              style: TextStyle(
-                  color: Theme.of(context).primaryColor,
-                  decoration: TextDecoration.underline),
-            ),
-          ),
-          const SizedBox(height: 20),
-          ...backend.configFields.map((field) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: TextField(
-                controller: TextEditingController(text: config[field])
-                  ..selection = TextSelection.collapsed(
-                      offset: config[field]?.length ?? 0),
-                decoration: InputDecoration(
-                  labelText: field.toUpperCase(),
-                  border: const OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  ref
-                      .read(onlineTtsConfigProvider(serviceId).notifier)
-                      .updateConfig(field, value);
-                },
-              ),
-            );
-          }),
-        ],
+      child: ServiceConfigForm(
+        configItems: configItems,
+        initialConfig: config,
+        onConfigChanged: (newConfig) {
+          // Update config for each changed field
+          for (var entry in newConfig.entries) {
+            ref
+                .read(onlineTtsConfigProvider(serviceId).notifier)
+                .updateConfig(entry.key, entry.value);
+          }
+        },
       ),
     );
   }

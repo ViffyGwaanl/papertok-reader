@@ -39,12 +39,12 @@ Future<List<TtsVoice>> ttsVoices(Ref ref) async {
 @riverpod
 class OnlineTtsConfig extends _$OnlineTtsConfig {
   @override
-  Map<String, String> build(String serviceId) {
+  Map<String, dynamic> build(String serviceId) {
     return Prefs().getOnlineTtsConfig(serviceId);
   }
 
-  void updateConfig(String key, String value) {
-    final current = Map<String, String>.from(state);
+  void updateConfig(String key, dynamic value) {
+    final current = Map<String, dynamic>.from(state);
     current[key] = value;
     Prefs().saveOnlineTtsConfig(serviceId, current);
     state = current;

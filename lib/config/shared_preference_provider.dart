@@ -501,19 +501,18 @@ class Prefs extends ChangeNotifier {
     return 'system';
   }
 
-  Map<String, String> getOnlineTtsConfig(String serviceId) {
+  Map<String, dynamic> getOnlineTtsConfig(String serviceId) {
     String? json = prefs.getString('onlineTtsConfig_$serviceId');
     if (json == null) return {};
     try {
-      Map<String, dynamic> decoded = jsonDecode(json);
-      return decoded.map((key, value) => MapEntry(key, value.toString()));
+      return jsonDecode(json) as Map<String, dynamic>;
     } catch (e) {
       return {};
     }
   }
 
   Future<void> saveOnlineTtsConfig(
-      String serviceId, Map<String, String> config) async {
+      String serviceId, Map<String, dynamic> config) async {
     await prefs.setString('onlineTtsConfig_$serviceId', jsonEncode(config));
     notifyListeners();
   }

@@ -3,6 +3,7 @@ import 'dart:core';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/service/config/config_item.dart';
 import 'package:anx_reader/service/translate/ai.dart';
 import 'package:anx_reader/service/translate/deepl.dart';
 import 'package:anx_reader/service/translate/google_api.dart';
@@ -58,51 +59,6 @@ TranslateService getTranslateService(String name) {
     return TranslateService.values.firstWhere((e) => e.name == name);
   } catch (e) {
     return TranslateService.bingWeb;
-  }
-}
-
-enum ConfigItemType {
-  text('text input'),
-  password('password input'),
-  number('number input'),
-  select('select'),
-  radio('radio'),
-  checkbox('checkbox'),
-  toggle('toggle'),
-  tip('tip');
-
-  const ConfigItemType(this.label);
-  final String label;
-}
-
-class ConfigItem {
-  final String key;
-  final String label;
-  final String? description;
-  final ConfigItemType type;
-  final dynamic defaultValue;
-  final List<Map<String, dynamic>>? options;
-  final String? link;
-
-  ConfigItem({
-    required this.key,
-    required this.label,
-    this.description,
-    required this.type,
-    this.defaultValue,
-    this.options,
-    this.link,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'key': key,
-      'label': label,
-      'description': description,
-      'type': type.name,
-      'defaultValue': defaultValue,
-      'options': options,
-    };
   }
 }
 

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/tts/base_tts.dart';
-import 'package:anx_reader/service/tts/online_tts_backend.dart';
-import 'package:anx_reader/service/tts/azure_tts_backend.dart';
+import 'package:anx_reader/service/tts/tts_service.dart';
+import 'package:anx_reader/service/tts/tts_service_provider.dart';
 import 'package:anx_reader/service/tts/models/tts_segment.dart';
 import 'package:anx_reader/service/tts/models/tts_sentence.dart';
 import 'package:anx_reader/service/tts/models/tts_voice.dart';
@@ -55,16 +55,12 @@ class OnlineTts extends BaseTts {
   bool _shouldStop = false;
 
   // ============ Backend ============
-  OnlineTtsBackend? _currentBackend;
+  TtsServiceProvider? _currentBackend;
 
-  OnlineTtsBackend get backend {
-    String serviceId = Prefs().ttsService;
-    if (_currentBackend?.serviceId != serviceId) {
-      if (serviceId == 'azure') {
-        _currentBackend = AzureTtsBackend();
-      } else {
-        _currentBackend = AzureTtsBackend();
-      }
+  TtsServiceProvider get backend {
+    TtsService service = getTtsService(Prefs().ttsService);
+    if (_currentBackend?.service != service) {
+      _currentBackend = service.provider;
     }
     return _currentBackend!;
   }
