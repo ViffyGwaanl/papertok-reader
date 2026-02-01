@@ -11,6 +11,9 @@ class TtsVoice {
   /// Gender (Male, Female, or other/unknown)
   final String gender;
 
+  /// Optional description for display
+  final String description;
+
   /// Optional raw data for extra properties
   final Map<String, dynamic>? rawData;
 
@@ -19,6 +22,7 @@ class TtsVoice {
     required this.name,
     required this.locale,
     this.gender = '',
+    this.description = '',
     this.rawData,
   });
 
@@ -28,6 +32,7 @@ class TtsVoice {
       name: map['FriendlyName'] ?? map['Name'] ?? map['ShortName'] ?? '',
       locale: map['Locale'] ?? map['locale'] ?? '',
       gender: map['Gender'] ?? '',
+      description: map['Description'] ?? map['description'] ?? '',
       rawData: map,
     );
   }
@@ -38,6 +43,7 @@ class TtsVoice {
       'FriendlyName': name,
       'Locale': locale,
       'Gender': gender,
+      'Description': description,
       ...rawData ?? {},
     };
   }

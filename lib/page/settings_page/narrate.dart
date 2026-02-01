@@ -436,6 +436,9 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
               value: 'system',
               child: Text(L10n.of(context).settingsNarrateSystemTts)),
           DropdownMenuItem(
+              value: 'aliyun',
+              child: Text(L10n.of(context).settingsNarrateAliyunTts)),
+          DropdownMenuItem(
               value: 'azure',
               child: Text(L10n.of(context).settingsNarrateAzureTts)),
           DropdownMenuItem(
@@ -687,6 +690,11 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                         ? L10n.of(context).settingsNarrateVoiceModelMale
                         : gender;
 
+                final description = voice.description;
+                final subtitle = description.isNotEmpty
+                    ? '$localizationedGender · ${voice.locale} · $description'
+                    : '$localizationedGender · ${voice.locale}';
+
                 return AnimatedBuilder(
                   animation: _highlightAnimation,
                   builder: (context, child) {
@@ -713,7 +721,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                             isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
-                    subtitle: Text('$localizationedGender · ${voice.locale}'),
+                    subtitle: Text(subtitle),
                     trailing: isSelected
                         ? Icon(Icons.check,
                             color: Theme.of(context).primaryColor)
@@ -744,11 +752,12 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                   ),
                 );
               }),
-            Divider(
-              height: 1,
-              thickness: 4,
-              color: Theme.of(context).colorScheme.surface,
-            ),
+            if (language != sortedEntries.last)
+              Divider(
+                height: 1,
+                thickness: 4,
+                color: Theme.of(context).colorScheme.surface,
+              ),
           ],
         ),
       );

@@ -1,4 +1,5 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/service/tts/aliyun/aliyun_tts_backend.dart';
 import 'package:anx_reader/service/tts/azure_tts_backend.dart';
 import 'package:anx_reader/service/tts/openai_tts_backend.dart';
 import 'package:anx_reader/service/tts/tts_service_provider.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/material.dart';
 /// Defines available TTS services (system TTS and online TTS services).
 enum TtsService {
   system,
+  aliyun,
   azure,
   openai;
   // Future services can be added here: google, aws, elevenlabs, etc.
@@ -17,6 +19,8 @@ enum TtsService {
     switch (this) {
       case TtsService.system:
         return SystemTtsProvider();
+      case TtsService.aliyun:
+        return AliyunTtsProvider();
       case TtsService.azure:
         return AzureTtsProvider();
       case TtsService.openai:
