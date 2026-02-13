@@ -32,12 +32,18 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.sendImmediate = false,
     this.quickPromptChips = const [],
     this.trailing,
+    this.scrollController,
   });
 
   final String? initialMessage;
   final bool sendImmediate;
   final List<AiQuickPromptChip> quickPromptChips;
   final List<Widget>? trailing;
+
+  /// Optional external scroll controller used for the message list.
+  ///
+  /// This is mainly for integrating with [DraggableScrollableSheet].
+  final ScrollController? scrollController;
 
   @override
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
@@ -49,7 +55,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Stream<List<ChatMessage>>? _messageStream;
   StreamController<List<ChatMessage>>? _messageController;
   StreamSubscription<List<ChatMessage>>? _messageSubscription;
-  final ScrollController _scrollController = ScrollController();
+
+  late final ScrollController _scrollController;
+  late final bool _ownsScrollController;
+
   bool _isStreaming = false;
   late List<AiServiceOption> _serviceOptions;
   late String _selectedServiceId;
@@ -84,6 +93,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   @override
   void initState() {
     super.initState();
+
+    _ownsScrollController = widget.scrollController == null;
+    _scrollController = widget.scrollController ?? ScrollController();
+
     _starterPrompts = [
       L10n.of(navigatorKey.currentContext!).quickPrompt1,
       L10n.of(navigatorKey.currentContext!).quickPrompt2,
@@ -118,7 +131,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     inputController.dispose();
     _messageSubscription?.cancel();
     _messageController?.close();
-    _scrollController.dispose();
+    if (_ownsScrollController) {
+      _scrollController.dispose();
+    }
     super.dispose();
   }
 

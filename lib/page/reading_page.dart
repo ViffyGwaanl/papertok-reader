@@ -20,6 +20,7 @@ import 'package:anx_reader/service/ai/prompt_generate.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ui/status_bar.dart';
+import 'package:anx_reader/widgets/ai/ai_chat_bottom_sheet.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:anx_reader/widgets/ai/ai_stream.dart';
 import 'package:anx_reader/widgets/reading_page/notes_widget.dart';
@@ -535,26 +536,19 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     List<AiQuickPromptChip> quickPrompts = _getAiQuickPromptChips();
     if (MediaQuery.of(navigatorKey.currentContext!).size.width < 600) {
       showModalBottomSheet(
-          context: navigatorKey.currentContext!,
-          isScrollControlled: true,
-          showDragHandle: false,
-          clipBehavior: Clip.hardEdge,
-          builder: (context) => PointerInterceptor(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.8,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: AiChatStream(
-                      key: aiChatKey,
-                      initialMessage: content,
-                      sendImmediate: sendImmediate,
-                      quickPromptChips: quickPrompts,
-                    ),
-                  ),
-                ),
-              ));
+        context: navigatorKey.currentContext!,
+        isScrollControlled: true,
+        showDragHandle: false,
+        clipBehavior: Clip.hardEdge,
+        builder: (context) => PointerInterceptor(
+          child: AiChatBottomSheet(
+            aiChatKey: aiChatKey,
+            initialMessage: content,
+            sendImmediate: sendImmediate,
+            quickPromptChips: quickPrompts,
+          ),
+        ),
+      );
     } else {
       setState(() {
         final maxWidth = _aiChatMaxWidth(navigatorKey.currentContext!);

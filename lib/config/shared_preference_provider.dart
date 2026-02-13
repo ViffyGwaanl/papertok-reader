@@ -1498,6 +1498,16 @@ class Prefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Initial height of AI chat bottom sheet (0-1, relative to screen height).
+  double get aiSheetInitialSize {
+    return prefs.getDouble('aiSheetInitialSize') ?? 0.6;
+  }
+
+  set aiSheetInitialSize(double size) {
+    prefs.setDouble('aiSheetInitialSize', size);
+    notifyListeners();
+  }
+
   CodeHighlightThemeEnum get codeHighlightTheme {
     return CodeHighlightThemeEnum.fromCode(
         prefs.getString('codeHighlightTheme') ?? 'default');
