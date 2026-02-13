@@ -699,6 +699,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       );
     }
 
+    final fontScale = Prefs().aiChatFontScale.clamp(0.8, 1.4).toDouble();
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.transparent,
@@ -711,6 +713,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.text_fields),
+            tooltip: L10n.of(context).font,
+            onPressed: _showFontScaleSheet,
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_document),
             onPressed: _clearMessage,
           ),
@@ -720,40 +727,46 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       drawer: Drawer(
         child: _buildHistoryDrawer(context),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _messageStream != null
-                ? StreamBuilder<List<ChatMessage>>(
-                    stream: _messageStream,
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return Skeletonizer.zone(child: Bone.multiText());
-                      }
+      body: MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(fontScale),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: _messageStream != null
+                  ? StreamBuilder<List<ChatMessage>>(
+                      stream: _messageStream,
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return Skeletonizer.zone(child: Bone.multiText());
+                        }
 
-                      final messages = snapshot.data!;
-                      if (messages.isEmpty) {
-                        return buildEmptyState();
-                      }
-
-                      return _buildMessageList(messages);
-                    },
-                  )
-                : ref.watch(aiChatProvider).when(
-                      data: (messages) {
+                        final messages = snapshot.data!;
                         if (messages.isEmpty) {
                           return buildEmptyState();
                         }
 
                         return _buildMessageList(messages);
                       },
-                      loading: () => Skeletonizer.zone(child: Bone.multiText()),
-                      error: (error, stack) =>
-                          Center(child: Text('error: $error')),
-                    ),
-          ),
-          inputBox,
-        ],
+                    )
+                  : ref.watch(aiChatProvider).when(
+                        data: (messages) {
+                          if (messages.isEmpty) {
+                            return buildEmptyState();
+                          }
+
+                          return _buildMessageList(messages);
+                        },
+                        loading: () =>
+                            Skeletonizer.zone(child: Bone.multiText()),
+                        error: (error, stack) =>
+                            Center(child: Text('error: $error')),
+                      ),
+            ),
+            inputBox,
+          ],
+        ),
       ),
     );
   }
@@ -937,6 +950,68 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       return ApplyBookTagsStepTile(step: step);
     }
     return ToolStepTile(step: step);
+  }
+
+  void _showFontScaleSheet() {
+    final l10n = L10n.of(context);
+    const minScale = 0.8;
+    const maxScale = 1.4;
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        double scale = Prefs().aiChatFontScale.clamp(minScale, maxScale);
+        return SafeArea(
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              void update(double next) {
+                final clamped = next.clamp(minScale, maxScale).toDouble();
+                setModalState(() {
+                  scale = clamped;
+                });
+                Prefs().aiChatFontScale = clamped;
+                // Force rebuild to apply scale immediately.
+                setState(() {});
+              }
+
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.font,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => update(1.0),
+                          child: Text(l10n.commonReset),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Slider(
+                      value: scale,
+                      min: minScale,
+                      max: maxScale,
+                      divisions: 12,
+                      label: '${(scale * 100).round()}%',
+                      onChanged: update,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildCollapsibleText(String text, bool isLongMessage) {

@@ -1510,6 +1510,16 @@ class Prefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Font scale for AI chat UI (markdown + input). 1.0 = system default.
+  double get aiChatFontScale {
+    return prefs.getDouble('aiChatFontScale') ?? 1.0;
+  }
+
+  set aiChatFontScale(double scale) {
+    prefs.setDouble('aiChatFontScale', scale);
+    notifyListeners();
+  }
+
   /// iPad AI panel mode: dock (split panel) or bottomSheet.
   AiPadPanelModeEnum get aiPadPanelMode {
     return AiPadPanelModeEnum.fromCode(
