@@ -94,6 +94,11 @@ class ReadingPageState extends ConsumerState<ReadingPage>
       AnxToast.show(L10n.of(context).bookDeleted);
       return;
     }
+
+    // Restore AI panel persisted size early.
+    _aiChatWidth = Prefs().aiPanelWidth;
+    _aiChatHeight = Prefs().aiPanelHeight;
+
     if (Prefs().hideStatusBar) {
       hideStatusBar();
     }
@@ -390,6 +395,12 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   }
 
   void _endAiChatResize() {
+    // Persist size even if we didn't enter resizing state (safe + cheap)
+    try {
+      Prefs().aiPanelWidth = _aiChatWidth;
+      Prefs().aiPanelHeight = _aiChatHeight;
+    } catch (_) {}
+
     if (_isResizingAiChat) {
       setState(() {
         _isResizingAiChat = false;
@@ -812,10 +823,11 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                       ),
                       if (_aiChat != null)
                         GestureDetector(
-                          behavior: HitTestBehavior.translucent,
+                          behavior: HitTestBehavior.opaque,
                           onHorizontalDragStart: Prefs().aiPanelPosition ==
                                   AiPanelPositionEnum.right
                               ? (details) {
+                                  HapticFeedback.selectionClick();
                                   _beginAiChatResize(details.globalPosition.dx);
                                 }
                               : null,
@@ -843,6 +855,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                           onVerticalDragStart: Prefs().aiPanelPosition ==
                                   AiPanelPositionEnum.bottom
                               ? (details) {
+                                  HapticFeedback.selectionClick();
                                   _beginAiChatResizeVertical(
                                       details.globalPosition.dy);
                                 }
@@ -875,13 +888,48 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                                 : SystemMouseCursors.resizeRow,
                             child: Prefs().aiPanelPosition ==
                                     AiPanelPositionEnum.right
-                                ? VerticalDivider(
-                                    width: 2,
-                                    thickness: 1,
+                                ? SizedBox(
+                                    width: 16,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        const VerticalDivider(
+                                          width: 16,
+                                          thickness: 1,
+                                        ),
+                                        Icon(
+                                          Icons.drag_indicator,
+                                          size: 16,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withAlpha(120),
+                                        ),
+                                      ],
+                                    ),
                                   )
-                                : Divider(
-                                    height: 2,
-                                    thickness: 1,
+                                : SizedBox(
+                                    height: 16,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        const Divider(
+                                          height: 16,
+                                          thickness: 1,
+                                        ),
+                                        RotatedBox(
+                                          quarterTurns: 1,
+                                          child: Icon(
+                                            Icons.drag_indicator,
+                                            size: 16,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withAlpha(120),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                           ),
                         ),

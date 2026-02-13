@@ -1478,6 +1478,26 @@ class Prefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// AI panel width (dock mode)
+  double get aiPanelWidth {
+    return prefs.getDouble('aiPanelWidth') ?? 300;
+  }
+
+  set aiPanelWidth(double width) {
+    prefs.setDouble('aiPanelWidth', width);
+    notifyListeners();
+  }
+
+  /// AI panel height (dock mode when positioned at bottom)
+  double get aiPanelHeight {
+    return prefs.getDouble('aiPanelHeight') ?? 300;
+  }
+
+  set aiPanelHeight(double height) {
+    prefs.setDouble('aiPanelHeight', height);
+    notifyListeners();
+  }
+
   CodeHighlightThemeEnum get codeHighlightTheme {
     return CodeHighlightThemeEnum.fromCode(
         prefs.getString('codeHighlightTheme') ?? 'default');
