@@ -66,6 +66,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   late List<String> _starterPrompts;
 
   List<Map<String, String>> _getQuickPrompts(BuildContext context) {
+    // Use customized prompts if available.
+    final custom = Prefs().aiInputQuickPrompts;
+    if (custom.isNotEmpty) {
+      return custom
+          .where((p) => p.enabled)
+          .map((p) => {'label': p.label, 'prompt': p.prompt})
+          .toList();
+    }
+    // Fall back to localized defaults.
     return [
       {
         'label': L10n.of(context).aiQuickPromptExplain,

@@ -12,6 +12,7 @@ import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/widgets/ai/ai_stream.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
+import 'package:anx_reader/page/settings_page/ai_quick_prompts_editor.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
@@ -527,6 +528,23 @@ class _AISettingsState extends ConsumerState<AISettings> {
           ],
         ),
       SettingsSection(
+        title: Text(l10n.settingsAiQuickPrompts),
+        tiles: [
+          SettingsTile.navigation(
+            title: Text(l10n.settingsAiQuickPrompts),
+            description: Text(l10n.settingsAiQuickPromptsHint),
+            onPressed: (context) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AiQuickPromptsEditor(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      SettingsSection(
         title: Text(L10n.of(context).settingsAiCache),
         tiles: [
           CustomSettingsTile(
@@ -790,7 +808,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
           ),
           maxLines: 8,
           minLines: 5,
-          maxLength: 2000,
+          maxLength: 20000,
         ),
         const SizedBox(height: 12),
 
@@ -872,7 +890,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
                 ),
                 maxLines: 8,
                 minLines: 5,
-                maxLength: 2000,
+                maxLength: 20000,
               ),
             ],
           ),
