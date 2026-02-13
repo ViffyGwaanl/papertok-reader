@@ -1,5 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/ai_prompts.dart';
+import 'package:anx_reader/enums/ai_dock_side.dart';
+import 'package:anx_reader/enums/ai_pad_panel_mode.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/ai_cache_count.dart';
 import 'package:anx_reader/providers/user_prompts.dart';
@@ -488,6 +490,42 @@ class _AISettingsState extends ConsumerState<AISettings> {
           toolsTile,
         ],
       ),
+      // iPad-specific AI panel settings (only show on larger screens)
+      if (MediaQuery.of(context).size.width >= 600)
+        SettingsSection(
+          title: Text(l10n.settingsAiPadPanelMode),
+          tiles: [
+            SettingsTile.switchTile(
+              title: Text(l10n.settingsAiPadPanelModeBottomSheet),
+              description: Text(l10n.settingsAiPadPanelModeDock),
+              initialValue:
+                  Prefs().aiPadPanelMode == AiPadPanelModeEnum.bottomSheet,
+              onToggle: (value) {
+                setState(() {
+                  Prefs().aiPadPanelMode = value
+                      ? AiPadPanelModeEnum.bottomSheet
+                      : AiPadPanelModeEnum.dock;
+                });
+              },
+            ),
+            // Dock side only relevant when in dock mode
+            if (Prefs().aiPadPanelMode == AiPadPanelModeEnum.dock)
+              SettingsTile.navigation(
+                title: Text(l10n.settingsAiDockSide),
+                value: Text(Prefs().aiDockSide == AiDockSideEnum.left
+                    ? l10n.settingsAiDockSideLeft
+                    : l10n.settingsAiDockSideRight),
+                onPressed: (context) {
+                  setState(() {
+                    Prefs().aiDockSide =
+                        Prefs().aiDockSide == AiDockSideEnum.left
+                            ? AiDockSideEnum.right
+                            : AiDockSideEnum.left;
+                  });
+                },
+              ),
+          ],
+        ),
       SettingsSection(
         title: Text(L10n.of(context).settingsAiCache),
         tiles: [

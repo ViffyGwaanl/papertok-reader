@@ -16,6 +16,8 @@ import 'package:anx_reader/enums/translation_mode.dart';
 import 'package:anx_reader/enums/writing_mode.dart';
 import 'package:anx_reader/enums/text_alignment.dart';
 import 'package:anx_reader/enums/ai_panel_position.dart';
+import 'package:anx_reader/enums/ai_dock_side.dart';
+import 'package:anx_reader/enums/ai_pad_panel_mode.dart';
 import 'package:anx_reader/enums/code_highlight_theme.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
@@ -1505,6 +1507,27 @@ class Prefs extends ChangeNotifier {
 
   set aiSheetInitialSize(double size) {
     prefs.setDouble('aiSheetInitialSize', size);
+    notifyListeners();
+  }
+
+  /// iPad AI panel mode: dock (split panel) or bottomSheet.
+  AiPadPanelModeEnum get aiPadPanelMode {
+    return AiPadPanelModeEnum.fromCode(
+        prefs.getString('aiPadPanelMode') ?? 'dock');
+  }
+
+  set aiPadPanelMode(AiPadPanelModeEnum mode) {
+    prefs.setString('aiPadPanelMode', mode.code);
+    notifyListeners();
+  }
+
+  /// AI panel dock side when in dock mode (left or right). Affects iPad primarily.
+  AiDockSideEnum get aiDockSide {
+    return AiDockSideEnum.fromCode(prefs.getString('aiDockSide') ?? 'right');
+  }
+
+  set aiDockSide(AiDockSideEnum side) {
+    prefs.setString('aiDockSide', side.code);
     notifyListeners();
   }
 
