@@ -644,11 +644,22 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                 const VerticalDivider(width: 16, thickness: 1)
               else
                 const Divider(height: 16, thickness: 1),
-              Icon(
-                Icons.drag_indicator,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
-              ),
+              if (axis == Axis.vertical)
+                RotatedBox(
+                  quarterTurns: 1,
+                  child: Icon(
+                    Icons.drag_indicator,
+                    size: 16,
+                    color:
+                        Theme.of(context).colorScheme.onSurface.withAlpha(120),
+                  ),
+                )
+              else
+                Icon(
+                  Icons.drag_indicator,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
+                ),
             ],
           ),
         ),
