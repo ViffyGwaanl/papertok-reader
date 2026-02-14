@@ -121,7 +121,25 @@ class Prefs extends ChangeNotifier {
       prefsBackupVersionKey: prefsBackupSchemaVersion,
     };
     for (final String key in prefs.getKeys()) {
-      final Object? value = prefs.get(key);
+      Object? value = prefs.get(key);
+
+      // Never include AI API keys in plain backups.
+      if (key.startsWith('aiConfig_') && value is String) {
+        try {
+          final decoded = jsonDecode(value);
+          if (decoded is Map<String, dynamic>) {
+            decoded.remove('api_key');
+            value = jsonEncode(decoded);
+          } else if (decoded is Map) {
+            final map = decoded.cast<String, dynamic>();
+            map.remove('api_key');
+            value = jsonEncode(map);
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+      }
+
       final Map<String, Object?>? encoded = encodePrefsBackupEntry(value);
       if (encoded != null) {
         backup[key] = encoded;
@@ -152,7 +170,40 @@ class Prefs extends ChangeNotifier {
           if (value is num) await prefs.setDouble(key, value.toDouble());
           break;
         case 'string':
-          if (value is String) await prefs.setString(key, value);
+          if (value is String) {
+            // Preserve local-only secrets.
+            if (key.startsWith('aiConfig_')) {
+              try {
+                final incoming = jsonDecode(value);
+                final existingRaw = prefs.getString(key);
+                final existing =
+                    existingRaw == null ? null : jsonDecode(existingRaw);
+
+                String? existingApiKey;
+                if (existing is Map) {
+                  existingApiKey = existing['api_key']?.toString();
+                }
+
+                if (incoming is Map) {
+                  final map = incoming.cast<String, dynamic>();
+
+                  // Never import api keys from plain backup.
+                  map.remove('api_key');
+
+                  if (existingApiKey != null && existingApiKey.isNotEmpty) {
+                    map['api_key'] = existingApiKey;
+                  }
+
+                  await prefs.setString(key, jsonEncode(map));
+                  break;
+                }
+              } catch (_) {
+                // fallthrough
+              }
+            }
+
+            await prefs.setString(key, value);
+          }
           break;
         case 'stringList':
           if (value is List) {
