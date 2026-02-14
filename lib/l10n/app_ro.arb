@@ -825,6 +825,7 @@
    "settingsAiUserPromptsName": "Nume prompt",
    "settingsAiUserPromptsContent": "Conținut prompt",
    "settingsAiUserPromptsEmpty": "Încă nu există prompts de utilizator. Faceți clic pe butonul de mai sus pentru a adăuga unul",
+   "commonAdd": "Adaugă",
    "commonInputCannotBeEmpty": "Introducerea nu poate fi goală",
    "commonAddSuccess": "Adăugat cu succes",
    "commonSaveSuccess": "Salvat cu succes"

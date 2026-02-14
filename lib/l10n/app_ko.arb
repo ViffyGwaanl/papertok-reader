@@ -823,6 +823,7 @@
    "settingsAiUserPromptsName": "프롬프트 이름",
    "settingsAiUserPromptsContent": "프롬프트 내용",
    "settingsAiUserPromptsEmpty": "아직 사용자 프롬프트가 없습니다. 위 버튼을 클릭하여 추가하세요",
+   "commonAdd": "추가",
    "commonInputCannotBeEmpty": "입력은 비워둘 수 없습니다",
    "commonAddSuccess": "추가되었습니다",
    "commonSaveSuccess": "저장되었습니다",

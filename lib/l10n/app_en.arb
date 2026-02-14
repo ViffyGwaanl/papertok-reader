@@ -849,6 +849,7 @@
   "settingsAiQuickPromptsHint": "Drag to reorder. Tap to edit. Toggle to enable/disable.",
   "settingsAiQuickPromptsEmpty": "No custom quick prompts. Tap + to add one, or they will use defaults.",
   "settingsAiQuickPromptsResetConfirm": "Reset to default quick prompts?",
+  "commonAdd": "Add",
   "commonInputCannotBeEmpty": "Input cannot be empty",
   "commonAddSuccess": "Added successfully",
   "commonSaveSuccess": "Saved successfully",

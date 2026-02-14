@@ -823,6 +823,7 @@
    "settingsAiUserPromptsName": "Prompt-Name",
    "settingsAiUserPromptsContent": "Prompt-Inhalt",
    "settingsAiUserPromptsEmpty": "Noch keine Benutzer-Prompts vorhanden. Klicken Sie auf die Schaltfläche oben, um einen hinzuzufügen",
+   "commonAdd": "Hinzufügen",
    "commonInputCannotBeEmpty": "Eingabe darf nicht leer sein",
    "commonAddSuccess": "Erfolgreich hinzugefügt",
    "commonSaveSuccess": "Erfolgreich gespeichert",

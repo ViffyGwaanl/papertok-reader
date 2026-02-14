@@ -823,6 +823,7 @@
    "settingsAiUserPromptsName": "Nome del prompt",
    "settingsAiUserPromptsContent": "Contenuto del prompt",
    "settingsAiUserPromptsEmpty": "Nessun prompt utente ancora. Clicca il pulsante sopra per aggiungerne uno",
+   "commonAdd": "Aggiungi",
    "commonInputCannotBeEmpty": "L'input non può essere vuoto",
    "commonAddSuccess": "Aggiunto con successo",
    "commonSaveSuccess": "Salvato con successo",

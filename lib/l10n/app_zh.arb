@@ -823,6 +823,7 @@
    "settingsAiUserPromptsName": "提示词名称",
    "settingsAiUserPromptsContent": "提示词内容",
    "settingsAiUserPromptsEmpty": "还没有用户提示词，点击上方按钮添加",
+   "commonAdd": "添加",
    "commonInputCannotBeEmpty": "输入不能为空",
    "commonAddSuccess": "添加成功",
    "commonSaveSuccess": "保存成功",

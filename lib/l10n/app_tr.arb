@@ -825,6 +825,7 @@
    "settingsAiUserPromptsName": "Komut adı",
    "settingsAiUserPromptsContent": "Komut içeriği",
    "settingsAiUserPromptsEmpty": "Henüz kullanıcı komutu yok. Eklemek için yukarıdaki düğmeye tıklayın",
+   "commonAdd": "Ekle",
    "commonInputCannotBeEmpty": "Giriş boş olamaz",
    "commonAddSuccess": "Başarıyla eklendi",
    "commonSaveSuccess": "Başarıyla kaydedildi"

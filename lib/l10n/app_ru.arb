@@ -825,6 +825,7 @@
    "settingsAiUserPromptsName": "Название промпта",
    "settingsAiUserPromptsContent": "Содержание промпта",
    "settingsAiUserPromptsEmpty": "Пока нет пользовательских промптов. Нажмите кнопку выше, чтобы добавить",
+   "commonAdd": "Добавить",
    "commonInputCannotBeEmpty": "Ввод не может быть пустым",
    "commonAddSuccess": "Успешно добавлено",
    "commonSaveSuccess": "Успешно сохранено"

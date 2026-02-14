@@ -823,6 +823,7 @@
    "settingsAiUserPromptsName": "提詞名",
    "settingsAiUserPromptsContent": "提詞容",
    "settingsAiUserPromptsEmpty": "尚無用者提詞，點上方紐以增",
+   "commonAdd": "增",
    "commonInputCannotBeEmpty": "輸不可空",
    "commonAddSuccess": "增成",
    "commonSaveSuccess": "存成",
