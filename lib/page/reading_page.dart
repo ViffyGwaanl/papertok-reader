@@ -68,6 +68,9 @@ final epubPlayerKey = GlobalKey<EpubPlayerState>();
 class ReadingPageState extends ConsumerState<ReadingPage>
     with WidgetsBindingObserver, TickerProviderStateMixin {
   static const empty = SizedBox.shrink();
+
+  double _aiSwipeUpTotalDy = 0;
+  bool _aiSwipeUpTriggered = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late Book _book;
   late Widget _currentPage = empty;
@@ -541,6 +544,41 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                 initialThemes: widget.initialThemes,
                 updateParent: updateState,
               ),
+              // Swipe up from lower-middle area to open AI bottom sheet.
+              if (_shouldUseAiBottomSheet(context))
+                Positioned(
+                  left: MediaQuery.of(context).size.width * 0.25,
+                  right: MediaQuery.of(context).size.width * 0.25,
+                  bottom: 0,
+                  height: 140,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onVerticalDragStart: (_) {
+                      _aiSwipeUpTotalDy = 0;
+                      _aiSwipeUpTriggered = false;
+                    },
+                    onVerticalDragUpdate: (details) {
+                      _aiSwipeUpTotalDy += details.delta.dy;
+                      if (!_aiSwipeUpTriggered && _aiSwipeUpTotalDy < -40) {
+                        _aiSwipeUpTriggered = true;
+                        showAiChat();
+                      }
+                    },
+                    onVerticalDragEnd: (details) {
+                      final v = details.primaryVelocity ?? 0;
+                      if (!_aiSwipeUpTriggered && v < -500) {
+                        _aiSwipeUpTriggered = true;
+                        showAiChat();
+                      }
+                      _aiSwipeUpTotalDy = 0;
+                      _aiSwipeUpTriggered = false;
+                    },
+                    onVerticalDragCancel: () {
+                      _aiSwipeUpTotalDy = 0;
+                      _aiSwipeUpTriggered = false;
+                    },
+                  ),
+                ),
               if (_isResizingAiChat)
                 SizedBox.expand(
                   child: Container(
@@ -696,17 +734,20 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     ];
   }
 
+  bool _shouldUseAiBottomSheet(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    return screenWidth < 600 ||
+        (screenWidth >= 600 &&
+            Prefs().aiPadPanelMode == AiPadPanelModeEnum.bottomSheet);
+  }
+
   Future<void> showAiChat({
     String? content,
     bool sendImmediate = false,
   }) async {
     List<AiQuickPromptChip> quickPrompts = _getAiQuickPromptChips();
-    final screenWidth = MediaQuery.of(navigatorKey.currentContext!).size.width;
-
-    // Use bottom sheet on small screens, or on iPad when configured to do so.
-    final useBottomSheet = screenWidth < 600 ||
-        (screenWidth >= 600 &&
-            Prefs().aiPadPanelMode == AiPadPanelModeEnum.bottomSheet);
+    final useBottomSheet =
+        _shouldUseAiBottomSheet(navigatorKey.currentContext!);
 
     if (useBottomSheet) {
       showModalBottomSheet(
