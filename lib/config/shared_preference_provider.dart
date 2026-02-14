@@ -802,7 +802,39 @@ class Prefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  int get aiSettingsUpdatedAt {
+    return prefs.getInt('aiSettingsUpdatedAt') ?? 0;
+  }
+
+  set aiSettingsUpdatedAt(int value) {
+    prefs.setInt('aiSettingsUpdatedAt', value);
+  }
+
+  void touchAiSettingsUpdatedAt() {
+    prefs.setInt('aiSettingsUpdatedAt', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  bool _safeAiConfigEquals(
+    Map<String, String> a,
+    Map<String, String> b,
+  ) {
+    final keys = <String>{...a.keys, ...b.keys};
+    for (final k in keys) {
+      if ((a[k] ?? '').trim() != (b[k] ?? '').trim()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void saveAiConfig(String identifier, Map<String, String> config) {
+    final before = getAiConfig(identifier);
+    final beforeSafe = Map<String, String>.from(before)..remove('api_key');
+    final afterSafe = Map<String, String>.from(config)..remove('api_key');
+    if (!_safeAiConfigEquals(beforeSafe, afterSafe)) {
+      touchAiSettingsUpdatedAt();
+    }
+
     prefs.setString('aiConfig_$identifier', jsonEncode(config));
     notifyListeners();
   }
@@ -817,6 +849,9 @@ class Prefs extends ChangeNotifier {
   }
 
   set selectedAiService(String identifier) {
+    if ((prefs.getString('selectedAiService') ?? 'openai') != identifier) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setString('selectedAiService', identifier);
     notifyListeners();
   }
@@ -826,12 +861,20 @@ class Prefs extends ChangeNotifier {
   }
 
   void deleteAiConfig(String identifier) {
+    // Removing config affects syncable settings.
+    if (prefs.containsKey('aiConfig_$identifier')) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.remove('aiConfig_$identifier');
     notifyListeners();
   }
 
   void saveAiPrompt(AiPrompts identifier, String prompt) {
-    prefs.setString('aiPrompt_${identifier.name}', prompt);
+    final key = 'aiPrompt_${identifier.name}';
+    if ((prefs.getString(key) ?? '') != prompt) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(key, prompt);
     notifyListeners();
   }
 
@@ -844,7 +887,11 @@ class Prefs extends ChangeNotifier {
   }
 
   void deleteAiPrompt(AiPrompts identifier) {
-    prefs.remove('aiPrompt_${identifier.name}');
+    final key = 'aiPrompt_${identifier.name}';
+    if (prefs.containsKey(key)) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.remove(key);
     notifyListeners();
   }
 
@@ -931,6 +978,7 @@ class Prefs extends ChangeNotifier {
   }
 
   set userPrompts(List<UserPrompt> prompts) {
+    touchAiSettingsUpdatedAt();
     final jsonList = prompts.map((p) => p.toJson()).toList();
     prefs.setString(_userPromptsKey, jsonEncode(jsonList));
     notifyListeners();
@@ -1477,6 +1525,9 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiPanelPosition(AiPanelPositionEnum position) {
+    if ((prefs.getString('aiPanelPosition') ?? 'right') != position.code) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setString('aiPanelPosition', position.code);
     notifyListeners();
   }
@@ -1487,6 +1538,9 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiPanelWidth(double width) {
+    if ((prefs.getDouble('aiPanelWidth') ?? 300) != width) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setDouble('aiPanelWidth', width);
     notifyListeners();
   }
@@ -1497,6 +1551,9 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiPanelHeight(double height) {
+    if ((prefs.getDouble('aiPanelHeight') ?? 300) != height) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setDouble('aiPanelHeight', height);
     notifyListeners();
   }
@@ -1507,6 +1564,9 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiSheetInitialSize(double size) {
+    if ((prefs.getDouble('aiSheetInitialSize') ?? 0.6) != size) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setDouble('aiSheetInitialSize', size);
     notifyListeners();
   }
@@ -1517,6 +1577,9 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiChatFontScale(double scale) {
+    if ((prefs.getDouble('aiChatFontScale') ?? 1.0) != scale) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setDouble('aiChatFontScale', scale);
     notifyListeners();
   }
@@ -1534,6 +1597,7 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiInputQuickPrompts(List<AiInputQuickPrompt> prompts) {
+    touchAiSettingsUpdatedAt();
     prefs.setString(
         'aiInputQuickPrompts', AiInputQuickPrompt.toJsonList(prompts));
     notifyListeners();
@@ -1546,6 +1610,9 @@ class Prefs extends ChangeNotifier {
 
   /// Clear custom quick prompts to revert to defaults.
   void clearAiInputQuickPrompts() {
+    if (prefs.containsKey('aiInputQuickPrompts')) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.remove('aiInputQuickPrompts');
     notifyListeners();
   }
@@ -1557,6 +1624,9 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiPadPanelMode(AiPadPanelModeEnum mode) {
+    if ((prefs.getString('aiPadPanelMode') ?? 'dock') != mode.code) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setString('aiPadPanelMode', mode.code);
     notifyListeners();
   }
@@ -1567,6 +1637,9 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiDockSide(AiDockSideEnum side) {
+    if ((prefs.getString('aiDockSide') ?? 'right') != side.code) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setString('aiDockSide', side.code);
     notifyListeners();
   }
