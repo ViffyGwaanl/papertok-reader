@@ -3,6 +3,39 @@
 [Русский](#русский)
 
 # English
+
+## Developer: build fails / analyzer errors about generated files
+
+If you see errors like:
+
+- `Target of URI doesn't exist: package:anx_reader/l10n/generated/L10n.dart`
+- missing `*.g.dart` / `toJson()` not found
+
+you likely need to regenerate code:
+
+```bash
+flutter pub get
+flutter gen-l10n
+dart run build_runner build --delete-conflicting-outputs
+```
+
+## iOS: Archive shows old build number (TestFlight)
+
+If you changed `pubspec.yaml` `version: x.y.z+BUILD` but Xcode Archive still shows the old build number:
+
+- Check `ios/Flutter/Generated.xcconfig` contains the new `FLUTTER_BUILD_NUMBER`.
+- This file is generated and may not refresh with `flutter pub get` alone.
+
+Suggested fix:
+
+```bash
+flutter clean
+flutter pub get
+flutter build ios --release --no-codesign
+```
+
+Then Archive again.
+
 ## Unable to Import Books
 - Ensure the book format is supported. Please check the supported formats in the [README](../README.md).
 - Ensure the book file is not corrupted. You can try using other readers to confirm if the file is normal.
@@ -15,6 +48,39 @@ After **reproducing the issue**, click on the bottom right corner of the interfa
 For some issues, you may need to first disable the "Clear logs on startup" option in the "Advanced" interface to export the log file after reproducing the issue.
 
 # 简体中文
+
+## 开发者：编译失败 / 分析器提示缺少生成文件
+
+如果你遇到类似错误：
+
+- `Target of URI doesn't exist: package:anx_reader/l10n/generated/L10n.dart`
+- 缺少 `*.g.dart` / 提示 `toJson()` 不存在
+
+通常是因为尚未生成代码。可执行：
+
+```bash
+flutter pub get
+flutter gen-l10n
+dart run build_runner build --delete-conflicting-outputs
+```
+
+## iOS：Archive 仍显示旧的 Build Number（TestFlight）
+
+如果你改了 `pubspec.yaml` 的 `version: x.y.z+BUILD`，但 Xcode Archive 里仍然显示旧的 Build Number：
+
+- 检查 `ios/Flutter/Generated.xcconfig` 中的 `FLUTTER_BUILD_NUMBER` 是否已更新。
+- 该文件是 Flutter 自动生成的，仅 `flutter pub get` 有时不会刷新。
+
+建议执行：
+
+```bash
+flutter clean
+flutter pub get
+flutter build ios --release --no-codesign
+```
+
+然后再 Archive。
+
 ## 无法导入书籍
 
 - 确保书籍格式支持，请从[README](../README_zh.md)中查看支持的格式。
