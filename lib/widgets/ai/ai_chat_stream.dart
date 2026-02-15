@@ -1839,13 +1839,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     const minScale = 0.8;
     const maxScale = 1.4;
 
-    showModalBottomSheet(
+    // Use a dialog instead of a bottom sheet.
+    //
+    // The AI chat itself can be hosted inside a bottom sheet (iPhone/iPad sheet
+    // mode). Stacking a sheet-on-sheet may auto-dismiss on some platforms.
+    showDialog<void>(
       context: context,
-      showDragHandle: true,
       builder: (ctx) {
         double scale = Prefs().aiChatFontScale.clamp(minScale, maxScale);
-        return SafeArea(
-          child: StatefulBuilder(
+
+        return AlertDialog(
+          title: Text(l10n.font),
+          content: StatefulBuilder(
             builder: (context, setModalState) {
               void update(double next) {
                 final clamped = next.clamp(minScale, maxScale).toDouble();
@@ -1857,8 +1862,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 setState(() {});
               }
 
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              return SizedBox(
+                width: 320,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1867,8 +1872,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       children: [
                         Expanded(
                           child: Text(
-                            l10n.font,
-                            style: Theme.of(context).textTheme.titleMedium,
+                            '${(scale * 100).round()}%',
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
                         TextButton(
@@ -1877,7 +1882,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
                     Slider(
                       value: scale,
                       min: minScale,
@@ -1891,6 +1895,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               );
             },
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(l10n.commonOk),
+            ),
+          ],
         );
       },
     );

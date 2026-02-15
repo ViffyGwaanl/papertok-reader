@@ -823,6 +823,7 @@
    "settingsAiUserPromptsName": "اسم المطالبة",
    "settingsAiUserPromptsContent": "محتوى المطالبة",
    "settingsAiUserPromptsEmpty": "لا توجد مطالبات مستخدم حتى الآن. انقر على الزر أعلاه لإضافة واحدة",
+   "commonAdd": "إضافة",
    "commonInputCannotBeEmpty": "لا يمكن أن يكون الإدخال فارغًا",
    "commonAddSuccess": "تمت الإضافة بنجاح",
    "commonSaveSuccess": "تم الحفظ بنجاح",

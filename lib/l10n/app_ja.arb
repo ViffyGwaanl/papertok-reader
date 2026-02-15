@@ -823,6 +823,7 @@
    "settingsAiUserPromptsName": "プロンプト名",
    "settingsAiUserPromptsContent": "プロンプト内容",
    "settingsAiUserPromptsEmpty": "ユーザープロンプトがまだありません。上のボタンをクリックして追加してください",
+   "commonAdd": "追加",
    "commonInputCannotBeEmpty": "入力を空にすることはできません",
    "commonAddSuccess": "追加しました",
    "commonSaveSuccess": "保存しました",

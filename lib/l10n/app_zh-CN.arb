@@ -849,6 +849,7 @@
   "settingsAiQuickPromptsHint": "拖动排序。点击编辑。开关启用/禁用。",
   "settingsAiQuickPromptsEmpty": "暂无自定义快捷提示词。点击 + 添加，否则将使用默认值。",
   "settingsAiQuickPromptsResetConfirm": "重置为默认快捷提示词？",
+  "commonAdd": "添加",
   "commonInputCannotBeEmpty": "输入不能为空",
   "commonAddSuccess": "添加成功",
   "commonSaveSuccess": "保存成功",
