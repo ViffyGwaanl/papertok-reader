@@ -1257,7 +1257,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.3,
             child: SingleChildScrollView(
-              // scrollDirection: Axis.horizontal,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: chips,
@@ -1267,7 +1266,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         );
       }
 
-      return Stack(
+      final content = Stack(
         children: [
           if (widget.quickPromptChips.isEmpty)
             Center(
@@ -1299,6 +1298,22 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ),
             ),
           buildQuickChipColumn(),
+        ],
+      );
+
+      // IMPORTANT:
+      // When used inside DraggableScrollableSheet, we must always attach the
+      // provided ScrollController to a ScrollView; otherwise the sheet
+      // controller won't be attached and programmatic minimize won't work.
+      return ListView(
+        controller: _scrollController,
+        padding: EdgeInsets.zero,
+        physics: const ClampingScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: content,
+          ),
         ],
       );
     }
