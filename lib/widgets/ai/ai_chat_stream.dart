@@ -74,6 +74,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   late List<String> _suggestedPrompts;
   late List<String> _starterPrompts;
+  bool _starterPromptsReady = false;
 
   List<Map<String, String>> _getQuickPrompts(BuildContext context) {
     // Use customized prompts if available.
@@ -116,20 +117,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     _ownsScrollController = widget.scrollController == null;
     _scrollController = widget.scrollController ?? ScrollController();
 
-    _starterPrompts = [
-      L10n.of(navigatorKey.currentContext!).quickPrompt1,
-      L10n.of(navigatorKey.currentContext!).quickPrompt2,
-      L10n.of(navigatorKey.currentContext!).quickPrompt3,
-      L10n.of(navigatorKey.currentContext!).quickPrompt4,
-      L10n.of(navigatorKey.currentContext!).quickPrompt5,
-      L10n.of(navigatorKey.currentContext!).quickPrompt6,
-      L10n.of(navigatorKey.currentContext!).quickPrompt7,
-      L10n.of(navigatorKey.currentContext!).quickPrompt8,
-      L10n.of(navigatorKey.currentContext!).quickPrompt9,
-      L10n.of(navigatorKey.currentContext!).quickPrompt10,
-      L10n.of(navigatorKey.currentContext!).quickPrompt11,
-      L10n.of(navigatorKey.currentContext!).quickPrompt12,
-    ];
+    _starterPrompts = const [];
     _builtInOptions = buildDefaultAiServices();
     _builtInById = {
       for (final option in _builtInOptions) option.identifier: option,
@@ -144,11 +132,38 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       Prefs().selectedAiService = _selectedProviderId;
     }
     inputController.text = widget.initialMessage ?? '';
-    _suggestedPrompts = _pickSuggestedPrompts();
+    _suggestedPrompts = const [];
     if (widget.sendImmediate) {
       _sendMessage();
     }
     _scrollToBottom();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Initialize localized starter prompts using the widget's own context.
+    // Avoid depending on a global navigator context in initState.
+    if (!_starterPromptsReady) {
+      final l10n = L10n.of(context);
+      _starterPrompts = [
+        l10n.quickPrompt1,
+        l10n.quickPrompt2,
+        l10n.quickPrompt3,
+        l10n.quickPrompt4,
+        l10n.quickPrompt5,
+        l10n.quickPrompt6,
+        l10n.quickPrompt7,
+        l10n.quickPrompt8,
+        l10n.quickPrompt9,
+        l10n.quickPrompt10,
+        l10n.quickPrompt11,
+        l10n.quickPrompt12,
+      ];
+      _suggestedPrompts = _pickSuggestedPrompts();
+      _starterPromptsReady = true;
+    }
   }
 
   @override
@@ -746,6 +761,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         if (mounted) {
           setState(() {
             _isStreaming = false;
+            // Return to provider-driven UI so variant switching/rollback works.
+            _messageStream = null;
+            _messageController = null;
           });
         }
       },
@@ -756,6 +774,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         if (mounted) {
           setState(() {
             _isStreaming = false;
+            // Return to provider-driven UI so variant switching/rollback works.
+            _messageStream = null;
+            _messageController = null;
           });
         }
       },

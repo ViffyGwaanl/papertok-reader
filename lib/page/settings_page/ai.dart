@@ -265,86 +265,19 @@ class _AISettingsState extends ConsumerState<AISettings> {
       );
     }
 
-    var servicesTile = CustomSettingsTile(
-        child: AnimatedSize(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                shrinkWrap: true,
-                scrollDirection: Axis.horizontal,
-                itemCount: services.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: InkWell(
-                      onTap: () {
-                        if (showSettings) {
-                          if (currentIndex == index) {
-                            setState(() {
-                              showSettings = false;
-                            });
-                            return;
-                          }
-                          showSettings = false;
-                          Future.delayed(
-                            const Duration(milliseconds: 200),
-                            () {
-                              setState(() {
-                                showSettings = true;
-                                currentIndex = index;
-                              });
-                            },
-                          );
-                        } else {
-                          showSettings = true;
-                          currentIndex = index;
-                        }
-
-                        setState(() {});
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        width: 100,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                              color: Prefs().selectedAiService ==
-                                      services[index]["identifier"]
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Image.asset(
-                              services[index]["logo"],
-                              height: 25,
-                            ),
-                            const SizedBox(
-                              height: 10,
-                            ),
-                            FittedBox(child: Text(services[index]["title"])),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+    final servicesTile = CustomSettingsTile(
+      child: SettingsTile.navigation(
+        title: Text(l10n.settingsAiProviderCenterTitle),
+        description: Text(l10n.settingsAiProviderCenterDesc),
+        onPressed: (context) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const AiProviderCenterPage(),
             ),
-            !showSettings ? const SizedBox() : aiConfig(),
-          ],
-        ),
+          );
+        },
       ),
-    ));
+    );
 
     var promptTile = CustomSettingsTile(
       child: ListView.builder(
