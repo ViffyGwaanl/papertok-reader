@@ -29,7 +29,23 @@ class CancelableLangchainRunner {
         _subscription = source.listen(
           (event) {
             final rawChunk = event.output.content;
+            final metaReasoning = (event.metadata?['reasoning_content'] ??
+                    event.metadata?['reasoning'])
+                ?.toString();
+
+            if (metaReasoning != null && metaReasoning.trim().isNotEmpty) {
+              reasoningDetected = true;
+              thinkBuffer += metaReasoning;
+            }
+
             if (rawChunk.isEmpty) {
+              final aggregated = reasoningDetected
+                  ? '<think>${thinkBuffer.trim()}</think>\n$answerBuffer'
+                  : answerBuffer;
+
+              if (!controller.isClosed) {
+                controller.add(aggregated);
+              }
               return;
             }
 
@@ -182,6 +198,10 @@ class CancelableLangchainRunner {
           final completer = Completer<void>();
           _subscription = model.stream(prompt, options: options).listen(
             (chunk) {
+              final metaReasoning = (chunk.metadata['reasoning_content'] ??
+                      chunk.metadata['reasoning'])
+                  ?.toString();
+
               final isThinkChunk = chunk.output.content.startsWith(thinkTag);
               final normalizedChunk = _normalizeThinkChunk(chunk);
 
@@ -192,12 +212,22 @@ class CancelableLangchainRunner {
 
               if (output.toolCalls.isEmpty) {
                 final textChunk = normalizedChunk.outputAsString;
+
+                if (metaReasoning != null && metaReasoning.trim().isNotEmpty) {
+                  appendThinkingChunk(metaReasoning);
+                }
+
                 if (isThinkChunk) {
                   appendThinkingChunk(textChunk);
                 } else {
                   appendReplyChunk(textChunk);
                 }
-                emit();
+
+                if ((metaReasoning != null &&
+                        metaReasoning.trim().isNotEmpty) ||
+                    textChunk.isNotEmpty) {
+                  emit();
+                }
               }
             },
             onError: (Object error, StackTrace stack) {

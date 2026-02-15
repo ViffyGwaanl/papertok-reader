@@ -1242,10 +1242,9 @@ packages:
   langchain_openai:
     dependency: "direct main"
     description:
-      name: langchain_openai
-      sha256: "23ed96ece5bc27ec95d1b720bce61267e6db578d24134ddf80b715184e932330"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/langchain_openai"
+      relative: true
+    source: path
     version: "0.8.1+1"
   langchain_tiktoken:
     dependency: transitive
