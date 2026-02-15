@@ -80,6 +80,7 @@ This branch includes all AI-related changes (PR-1..7 line + Provider Center/chat
 
 ## Documents
 
+- [AI 改造：已完成 & 路线图（中文）](./ai_status_roadmap_zh.md)
 - [AI panel UX tech design](./ai_panel_ux_tech_design.md)
 - [AI provider config UX (Provider Center)](./ai_provider_config_ux.md)
 - [AI settings sync (WebDAV) tech design](./ai_settings_sync_webdav.md)
