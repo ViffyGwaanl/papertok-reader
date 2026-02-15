@@ -1,5 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/ai_prompts.dart';
+import 'package:anx_reader/enums/ai_dock_side.dart';
+import 'package:anx_reader/enums/ai_pad_panel_mode.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/ai_cache_count.dart';
 import 'package:anx_reader/providers/user_prompts.dart';
@@ -11,6 +13,7 @@ import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_cen
 import 'package:anx_reader/widgets/ai/ai_stream.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
+import 'package:anx_reader/page/settings_page/ai_quick_prompts_editor.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
@@ -503,6 +506,59 @@ class _AISettingsState extends ConsumerState<AISettings> {
           toolsTile,
         ],
       ),
+      // iPad-specific AI panel settings (only show on larger screens)
+      if (MediaQuery.of(context).size.width >= 600)
+        SettingsSection(
+          title: Text(l10n.settingsAiPadPanelMode),
+          tiles: [
+            SettingsTile.switchTile(
+              title: Text(l10n.settingsAiPadPanelModeBottomSheet),
+              description: Text(l10n.settingsAiPadPanelModeDock),
+              initialValue:
+                  Prefs().aiPadPanelMode == AiPadPanelModeEnum.bottomSheet,
+              onToggle: (value) {
+                setState(() {
+                  Prefs().aiPadPanelMode = value
+                      ? AiPadPanelModeEnum.bottomSheet
+                      : AiPadPanelModeEnum.dock;
+                });
+              },
+            ),
+            // Dock side only relevant when in dock mode
+            if (Prefs().aiPadPanelMode == AiPadPanelModeEnum.dock)
+              SettingsTile.navigation(
+                title: Text(l10n.settingsAiDockSide),
+                value: Text(Prefs().aiDockSide == AiDockSideEnum.left
+                    ? l10n.settingsAiDockSideLeft
+                    : l10n.settingsAiDockSideRight),
+                onPressed: (context) {
+                  setState(() {
+                    Prefs().aiDockSide =
+                        Prefs().aiDockSide == AiDockSideEnum.left
+                            ? AiDockSideEnum.right
+                            : AiDockSideEnum.left;
+                  });
+                },
+              ),
+          ],
+        ),
+      SettingsSection(
+        title: Text(l10n.settingsAiQuickPrompts),
+        tiles: [
+          SettingsTile.navigation(
+            title: Text(l10n.settingsAiQuickPrompts),
+            description: Text(l10n.settingsAiQuickPromptsHint),
+            onPressed: (context) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AiQuickPromptsEditor(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       SettingsSection(
         title: Text(L10n.of(context).settingsAiCache),
         tiles: [
@@ -767,7 +823,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
           ),
           maxLines: 8,
           minLines: 5,
-          maxLength: 2000,
+          maxLength: 20000,
         ),
         const SizedBox(height: 12),
 
@@ -849,7 +905,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
                 ),
                 maxLines: 8,
                 minLines: 5,
-                maxLength: 2000,
+                maxLength: 20000,
               ),
             ],
           ),

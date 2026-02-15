@@ -5,6 +5,8 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/reading_time.dart';
 import 'package:anx_reader/dao/theme.dart';
 import 'package:anx_reader/enums/ai_panel_position.dart';
+import 'package:anx_reader/enums/ai_dock_side.dart';
+import 'package:anx_reader/enums/ai_pad_panel_mode.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
@@ -20,6 +22,7 @@ import 'package:anx_reader/service/ai/prompt_generate.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ui/status_bar.dart';
+import 'package:anx_reader/widgets/ai/ai_chat_bottom_sheet.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:anx_reader/widgets/ai/ai_stream.dart';
 import 'package:anx_reader/widgets/reading_page/notes_widget.dart';
@@ -94,6 +97,11 @@ class ReadingPageState extends ConsumerState<ReadingPage>
       AnxToast.show(L10n.of(context).bookDeleted);
       return;
     }
+
+    // Restore AI panel persisted size.
+    _aiChatWidth = Prefs().aiPanelWidth;
+    _aiChatHeight = Prefs().aiPanelHeight;
+
     if (Prefs().hideStatusBar) {
       hideStatusBar();
     }
@@ -390,6 +398,11 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   }
 
   void _endAiChatResize() {
+    // Persist size to preferences.
+    try {
+      Prefs().aiPanelWidth = _aiChatWidth;
+      Prefs().aiPanelHeight = _aiChatHeight;
+    } catch (_) {}
     if (_isResizingAiChat) {
       setState(() {
         _isResizingAiChat = false;
@@ -488,6 +501,172 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     );
   }
 
+  /// Returns true if AI panel is currently docked on the left side.
+  /// This is used to disable drawer edge-swipe gesture to avoid conflicts.
+  bool _isAiDockedLeft() {
+    final width = MediaQuery.of(navigatorKey.currentContext!).size.width;
+    if (width < 600) return false;
+    if (Prefs().aiPadPanelMode != AiPadPanelModeEnum.dock) return false;
+    if (Prefs().aiPanelPosition != AiPanelPositionEnum.right) return false;
+    return Prefs().aiDockSide == AiDockSideEnum.left && _aiChat != null;
+  }
+
+  Widget _buildMainLayout(BuildContext context) {
+    final axis = Prefs().aiPanelPosition == AiPanelPositionEnum.right
+        ? Axis.horizontal
+        : Axis.vertical;
+    final dockLeft = Prefs().aiDockSide == AiDockSideEnum.left &&
+        Prefs().aiPanelPosition == AiPanelPositionEnum.right;
+
+    final readerContent = Expanded(
+      child: MouseRegion(
+        onHover: (PointerHoverEvent detail) {
+          if (!Prefs().showMenuOnHover) return;
+          var y = detail.position.dy;
+          if (y < 30 || y > MediaQuery.of(context).size.height - 30) {
+            showOrHideAppBarAndBottomBar(true);
+          }
+        },
+        child: Focus(
+          focusNode: _readerFocusNode,
+          onKeyEvent: _handleReaderKeyEvent,
+          child: Stack(
+            children: [
+              EpubPlayer(
+                key: epubPlayerKey,
+                book: _book,
+                cfi: widget.cfi,
+                showOrHideAppBarAndBottomBar: showOrHideAppBarAndBottomBar,
+                onLoadEnd: onLoadEnd,
+                initialThemes: widget.initialThemes,
+                updateParent: updateState,
+              ),
+              if (_isResizingAiChat)
+                SizedBox.expand(
+                  child: Container(
+                    color: Theme.of(context).colorScheme.surface.withAlpha(1),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return AxisFlex(
+      axis: axis,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: dockLeft
+          ? [
+              if (_aiChat != null) _buildAiPanel(context),
+              if (_aiChat != null) _buildAiPanelDivider(context, axis),
+              readerContent,
+            ]
+          : [
+              readerContent,
+              if (_aiChat != null) _buildAiPanelDivider(context, axis),
+              if (_aiChat != null) _buildAiPanel(context),
+            ],
+    );
+  }
+
+  Widget _buildAiPanel(BuildContext context) {
+    return SizedBox(
+      key: const ValueKey('ai-chat-panel'),
+      width: Prefs().aiPanelPosition == AiPanelPositionEnum.right
+          ? _aiChatWidth
+          : null,
+      height: Prefs().aiPanelPosition == AiPanelPositionEnum.bottom
+          ? _aiChatHeight
+          : null,
+      child: _aiChat,
+    );
+  }
+
+  Widget _buildAiPanelDivider(BuildContext context, Axis axis) {
+    final dockLeft = Prefs().aiDockSide == AiDockSideEnum.left &&
+        Prefs().aiPanelPosition == AiPanelPositionEnum.right;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragStart:
+          Prefs().aiPanelPosition == AiPanelPositionEnum.right
+              ? (details) {
+                  HapticFeedback.selectionClick();
+                  _beginAiChatResize(details.globalPosition.dx);
+                }
+              : null,
+      onHorizontalDragUpdate:
+          Prefs().aiPanelPosition == AiPanelPositionEnum.right
+              ? (details) {
+                  // Flip delta for left-dock to make drag direction intuitive.
+                  final delta = dockLeft ? -details.delta.dx : details.delta.dx;
+                  _applyAiChatResizeDelta(delta, context);
+                }
+              : null,
+      onHorizontalDragEnd: Prefs().aiPanelPosition == AiPanelPositionEnum.right
+          ? (_) => _endAiChatResize()
+          : null,
+      onHorizontalDragCancel:
+          Prefs().aiPanelPosition == AiPanelPositionEnum.right
+              ? () => _endAiChatResize()
+              : null,
+      onVerticalDragStart: Prefs().aiPanelPosition == AiPanelPositionEnum.bottom
+          ? (details) {
+              HapticFeedback.selectionClick();
+              _beginAiChatResizeVertical(details.globalPosition.dy);
+            }
+          : null,
+      onVerticalDragUpdate:
+          Prefs().aiPanelPosition == AiPanelPositionEnum.bottom
+              ? (details) {
+                  _applyAiChatResizeDeltaVertical(details.delta.dy, context);
+                }
+              : null,
+      onVerticalDragEnd: Prefs().aiPanelPosition == AiPanelPositionEnum.bottom
+          ? (_) => _endAiChatResize()
+          : null,
+      onVerticalDragCancel:
+          Prefs().aiPanelPosition == AiPanelPositionEnum.bottom
+              ? () => _endAiChatResize()
+              : null,
+      child: MouseRegion(
+        cursor: Prefs().aiPanelPosition == AiPanelPositionEnum.right
+            ? SystemMouseCursors.resizeColumn
+            : SystemMouseCursors.resizeRow,
+        child: SizedBox(
+          width: axis == Axis.horizontal ? 16 : null,
+          height: axis == Axis.vertical ? 16 : null,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (axis == Axis.horizontal)
+                const VerticalDivider(width: 16, thickness: 1)
+              else
+                const Divider(height: 16, thickness: 1),
+              if (axis == Axis.vertical)
+                RotatedBox(
+                  quarterTurns: 1,
+                  child: Icon(
+                    Icons.drag_indicator,
+                    size: 16,
+                    color:
+                        Theme.of(context).colorScheme.onSurface.withAlpha(120),
+                  ),
+                )
+              else
+                Icon(
+                  Icons.drag_indicator,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   List<AiQuickPromptChip> _getAiQuickPromptChips() {
     return [
       AiQuickPromptChip(
@@ -522,28 +701,28 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     bool sendImmediate = false,
   }) async {
     List<AiQuickPromptChip> quickPrompts = _getAiQuickPromptChips();
-    if (MediaQuery.of(navigatorKey.currentContext!).size.width < 600) {
+    final screenWidth = MediaQuery.of(navigatorKey.currentContext!).size.width;
+
+    // Use bottom sheet on small screens, or on iPad when configured to do so.
+    final useBottomSheet = screenWidth < 600 ||
+        (screenWidth >= 600 &&
+            Prefs().aiPadPanelMode == AiPadPanelModeEnum.bottomSheet);
+
+    if (useBottomSheet) {
       showModalBottomSheet(
-          context: navigatorKey.currentContext!,
-          isScrollControlled: true,
-          showDragHandle: false,
-          clipBehavior: Clip.hardEdge,
-          builder: (context) => PointerInterceptor(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.8,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: AiChatStream(
-                      key: aiChatKey,
-                      initialMessage: content,
-                      sendImmediate: sendImmediate,
-                      quickPromptChips: quickPrompts,
-                    ),
-                  ),
-                ),
-              ));
+        context: navigatorKey.currentContext!,
+        isScrollControlled: true,
+        showDragHandle: false,
+        clipBehavior: Clip.hardEdge,
+        builder: (context) => PointerInterceptor(
+          child: AiChatBottomSheet(
+            aiChatKey: aiChatKey,
+            initialMessage: content,
+            sendImmediate: sendImmediate,
+            quickPromptChips: quickPrompts,
+          ),
+        ),
+      );
     } else {
       setState(() {
         final maxWidth = _aiChatMaxWidth(navigatorKey.currentContext!);
@@ -746,6 +925,9 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             child: Scaffold(
               key: _scaffoldKey,
               resizeToAvoidBottomInset: false,
+              // Disable edge-swipe to open drawer when AI is docked on the left
+              // to avoid gesture conflicts.
+              drawerEnableOpenDragGesture: !_isAiDockedLeft(),
               drawer: PointerInterceptor(
                 child: Drawer(
                   width: math.min(
@@ -765,141 +947,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
               ),
               body: Stack(
                 children: [
-                  AxisFlex(
-                    axis: Prefs().aiPanelPosition == AiPanelPositionEnum.right
-                        ? Axis.horizontal
-                        : Axis.vertical,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: MouseRegion(
-                          onHover: (PointerHoverEvent detail) {
-                            if (!Prefs().showMenuOnHover) return;
-                            var y = detail.position.dy;
-                            if (y < 30 ||
-                                y > MediaQuery.of(context).size.height - 30) {
-                              showOrHideAppBarAndBottomBar(true);
-                            }
-                          },
-                          child: Focus(
-                            focusNode: _readerFocusNode,
-                            onKeyEvent: _handleReaderKeyEvent,
-                            child: Stack(
-                              children: [
-                                EpubPlayer(
-                                  key: epubPlayerKey,
-                                  book: _book,
-                                  cfi: widget.cfi,
-                                  showOrHideAppBarAndBottomBar:
-                                      showOrHideAppBarAndBottomBar,
-                                  onLoadEnd: onLoadEnd,
-                                  initialThemes: widget.initialThemes,
-                                  updateParent: updateState,
-                                ),
-                                if (_isResizingAiChat)
-                                  SizedBox.expand(
-                                    child: Container(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .surface
-                                          .withAlpha(1),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_aiChat != null)
-                        GestureDetector(
-                          behavior: HitTestBehavior.translucent,
-                          onHorizontalDragStart: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.right
-                              ? (details) {
-                                  _beginAiChatResize(details.globalPosition.dx);
-                                }
-                              : null,
-                          onHorizontalDragUpdate: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.right
-                              ? (details) {
-                                  _applyAiChatResizeDelta(
-                                    details.delta.dx,
-                                    context,
-                                  );
-                                }
-                              : null,
-                          onHorizontalDragEnd: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.right
-                              ? (_) {
-                                  _endAiChatResize();
-                                }
-                              : null,
-                          onHorizontalDragCancel: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.right
-                              ? () {
-                                  _endAiChatResize();
-                                }
-                              : null,
-                          onVerticalDragStart: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.bottom
-                              ? (details) {
-                                  _beginAiChatResizeVertical(
-                                      details.globalPosition.dy);
-                                }
-                              : null,
-                          onVerticalDragUpdate: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.bottom
-                              ? (details) {
-                                  _applyAiChatResizeDeltaVertical(
-                                    details.delta.dy,
-                                    context,
-                                  );
-                                }
-                              : null,
-                          onVerticalDragEnd: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.bottom
-                              ? (_) {
-                                  _endAiChatResize();
-                                }
-                              : null,
-                          onVerticalDragCancel: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.bottom
-                              ? () {
-                                  _endAiChatResize();
-                                }
-                              : null,
-                          child: MouseRegion(
-                            cursor: Prefs().aiPanelPosition ==
-                                    AiPanelPositionEnum.right
-                                ? SystemMouseCursors.resizeColumn
-                                : SystemMouseCursors.resizeRow,
-                            child: Prefs().aiPanelPosition ==
-                                    AiPanelPositionEnum.right
-                                ? VerticalDivider(
-                                    width: 2,
-                                    thickness: 1,
-                                  )
-                                : Divider(
-                                    height: 2,
-                                    thickness: 1,
-                                  ),
-                          ),
-                        ),
-                      if (_aiChat != null)
-                        SizedBox(
-                          key: const ValueKey('ai-chat-panel'),
-                          width: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.right
-                              ? _aiChatWidth
-                              : null,
-                          height: Prefs().aiPanelPosition ==
-                                  AiPanelPositionEnum.bottom
-                              ? _aiChatHeight
-                              : null,
-                          child: _aiChat,
-                        )
-                    ],
-                  ),
+                  _buildMainLayout(context),
                   controller,
                 ],
               ),

@@ -16,11 +16,14 @@ import 'package:anx_reader/enums/translation_mode.dart';
 import 'package:anx_reader/enums/writing_mode.dart';
 import 'package:anx_reader/enums/text_alignment.dart';
 import 'package:anx_reader/enums/ai_panel_position.dart';
+import 'package:anx_reader/enums/ai_dock_side.dart';
+import 'package:anx_reader/enums/ai_pad_panel_mode.dart';
 import 'package:anx_reader/enums/code_highlight_theme.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/bgimg.dart';
 import 'package:anx_reader/models/book_style.dart';
+import 'package:anx_reader/models/ai_input_quick_prompt.dart';
 import 'package:anx_reader/models/chapter_split_presets.dart';
 import 'package:anx_reader/models/chapter_split_rule.dart';
 import 'package:anx_reader/models/font_model.dart';
@@ -124,7 +127,25 @@ class Prefs extends ChangeNotifier {
         continue;
       }
 
-      final Object? value = prefs.get(key);
+      Object? value = prefs.get(key);
+
+      // Never include AI API keys in plain backups.
+      if (key.startsWith('aiConfig_') && value is String) {
+        try {
+          final decoded = jsonDecode(value);
+          if (decoded is Map<String, dynamic>) {
+            decoded.remove('api_key');
+            value = jsonEncode(decoded);
+          } else if (decoded is Map) {
+            final map = decoded.cast<String, dynamic>();
+            map.remove('api_key');
+            value = jsonEncode(map);
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+      }
+
       final Map<String, Object?>? encoded = encodePrefsBackupEntry(value);
       if (encoded != null) {
         backup[key] = encoded;
@@ -157,7 +178,40 @@ class Prefs extends ChangeNotifier {
           if (value is num) await prefs.setDouble(key, value.toDouble());
           break;
         case 'string':
-          if (value is String) await prefs.setString(key, value);
+          if (value is String) {
+            // Preserve local-only secrets.
+            if (key.startsWith('aiConfig_')) {
+              try {
+                final incoming = jsonDecode(value);
+                final existingRaw = prefs.getString(key);
+                final existing =
+                    existingRaw == null ? null : jsonDecode(existingRaw);
+
+                String? existingApiKey;
+                if (existing is Map) {
+                  existingApiKey = existing['api_key']?.toString();
+                }
+
+                if (incoming is Map) {
+                  final map = incoming.cast<String, dynamic>();
+
+                  // Never import api keys from plain backup.
+                  map.remove('api_key');
+
+                  if (existingApiKey != null && existingApiKey.isNotEmpty) {
+                    map['api_key'] = existingApiKey;
+                  }
+
+                  await prefs.setString(key, jsonEncode(map));
+                  break;
+                }
+              } catch (_) {
+                // fallthrough
+              }
+            }
+
+            await prefs.setString(key, value);
+          }
           break;
         case 'stringList':
           if (value is List) {
@@ -807,7 +861,39 @@ class Prefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  int get aiSettingsUpdatedAt {
+    return prefs.getInt('aiSettingsUpdatedAt') ?? 0;
+  }
+
+  set aiSettingsUpdatedAt(int value) {
+    prefs.setInt('aiSettingsUpdatedAt', value);
+  }
+
+  void touchAiSettingsUpdatedAt() {
+    prefs.setInt('aiSettingsUpdatedAt', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  bool _safeAiConfigEquals(
+    Map<String, String> a,
+    Map<String, String> b,
+  ) {
+    final keys = <String>{...a.keys, ...b.keys};
+    for (final k in keys) {
+      if ((a[k] ?? '').trim() != (b[k] ?? '').trim()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void saveAiConfig(String identifier, Map<String, String> config) {
+    final before = getAiConfig(identifier);
+    final beforeSafe = Map<String, String>.from(before)..remove('api_key');
+    final afterSafe = Map<String, String>.from(config)..remove('api_key');
+    if (!_safeAiConfigEquals(beforeSafe, afterSafe)) {
+      touchAiSettingsUpdatedAt();
+    }
+
     prefs.setString('aiConfig_$identifier', jsonEncode(config));
     notifyListeners();
   }
@@ -822,6 +908,9 @@ class Prefs extends ChangeNotifier {
   }
 
   set selectedAiService(String identifier) {
+    if ((prefs.getString('selectedAiService') ?? 'openai') != identifier) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setString('selectedAiService', identifier);
     notifyListeners();
   }
@@ -933,6 +1022,10 @@ class Prefs extends ChangeNotifier {
   }
 
   void deleteAiConfig(String identifier) {
+    // Removing config affects syncable settings.
+    if (prefs.containsKey('aiConfig_$identifier')) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.remove('aiConfig_$identifier');
     // Also clear caches bound to this provider.
     prefs.remove(_aiModelsCacheKey(identifier));
@@ -999,7 +1092,11 @@ class Prefs extends ChangeNotifier {
   }
 
   void saveAiPrompt(AiPrompts identifier, String prompt) {
-    prefs.setString('aiPrompt_${identifier.name}', prompt);
+    final key = 'aiPrompt_${identifier.name}';
+    if ((prefs.getString(key) ?? '') != prompt) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(key, prompt);
     notifyListeners();
   }
 
@@ -1012,7 +1109,11 @@ class Prefs extends ChangeNotifier {
   }
 
   void deleteAiPrompt(AiPrompts identifier) {
-    prefs.remove('aiPrompt_${identifier.name}');
+    final key = 'aiPrompt_${identifier.name}';
+    if (prefs.containsKey(key)) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.remove(key);
     notifyListeners();
   }
 
@@ -1099,6 +1200,7 @@ class Prefs extends ChangeNotifier {
   }
 
   set userPrompts(List<UserPrompt> prompts) {
+    touchAiSettingsUpdatedAt();
     final jsonList = prompts.map((p) => p.toJson()).toList();
     prefs.setString(_userPromptsKey, jsonEncode(jsonList));
     notifyListeners();
@@ -1645,7 +1747,122 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiPanelPosition(AiPanelPositionEnum position) {
+    if ((prefs.getString('aiPanelPosition') ?? 'right') != position.code) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setString('aiPanelPosition', position.code);
+    notifyListeners();
+  }
+
+  /// AI panel width (dock mode)
+  double get aiPanelWidth {
+    return prefs.getDouble('aiPanelWidth') ?? 300;
+  }
+
+  set aiPanelWidth(double width) {
+    if ((prefs.getDouble('aiPanelWidth') ?? 300) != width) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setDouble('aiPanelWidth', width);
+    notifyListeners();
+  }
+
+  /// AI panel height (dock mode when positioned at bottom)
+  double get aiPanelHeight {
+    return prefs.getDouble('aiPanelHeight') ?? 300;
+  }
+
+  set aiPanelHeight(double height) {
+    if ((prefs.getDouble('aiPanelHeight') ?? 300) != height) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setDouble('aiPanelHeight', height);
+    notifyListeners();
+  }
+
+  /// Initial height of AI chat bottom sheet (0-1, relative to screen height).
+  double get aiSheetInitialSize {
+    return prefs.getDouble('aiSheetInitialSize') ?? 0.6;
+  }
+
+  set aiSheetInitialSize(double size) {
+    if ((prefs.getDouble('aiSheetInitialSize') ?? 0.6) != size) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setDouble('aiSheetInitialSize', size);
+    notifyListeners();
+  }
+
+  /// Font scale for AI chat UI (markdown + input). 1.0 = system default.
+  double get aiChatFontScale {
+    return prefs.getDouble('aiChatFontScale') ?? 1.0;
+  }
+
+  set aiChatFontScale(double scale) {
+    if ((prefs.getDouble('aiChatFontScale') ?? 1.0) != scale) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setDouble('aiChatFontScale', scale);
+    notifyListeners();
+  }
+
+  /// Configurable quick prompts shown in AI chat input area.
+  /// Returns default prompts (localized) if never customized.
+  List<AiInputQuickPrompt> get aiInputQuickPrompts {
+    final stored = prefs.getString('aiInputQuickPrompts');
+    if (stored != null && stored.isNotEmpty) {
+      final list = AiInputQuickPrompt.fromJsonList(stored);
+      if (list.isNotEmpty) return list;
+    }
+    // Return empty list; AiChatStream will use localized defaults.
+    return [];
+  }
+
+  set aiInputQuickPrompts(List<AiInputQuickPrompt> prompts) {
+    touchAiSettingsUpdatedAt();
+    prefs.setString(
+        'aiInputQuickPrompts', AiInputQuickPrompt.toJsonList(prompts));
+    notifyListeners();
+  }
+
+  /// Whether user has customized quick prompts (used to decide seeding).
+  bool get hasCustomAiInputQuickPrompts {
+    return prefs.containsKey('aiInputQuickPrompts');
+  }
+
+  /// Clear custom quick prompts to revert to defaults.
+  void clearAiInputQuickPrompts() {
+    if (prefs.containsKey('aiInputQuickPrompts')) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.remove('aiInputQuickPrompts');
+    notifyListeners();
+  }
+
+  /// iPad AI panel mode: dock (split panel) or bottomSheet.
+  AiPadPanelModeEnum get aiPadPanelMode {
+    return AiPadPanelModeEnum.fromCode(
+        prefs.getString('aiPadPanelMode') ?? 'dock');
+  }
+
+  set aiPadPanelMode(AiPadPanelModeEnum mode) {
+    if ((prefs.getString('aiPadPanelMode') ?? 'dock') != mode.code) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString('aiPadPanelMode', mode.code);
+    notifyListeners();
+  }
+
+  /// AI panel dock side when in dock mode (left or right). Affects iPad primarily.
+  AiDockSideEnum get aiDockSide {
+    return AiDockSideEnum.fromCode(prefs.getString('aiDockSide') ?? 'right');
+  }
+
+  set aiDockSide(AiDockSideEnum side) {
+    if ((prefs.getString('aiDockSide') ?? 'right') != side.code) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString('aiDockSide', side.code);
     notifyListeners();
   }
 
