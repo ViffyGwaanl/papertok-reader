@@ -10,7 +10,7 @@ import 'package:anx_reader/service/ai/langchain_registry.dart';
 import 'package:anx_reader/service/ai/langchain_runner.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/utils/log/common.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
 
@@ -22,7 +22,7 @@ Stream<String> aiGenerateStream(
   Map<String, String>? config,
   bool regenerate = false,
   bool useAgent = false,
-  WidgetRef? ref,
+  Ref? ref,
 }) {
   if (useAgent) {
     assert(ref != null, 'ref must be provided when useAgent is true');

@@ -58,14 +58,11 @@ class AiChatStream extends ConsumerStatefulWidget {
 class AiChatStreamState extends ConsumerState<AiChatStream> {
   final TextEditingController inputController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  Stream<List<ChatMessage>>? _messageStream;
-  StreamController<List<ChatMessage>>? _messageController;
-  StreamSubscription<List<ChatMessage>>? _messageSubscription;
 
   late ScrollController _scrollController;
   bool _ownsScrollController = false;
 
-  bool _isStreaming = false;
+  bool get _isStreaming => ref.read(aiChatStreamingProvider);
 
   // Bottom sheet convenience gesture: swipe down on input box to minimize.
   double _inputSwipeDownDy = 0;
@@ -219,8 +216,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   @override
   void dispose() {
     inputController.dispose();
-    _messageSubscription?.cancel();
-    _messageController?.close();
     try {
       _scrollController.removeListener(_handleScroll);
     } catch (_) {}
@@ -756,25 +751,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     AiChatHistoryEntry entry,
   ) async {
     if (_isStreaming) {
-      _cancelStreaming();
+      unawaited(ref.read(aiChatProvider.notifier).cancelStreaming());
     }
-    _messageSubscription?.cancel();
-    _messageSubscription = null;
-    final controller = _messageController;
-    if (controller != null && !controller.isClosed) {
-      await controller.close();
-    }
-    _messageController = null;
 
     ref.read(aiChatProvider.notifier).loadHistoryEntry(entry);
 
-    setState(() {
-      _messageStream = null;
-      // reset state when switching service
-    });
-
     Navigator.of(context).pop();
-    _scrollToBottom();
+    _pinnedToBottom = true;
+    _scrollToBottom(force: true);
   }
 
   Future<void> _confirmDeleteHistory(
@@ -786,68 +770,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final currentSessionId = ref.read(aiChatProvider.notifier).currentSessionId;
     if (currentSessionId == entry.id) {
       ref.read(aiChatProvider.notifier).clear();
-      setState(() {
-        _messageStream = null;
-        // reset state when conversation changes
-      });
     }
   }
 
   Future<void> _confirmClearHistory(BuildContext context) async {
     await ref.read(aiHistoryProvider.notifier).clear();
     ref.read(aiChatProvider.notifier).clear();
-    setState(() {
-      _messageStream = null;
-    });
   }
 
-  void _startStream(Stream<List<ChatMessage>> stream) {
-    _messageSubscription?.cancel();
-    _messageController?.close();
-
-    final controller = StreamController<List<ChatMessage>>();
-
-    setState(() {
-      _messageController = controller;
-      _messageStream = controller.stream;
-      _isStreaming = true;
-    });
-
-    _messageSubscription = stream.listen(
-      (event) {
-        controller.add(event);
-        _scrollToBottom();
-      },
-      onError: (error, stack) {
-        controller.addError(error, stack);
-        if (!controller.isClosed) {
-          controller.close();
-        }
-        if (mounted) {
-          setState(() {
-            _isStreaming = false;
-            // Return to provider-driven UI so variant switching/rollback works.
-            _messageStream = null;
-            _messageController = null;
-          });
-        }
-      },
-      onDone: () {
-        if (!controller.isClosed) {
-          controller.close();
-        }
-        if (mounted) {
-          setState(() {
-            _isStreaming = false;
-            // Return to provider-driven UI so variant switching/rollback works.
-            _messageStream = null;
-            _messageController = null;
-          });
-        }
-      },
-      cancelOnError: false,
-    );
-  }
+  // Streaming lifecycle is managed by [aiChatProvider] so UI minimize/close
+  // does not interrupt generation.
 
   void _sendMessage() {
     if (_isStreaming) {
@@ -858,14 +790,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final message = inputController.text.trim();
     inputController.clear();
 
-    final stream = ref.read(aiChatProvider.notifier).sendMessageStream(
-          message,
-          ref,
-          false,
-        );
-
     _pinnedToBottom = true;
-    _startStream(stream);
+    ref.read(aiChatProvider.notifier).startStreaming(message, false);
+    _scrollToBottom(force: true);
   }
 
   void _regenerateFromUserIndex(int userIndex) {
@@ -873,15 +800,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       return;
     }
 
-    final stream = ref.read(aiChatProvider.notifier).sendMessageStream(
+    _pinnedToBottom = true;
+    ref.read(aiChatProvider.notifier).startStreaming(
           '',
-          ref,
           true,
           regenerateFromUserIndex: userIndex,
         );
-
-    _pinnedToBottom = true;
-    _startStream(stream);
+    _scrollToBottom(force: true);
   }
 
   void _editUserMessageAndRegenerate(int userIndex, String newText) {
@@ -889,16 +814,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       return;
     }
 
-    final stream = ref.read(aiChatProvider.notifier).sendMessageStream(
+    _pinnedToBottom = true;
+    ref.read(aiChatProvider.notifier).startStreaming(
           newText,
-          ref,
           true,
           regenerateFromUserIndex: userIndex,
           replaceUserMessage: true,
         );
-
-    _pinnedToBottom = true;
-    _startStream(stream);
+    _scrollToBottom(force: true);
   }
 
   void _copyPlainText(String text) {
@@ -1023,13 +946,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (_isStreaming) {
       return;
     }
-    _messageSubscription?.cancel();
-    _messageSubscription = null;
-    _messageController?.close();
-    _messageController = null;
+
+    ref.read(aiChatProvider.notifier).clear();
     setState(() {
-      ref.read(aiChatProvider.notifier).clear();
-      _messageStream = null;
       _suggestedPrompts = _pickSuggestedPrompts();
     });
   }
@@ -1061,15 +980,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   void _cancelStreaming() {
     if (!_isStreaming) return;
-    cancelActiveAiRequest();
-    _messageSubscription?.cancel();
-    _messageSubscription = null;
-    _messageController?.close();
-    _messageController = null;
-    setState(() {
-      _isStreaming = false;
-      _messageStream = null;
-    });
+    unawaited(ref.read(aiChatProvider.notifier).cancelStreaming());
   }
 
   ChatMessage? _getLastAssistantMessage() {
@@ -1089,12 +1000,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   @override
   Widget build(BuildContext context) {
     final quickPrompts = _getQuickPrompts(context);
+    final chatIsStreaming = ref.watch(aiChatStreamingProvider);
 
     final current = _currentProvider;
     final currentModel = _modelLabel(_selectedProviderId);
 
     var aiService = PopupMenuButton<String>(
-      enabled: !_isStreaming,
+      enabled: !chatIsStreaming,
       onSelected: _onProviderSelected,
       itemBuilder: (context) {
         return _providers.map((provider) {
@@ -1230,8 +1142,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     onPressed: widget.onRequestMinimize,
                   ),
                 IconButton(
-                  icon: Icon(_isStreaming ? Icons.stop : Icons.send, size: 18),
-                  onPressed: _isStreaming ? _cancelStreaming : _sendMessage,
+                  icon: Icon(
+                    chatIsStreaming ? Icons.stop : Icons.send,
+                    size: 18,
+                  ),
+                  onPressed: chatIsStreaming ? _cancelStreaming : _sendMessage,
                 ),
               ],
             ),
@@ -1391,35 +1306,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         child: Column(
           children: [
             Expanded(
-              child: _messageStream != null
-                  ? StreamBuilder<List<ChatMessage>>(
-                      stream: _messageStream,
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return Skeletonizer.zone(child: Bone.multiText());
-                        }
+              child: ref.watch(aiChatProvider).when(
+                    data: (messages) {
+                      if (messages.isEmpty) {
+                        return buildEmptyState();
+                      }
 
-                        final messages = snapshot.data!;
-                        if (messages.isEmpty) {
-                          return buildEmptyState();
-                        }
-
-                        return _buildMessageList(messages);
-                      },
-                    )
-                  : ref.watch(aiChatProvider).when(
-                        data: (messages) {
-                          if (messages.isEmpty) {
-                            return buildEmptyState();
-                          }
-
-                          return _buildMessageList(messages);
-                        },
-                        loading: () =>
-                            Skeletonizer.zone(child: Bone.multiText()),
-                        error: (error, stack) =>
-                            Center(child: Text('error: $error')),
-                      ),
+                      return _buildMessageList(messages);
+                    },
+                    loading: () => Skeletonizer.zone(child: Bone.multiText()),
+                    error: (error, stack) =>
+                        Center(child: Text('error: $error')),
+                  ),
             ),
             inputBox,
           ],
@@ -1430,19 +1328,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   Widget _buildMessageList(List<ChatMessage> messages) {
     final lastHumanIndex = _findLastHumanIndex(messages);
+    final isStreaming = ref.watch(aiChatStreamingProvider);
 
     return ListView.builder(
       controller: _scrollController,
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
-        final isStreaming =
-            _messageStream != null && index == messages.length - 1;
+        final isLastMessage = index == messages.length - 1;
         return _buildLinearMessageItem(
           messages,
           message,
           index,
-          isStreaming,
+          isStreaming && isLastMessage,
           lastHumanIndex: lastHumanIndex,
         );
       },
@@ -1722,7 +1620,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final message = item.variants[selected];
     final content = message.contentAsString;
     final isStreaming =
-        _messageStream != null && identical(lastMessage, message);
+        ref.watch(aiChatStreamingProvider) && identical(lastMessage, message);
 
     final canNavigateVariants =
         item.variants.length > 1 && !_isStreaming && !isStreaming;

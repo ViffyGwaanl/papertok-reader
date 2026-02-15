@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/providers/ai_history.dart';
 import 'package:anx_reader/service/ai/ai_history.dart';
@@ -10,17 +12,39 @@ import 'package:langchain_core/chat_models.dart';
 part 'ai_chat.g.dart';
 
 @Riverpod(keepAlive: true)
+class AiChatStreaming extends _$AiChatStreaming {
+  @override
+  bool build() => false;
+
+  void setStreaming(bool value) {
+    state = value;
+  }
+}
+
+@Riverpod(keepAlive: true)
 class AiChat extends _$AiChat {
   String? _currentSessionId;
 
   AiConversationTree _tree = AiConversationTree.empty();
   List<String> _activeNodeIds = const [];
 
+  StreamSubscription<String>? _generationSub;
+  AiChatHistoryEntry? _draftEntry;
+  String? _draftAssistantNodeId;
+  String? _draftHumanNodeId;
+
   @override
   FutureOr<List<ChatMessage>> build() async {
     _currentSessionId = null;
     _tree = AiConversationTree.empty();
     _activeNodeIds = const [];
+
+    _generationSub?.cancel();
+    _generationSub = null;
+    _draftEntry = null;
+    _draftAssistantNodeId = null;
+    _draftHumanNodeId = null;
+
     return List<ChatMessage>.empty();
   }
 
@@ -32,6 +56,11 @@ class AiChat extends _$AiChat {
   }
 
   void restore(List<ChatMessage> history, {String? sessionId}) {
+    cancelActiveAiRequest();
+    _generationSub?.cancel();
+    _generationSub = null;
+    ref.read(aiChatStreamingProvider.notifier).setStreaming(false);
+
     if (sessionId != null) {
       _currentSessionId = sessionId;
     }
@@ -39,20 +68,29 @@ class AiChat extends _$AiChat {
     _rebuildFromTree();
   }
 
-  Stream<List<ChatMessage>> sendMessageStream(
+  bool get isStreaming => _generationSub != null;
+
+  /// Start a streaming generation session.
+  ///
+  /// This runs inside the provider (not the UI widget), so minimizing/closing
+  /// the chat panel will not interrupt generation.
+  void startStreaming(
     String message,
-    WidgetRef widgetRef,
     bool isRegenerate, {
     int? regenerateFromUserIndex,
     bool replaceUserMessage = false,
-  }) async* {
+  }) {
+    if (_generationSub != null) {
+      return;
+    }
+
     final sessionId = _ensureSessionId();
     final serviceId = Prefs().selectedAiService;
     final config = Prefs().getAiConfig(serviceId);
     final model = (config['model'])?.trim() ?? '';
 
-    final historyNotifier = widgetRef.read(aiHistoryProvider.notifier);
-    final initialHistoryState = widgetRef
+    final historyNotifier = ref.read(aiHistoryProvider.notifier);
+    final initialHistoryState = ref
         .read(aiHistoryProvider)
         .maybeWhen(data: (value) => value, orElse: () => const []);
     AiChatHistoryEntry? entry;
@@ -65,24 +103,20 @@ class AiChat extends _$AiChat {
 
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    // Ensure tree is initialized.
     if (_tree.nodes.isEmpty) {
       _tree = AiConversationTree.empty();
     }
 
-    // 1) Mutate tree: create a new branch/message if needed.
-    String parentId =
-        _activeNodeIds.isEmpty ? _tree.rootId : _activeNodeIds.last;
+    // 1) Mutate tree.
+    var parentId = _activeNodeIds.isEmpty ? _tree.rootId : _activeNodeIds.last;
 
     if (!isRegenerate && !replaceUserMessage) {
-      // New message at the end.
       _tree = _tree.appendChild(
         parentId: parentId,
         message: ChatMessage.humanText(message),
       );
       parentId = _tree.nodes[parentId]!.activeChildId!;
     } else {
-      // Regenerate/edit from a specific human message.
       final userIndex = regenerateFromUserIndex ?? _findLastHumanIndex();
       if (userIndex != null &&
           userIndex >= 0 &&
@@ -93,31 +127,32 @@ class AiChat extends _$AiChat {
           final parentOfUser = userNode.parentId ?? _tree.rootId;
 
           if (replaceUserMessage) {
-            // Edit creates a new *sibling* human node (branch), preserving the old one.
             _tree = _tree.appendChild(
               parentId: parentOfUser,
               message: ChatMessage.humanText(message),
             );
             parentId = _tree.nodes[parentOfUser]!.activeChildId!;
           } else {
-            // Regenerate creates a new assistant variant under the existing human node.
             parentId = userNodeId;
           }
         }
       }
     }
 
-    // 2) Create assistant placeholder under [parentId] (either new human or existing human).
+    _draftHumanNodeId = parentId;
+
+    // 2) Assistant placeholder.
     _tree = _tree.appendChild(
       parentId: parentId,
       message: ChatMessage.ai(''),
     );
-    final assistantNodeId = _tree.nodes[parentId]!.activeChildId!;
+    _draftAssistantNodeId = _tree.nodes[parentId]!.activeChildId!;
 
-    // 3) Rebuild active view and write draft.
+    // 3) Update UI state + write draft entry.
     _rebuildFromTree();
     final updatedMessages = state.value ?? const <ChatMessage>[];
-    final draftEntry = (entry ??
+
+    _draftEntry = (entry ??
             AiChatHistoryEntry(
               id: sessionId,
               serviceId: serviceId,
@@ -135,53 +170,102 @@ class AiChat extends _$AiChat {
       conversationV2: _tree.toJson(),
     );
 
-    yield updatedMessages;
-    historyNotifier.upsert(draftEntry).catchError((_) {});
+    historyNotifier.upsert(_draftEntry!).catchError((_) {});
 
-    // 4) Build prompt messages: use the active path up to the parentId (human) + placeholder? We send up to the human.
+    // 4) Start generation.
     final promptMessages = _buildPromptMessagesForAssistantParent(parentId);
 
-    try {
-      await for (final chunk in aiGenerateStream(
-        promptMessages,
-        regenerate: isRegenerate,
-        useAgent: true,
-        ref: widgetRef,
-      )) {
-        _tree = _tree.updateNodeMessage(assistantNodeId, ChatMessage.ai(chunk));
-        _rebuildFromTree();
-        yield state.value ?? const <ChatMessage>[];
-      }
+    ref.read(aiChatStreamingProvider.notifier).setStreaming(true);
 
-      final completedEntry = draftEntry.copyWith(
-        messages: List<ChatMessage>.from(state.value ?? updatedMessages),
-        updatedAt: DateTime.now().millisecondsSinceEpoch,
-        completed: true,
-        model: model,
-        conversationV2: _tree.toJson(),
-      );
-      historyNotifier.upsert(completedEntry).catchError((_) {});
-    } catch (_) {
-      final failedEntry = draftEntry.copyWith(
-        messages: List<ChatMessage>.from(state.value ?? updatedMessages),
-        updatedAt: DateTime.now().millisecondsSinceEpoch,
-        completed: false,
-        model: model,
-        conversationV2: _tree.toJson(),
-      );
-      historyNotifier.upsert(failedEntry).catchError((_) {});
-      rethrow;
+    final stream = aiGenerateStream(
+      promptMessages,
+      regenerate: isRegenerate,
+      useAgent: true,
+      ref: ref,
+    );
+
+    _generationSub = stream.listen(
+      (chunk) {
+        final assistantId = _draftAssistantNodeId;
+        if (assistantId == null) {
+          return;
+        }
+        _tree = _tree.updateNodeMessage(assistantId, ChatMessage.ai(chunk));
+        _rebuildFromTree();
+      },
+      onError: (Object error, StackTrace stack) {
+        _generationSub = null;
+        _finalizeStreaming(completed: false);
+      },
+      onDone: () {
+        _generationSub = null;
+        _finalizeStreaming(completed: true);
+      },
+      cancelOnError: false,
+    );
+  }
+
+  Future<void> cancelStreaming() async {
+    if (_generationSub == null) {
+      return;
     }
+
+    cancelActiveAiRequest();
+
+    try {
+      await _generationSub?.cancel();
+    } catch (_) {}
+
+    _generationSub = null;
+    _finalizeStreaming(completed: false);
+  }
+
+  void _finalizeStreaming({required bool completed}) {
+    if (_generationSub != null) {
+      return;
+    }
+
+    ref.read(aiChatStreamingProvider.notifier).setStreaming(false);
+
+    final historyNotifier = ref.read(aiHistoryProvider.notifier);
+    final draftEntry = _draftEntry;
+    if (draftEntry != null) {
+      final finalEntry = draftEntry.copyWith(
+        messages: List<ChatMessage>.from(state.value ?? const <ChatMessage>[]),
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+        completed: completed,
+        conversationV2: _tree.toJson(),
+      );
+      historyNotifier.upsert(finalEntry).catchError((_) {});
+    }
+
+    _draftEntry = null;
+    _draftAssistantNodeId = null;
+    _draftHumanNodeId = null;
   }
 
   void clear() {
+    cancelActiveAiRequest();
+    _generationSub?.cancel();
+    _generationSub = null;
+    ref.read(aiChatStreamingProvider.notifier).setStreaming(false);
+
     state = AsyncData(List<ChatMessage>.empty());
     _currentSessionId = null;
     _tree = AiConversationTree.empty();
     _activeNodeIds = const [];
+
+    _draftEntry = null;
+    _draftAssistantNodeId = null;
+    _draftHumanNodeId = null;
   }
 
   void loadHistoryEntry(AiChatHistoryEntry entry) {
+    cancelActiveAiRequest();
+    _generationSub?.cancel();
+    _generationSub = null;
+    ref.read(aiChatStreamingProvider.notifier).setStreaming(false);
+
     _currentSessionId = entry.id;
 
     final rawTree = entry.conversationV2;
