@@ -19,12 +19,22 @@ class AiChatBottomSheet extends StatefulWidget {
     this.initialMessage,
     this.sendImmediate = false,
     this.quickPromptChips = const [],
+    this.initialSizeOverride,
+    this.rememberSize = true,
   });
 
   final GlobalKey<AiChatStreamState> aiChatKey;
   final String? initialMessage;
   final bool sendImmediate;
   final List<AiQuickPromptChip> quickPromptChips;
+
+  /// Optional override for the initial sheet height (0-1).
+  /// When set, it takes precedence over persisted size.
+  final double? initialSizeOverride;
+
+  /// Whether to persist sheet height while dragging.
+  /// Note: minimized state is not persisted.
+  final bool rememberSize;
 
   @override
   State<AiChatBottomSheet> createState() => _AiChatBottomSheetState();
@@ -33,26 +43,57 @@ class AiChatBottomSheet extends StatefulWidget {
 class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
   static const double _minSize = 0.12;
   static const double _maxSize = 0.95;
+  static const double _minimizedEpsilon = 0.02;
 
+  final _sheetController = DraggableScrollableController();
   Timer? _saveDebounce;
 
   @override
   void dispose() {
     _saveDebounce?.cancel();
+    _sheetController.dispose();
     super.dispose();
   }
 
   void _scheduleSave(double size) {
+    if (!widget.rememberSize) {
+      return;
+    }
+
     final clamped = size.clamp(_minSize, _maxSize).toDouble();
+    // Don't persist the minimized bar state; reopening should start expanded.
+    if (clamped <= _minSize + _minimizedEpsilon) {
+      return;
+    }
+
     _saveDebounce?.cancel();
     _saveDebounce = Timer(const Duration(milliseconds: 250), () {
       Prefs().aiSheetInitialSize = clamped;
     });
   }
 
+  Future<void> _minimize() async {
+    try {
+      await _sheetController.animateTo(
+        _minSize,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+    } catch (_) {
+      // ignore (controller might not be attached yet)
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final initial = Prefs().aiSheetInitialSize.clamp(_minSize, _maxSize);
+    var initial = (widget.initialSizeOverride ?? Prefs().aiSheetInitialSize)
+        .clamp(_minSize, _maxSize)
+        .toDouble();
+
+    // If we ever persisted a minimized size, ignore it on open.
+    if (initial <= _minSize + _minimizedEpsilon) {
+      initial = _maxSize;
+    }
 
     return NotificationListener<DraggableScrollableNotification>(
       onNotification: (n) {
@@ -60,6 +101,7 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
         return false;
       },
       child: DraggableScrollableSheet(
+        controller: _sheetController,
         initialChildSize: initial,
         minChildSize: _minSize,
         maxChildSize: _maxSize,
@@ -83,7 +125,12 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
               sendImmediate: widget.sendImmediate,
               quickPromptChips: widget.quickPromptChips,
               scrollController: scrollController,
+              onRequestMinimize: _minimize,
               trailing: [
+                IconButton(
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  onPressed: _minimize,
+                ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.of(context).pop(),

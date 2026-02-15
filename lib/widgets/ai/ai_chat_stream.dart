@@ -35,6 +35,7 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.quickPromptChips = const [],
     this.trailing,
     this.scrollController,
+    this.onRequestMinimize,
   });
 
   final String? initialMessage;
@@ -46,6 +47,9 @@ class AiChatStream extends ConsumerStatefulWidget {
   ///
   /// This is mainly for integrating with [DraggableScrollableSheet].
   final ScrollController? scrollController;
+
+  /// Optional callback used by bottom-sheet mode to minimize the sheet.
+  final VoidCallback? onRequestMinimize;
 
   @override
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
@@ -62,6 +66,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   late final bool _ownsScrollController;
 
   bool _isStreaming = false;
+
+  // Bottom sheet convenience gesture: swipe down on input box to minimize.
+  double _inputSwipeDownDy = 0;
 
   // Auto-scroll behavior:
   // - Do NOT jump to bottom when opening the panel.
@@ -1179,6 +1186,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ],
                   ),
                 ),
+                if (widget.onRequestMinimize != null)
+                  IconButton(
+                    icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                    onPressed: widget.onRequestMinimize,
+                  ),
                 IconButton(
                   icon: Icon(_isStreaming ? Icons.stop : Icons.send, size: 18),
                   onPressed: _isStreaming ? _cancelStreaming : _sendMessage,
@@ -1189,6 +1201,29 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ),
       ),
     );
+
+    if (widget.onRequestMinimize != null) {
+      inputBox = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragStart: (_) {
+          _inputSwipeDownDy = 0;
+        },
+        onVerticalDragUpdate: (details) {
+          final delta = details.primaryDelta ?? 0;
+          if (delta > 0) {
+            _inputSwipeDownDy += delta;
+          }
+        },
+        onVerticalDragEnd: (_) {
+          if (_inputSwipeDownDy > 24) {
+            HapticFeedback.selectionClick();
+            widget.onRequestMinimize?.call();
+          }
+          _inputSwipeDownDy = 0;
+        },
+        child: inputBox,
+      );
+    }
 
     Widget buildEmptyState() {
       final theme = Theme.of(context);

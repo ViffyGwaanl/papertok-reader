@@ -762,6 +762,9 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             initialMessage: content,
             sendImmediate: sendImmediate,
             quickPromptChips: quickPrompts,
+            // Reading page: open fully expanded by default.
+            initialSizeOverride: 0.95,
+            rememberSize: false,
           ),
         ),
       );
