@@ -19,6 +19,16 @@ flutter gen-l10n
 dart run build_runner build --delete-conflicting-outputs
 ```
 
+## Developer (fork): switching branches may change path dependencies
+
+The fork may use local path dependencies (e.g. `packages/langchain_openai`).
+
+If you switch branches and see pub resolution errors, always run:
+
+```bash
+flutter pub get
+```
+
 ## iOS: Archive shows old build number (TestFlight)
 
 If you changed `pubspec.yaml` `version: x.y.z+BUILD` but Xcode Archive still shows the old build number:
@@ -35,6 +45,15 @@ flutter build ios --release --no-codesign
 ```
 
 Then Archive again.
+
+## Reading-page AI: minimize should not interrupt streaming (fork)
+
+If minimizing the bottom sheet interrupts generation:
+
+- Confirm you are on the latest `feat/ai-all-in-one`.
+- Export logs after reproducing (Settings → More → Advanced → Logs).
+
+The fork moved streaming ownership into `aiChatProvider` so UI minimize/close should not cancel.
 
 ## Translation: AI full-text translation looks weird or fails
 
@@ -72,6 +91,16 @@ flutter gen-l10n
 dart run build_runner build --delete-conflicting-outputs
 ```
 
+## 开发者（fork）：切分支后 pub 依赖可能变化
+
+fork 里可能使用 path 依赖（例如 `packages/langchain_openai`）。
+
+切分支后如果遇到依赖解析问题，先执行：
+
+```bash
+flutter pub get
+```
+
 ## iOS：Archive 仍显示旧的 Build Number（TestFlight）
 
 如果你改了 `pubspec.yaml` 的 `version: x.y.z+BUILD`，但 Xcode Archive 里仍然显示旧的 Build Number：
@@ -88,6 +117,15 @@ flutter build ios --release --no-codesign
 ```
 
 然后再 Archive。
+
+## 阅读页 AI：最小化不应中断生成（fork）
+
+如果你发现 bottom sheet 最小化后中断生成：
+
+- 确认已更新到 `feat/ai-all-in-one` 最新提交
+- 重现后导出日志（设置 → 更多设置 → 高级 → 日志）
+
+fork 已将 streaming 所有权迁移到 `aiChatProvider`，UI 最小化/关闭不应取消生成。
 
 ## 翻译：AI 全文翻译效果怪 / 无法翻译
 
