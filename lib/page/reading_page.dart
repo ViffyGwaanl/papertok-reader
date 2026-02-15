@@ -741,6 +741,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             Prefs().aiPadPanelMode == AiPadPanelModeEnum.bottomSheet);
   }
 
+  PersistentBottomSheetController? _aiBottomSheetController;
+
   Future<void> showAiChat({
     String? content,
     bool sendImmediate = false,
@@ -750,13 +752,20 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         _shouldUseAiBottomSheet(navigatorKey.currentContext!);
 
     if (useBottomSheet) {
-      showModalBottomSheet(
-        context: navigatorKey.currentContext!,
-        isScrollControlled: true,
-        enableDrag: false,
-        showDragHandle: false,
-        clipBehavior: Clip.hardEdge,
-        builder: (context) => PointerInterceptor(
+      // Use a *persistent* bottom sheet on reading page so users can keep
+      // interacting with the book while the assistant keeps streaming.
+      final scaffoldState = _scaffoldKey.currentState;
+      if (scaffoldState == null) {
+        return;
+      }
+
+      if (_aiBottomSheetController != null) {
+        // If already shown, do nothing (avoid stacking multiple sheets).
+        return;
+      }
+
+      _aiBottomSheetController = scaffoldState.showBottomSheet(
+        (context) => PointerInterceptor(
           child: AiChatBottomSheet(
             aiChatKey: aiChatKey,
             initialMessage: content,
@@ -765,9 +774,19 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             // Reading page: open fully expanded by default.
             initialSizeOverride: 0.95,
             rememberSize: false,
+            onRequestClose: () {
+              _aiBottomSheetController?.close();
+            },
           ),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        enableDrag: false,
       );
+
+      _aiBottomSheetController!.closed.whenComplete(() {
+        _aiBottomSheetController = null;
+      });
     } else {
       setState(() {
         final maxWidth = _aiChatMaxWidth(navigatorKey.currentContext!);

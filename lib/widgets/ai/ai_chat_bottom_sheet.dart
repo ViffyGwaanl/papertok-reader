@@ -21,6 +21,7 @@ class AiChatBottomSheet extends StatefulWidget {
     this.quickPromptChips = const [],
     this.initialSizeOverride,
     this.rememberSize = true,
+    this.onRequestClose,
   });
 
   final GlobalKey<AiChatStreamState> aiChatKey;
@@ -35,6 +36,11 @@ class AiChatBottomSheet extends StatefulWidget {
   /// Whether to persist sheet height while dragging.
   /// Note: minimized state is not persisted.
   final bool rememberSize;
+
+  /// Close callback.
+  /// - Modal sheet: pass `Navigator.pop`.
+  /// - Persistent sheet: pass `PersistentBottomSheetController.close`.
+  final VoidCallback? onRequestClose;
 
   @override
   State<AiChatBottomSheet> createState() => _AiChatBottomSheetState();
@@ -133,7 +139,8 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: widget.onRequestClose ??
+                      () => Navigator.of(context).pop(),
                 ),
               ],
             ),
