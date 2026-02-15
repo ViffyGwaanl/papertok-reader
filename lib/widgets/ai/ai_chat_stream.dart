@@ -62,8 +62,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   StreamController<List<ChatMessage>>? _messageController;
   StreamSubscription<List<ChatMessage>>? _messageSubscription;
 
-  late final ScrollController _scrollController;
-  late final bool _ownsScrollController;
+  late ScrollController _scrollController;
+  bool _ownsScrollController = false;
 
   bool _isStreaming = false;
 
@@ -122,20 +122,42 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     ];
   }
 
-  @override
-  void initState() {
-    super.initState();
-
-    _ownsScrollController = widget.scrollController == null;
-    _scrollController = widget.scrollController ?? ScrollController();
-
-    _scrollController.addListener(() {
+  void _handleScroll() {
+    // Be defensive: scroll controller may be swapped/rebuilt by the sheet.
+    try {
       if (!_scrollController.hasClients) return;
       final max = _scrollController.position.maxScrollExtent;
       final offset = _scrollController.offset;
       // Within 120px counts as "at bottom".
       _pinnedToBottom = (max - offset) < 120;
-    });
+    } catch (_) {
+      // Ignore (e.g. controller disposed during rebuild).
+    }
+  }
+
+  void _attachScrollController(ScrollController? external) {
+    // Detach old controller.
+    try {
+      _scrollController.removeListener(_handleScroll);
+    } catch (_) {}
+
+    if (_ownsScrollController) {
+      try {
+        _scrollController.dispose();
+      } catch (_) {}
+    }
+
+    _ownsScrollController = external == null;
+    _scrollController = external ?? ScrollController();
+    _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _scrollController = ScrollController();
+    _attachScrollController(widget.scrollController);
 
     _starterPrompts = const [];
     _builtInOptions = buildDefaultAiServices();
@@ -155,6 +177,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     _suggestedPrompts = const [];
     if (widget.sendImmediate) {
       _sendMessage();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AiChatStream oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.scrollController != widget.scrollController) {
+      _attachScrollController(widget.scrollController);
     }
   }
 
@@ -190,6 +221,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     inputController.dispose();
     _messageSubscription?.cancel();
     _messageController?.close();
+    try {
+      _scrollController.removeListener(_handleScroll);
+    } catch (_) {}
     if (_ownsScrollController) {
       _scrollController.dispose();
     }
@@ -559,18 +593,22 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (!force && !_pinnedToBottom) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        final target = _scrollController.position.maxScrollExtent;
-        // Use jumpTo during streaming to reduce jank.
-        if (_isStreaming) {
-          _scrollController.jumpTo(target);
-        } else {
-          _scrollController.animateTo(
-            target,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
+      try {
+        if (_scrollController.hasClients) {
+          final target = _scrollController.position.maxScrollExtent;
+          // Use jumpTo during streaming to reduce jank.
+          if (_isStreaming) {
+            _scrollController.jumpTo(target);
+          } else {
+            _scrollController.animateTo(
+              target,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+            );
+          }
         }
+      } catch (_) {
+        // Ignore (e.g. controller disposed/replaced while minimizing).
       }
     });
   }
