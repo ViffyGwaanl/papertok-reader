@@ -63,6 +63,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   bool _isStreaming = false;
 
+  // Auto-scroll behavior:
+  // - Do NOT jump to bottom when opening the panel.
+  // - While streaming, only keep scrolling if the user is already near bottom.
+  bool _pinnedToBottom = false;
+
   // For each user turn, the assistant may have multiple generated variants.
   // We keep a lightweight UI-only selection index per turn.
   final Map<int, int> _selectedVariantByUserIndex = {};
@@ -117,6 +122,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     _ownsScrollController = widget.scrollController == null;
     _scrollController = widget.scrollController ?? ScrollController();
 
+    _scrollController.addListener(() {
+      if (!_scrollController.hasClients) return;
+      final max = _scrollController.position.maxScrollExtent;
+      final offset = _scrollController.offset;
+      // Within 120px counts as "at bottom".
+      _pinnedToBottom = (max - offset) < 120;
+    });
+
     _starterPrompts = const [];
     _builtInOptions = buildDefaultAiServices();
     _builtInById = {
@@ -136,7 +149,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (widget.sendImmediate) {
       _sendMessage();
     }
-    _scrollToBottom();
   }
 
   @override
@@ -536,14 +548,22 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return prompts.take(3).toList(growable: false);
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool force = false}) {
+    if (!force && !_pinnedToBottom) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        final target = _scrollController.position.maxScrollExtent;
+        // Use jumpTo during streaming to reduce jank.
+        if (_isStreaming) {
+          _scrollController.jumpTo(target);
+        } else {
+          _scrollController.animateTo(
+            target,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
+        }
       }
     });
   }
@@ -799,6 +819,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           false,
         );
 
+    _pinnedToBottom = true;
     _startStream(stream);
   }
 
@@ -814,6 +835,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           regenerateFromUserIndex: userIndex,
         );
 
+    _pinnedToBottom = true;
     _startStream(stream);
   }
 
@@ -830,6 +852,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           replaceUserMessage: true,
         );
 
+    _pinnedToBottom = true;
     _startStream(stream);
   }
 
