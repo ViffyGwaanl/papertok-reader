@@ -7,6 +7,36 @@ import 'package:anx_reader/service/translate/fulltext_translate_cache.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:crypto/crypto.dart';
 
+String _sanitizeInlineFullTextTranslation(String raw) {
+  var s = raw.trim();
+  if (s.isEmpty) return s;
+
+  // Remove common code fences.
+  s = s.replaceAll(RegExp(r'^```[a-zA-Z0-9_-]*\n'), '');
+  s = s.replaceAll(RegExp(r'\n```$'), '');
+
+  // Remove thinking blocks if any model leaks them.
+  s = s.replaceAll(RegExp(r'<think>[\s\S]*?<\/think>', multiLine: true), '');
+
+  // If the model returned HTML/XML-like tags, strip them.
+  // Heuristic: only strip tags that look like markup (<p>, </div>, <!DOCTYPE ...>).
+  final tagPattern = RegExp(r'<[a-zA-Z/!][^>]*>');
+  final fullWidthTagPattern = RegExp(r'＜[a-zA-Z/!][^＞]*＞');
+  final tagCount = tagPattern.allMatches(s).length;
+  final fwTagCount = fullWidthTagPattern.allMatches(s).length;
+
+  if (tagCount >= 1 || fwTagCount >= 1) {
+    s = s.replaceAll(tagPattern, '');
+    s = s.replaceAll(fullWidthTagPattern, '');
+  }
+
+  // Clean up extra whitespace introduced by stripping tags.
+  s = s.replaceAll(RegExp(r'[ \t]+'), ' ');
+  s = s.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+
+  return s.trim();
+}
+
 class FullTextTranslateRuntime {
   FullTextTranslateRuntime._();
 
@@ -59,12 +89,14 @@ class FullTextTranslateRuntime {
         contextText: contextText,
       );
 
+      final sanitized = _sanitizeInlineFullTextTranslation(result);
+
       // Persist even if empty? No.
-      if (enableCache && result.trim().isNotEmpty) {
-        await FullTextTranslateCache.set(bookId, key, result);
+      if (enableCache && sanitized.trim().isNotEmpty) {
+        await FullTextTranslateCache.set(bookId, key, sanitized);
       }
 
-      return result;
+      return sanitized;
     });
 
     _inflight[key] = future;

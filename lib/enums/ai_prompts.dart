@@ -113,6 +113,7 @@ Task:
 
 Strict output rules (CRITICAL):
 - Do NOT add any explanation, notes, headings, quotes, markdown, numbering, or extra symbols.
+- Do NOT output ANY HTML/XML tags (e.g. <p>, </div>, <xml>...). Plain text only.
 - Preserve paragraph breaks as in the source (keep line breaks if present).
 - Keep the tone/register consistent with the source.
 - If the source is empty, output empty.
