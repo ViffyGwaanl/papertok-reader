@@ -459,6 +459,7 @@
   "settingsAiPromptTranslateFulltext": "Full-text translation (translation-only)",
   "readingPageClearFullTextTranslationCache": "Clear translation cache (this book)",
   "readingPageFullTextTranslationCacheCleared": "Translation cache cleared.",
+  "readingPageShowTranslateHud": "Show translation progress",
   "noteListShowBookmark": "Show Bookmark",
   "readingBookmark": "Bookmark",
   "noBookmarks": "No Bookmarks",

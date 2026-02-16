@@ -361,6 +361,20 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.clearTranslation
                 ),
               ),
             ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: isReading
+                    ? () {
+                        epubPlayerKey.currentState?.showInlineTranslateHud();
+                      }
+                    : null,
+                icon: const Icon(Icons.visibility, size: 18),
+                label: Text(
+                  L10n.of(context).readingPageShowTranslateHud,
+                ),
+              ),
+            ),
           ],
         ),
       );

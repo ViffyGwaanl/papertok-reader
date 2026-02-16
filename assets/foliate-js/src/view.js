@@ -197,7 +197,7 @@ export class View extends HTMLElement {
       // does not trigger when navigating back/forward.
       try {
         if (this.#translator.getTranslationMode() !== TranslationMode.OFF) {
-          this.#translator.forceTranslateForViewport?.()
+          this.#translator.requestTranslateForViewport?.({ immediate: true })
         }
       } catch (e) {
         // ignore
@@ -604,13 +604,21 @@ export class View extends HTMLElement {
   setTranslationMode(mode) {
     this.#translator.setTranslationMode(mode)
   }
-  
+
   getTranslationMode() {
     return this.#translator.getTranslationMode()
   }
-  
+
   clearTranslations() {
     this.#translator.clearTranslations()
+  }
+
+  requestTranslateForViewport() {
+    this.#translator.requestTranslateForViewport?.({ immediate: true })
+  }
+
+  applyFullTextTranslation(id, translatedText) {
+    return this.#translator.applyTranslationById?.(id, translatedText)
   }
 }
 

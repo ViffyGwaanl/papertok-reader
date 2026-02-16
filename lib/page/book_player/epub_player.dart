@@ -29,6 +29,8 @@ import 'package:anx_reader/providers/chapter_content_bridge.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/book_player/book_player_server.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
+import 'package:anx_reader/service/translate/inline_fulltext_translate_engine.dart';
+import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
 import 'package:anx_reader/providers/toc_search.dart';
 import 'package:anx_reader/service/tts/models/tts_sentence.dart';
 import 'package:anx_reader/utils/coordinates_to_part.dart';
@@ -79,6 +81,11 @@ class EpubPlayer extends ConsumerStatefulWidget {
 class EpubPlayerState extends ConsumerState<EpubPlayer>
     with TickerProviderStateMixin {
   late InAppWebViewController webViewController;
+  late InlineFullTextTranslateEngine _inlineTranslateEngine;
+  final ValueNotifier<InlineFullTextTranslationProgress>
+      _inlineTranslateProgress =
+      ValueNotifier(InlineFullTextTranslationProgress.idle());
+  bool _inlineTranslateHudVisible = true;
   late ContextMenu contextMenu;
   String cfi = '';
   double percentage = 0.0;
@@ -805,6 +812,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         setState(() {});
       },
     );
+    // Backward compatible single-text handler (fallback)
     controller.addJavaScriptHandler(
       handlerName: 'translateText',
       callback: (args) async {
@@ -824,6 +832,36 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         } catch (e) {
           AnxLog.severe('Translation error: $e');
           return 'Translation error: $e';
+        }
+      },
+    );
+
+    // V2: batch queue handler for visible blocks (current + next viewport).
+    controller.addJavaScriptHandler(
+      handlerName: 'translateBlocks',
+      callback: (args) {
+        try {
+          final raw = args.isNotEmpty ? args[0] : null;
+          final blocks = InlineFullTextTranslateBlock.parseList(raw);
+          if (blocks.isEmpty) return {'queued': 0};
+
+          final service = Prefs().fullTextTranslateService;
+          final from = Prefs().fullTextTranslateFrom;
+          final to = Prefs().fullTextTranslateTo;
+
+          _inlineTranslateEngine.submit(
+            webViewController: controller,
+            bookId: widget.book.id,
+            service: service,
+            from: from,
+            to: to,
+            blocks: blocks,
+          );
+
+          return {'queued': blocks.length};
+        } catch (e) {
+          AnxLog.severe('translateBlocks error: $e');
+          return {'queued': 0, 'error': e.toString()};
         }
       },
     );
@@ -867,6 +905,12 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   @override
   void initState() {
     book = widget.book;
+
+    _inlineTranslateEngine = InlineFullTextTranslateEngine(
+      progress: _inlineTranslateProgress,
+      maxConcurrency: FullTextTranslateRuntime.defaultConcurrency,
+    );
+
     getThemeColor();
 
     contextMenu = ContextMenu(
@@ -910,6 +954,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
   @override
   void dispose() {
+    _inlineTranslateEngine.dispose();
+    _inlineTranslateProgress.dispose();
     _animationController?.dispose();
     saveReadingProgress();
     removeOverlay();
@@ -1169,6 +1215,80 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     );
   }
 
+  Widget _inlineFullTextHud() {
+    if (!_inlineTranslateHudVisible) return const SizedBox.shrink();
+
+    // Only show when translation mode is enabled for this book.
+    final mode = Prefs().getBookTranslationMode(widget.book.id);
+    if (mode == TranslationModeEnum.off) return const SizedBox.shrink();
+
+    final topPadding = MediaQuery.of(context).padding.top;
+
+    return Positioned(
+      top: topPadding + 8,
+      right: 8,
+      child: ValueListenableBuilder<InlineFullTextTranslationProgress>(
+        valueListenable: _inlineTranslateProgress,
+        builder: (context, p, _) {
+          // Show HUD while active or if there was any result.
+          final shouldShow = p.active || p.total > 0;
+          if (!shouldShow) return const SizedBox.shrink();
+
+          final done = p.done.clamp(0, p.total);
+          final total = p.total;
+          final inflight = p.inflight;
+          final failed = p.failed;
+
+          final text = '译 $done/$total'
+              '${inflight > 0 ? ' · $inflight中' : ''}'
+              '${failed > 0 ? ' · 失败$failed' : ''}';
+
+          return Material(
+            color: Theme.of(context).colorScheme.surface.withAlpha(230),
+            elevation: 3,
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (p.active)
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  if (p.active) const SizedBox(width: 8),
+                  Text(
+                    text,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _inlineTranslateHudVisible = false;
+                      });
+                    },
+                    child: const Icon(Icons.close, size: 16),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void showInlineTranslateHud() {
+    if (!_inlineTranslateHudVisible) {
+      setState(() {
+        _inlineTranslateHudVisible = true;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     String uri = Uri.encodeComponent(widget.book.fileFullPath);
@@ -1186,6 +1306,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             buildWebviewWithIOSWorkaround(context, url, initialCfi),
             readingInfoWidget(),
             if (showHistory) _buildHistoryCapsule(),
+            _inlineFullTextHud(),
             if (Prefs().openBookAnimation)
               SizedBox.expand(
                   child: IgnorePointer(
