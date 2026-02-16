@@ -453,7 +453,7 @@
   "readingPageRightMargin": "Right Margin",
   "readingPageLeftMargin": "Left Margin",
   "syncRemoteDataUpdateTime": "Remote data update time: ",
-  "settingsTranslateAiTip": "Go to the AI settings page to configure the AI service.",
+  "settingsTranslateAiTip": "AI translation reuses the provider/model configured in Settings → AI. (Per-translation model override is not available yet.)",
   "settingsTranslateAiFulltext": "AI (Translate Only)",
   "settingsAiPromptTranslateAndDictionary": "Translate And Dictionary",
   "settingsAiPromptTranslateFulltext": "Full-text translation (translation-only)",

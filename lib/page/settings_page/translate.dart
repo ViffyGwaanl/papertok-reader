@@ -119,7 +119,7 @@ class _TranslateSettingState extends State<TranslateSetting> {
         SettingsSection(
           title: Text(L10n.of(context).translationServiceConfiguration),
           tiles: [
-            for (var service in TranslateService.activeValues)
+            for (var service in TranslateService.activeValuesForSelection)
               CustomSettingsTile(
                 child: TranslateSettingItem(service: service),
               ),

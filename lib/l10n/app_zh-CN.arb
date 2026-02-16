@@ -453,7 +453,7 @@
   "readingPageRightMargin": "右边距",
   "readingPageLeftMargin": "左边距",
   "syncRemoteDataUpdateTime": "远程数据更新时间：",
-  "settingsTranslateAiTip": "转到AI设置页面以配置AI服务。",
+  "settingsTranslateAiTip": "AI 翻译会复用【设置→AI】里的供应商/模型配置（当前版本暂不支持为翻译单独指定模型）。",
   "settingsTranslateAiFulltext": "AI（纯翻译）",
   "settingsAiPromptTranslateAndDictionary": "翻译和词典",
   "settingsAiPromptTranslateFulltext": "全文翻译（仅译文）",

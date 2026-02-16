@@ -191,6 +191,18 @@ export class View extends HTMLElement {
 
     if (cfi && (!this.#lastCfi || cfi !== this.#lastCfi)) {
       this.#lastCfi = cfi
+
+      // When translation is enabled, proactively translate the current + next
+      // viewport on every relocate. This fixes cases where IntersectionObserver
+      // does not trigger when navigating back/forward.
+      try {
+        if (this.#translator.getTranslationMode() !== TranslationMode.OFF) {
+          this.#translator.forceTranslateForViewport?.()
+        }
+      } catch (e) {
+        // ignore
+      }
+
       this.#emit('relocate', this.lastLocation)
     }
   }

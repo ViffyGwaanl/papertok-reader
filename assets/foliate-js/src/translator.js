@@ -134,43 +134,48 @@ export class Translator {
   }
 
   #walkTextNodes(root, rejectTags = ['pre', 'code', 'math', 'style', 'script']) {
-    const elements = []
-    
-    const walk = (node, depth = 0) => {
-      if (depth > 15) return
-      
-      const children = Array.from(node.children || [])
-      for (const child of children) {
-        if (rejectTags.includes(child.tagName.toLowerCase())) {
-          continue
-        }
-        
-        // Skip translation elements
-        if (child.classList.contains('translated-text')) {
-          continue
-        }
-        
-        const hasDirectText = Array.from(child.childNodes).some(node => {
-          if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
-            return true
-          }
-          if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'SPAN') {
-            return true
-          }
-          return false
-        })
-        
-        if (child.children.length === 0 && child.textContent?.trim()) {
-          elements.push(child)
-        } else if (hasDirectText) {
-          elements.push(child)
-        } else if (child.children.length > 0) {
-          walk(child, depth + 1)
-        }
-      }
+    // IMPORTANT: For EPUB reading, translating inline nodes (e.g. SPAN) causes
+    // partial/mixed results within a paragraph.
+    // We prefer block-level elements as translation units.
+
+    if (!root || !root.querySelectorAll) return []
+
+    const blockSelectors = [
+      'p',
+      'li',
+      'blockquote',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'figcaption',
+      'dd', 'dt',
+    ]
+
+    const candidates = Array.from(root.querySelectorAll(blockSelectors.join(',')))
+
+    const isRejected = (el) => {
+      const name = el.tagName.toLowerCase()
+      if (rejectTags.includes(name)) return true
+      if (el.classList && el.classList.contains('translated-text')) return true
+      if (el.closest && el.closest('.translated-text')) return true
+      return false
     }
-    
-    walk(root)
+
+    const elements = []
+
+    for (const el of candidates) {
+      if (!el || isRejected(el)) continue
+
+      // Skip list items that already contain paragraphs: let <p> be the unit.
+      if (el.tagName.toLowerCase() === 'li') {
+        if (el.querySelector('p')) continue
+      }
+
+      // Skip empty blocks.
+      const text = el.innerText?.trim() || el.textContent?.trim()
+      if (!text) continue
+
+      elements.push(el)
+    }
+
     return elements
   }
 
@@ -306,6 +311,10 @@ export class Translator {
     }
     
     element.classList.remove('translation-source-hidden')
+  }
+
+  async forceTranslateForViewport() {
+    return this.#forceTranslateVisibleElements()
   }
 
   async #forceTranslateVisibleElements() {
