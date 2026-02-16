@@ -6,8 +6,16 @@ import 'dart:convert';
 /// - [anthropic] covers Anthropic Messages API compatible endpoints.
 /// - [gemini] covers Google Gemini (Generative Language) compatible endpoints.
 enum AiProviderType {
+  /// OpenAI Chat Completions compatible gateways.
   openaiCompatible,
+
+  /// OpenAI Responses API (official).
+  openaiResponses,
+
+  /// Anthropic Messages API.
   anthropic,
+
+  /// Google Gemini.
   gemini,
 }
 
@@ -18,6 +26,10 @@ AiProviderType aiProviderTypeFromString(String raw) {
     case 'openai-compatible':
     case 'openaiCompatible':
       return AiProviderType.openaiCompatible;
+    case 'openai_responses':
+    case 'openai-responses':
+    case 'responses':
+      return AiProviderType.openaiResponses;
     case 'anthropic':
     case 'claude':
       return AiProviderType.anthropic;
@@ -33,6 +45,8 @@ String aiProviderTypeToString(AiProviderType type) {
   switch (type) {
     case AiProviderType.openaiCompatible:
       return 'openai';
+    case AiProviderType.openaiResponses:
+      return 'openai_responses';
     case AiProviderType.anthropic:
       return 'anthropic';
     case AiProviderType.gemini:

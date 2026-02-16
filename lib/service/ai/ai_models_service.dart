@@ -13,6 +13,8 @@ class AiModelsService {
         return 'claude';
       case AiProviderType.gemini:
         return 'gemini';
+      case AiProviderType.openaiResponses:
+        return 'openai-responses';
       case AiProviderType.openaiCompatible:
         return 'openai';
     }
@@ -30,6 +32,7 @@ class AiModelsService {
 
     switch (provider.type) {
       case AiProviderType.openaiCompatible:
+      case AiProviderType.openaiResponses:
         return _fetchOpenAICompatible(config);
       case AiProviderType.anthropic:
         return _fetchAnthropic(config);

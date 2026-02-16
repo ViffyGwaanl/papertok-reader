@@ -402,6 +402,8 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     switch (type) {
       case AiProviderType.openaiCompatible:
         return l10n.settingsAiProviderCenterTypeOpenAICompatible;
+      case AiProviderType.openaiResponses:
+        return l10n.settingsAiProviderCenterTypeOpenAIResponses;
       case AiProviderType.anthropic:
         return l10n.settingsAiProviderCenterTypeAnthropic;
       case AiProviderType.gemini:

@@ -64,6 +64,7 @@ Stream<String> _generateStream({
       : switch (meta.type) {
           AiProviderType.anthropic => 'claude',
           AiProviderType.gemini => 'gemini',
+          AiProviderType.openaiResponses => 'openai-responses',
           AiProviderType.openaiCompatible => 'openai',
         };
 

@@ -231,6 +231,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       final type = switch (option.identifier) {
         'claude' => AiProviderType.anthropic,
         'gemini' => AiProviderType.gemini,
+        'openai-responses' => AiProviderType.openaiResponses,
         _ => AiProviderType.openaiCompatible,
       };
 
@@ -296,6 +297,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         return _builtInById['claude'];
       case AiProviderType.gemini:
         return _builtInById['gemini'];
+      case AiProviderType.openaiResponses:
+        return _builtInById['openai-responses'];
       case AiProviderType.openaiCompatible:
         return _builtInById['openai'];
     }
@@ -367,6 +370,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     switch (provider.type) {
       case AiProviderType.openaiCompatible:
+      case AiProviderType.openaiResponses:
         return const [
           AiThinkingMode.off,
           AiThinkingMode.auto,

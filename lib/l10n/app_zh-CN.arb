@@ -861,6 +861,7 @@
   "settingsAiProviderCenterUntitledProvider": "未命名供应商",
   "settingsAiProviderCenterProviderTypeLabel": "供应商类型",
   "settingsAiProviderCenterTypeOpenAICompatible": "OpenAI 兼容",
+  "settingsAiProviderCenterTypeOpenAIResponses": "OpenAI Responses",
   "settingsAiProviderCenterTypeAnthropic": "Anthropic",
   "settingsAiProviderCenterTypeGemini": "Gemini",
   "settingsAiProviderCenterDefaultApplied": "已设为默认：{name}",

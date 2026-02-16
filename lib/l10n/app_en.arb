@@ -861,6 +861,7 @@
   "settingsAiProviderCenterUntitledProvider": "Untitled Provider",
   "settingsAiProviderCenterProviderTypeLabel": "Provider Type",
   "settingsAiProviderCenterTypeOpenAICompatible": "OpenAI-compatible",
+  "settingsAiProviderCenterTypeOpenAIResponses": "OpenAI Responses",
   "settingsAiProviderCenterTypeAnthropic": "Anthropic",
   "settingsAiProviderCenterTypeGemini": "Gemini",
   "settingsAiProviderCenterDefaultApplied": "Default provider set to: {name}",

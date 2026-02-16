@@ -34,6 +34,7 @@ class _AiProviderCenterPageState extends State<AiProviderCenterPage> {
       final type = switch (option.identifier) {
         'claude' => AiProviderType.anthropic,
         'gemini' => AiProviderType.gemini,
+        'openai-responses' => AiProviderType.openaiResponses,
         _ => AiProviderType.openaiCompatible,
       };
 
@@ -288,6 +289,8 @@ class _AiProviderCenterPageState extends State<AiProviderCenterPage> {
     switch (type) {
       case AiProviderType.openaiCompatible:
         return l10n.settingsAiProviderCenterTypeOpenAICompatible;
+      case AiProviderType.openaiResponses:
+        return l10n.settingsAiProviderCenterTypeOpenAIResponses;
       case AiProviderType.anthropic:
         return l10n.settingsAiProviderCenterTypeAnthropic;
       case AiProviderType.gemini:
