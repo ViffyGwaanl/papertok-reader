@@ -1798,6 +1798,22 @@ class Prefs extends ChangeNotifier {
     return prefs.getDouble('aiChatFontScale') ?? 1.0;
   }
 
+  /// AI dev mode diagnostic logging.
+  ///
+  /// When enabled, extra AI streaming / tool calling debug logs will be written
+  /// to the app log file (Settings -> Advanced -> Log).
+  bool get aiDebugLogsEnabled {
+    return prefs.getBool('aiDebugLogsEnabled') ?? false;
+  }
+
+  set aiDebugLogsEnabled(bool enabled) {
+    if ((prefs.getBool('aiDebugLogsEnabled') ?? false) != enabled) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool('aiDebugLogsEnabled', enabled);
+    notifyListeners();
+  }
+
   set aiChatFontScale(double scale) {
     if ((prefs.getDouble('aiChatFontScale') ?? 1.0) != scale) {
       touchAiSettingsUpdatedAt();

@@ -14,6 +14,7 @@ import 'package:anx_reader/widgets/ai/ai_stream.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/page/settings_page/ai_quick_prompts_editor.dart';
+import 'package:anx_reader/page/settings_page/subpage/log_page.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
@@ -555,6 +556,31 @@ class _AISettingsState extends ConsumerState<AISettings> {
                   ),
                 );
               }),
+        ],
+      ),
+      SettingsSection(
+        title: Text(l10n.settingsAiDebugTitle),
+        tiles: [
+          SettingsTile.switchTile(
+            leading: const Icon(Icons.developer_mode),
+            title: Text(l10n.settingsAiDebugEnable),
+            description: Text(l10n.settingsAiDebugEnableDesc),
+            initialValue: Prefs().aiDebugLogsEnabled,
+            onToggle: (value) {
+              setState(() {
+                Prefs().aiDebugLogsEnabled = value;
+              });
+            },
+          ),
+          SettingsTile.navigation(
+            leading: const Icon(Icons.bug_report),
+            title: Text(L10n.of(context).settingsAdvancedLog),
+            onPressed: (context) {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const LogPage()),
+              );
+            },
+          ),
         ],
       ),
     ]);

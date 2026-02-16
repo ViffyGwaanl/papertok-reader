@@ -6,6 +6,8 @@ import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/language_models.dart';
 import 'package:langchain_core/prompts.dart';
 import 'package:langchain_core/tools.dart';
+import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/utils/log/common.dart';
 import 'package:langchain_openai/langchain_openai.dart';
 
 /// A minimal OpenAI Responses API chat model wrapper.
@@ -45,6 +47,20 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
   /// We keep these items in-memory and replay them into subsequent requests in
   /// the same run.
   final List<Map<String, dynamic>> _replayReasoningItems = [];
+
+  bool get _aiDebugEnabled {
+    try {
+      return Prefs().aiDebugLogsEnabled;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _aiDebug(String message) {
+    if (_aiDebugEnabled) {
+      AnxLog.info('[AI-DEBUG][openai-responses] $message');
+    }
+  }
 
   @override
   String get modelType => 'openai-responses';
@@ -112,6 +128,19 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
 
     Future<void>(() async {
       final requestBody = _buildRequestBody(input.toChatMessages(), effective);
+
+      if (_aiDebugEnabled) {
+        final inputItems = requestBody['input'];
+        final inputTypes = inputItems is List
+            ? inputItems
+                .map((e) => e is Map ? e['type']?.toString() : null)
+                .whereType<String>()
+                .toList(growable: false)
+            : const <String>[];
+        _aiDebug(
+          'request model=${requestBody['model']} tool_count=${(requestBody['tools'] as List?)?.length ?? 0} tool_choice=${requestBody['tool_choice']} reasoning=${requestBody['reasoning']} inputTypes=$inputTypes',
+        );
+      }
 
       final request = http.Request('POST', _endpoint())
         ..headers.addAll({
@@ -235,6 +264,10 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
 
               if (type == 'response.output_text.delta') {
                 final delta = data['delta']?.toString() ?? '';
+                if (_aiDebugEnabled) {
+                  _aiDebug(
+                      'event response.output_text.delta len=${delta.length}');
+                }
                 if (delta.isNotEmpty) emitTextDelta(delta);
                 continue;
               }
@@ -320,6 +353,11 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
               if (type == 'response.function_call_arguments.delta') {
                 final itemId = data['item_id']?.toString() ?? '';
                 final delta = data['delta']?.toString() ?? '';
+                if (_aiDebugEnabled) {
+                  _aiDebug(
+                    'event response.function_call_arguments.delta item_id=$itemId len=${delta.length}',
+                  );
+                }
                 if (itemId.isEmpty || delta.isEmpty) continue;
 
                 final pending = pendingCallsByItemId[itemId];
@@ -332,6 +370,11 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
               if (type == 'response.function_call_arguments.done') {
                 final itemId = data['item_id']?.toString() ?? '';
                 final args = data['arguments']?.toString() ?? '';
+                if (_aiDebugEnabled) {
+                  _aiDebug(
+                    'event response.function_call_arguments.done item_id=$itemId len=${args.length}',
+                  );
+                }
                 if (itemId.isEmpty || args.isEmpty) continue;
 
                 final pending = pendingCallsByItemId[itemId];

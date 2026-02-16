@@ -8,6 +8,7 @@ import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/language_models.dart';
 import 'package:langchain_core/prompts.dart';
 import 'package:langchain_openai/langchain_openai.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _QueuedStreamClient extends http.BaseClient {
   _QueuedStreamClient(this._queue);
@@ -49,6 +50,12 @@ String _sseEvent(String type, Map<String, dynamic> data) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   test('streams output_text.delta chunks and aggregates into final content',
       () async {
     final sse = StringBuffer()

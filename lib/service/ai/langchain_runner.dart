@@ -1,12 +1,27 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:langchain/langchain.dart';
 
 class CancelableLangchainRunner {
   static const String thinkTag = '<think/>';
   StreamSubscription<ChatResult>? _subscription;
+
+  bool get _aiDebugEnabled {
+    try {
+      return Prefs().aiDebugLogsEnabled;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _aiDebug(String message) {
+    if (_aiDebugEnabled) {
+      AnxLog.info('[AI-DEBUG] $message');
+    }
+  }
 
   void cancel() {
     _subscription?.cancel();
@@ -25,6 +40,10 @@ class CancelableLangchainRunner {
     late StreamController<String> controller;
     controller = StreamController<String>(
       onListen: () {
+        _aiDebug(
+          'runner.stream start modelType=${model.modelType} model=${model.defaultOptions.model}',
+        );
+
         final source = model.stream(prompt);
         _subscription = source.listen(
           (event) {
@@ -32,6 +51,17 @@ class CancelableLangchainRunner {
             final metaReasoning = (event.metadata?['reasoning_content'] ??
                     event.metadata?['reasoning'])
                 ?.toString();
+
+            if (_aiDebugEnabled) {
+              _aiDebug(
+                'runner.stream chunk finishReason=${event.finishReason} outLen=${rawChunk.length} toolCalls=${event.output.toolCalls.length} metaKeys=${event.metadata.keys.toList(growable: false)}',
+              );
+              if (metaReasoning != null && metaReasoning.trim().isNotEmpty) {
+                _aiDebug(
+                  'runner.stream meta reasoning_content len=${metaReasoning.length}',
+                );
+              }
+            }
 
             if (metaReasoning != null && metaReasoning.trim().isNotEmpty) {
               reasoningDetected = true;
@@ -115,6 +145,10 @@ class CancelableLangchainRunner {
     final controller = StreamController<String>();
 
     Future<void>(() async {
+      _aiDebug(
+        'runner.streamAgent start modelType=${model.modelType} model=${model.defaultOptions.model} tools=${tools.length}',
+      );
+
       final parser = const ToolsAgentOutputParser();
       final toolMap = <String, Tool>{
         for (final tool in tools) tool.name: tool,
@@ -201,6 +235,17 @@ class CancelableLangchainRunner {
               final metaReasoning = (chunk.metadata['reasoning_content'] ??
                       chunk.metadata['reasoning'])
                   ?.toString();
+
+              if (_aiDebugEnabled) {
+                _aiDebug(
+                  'runner.streamAgent chunk finishReason=${chunk.finishReason} outLen=${chunk.output.content.length} toolCalls=${chunk.output.toolCalls.length} metaKeys=${chunk.metadata.keys.toList(growable: false)}',
+                );
+                if (metaReasoning != null && metaReasoning.trim().isNotEmpty) {
+                  _aiDebug(
+                    'runner.streamAgent meta reasoning_content len=${metaReasoning.length}',
+                  );
+                }
+              }
 
               final isThinkChunk = chunk.output.content.startsWith(thinkTag);
               final normalizedChunk = _normalizeThinkChunk(chunk);
