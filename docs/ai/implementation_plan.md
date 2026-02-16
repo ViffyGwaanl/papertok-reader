@@ -76,9 +76,13 @@ This file tracks what is implemented in the fork and what remains, written as an
 
 Background: many OpenAI-compatible providers do not return `reasoning_content`.
 
-- [ ] Add an opt-in “thinking summary” mode for OpenAI-compatible providers
-- [ ] Implement a safe prompt policy that produces a short `<think>...</think>` summary (NOT chain-of-thought), while keeping answer clean
-- [ ] Add clear UX copy about what is shown
+- [ ] Implement a fallback summary mode so thinkingMode!=off can still show Thinking
+- [ ] Source priority:
+  - prefer native `reasoning_content`/`reasoning` when present
+  - otherwise use a **prompt-based summary** (NOT chain-of-thought)
+- [ ] Ensure thinkingMode=off hides Thinking even if backend returns reasoning_content
+- [ ] Add unit tests for streaming parsing and priority rules
+- [ ] Update docs: `ai_thinking_fallback_openai_zh.md`
 
 ### B) Provider Center stability / iPad navigation
 
