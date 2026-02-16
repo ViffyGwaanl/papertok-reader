@@ -8,6 +8,11 @@ class PaperTokCard {
   final List<String> thumbnails;
   final String? url;
 
+  String get bestTitle =>
+      (displayTitle != null && displayTitle!.trim().isNotEmpty)
+          ? displayTitle!
+          : title;
+
   PaperTokCard({
     required this.id,
     required this.title,
