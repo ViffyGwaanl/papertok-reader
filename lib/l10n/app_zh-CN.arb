@@ -914,5 +914,8 @@
   "aiSectionTools": "工具",
   "aiChatRegenerateFromHereConfirmTitle": "从这里创建分支？",
   "aiChatRegenerateFromHereConfirmBody": "将基于该消息创建一个新的对话分支继续生成；旧版本及其后续对话都会保留，你可以用消息下方的左右切换回滚。是否继续？",
-  "aiChatEditUserMessageTitle": "编辑消息"
+  "aiChatEditUserMessageTitle": "编辑消息",
+  "navBarPapers": "论文",
+  "settingsHomeNavigation": "首页导航",
+  "settingsHomeNavigationSubtitle": "调整首页标签顺序，并设置显示/隐藏"
 }
