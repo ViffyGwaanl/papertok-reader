@@ -57,8 +57,8 @@
 
 - [ ] Gemini includeThoughts=ON shows Thinking section
 - [ ] OpenAI-compatible backend returning `reasoning_content` shows Thinking section
-- [ ] OpenAI-compatible backend **without** `reasoning_content`: thinkingMode!=off still shows Thinking via fallback summary
-- [ ] thinkingMode=off hides Thinking even if backend provides reasoning_content
+- [ ] OpenAI-compatible backend **without** `reasoning_content`: no Thinking section (no prompt-based fallback)
+- [ ] thinkingMode=off does NOT request thinking, but if backend still returns reasoning_content it is displayed
 - [ ] Tools timeline renders and collapses/expands
 
 ---

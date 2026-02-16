@@ -997,10 +997,34 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return null;
   }
 
+  void _ensureSelectedProviderValid() {
+    if (_isProviderSelectable(_selectedProviderId)) {
+      return;
+    }
+
+    final fallback = _fallbackProviderId(_providers);
+    if (fallback == _selectedProviderId) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_isProviderSelectable(fallback)) return;
+      Prefs().selectedAiService = fallback;
+      setState(() {
+        _selectedProviderId = fallback;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final quickPrompts = _getQuickPrompts(context);
     final chatIsStreaming = ref.watch(aiChatStreamingProvider);
+
+    // Refresh providers in case user toggled enable/disable in Provider Center.
+    _providers = Prefs().aiProvidersV1;
+    _ensureSelectedProviderValid();
 
     final current = _currentProvider;
     final currentModel = _modelLabel(_selectedProviderId);
@@ -1009,7 +1033,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       enabled: !chatIsStreaming,
       onSelected: _onProviderSelected,
       itemBuilder: (context) {
-        return _providers.map((provider) {
+        final enabledProviders =
+            _providers.where((provider) => provider.enabled).toList();
+
+        return enabledProviders.map((provider) {
           final isSelected = provider.id == _selectedProviderId;
           final model = _modelLabel(provider.id);
           final logoKey = _providerLogoKey(provider);
@@ -1019,7 +1046,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
           return PopupMenuItem<String>(
             value: provider.id,
-            enabled: provider.enabled,
             child: Row(
               children: [
                 if (logoKey.isNotEmpty)

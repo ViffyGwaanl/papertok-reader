@@ -72,17 +72,15 @@ This file tracks what is implemented in the fork and what remains, written as an
 
 ## Next work (planned)
 
-### A) OpenAI-compatible “thinking” fallback mode
+### A) OpenAI-compatible “thinking” (provider-only)
 
 Background: many OpenAI-compatible providers do not return `reasoning_content`.
 
-- [ ] Implement a fallback summary mode so thinkingMode!=off can still show Thinking
-- [ ] Source priority:
-  - prefer native `reasoning_content`/`reasoning` when present
-  - otherwise use a **prompt-based summary** (NOT chain-of-thought)
-- [ ] Ensure thinkingMode=off hides Thinking even if backend returns reasoning_content
-- [ ] Add unit tests for streaming parsing and priority rules
-- [ ] Update docs: `ai_thinking_fallback_openai_zh.md`
+- [ ] Do NOT add prompt-based thinking fallback. If provider returns nothing, show nothing.
+- [ ] Ensure `reasoning_content`/`reasoning` is preserved end-to-end and rendered as Thinking.
+- [ ] thinkingMode=off: do not request reasoning; but if backend still returns reasoning_content, display it.
+- [ ] Add unit tests for streaming parsing (metadata reasoning_content/reasoning).
+- [ ] Update docs: `ai_thinking_openai_provider_only_zh.md`
 
 ### B) Provider Center stability / iPad navigation
 
