@@ -272,8 +272,22 @@ void main() {
     final secondBody = client.sentJsonBodies[1];
     final input = (secondBody['input'] as List).cast<dynamic>();
     expect(input.isNotEmpty, isTrue);
-    final firstItem = input.first as Map;
-    expect(firstItem['type'], 'reasoning');
-    expect(firstItem['id'], 'rs_1');
+
+    // Order should be: function_call (from AI toolCalls), reasoning replay,
+    // then function_call_output.
+    final types = input
+        .map((e) => (e as Map)['type']?.toString())
+        .whereType<String>()
+        .toList(growable: false);
+
+    final reasoningIndex = types.indexOf('reasoning');
+    final outputIndex = types.indexOf('function_call_output');
+
+    expect(reasoningIndex, greaterThanOrEqualTo(0));
+    expect(outputIndex, greaterThanOrEqualTo(0));
+    expect(reasoningIndex, lessThan(outputIndex));
+
+    final reasoningItem = input[reasoningIndex] as Map;
+    expect(reasoningItem['id'], 'rs_1');
   });
 }

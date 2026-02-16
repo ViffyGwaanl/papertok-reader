@@ -446,9 +446,29 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       }
     }
 
-    // Replay reasoning items before tool outputs when applicable.
+    // Replay reasoning items together with tool outputs when applicable.
+    //
+    // We must not prepend them to the whole conversation (that would change
+    // semantics). Instead, insert them right before the first
+    // function_call_output.
+    //
+    // See OpenAI docs note: reasoning items returned with tool calls must be
+    // passed back with tool call outputs.
+    var replayInserted = false;
     if (hasToolOutputs && _replayReasoningItems.isNotEmpty) {
-      inputItems.insertAll(0, _replayReasoningItems);
+      for (var i = 0; i < inputItems.length; i++) {
+        if (inputItems[i]['type']?.toString() == 'function_call_output') {
+          inputItems.insertAll(i, _replayReasoningItems);
+          replayInserted = true;
+          break;
+        }
+      }
+
+      // If we couldn't find a tool output item (unexpected), fall back to
+      // appending.
+      if (!replayInserted) {
+        inputItems.addAll(_replayReasoningItems);
+      }
     }
 
     final tools = (options.tools ?? const <ToolSpec>[])
