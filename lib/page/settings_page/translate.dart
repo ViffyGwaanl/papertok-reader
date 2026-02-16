@@ -290,9 +290,9 @@ class TranslateServicePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      itemCount: TranslateService.activeValues.length,
+      itemCount: TranslateService.activeValuesForSelection.length,
       itemBuilder: (context, index) {
-        final service = TranslateService.activeValues.elementAt(index);
+        final service = TranslateService.activeValuesForSelection.elementAt(index);
         return ListTile(
           title: Text(service.getLabel(context)),
           onTap: () {
@@ -310,8 +310,9 @@ class FullTextTranslateServicePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final services =
-        TranslateService.activeValues.where((s) => !s.isWebView).toList();
+    final services = TranslateService.activeValuesForFullText
+        .where((s) => !s.isWebView)
+        .toList();
 
     return ListView.builder(
       itemCount: services.length,

@@ -47,7 +47,9 @@ export class Translator {
         })
       },
       {
-        rootMargin: '1280px',
+        // Only translate current viewport + the next viewport.
+        // Avoid multi-screen prefetch to reduce API storms.
+        rootMargin: '0px 0px 100% 0px',
         threshold: 0
       }
     )
@@ -312,10 +314,12 @@ export class Translator {
     const translationPromises = []
     
     // Find elements in viewport and translate them immediately
+    const prefetchBottom = window.innerHeight * 2
+
     this.observedElements.forEach(element => {
       const rect = element.getBoundingClientRect()
-      const isVisible = rect.top < window.innerHeight && rect.bottom > 0
-      
+      const isVisible = rect.top < prefetchBottom && rect.bottom > 0
+
       if (isVisible && !this.#translatedElements.has(element)) {
         // console.log('Force translating visible element:', element)
         const translationPromise = this.#translateElement(element).catch(error => {

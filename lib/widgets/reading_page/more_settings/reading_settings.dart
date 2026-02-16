@@ -7,6 +7,8 @@ import 'package:anx_reader/enums/code_highlight_theme.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/page/settings_page/subpage/fonts.dart';
+import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
+import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -327,6 +329,37 @@ class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: isReading
+                    ? () async {
+                        final currentBookId =
+                            epubPlayerKey.currentState!.widget.book.id;
+                        await FullTextTranslateRuntime.instance
+                            .clearBook(currentBookId);
+
+                        // Also clear current DOM overlays so user sees immediate effect.
+                        await epubPlayerKey.currentState?.webViewController
+                            .evaluateJavascript(source: '''
+if (typeof reader !== 'undefined' && reader.view && reader.view.clearTranslations) {
+  reader.view.clearTranslations();
+}
+''');
+
+                        AnxToast.show(
+                          L10n.of(context)
+                              .readingPageFullTextTranslationCacheCleared,
+                        );
+                      }
+                    : null,
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: Text(
+                  L10n.of(context).readingPageClearFullTextTranslationCache,
+                ),
+              ),
             ),
           ],
         ),

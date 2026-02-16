@@ -1,0 +1,135 @@
+import 'dart:async';
+import 'dart:collection';
+import 'dart:convert';
+
+import 'package:anx_reader/enums/lang_list.dart';
+import 'package:anx_reader/service/translate/fulltext_translate_cache.dart';
+import 'package:anx_reader/service/translate/index.dart';
+import 'package:crypto/crypto.dart';
+
+class FullTextTranslateRuntime {
+  FullTextTranslateRuntime._();
+
+  static final FullTextTranslateRuntime instance = FullTextTranslateRuntime._();
+
+  // Default concurrency requirement confirmed by user.
+  static const int defaultConcurrency = 4;
+
+  final _Semaphore _semaphore = _Semaphore(defaultConcurrency);
+  final Map<String, Future<String>> _inflight = {};
+
+  Future<String> translate(
+    TranslateService service,
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    required int bookId,
+    String? contextText,
+    bool enableCache = true,
+  }) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return '';
+
+    final normalized = _normalizeForCacheKey(text);
+
+    // Cache key MUST include bookId to enable per-book clear.
+    final key = sha1
+        .convert(utf8.encode(
+          'v1|book:$bookId|svc:${service.name}|from:${from.code}|to:${to.code}|$normalized',
+        ))
+        .toString();
+
+    if (enableCache) {
+      final cached = await FullTextTranslateCache.get(bookId, key);
+      if (cached != null && cached.isNotEmpty) {
+        return cached;
+      }
+    }
+
+    final existing = _inflight[key];
+    if (existing != null) {
+      return await existing;
+    }
+
+    final future = _semaphore.withPermit(() async {
+      final result = await service.provider.translateTextOnly(
+        text,
+        from,
+        to,
+        contextText: contextText,
+      );
+
+      // Persist even if empty? No.
+      if (enableCache && result.trim().isNotEmpty) {
+        await FullTextTranslateCache.set(bookId, key, result);
+      }
+
+      return result;
+    });
+
+    _inflight[key] = future;
+
+    try {
+      return await future;
+    } finally {
+      _inflight.remove(key);
+    }
+  }
+
+  Future<void> clearBook(int bookId) async {
+    await FullTextTranslateCache.clearBook(bookId);
+  }
+
+  String _normalizeForCacheKey(String text) {
+    // Normalize in a way that keeps paragraph boundaries stable.
+    // - Normalize CRLF
+    // - Collapse spaces/tabs inside a line
+    // - Collapse 3+ blank lines to 2
+    final s = text.replaceAll('\r\n', '\n');
+    final lines = s.split('\n').map((line) {
+      return line.replaceAll(RegExp(r'[\t ]+'), ' ').trimRight();
+    }).toList(growable: false);
+
+    var normalized = lines.join('\n').trim();
+    normalized = normalized.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    return normalized;
+  }
+}
+
+class _Semaphore {
+  _Semaphore(this._max);
+
+  final int _max;
+  int _current = 0;
+  final Queue<Completer<void>> _queue = Queue();
+
+  Future<T> withPermit<T>(Future<T> Function() action) async {
+    await _acquire();
+    try {
+      return await action();
+    } finally {
+      _release();
+    }
+  }
+
+  Future<void> _acquire() {
+    if (_current < _max) {
+      _current++;
+      return Future.value();
+    }
+    final c = Completer<void>();
+    _queue.add(c);
+    return c.future.then((_) {
+      _current++;
+    });
+  }
+
+  void _release() {
+    _current--;
+    if (_current < 0) _current = 0;
+    if (_queue.isNotEmpty && _current < _max) {
+      final next = _queue.removeFirst();
+      if (!next.isCompleted) next.complete();
+    }
+  }
+}

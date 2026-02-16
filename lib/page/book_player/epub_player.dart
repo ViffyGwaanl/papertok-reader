@@ -28,6 +28,7 @@ import 'package:anx_reader/providers/bookmark.dart';
 import 'package:anx_reader/providers/chapter_content_bridge.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/book_player/book_player_server.dart';
+import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
 import 'package:anx_reader/providers/toc_search.dart';
 import 'package:anx_reader/service/tts/models/tts_sentence.dart';
 import 'package:anx_reader/utils/coordinates_to_part.dart';
@@ -813,7 +814,13 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           final from = Prefs().fullTextTranslateFrom;
           final to = Prefs().fullTextTranslateTo;
 
-          return await service.provider.translateTextOnly(text, from, to);
+          return await FullTextTranslateRuntime.instance.translate(
+            service,
+            text,
+            from,
+            to,
+            bookId: widget.book.id,
+          );
         } catch (e) {
           AnxLog.severe('Translation error: $e');
           return 'Translation error: $e';
