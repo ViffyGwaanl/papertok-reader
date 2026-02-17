@@ -106,7 +106,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   // Inline translation HUD (per relocated page)
   final ValueNotifier<_InlineTranslateHudState> _translateHud =
       ValueNotifier(const _InlineTranslateHudState());
-  final Set<String> _translateHudSeenKeys = <String>{};
+  final Map<String, _InlineTranslateHudItem> _translateHudItems = <String, _InlineTranslateHudItem>{};
   bool _translateHudVisible = true;
 
   // to know anytime if we are on top of navigation stack
@@ -831,17 +831,17 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         final from = Prefs().fullTextTranslateFrom;
         final to = Prefs().fullTextTranslateTo;
 
+        final cacheKey = FullTextTranslateRuntime.instance.buildCacheKey(
+          bookId: widget.book.id,
+          service: service,
+          from: from,
+          to: to,
+          text: text,
+        );
+
         // Update HUD stats
         _translateHudVisible = true;
-        _hudMarkStart(
-          cacheKey: FullTextTranslateRuntime.instance.buildCacheKey(
-            bookId: widget.book.id,
-            service: service,
-            from: from,
-            to: to,
-            text: text,
-          ),
-        );
+        _hudMarkStart(cacheKey: cacheKey);
 
         try {
           final result = await FullTextTranslateRuntime.instance.translate(
@@ -853,18 +853,18 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           );
 
           if (_looksLikeTranslateFailure(result)) {
-            _hudMarkFail();
+            _hudMarkFail(cacheKey: cacheKey);
             return '';
           }
 
-          _hudMarkDone();
+          _hudMarkDone(cacheKey: cacheKey);
           return result;
         } catch (e) {
-          _hudMarkFail();
+          _hudMarkFail(cacheKey: cacheKey);
           AnxLog.severe('Translation error: $e');
           return '';
         } finally {
-          _hudMarkFinishInflight();
+          _hudMarkFinishInflight(cacheKey: cacheKey);
         }
       },
     );
@@ -1225,41 +1225,71 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   }
 
   void _resetTranslateHud() {
-    _translateHudSeenKeys.clear();
+    _translateHudItems.clear();
     _translateHud.value = const _InlineTranslateHudState();
   }
 
   void _hudMarkStart({required String cacheKey}) {
-    final prev = _translateHud.value;
-    final isNew = _translateHudSeenKeys.add(cacheKey);
-
-    _translateHud.value = prev.copyWith(
-      total: prev.total + (isNew ? 1 : 0),
-      inflight: prev.inflight + 1,
-      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
-    );
+    final item = _translateHudItems[cacheKey];
+    if (item == null) {
+      _translateHudItems[cacheKey] = _InlineTranslateHudItem.inflight;
+    } else {
+      // If already inflight/done/failed, do not double-count inflight.
+      if (item == _InlineTranslateHudItem.inflight) return;
+      if (item == _InlineTranslateHudItem.done) return;
+      // failed -> retry: move to inflight
+      _translateHudItems[cacheKey] = _InlineTranslateHudItem.inflight;
+    }
+    _recomputeHud();
   }
 
-  void _hudMarkFinishInflight() {
-    final prev = _translateHud.value;
-    _translateHud.value = prev.copyWith(
-      inflight: (prev.inflight - 1).clamp(0, 1 << 30),
-      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
-    );
+  void _hudMarkDone({required String cacheKey}) {
+    final item = _translateHudItems[cacheKey];
+    if (item == null) return;
+    _translateHudItems[cacheKey] = _InlineTranslateHudItem.done;
+    _recomputeHud();
   }
 
-  void _hudMarkDone() {
-    final prev = _translateHud.value;
-    _translateHud.value = prev.copyWith(
-      done: prev.done + 1,
-      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
-    );
+  void _hudMarkFail({required String cacheKey}) {
+    final item = _translateHudItems[cacheKey];
+    if (item == null) return;
+    _translateHudItems[cacheKey] = _InlineTranslateHudItem.failed;
+    _recomputeHud();
   }
 
-  void _hudMarkFail() {
-    final prev = _translateHud.value;
-    _translateHud.value = prev.copyWith(
-      failed: prev.failed + 1,
+  void _hudMarkFinishInflight({required String cacheKey}) {
+    final item = _translateHudItems[cacheKey];
+    if (item == _InlineTranslateHudItem.inflight) {
+      // If we end inflight without marking done/fail, treat as failed.
+      _translateHudItems[cacheKey] = _InlineTranslateHudItem.failed;
+      _recomputeHud();
+    }
+  }
+
+  void _recomputeHud() {
+    var inflight = 0;
+    var done = 0;
+    var failed = 0;
+
+    for (final v in _translateHudItems.values) {
+      switch (v) {
+        case _InlineTranslateHudItem.inflight:
+          inflight++;
+          break;
+        case _InlineTranslateHudItem.done:
+          done++;
+          break;
+        case _InlineTranslateHudItem.failed:
+          failed++;
+          break;
+      }
+    }
+
+    _translateHud.value = _InlineTranslateHudState(
+      total: _translateHudItems.length,
+      inflight: inflight,
+      done: done,
+      failed: failed,
       updatedAtMs: DateTime.now().millisecondsSinceEpoch,
     );
   }
@@ -1358,6 +1388,12 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       ),
     );
   }
+}
+
+enum _InlineTranslateHudItem {
+  inflight,
+  done,
+  failed,
 }
 
 class _InlineTranslateHudState {

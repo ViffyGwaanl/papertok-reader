@@ -29,6 +29,7 @@ export class Translator {
   #translationMode = TranslationMode.OFF
   observedElements = new Set()
   #translatedElements = new WeakMap()
+  #translatingElements = new WeakSet()
   #observer = null
   
   constructor() {
@@ -184,10 +185,13 @@ export class Translator {
   async #translateElement(element) {
     if (this.#translationMode === TranslationMode.OFF) return
     if (this.#translatedElements.has(element)) return
-    
+    if (this.#translatingElements.has(element)) return
+
     const text = element.innerText?.trim()
     if (!text) return
-    
+
+    this.#translatingElements.add(element)
+
     try {
       const translatedText = await translate(text)
 
@@ -205,6 +209,8 @@ export class Translator {
       this.#applyTranslation(element, translatedText)
     } catch (error) {
       console.warn('Translation failed:', error)
+    } finally {
+      this.#translatingElements.delete(element)
     }
   }
 
