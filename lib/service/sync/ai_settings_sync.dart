@@ -55,6 +55,14 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'aiChatFontScale': prefs.aiChatFontScale,
   };
 
+  // Translation-only prefs (safe to sync; no secrets).
+  final translate = <String, dynamic>{
+    'aiTranslateProviderIdV1': prefs.aiTranslateProviderId,
+    'aiTranslateModelV1': prefs.aiTranslateModel,
+    'inlineFullTextTranslateConcurrency':
+        prefs.inlineFullTextTranslateConcurrency,
+  };
+
   return {
     'schemaVersion': aiSettingsSchemaVersion,
     'updatedAt': prefs.aiSettingsUpdatedAt,
@@ -65,6 +73,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'inputQuickPrompts':
         prefs.aiInputQuickPrompts.map((e) => e.toJson()).toList(),
     'ui': ui,
+    'translate': translate,
   };
 }
 
@@ -177,6 +186,25 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
       if (sheet != null) prefs.aiSheetInitialSize = sheet;
       final scale = (ui['aiChatFontScale'] as num?)?.toDouble();
       if (scale != null) prefs.aiChatFontScale = scale;
+    }
+
+    final translate = json['translate'];
+    if (translate is Map) {
+      final providerId = translate['aiTranslateProviderIdV1']?.toString();
+      if (providerId != null) {
+        prefs.aiTranslateProviderId = providerId;
+      }
+
+      final model = translate['aiTranslateModelV1']?.toString();
+      if (model != null) {
+        prefs.aiTranslateModel = model;
+      }
+
+      final concurrency =
+          (translate['inlineFullTextTranslateConcurrency'] as num?)?.toInt();
+      if (concurrency != null) {
+        prefs.inlineFullTextTranslateConcurrency = concurrency;
+      }
     }
   } catch (e) {
     AnxLog.severe('ai_settings_sync: failed to apply: $e');

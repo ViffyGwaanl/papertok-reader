@@ -690,6 +690,9 @@ class Prefs extends ChangeNotifier {
 
   set inlineFullTextTranslateConcurrency(int value) {
     final v = value.clamp(1, 8);
+    if (inlineFullTextTranslateConcurrency != v) {
+      touchAiSettingsUpdatedAt();
+    }
     prefs.setInt('inlineFullTextTranslateConcurrency', v);
     notifyListeners();
   }
@@ -726,7 +729,11 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiTranslateProviderId(String id) {
-    prefs.setString(_aiTranslateProviderIdKey, id.trim());
+    final v = id.trim();
+    if (aiTranslateProviderId.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiTranslateProviderIdKey, v);
     notifyListeners();
   }
 
@@ -765,7 +772,11 @@ class Prefs extends ChangeNotifier {
   }
 
   set aiTranslateModel(String model) {
-    prefs.setString(_aiTranslateModelKey, model.trim());
+    final v = model.trim();
+    if (aiTranslateModel.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiTranslateModelKey, v);
     notifyListeners();
   }
 

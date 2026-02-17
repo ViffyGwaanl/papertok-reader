@@ -464,6 +464,20 @@
   "readingPageOpenReadingSettings": "Reading settings",
   "readingPageRetryTranslation": "Retry translation",
   "readingPageTranslateConcurrencyValue": "Concurrency: {value}",
+  "readingPageTranslateRetryTriggered": "Retry triggered: started {started}/{candidates}",
+  "@readingPageTranslateRetryTriggered": {
+    "placeholders": {
+      "started": {},
+      "candidates": {}
+    }
+  },
+  "readingPageTranslateLastRetryStats": "Last retry: started {started}/{candidates}",
+  "@readingPageTranslateLastRetryStats": {
+    "placeholders": {
+      "started": {},
+      "candidates": {}
+    }
+  },
   "readingPageTranslateFailureReasons": "Failure reasons",
   "readingPageTranslateFailureReasonRateLimit": "429/rate limit",
   "readingPageTranslateFailureReasonAuth": "auth",

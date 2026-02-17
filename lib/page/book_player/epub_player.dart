@@ -1488,12 +1488,38 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
                         // Manual retry: reset counters to avoid stacking, then
                         // force re-translate current + next viewport.
                         resetInlineTranslateHudStats();
+
+                        ({int started, int candidates})? parseStats(dynamic v) {
+                          try {
+                            if (v is Map) {
+                              final started = (v['started'] as num?)?.toInt();
+                              final candidates =
+                                  (v['candidates'] as num?)?.toInt();
+                              if (started != null && candidates != null) {
+                                return (started: started, candidates: candidates);
+                              }
+                            }
+                          } catch (_) {}
+                          return null;
+                        }
+
                         try {
-                          await webViewController.evaluateJavascript(source: '''
+                          final result = await webViewController
+                              .callAsyncJavaScript(functionBody: '''
 if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateForViewport) {
-  reader.view.forceTranslateForViewport(true);
+  return await reader.view.forceTranslateForViewport(true);
 }
+return null;
 ''');
+
+                          final stats = parseStats(result?.value);
+                          if (stats != null) {
+                            InlineFullTextTranslationStatusBus.instance
+                                .reportManualRetry(
+                              started: stats.started,
+                              candidates: stats.candidates,
+                            );
+                          }
                         } catch (_) {}
                       },
                       child: const Icon(Icons.refresh, size: 16),

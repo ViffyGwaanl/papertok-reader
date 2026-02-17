@@ -650,6 +650,8 @@ export class Translator {
     const maxStartTotal = 12
     const maxStartCurrent = 8
 
+    const candidates = current.length + next.length
+
     let started = 0
 
     const startOne = (item) => {
@@ -676,6 +678,13 @@ export class Translator {
     for (const item of next) {
       if (started >= maxStartTotal) break
       startOne(item)
+    }
+
+    return {
+      started,
+      candidates,
+      current: current.length,
+      next: next.length,
     }
   }
 

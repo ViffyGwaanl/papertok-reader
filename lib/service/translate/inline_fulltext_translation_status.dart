@@ -62,4 +62,20 @@ class InlineFullTextTranslationStatusBus {
       this.failureReasons.value = Map.unmodifiable(failureReasons);
     }
   }
+
+  void reportManualRetry({
+    required int started,
+    required int candidates,
+  }) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final prev = progress.value;
+
+    progress.value = prev.copyWith(
+      lastRetryAtMs: now,
+      lastRetryStarted: started,
+      lastRetryCandidates: candidates,
+      generation: prev.generation + 1,
+      updatedAtMs: now,
+    );
+  }
 }

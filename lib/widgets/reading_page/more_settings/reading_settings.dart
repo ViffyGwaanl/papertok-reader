@@ -373,14 +373,46 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.clearTranslation
                         // Reset counters to avoid stacking on repeated retries.
                         epubPlayerKey.currentState?.resetInlineTranslateHudStats();
 
+                        ({int started, int candidates})? parseStats(dynamic v) {
+                          try {
+                            if (v is Map) {
+                              final started = (v['started'] as num?)?.toInt();
+                              final candidates =
+                                  (v['candidates'] as num?)?.toInt();
+                              if (started != null && candidates != null) {
+                                return (started: started, candidates: candidates);
+                              }
+                            }
+                          } catch (_) {}
+                          return null;
+                        }
+
                         // Retry current viewport translations.
                         try {
-                          await epubPlayerKey.currentState?.webViewController
-                              .evaluateJavascript(source: '''
+                          final result = await epubPlayerKey
+                              .currentState?.webViewController
+                              .callAsyncJavaScript(functionBody: '''
 if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateForViewport) {
-  reader.view.forceTranslateForViewport(true);
+  return await reader.view.forceTranslateForViewport(true);
 }
+return null;
 ''');
+
+                          final stats = parseStats(result?.value);
+                          if (stats != null) {
+                            InlineFullTextTranslationStatusBus.instance
+                                .reportManualRetry(
+                              started: stats.started,
+                              candidates: stats.candidates,
+                            );
+
+                            AnxToast.show(
+                              L10n.of(context).readingPageTranslateRetryTriggered(
+                                stats.started,
+                                stats.candidates,
+                              ),
+                            );
+                          }
                         } catch (_) {}
 
                         // Show HUD when not in scroll mode.
@@ -449,6 +481,17 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateFo
                             '${L10n.of(context).readingPageTranslateFailureReasons}: $top';
                       }
 
+                      String? retryText;
+                      final started = p.lastRetryStarted;
+                      final candidates = p.lastRetryCandidates;
+                      if (started != null && candidates != null) {
+                        retryText =
+                            L10n.of(context).readingPageTranslateLastRetryStats(
+                          started,
+                          candidates,
+                        );
+                      }
+
                       return Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Column(
@@ -466,6 +509,17 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateFo
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
                                   reasonText,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: Colors.grey),
+                                ),
+                              ),
+                            if (retryText != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  retryText,
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall

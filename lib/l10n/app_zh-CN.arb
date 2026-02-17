@@ -464,6 +464,20 @@
   "readingPageOpenReadingSettings": "阅读设置",
   "readingPageRetryTranslation": "重试翻译",
   "readingPageTranslateConcurrencyValue": "并发：{value}",
+  "readingPageTranslateRetryTriggered": "本次重试：启动 {started}/{candidates}",
+  "@readingPageTranslateRetryTriggered": {
+    "placeholders": {
+      "started": {},
+      "candidates": {}
+    }
+  },
+  "readingPageTranslateLastRetryStats": "上次重试：启动 {started}/{candidates}",
+  "@readingPageTranslateLastRetryStats": {
+    "placeholders": {
+      "started": {},
+      "candidates": {}
+    }
+  },
   "readingPageTranslateFailureReasons": "失败原因",
   "readingPageTranslateFailureReasonRateLimit": "限流/429",
   "readingPageTranslateFailureReasonAuth": "鉴权",

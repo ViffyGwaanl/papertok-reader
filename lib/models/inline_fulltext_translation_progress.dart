@@ -8,6 +8,9 @@ class InlineFullTextTranslationProgress {
     required this.failed,
     required this.generation,
     required this.updatedAtMs,
+    this.lastRetryAtMs,
+    this.lastRetryStarted,
+    this.lastRetryCandidates,
   });
 
   final bool active;
@@ -19,6 +22,11 @@ class InlineFullTextTranslationProgress {
   final int generation;
   final int updatedAtMs;
 
+  /// Manual retry diagnostics (best-effort, non-persistent).
+  final int? lastRetryAtMs;
+  final int? lastRetryStarted;
+  final int? lastRetryCandidates;
+
   factory InlineFullTextTranslationProgress.idle() {
     return InlineFullTextTranslationProgress(
       active: false,
@@ -29,6 +37,9 @@ class InlineFullTextTranslationProgress {
       failed: 0,
       generation: 0,
       updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+      lastRetryAtMs: null,
+      lastRetryStarted: null,
+      lastRetryCandidates: null,
     );
   }
 
@@ -41,6 +52,9 @@ class InlineFullTextTranslationProgress {
     int? failed,
     int? generation,
     int? updatedAtMs,
+    int? lastRetryAtMs,
+    int? lastRetryStarted,
+    int? lastRetryCandidates,
   }) {
     return InlineFullTextTranslationProgress(
       active: active ?? this.active,
@@ -51,6 +65,9 @@ class InlineFullTextTranslationProgress {
       failed: failed ?? this.failed,
       generation: generation ?? this.generation,
       updatedAtMs: updatedAtMs ?? this.updatedAtMs,
+      lastRetryAtMs: lastRetryAtMs ?? this.lastRetryAtMs,
+      lastRetryStarted: lastRetryStarted ?? this.lastRetryStarted,
+      lastRetryCandidates: lastRetryCandidates ?? this.lastRetryCandidates,
     );
   }
 }
