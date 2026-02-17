@@ -3,7 +3,7 @@ import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/ai_models_service.dart';
-import 'package:anx_reader/service/translate/inline_fulltext_translation_status.dart';
+// Inline full-text translation status is shown in Reading Settings.
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
@@ -349,30 +349,7 @@ class _TranslateSettingState extends State<TranslateSetting> {
               value: Text(Prefs().fullTextTranslateTo.getNative(context)),
               onPressed: (_) => _pickLang(isFrom: false, isFullText: true),
             ),
-            CustomSettingsTile(
-              child: ValueListenableBuilder(
-                valueListenable:
-                    InlineFullTextTranslationStatusBus.instance.progress,
-                builder: (context, p, _) {
-                  final status = p.active
-                      ? L10n.of(context).settingsTranslateBackgroundStatusActive(
-                          p.done,
-                          p.total,
-                          p.inflight,
-                          p.pending,
-                          p.failed,
-                        )
-                      : L10n.of(context).settingsTranslateBackgroundStatusIdle;
-
-                  return SettingsTile(
-                    leading: const Icon(Icons.monitor_heart_outlined),
-                    title:
-                        Text(L10n.of(context).settingsTranslateBackgroundStatus),
-                    value: Text(status),
-                  );
-                },
-              ),
-            ),
+            // Background status is shown in Reading Settings.
           ],
         ),
       ],

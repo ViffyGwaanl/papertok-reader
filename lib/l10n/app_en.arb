@@ -463,6 +463,7 @@
   "readingPageToggleFullTextTranslation": "Toggle full-text translation",
   "readingPageOpenReadingSettings": "Reading settings",
   "readingPageRetryTranslation": "Retry translation",
+  "readingPageTranslateConcurrencyValue": "Concurrency: {value}",
   "noteListShowBookmark": "Show Bookmark",
   "readingBookmark": "Bookmark",
   "noBookmarks": "No Bookmarks",

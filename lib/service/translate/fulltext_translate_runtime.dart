@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_cache.dart';
 import 'package:anx_reader/service/translate/index.dart';
@@ -46,6 +47,15 @@ class FullTextTranslateRuntime {
   static const int defaultConcurrency = 4;
 
   final _Semaphore _semaphore = _Semaphore(defaultConcurrency);
+
+  void _syncConcurrencyFromPrefs() {
+    try {
+      final desired = Prefs().inlineFullTextTranslateConcurrency;
+      _semaphore.setMax(desired);
+    } catch (_) {
+      // Ignore prefs issues in tests / early boot.
+    }
+  }
   final Map<String, Future<String>> _inflight = {};
 
   String normalizeForCacheKey(String text) => _normalizeForCacheKey(text);
@@ -76,6 +86,8 @@ class FullTextTranslateRuntime {
     String? contextText,
     bool enableCache = true,
   }) async {
+    _syncConcurrencyFromPrefs();
+
     final trimmed = text.trim();
     if (trimmed.isEmpty) return '';
 
@@ -102,7 +114,7 @@ class FullTextTranslateRuntime {
 
     final future = _semaphore.withPermit(() async {
       // Extra retry layer for providers that return error strings (not exceptions).
-      const maxAttempts = 2;
+      const maxAttempts = 3;
       for (var attempt = 0; attempt < maxAttempts; attempt++) {
         final result = await service.provider.translateTextOnly(
           text,
@@ -118,6 +130,7 @@ class FullTextTranslateRuntime {
             lower.startsWith('error:') ||
             lower.contains('authentication failed') ||
             lower.contains('rate limit') ||
+            lower.contains('429') ||
             lower.contains('ai service not configured') ||
             lower.contains('ai 服务未配置');
 
@@ -129,7 +142,12 @@ class FullTextTranslateRuntime {
         }
 
         if (attempt < maxAttempts - 1) {
-          await Future<void>.delayed(Duration(milliseconds: 120 * (attempt + 1)));
+          // Backoff (rate limit needs longer pauses).
+          final isRateLimit = lower.contains('rate limit') || lower.contains('429');
+          final delay = isRateLimit
+              ? Duration(milliseconds: 800 * (attempt + 1))
+              : Duration(milliseconds: 200 * (attempt + 1));
+          await Future<void>.delayed(delay);
           continue;
         }
 
@@ -172,9 +190,22 @@ class FullTextTranslateRuntime {
 class _Semaphore {
   _Semaphore(this._max);
 
-  final int _max;
+  int _max;
   int _current = 0;
   final Queue<Completer<void>> _queue = Queue();
+
+  void setMax(int max) {
+    final next = max.clamp(1, 32);
+    if (next == _max) return;
+    _max = next;
+
+    // If we increased capacity, release queued waiters.
+    while (_queue.isNotEmpty && _current < _max) {
+      final c = _queue.removeFirst();
+      if (!c.isCompleted) c.complete();
+      // _current will be incremented when that waiter resumes.
+    }
+  }
 
   Future<T> withPermit<T>(Future<T> Function() action) async {
     await _acquire();

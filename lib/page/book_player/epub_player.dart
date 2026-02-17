@@ -610,8 +610,22 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           Map<String, dynamic> location = args[0];
           if (cfi == location['cfi']) return;
 
-          // New page/location -> reset HUD stats.
-          _resetTranslateHud();
+          final newChapterHref = location['chapterHref'] ?? '';
+          final chapterChanged = newChapterHref != chapterHref;
+
+          // Keep HUD stats across page turns inside the same chapter.
+          // Only reset when chapter changes (or when user toggles mode / presses retry).
+          if (chapterChanged) {
+            _resetTranslateHud();
+          }
+
+          // Keep HUD visible when translation is enabled.
+          final mode = Prefs().getBookTranslationMode(widget.book.id);
+          if (mode != TranslationModeEnum.off &&
+              Prefs().pageTurnStyle != PageTurn.scroll) {
+            _translateHudVisible = true;
+          }
+
           // if (chapterHref != location['chapterHref']) {
           //   refreshToc();
           // }
@@ -1425,7 +1439,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
                     const SizedBox(width: 6),
                     InkWell(
                       onTap: () async {
-                        // Manual retry: force re-translate current + next viewport.
+                        // Manual retry: reset counters to avoid stacking, then
+                        // force re-translate current + next viewport.
+                        resetInlineTranslateHudStats();
                         try {
                           await webViewController.evaluateJavascript(source: '''
 if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateForViewport) {
@@ -1463,6 +1479,14 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateFo
       setState(() {
         _translateHudVisible = true;
       });
+    }
+  }
+
+  /// Reset HUD counters (used by manual retry).
+  void resetInlineTranslateHudStats() {
+    _resetTranslateHud();
+    if (Prefs().pageTurnStyle != PageTurn.scroll) {
+      _translateHudVisible = true;
     }
   }
 

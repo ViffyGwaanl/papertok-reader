@@ -9,6 +9,8 @@ import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/page/settings_page/subpage/fonts.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
+import 'package:anx_reader/service/translate/inline_fulltext_translation_status.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:flutter/material.dart';
@@ -367,6 +369,9 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.clearTranslation
               child: TextButton.icon(
                 onPressed: isReading
                     ? () async {
+                        // Reset counters to avoid stacking on repeated retries.
+                        epubPlayerKey.currentState?.resetInlineTranslateHudStats();
+
                         // Retry current viewport translations.
                         try {
                           await epubPlayerKey.currentState?.webViewController
@@ -383,6 +388,79 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateFo
                     : null,
                 icon: const Icon(Icons.refresh, size: 18),
                 label: Text(L10n.of(context).readingPageRetryTranslation),
+              ),
+            ),
+
+            // Live background status (reading-page only)
+            if (isReading)
+              ValueListenableBuilder<InlineFullTextTranslationProgress>(
+                valueListenable:
+                    InlineFullTextTranslationStatusBus.instance.progress,
+                builder: (context, p, _) {
+                  final status = p.active
+                      ? L10n.of(context).settingsTranslateBackgroundStatusActive(
+                          p.done,
+                          p.total,
+                          p.inflight,
+                          p.pending,
+                          p.failed,
+                        )
+                      : L10n.of(context).settingsTranslateBackgroundStatusIdle;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '${L10n.of(context).settingsTranslateBackgroundStatus}: $status',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: Colors.grey),
+                    ),
+                  );
+                },
+              ),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: isReading
+                    ? () async {
+
+                  final current = Prefs().inlineFullTextTranslateConcurrency;
+                  final selected = await showModalBottomSheet<int>(
+                    context: context,
+                    builder: (context) {
+                      return SafeArea(
+                        child: ListView(
+                          children: [
+                            for (var i = 1; i <= 8; i++)
+                              ListTile(
+                                title: Text(
+                                  L10n.of(context)
+                                      .readingPageTranslateConcurrencyValue(i),
+                                ),
+                                trailing:
+                                    i == current ? const Icon(Icons.check) : null,
+                                onTap: () => Navigator.pop(context, i),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+
+                  if (selected != null) {
+                    Prefs().inlineFullTextTranslateConcurrency = selected;
+                    setState(() {});
+                  }
+                }
+                    : null,
+                icon: const Icon(Icons.speed, size: 18),
+                label: Text(
+                  L10n.of(context).readingPageTranslateConcurrencyValue(
+                        Prefs().inlineFullTextTranslateConcurrency,
+                      ),
+                ),
               ),
             ),
             if (Prefs().pageTurnStyle != PageTurn.scroll)

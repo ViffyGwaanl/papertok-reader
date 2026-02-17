@@ -679,6 +679,21 @@ class Prefs extends ChangeNotifier {
         prefs.getString('fullTextTranslateService') ?? 'microsoft');
   }
 
+  // Inline full-text translation concurrency (global).
+  // Default = 4 (previous hard-coded behavior).
+  int get inlineFullTextTranslateConcurrency {
+    final v = prefs.getInt('inlineFullTextTranslateConcurrency') ?? 4;
+    if (v < 1) return 1;
+    if (v > 8) return 8;
+    return v;
+  }
+
+  set inlineFullTextTranslateConcurrency(int value) {
+    final v = value.clamp(1, 8);
+    prefs.setInt('inlineFullTextTranslateConcurrency', v);
+    notifyListeners();
+  }
+
   set fullTextTranslateFrom(LangListEnum from) {
     prefs.setString('fullTextTranslateFrom', from.code);
     notifyListeners();
