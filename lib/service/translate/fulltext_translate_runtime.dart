@@ -56,6 +56,7 @@ class FullTextTranslateRuntime {
       // Ignore prefs issues in tests / early boot.
     }
   }
+
   final Map<String, Future<String>> _inflight = {};
 
   String normalizeForCacheKey(String text) => _normalizeForCacheKey(text);
@@ -126,8 +127,13 @@ class FullTextTranslateRuntime {
         final sanitized = sanitize(result);
 
         final lower = sanitized.trim().toLowerCase();
+        final looksUntranslated = _looksUntranslated(text, sanitized);
+
         final looksBad = sanitized.trim().isEmpty ||
+            looksUntranslated ||
             lower.startsWith('error:') ||
+            lower.contains('translate error') ||
+            lower.contains('翻译错误') ||
             lower.contains('authentication failed') ||
             lower.contains('rate limit') ||
             lower.contains('429') ||
@@ -143,7 +149,8 @@ class FullTextTranslateRuntime {
 
         if (attempt < maxAttempts - 1) {
           // Backoff (rate limit needs longer pauses).
-          final isRateLimit = lower.contains('rate limit') || lower.contains('429');
+          final isRateLimit =
+              lower.contains('rate limit') || lower.contains('429');
           final delay = isRateLimit
               ? Duration(milliseconds: 800 * (attempt + 1))
               : Duration(milliseconds: 200 * (attempt + 1));
@@ -169,6 +176,34 @@ class FullTextTranslateRuntime {
 
   Future<void> clearBook(int bookId) async {
     await FullTextTranslateCache.clearBook(bookId);
+  }
+
+  bool _looksUntranslated(String original, String translated) {
+    final o = _normalizeForCacheKey(original);
+    final t = _normalizeForCacheKey(translated);
+
+    if (o.isEmpty || t.isEmpty) return true;
+
+    // Identity output for longer, letterful text is almost certainly "not translated".
+    // (Allow identity for short fragments / numbers / punctuation.)
+    if (t == o) {
+      final hasLetter = RegExp(r'[A-Za-z\u4e00-\u9fff]').hasMatch(o);
+      if (!hasLetter) return false;
+      if (o.length < 20) return false;
+      return true;
+    }
+
+    // Bilingual leakage: the model may echo the original paragraph and append a translation.
+    // If translated contains a long prefix of the original, treat as failure so it can retry.
+    if (o.length >= 80) {
+      final prefixLen = o.length >= 120 ? 120 : 80;
+      final prefix = o.substring(0, prefixLen);
+      if (prefix.trim().isNotEmpty && t.contains(prefix)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   String _normalizeForCacheKey(String text) {
