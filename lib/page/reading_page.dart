@@ -9,6 +9,7 @@ import 'package:anx_reader/enums/ai_dock_side.dart';
 import 'package:anx_reader/enums/ai_pad_panel_mode.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
+import 'package:anx_reader/enums/translation_mode.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
@@ -31,6 +32,7 @@ import 'package:anx_reader/widgets/reading_page/progress_widget.dart';
 import 'package:anx_reader/widgets/reading_page/tts_widget.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:anx_reader/widgets/reading_page/toc_widget.dart';
+import 'package:anx_reader/widgets/reading_page/more_settings/more_settings.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -867,23 +869,30 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                   actions: [
                     if (EnvVar.enableAIFeature) aiButton,
                     IconButton(
-                      icon: const Icon(Icons.copy),
-                      tooltip: L10n.of(context).readingPageCopyChapterContent,
-                      onPressed: () async {
-                        try {
-                          var content = await epubPlayerKey.currentState
-                              ?.theChapterContent();
-                          var len = content?.length ?? 0;
-                          if (len > 0) {
-                            await Clipboard.setData(
-                                ClipboardData(text: content!));
-                          }
-                          AnxToast.show(L10n.of(context)
-                              .readingPageCopiedCharacters(len));
-                        } catch (e) {
-                          AnxToast.show(
-                              L10n.of(context).readingPageErrorCopyingContent);
+                      icon: Icon(
+                        Prefs().getBookTranslationMode(widget.book.id) ==
+                                TranslationModeEnum.off
+                            ? Icons.g_translate
+                            : Icons.translate,
+                      ),
+                      tooltip:
+                          L10n.of(context).readingPageToggleFullTextTranslation,
+                      onPressed: () {
+                        final current =
+                            Prefs().getBookTranslationMode(widget.book.id);
+                        final next = current == TranslationModeEnum.off
+                            ? TranslationModeEnum.bilingual
+                            : TranslationModeEnum.off;
+
+                        Prefs().setBookTranslationMode(widget.book.id, next);
+                        epubPlayerKey.currentState?.setTranslationMode(next);
+
+                        if (next != TranslationModeEnum.off) {
+                          // Ensure HUD is visible when enabling.
+                          epubPlayerKey.currentState?.showInlineTranslateHud();
                         }
+
+                        setState(() {});
                       },
                     ),
                     IconButton(
@@ -901,15 +910,10 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                             ? const Icon(Icons.bookmark)
                             : const Icon(Icons.bookmark_border)),
                     IconButton(
-                      tooltip: L10n.of(context).readingPageBookDetails,
+                      tooltip: L10n.of(context).readingPageOpenReadingSettings,
                       icon: const Icon(EvaIcons.more_vertical),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          CupertinoPageRoute(
-                            builder: (context) => BookDetail(book: widget.book),
-                          ),
-                        );
+                        showMoreSettings(ReadingSettings.theme);
                       },
                     ),
                   ],

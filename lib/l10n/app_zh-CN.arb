@@ -460,6 +460,8 @@
   "readingPageClearFullTextTranslationCache": "清除本书全文翻译缓存",
   "readingPageFullTextTranslationCacheCleared": "已清除本书全文翻译缓存",
   "readingPageShowTranslateHud": "显示翻译进度",
+  "readingPageToggleFullTextTranslation": "全文翻译开关",
+  "readingPageOpenReadingSettings": "阅读设置",
   "noteListShowBookmark": "显示书签",
   "readingBookmark": "书签",
   "noBookmarks": "没有书签",
