@@ -949,6 +949,47 @@ class Prefs extends ChangeNotifier {
     return prefs.getString('selectedAiService') ?? 'openai';
   }
 
+  // Translation: dedicated provider/model override
+  // (used by ai_settings_sync.dart; safe to keep even if UI not exposed yet)
+
+  String get aiTranslateProviderId {
+    return prefs.getString('aiTranslateProviderIdV1') ?? '';
+  }
+
+  set aiTranslateProviderId(String providerId) {
+    if (aiTranslateProviderId != providerId) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString('aiTranslateProviderIdV1', providerId);
+    notifyListeners();
+  }
+
+  String get aiTranslateModel {
+    return prefs.getString('aiTranslateModelV1') ?? '';
+  }
+
+  set aiTranslateModel(String model) {
+    if (aiTranslateModel != model) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString('aiTranslateModelV1', model);
+    notifyListeners();
+  }
+
+  // Runtime concurrency control for inline full-text translation.
+  int get inlineFullTextTranslateConcurrency {
+    return prefs.getInt('inlineFullTextTranslateConcurrency') ?? 3;
+  }
+
+  set inlineFullTextTranslateConcurrency(int concurrency) {
+    final v = concurrency.clamp(1, 12);
+    if (inlineFullTextTranslateConcurrency != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt('inlineFullTextTranslateConcurrency', v);
+    notifyListeners();
+  }
+
   // --- Provider Center (Cherry-style) ---
 
   static const String _aiProvidersV1Key = 'aiProvidersV1';
