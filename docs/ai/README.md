@@ -48,6 +48,10 @@
 
 ---
 
+## Other modules (fork)
+
+- [PaperTok (papers feed) — UX + import behavior](../papertok/README.md)
+
 ## Architecture Notes (important)
 
 ### Provider-managed streaming (root-cause fix)

@@ -63,6 +63,23 @@ The fork moved streaming ownership into `aiChatProvider` so UI minimize/close sh
   - if long paragraphs fail, reduce the translated chunk size (or try a non-AI provider)
 - For scanned PDFs (no selectable text): OCR is required before translation can be reliable.
 
+## PaperTok (Papers feed) issues (fork)
+
+### PaperTok images / EPUB / PDF show 404
+
+- PaperTok may return **relative URLs** like `/static/epub/...` or `/static/pdfs/...`.
+- Ensure the client is using the canonical base URL (default: `https://papertok.ai`).
+- Verify the artifact exists:
+  - `https://papertok.ai/static/epub/<external_id>/<external_id>.en.epub`
+  - `https://papertok.ai/static/pdfs/<external_id>.pdf`
+
+### Import succeeds but doesn’t auto-open
+
+- In this fork, PaperTok import uses a dedicated “download → import → open Reading Page” flow.
+- If it doesn’t auto-open, export logs (Settings → More Settings → Advanced → Logs) and check for WebView errors during metadata extraction.
+
+---
+
 ## Unable to Import Books
 - Ensure the book format is supported. Please check the supported formats in the [README](../README.md).
 - Ensure the book file is not corrupted. You can try using other readers to confirm if the file is normal.
