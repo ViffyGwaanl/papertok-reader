@@ -1450,7 +1450,8 @@ class Prefs extends ChangeNotifier {
   }
 
   bool get bottomNavigatorShowNote {
-    return prefs.getBool('bottomNavigatorShowNote') ?? true;
+    // Default: hidden (new default UX).
+    return prefs.getBool('bottomNavigatorShowNote') ?? false;
   }
 
   set bottomNavigatorShowStatistics(bool status) {
@@ -1459,7 +1460,8 @@ class Prefs extends ChangeNotifier {
   }
 
   bool get bottomNavigatorShowStatistics {
-    return prefs.getBool('bottomNavigatorShowStatistics') ?? true;
+    // Default: hidden (new default UX).
+    return prefs.getBool('bottomNavigatorShowStatistics') ?? false;
   }
 
   bool get bottomNavigatorShowAI {
@@ -1483,10 +1485,12 @@ class Prefs extends ChangeNotifier {
     }
 
     // Migrate from legacy bottom navigator switches.
+    // New default UX: Statistics + Notes are hidden unless the user explicitly
+    // enabled them (legacy prefs present).
     final legacyShowStatistics =
-        prefs.getBool('bottomNavigatorShowStatistics') ?? true;
+        prefs.getBool('bottomNavigatorShowStatistics') ?? false;
     final legacyShowAI = prefs.getBool('bottomNavigatorShowAI') ?? true;
-    final legacyShowNotes = prefs.getBool('bottomNavigatorShowNote') ?? true;
+    final legacyShowNotes = prefs.getBool('bottomNavigatorShowNote') ?? false;
 
     final defaultOrder = <String>[
       homeTabPapers,
@@ -1635,17 +1639,14 @@ class Prefs extends ChangeNotifier {
       homeTabSettings,
     ];
 
-    final legacyShowStatistics =
-        prefs.getBool('bottomNavigatorShowStatistics') ?? true;
-    final legacyShowAI = prefs.getBool('bottomNavigatorShowAI') ?? true;
-    final legacyShowNotes = prefs.getBool('bottomNavigatorShowNote') ?? true;
-
+    // Reset to the current *default* UX.
+    // Notes + Statistics are hidden by default.
     final enabled = <String, bool>{
       homeTabPapers: true,
       homeTabBookshelf: true,
-      homeTabStatistics: legacyShowStatistics,
-      homeTabAI: legacyShowAI,
-      homeTabNotes: legacyShowNotes,
+      homeTabStatistics: false,
+      homeTabAI: true,
+      homeTabNotes: false,
       homeTabSettings: true,
     };
 
