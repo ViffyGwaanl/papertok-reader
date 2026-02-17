@@ -1491,7 +1491,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
                         try {
                           await webViewController.evaluateJavascript(source: '''
 if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateForViewport) {
-  reader.view.forceTranslateForViewport();
+  reader.view.forceTranslateForViewport(true);
 }
 ''');
                         } catch (_) {}

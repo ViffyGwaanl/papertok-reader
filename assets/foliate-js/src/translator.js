@@ -164,6 +164,8 @@ export class Translator {
     this.#observer.disconnect()
     this.observedElements.clear()
     this.#translatedElements = new WeakMap()
+    this.#failedElements = new WeakMap()
+    this.#retryTimers = new WeakMap()
     
     // Reinitialize observer
     this.#initializeObserver()
@@ -253,15 +255,22 @@ export class Translator {
     return segments
   }
 
-  async #translateElement(element) {
+  async #translateElement(element, { force = false } = {}) {
     if (this.#translationMode === TranslationMode.OFF) return
     if (!element || !element.isConnected) return
     if (this.#translatedElements.has(element)) return
     if (this.#translatingElements.has(element)) return
 
     const failState = this.#failedElements.get(element)
-    if (failState && failState.attempts >= 6) {
+    if (!force && failState && failState.attempts >= 6) {
       return
+    }
+
+    if (force) {
+      // Manual retry should not be blocked by previous failures.
+      try {
+        this.#clearFailure(element)
+      } catch (_) {}
     }
 
     const text = element.innerText?.trim()
@@ -579,10 +588,15 @@ export class Translator {
   }
 
   async forceTranslateForViewport() {
-    return this.#forceTranslateVisibleElements()
+    return this.#forceTranslateVisibleElements({ force: false })
   }
 
-  async #forceTranslateVisibleElements() {
+  async forceRetryForViewport() {
+    // Manual retry: reset failure state for visible elements and ignore retry cap.
+    return this.#forceTranslateVisibleElements({ force: true, resetFailures: true })
+  }
+
+  async #forceTranslateVisibleElements({ force = false, resetFailures = false } = {}) {
     // Prioritize current viewport first, then next viewport.
     // Also limit the number of newly-started translations to reduce backlog
     // when the user scrolls quickly.
@@ -636,8 +650,15 @@ export class Translator {
 
     const startOne = (item) => {
       started++
+
+      if (resetFailures) {
+        try {
+          this.#clearFailure(item.element)
+        } catch (_) {}
+      }
+
       // Start but don't await (Flutter side enforces concurrency).
-      this.#translateElement(item.element).catch((error) => {
+      this.#translateElement(item.element, { force }).catch((error) => {
         console.warn('Force translation failed:', error)
       })
     }

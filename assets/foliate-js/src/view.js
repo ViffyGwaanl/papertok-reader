@@ -611,9 +611,35 @@ export class View extends HTMLElement {
   
   clearTranslations() {
     this.#translator.clearTranslations()
+
+    // Re-observe current document and restart translation if needed.
+    try {
+      const doc = this.renderer.getContents()[0]?.doc
+      if (doc) {
+        this.#translator.observeDocument(doc)
+      }
+    } catch (_) {}
+
+    try {
+      if (this.#translator.getTranslationMode?.() !== 'off') {
+        this.#translator.forceTranslateForViewport?.()
+      }
+    } catch (_) {}
   }
 
-  forceTranslateForViewport() {
+  // force=true means: ignore per-element max retry cap and treat as manual retry.
+  forceTranslateForViewport(force = false) {
+    try {
+      const doc = this.renderer.getContents()[0]?.doc
+      if (doc) {
+        this.#translator.observeDocument(doc)
+      }
+    } catch (_) {}
+
+    if (force && this.#translator.forceRetryForViewport) {
+      return this.#translator.forceRetryForViewport()
+    }
+
     return this.#translator.forceTranslateForViewport?.()
   }
 }

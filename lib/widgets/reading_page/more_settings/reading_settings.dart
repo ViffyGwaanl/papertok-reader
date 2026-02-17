@@ -378,7 +378,7 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.clearTranslation
                           await epubPlayerKey.currentState?.webViewController
                               .evaluateJavascript(source: '''
 if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateForViewport) {
-  reader.view.forceTranslateForViewport();
+  reader.view.forceTranslateForViewport(true);
 }
 ''');
                         } catch (_) {}
