@@ -43,6 +43,13 @@ export class Translator {
   observedElements = new Set()
   #translatedElements = new WeakMap()
   #translatingElements = new WeakSet()
+
+  // Retry state for elements that failed while staying in the viewport.
+  // WeakMap avoids leaks (as long as we don't keep strong refs elsewhere).
+  // NOTE: observedElements is a strong Set, so we also prune disconnected nodes.
+  #failedElements = new WeakMap()
+  #retryTimers = new WeakMap()
+
   #observer = null
   
   constructor() {
@@ -112,10 +119,12 @@ export class Translator {
       console.warn('No document provided to observeDocument')
       return
     }
-        
+
+    this.#pruneDisconnectedElements()
+
     const textElements = this.#walkTextNodes(doc.body || doc.documentElement)
     // console.log(`Found ${textElements.length} text elements to observe`)
-    
+
     textElements.forEach(element => {
       if (!this.observedElements.has(element)) {
         this.#observer.observe(element)
@@ -123,8 +132,22 @@ export class Translator {
         // console.log('Added element to observer:', element.tagName, element.textContent?.substring(0, 50))
       }
     })
-    
+
     // console.log(`Total observed elements: ${this.observedElements.size}`)
+  }
+
+  #pruneDisconnectedElements() {
+    // observedElements is a strong Set. Remove elements that are no longer in
+    // the DOM to avoid memory growth across relocations/chapters.
+    for (const el of Array.from(this.observedElements)) {
+      try {
+        if (!el || !el.isConnected) {
+          this.observedElements.delete(el)
+        }
+      } catch (_) {
+        this.observedElements.delete(el)
+      }
+    }
   }
 
   clearTranslations() {
@@ -232,8 +255,14 @@ export class Translator {
 
   async #translateElement(element) {
     if (this.#translationMode === TranslationMode.OFF) return
+    if (!element || !element.isConnected) return
     if (this.#translatedElements.has(element)) return
     if (this.#translatingElements.has(element)) return
+
+    const failState = this.#failedElements.get(element)
+    if (failState && failState.attempts >= 6) {
+      return
+    }
 
     const text = element.innerText?.trim()
     if (!text) return
@@ -252,23 +281,29 @@ export class Translator {
           })
 
           if (translatedSegments && Array.isArray(translatedSegments) && translatedSegments.length === segments.length) {
-            // Mark as translated to prevent re-processing
-            this.#translatedElements.set(element, {
-              originalText: text,
-              translatedText: translatedSegments.join(''),
-              structuredLinks: true,
-            })
+            const joined = translatedSegments.join('')
+            if (joined && joined.trim()) {
+              // Mark as translated to prevent re-processing
+              this.#translatedElements.set(element, {
+                originalText: text,
+                translatedText: joined,
+                structuredLinks: true,
+              })
 
-            this.#applyStructuredTranslation(element, segments, translatedSegments)
-            return
+              this.#clearFailure(element)
+              this.#applyStructuredTranslation(element, segments, translatedSegments)
+              return
+            }
           }
         }
       }
 
       const translatedText = await translate(text)
 
-      // Empty translation -> treat as failure, do not mark as translated.
+      // Empty translation -> failure: schedule retry if still in viewport.
       if (!translatedText || !translatedText.trim()) {
+        this.#markFailure(element)
+        this.#scheduleRetryIfVisible(element)
         return
       }
 
@@ -278,11 +313,87 @@ export class Translator {
         translatedText: translatedText
       })
 
+      this.#clearFailure(element)
       this.#applyTranslation(element, translatedText)
     } catch (error) {
+      this.#markFailure(element)
+      this.#scheduleRetryIfVisible(element)
       console.warn('Translation failed:', error)
     } finally {
       this.#translatingElements.delete(element)
+    }
+  }
+
+  #markFailure(element) {
+    try {
+      const prev = this.#failedElements.get(element) || { attempts: 0, lastAt: 0 }
+      const next = {
+        attempts: (prev.attempts || 0) + 1,
+        lastAt: Date.now(),
+      }
+      this.#failedElements.set(element, next)
+      try {
+        element.setAttribute('data-translation-failed', String(next.attempts))
+      } catch (_) {}
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  #clearFailure(element) {
+    try {
+      this.#failedElements.delete(element)
+      const timer = this.#retryTimers.get(element)
+      if (timer) {
+        clearTimeout(timer)
+        this.#retryTimers.delete(element)
+      }
+      try {
+        element.removeAttribute('data-translation-failed')
+      } catch (_) {}
+    } catch (_) {}
+  }
+
+  #scheduleRetryIfVisible(element) {
+    if (this.#translationMode === TranslationMode.OFF) return
+    if (!element || !element.isConnected) return
+    if (this.#translatedElements.has(element)) return
+    if (this.#translatingElements.has(element)) return
+
+    const state = this.#failedElements.get(element)
+    if (!state) return
+    if (state.attempts >= 6) return
+
+    // Avoid multiple timers per element.
+    if (this.#retryTimers.get(element)) return
+
+    // Only retry if the element is within current+next viewport.
+    try {
+      const rect = element.getBoundingClientRect()
+      if (!rect) return
+      if (rect.bottom <= 0) return
+      if (rect.top > window.innerHeight * 2) return
+
+      const attempt = state.attempts || 1
+      const delay = Math.min(8000, 600 * Math.pow(2, Math.max(0, attempt - 1)))
+
+      const timer = setTimeout(() => {
+        try {
+          this.#retryTimers.delete(element)
+        } catch (_) {}
+        // Retry only if still relevant.
+        if (this.#translationMode === TranslationMode.OFF) return
+        if (!element || !element.isConnected) return
+        if (this.#translatedElements.has(element)) return
+        if (this.#translatingElements.has(element)) return
+        this.#translateElement(element).catch((e) => {
+          console.warn('Retry translation failed:', e)
+        })
+      }, delay)
+
+      this.#retryTimers.set(element, timer)
+    } catch (_) {
+      // ignore
     }
   }
 
@@ -475,6 +586,8 @@ export class Translator {
     // Prioritize current viewport first, then next viewport.
     // Also limit the number of newly-started translations to reduce backlog
     // when the user scrolls quickly.
+
+    this.#pruneDisconnectedElements()
 
     const currentBottom = window.innerHeight
     const prefetchBottom = window.innerHeight * 2
