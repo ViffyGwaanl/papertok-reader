@@ -615,13 +615,17 @@ export class Translator {
       const rect = element.getBoundingClientRect()
       if (rect.bottom <= 0) return
 
-      // Update display for already translated elements in the visible range.
+      // If we have a translation state but the DOM wrapper is missing (e.g. DOM
+      // got re-rendered), treat it as NOT translated so it can be re-generated.
       if (rect.top < prefetchBottom && this.#translatedElements.has(element)) {
         const translationWrapper = element.querySelector('.translated-text')
         if (translationWrapper) {
           this.#updateElementDisplay(element, translationWrapper)
+          return
         }
-        return
+
+        // Missing wrapper: drop state so it can be translated again.
+        this.#translatedElements.delete(element)
       }
 
       // Skip already translated/inflight
