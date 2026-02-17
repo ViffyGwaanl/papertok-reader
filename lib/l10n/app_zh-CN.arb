@@ -962,5 +962,30 @@
   "aiSectionTools": "工具",
   "aiChatRegenerateFromHereConfirmTitle": "从这里创建分支？",
   "aiChatRegenerateFromHereConfirmBody": "将基于该消息创建一个新的对话分支继续生成；旧版本及其后续对话都会保留，你可以用消息下方的左右切换回滚。是否继续？",
-  "aiChatEditUserMessageTitle": "编辑消息"
+  "aiChatEditUserMessageTitle": "编辑消息",
+  "navBarPapers": "PaperTok",
+  "settingsHomeNavigation": "首页导航",
+  "settingsHomeNavigationSubtitle": "调整首页标签顺序，并设置显示/隐藏",
+  "papersImportPdf": "导入书架（PDF）",
+  "papersDownloadingPdf": "正在下载 PDF",
+  "papersLoadFailed": "加载失败",
+  "papersCancelled": "已取消",
+  "papersDownloadFailed": "下载失败：{error}",
+  "@papersDownloadFailed": {
+    "description": "PaperTok PDF download failed message",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "papersImportEpub": "导入书架（EPUB）",
+  "papersDownloadingEpub": "正在下载 EPUB",
+  "papersChooseEpubEdition": "选择 EPUB 版本",
+  "papersEpubEditionDefault": "默认",
+  "papersEpubEditionEn": "英文",
+  "papersEpubEditionZh": "中文",
+  "papersEpubEditionBilingual": "双语",
+  "papersTabExplain": "讲解",
+  "papersTabOriginal": "原文"
 }

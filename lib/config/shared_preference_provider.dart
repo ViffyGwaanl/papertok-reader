@@ -72,9 +72,39 @@ class Prefs extends ChangeNotifier {
   static const String _enabledAiToolsKey = 'enabledAiTools';
   static const String _userPromptsKey = 'userPrompts';
 
+  // Home tabs config (order + enable), backed by SharedPreferences.
+  // papers + settings are mandatory and cannot be disabled.
+  static const int _homeTabsSchemaVersion = 1;
+  static const String _homeTabsSchemaVersionKey = 'homeTabsSchemaVersion';
+  static const String _homeTabsOrderKey = 'homeTabsOrder';
+  static const String _homeTabsEnabledKey = 'homeTabsEnabled';
+
+  static const String homeTabPapers = 'papers';
+  static const String homeTabBookshelf = 'bookshelf';
+  static const String homeTabStatistics = 'statistics';
+  static const String homeTabAI = 'ai';
+  static const String homeTabNotes = 'notes';
+  static const String homeTabSettings = 'settings';
+
+  static const List<String> _homeTabAll = [
+    homeTabPapers,
+    homeTabBookshelf,
+    homeTabStatistics,
+    homeTabAI,
+    homeTabNotes,
+    homeTabSettings,
+  ];
+
+  static const Set<String> _homeTabMandatory = {
+    homeTabPapers,
+    homeTabSettings,
+  };
+
   Future<void> initPrefs() async {
     prefs = await SharedPreferences.getInstance();
     saveBeginDate();
+    _migrateHomeTabsIfNeeded();
+    _normalizeAndPersistHomeTabsConfig();
     notifyListeners();
   }
 
@@ -1001,6 +1031,47 @@ class Prefs extends ChangeNotifier {
     return prefs.getString('selectedAiService') ?? 'openai';
   }
 
+  // Translation: dedicated provider/model override
+  // (used by ai_settings_sync.dart; safe to keep even if UI not exposed yet)
+
+  String get aiTranslateProviderId {
+    return prefs.getString('aiTranslateProviderIdV1') ?? '';
+  }
+
+  set aiTranslateProviderId(String providerId) {
+    if (aiTranslateProviderId != providerId) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString('aiTranslateProviderIdV1', providerId);
+    notifyListeners();
+  }
+
+  String get aiTranslateModel {
+    return prefs.getString('aiTranslateModelV1') ?? '';
+  }
+
+  set aiTranslateModel(String model) {
+    if (aiTranslateModel != model) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString('aiTranslateModelV1', model);
+    notifyListeners();
+  }
+
+  // Runtime concurrency control for inline full-text translation.
+  int get inlineFullTextTranslateConcurrency {
+    return prefs.getInt('inlineFullTextTranslateConcurrency') ?? 3;
+  }
+
+  set inlineFullTextTranslateConcurrency(int concurrency) {
+    final v = concurrency.clamp(1, 12);
+    if (inlineFullTextTranslateConcurrency != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt('inlineFullTextTranslateConcurrency', v);
+    notifyListeners();
+  }
+
   // --- Provider Center (Cherry-style) ---
 
   static const String _aiProvidersV1Key = 'aiProvidersV1';
@@ -1438,6 +1509,191 @@ class Prefs extends ChangeNotifier {
 
   set bottomNavigatorShowAI(bool status) {
     prefs.setBool('bottomNavigatorShowAI', status);
+    notifyListeners();
+  }
+
+  // --- Home tabs config (order + enable) ---
+
+  void _migrateHomeTabsIfNeeded() {
+    final v = prefs.getInt(_homeTabsSchemaVersionKey);
+    final hasOrder = prefs.getStringList(_homeTabsOrderKey) != null;
+    final hasEnabled = prefs.getString(_homeTabsEnabledKey) != null;
+
+    if (v == _homeTabsSchemaVersion && hasOrder && hasEnabled) {
+      return;
+    }
+
+    // Migrate from legacy bottom navigator switches.
+    final legacyShowStatistics =
+        prefs.getBool('bottomNavigatorShowStatistics') ?? true;
+    final legacyShowAI = prefs.getBool('bottomNavigatorShowAI') ?? true;
+    final legacyShowNotes = prefs.getBool('bottomNavigatorShowNote') ?? true;
+
+    final defaultOrder = <String>[
+      homeTabPapers,
+      homeTabBookshelf,
+      homeTabStatistics,
+      homeTabAI,
+      homeTabNotes,
+      homeTabSettings,
+    ];
+
+    final enabled = <String, bool>{
+      homeTabPapers: true,
+      homeTabBookshelf: true,
+      homeTabStatistics: legacyShowStatistics,
+      homeTabAI: legacyShowAI,
+      homeTabNotes: legacyShowNotes,
+      homeTabSettings: true,
+    };
+
+    prefs.setInt(_homeTabsSchemaVersionKey, _homeTabsSchemaVersion);
+    prefs.setStringList(_homeTabsOrderKey, defaultOrder);
+    prefs.setString(_homeTabsEnabledKey, jsonEncode(enabled));
+  }
+
+  List<String> _normalizeHomeTabsOrder(List<String> raw) {
+    final out = <String>[];
+    final seen = <String>{};
+
+    for (final id in raw) {
+      if (!_homeTabAll.contains(id)) continue;
+      if (seen.contains(id)) continue;
+      seen.add(id);
+      out.add(id);
+    }
+
+    // Ensure mandatory tabs exist even if the config is corrupted.
+    if (!seen.contains(homeTabPapers)) {
+      out.insert(0, homeTabPapers);
+      seen.add(homeTabPapers);
+    }
+    if (!seen.contains(homeTabSettings)) {
+      out.add(homeTabSettings);
+      seen.add(homeTabSettings);
+    }
+
+    // Append any newly added tabs.
+    for (final id in _homeTabAll) {
+      if (!seen.contains(id)) out.add(id);
+    }
+
+    return out;
+  }
+
+  Map<String, bool> _normalizeHomeTabsEnabled(Map<String, bool> raw) {
+    final out = <String, bool>{};
+    for (final id in _homeTabAll) {
+      out[id] = raw[id] ?? true;
+    }
+    // Mandatory tabs cannot be disabled.
+    for (final id in _homeTabMandatory) {
+      out[id] = true;
+    }
+    return out;
+  }
+
+  void _normalizeAndPersistHomeTabsConfig() {
+    final order = _normalizeHomeTabsOrder(
+        prefs.getStringList(_homeTabsOrderKey) ?? const []);
+
+    Map<String, bool> enabled;
+    final enabledStr = prefs.getString(_homeTabsEnabledKey);
+    if (enabledStr == null || enabledStr.trim().isEmpty) {
+      enabled = <String, bool>{};
+    } else {
+      try {
+        final dynamic decoded = jsonDecode(enabledStr);
+        if (decoded is Map) {
+          enabled = decoded
+              .map((key, value) => MapEntry(key.toString(), value == true));
+        } else {
+          enabled = <String, bool>{};
+        }
+      } catch (_) {
+        enabled = <String, bool>{};
+      }
+    }
+
+    final enabledNormalized = _normalizeHomeTabsEnabled(enabled);
+
+    prefs.setInt(_homeTabsSchemaVersionKey, _homeTabsSchemaVersion);
+    prefs.setStringList(_homeTabsOrderKey, order);
+    prefs.setString(_homeTabsEnabledKey, jsonEncode(enabledNormalized));
+  }
+
+  List<String> get homeTabsOrder {
+    return _normalizeHomeTabsOrder(
+        prefs.getStringList(_homeTabsOrderKey) ?? const []);
+  }
+
+  Map<String, bool> get homeTabsEnabled {
+    final enabledStr = prefs.getString(_homeTabsEnabledKey);
+    Map<String, bool> enabled;
+    if (enabledStr == null || enabledStr.trim().isEmpty) {
+      enabled = <String, bool>{};
+    } else {
+      try {
+        final dynamic decoded = jsonDecode(enabledStr);
+        if (decoded is Map) {
+          enabled = decoded
+              .map((key, value) => MapEntry(key.toString(), value == true));
+        } else {
+          enabled = <String, bool>{};
+        }
+      } catch (_) {
+        enabled = <String, bool>{};
+      }
+    }
+    return _normalizeHomeTabsEnabled(enabled);
+  }
+
+  void setHomeTabsOrder(List<String> order) {
+    final normalized = _normalizeHomeTabsOrder(order);
+    prefs.setStringList(_homeTabsOrderKey, normalized);
+    notifyListeners();
+  }
+
+  void setHomeTabEnabled(String tabId, bool enabled) {
+    final map0 = Map<String, bool>.from(homeTabsEnabled);
+    if (_homeTabMandatory.contains(tabId)) {
+      map0[tabId] = true;
+    } else {
+      map0[tabId] = enabled;
+    }
+    final normalized = _normalizeHomeTabsEnabled(map0);
+    prefs.setString(_homeTabsEnabledKey, jsonEncode(normalized));
+    notifyListeners();
+  }
+
+  void resetHomeTabsConfigToDefault() {
+    final defaultOrder = <String>[
+      homeTabPapers,
+      homeTabBookshelf,
+      homeTabStatistics,
+      homeTabAI,
+      homeTabNotes,
+      homeTabSettings,
+    ];
+
+    final legacyShowStatistics =
+        prefs.getBool('bottomNavigatorShowStatistics') ?? true;
+    final legacyShowAI = prefs.getBool('bottomNavigatorShowAI') ?? true;
+    final legacyShowNotes = prefs.getBool('bottomNavigatorShowNote') ?? true;
+
+    final enabled = <String, bool>{
+      homeTabPapers: true,
+      homeTabBookshelf: true,
+      homeTabStatistics: legacyShowStatistics,
+      homeTabAI: legacyShowAI,
+      homeTabNotes: legacyShowNotes,
+      homeTabSettings: true,
+    };
+
+    prefs.setInt(_homeTabsSchemaVersionKey, _homeTabsSchemaVersion);
+    prefs.setStringList(_homeTabsOrderKey, defaultOrder);
+    prefs.setString(
+        _homeTabsEnabledKey, jsonEncode(_normalizeHomeTabsEnabled(enabled)));
     notifyListeners();
   }
 

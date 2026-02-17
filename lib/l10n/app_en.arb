@@ -962,5 +962,30 @@
   "aiSectionTools": "Tools",
   "aiChatRegenerateFromHereConfirmTitle": "Create a branch from here?",
   "aiChatRegenerateFromHereConfirmBody": "This will create a new conversation branch from this message. The old version and its subsequent conversation will be kept, and you can switch back via the left/right variant switcher. Continue?",
-  "aiChatEditUserMessageTitle": "Edit message"
+  "aiChatEditUserMessageTitle": "Edit message",
+  "navBarPapers": "PaperTok",
+  "settingsHomeNavigation": "Home navigation",
+  "settingsHomeNavigationSubtitle": "Reorder home tabs and toggle visibility",
+  "papersImportPdf": "Import PDF",
+  "papersDownloadingPdf": "Downloading PDF",
+  "papersLoadFailed": "Load failed",
+  "papersCancelled": "Cancelled",
+  "papersDownloadFailed": "Download failed: {error}",
+  "@papersDownloadFailed": {
+    "description": "PaperTok PDF download failed message",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "papersImportEpub": "Import EPUB",
+  "papersDownloadingEpub": "Downloading EPUB",
+  "papersChooseEpubEdition": "Choose EPUB edition",
+  "papersEpubEditionDefault": "Default",
+  "papersEpubEditionEn": "English",
+  "papersEpubEditionZh": "Chinese",
+  "papersEpubEditionBilingual": "Bilingual",
+  "papersTabExplain": "Explain",
+  "papersTabOriginal": "Original"
 }
