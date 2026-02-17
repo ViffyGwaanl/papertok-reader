@@ -269,19 +269,37 @@ export class Translator {
     if (!element.hasAttribute('data-original-visibility')) {
       element.setAttribute('data-original-visibility', 'hidden')
       
-      // Hide all child nodes except translation elements using CSS
+      // Hide all child nodes except translation elements using CSS.
+      // IMPORTANT: preserve hyperlinks/footnotes.
+      // If a subtree contains <a href>, we keep it visible so links remain clickable.
       Array.from(element.childNodes).forEach(node => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           const el = node
-          if (!el.classList || !el.classList.contains('translated-text')) {
-            // Store and hide using CSS
-            if (!el.hasAttribute('data-original-display')) {
-              el.setAttribute('data-original-display', el.style.display || 'initial')
-              el.style.display = 'none'
-            }
+          if (el.classList && el.classList.contains('translated-text')) {
+            return
+          }
+
+          const containsLink =
+            (el.matches && el.matches('a[href]')) ||
+            (el.querySelector && el.querySelector('a[href]'))
+
+          if (containsLink) {
+            // Do not hide; keep link subtree interactive.
+            return
+          }
+
+          // Store and hide using CSS
+          if (!el.hasAttribute('data-original-display')) {
+            el.setAttribute('data-original-display', el.style.display || 'initial')
+            el.style.display = 'none'
           }
         } else if (node.nodeType === Node.TEXT_NODE) {
           // For text nodes, store content and make invisible
+          // But keep text nodes that are inside a link (<a href>) so link markers remain.
+          const parent = node.parentElement
+          const inLink = parent && parent.closest && parent.closest('a[href]')
+          if (inLink) return
+
           if (!node.__originalContent) {
             node.__originalContent = node.textContent
             node.textContent = ''
