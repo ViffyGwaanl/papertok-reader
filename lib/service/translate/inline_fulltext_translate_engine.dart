@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
+import 'package:anx_reader/service/ai/index.dart';
+import 'package:anx_reader/service/ai/prompt_generate.dart';
+import 'package:anx_reader/service/translate/fulltext_translate_cache.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:flutter/foundation.dart';
@@ -33,15 +37,27 @@ class InlineFullTextTranslateEngine {
   InlineFullTextTranslateEngine({
     required this.progress,
     required this.maxConcurrency,
-  });
+  }) : _semaphore = _Semaphore(maxConcurrency);
 
   final ValueNotifier<InlineFullTextTranslationProgress> progress;
   final int maxConcurrency;
 
-  int _generation = 0;
+  final _Semaphore _semaphore;
+
   bool _disposed = false;
 
-  int _inflight = 0;
+  // Active viewport ids (current + next viewport)
+  Set<String> _activeIds = <String>{};
+
+  // State (session-level)
+  final Set<String> _doneIds = <String>{};
+  final Set<String> _failedIds = <String>{};
+  final Map<String, Future<void>> _inflightById = <String, Future<void>>{};
+
+  // Attempt counts for retry
+  final Map<String, int> _attempts = <String, int>{};
+
+  int _progressGeneration = 0;
 
   Future<void> submit({
     required InAppWebViewController webViewController,
@@ -52,129 +68,402 @@ class InlineFullTextTranslateEngine {
     required List<InlineFullTextTranslateBlock> blocks,
   }) async {
     if (_disposed) return;
-    if (blocks.isEmpty) return;
+    if (blocks.isEmpty) {
+      _activeIds = <String>{};
+      _recomputeProgress();
+      return;
+    }
 
-    final gen = ++_generation;
+    // Deduplicate by id.
+    final byId = <String, InlineFullTextTranslateBlock>{};
+    for (final b in blocks) {
+      if (b.id.isEmpty) continue;
+      if (b.text.trim().isEmpty) continue;
+      byId[b.id] = b;
+    }
 
-    // Reset progress for this viewport batch.
-    progress.value = InlineFullTextTranslationProgress(
-      active: true,
-      total: blocks.length,
-      pending: blocks.length,
-      inflight: 0,
-      done: 0,
-      failed: 0,
-      generation: gen,
-      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+    _activeIds = byId.keys.toSet();
+    _progressGeneration++;
+
+    // First: apply cached translations immediately (zero latency).
+    await _applyCached(
+      webViewController: webViewController,
+      bookId: bookId,
+      service: service,
+      from: from,
+      to: to,
+      blocks: byId.values.toList(growable: false),
     );
 
-    final sem = _Semaphore(maxConcurrency);
+    _recomputeProgress();
 
-    // Fire tasks; no need to await them here.
-    // ignore: discarded_futures
-    () async {
-      for (final block in blocks) {
-        if (_disposed || gen != _generation) {
-          // generation moved; stop scheduling further tasks.
-          break;
-        }
+    // Schedule translation for remaining blocks.
+    if (service == TranslateService.aiFullText) {
+      _scheduleAiBatches(
+        webViewController: webViewController,
+        bookId: bookId,
+        from: from,
+        to: to,
+        blocksById: byId,
+      );
+    } else {
+      _schedulePerBlock(
+        webViewController: webViewController,
+        bookId: bookId,
+        service: service,
+        from: from,
+        to: to,
+        blocksById: byId,
+      );
+    }
+  }
 
-        // ignore: discarded_futures
-        sem.withPermit(() async {
-          if (_disposed || gen != _generation) return;
+  Future<void> _applyCached({
+    required InAppWebViewController webViewController,
+    required int bookId,
+    required TranslateService service,
+    required LangListEnum from,
+    required LangListEnum to,
+    required List<InlineFullTextTranslateBlock> blocks,
+  }) async {
+    for (final b in blocks) {
+      if (_disposed) return;
+      if (_doneIds.contains(b.id)) continue;
 
-          _inflight++;
-          _update(gen, pendingDelta: -1, inflightDelta: 1);
+      final key = FullTextTranslateRuntime.instance.buildCacheKey(
+        bookId: bookId,
+        service: service,
+        from: from,
+        to: to,
+        text: b.text,
+      );
 
-          try {
-            final translated = await FullTextTranslateRuntime.instance.translate(
-              service,
-              block.text,
-              from,
-              to,
-              bookId: bookId,
+      final cached = await FullTextTranslateCache.get(bookId, key);
+      if (cached != null && cached.trim().isNotEmpty) {
+        await _applyToWeb(
+          webViewController: webViewController,
+          id: b.id,
+          translated: cached,
+        );
+        _doneIds.add(b.id);
+        _failedIds.remove(b.id);
+      }
+    }
+  }
+
+  void _schedulePerBlock({
+    required InAppWebViewController webViewController,
+    required int bookId,
+    required TranslateService service,
+    required LangListEnum from,
+    required LangListEnum to,
+    required Map<String, InlineFullTextTranslateBlock> blocksById,
+  }) {
+    for (final entry in blocksById.entries) {
+      final id = entry.key;
+      final block = entry.value;
+
+      if (_disposed) return;
+      if (_doneIds.contains(id)) continue;
+      if (_inflightById.containsKey(id)) continue;
+
+      final future = _semaphore.withPermit(() async {
+        try {
+          final translated = await FullTextTranslateRuntime.instance.translate(
+            service,
+            block.text,
+            from,
+            to,
+            bookId: bookId,
+          );
+
+          final t = translated.trim();
+          final isError = t.toLowerCase().startsWith('error:') ||
+              t.contains('AI service not configured') ||
+              t.contains('AI 服务未配置') ||
+              t.contains('Authentication failed');
+
+          if (!isError && t.isNotEmpty && !_disposed) {
+            await _applyToWeb(
+              webViewController: webViewController,
+              id: id,
+              translated: translated,
             );
+            _doneIds.add(id);
+            _failedIds.remove(id);
+          } else {
+            _failedIds.add(id);
+          }
+        } catch (_) {
+          _failedIds.add(id);
+        } finally {
+          _inflightById.remove(id);
+          _recomputeProgress();
+        }
+      });
 
-            // Treat known error strings as failures (do not display in text).
-            final t = translated.trim();
-            final isError = t.toLowerCase().startsWith('error:') ||
-                t.contains('AI service not configured') ||
-                t.contains('AI 服务未配置') ||
-                t.contains('Authentication failed');
+      _inflightById[id] = future;
+      _recomputeProgress();
+    }
+  }
 
-            if (!isError && t.isNotEmpty && !_disposed && gen == _generation) {
-              final js = '''
+  void _scheduleAiBatches({
+    required InAppWebViewController webViewController,
+    required int bookId,
+    required LangListEnum from,
+    required LangListEnum to,
+    required Map<String, InlineFullTextTranslateBlock> blocksById,
+  }) {
+    // Build pending list.
+    final pending = <InlineFullTextTranslateBlock>[];
+    for (final b in blocksById.values) {
+      if (_doneIds.contains(b.id)) continue;
+      if (_inflightById.containsKey(b.id)) continue;
+      pending.add(b);
+    }
+
+    if (pending.isEmpty) {
+      _recomputeProgress();
+      return;
+    }
+
+    final batches = _groupBatches(pending);
+
+    for (final batch in batches) {
+      if (_disposed) return;
+
+      // Mark inflight.
+      for (final b in batch) {
+        // We use a placeholder future; it will be replaced below.
+        _inflightById[b.id] = Future.value();
+        _failedIds.remove(b.id);
+      }
+      _recomputeProgress();
+
+      // ignore: discarded_futures
+      _semaphore.withPermit(() async {
+        final ids = batch.map((e) => e.id).toSet();
+        try {
+          final resultMap = await _translateBatchAi(
+            blocks: batch,
+            to: to,
+            from: from,
+          );
+
+          // Apply translations
+          for (final b in batch) {
+            final translated = resultMap[b.id];
+            if (translated != null && translated.trim().isNotEmpty) {
+              // Cache (use aiFullText as service)
+              final key = FullTextTranslateRuntime.instance.buildCacheKey(
+                bookId: bookId,
+                service: TranslateService.aiFullText,
+                from: from,
+                to: to,
+                text: b.text,
+              );
+              await FullTextTranslateCache.set(bookId, key, translated);
+
+              await _applyToWeb(
+                webViewController: webViewController,
+                id: b.id,
+                translated: translated,
+              );
+              _doneIds.add(b.id);
+              _failedIds.remove(b.id);
+            } else {
+              _failedIds.add(b.id);
+            }
+          }
+
+          // Fallback: for missing ids, try per-block once.
+          final missing = batch
+              .where((b) => !_doneIds.contains(b.id))
+              .toList(growable: false);
+          for (final b in missing) {
+            final attempt = (_attempts[b.id] ?? 0) + 1;
+            _attempts[b.id] = attempt;
+            if (attempt > 1) continue;
+
+            try {
+              final translated = await FullTextTranslateRuntime.instance.translate(
+                TranslateService.aiFullText,
+                b.text,
+                from,
+                to,
+                bookId: bookId,
+              );
+              if (translated.trim().isNotEmpty) {
+                await _applyToWeb(
+                  webViewController: webViewController,
+                  id: b.id,
+                  translated: translated,
+                );
+                _doneIds.add(b.id);
+                _failedIds.remove(b.id);
+              }
+            } catch (_) {}
+          }
+        } catch (_) {
+          for (final b in batch) {
+            _failedIds.add(b.id);
+          }
+        } finally {
+          for (final id in ids) {
+            _inflightById.remove(id);
+          }
+          _recomputeProgress();
+        }
+      });
+    }
+  }
+
+  List<List<InlineFullTextTranslateBlock>> _groupBatches(
+    List<InlineFullTextTranslateBlock> blocks,
+  ) {
+    // Heuristic batch sizing for current+next viewport.
+    // Keep batches small to improve JSON compliance.
+    const maxBatchChars = 4000;
+    const maxBatchCount = 12;
+
+    final batches = <List<InlineFullTextTranslateBlock>>[];
+    var current = <InlineFullTextTranslateBlock>[];
+    var chars = 0;
+
+    for (final b in blocks) {
+      final len = b.text.length;
+      final wouldExceed =
+          (current.length + 1 > maxBatchCount) || (chars + len > maxBatchChars);
+
+      if (current.isNotEmpty && wouldExceed) {
+        batches.add(current);
+        current = <InlineFullTextTranslateBlock>[];
+        chars = 0;
+      }
+
+      current.add(b);
+      chars += len;
+    }
+
+    if (current.isNotEmpty) {
+      batches.add(current);
+    }
+
+    return batches;
+  }
+
+  Future<Map<String, String>> _translateBatchAi({
+    required List<InlineFullTextTranslateBlock> blocks,
+    required LangListEnum to,
+    required LangListEnum from,
+  }) async {
+    final input = blocks
+        .map((b) => {
+              'id': b.id,
+              'text': b.text,
+            })
+        .toList(growable: false);
+
+    final blocksJson = jsonEncode(input);
+
+    final payload = generatePromptTranslateFulltextBlocksJson(
+      blocksJson,
+      to.nativeName,
+      from.nativeName,
+    );
+
+    final messages = payload.buildMessages();
+
+    String? last;
+    await for (final chunk in aiGenerateStream(messages, regenerate: false)) {
+      last = chunk;
+    }
+
+    final raw = (last ?? '').trim();
+    if (raw.isEmpty) return {};
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) return {};
+
+    final out = <String, String>{};
+    for (final item in decoded) {
+      if (item is Map) {
+        final id = item['id']?.toString() ?? '';
+        final t = item['translation']?.toString() ?? '';
+        if (id.isEmpty) continue;
+        final sanitized = FullTextTranslateRuntime.instance.sanitize(t);
+        if (sanitized.trim().isEmpty) continue;
+        out[id] = sanitized;
+      }
+    }
+    return out;
+  }
+
+  Future<void> _applyToWeb({
+    required InAppWebViewController webViewController,
+    required String id,
+    required String translated,
+  }) async {
+    final js = '''
 try {
   if (typeof reader !== 'undefined' && reader.view && reader.view.applyFullTextTranslation) {
-    reader.view.applyFullTextTranslation(${_jsString(block.id)}, ${_jsString(translated)});
+    reader.view.applyFullTextTranslation(${_jsString(id)}, ${_jsString(translated)});
   }
 } catch (e) {}
 ''';
-              await webViewController.evaluateJavascript(source: js);
-              _update(gen, doneDelta: 1);
-            } else {
-              _update(gen, failedDelta: 1);
-            }
-          } catch (_) {
-            if (!_disposed && gen == _generation) {
-              _update(gen, failedDelta: 1);
-            }
-          } finally {
-            _inflight--;
-            if (!_disposed && gen == _generation) {
-              _update(gen, inflightDelta: -1);
-            }
-          }
-        });
-      }
+    await webViewController.evaluateJavascript(source: js);
+  }
 
-      // When queue drained for current gen, mark inactive.
-      // Wait a tiny bit for inflight completions.
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      if (!_disposed && gen == _generation) {
-        final p = progress.value;
-        if (p.pending <= 0 && p.inflight <= 0) {
-          progress.value = p.copyWith(active: false);
-        }
+  void _recomputeProgress() {
+    if (_disposed) return;
+
+    final ids = _activeIds;
+
+    final total = ids.length;
+    var done = 0;
+    var inflight = 0;
+    var failed = 0;
+
+    for (final id in ids) {
+      if (_doneIds.contains(id)) {
+        done++;
+      } else if (_inflightById.containsKey(id)) {
+        inflight++;
+      } else if (_failedIds.contains(id)) {
+        failed++;
       }
-    }();
+    }
+
+    final pending = (total - done - inflight - failed).clamp(0, 1 << 30);
+    final active = inflight > 0 || pending > 0;
+
+    progress.value = InlineFullTextTranslationProgress(
+      active: active,
+      total: total,
+      pending: pending,
+      inflight: inflight,
+      done: done,
+      failed: failed,
+      generation: _progressGeneration,
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+    );
   }
 
   void dispose() {
     _disposed = true;
-    _generation++;
-  }
-
-  void _update(
-    int gen, {
-    int pendingDelta = 0,
-    int inflightDelta = 0,
-    int doneDelta = 0,
-    int failedDelta = 0,
-  }) {
-    if (_disposed) return;
-    if (gen != _generation) return;
-
-    final p = progress.value;
-    progress.value = p.copyWith(
-      pending: (p.pending + pendingDelta).clamp(0, 1 << 30),
-      inflight: (p.inflight + inflightDelta).clamp(0, 1 << 30),
-      done: (p.done + doneDelta).clamp(0, 1 << 30),
-      failed: (p.failed + failedDelta).clamp(0, 1 << 30),
-      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
-    );
+    _activeIds = <String>{};
+    _inflightById.clear();
   }
 }
 
 String _jsString(String s) {
-  // Minimal JS string literal escaping using JSON rules.
-  // We embed it directly into JS source as a string literal.
+  // Minimal JS string literal escaping.
   final escaped = s
       .replaceAll('\\', r'\\')
       .replaceAll('\n', r'\n')
       .replaceAll('\r', r'\r')
       .replaceAll('\t', r'\t')
-      .replaceAll('"', r'\"')
+      .replaceAll('"', r'\\"')
       .replaceAll("'", r"\\'");
   return '"$escaped"';
 }

@@ -48,6 +48,25 @@ class FullTextTranslateRuntime {
   final _Semaphore _semaphore = _Semaphore(defaultConcurrency);
   final Map<String, Future<String>> _inflight = {};
 
+  String normalizeForCacheKey(String text) => _normalizeForCacheKey(text);
+
+  String sanitize(String raw) => _sanitizeInlineFullTextTranslation(raw);
+
+  String buildCacheKey({
+    required int bookId,
+    required TranslateService service,
+    required LangListEnum from,
+    required LangListEnum to,
+    required String text,
+  }) {
+    final normalized = _normalizeForCacheKey(text);
+    return sha1
+        .convert(utf8.encode(
+          'v1|book:$bookId|svc:${service.name}|from:${from.code}|to:${to.code}|$normalized',
+        ))
+        .toString();
+  }
+
   Future<String> translate(
     TranslateService service,
     String text,
@@ -60,14 +79,14 @@ class FullTextTranslateRuntime {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return '';
 
-    final normalized = _normalizeForCacheKey(text);
-
     // Cache key MUST include bookId to enable per-book clear.
-    final key = sha1
-        .convert(utf8.encode(
-          'v1|book:$bookId|svc:${service.name}|from:${from.code}|to:${to.code}|$normalized',
-        ))
-        .toString();
+    final key = buildCacheKey(
+      bookId: bookId,
+      service: service,
+      from: from,
+      to: to,
+      text: text,
+    );
 
     if (enableCache) {
       final cached = await FullTextTranslateCache.get(bookId, key);
@@ -89,7 +108,7 @@ class FullTextTranslateRuntime {
         contextText: contextText,
       );
 
-      final sanitized = _sanitizeInlineFullTextTranslation(result);
+      final sanitized = sanitize(result);
 
       // Persist even if empty? No.
       if (enableCache && sanitized.trim().isNotEmpty) {
