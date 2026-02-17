@@ -73,7 +73,7 @@ class _PapersPageState extends State<PapersPage> {
               const SizedBox(height: 12),
               FilledButton(
                 onPressed: _loadMore,
-                child: const Text('Retry'),
+                child: Text(L10n.of(context).commonRetry),
               ),
             ],
           ),

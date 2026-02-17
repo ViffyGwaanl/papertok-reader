@@ -831,5 +831,18 @@
   "aiShowAtRight": "在右側顯示",
   "navBarPapers": "論文",
   "settingsHomeNavigation": "首頁導覽",
-  "settingsHomeNavigationSubtitle": "調整首頁標籤順序，並設定顯示/隱藏"
+  "settingsHomeNavigationSubtitle": "調整首頁標籤順序，並設定顯示/隱藏",
+  "papersImportPdf": "匯入書架（PDF）",
+  "papersDownloadingPdf": "正在下載 PDF",
+  "papersLoadFailed": "載入失敗",
+  "papersCancelled": "已取消",
+  "papersDownloadFailed": "下載失敗：{error}",
+  "@papersDownloadFailed": {
+    "description": "PaperTok PDF download failed message",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }

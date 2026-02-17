@@ -831,5 +831,18 @@
   "aiShowAtRight": "Mostra a destra",
   "navBarPapers": "Papers",
   "settingsHomeNavigation": "Home navigation",
-  "settingsHomeNavigationSubtitle": "Reorder home tabs and toggle visibility"
+  "settingsHomeNavigationSubtitle": "Reorder home tabs and toggle visibility",
+  "papersImportPdf": "Import PDF",
+  "papersDownloadingPdf": "Downloading PDF",
+  "papersLoadFailed": "Load failed",
+  "papersCancelled": "Cancelled",
+  "papersDownloadFailed": "Download failed: {error}",
+  "@papersDownloadFailed": {
+    "description": "PaperTok PDF download failed message",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }

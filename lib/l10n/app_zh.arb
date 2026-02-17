@@ -831,5 +831,18 @@
   "aiShowAtRight": "在右侧显示",
   "navBarPapers": "论文",
   "settingsHomeNavigation": "首页导航",
-  "settingsHomeNavigationSubtitle": "调整首页标签顺序，并设置显示/隐藏"
+  "settingsHomeNavigationSubtitle": "调整首页标签顺序，并设置显示/隐藏",
+  "papersImportPdf": "导入书架（PDF）",
+  "papersDownloadingPdf": "正在下载 PDF",
+  "papersLoadFailed": "加载失败",
+  "papersCancelled": "已取消",
+  "papersDownloadFailed": "下载失败：{error}",
+  "@papersDownloadFailed": {
+    "description": "PaperTok PDF download failed message",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -831,5 +831,18 @@
   "aiShowAtRight": "示於右",
   "navBarPapers": "論文",
   "settingsHomeNavigation": "首頁之導",
-  "settingsHomeNavigationSubtitle": "易其序，或顯或藏"
+  "settingsHomeNavigationSubtitle": "易其序，或顯或藏",
+  "papersImportPdf": "納入書架（PDF）",
+  "papersDownloadingPdf": "下載 PDF 中",
+  "papersLoadFailed": "取之失敗",
+  "papersCancelled": "已止",
+  "papersDownloadFailed": "下載失敗：{error}",
+  "@papersDownloadFailed": {
+    "description": "PaperTok PDF download failed message",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }
