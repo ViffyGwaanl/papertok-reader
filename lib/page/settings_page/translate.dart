@@ -184,6 +184,53 @@ class _TranslateSettingState extends State<TranslateSetting> {
                     },
                   ),
                   ListTile(
+                    leading: const Icon(Icons.edit_outlined),
+                    title: Text(L10n.of(context).settingsTranslateAiModelCustom),
+                    subtitle:
+                        Text(L10n.of(context).settingsTranslateAiModelCustomDesc),
+                    onTap: () async {
+                      final controller = TextEditingController(
+                        text: Prefs().aiTranslateModel.trim(),
+                      );
+
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text(
+                              L10n.of(context).settingsTranslateAiModelCustom,
+                            ),
+                            content: TextField(
+                              controller: controller,
+                              decoration: InputDecoration(
+                                hintText: L10n.of(context)
+                                    .settingsTranslateAiModelCustomHint,
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: Text(L10n.of(context).commonCancel),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: Text(L10n.of(context).commonConfirm),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (ok == true) {
+                        Prefs().aiTranslateModel = controller.text;
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
+                        setState(() {});
+                      }
+                    },
+                  ),
+                  ListTile(
                     leading: loading
                         ? const SizedBox(
                             width: 18,

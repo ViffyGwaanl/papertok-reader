@@ -580,6 +580,9 @@
   "settingsTranslateAiModelFollowProviderDesc": "Use the model configured in the provider settings.",
   "settingsTranslateAiModelFollowProviderShort": "Follow provider",
   "settingsTranslateAiModelEmpty": "No models found. Tap Refresh to fetch from provider.",
+  "settingsTranslateAiModelCustom": "Custom model",
+  "settingsTranslateAiModelCustomDesc": "Enter model id manually",
+  "settingsTranslateAiModelCustomHint": "e.g. gpt-4o-mini",
 
   "settingsTranslateBackgroundStatus": "Background translation status",
   "settingsTranslateBackgroundStatusIdle": "Idle",

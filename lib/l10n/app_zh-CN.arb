@@ -580,6 +580,9 @@
   "settingsTranslateAiModelFollowProviderDesc": "使用供应商配置中设置的模型。",
   "settingsTranslateAiModelFollowProviderShort": "跟随供应商",
   "settingsTranslateAiModelEmpty": "没有获取到模型列表，点击“刷新”从供应商拉取。",
+  "settingsTranslateAiModelCustom": "自定义模型",
+  "settingsTranslateAiModelCustomDesc": "手动输入模型 id",
+  "settingsTranslateAiModelCustomHint": "例如 gpt-4o-mini",
 
   "settingsTranslateBackgroundStatus": "后台翻译状态",
   "settingsTranslateBackgroundStatusIdle": "空闲",
