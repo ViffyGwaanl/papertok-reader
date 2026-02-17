@@ -69,6 +69,15 @@ final epubPlayerKey = GlobalKey<EpubPlayerState>();
 
 class ReadingPageState extends ConsumerState<ReadingPage>
     with WidgetsBindingObserver, TickerProviderStateMixin {
+  Icon _translationModeIcon(TranslationModeEnum mode) {
+    // Keep icons consistent with ReadingMoreSettings segmented control.
+    return switch (mode) {
+      TranslationModeEnum.off => const Icon(Icons.translate_outlined),
+      TranslationModeEnum.originalOnly => const Icon(Icons.translate_outlined),
+      TranslationModeEnum.translationOnly => const Icon(Icons.g_translate),
+      TranslationModeEnum.bilingual => const Icon(Icons.compare),
+    };
+  }
   static const empty = SizedBox.shrink();
 
   double _aiSwipeUpTotalDy = 0;
@@ -869,26 +878,29 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                   actions: [
                     if (EnvVar.enableAIFeature) aiButton,
                     IconButton(
-                      icon: Icon(
-                        Prefs().getBookTranslationMode(widget.book.id) ==
-                                TranslationModeEnum.off
-                            ? Icons.g_translate
-                            : Icons.translate,
+                      icon: _translationModeIcon(
+                        Prefs().getBookTranslationMode(widget.book.id),
                       ),
                       tooltip:
                           L10n.of(context).readingPageToggleFullTextTranslation,
                       onPressed: () {
                         final current =
                             Prefs().getBookTranslationMode(widget.book.id);
-                        final next = current == TranslationModeEnum.off
-                            ? TranslationModeEnum.bilingual
-                            : TranslationModeEnum.off;
+                        final next = switch (current) {
+                          TranslationModeEnum.off =>
+                            TranslationModeEnum.translationOnly,
+                          TranslationModeEnum.originalOnly =>
+                            TranslationModeEnum.translationOnly,
+                          TranslationModeEnum.translationOnly =>
+                            TranslationModeEnum.bilingual,
+                          TranslationModeEnum.bilingual => TranslationModeEnum.off,
+                        };
 
                         Prefs().setBookTranslationMode(widget.book.id, next);
                         epubPlayerKey.currentState?.setTranslationMode(next);
 
                         if (next != TranslationModeEnum.off) {
-                          // Ensure HUD is visible when enabling.
+                          // Ensure HUD is visible when enabling (paginated mode only).
                           epubPlayerKey.currentState?.showInlineTranslateHud();
                         }
 

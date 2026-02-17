@@ -1365,6 +1365,11 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   Widget _inlineTranslateHud() {
     if (!_translateHudVisible) return const SizedBox.shrink();
 
+    // Do not show translation HUD in scroll mode (user preference).
+    if (Prefs().pageTurnStyle == PageTurn.scroll) {
+      return const SizedBox.shrink();
+    }
+
     final mode = Prefs().getBookTranslationMode(widget.book.id);
     if (mode == TranslationModeEnum.off) return const SizedBox.shrink();
 
@@ -1400,6 +1405,22 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
                     ),
                   if (s.inflight > 0) const SizedBox(width: 8),
                   Text(text, style: Theme.of(context).textTheme.bodySmall),
+                  if (s.failed > 0 || s.inflight == 0) ...[
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () async {
+                        // Manual retry: force re-translate current + next viewport.
+                        try {
+                          await webViewController.evaluateJavascript(source: '''
+if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateForViewport) {
+  reader.view.forceTranslateForViewport();
+}
+''');
+                        } catch (_) {}
+                      },
+                      child: const Icon(Icons.refresh, size: 16),
+                    ),
+                  ],
                   const SizedBox(width: 6),
                   InkWell(
                     onTap: () {
@@ -1419,6 +1440,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   }
 
   void showInlineTranslateHud() {
+    // Scroll mode explicitly hides the HUD.
+    if (Prefs().pageTurnStyle == PageTurn.scroll) return;
+
     if (!_translateHudVisible) {
       setState(() {
         _translateHudVisible = true;

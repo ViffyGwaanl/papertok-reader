@@ -462,6 +462,7 @@
   "readingPageShowTranslateHud": "显示翻译进度",
   "readingPageToggleFullTextTranslation": "全文翻译开关",
   "readingPageOpenReadingSettings": "阅读设置",
+  "readingPageRetryTranslation": "重试翻译",
   "noteListShowBookmark": "显示书签",
   "readingBookmark": "书签",
   "noBookmarks": "没有书签",

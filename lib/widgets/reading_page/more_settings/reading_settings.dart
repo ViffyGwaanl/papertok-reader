@@ -10,6 +10,7 @@ import 'package:anx_reader/page/settings_page/subpage/fonts.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
+import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
 
@@ -365,16 +366,40 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.clearTranslation
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 onPressed: isReading
-                    ? () {
+                    ? () async {
+                        // Retry current viewport translations.
+                        try {
+                          await epubPlayerKey.currentState?.webViewController
+                              .evaluateJavascript(source: '''
+if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateForViewport) {
+  reader.view.forceTranslateForViewport();
+}
+''');
+                        } catch (_) {}
+
+                        // Show HUD when not in scroll mode.
                         epubPlayerKey.currentState?.showInlineTranslateHud();
                       }
                     : null,
-                icon: const Icon(Icons.visibility, size: 18),
-                label: Text(
-                  L10n.of(context).readingPageShowTranslateHud,
-                ),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: Text(L10n.of(context).readingPageRetryTranslation),
               ),
             ),
+            if (Prefs().pageTurnStyle != PageTurn.scroll)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: isReading
+                      ? () {
+                          epubPlayerKey.currentState?.showInlineTranslateHud();
+                        }
+                      : null,
+                  icon: const Icon(Icons.visibility, size: 18),
+                  label: Text(
+                    L10n.of(context).readingPageShowTranslateHud,
+                  ),
+                ),
+              ),
           ],
         ),
       );

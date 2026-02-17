@@ -462,6 +462,7 @@
   "readingPageShowTranslateHud": "Show translation progress",
   "readingPageToggleFullTextTranslation": "Toggle full-text translation",
   "readingPageOpenReadingSettings": "Reading settings",
+  "readingPageRetryTranslation": "Retry translation",
   "noteListShowBookmark": "Show Bookmark",
   "readingBookmark": "Bookmark",
   "noBookmarks": "No Bookmarks",

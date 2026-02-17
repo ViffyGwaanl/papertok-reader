@@ -80,16 +80,15 @@ export class Translator {
     
     if (oldMode !== mode) {
       // console.log(`Translation mode changed from ${oldMode} to ${mode}`)
-      
+
       if (mode === TranslationMode.OFF) {
         // Turn off translation
         this.#updateTranslationDisplay()
-      } else if (oldMode === TranslationMode.OFF) {
-        // Turn on translation - force translate visible elements and wait for completion
-        await this.#forceTranslateVisibleElements()
       } else {
-        // Just update display mode
+        // When enabling or switching mode, always try to translate the current
+        // viewport (and next viewport).
         this.#updateTranslationDisplay()
+        await this.forceTranslateForViewport()
       }
     }
 

@@ -612,6 +612,10 @@ export class View extends HTMLElement {
   clearTranslations() {
     this.#translator.clearTranslations()
   }
+
+  forceTranslateForViewport() {
+    return this.#translator.forceTranslateForViewport?.()
+  }
 }
 
 customElements.define('foliate-view', View)
