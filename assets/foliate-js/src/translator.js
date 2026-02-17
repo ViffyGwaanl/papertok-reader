@@ -39,15 +39,13 @@ export class Translator {
   #initializeObserver() {
     this.#observer = new IntersectionObserver(
       (entries) => {
-        // console.log(`IntersectionObserver triggered with ${entries.length} entries`)
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            // console.log('Element intersecting, translating:', entry.target.tagName, entry.target.textContent?.substring(0, 30))
-            this.#translateElement(entry.target).catch(error => 
-              console.warn('Translation failed in observer:', error)
-            )
-          }
-        })
+        if (this.#translationMode === TranslationMode.OFF) return
+        // If anything intersects, translate the current + next viewport.
+        if (entries.some((e) => e.isIntersecting)) {
+          this.forceTranslateForViewport().catch((error) => {
+            console.warn('Translation failed in observer:', error)
+          })
+        }
       },
       {
         // Only translate current viewport + the next viewport.
@@ -331,37 +329,72 @@ export class Translator {
   }
 
   async #forceTranslateVisibleElements() {
-    // console.log('Force translating visible elements')
-    
-    const translationPromises = []
-    
-    // Find elements in viewport and translate them immediately
+    // Prioritize current viewport first, then next viewport.
+    // Also limit the number of newly-started translations to reduce backlog
+    // when the user scrolls quickly.
+
+    const currentBottom = window.innerHeight
     const prefetchBottom = window.innerHeight * 2
 
-    this.observedElements.forEach(element => {
-      const rect = element.getBoundingClientRect()
-      const isVisible = rect.top < prefetchBottom && rect.bottom > 0
+    const current = []
+    const next = []
 
-      if (isVisible && !this.#translatedElements.has(element)) {
-        // console.log('Force translating visible element:', element)
-        const translationPromise = this.#translateElement(element).catch(error => {
-          console.warn('Force translation failed:', error)
-        })
-        translationPromises.push(translationPromise)
-      } else if (isVisible && this.#translatedElements.has(element)) {
-        // Element already translated, just update display
+    this.observedElements.forEach((element) => {
+      if (!element || !element.getBoundingClientRect) return
+
+      const rect = element.getBoundingClientRect()
+      if (rect.bottom <= 0) return
+
+      // Update display for already translated elements in the visible range.
+      if (rect.top < prefetchBottom && this.#translatedElements.has(element)) {
         const translationWrapper = element.querySelector('.translated-text')
         if (translationWrapper) {
           this.#updateElementDisplay(element, translationWrapper)
         }
+        return
+      }
+
+      // Skip already translated/inflight
+      if (this.#translatedElements.has(element)) return
+      if (this.#translatingElements.has(element)) return
+
+      // Current viewport
+      if (rect.top < currentBottom) {
+        current.push({ element, top: rect.top })
+        return
+      }
+
+      // Next viewport
+      if (rect.top < prefetchBottom) {
+        next.push({ element, top: rect.top })
       }
     })
-    
-    // Wait for all visible translations to complete
-    if (translationPromises.length > 0) {
-      // console.log(`Waiting for ${translationPromises.length} translations to complete`)
-      await Promise.allSettled(translationPromises)
-      // console.log('All visible translations completed')
+
+    current.sort((a, b) => a.top - b.top)
+    next.sort((a, b) => a.top - b.top)
+
+    const maxStartTotal = 12
+    const maxStartCurrent = 8
+
+    let started = 0
+
+    const startOne = (item) => {
+      started++
+      // Start but don't await (Flutter side enforces concurrency).
+      this.#translateElement(item.element).catch((error) => {
+        console.warn('Force translation failed:', error)
+      })
+    }
+
+    for (const item of current) {
+      if (started >= maxStartTotal) break
+      if (started >= maxStartCurrent) break
+      startOne(item)
+    }
+
+    for (const item of next) {
+      if (started >= maxStartTotal) break
+      startOne(item)
     }
   }
 
