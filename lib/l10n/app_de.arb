@@ -829,7 +829,7 @@
   "commonSaveSuccess": "Erfolgreich gespeichert",
   "aiShowAtBottom": "Unten anzeigen",
   "aiShowAtRight": "Rechts anzeigen",
-  "navBarPapers": "Papers",
+  "navBarPapers": "PaperTok",
   "settingsHomeNavigation": "Home navigation",
   "settingsHomeNavigationSubtitle": "Reorder home tabs and toggle visibility",
   "papersImportPdf": "Import PDF",
@@ -851,5 +851,7 @@
   "papersEpubEditionDefault": "Default",
   "papersEpubEditionEn": "English",
   "papersEpubEditionZh": "Chinese",
-  "papersEpubEditionBilingual": "Bilingual"
+  "papersEpubEditionBilingual": "Bilingual",
+  "papersTabExplain": "Explain",
+  "papersTabOriginal": "Original"
 }

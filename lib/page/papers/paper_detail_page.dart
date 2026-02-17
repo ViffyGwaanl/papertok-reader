@@ -1,10 +1,14 @@
 import 'dart:io';
 
+import 'package:anx_reader/dao/book.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/service/book.dart';
+import 'package:anx_reader/service/md5_service.dart';
 import 'package:anx_reader/service/papertok/models.dart';
 import 'package:anx_reader/service/papertok/papertok_api.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
+import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -157,7 +161,7 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
       if (!mounted) return;
       closeDialogIfOpen();
 
-      importBookList([File(savePath)], context, ref);
+      await _importAndOpen(File(savePath));
     } catch (e) {
       if (!mounted) return;
       closeDialogIfOpen();
@@ -177,6 +181,81 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
           content: Text(isCancelled
               ? L10n.of(context).papersCancelled
               : L10n.of(context).papersDownloadFailed(e.toString())),
+        ),
+      );
+    }
+  }
+
+  Future<void> _importAndOpen(File file) async {
+    // Calculate md5 to locate the imported book in DB.
+    final md5 = await MD5Service.calculateFileMd5(file.path);
+    if (!mounted) return;
+
+    bool dialogClosed = false;
+    BuildContext? dialogContext;
+
+    void closeDialogIfOpen() {
+      if (dialogClosed) return;
+      dialogClosed = true;
+      final ctx = dialogContext;
+      if (ctx != null && Navigator.of(ctx).canPop()) {
+        Navigator.of(ctx).pop();
+      }
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        dialogContext = ctx;
+        return AlertDialog(
+          title: Text(L10n.of(context).importing),
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  path.basename(file.path),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      await getBookMetadata(file, md5: md5, ref: ref);
+
+      // Prefer lookup by md5; fallback to the most recently updated book.
+      Book? book;
+      if (md5 != null && md5.trim().isNotEmpty) {
+        book = await bookDao.getBookByMd5(md5);
+      }
+      if (book == null) {
+        final books = await bookDao.selectNotDeleteBooks();
+        if (books.isNotEmpty) book = books.first;
+      }
+
+      if (!mounted) return;
+      closeDialogIfOpen();
+
+      if (book != null) {
+        await pushToReadingPage(ref, context, book);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      closeDialogIfOpen();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(L10n.of(context).importFailed(e.toString())),
         ),
       );
     }
@@ -285,134 +364,181 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('')),
-      body: FutureBuilder<PaperTokDetail>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(L10n.of(context).papersLoadFailed),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: () {
-                      setState(() {
-                        _future = PaperTokApi.instance
-                            .fetchPaperDetail(widget.paperId, lang: 'zh');
-                      });
-                    },
-                    child: Text(L10n.of(context).commonRetry),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final p = snapshot.data!;
-          final api = PaperTokApi.instance;
-
-          Widget imageCarousel() {
-            final imgs = p.carouselImages;
-            if (imgs.isEmpty) return const SizedBox.shrink();
-
-            return SizedBox(
-              height: 260,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: imgs.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final url = api.resolveUrl(imgs[index]);
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: CachedNetworkImage(
-                      imageUrl: url,
-                      width: 160,
-                      fit: BoxFit.cover,
-                      placeholder: (context, _) => Container(
-                        width: 160,
-                        color: Theme.of(context).colorScheme.surfaceContainer,
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                      errorWidget: (context, _, __) => Container(
-                        width: 160,
-                        color: Theme.of(context).colorScheme.surfaceContainer,
-                        child: const Icon(Icons.broken_image_outlined),
-                      ),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(L10n.of(context).navBarPapers),
+          bottom: TabBar(
+            tabs: [
+              Tab(text: L10n.of(context).papersTabExplain),
+              Tab(text: L10n.of(context).papersTabOriginal),
+            ],
+          ),
+        ),
+        body: FutureBuilder<PaperTokDetail>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError || !snapshot.hasData) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(L10n.of(context).papersLoadFailed),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () {
+                        setState(() {
+                          _future = PaperTokApi.instance
+                              .fetchPaperDetail(widget.paperId, lang: 'zh');
+                        });
+                      },
+                      child: Text(L10n.of(context).commonRetry),
                     ),
-                  );
-                },
-              ),
-            );
-          }
-
-          final hasPdf = (p.pdfLocalUrl ?? '').trim().isNotEmpty ||
-              (p.pdfUrl ?? '').trim().isNotEmpty;
-          final hasEpub = (p.bestEpubUrl ?? '').trim().isNotEmpty;
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              Text(
-                (p.displayTitle != null && p.displayTitle!.trim().isNotEmpty)
-                    ? p.displayTitle!
-                    : p.title,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              if ((p.oneLiner ?? '').trim().isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(p.oneLiner!,
-                    style: Theme.of(context).textTheme.bodyMedium),
-              ],
-              const SizedBox(height: 16),
-              imageCarousel(),
-              if ((p.contentExplain ?? '').trim().isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  p.contentExplain!,
-                  style: Theme.of(context).textTheme.bodyLarge,
+                  ],
                 ),
-              ],
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              );
+            }
+
+            final p = snapshot.data!;
+            final api = PaperTokApi.instance;
+
+            Widget imageCarousel() {
+              final imgs = p.carouselImages;
+              if (imgs.isEmpty) return const SizedBox.shrink();
+
+              return SizedBox(
+                height: 260,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: imgs.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final url = api.resolveUrl(imgs[index]);
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: CachedNetworkImage(
+                        imageUrl: url,
+                        width: 160,
+                        fit: BoxFit.cover,
+                        placeholder: (context, _) => Container(
+                          width: 160,
+                          color: Theme.of(context).colorScheme.surfaceContainer,
+                          child:
+                              const Center(child: CircularProgressIndicator()),
+                        ),
+                        errorWidget: (context, _, __) => Container(
+                          width: 160,
+                          color: Theme.of(context).colorScheme.surfaceContainer,
+                          child: const Icon(Icons.broken_image_outlined),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }
+
+            final hasPdf = (p.pdfLocalUrl ?? '').trim().isNotEmpty ||
+                (p.pdfUrl ?? '').trim().isNotEmpty;
+            final hasEpub = (p.bestEpubUrl ?? '').trim().isNotEmpty;
+
+            Widget explainTab() {
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
+                  Text(
+                    (p.displayTitle != null &&
+                            p.displayTitle!.trim().isNotEmpty)
+                        ? p.displayTitle!
+                        : p.title,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  if ((p.oneLiner ?? '').trim().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      p.oneLiner!,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  imageCarousel(),
+                  if ((p.contentExplain ?? '').trim().isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    StyledMarkdown(data: p.contentExplain!),
+                  ],
+                ],
+              );
+            }
+
+            Widget originalTab() {
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
+                children: [
+                  ListTile(
+                    title: Text(
+                      (p.displayTitle != null &&
+                              p.displayTitle!.trim().isNotEmpty)
+                          ? p.displayTitle!
+                          : p.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: (p.externalId != null &&
+                            p.externalId!.trim().isNotEmpty)
+                        ? Text(p.externalId!)
+                        : null,
+                    leading: const Icon(Icons.article_outlined),
+                  ),
+                  const Divider(height: 1),
+                  if (hasEpub)
+                    ListTile(
+                      leading: const Icon(Icons.menu_book_outlined),
+                      title: Text(L10n.of(context).papersImportEpub),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _showEpubPicker(p),
+                    ),
+                  if (hasPdf)
+                    ListTile(
+                      leading: const Icon(Icons.picture_as_pdf_outlined),
+                      title: Text(L10n.of(context).papersImportPdf),
+                      trailing: const Icon(Icons.download_outlined),
+                      onTap: () => _downloadAndImportPdf(p),
+                    ),
                   if ((p.url ?? '').trim().isNotEmpty)
-                    OutlinedButton.icon(
-                      onPressed: () async {
+                    ListTile(
+                      leading: const Icon(Icons.link),
+                      title: Text(
+                          L10n.of(context).readingPageOpenExternalLinkTitle),
+                      subtitle: Text(
+                        p.url!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () async {
                         final uri = Uri.tryParse(p.url!);
                         if (uri != null) {
                           await launchUrl(uri,
                               mode: LaunchMode.externalApplication);
                         }
                       },
-                      icon: const Icon(Icons.link),
-                      label: Text(
-                          L10n.of(context).readingPageOpenExternalLinkAction),
                     ),
-                  FilledButton.icon(
-                    onPressed: hasPdf ? () => _downloadAndImportPdf(p) : null,
-                    icon: const Icon(Icons.download_outlined),
-                    label: Text(L10n.of(context).papersImportPdf),
-                  ),
-                  FilledButton.icon(
-                    onPressed: hasEpub ? () => _showEpubPicker(p) : null,
-                    icon: const Icon(Icons.download_for_offline_outlined),
-                    label: Text(L10n.of(context).papersImportEpub),
-                  ),
                 ],
-              ),
-            ],
-          );
-        },
+              );
+            }
+
+            return TabBarView(
+              children: [
+                explainTab(),
+                originalTab(),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

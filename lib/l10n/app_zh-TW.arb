@@ -829,7 +829,7 @@
   "commonSaveSuccess": "儲存成功",
   "aiShowAtBottom": "在底部顯示",
   "aiShowAtRight": "在右側顯示",
-  "navBarPapers": "論文",
+  "navBarPapers": "PaperTok",
   "settingsHomeNavigation": "首頁導覽",
   "settingsHomeNavigationSubtitle": "調整首頁標籤順序，並設定顯示/隱藏",
   "papersImportPdf": "匯入書架（PDF）",
@@ -851,5 +851,7 @@
   "papersEpubEditionDefault": "預設",
   "papersEpubEditionEn": "英文",
   "papersEpubEditionZh": "中文",
-  "papersEpubEditionBilingual": "雙語"
+  "papersEpubEditionBilingual": "雙語",
+  "papersTabExplain": "講解",
+  "papersTabOriginal": "原文"
 }

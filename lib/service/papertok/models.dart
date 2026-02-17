@@ -77,6 +77,7 @@ class PaperTokDetail {
   final int id;
   final String title;
   final String? displayTitle;
+  final String? externalId;
   final String? url;
   final String? oneLiner;
   final String? contentExplain;
@@ -93,6 +94,7 @@ class PaperTokDetail {
     required this.id,
     required this.title,
     this.displayTitle,
+    this.externalId,
     this.url,
     this.oneLiner,
     this.contentExplain,
@@ -130,6 +132,7 @@ class PaperTokDetail {
       id: (json['id'] as num).toInt(),
       title: (json['title'] as String?) ?? '',
       displayTitle: json['display_title'] as String?,
+      externalId: json['external_id'] as String?,
       url: json['url'] as String?,
       oneLiner: json['one_liner'] as String?,
       contentExplain: json['content_explain'] as String?,

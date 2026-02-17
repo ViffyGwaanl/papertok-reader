@@ -829,7 +829,7 @@
   "commonSaveSuccess": "保存成功",
   "aiShowAtBottom": "在底部显示",
   "aiShowAtRight": "在右侧显示",
-  "navBarPapers": "论文",
+  "navBarPapers": "PaperTok",
   "settingsHomeNavigation": "首页导航",
   "settingsHomeNavigationSubtitle": "调整首页标签顺序，并设置显示/隐藏",
   "papersImportPdf": "导入书架（PDF）",
@@ -851,5 +851,7 @@
   "papersEpubEditionDefault": "默认",
   "papersEpubEditionEn": "英文",
   "papersEpubEditionZh": "中文",
-  "papersEpubEditionBilingual": "双语"
+  "papersEpubEditionBilingual": "双语",
+  "papersTabExplain": "讲解",
+  "papersTabOriginal": "原文"
 }

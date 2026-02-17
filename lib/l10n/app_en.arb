@@ -915,7 +915,7 @@
   "aiChatRegenerateFromHereConfirmTitle": "Create a branch from here?",
   "aiChatRegenerateFromHereConfirmBody": "This will create a new conversation branch from this message. The old version and its subsequent conversation will be kept, and you can switch back via the left/right variant switcher. Continue?",
   "aiChatEditUserMessageTitle": "Edit message",
-  "navBarPapers": "Papers",
+  "navBarPapers": "PaperTok",
   "settingsHomeNavigation": "Home navigation",
   "settingsHomeNavigationSubtitle": "Reorder home tabs and toggle visibility",
   "papersImportPdf": "Import PDF",
@@ -937,5 +937,7 @@
   "papersEpubEditionDefault": "Default",
   "papersEpubEditionEn": "English",
   "papersEpubEditionZh": "Chinese",
-  "papersEpubEditionBilingual": "Bilingual"
+  "papersEpubEditionBilingual": "Bilingual",
+  "papersTabExplain": "Explain",
+  "papersTabOriginal": "Original"
 }
