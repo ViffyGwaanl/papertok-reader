@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
 import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_cache.dart';
 import 'package:anx_reader/service/translate/index.dart';
@@ -57,7 +58,13 @@ class FullTextTranslateRuntime {
     }
   }
 
-  final Map<String, Future<String>> _inflight = {};
+  final Map<
+      String,
+      Future<
+          ({
+            String text,
+            InlineFullTextTranslateFailureReason? failureReason
+          })>> _inflight = {};
 
   String normalizeForCacheKey(String text) => _normalizeForCacheKey(text);
 
@@ -78,7 +85,8 @@ class FullTextTranslateRuntime {
         .toString();
   }
 
-  Future<String> translate(
+  Future<({String text, InlineFullTextTranslateFailureReason? failureReason})>
+      translateWithMeta(
     TranslateService service,
     String text,
     LangListEnum from,
@@ -90,7 +98,12 @@ class FullTextTranslateRuntime {
     _syncConcurrencyFromPrefs();
 
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return '';
+    if (trimmed.isEmpty) {
+      return (
+        text: '',
+        failureReason: InlineFullTextTranslateFailureReason.unknown
+      );
+    }
 
     // Cache key MUST include bookId to enable per-book clear.
     final key = buildCacheKey(
@@ -104,7 +117,10 @@ class FullTextTranslateRuntime {
     if (enableCache) {
       final cached = await FullTextTranslateCache.get(bookId, key);
       if (cached != null && cached.isNotEmpty) {
-        return cached;
+        // Guard: old cache entries might contain original/echo content.
+        if (!_looksUntranslated(text, cached)) {
+          return (text: cached, failureReason: null);
+        }
       }
     }
 
@@ -116,13 +132,54 @@ class FullTextTranslateRuntime {
     final future = _semaphore.withPermit(() async {
       // Extra retry layer for providers that return error strings (not exceptions).
       const maxAttempts = 3;
+
+      InlineFullTextTranslateFailureReason classifyFailure({
+        required bool looksUntranslated,
+        required String lower,
+        required String sanitized,
+      }) {
+        if (looksUntranslated) {
+          return InlineFullTextTranslateFailureReason.untranslatedEcho;
+        }
+        if (lower.contains('authentication failed') ||
+            lower.contains('unauthorized') ||
+            lower.contains('invalid api key') ||
+            lower.contains('401')) {
+          return InlineFullTextTranslateFailureReason.auth;
+        }
+        if (lower.contains('rate limit') || lower.contains('429')) {
+          return InlineFullTextTranslateFailureReason.rateLimit;
+        }
+        if (lower.contains('ai service not configured') ||
+            lower.contains('ai 服务未配置')) {
+          return InlineFullTextTranslateFailureReason.notConfigured;
+        }
+        if (lower.startsWith('error:') ||
+            lower.contains('translate error') ||
+            lower.contains('翻译错误')) {
+          return InlineFullTextTranslateFailureReason.translateError;
+        }
+        if (sanitized.trim().isEmpty) {
+          return InlineFullTextTranslateFailureReason.unknown;
+        }
+        return InlineFullTextTranslateFailureReason.unknown;
+      }
+
       for (var attempt = 0; attempt < maxAttempts; attempt++) {
-        final result = await service.provider.translateTextOnly(
-          text,
-          from,
-          to,
-          contextText: contextText,
-        );
+        String result;
+        try {
+          result = await service.provider.translateTextOnly(
+            text,
+            from,
+            to,
+            contextText: contextText,
+          );
+        } catch (_) {
+          return (
+            text: '',
+            failureReason: InlineFullTextTranslateFailureReason.exception,
+          );
+        }
 
         final sanitized = sanitize(result);
 
@@ -144,7 +201,7 @@ class FullTextTranslateRuntime {
           if (enableCache) {
             await FullTextTranslateCache.set(bookId, key, sanitized);
           }
-          return sanitized;
+          return (text: sanitized, failureReason: null);
         }
 
         if (attempt < maxAttempts - 1) {
@@ -159,10 +216,20 @@ class FullTextTranslateRuntime {
         }
 
         // Give up.
-        return '';
+        return (
+          text: '',
+          failureReason: classifyFailure(
+            looksUntranslated: looksUntranslated,
+            lower: lower,
+            sanitized: sanitized,
+          ),
+        );
       }
 
-      return '';
+      return (
+        text: '',
+        failureReason: InlineFullTextTranslateFailureReason.unknown
+      );
     });
 
     _inflight[key] = future;
@@ -172,6 +239,27 @@ class FullTextTranslateRuntime {
     } finally {
       _inflight.remove(key);
     }
+  }
+
+  Future<String> translate(
+    TranslateService service,
+    String text,
+    LangListEnum from,
+    LangListEnum to, {
+    required int bookId,
+    String? contextText,
+    bool enableCache = true,
+  }) async {
+    final out = await translateWithMeta(
+      service,
+      text,
+      from,
+      to,
+      bookId: bookId,
+      contextText: contextText,
+      enableCache: enableCache,
+    );
+    return out.text;
   }
 
   Future<void> clearBook(int bookId) async {

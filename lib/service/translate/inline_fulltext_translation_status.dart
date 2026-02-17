@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
 import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
 import 'package:flutter/foundation.dart';
 
@@ -21,6 +22,9 @@ class InlineFullTextTranslationStatusBus {
   final ValueNotifier<InlineFullTextTranslationProgress> progress =
       ValueNotifier(InlineFullTextTranslationProgress.idle());
 
+  final ValueNotifier<Map<InlineFullTextTranslateFailureReason, int>>
+      failureReasons = ValueNotifier(const {});
+
   void reset() {
     final now = DateTime.now().millisecondsSinceEpoch;
     final prev = progress.value;
@@ -28,6 +32,7 @@ class InlineFullTextTranslationStatusBus {
       generation: prev.generation + 1,
       updatedAtMs: now,
     );
+    failureReasons.value = const {};
   }
 
   void update({
@@ -35,6 +40,7 @@ class InlineFullTextTranslationStatusBus {
     required int inflight,
     required int done,
     required int failed,
+    Map<InlineFullTextTranslateFailureReason, int>? failureReasons,
   }) {
     final now = DateTime.now().millisecondsSinceEpoch;
     final prev = progress.value;
@@ -51,5 +57,9 @@ class InlineFullTextTranslationStatusBus {
       generation: prev.generation + 1,
       updatedAtMs: now,
     );
+
+    if (failureReasons != null) {
+      this.failureReasons.value = Map.unmodifiable(failureReasons);
+    }
   }
 }

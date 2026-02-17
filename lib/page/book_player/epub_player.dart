@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/book.dart';
 import 'package:anx_reader/dao/book_note.dart';
+import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
 import 'package:anx_reader/enums/page_turn_mode.dart';
 import 'package:anx_reader/enums/reading_info.dart';
 import 'package:anx_reader/enums/translation_mode.dart';
@@ -108,7 +109,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   // Inline translation HUD (per relocated page)
   final ValueNotifier<_InlineTranslateHudState> _translateHud =
       ValueNotifier(const _InlineTranslateHudState());
-  final Map<String, _InlineTranslateHudItem> _translateHudItems = <String, _InlineTranslateHudItem>{};
+  final Map<String, _InlineTranslateHudEntry> _translateHudItems =
+      <String, _InlineTranslateHudEntry>{};
   bool _translateHudVisible = true;
 
   // to know anytime if we are on top of navigation stack
@@ -862,7 +864,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         _hudMarkStart(cacheKey: cacheKey);
 
         try {
-          final result = await FullTextTranslateRuntime.instance.translate(
+          final out = await FullTextTranslateRuntime.instance.translateWithMeta(
             service,
             text,
             from,
@@ -870,15 +872,22 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             bookId: widget.book.id,
           );
 
-          if (_looksLikeTranslateFailure(result)) {
-            _hudMarkFail(cacheKey: cacheKey);
+          if (out.text.trim().isEmpty || _looksLikeTranslateFailure(out.text)) {
+            _hudMarkFail(
+              cacheKey: cacheKey,
+              reason: out.failureReason ??
+                  InlineFullTextTranslateFailureReason.translateError,
+            );
             return '';
           }
 
           _hudMarkDone(cacheKey: cacheKey);
-          return result;
+          return out.text;
         } catch (e) {
-          _hudMarkFail(cacheKey: cacheKey);
+          _hudMarkFail(
+            cacheKey: cacheKey,
+            reason: InlineFullTextTranslateFailureReason.exception,
+          );
           AnxLog.severe('Translation error: $e');
           return '';
         } finally {
@@ -922,15 +931,22 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           _translateHudVisible = true;
           _hudMarkStart(cacheKey: cacheKey);
 
-          final futures = <Future<String>>[];
+          final futures = <Future<({String text, InlineFullTextTranslateFailureReason? failureReason})>>[];
           for (final seg in rawSegments) {
             if (seg is! Map) {
-              futures.add(Future.value(''));
+              futures.add(
+                Future.value(
+                  (
+                    text: '',
+                    failureReason: InlineFullTextTranslateFailureReason.unknown,
+                  ),
+                ),
+              );
               continue;
             }
             final segText = seg['text']?.toString() ?? '';
             futures.add(
-              FullTextTranslateRuntime.instance.translate(
+              FullTextTranslateRuntime.instance.translateWithMeta(
                 service,
                 segText,
                 from,
@@ -940,11 +956,28 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             );
           }
 
-          final results = await Future.wait(futures);
-          final hasAny = results.any((e) => e.trim().isNotEmpty);
+          final outcomes = await Future.wait(futures);
+          final results = outcomes.map((e) => e.text).toList(growable: false);
 
+          final hasAny = results.any((e) => e.trim().isNotEmpty);
           if (!hasAny) {
-            _hudMarkFail(cacheKey: cacheKey);
+            // Pick the most common failure reason among segments.
+            final counts = <InlineFullTextTranslateFailureReason, int>{};
+            for (final o in outcomes) {
+              final r = o.failureReason ?? InlineFullTextTranslateFailureReason.unknown;
+              counts[r] = (counts[r] ?? 0) + 1;
+            }
+            InlineFullTextTranslateFailureReason best =
+                InlineFullTextTranslateFailureReason.unknown;
+            var bestCount = -1;
+            for (final entry in counts.entries) {
+              if (entry.value > bestCount) {
+                best = entry.key;
+                bestCount = entry.value;
+              }
+            }
+
+            _hudMarkFail(cacheKey: cacheKey, reason: best);
           } else {
             _hudMarkDone(cacheKey: cacheKey);
           }
@@ -1322,13 +1355,13 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   void _hudMarkStart({required String cacheKey}) {
     final item = _translateHudItems[cacheKey];
     if (item == null) {
-      _translateHudItems[cacheKey] = _InlineTranslateHudItem.inflight;
+      _translateHudItems[cacheKey] = _InlineTranslateHudEntry.inflight;
     } else {
       // If already inflight/done/failed, do not double-count inflight.
-      if (item == _InlineTranslateHudItem.inflight) return;
-      if (item == _InlineTranslateHudItem.done) return;
+      if (item.status == _InlineTranslateHudItemStatus.inflight) return;
+      if (item.status == _InlineTranslateHudItemStatus.done) return;
       // failed -> retry: move to inflight
-      _translateHudItems[cacheKey] = _InlineTranslateHudItem.inflight;
+      _translateHudItems[cacheKey] = _InlineTranslateHudEntry.inflight;
     }
     _recomputeHud();
   }
@@ -1336,22 +1369,28 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   void _hudMarkDone({required String cacheKey}) {
     final item = _translateHudItems[cacheKey];
     if (item == null) return;
-    _translateHudItems[cacheKey] = _InlineTranslateHudItem.done;
+    _translateHudItems[cacheKey] = _InlineTranslateHudEntry.done;
     _recomputeHud();
   }
 
-  void _hudMarkFail({required String cacheKey}) {
+  void _hudMarkFail({
+    required String cacheKey,
+    InlineFullTextTranslateFailureReason reason =
+        InlineFullTextTranslateFailureReason.unknown,
+  }) {
     final item = _translateHudItems[cacheKey];
     if (item == null) return;
-    _translateHudItems[cacheKey] = _InlineTranslateHudItem.failed;
+    _translateHudItems[cacheKey] = _InlineTranslateHudEntry.failed(reason);
     _recomputeHud();
   }
 
   void _hudMarkFinishInflight({required String cacheKey}) {
     final item = _translateHudItems[cacheKey];
-    if (item == _InlineTranslateHudItem.inflight) {
+    if (item?.status == _InlineTranslateHudItemStatus.inflight) {
       // If we end inflight without marking done/fail, treat as failed.
-      _translateHudItems[cacheKey] = _InlineTranslateHudItem.failed;
+      _translateHudItems[cacheKey] = _InlineTranslateHudEntry.failed(
+        InlineFullTextTranslateFailureReason.unknown,
+      );
       _recomputeHud();
     }
   }
@@ -1361,16 +1400,21 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     var done = 0;
     var failed = 0;
 
+    final reasonCounts = <InlineFullTextTranslateFailureReason, int>{};
+
     for (final v in _translateHudItems.values) {
-      switch (v) {
-        case _InlineTranslateHudItem.inflight:
+      switch (v.status) {
+        case _InlineTranslateHudItemStatus.inflight:
           inflight++;
           break;
-        case _InlineTranslateHudItem.done:
+        case _InlineTranslateHudItemStatus.done:
           done++;
           break;
-        case _InlineTranslateHudItem.failed:
+        case _InlineTranslateHudItemStatus.failed:
           failed++;
+          final reason =
+              v.failureReason ?? InlineFullTextTranslateFailureReason.unknown;
+          reasonCounts[reason] = (reasonCounts[reason] ?? 0) + 1;
           break;
       }
     }
@@ -1390,6 +1434,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       inflight: inflight,
       done: done,
       failed: failed,
+      failureReasons: reasonCounts,
     );
   }
 
@@ -1523,10 +1568,36 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateFo
   }
 }
 
-enum _InlineTranslateHudItem {
+enum _InlineTranslateHudItemStatus {
   inflight,
   done,
   failed,
+}
+
+class _InlineTranslateHudEntry {
+  const _InlineTranslateHudEntry({
+    required this.status,
+    this.failureReason,
+  });
+
+  final _InlineTranslateHudItemStatus status;
+  final InlineFullTextTranslateFailureReason? failureReason;
+
+  static const inflight = _InlineTranslateHudEntry(
+    status: _InlineTranslateHudItemStatus.inflight,
+  );
+  static const done = _InlineTranslateHudEntry(
+    status: _InlineTranslateHudItemStatus.done,
+  );
+
+  static _InlineTranslateHudEntry failed(
+    InlineFullTextTranslateFailureReason reason,
+  ) {
+    return _InlineTranslateHudEntry(
+      status: _InlineTranslateHudItemStatus.failed,
+      failureReason: reason,
+    );
+  }
 }
 
 class _InlineTranslateHudState {

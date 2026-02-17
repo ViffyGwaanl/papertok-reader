@@ -9,6 +9,7 @@ import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/page/settings_page/subpage/fonts.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
 import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
 import 'package:anx_reader/service/translate/inline_fulltext_translation_status.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
@@ -407,15 +408,74 @@ if (typeof reader !== 'undefined' && reader.view && reader.view.forceTranslateFo
                         )
                       : L10n.of(context).settingsTranslateBackgroundStatusIdle;
 
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      '${L10n.of(context).settingsTranslateBackgroundStatus}: $status',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: Colors.grey),
-                    ),
+                  return ValueListenableBuilder<
+                      Map<InlineFullTextTranslateFailureReason, int>>(
+                    valueListenable:
+                        InlineFullTextTranslationStatusBus.instance.failureReasons,
+                    builder: (context, reasons, _) {
+                      String? reasonText;
+                      if (p.failed > 0 && reasons.isNotEmpty) {
+                        final sorted = reasons.entries.toList(growable: false)
+                          ..sort((a, b) => b.value.compareTo(a.value));
+
+                        final top = sorted.take(3).map((e) {
+                          final label = switch (e.key) {
+                            InlineFullTextTranslateFailureReason.rateLimit =>
+                              L10n.of(context)
+                                  .readingPageTranslateFailureReasonRateLimit,
+                            InlineFullTextTranslateFailureReason.auth =>
+                              L10n.of(context)
+                                  .readingPageTranslateFailureReasonAuth,
+                            InlineFullTextTranslateFailureReason.notConfigured =>
+                              L10n.of(context)
+                                  .readingPageTranslateFailureReasonNotConfigured,
+                            InlineFullTextTranslateFailureReason.untranslatedEcho =>
+                              L10n.of(context)
+                                  .readingPageTranslateFailureReasonUntranslated,
+                            InlineFullTextTranslateFailureReason.translateError =>
+                              L10n.of(context)
+                                  .readingPageTranslateFailureReasonTranslateError,
+                            InlineFullTextTranslateFailureReason.exception =>
+                              L10n.of(context)
+                                  .readingPageTranslateFailureReasonException,
+                            InlineFullTextTranslateFailureReason.unknown =>
+                              L10n.of(context)
+                                  .readingPageTranslateFailureReasonUnknown,
+                          };
+                          return '$label×${e.value}';
+                        }).join(' · ');
+
+                        reasonText =
+                            '${L10n.of(context).readingPageTranslateFailureReasons}: $top';
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${L10n.of(context).settingsTranslateBackgroundStatus}: $status',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: Colors.grey),
+                            ),
+                            if (reasonText != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  reasonText,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: Colors.grey),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
                   );
                 },
               ),
