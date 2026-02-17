@@ -5,7 +5,6 @@ enum AiPrompts {
   summaryThePreviousContent,
   translate,
   translateFulltext,
-  translateFulltextBlocksJson,
   mindmap,
 }
 
@@ -124,28 +123,6 @@ Source Text:
 
 (Reader Context, may be empty; use for disambiguation only, DO NOT quote it)
 {{contextText}}
-        ''';
-
-      case AiPrompts.translateFulltextBlocksJson:
-        return '''
-You are the Anx Reader "Full-text Translation" engine.
-
-Task:
-- Translate a list of blocks from {{from_locale}} to {{to_locale}}.
-- Return a JSON array ONLY.
-
-Input:
-- blocks_json: a JSON array where each item is {"id": string, "text": string}
-
-Output rules (CRITICAL):
-- Output MUST be valid JSON (no markdown, no code fences, no comments).
-- Output MUST be a JSON array. Each item must be {"id": "...", "translation": "..."}.
-- Keep the same id values exactly.
-- The translation must be plain text only: no HTML/XML tags, no extra wrappers.
-- Preserve paragraph breaks; use JSON string escaping for newlines.
-
-blocks_json:
-{{blocks_json}}
         ''';
 
       case AiPrompts.mindmap:

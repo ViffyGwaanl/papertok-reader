@@ -101,21 +101,43 @@ class FullTextTranslateRuntime {
     }
 
     final future = _semaphore.withPermit(() async {
-      final result = await service.provider.translateTextOnly(
-        text,
-        from,
-        to,
-        contextText: contextText,
-      );
+      // Extra retry layer for providers that return error strings (not exceptions).
+      const maxAttempts = 2;
+      for (var attempt = 0; attempt < maxAttempts; attempt++) {
+        final result = await service.provider.translateTextOnly(
+          text,
+          from,
+          to,
+          contextText: contextText,
+        );
 
-      final sanitized = sanitize(result);
+        final sanitized = sanitize(result);
 
-      // Persist even if empty? No.
-      if (enableCache && sanitized.trim().isNotEmpty) {
-        await FullTextTranslateCache.set(bookId, key, sanitized);
+        final lower = sanitized.trim().toLowerCase();
+        final looksBad = sanitized.trim().isEmpty ||
+            lower.startsWith('error:') ||
+            lower.contains('authentication failed') ||
+            lower.contains('rate limit') ||
+            lower.contains('ai service not configured') ||
+            lower.contains('ai 服务未配置');
+
+        if (!looksBad) {
+          if (enableCache) {
+            await FullTextTranslateCache.set(bookId, key, sanitized);
+          }
+          return sanitized;
+        }
+
+        if (attempt < maxAttempts - 1) {
+          await Future<void>.delayed(Duration(milliseconds: 120 * (attempt + 1)));
+          continue;
+        }
+
+        // Give up.
+        return '';
       }
 
-      return sanitized;
+      return '';
     });
 
     _inflight[key] = future;

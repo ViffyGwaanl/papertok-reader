@@ -144,27 +144,6 @@ PromptTemplatePayload generatePromptTranslateFulltext(
   );
 }
 
-PromptTemplatePayload generatePromptTranslateFulltextBlocksJson(
-  String blocksJson,
-  String toLocale,
-  String fromLocale,
-) {
-  final prompt = Prefs().getAiPrompt(AiPrompts.translateFulltextBlocksJson);
-  final normalized = _normalizePrompt(prompt);
-  final template = ChatPromptTemplate.fromPromptMessages([
-    HumanChatMessagePromptTemplate.fromTemplate(normalized),
-  ]);
-  return PromptTemplatePayload(
-    template: template,
-    variables: {
-      'blocks_json': blocksJson.trim(),
-      'to_locale': toLocale,
-      'from_locale': fromLocale,
-    },
-    identifier: AiPrompts.translateFulltextBlocksJson,
-  );
-}
-
 String _normalizePrompt(String template) {
   return template.replaceAll('{{', '{').replaceAll('}}', '}');
 }

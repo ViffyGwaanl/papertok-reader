@@ -29,8 +29,6 @@ import 'package:anx_reader/providers/chapter_content_bridge.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/book_player/book_player_server.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
-import 'package:anx_reader/service/translate/inline_fulltext_translate_engine.dart';
-import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
 import 'package:anx_reader/providers/toc_search.dart';
 import 'package:anx_reader/service/tts/models/tts_sentence.dart';
 import 'package:anx_reader/utils/coordinates_to_part.dart';
@@ -81,11 +79,6 @@ class EpubPlayer extends ConsumerStatefulWidget {
 class EpubPlayerState extends ConsumerState<EpubPlayer>
     with TickerProviderStateMixin {
   late InAppWebViewController webViewController;
-  late InlineFullTextTranslateEngine _inlineTranslateEngine;
-  final ValueNotifier<InlineFullTextTranslationProgress>
-      _inlineTranslateProgress =
-      ValueNotifier(InlineFullTextTranslationProgress.idle());
-  bool _inlineTranslateHudVisible = true;
   late ContextMenu contextMenu;
   String cfi = '';
   double percentage = 0.0;
@@ -109,6 +102,12 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   String? _lastSelectionContextText;
   bool _selectionClearLocked = false;
   bool _selectionClearPending = false;
+
+  // Inline translation HUD (per relocated page)
+  final ValueNotifier<_InlineTranslateHudState> _translateHud =
+      ValueNotifier(const _InlineTranslateHudState());
+  final Set<String> _translateHudSeenKeys = <String>{};
+  bool _translateHudVisible = true;
 
   // to know anytime if we are on top of navigation stack
   bool get _isTopOfNavigationStack =>
@@ -140,6 +139,12 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         reader.view.setTranslationMode('${mode.code}');
       }
       ''');
+
+    // Reset HUD stats when toggling translation mode.
+    _resetTranslateHud();
+    if (mode != TranslationModeEnum.off) {
+      _translateHudVisible = true;
+    }
   }
 
   Future<void> goToPercentage(double value) async {
@@ -602,6 +607,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         callback: (args) {
           Map<String, dynamic> location = args[0];
           if (cfi == location['cfi']) return;
+
+          // New page/location -> reset HUD stats.
+          _resetTranslateHud();
           // if (chapterHref != location['chapterHref']) {
           //   refreshToc();
           // }
@@ -812,56 +820,51 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         setState(() {});
       },
     );
-    // Backward compatible single-text handler (fallback)
     controller.addJavaScriptHandler(
       handlerName: 'translateText',
       callback: (args) async {
-        try {
-          String text = args[0];
-          final service = Prefs().fullTextTranslateService;
-          final from = Prefs().fullTextTranslateFrom;
-          final to = Prefs().fullTextTranslateTo;
+        final text =
+            (args.isNotEmpty ? args[0]?.toString() : null)?.trim() ?? '';
+        if (text.isEmpty) return '';
 
-          return await FullTextTranslateRuntime.instance.translate(
+        final service = Prefs().fullTextTranslateService;
+        final from = Prefs().fullTextTranslateFrom;
+        final to = Prefs().fullTextTranslateTo;
+
+        // Update HUD stats
+        _translateHudVisible = true;
+        _hudMarkStart(
+          cacheKey: FullTextTranslateRuntime.instance.buildCacheKey(
+            bookId: widget.book.id,
+            service: service,
+            from: from,
+            to: to,
+            text: text,
+          ),
+        );
+
+        try {
+          final result = await FullTextTranslateRuntime.instance.translate(
             service,
             text,
             from,
             to,
             bookId: widget.book.id,
           );
+
+          if (_looksLikeTranslateFailure(result)) {
+            _hudMarkFail();
+            return '';
+          }
+
+          _hudMarkDone();
+          return result;
         } catch (e) {
+          _hudMarkFail();
           AnxLog.severe('Translation error: $e');
-          return 'Translation error: $e';
-        }
-      },
-    );
-
-    // V2: batch queue handler for visible blocks (current + next viewport).
-    controller.addJavaScriptHandler(
-      handlerName: 'translateBlocks',
-      callback: (args) {
-        try {
-          final raw = args.isNotEmpty ? args[0] : null;
-          final blocks = InlineFullTextTranslateBlock.parseList(raw);
-          if (blocks.isEmpty) return {'queued': 0};
-
-          final service = Prefs().fullTextTranslateService;
-          final from = Prefs().fullTextTranslateFrom;
-          final to = Prefs().fullTextTranslateTo;
-
-          _inlineTranslateEngine.submit(
-            webViewController: controller,
-            bookId: widget.book.id,
-            service: service,
-            from: from,
-            to: to,
-            blocks: blocks,
-          );
-
-          return {'queued': blocks.length};
-        } catch (e) {
-          AnxLog.severe('translateBlocks error: $e');
-          return {'queued': 0, 'error': e.toString()};
+          return '';
+        } finally {
+          _hudMarkFinishInflight();
         }
       },
     );
@@ -905,12 +908,6 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   @override
   void initState() {
     book = widget.book;
-
-    _inlineTranslateEngine = InlineFullTextTranslateEngine(
-      progress: _inlineTranslateProgress,
-      maxConcurrency: FullTextTranslateRuntime.defaultConcurrency,
-    );
-
     getThemeColor();
 
     contextMenu = ContextMenu(
@@ -954,8 +951,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
   @override
   void dispose() {
-    _inlineTranslateEngine.dispose();
-    _inlineTranslateProgress.dispose();
+    _translateHud.dispose();
     _animationController?.dispose();
     saveReadingProgress();
     removeOverlay();
@@ -1215,10 +1211,62 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     );
   }
 
-  Widget _inlineFullTextHud() {
-    if (!_inlineTranslateHudVisible) return const SizedBox.shrink();
+  bool _looksLikeTranslateFailure(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return true;
 
-    // Only show when translation mode is enabled for this book.
+    final lower = t.toLowerCase();
+    if (lower.startsWith('error:')) return true;
+    if (lower.contains('authentication failed')) return true;
+    if (lower.contains('rate limit')) return true;
+    if (lower.contains('ai service not configured')) return true;
+
+    return false;
+  }
+
+  void _resetTranslateHud() {
+    _translateHudSeenKeys.clear();
+    _translateHud.value = const _InlineTranslateHudState();
+  }
+
+  void _hudMarkStart({required String cacheKey}) {
+    final prev = _translateHud.value;
+    final isNew = _translateHudSeenKeys.add(cacheKey);
+
+    _translateHud.value = prev.copyWith(
+      total: prev.total + (isNew ? 1 : 0),
+      inflight: prev.inflight + 1,
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  void _hudMarkFinishInflight() {
+    final prev = _translateHud.value;
+    _translateHud.value = prev.copyWith(
+      inflight: (prev.inflight - 1).clamp(0, 1 << 30),
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  void _hudMarkDone() {
+    final prev = _translateHud.value;
+    _translateHud.value = prev.copyWith(
+      done: prev.done + 1,
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  void _hudMarkFail() {
+    final prev = _translateHud.value;
+    _translateHud.value = prev.copyWith(
+      failed: prev.failed + 1,
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  Widget _inlineTranslateHud() {
+    if (!_translateHudVisible) return const SizedBox.shrink();
+
     final mode = Prefs().getBookTranslationMode(widget.book.id);
     if (mode == TranslationModeEnum.off) return const SizedBox.shrink();
 
@@ -1227,21 +1275,15 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     return Positioned(
       top: topPadding + 8,
       right: 8,
-      child: ValueListenableBuilder<InlineFullTextTranslationProgress>(
-        valueListenable: _inlineTranslateProgress,
-        builder: (context, p, _) {
-          // Show HUD while active or if there was any result.
-          final shouldShow = p.active || p.total > 0;
+      child: ValueListenableBuilder<_InlineTranslateHudState>(
+        valueListenable: _translateHud,
+        builder: (context, s, _) {
+          final shouldShow = s.total > 0 || s.inflight > 0;
           if (!shouldShow) return const SizedBox.shrink();
 
-          final done = p.done.clamp(0, p.total);
-          final total = p.total;
-          final inflight = p.inflight;
-          final failed = p.failed;
-
-          final text = '译 $done/$total'
-              '${inflight > 0 ? ' · $inflight中' : ''}'
-              '${failed > 0 ? ' · 失败$failed' : ''}';
+          final text = '译 ${s.done}/${s.total}'
+              '${s.inflight > 0 ? ' · ${s.inflight}中' : ''}'
+              '${s.failed > 0 ? ' · 失败${s.failed}' : ''}';
 
           return Material(
             color: Theme.of(context).colorScheme.surface.withAlpha(230),
@@ -1252,22 +1294,19 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (p.active)
+                  if (s.inflight > 0)
                     const SizedBox(
                       width: 14,
                       height: 14,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                  if (p.active) const SizedBox(width: 8),
-                  Text(
-                    text,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  if (s.inflight > 0) const SizedBox(width: 8),
+                  Text(text, style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(width: 6),
                   InkWell(
                     onTap: () {
                       setState(() {
-                        _inlineTranslateHudVisible = false;
+                        _translateHudVisible = false;
                       });
                     },
                     child: const Icon(Icons.close, size: 16),
@@ -1282,9 +1321,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   }
 
   void showInlineTranslateHud() {
-    if (!_inlineTranslateHudVisible) {
+    if (!_translateHudVisible) {
       setState(() {
-        _inlineTranslateHudVisible = true;
+        _translateHudVisible = true;
       });
     }
   }
@@ -1306,7 +1345,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             buildWebviewWithIOSWorkaround(context, url, initialCfi),
             readingInfoWidget(),
             if (showHistory) _buildHistoryCapsule(),
-            _inlineFullTextHud(),
+            _inlineTranslateHud(),
             if (Prefs().openBookAnimation)
               SizedBox.expand(
                   child: IgnorePointer(
@@ -1317,6 +1356,38 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InlineTranslateHudState {
+  const _InlineTranslateHudState({
+    this.total = 0,
+    this.inflight = 0,
+    this.done = 0,
+    this.failed = 0,
+    this.updatedAtMs = 0,
+  });
+
+  final int total;
+  final int inflight;
+  final int done;
+  final int failed;
+  final int updatedAtMs;
+
+  _InlineTranslateHudState copyWith({
+    int? total,
+    int? inflight,
+    int? done,
+    int? failed,
+    int? updatedAtMs,
+  }) {
+    return _InlineTranslateHudState(
+      total: total ?? this.total,
+      inflight: inflight ?? this.inflight,
+      done: done ?? this.done,
+      failed: failed ?? this.failed,
+      updatedAtMs: updatedAtMs ?? this.updatedAtMs,
     );
   }
 }
