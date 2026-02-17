@@ -14,14 +14,27 @@ if (typeof window !== 'undefined') {
 // Translation function that calls Flutter's translation service
 const translate = async (text) => {
   try {
-    // Call Flutter's translation handler
-      const result = await window.flutter_inappwebview.callHandler('translateText', text)
-      // On failure, return empty string and let the app HUD show failures.
-      // Do NOT inject failure messages into the book content.
-      return result || ''
+    const result = await window.flutter_inappwebview.callHandler('translateText', text)
+    // On failure, return empty string and let the app HUD show failures.
+    // Do NOT inject failure messages into the book content.
+    return result || ''
   } catch (error) {
     console.error('Translation failed:', error)
     return ''
+  }
+}
+
+// Rich-text translation for paragraphs containing links.
+// Input payload:
+// { fullText: string, segments: [{type:'text'|'link', text:string, href?:string}] }
+// Output: string[] translations aligned to segments (plain text only)
+const translateRichSegments = async (payload) => {
+  try {
+    const result = await window.flutter_inappwebview.callHandler('translateRichSegments', payload)
+    return result
+  } catch (error) {
+    console.warn('translateRichSegments failed:', error)
+    return null
   }
 }
 
@@ -180,6 +193,44 @@ export class Translator {
     return elements
   }
 
+  #extractLinkSegments(element) {
+    const segments = []
+
+    const walk = (node) => {
+      if (!node) return
+
+      if (node.nodeType === Node.TEXT_NODE) {
+        const t = node.textContent || ''
+        if (t) segments.push({ type: 'text', text: t })
+        return
+      }
+
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node
+        const name = (el.tagName || '').toLowerCase()
+
+        if (name === 'a' && el.getAttribute && el.getAttribute('href')) {
+          segments.push({
+            type: 'link',
+            href: el.getAttribute('href'),
+            text: el.textContent || ''
+          })
+          return
+        }
+
+        // Flatten other inline nodes.
+        const children = Array.from(el.childNodes || [])
+        for (const c of children) walk(c)
+      }
+    }
+
+    for (const c of Array.from(element.childNodes || [])) {
+      walk(c)
+    }
+
+    return segments
+  }
+
   async #translateElement(element) {
     if (this.#translationMode === TranslationMode.OFF) return
     if (this.#translatedElements.has(element)) return
@@ -191,6 +242,30 @@ export class Translator {
     this.#translatingElements.add(element)
 
     try {
+      const hasLink = element.querySelector && element.querySelector('a[href]')
+
+      if (hasLink) {
+        const segments = this.#extractLinkSegments(element)
+        if (segments && segments.length > 0) {
+          const translatedSegments = await translateRichSegments({
+            fullText: text,
+            segments
+          })
+
+          if (translatedSegments && Array.isArray(translatedSegments) && translatedSegments.length === segments.length) {
+            // Mark as translated to prevent re-processing
+            this.#translatedElements.set(element, {
+              originalText: text,
+              translatedText: translatedSegments.join(''),
+              structuredLinks: true,
+            })
+
+            this.#applyStructuredTranslation(element, segments, translatedSegments)
+            return
+          }
+        }
+      }
+
       const translatedText = await translate(text)
 
       // Empty translation -> treat as failure, do not mark as translated.
@@ -212,37 +287,89 @@ export class Translator {
     }
   }
 
+  #applyStructuredTranslation(element, segments, translatedSegments) {
+    const existingTranslation = element.querySelector('.translated-text')
+    if (existingTranslation) {
+      existingTranslation.remove()
+    }
+
+    const wrapper = document.createElement('span')
+    wrapper.className = 'translated-text'
+    wrapper.setAttribute('data-translation-mark', '1')
+    wrapper.style.display = 'block'
+    wrapper.style.marginTop = '0.2em'
+
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i]
+      const t = (translatedSegments[i] || '')
+
+      if (!seg || !seg.type) {
+        wrapper.appendChild(document.createTextNode(t))
+        continue
+      }
+
+      if (seg.type === 'link' && seg.href) {
+        const a = document.createElement('a')
+        a.setAttribute('href', seg.href)
+        a.textContent = t
+
+        // Make translated links work with the reader's navigation.
+        a.addEventListener('click', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          try {
+            if (typeof window.goToHref === 'function') {
+              window.goToHref(seg.href)
+              return
+            }
+          } catch (_) {}
+          try {
+            window.location.href = seg.href
+          } catch (_) {}
+        }, true)
+
+        wrapper.appendChild(a)
+      } else {
+        wrapper.appendChild(document.createTextNode(t))
+      }
+    }
+
+    this.#updateElementDisplay(element, wrapper)
+    element.appendChild(wrapper)
+  }
+
   #applyTranslation(element, translatedText) {
     // Remove existing translation if any
     const existingTranslation = element.querySelector('.translated-text')
     if (existingTranslation) {
       existingTranslation.remove()
     }
-    
+
     // Create translation wrapper
     const wrapper = document.createElement('span')
     wrapper.className = 'translated-text'
     wrapper.setAttribute('data-translation-mark', '1')
     wrapper.style.display = 'block'
-    // wrapper.style.fontSize = '0.9em'
-    // wrapper.style.color = '#666'
-    // wrapper.style.fontStyle = 'italic'
     wrapper.style.marginTop = '0.2em'
     wrapper.textContent = translatedText
-    
+
     // Apply based on current mode
     this.#updateElementDisplay(element, wrapper)
-    
+
     element.appendChild(wrapper)
   }
 
   #updateElementDisplay(element, translationWrapper) {
     const data = this.#translatedElements.get(element)
     if (!data) return
-    
+
+    const wrapperHasLinks = !!(translationWrapper && translationWrapper.querySelector && translationWrapper.querySelector('a[href]'))
+
     switch (this.#translationMode) {
       case TranslationMode.TRANSLATION_ONLY:
-        this.#hideOriginalText(element)
+        // If the translation wrapper already contains links, we can safely hide
+        // original link subtrees. Otherwise, preserve original links.
+        this.#hideOriginalText(element, { preserveLinks: !wrapperHasLinks })
         translationWrapper.style.display = 'block'
         break
         
@@ -264,14 +391,11 @@ export class Translator {
     }
   }
 
-  #hideOriginalText(element) {
+  #hideOriginalText(element, { preserveLinks = true } = {}) {
     // Use CSS to hide original content instead of removing DOM nodes
     if (!element.hasAttribute('data-original-visibility')) {
       element.setAttribute('data-original-visibility', 'hidden')
-      
-      // Hide all child nodes except translation elements using CSS.
-      // IMPORTANT: preserve hyperlinks/footnotes.
-      // If a subtree contains <a href>, we keep it visible so links remain clickable.
+
       Array.from(element.childNodes).forEach(node => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           const el = node
@@ -279,13 +403,15 @@ export class Translator {
             return
           }
 
-          const containsLink =
-            (el.matches && el.matches('a[href]')) ||
-            (el.querySelector && el.querySelector('a[href]'))
+          if (preserveLinks) {
+            const containsLink =
+              (el.matches && el.matches('a[href]')) ||
+              (el.querySelector && el.querySelector('a[href]'))
 
-          if (containsLink) {
-            // Do not hide; keep link subtree interactive.
-            return
+            if (containsLink) {
+              // Do not hide; keep link subtree interactive.
+              return
+            }
           }
 
           // Store and hide using CSS
@@ -294,11 +420,11 @@ export class Translator {
             el.style.display = 'none'
           }
         } else if (node.nodeType === Node.TEXT_NODE) {
-          // For text nodes, store content and make invisible
-          // But keep text nodes that are inside a link (<a href>) so link markers remain.
-          const parent = node.parentElement
-          const inLink = parent && parent.closest && parent.closest('a[href]')
-          if (inLink) return
+          if (preserveLinks) {
+            const parent = node.parentElement
+            const inLink = parent && parent.closest && parent.closest('a[href]')
+            if (inLink) return
+          }
 
           if (!node.__originalContent) {
             node.__originalContent = node.textContent
@@ -307,7 +433,7 @@ export class Translator {
         }
       })
     }
-    
+
     // Mark element as having hidden text
     element.classList.add('translation-source-hidden')
   }

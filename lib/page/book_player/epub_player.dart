@@ -868,6 +868,74 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         }
       },
     );
+
+    // Structured translation for paragraphs that contain links.
+    // Payload: { fullText: string, segments: [{type:'text'|'link', text, href?}] }
+    // Response: string[] translated texts aligned to segments
+    controller.addJavaScriptHandler(
+      handlerName: 'translateRichSegments',
+      callback: (args) async {
+        try {
+          if (args.isEmpty) return const <String>[];
+          final payload = args[0];
+          if (payload is! Map) return const <String>[];
+
+          final fullText = payload['fullText']?.toString().trim() ?? '';
+          final rawSegments = payload['segments'];
+          if (fullText.isEmpty || rawSegments is! List) {
+            return const <String>[];
+          }
+
+          final service = Prefs().fullTextTranslateService;
+          final from = Prefs().fullTextTranslateFrom;
+          final to = Prefs().fullTextTranslateTo;
+
+          // HUD counts per paragraph (fullText key), not per segment.
+          final cacheKey = FullTextTranslateRuntime.instance.buildCacheKey(
+            bookId: widget.book.id,
+            service: service,
+            from: from,
+            to: to,
+            text: fullText,
+          );
+
+          _translateHudVisible = true;
+          _hudMarkStart(cacheKey: cacheKey);
+
+          final futures = <Future<String>>[];
+          for (final seg in rawSegments) {
+            if (seg is! Map) {
+              futures.add(Future.value(''));
+              continue;
+            }
+            final segText = seg['text']?.toString() ?? '';
+            futures.add(
+              FullTextTranslateRuntime.instance.translate(
+                service,
+                segText,
+                from,
+                to,
+                bookId: widget.book.id,
+              ),
+            );
+          }
+
+          final results = await Future.wait(futures);
+          final hasAny = results.any((e) => e.trim().isNotEmpty);
+
+          if (!hasAny) {
+            _hudMarkFail(cacheKey: cacheKey);
+          } else {
+            _hudMarkDone(cacheKey: cacheKey);
+          }
+
+          return results;
+        } catch (e) {
+          // Do not throw into JS.
+          return const <String>[];
+        }
+      },
+    );
   }
 
   Future<void> onWebViewCreated(InAppWebViewController controller) async {
