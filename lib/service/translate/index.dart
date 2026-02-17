@@ -213,7 +213,8 @@ abstract class TranslateServiceProvider {
 
 Widget translateText(String text,
     {TranslateService? service, String? contextText}) {
-  service ??= Prefs().translateService;
+  // Settings UI has been simplified to AI-only translation.
+  service ??= TranslateService.ai;
   final from = Prefs().translateFrom;
   final to = Prefs().translateTo;
 
@@ -241,7 +242,8 @@ void saveTranslateServiceConfig(
 
 Future<String> translateTextOnly(String text,
     {TranslateService? service, String? contextText}) async {
-  service ??= Prefs().translateService;
+  // Settings UI has been simplified to AI-only translation.
+  service ??= TranslateService.ai;
   final from = Prefs().translateFrom;
   final to = Prefs().translateTo;
 

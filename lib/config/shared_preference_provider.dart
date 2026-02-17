@@ -698,6 +698,62 @@ class Prefs extends ChangeNotifier {
         prefs.getString('fullTextTranslateTo') ?? getCurrentLanguageCode());
   }
 
+  // --- AI Translation (provider/model override) ---
+
+  static const String _aiTranslateProviderIdKey = 'aiTranslateProviderIdV1';
+  static const String _aiTranslateModelKey = 'aiTranslateModelV1';
+
+  /// AI provider id used for translation features (underline + inline full-text).
+  ///
+  /// Empty means "follow current AI chat provider".
+  String get aiTranslateProviderId {
+    return prefs.getString(_aiTranslateProviderIdKey) ?? '';
+  }
+
+  set aiTranslateProviderId(String id) {
+    prefs.setString(_aiTranslateProviderIdKey, id.trim());
+    notifyListeners();
+  }
+
+  /// Effective provider id for AI translation.
+  ///
+  /// Rules:
+  /// - If user-selected provider is enabled, use it.
+  /// - Else fallback to selectedAiService (if enabled).
+  /// - Else fallback to the first enabled provider.
+  String get aiTranslateProviderIdEffective {
+    final preferred = aiTranslateProviderId.trim();
+    if (preferred.isNotEmpty) {
+      final meta = getAiProviderMeta(preferred);
+      if (meta != null && meta.enabled) return preferred;
+    }
+
+    final fallback = selectedAiService.trim();
+    final fallbackMeta = getAiProviderMeta(fallback);
+    if (fallback.isNotEmpty && fallbackMeta != null && fallbackMeta.enabled) {
+      return fallback;
+    }
+
+    for (final p in aiProvidersV1) {
+      if (p.enabled) return p.id;
+    }
+
+    // Last resort: keep app usable even if provider list is empty/corrupt.
+    return fallback.isNotEmpty ? fallback : preferred;
+  }
+
+  /// Model id used for AI translation.
+  ///
+  /// Empty means "follow provider config".
+  String get aiTranslateModel {
+    return prefs.getString(_aiTranslateModelKey) ?? '';
+  }
+
+  set aiTranslateModel(String model) {
+    prefs.setString(_aiTranslateModelKey, model.trim());
+    notifyListeners();
+  }
+
   // set convertChineseMode(ConvertChineseMode mode) {
   //   prefs.setString('convertChineseMode', mode.name);
   //   notifyListeners();

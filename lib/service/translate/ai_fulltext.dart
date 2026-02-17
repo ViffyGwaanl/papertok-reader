@@ -1,3 +1,4 @@
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/main.dart';
@@ -42,8 +43,16 @@ class AiFullTextTranslateProvider extends TranslateServiceProvider {
 
     final messages = payload.buildMessages();
 
+    final providerId = Prefs().aiTranslateProviderIdEffective;
+    final model = Prefs().aiTranslateModel.trim();
+
     return StreamBuilder<String>(
-      stream: aiGenerateStream(messages, regenerate: false),
+      stream: aiGenerateStream(
+        messages,
+        identifier: providerId.isEmpty ? null : providerId,
+        config: model.isEmpty ? null : {'model': model},
+        regenerate: false,
+      ),
       builder: (context, snapshot) {
         final data = snapshot.data;
         if (data == null || data.isEmpty) {
@@ -71,8 +80,15 @@ class AiFullTextTranslateProvider extends TranslateServiceProvider {
 
       final messages = payload.buildMessages();
 
-      await for (final result
-          in aiGenerateStream(messages, regenerate: false)) {
+      final providerId = Prefs().aiTranslateProviderIdEffective;
+      final model = Prefs().aiTranslateModel.trim();
+
+      await for (final result in aiGenerateStream(
+        messages,
+        identifier: providerId.isEmpty ? null : providerId,
+        config: model.isEmpty ? null : {'model': model},
+        regenerate: false,
+      )) {
         yield result;
       }
     } catch (e) {

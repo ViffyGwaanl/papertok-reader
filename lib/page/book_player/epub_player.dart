@@ -29,6 +29,8 @@ import 'package:anx_reader/providers/chapter_content_bridge.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/book_player/book_player_server.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
+import 'package:anx_reader/service/translate/index.dart';
+import 'package:anx_reader/service/translate/inline_fulltext_translation_status.dart';
 import 'package:anx_reader/providers/toc_search.dart';
 import 'package:anx_reader/service/tts/models/tts_sentence.dart';
 import 'package:anx_reader/utils/coordinates_to_part.dart';
@@ -827,7 +829,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             (args.isNotEmpty ? args[0]?.toString() : null)?.trim() ?? '';
         if (text.isEmpty) return '';
 
-        final service = Prefs().fullTextTranslateService;
+        // Translation settings are AI-only. Keep runtime stable regardless of
+        // historical prefs.
+        final service = TranslateService.aiFullText;
         final from = Prefs().fullTextTranslateFrom;
         final to = Prefs().fullTextTranslateTo;
 
@@ -886,7 +890,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             return const <String>[];
           }
 
-          final service = Prefs().fullTextTranslateService;
+          // Translation settings are AI-only. Keep runtime stable regardless of
+          // historical prefs.
+          final service = TranslateService.aiFullText;
           final from = Prefs().fullTextTranslateFrom;
           final to = Prefs().fullTextTranslateTo;
 
@@ -1295,6 +1301,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   void _resetTranslateHud() {
     _translateHudItems.clear();
     _translateHud.value = const _InlineTranslateHudState();
+    InlineFullTextTranslationStatusBus.instance.reset();
   }
 
   void _hudMarkStart({required String cacheKey}) {
@@ -1353,12 +1360,21 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       }
     }
 
+    final updatedAtMs = DateTime.now().millisecondsSinceEpoch;
+
     _translateHud.value = _InlineTranslateHudState(
       total: _translateHudItems.length,
       inflight: inflight,
       done: done,
       failed: failed,
-      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+      updatedAtMs: updatedAtMs,
+    );
+
+    InlineFullTextTranslationStatusBus.instance.update(
+      total: _translateHudItems.length,
+      inflight: inflight,
+      done: done,
+      failed: failed,
     );
   }
 
