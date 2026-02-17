@@ -932,5 +932,10 @@
     }
   },
   "papersImportEpub": "Import EPUB",
-  "papersDownloadingEpub": "Downloading EPUB"
+  "papersDownloadingEpub": "Downloading EPUB",
+  "papersChooseEpubEdition": "Choose EPUB edition",
+  "papersEpubEditionDefault": "Default",
+  "papersEpubEditionEn": "English",
+  "papersEpubEditionZh": "Chinese",
+  "papersEpubEditionBilingual": "Bilingual"
 }

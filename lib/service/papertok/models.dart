@@ -85,6 +85,7 @@ class PaperTokDetail {
   final String? epubUrl;
   final String? epubUrlEn;
   final String? epubUrlZh;
+  final String? epubUrlBilingual;
   final List<String> images;
   final List<PaperTokGeneratedImage> generatedImages;
 
@@ -100,6 +101,7 @@ class PaperTokDetail {
     this.epubUrl,
     this.epubUrlEn,
     this.epubUrlZh,
+    this.epubUrlBilingual,
     this.images = const [],
     this.generatedImages = const [],
   });
@@ -136,6 +138,7 @@ class PaperTokDetail {
       epubUrl: json['epub_url'] as String?,
       epubUrlEn: json['epub_url_en'] as String?,
       epubUrlZh: json['epub_url_zh'] as String?,
+      epubUrlBilingual: json['epub_url_bilingual'] as String?,
       images: images,
       generatedImages: gen,
     );
@@ -149,8 +152,11 @@ class PaperTokDetail {
     }
 
     // Prefer the API's primary epub_url (usually language-scoped),
-    // then fall back to zh/en fields.
-    return pick(epubUrl) ?? pick(epubUrlZh) ?? pick(epubUrlEn);
+    // then fall back to zh/en/bilingual fields.
+    return pick(epubUrl) ??
+        pick(epubUrlZh) ??
+        pick(epubUrlEn) ??
+        pick(epubUrlBilingual);
   }
 
   List<String> get carouselImages {

@@ -201,10 +201,13 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
     );
   }
 
-  Future<void> _downloadAndImportEpub(PaperTokDetail p) async {
+  Future<void> _downloadAndImportEpubFromUrl(
+    PaperTokDetail p,
+    String raw,
+  ) async {
     final api = PaperTokApi.instance;
-    final raw = p.bestEpubUrl;
-    if (raw == null || raw.trim().isEmpty) return;
+    if (raw.trim().isEmpty) return;
+
     final url = api.resolveUrl(raw);
 
     await _downloadAndImportFile(
@@ -212,6 +215,71 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
       url: url,
       extension: 'epub',
       dialogTitle: L10n.of(context).papersDownloadingEpub,
+    );
+  }
+
+  Future<void> _showEpubPicker(PaperTokDetail p) async {
+    final options = <({String title, String url})>[];
+
+    void add(String title, String? url) {
+      final u = (url ?? '').trim();
+      if (u.isEmpty) return;
+      if (options.any((e) => e.url == u)) return;
+      options.add((title: title, url: u));
+    }
+
+    // Prefer showing explicit editions.
+    add(L10n.of(context).papersEpubEditionEn, p.epubUrlEn);
+    add(L10n.of(context).papersEpubEditionZh, p.epubUrlZh);
+    add(L10n.of(context).papersEpubEditionBilingual, p.epubUrlBilingual);
+
+    // Fallback: show the primary epub_url if it's not already included.
+    add(L10n.of(context).papersEpubEditionDefault, p.epubUrl);
+
+    if (options.isEmpty) return;
+
+    await showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    L10n.of(context).papersChooseEpubEdition,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final o = options[index];
+                    return ListTile(
+                      title: Text(o.title),
+                      leading: const Icon(Icons.menu_book_outlined),
+                      trailing: const Icon(Icons.download_outlined),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        await _downloadAndImportEpubFromUrl(p, o.url);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -336,7 +404,7 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
                     label: Text(L10n.of(context).papersImportPdf),
                   ),
                   FilledButton.icon(
-                    onPressed: hasEpub ? () => _downloadAndImportEpub(p) : null,
+                    onPressed: hasEpub ? () => _showEpubPicker(p) : null,
                     icon: const Icon(Icons.download_for_offline_outlined),
                     label: Text(L10n.of(context).papersImportEpub),
                   ),

@@ -846,5 +846,10 @@
     }
   },
   "papersImportEpub": "納入書架（EPUB）",
-  "papersDownloadingEpub": "下載 EPUB 中"
+  "papersDownloadingEpub": "下載 EPUB 中",
+  "papersChooseEpubEdition": "擇 EPUB 版本",
+  "papersEpubEditionDefault": "常用",
+  "papersEpubEditionEn": "英文",
+  "papersEpubEditionZh": "中文",
+  "papersEpubEditionBilingual": "雙語"
 }
