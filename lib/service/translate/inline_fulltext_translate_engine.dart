@@ -305,10 +305,31 @@ class InlineFullTextTranslateEngine {
             } catch (_) {}
           }
         } catch (_) {
+          // Batch failed (most likely JSON non-compliance). Mark failed, then
+          // fallback to per-block translation (best-effort) so the feature still works.
           for (final b in batch) {
             _failedIds.add(b.id);
           }
+
+          // Remove inflight placeholders before scheduling fallback.
+          for (final id in ids) {
+            _inflightById.remove(id);
+          }
+          _recomputeProgress();
+
+          // Fallback: per-block using translateFulltext prompt.
+          _schedulePerBlock(
+            webViewController: webViewController,
+            bookId: bookId,
+            service: TranslateService.aiFullText,
+            from: from,
+            to: to,
+            blocksById: {
+              for (final b in batch) b.id: b,
+            },
+          );
         } finally {
+          // Ensure placeholders removed (if not already removed by fallback path).
           for (final id in ids) {
             _inflightById.remove(id);
           }
@@ -352,6 +373,22 @@ class InlineFullTextTranslateEngine {
     return batches;
   }
 
+  String? _extractJsonArray(String raw) {
+    var s = raw.trim();
+    if (s.isEmpty) return null;
+
+    // Strip common code fences.
+    s = s.replaceAll(RegExp(r'^```[a-zA-Z0-9_-]*\n'), '');
+    s = s.replaceAll(RegExp(r'\n```$'), '');
+
+    final start = s.indexOf('[');
+    final end = s.lastIndexOf(']');
+    if (start >= 0 && end > start) {
+      return s.substring(start, end + 1);
+    }
+    return null;
+  }
+
   Future<Map<String, String>> _translateBatchAi({
     required List<InlineFullTextTranslateBlock> blocks,
     required LangListEnum to,
@@ -380,10 +417,28 @@ class InlineFullTextTranslateEngine {
     }
 
     final raw = (last ?? '').trim();
-    if (raw.isEmpty) return {};
+    if (raw.isEmpty) {
+      throw const FormatException('Empty AI response');
+    }
 
-    final decoded = jsonDecode(raw);
-    if (decoded is! List) return {};
+    if (raw.toLowerCase().startsWith('error:')) {
+      throw FormatException('AI error response: ${raw.substring(0, raw.length.clamp(0, 80))}');
+    }
+
+    Object decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } catch (_) {
+      final extracted = _extractJsonArray(raw);
+      if (extracted == null) {
+        throw const FormatException('Invalid JSON (no array found)');
+      }
+      decoded = jsonDecode(extracted);
+    }
+
+    if (decoded is! List) {
+      throw const FormatException('Invalid JSON (not an array)');
+    }
 
     final out = <String, String>{};
     for (final item in decoded) {
@@ -396,6 +451,11 @@ class InlineFullTextTranslateEngine {
         out[id] = sanitized;
       }
     }
+
+    if (out.isEmpty) {
+      throw const FormatException('JSON parsed but no usable items');
+    }
+
     return out;
   }
 
