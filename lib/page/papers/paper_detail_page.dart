@@ -58,21 +58,17 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
     return s;
   }
 
-  Future<void> _downloadAndImportPdf(PaperTokDetail p) async {
-    final api = PaperTokApi.instance;
-
-    final raw = (p.pdfLocalUrl ?? '').trim().isNotEmpty
-        ? p.pdfLocalUrl!.trim()
-        : (p.pdfUrl ?? '').trim();
-
-    if (raw.isEmpty) return;
-
-    final url = api.resolveUrl(raw);
-
+  Future<void> _downloadAndImportFile({
+    required PaperTokDetail p,
+    required String url,
+    required String extension,
+    required String dialogTitle,
+  }) async {
     final tempDir = await getAnxTempDir();
     if (!mounted) return;
+
     final baseName = _sanitizeFilename('${p.title}-${p.id}');
-    final savePath = path.join(tempDir.path, '$baseName.pdf');
+    final savePath = path.join(tempDir.path, '$baseName.$extension');
 
     final cancelToken = CancelToken();
     final progressNotifier =
@@ -99,7 +95,7 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
           valueListenable: progressNotifier,
           builder: (context, prog, _) {
             return AlertDialog(
-              title: Text(L10n.of(context).papersDownloadingPdf),
+              title: Text(dialogTitle),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,7 +130,6 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
     );
 
     try {
-      // Ensure the directory exists.
       await Directory(path.dirname(savePath)).create(recursive: true);
 
       final dio = Dio(
@@ -185,6 +180,39 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
         ),
       );
     }
+  }
+
+  Future<void> _downloadAndImportPdf(PaperTokDetail p) async {
+    final api = PaperTokApi.instance;
+
+    final raw = (p.pdfLocalUrl ?? '').trim().isNotEmpty
+        ? p.pdfLocalUrl!.trim()
+        : (p.pdfUrl ?? '').trim();
+
+    if (raw.isEmpty) return;
+
+    final url = api.resolveUrl(raw);
+
+    await _downloadAndImportFile(
+      p: p,
+      url: url,
+      extension: 'pdf',
+      dialogTitle: L10n.of(context).papersDownloadingPdf,
+    );
+  }
+
+  Future<void> _downloadAndImportEpub(PaperTokDetail p) async {
+    final api = PaperTokApi.instance;
+    final raw = p.bestEpubUrl;
+    if (raw == null || raw.trim().isEmpty) return;
+    final url = api.resolveUrl(raw);
+
+    await _downloadAndImportFile(
+      p: p,
+      url: url,
+      extension: 'epub',
+      dialogTitle: L10n.of(context).papersDownloadingEpub,
+    );
   }
 
   @override
@@ -259,6 +287,7 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
 
           final hasPdf = (p.pdfLocalUrl ?? '').trim().isNotEmpty ||
               (p.pdfUrl ?? '').trim().isNotEmpty;
+          final hasEpub = (p.bestEpubUrl ?? '').trim().isNotEmpty;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -305,6 +334,11 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
                     onPressed: hasPdf ? () => _downloadAndImportPdf(p) : null,
                     icon: const Icon(Icons.download_outlined),
                     label: Text(L10n.of(context).papersImportPdf),
+                  ),
+                  FilledButton.icon(
+                    onPressed: hasEpub ? () => _downloadAndImportEpub(p) : null,
+                    icon: const Icon(Icons.download_for_offline_outlined),
+                    label: Text(L10n.of(context).papersImportEpub),
                   ),
                 ],
               ),

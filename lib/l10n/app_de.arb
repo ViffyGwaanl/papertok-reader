@@ -844,5 +844,7 @@
         "type": "String"
       }
     }
-  }
+  },
+  "papersImportEpub": "Import EPUB",
+  "papersDownloadingEpub": "Downloading EPUB"
 }

@@ -82,6 +82,9 @@ class PaperTokDetail {
   final String? contentExplain;
   final String? pdfUrl;
   final String? pdfLocalUrl;
+  final String? epubUrl;
+  final String? epubUrlEn;
+  final String? epubUrlZh;
   final List<String> images;
   final List<PaperTokGeneratedImage> generatedImages;
 
@@ -94,6 +97,9 @@ class PaperTokDetail {
     this.contentExplain,
     this.pdfUrl,
     this.pdfLocalUrl,
+    this.epubUrl,
+    this.epubUrlEn,
+    this.epubUrlZh,
     this.images = const [],
     this.generatedImages = const [],
   });
@@ -127,9 +133,24 @@ class PaperTokDetail {
       contentExplain: json['content_explain'] as String?,
       pdfUrl: json['pdf_url'] as String?,
       pdfLocalUrl: json['pdf_local_url'] as String?,
+      epubUrl: json['epub_url'] as String?,
+      epubUrlEn: json['epub_url_en'] as String?,
+      epubUrlZh: json['epub_url_zh'] as String?,
       images: images,
       generatedImages: gen,
     );
+  }
+
+  String? get bestEpubUrl {
+    String? pick(String? s) {
+      if (s == null) return null;
+      final t = s.trim();
+      return t.isEmpty ? null : t;
+    }
+
+    // Prefer the API's primary epub_url (usually language-scoped),
+    // then fall back to zh/en fields.
+    return pick(epubUrl) ?? pick(epubUrlZh) ?? pick(epubUrlEn);
   }
 
   List<String> get carouselImages {

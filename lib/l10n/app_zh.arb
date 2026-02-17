@@ -844,5 +844,7 @@
         "type": "String"
       }
     }
-  }
+  },
+  "papersImportEpub": "导入书架（EPUB）",
+  "papersDownloadingEpub": "正在下载 EPUB"
 }
