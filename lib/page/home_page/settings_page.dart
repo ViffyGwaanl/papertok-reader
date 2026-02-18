@@ -16,8 +16,6 @@ import 'package:anx_reader/providers/iap.dart';
 import 'package:anx_reader/service/iap/iap_service.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
-import 'package:anx_reader/widgets/settings/theme_mode.dart';
-import 'package:anx_reader/widgets/settings/webdav_switch.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,16 +48,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 children: [
                   const Divider(),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 8, 10, 8),
-                    child: ChangeThemeMode(),
-                  ),
-                  const Divider(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: webdavSwitch(context, setState, ref),
-                  ),
-                  const Divider(),
                   // Main settings entries (flattened; previously lived under
                   // “More Settings”).
                   Padding(
@@ -69,8 +57,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ListTile(
                           leading: const Icon(Icons.home_outlined),
                           title: Text(L10n.of(context).settingsHomeNavigation),
-                          subtitle: Text(
-                              L10n.of(context).settingsHomeNavigationSubtitle),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.push(
@@ -172,8 +158,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             leading: const Icon(Icons.hub_outlined),
                             title: Text(
                                 L10n.of(context).settingsAiProviderCenterTitle),
-                            subtitle: Text(
-                                L10n.of(context).settingsAiProviderCenterDesc),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.push(

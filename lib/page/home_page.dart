@@ -266,10 +266,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                           child: Padding(
                             padding: const EdgeInsets.only(right: 2.0),
                             child: Image.asset(
+                              'assets/icon/paper_reader_logo.png',
                               width: 32,
                               height: 32,
-                              'assets/icon/Anx-logo-tined.png',
-                              color: Theme.of(context).colorScheme.secondary,
                             ),
                           ),
                         ),

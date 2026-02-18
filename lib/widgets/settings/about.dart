@@ -154,8 +154,7 @@ Future<void> openAboutDialog() async {
                   title: const Text('公众号'),
                   subtitle: const Text('书同文Suwin'),
                   onTap: () {
-                    Clipboard.setData(
-                        const ClipboardData(text: '书同文Suwin'));
+                    Clipboard.setData(const ClipboardData(text: '书同文Suwin'));
                     AnxToast.show('已复制：书同文Suwin');
                   },
                 ),
@@ -177,8 +176,7 @@ Future<void> openAboutDialog() async {
                             IonIcons.logo_github,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
-                          url:
-                              'https://github.com/ViffyGwaanl/papertok-reader',
+                          url: 'https://github.com/ViffyGwaanl/papertok-reader',
                           mode: LaunchMode.externalApplication),
                     ],
                   ),

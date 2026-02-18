@@ -45,8 +45,7 @@ Future<void> checkUpdate(bool manualCheck) async {
 
   // GitHub returns tag_name like "v1.2.3"
   final tagName = response.data['tag_name']?.toString() ?? '';
-  final newVersion =
-      tagName.startsWith('v') ? tagName.substring(1) : tagName;
+  final newVersion = tagName.startsWith('v') ? tagName.substring(1) : tagName;
   final releaseBody = response.data['body']?.toString() ?? '';
   String currentVersion = (await getAppVersion()).split('+').first;
   AnxLog.info('Update: new version $newVersion');
@@ -76,8 +75,7 @@ Future<void> checkUpdate(bool manualCheck) async {
     }
     SmartDialog.show(
       builder: (BuildContext context) {
-        final body =
-            releaseBody.split('\n').skip(1).join('\n');
+        final body = releaseBody.split('\n').skip(1).join('\n');
         return AlertDialog(
           title: Text(L10n.of(context).commonNewVersion,
               style: const TextStyle(
@@ -98,8 +96,7 @@ $body'''),
             ),
             TextButton(
               onPressed: () {
-                launchUrl(
-                    Uri.parse(_githubReleasesPage),
+                launchUrl(Uri.parse(_githubReleasesPage),
                     mode: LaunchMode.externalApplication);
               },
               child: Text(L10n.of(context).updateViaGithub),
