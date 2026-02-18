@@ -1,7 +1,7 @@
 {
   "@@locale": "zh_CN",
   "appName": "Anx Reader",
-  "appAbout": "关于 Anx Reader",
+  "appAbout": "关于 PaperTok Reader",
   "appVersion": "版本",
   "appLicense": "开源许可",
   "appAuthor": "开发者",
@@ -591,7 +591,6 @@
   "fullTextTranslation": "全文翻译",
   "fullTextTranslationTip": "阅读页面的双语平行翻译功能，翻译整个内容。",
   "translationServiceConfiguration": "翻译服务配置",
-
   "settingsTranslateAiOnlyTitle": "AI 翻译",
   "settingsTranslateAiProvider": "供应商",
   "settingsTranslateAiProviderDesc": "复用“供应商中心”的配置。可单独指定翻译使用的供应商。",
@@ -606,11 +605,9 @@
   "settingsTranslateAiModelCustom": "自定义模型",
   "settingsTranslateAiModelCustomDesc": "手动输入模型 id",
   "settingsTranslateAiModelCustomHint": "例如 gpt-4o-mini",
-
   "settingsTranslateBackgroundStatus": "后台翻译状态",
   "settingsTranslateBackgroundStatusIdle": "空闲",
   "settingsTranslateBackgroundStatusActive": "已完成 {done}/{total} · {inflight} 进行中 · {pending} 等待中 · 失败 {failed}",
-
   "translationMode": "翻译模式",
   "translationOnly": "仅翻译",
   "bilingual": "双语",

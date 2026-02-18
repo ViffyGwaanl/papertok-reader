@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
   "appName": "Anx Reader",
-  "appAbout": "About Anx Reader",
+  "appAbout": "About PaperTok Reader",
   "appVersion": "Version",
   "appLicense": "License",
   "appAuthor": "Author",
@@ -591,7 +591,6 @@
   "fullTextTranslation": "Full-text Translation",
   "fullTextTranslationTip": "Bilingual parallel translation feature for reading pages, translating entire content.",
   "translationServiceConfiguration": "Translation Service Configuration",
-
   "settingsTranslateAiOnlyTitle": "AI Translation",
   "settingsTranslateAiProvider": "Provider",
   "settingsTranslateAiProviderDesc": "Use providers from Provider Center. You can override the provider used for translation.",
@@ -606,11 +605,9 @@
   "settingsTranslateAiModelCustom": "Custom model",
   "settingsTranslateAiModelCustomDesc": "Enter model id manually",
   "settingsTranslateAiModelCustomHint": "e.g. gpt-4o-mini",
-
   "settingsTranslateBackgroundStatus": "Background translation status",
   "settingsTranslateBackgroundStatusIdle": "Idle",
   "settingsTranslateBackgroundStatusActive": "Done {done}/{total} · {inflight} inflight · {pending} pending · Failed {failed}",
-
   "translationMode": "Translation Mode",
   "translationOnly": "Translation Only",
   "bilingual": "Bilingual",
