@@ -1,5 +1,12 @@
 [English](README.md) | **简体中文** | [Türkçe](README_tr.md)
 
+<br>
+
+> **PaperTok Reader** — 基于 [Anx Reader](https://github.com/Anxcye/anx-reader) 的发行版，集成 **PaperTok**（论文流）与增强的 **AI/翻译** 能力。
+> 📚 [产品文档](./docs/README.md) | [工程工作流](./docs/engineering/WORKFLOW_zh.md) | [上游贡献指南](./docs/engineering/UPSTREAM_CONTRIB_zh.md)
+
+<br>
+
 <p align="center">
   <img src="./docs/images/Anx-logo.jpg" alt="Anx-logo" width="100" />
 </p>

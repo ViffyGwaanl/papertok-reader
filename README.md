@@ -2,6 +2,11 @@
 
 <br>
 
+> **PaperTok Reader** — A customized distribution based on [Anx Reader](https://github.com/Anxcye/anx-reader), integrating **PaperTok** (academic paper feed) and enhanced **AI/Translation** capabilities.
+> 📚 [Product Documentation](./docs/README.md) | [Engineering Workflow](./docs/engineering/WORKFLOW_zh.md) | [Upstream Contribution](./docs/engineering/UPSTREAM_CONTRIB_zh.md)
+
+<br>
+
 <p align="center">
   <img src="./docs/images/Anx-logo.jpg" alt="Anx-logo" width="100" />
 </p>
