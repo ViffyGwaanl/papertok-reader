@@ -17,6 +17,7 @@
 
 ### 1.2 `ViffyGwaanl/papertok-reader`（本仓库，产品发行版 / private）
 - 负责：阅读器 App 的产品体验（包含 PaperTok 一级入口）
+- 负责：品牌化（Display Name=**Paper Reader**）与发行版标识（Bundle ID/applicationId 默认：`ai.papertok.paperreader`）
 - 负责：TestFlight/签名/默认导航策略/产品文档
 
 ### 1.3 `ViffyGwaanl/anx-reader`（public fork，上游贡献工厂）

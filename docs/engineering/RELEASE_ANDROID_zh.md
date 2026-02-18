@@ -1,301 +1,198 @@
-# Android 发布清单
+# Android 发布清单（Paper Reader / papertok-reader）
 
-本文档记录 papertok-reader Android 版本的发布流程、"新项目化"改造要点与常见问题。
+本文档记录 **papertok-reader（产品发行版）** 的 Android 发布流程、产品化（branding + identifiers）改造要点与常见问题。
+
+> 适用范围
+> - 本仓库：`ViffyGwaanl/papertok-reader`（private）
+> - App 显示名：**Paper Reader**
 
 ---
 
-## 1. 新项目化改造要点
+## 0. 当前默认标识（Source of Truth）
 
-为避免与 Anx Reader 官方版本（或其他分支）在同一设备上冲突，建议修改 Application ID 并独立管理签名。
+- **applicationId / namespace**：`ai.papertok.paperreader`
 
-### 1.1 修改 Application ID
+相关文件：
+- `android/app/build.gradle`
+- `android/app/src/main/kotlin/ai/papertok/paperreader/MainActivity.kt`
+- `android/fastlane/Appfile`
+
+---
+
+## 1. 产品化改造要点（Branding & Identifiers）
+
+为避免与官方 Anx Reader/其他分支在同一设备上冲突，Android 侧必须修改：
+- `applicationId`（安装包唯一标识）
+- `namespace`（R/Manifest/编译命名空间）
+- Kotlin package 路径（与 namespace 保持一致）
+
+### 1.1 修改 applicationId / namespace
 
 编辑 `android/app/build.gradle`：
 
 ```gradle
 android {
-    ...
+    namespace "ai.papertok.paperreader"
+
     defaultConfig {
-        applicationId "com.papertok.reader"  // 原值: com.anxcye.anx_reader
-        minSdkVersion 21
-        targetSdkVersion 34
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        applicationId "ai.papertok.paperreader"
+        // ...
     }
 }
 ```
 
-**注意**：
-- Application ID 必须全局唯一（建议使用 `com.papertok.reader` 或 `ai.papertok.reader`）
-- 修改后需要卸载旧版本才能安装新版本（Application ID 不同视为不同 App）
+### 1.2 Kotlin 包路径与 MethodChannel
 
-### 1.2 签名配置（Release）
+当前 MainActivity 位于：
 
-Android 发布需要使用 **Release Keystore** 签名。
+- `android/app/src/main/kotlin/ai/papertok/paperreader/MainActivity.kt`
+- `package ai.papertok.paperreader`
 
-#### 1.2.1 生成 Keystore（首次）
+同时，安装信息通道（用于 IAP/安装时间读取）需要与 Dart 端一致：
 
-如果还没有 Keystore，使用以下命令生成：
+- Android（Kotlin）：`ai.papertok.paperreader/install_info`
+- Flutter（Dart）：`lib/service/iap/play_store_iap_service.dart`
+
+### 1.3 显示名（App Label）
+
+Android 的显示名来自：
+- `android/app/src/main/res/values/strings.xml`：`@string/title`
+
+当前值：`Paper Reader`
+
+---
+
+## 2. “一键切换到你自己的反向域名根”指南
+
+当你需要把标识从：
+- `ai.papertok.paperreader`
+
+切到比如：
+- `ai.yourdomain.paperreader`
+
+请按清单替换，改完必须跑验证命令。
+
+### 2.1 Android 必改文件清单
+
+| 文件 | 必改项 | 说明 |
+|---|---|---|
+| `android/app/build.gradle` | `namespace` + `applicationId` | 核心标识 |
+| `android/app/src/main/kotlin/.../MainActivity.kt` | `package ...` | 与 namespace 对齐 |
+| `android/app/src/main/kotlin/.../MainActivity.kt` | `INSTALL_INFO_CHANNEL` 字符串 | 与 Dart 端 MethodChannel 一致 |
+| `lib/service/iap/play_store_iap_service.dart` | MethodChannel 字符串 | 与 Android 一致 |
+| `android/fastlane/Appfile` | `package_name(...)` | fastlane 使用（如适用） |
+
+### 2.2 快速验证命令（改完必须跑）
 
 ```bash
-keytool -genkey -v -keystore ~/papertok-release-key.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 \
-  -alias papertok-release
+# 1) 搜索确认已替换
+rg -n "applicationId|namespace" android/app/build.gradle
+rg -n "package " android/app/src/main/kotlin/**/MainActivity.kt
+
+# 2) 基础回归
+flutter clean
+flutter pub get
+flutter gen-l10n
+# 如项目使用 build_runner：
+dart run build_runner build --delete-conflicting-outputs
+flutter test -j 1
 ```
 
-按提示输入：
-- Keystore 密码（妥善保存，后续需要）
-- 组织信息（CN、OU、O、L、ST、C）
-- Key 密码（建议与 Keystore 密码相同）
+---
 
-生成后，将 `papertok-release-key.jks` 保存到安全位置（**不要**提交到 Git）。
+## 3. 签名配置（Release）
 
-#### 1.2.2 配置签名
+Android 发布建议使用 **Release Keystore**。
 
-创建 `android/key.properties`（添加到 `.gitignore`）：
+### 3.1 生成 Keystore（首次）
+
+```bash
+keytool -genkey -v -keystore ~/paperreader-release-key.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias paperreader-release
+```
+
+> Keystore 与密码务必备份（密码管理器 + 冷备份），否则后续无法升级同一应用条目。
+
+### 3.2 配置签名
+
+创建 `android/key.properties`（不要提交到 Git）：
 
 ```properties
 storePassword=你的Keystore密码
 keyPassword=你的Key密码
-keyAlias=papertok-release
-storeFile=/path/to/papertok-release-key.jks
+keyAlias=paperreader-release
+storeFile=/path/to/paperreader-release-key.jks
 ```
 
-编辑 `android/app/build.gradle`：
-
-```gradle
-def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file('key.properties')
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-}
-
-android {
-    ...
-    signingConfigs {
-        release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-            storePassword keystoreProperties['storePassword']
-        }
-    }
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-            ...
-        }
-    }
-}
-```
-
-### 1.3 版本号策略
-
-版本号由 `pubspec.yaml` 中的 `version` 字段控制：
-
-```yaml
-version: 1.2.3+45
-```
-
-- `1.2.3`：versionName（用户可见版本号）
-- `45`：versionCode（内部版本号，必须递增）
-
-Flutter 会自动将这些值映射到 Android 的 `versionName` 和 `versionCode`。
+并在 `android/app/build.gradle` 中配置 `signingConfigs.release`。
 
 ---
 
-## 2. 发布流程（完整清单）
+## 4. 版本号策略
 
-### Step 1: 确认版本号
-
-编辑 `pubspec.yaml`：
+版本号由 `pubspec.yaml` 控制：
 
 ```yaml
-version: 1.2.3+46  # versionCode 递增
+version: 1.2.3+46
 ```
 
-### Step 2: 清理并生成代码
+- `1.2.3` → `versionName`
+- `46` → `versionCode`（必须递增）
+
+---
+
+## 5. 发布流程（完整清单）
 
 ```bash
 flutter clean
 flutter pub get
 flutter gen-l10n
 dart run build_runner build --delete-conflicting-outputs
-```
 
-### Step 3: 构建 Release APK 或 App Bundle
-
-#### 构建 APK（直接分发）
-
-```bash
+# APK（直接分发）
 flutter build apk --release
-```
 
-输出文件：`build/app/outputs/flutter-apk/app-release.apk`
-
-#### 构建 App Bundle（推荐，用于 Google Play）
-
-```bash
+# AAB（Google Play）
 flutter build appbundle --release
 ```
 
-输出文件：`build/app/outputs/bundle/release/app-release.aab`
-
-**App Bundle 优势**：
-- Google Play 会根据设备生成优化的 APK
-- 减小下载大小
-- 支持动态功能模块
-
-### Step 4: 验证签名
-
-检查 APK 是否已签名：
-
-```bash
-jarsigner -verify -verbose -certs build/app/outputs/flutter-apk/app-release.apk
-```
-
-预期输出包含：
-
-```
-jar verified.
-```
-
-### Step 5: 发布
-
-#### 5.1 直接分发（APK）
-
-- 上传 `app-release.apk` 到你的网站、GitHub Releases 或其他分发平台
-- 用户下载并安装（需要允许"未知来源"）
-
-#### 5.2 Google Play Store（App Bundle）
-
-1. 登录 [Google Play Console](https://play.google.com/console/)
-2. 选择你的 App（如果是新 App，先创建）
-3. 进入 **Production** 或 **Testing** → **Create new release**
-4. 上传 `app-release.aab`
-5. 填写 Release Notes
-6. 提交审核
-
-#### 5.3 其他应用商店（如小米、华为等）
-
-- 通常使用 APK
-- 按各平台要求上传并填写应用信息
-- 部分平台可能需要特殊签名或权限说明
+输出：
+- APK：`build/app/outputs/flutter-apk/app-release.apk`
+- AAB：`build/app/outputs/bundle/release/app-release.aab`
 
 ---
 
-## 3. Troubleshooting
+## 6. Troubleshooting
 
-### 构建失败：签名配置错误
+### 6.1 安装提示“应用未安装”
 
-**症状**：构建时提示 `Execution failed for task ':app:packageRelease'` 或签名相关错误。
+常见原因：
+- 设备上已存在相同 `applicationId` 但签名不同的版本
+- 多渠道混用 debug/release keystore
 
-**可能原因**：
-- `android/key.properties` 不存在或路径错误
-- Keystore 密码错误
-- `storeFile` 路径不正确
+解决：
+- 卸载旧版本后重装
+- 确保发布始终使用同一个 keystore
 
-**解决方案**：
-1. 确认 `android/key.properties` 存在且配置正确
-2. 检查 Keystore 文件路径（使用绝对路径或相对于 `android/` 的路径）
-3. 测试 Keystore 密码：
-   ```bash
-   keytool -list -v -keystore /path/to/papertok-release-key.jks
-   ```
+### 6.2 Google Play 提示 versionCode 已使用
 
-### APK 安装后提示"应用未安装"
-
-**可能原因**：
-- Application ID 冲突（设备上已安装同 ID 的 App）
-- 签名不匹配（之前安装的版本使用不同签名）
-- APK 损坏
-
-**解决方案**：
-1. 卸载旧版本（如果 Application ID 相同）
-2. 确保使用相同的 Keystore 签名（不要混用 Debug 和 Release 签名）
-3. 重新构建 APK
-
-### Google Play 上传失败："Version code X has already been used"
-
-**症状**：上传 App Bundle 时提示 versionCode 已存在。
-
-**解决方案**：
-1. 修改 `pubspec.yaml` 中的 versionCode（`+` 后的数字）
-2. 重新构建 App Bundle
-
-### 构建时提示 "Execution failed for task ':app:lintVitalRelease'"
-
-**症状**：Release 构建时 Lint 检查失败。
-
-**临时解决方案**（不推荐长期使用）：
-
-编辑 `android/app/build.gradle`：
-
-```gradle
-android {
-    lintOptions {
-        checkReleaseBuilds false
-        abortOnError false
-    }
-}
-```
-
-**建议**：修复 Lint 警告（通常是权限声明或资源问题）。
-
-### Keystore 丢失或密码忘记
-
-**后果**：
-- 无法更新已发布的 App（Google Play 要求签名一致）
-- 用户需要卸载旧版本才能安装新版本
-
-**预防措施**：
-- 备份 Keystore 文件（多地备份）
-- 记录密码（使用密码管理器）
-- 考虑使用 Google Play App Signing（Google 托管 Keystore）
-
-**补救方案**：
-- 如果使用 Google Play App Signing，可以在控制台重新生成 Upload Key
-- 否则需要发布新的 App（新 Application ID）
+解决：
+- `pubspec.yaml` 的 `+` 后数字递增，重新 build AAB。
 
 ---
 
-## 4. App Bundle vs APK 对比
+## 7. 未来可能要做的发布准备（与包名相关）
 
-| 特性 | App Bundle (.aab) | APK (.apk) |
-|------|-------------------|-----------|
-| 推荐用途 | Google Play 发布 | 直接分发、其他应用商店 |
-| 文件大小 | 较大（包含所有资源） | 较小（单一 APK） |
-| 用户下载大小 | 较小（Google Play 优化） | 与文件大小相同 |
-| 多设备支持 | Google Play 自动生成多 APK | 单一 APK 支持所有设备 |
-| 签名 | 可使用 Google Play App Signing | 自行签名 |
-
-**建议**：
-- Google Play 发布 → 使用 App Bundle
-- 直接分发 → 使用 APK
+1) **Android App Links**
+- 需要在 `papertok.ai/.well-known/assetlinks.json` 增加 `package_name = ai.papertok.paperreader` 与证书指纹。
 
 ---
 
-## 5. 参考资料
+## 8. 快速检查清单
 
-- [Flutter - Build and release an Android app](https://docs.flutter.dev/deployment/android)
-- [Google Play Console](https://play.google.com/console/)
-- [Android - App signing](https://developer.android.com/studio/publish/app-signing)
-
----
-
-## 6. 快速检查清单
-
-发布前确认：
-
-- [ ] `pubspec.yaml` 中的 versionCode 已递增
-- [ ] Application ID 正确（与之前版本一致或已规划好新 ID）
-- [ ] `android/key.properties` 配置正确
-- [ ] Keystore 文件存在且密码正确
-- [ ] 已执行 `flutter clean && flutter pub get && dart run build_runner build`
-- [ ] 已成功构建 APK 或 App Bundle：
-  - APK: `flutter build apk --release`
-  - App Bundle: `flutter build appbundle --release`
-- [ ] 签名验证通过（APK）
-- [ ] 已备份 Keystore 文件和密码
-- [ ] （Google Play）已登录 Play Console 并准备上传
-- [ ] Release Notes 已准备
+- [ ] applicationId：`ai.papertok.paperreader`
+- [ ] `pubspec.yaml` versionCode 已递增
+- [ ] `flutter test -j 1` 通过
+- [ ] Release 构建产物生成（APK/AAB）
+- [ ] Keystore 与密码已备份

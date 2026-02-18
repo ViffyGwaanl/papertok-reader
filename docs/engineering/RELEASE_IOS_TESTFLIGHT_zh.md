@@ -1,62 +1,133 @@
-# iOS TestFlight 发布清单
+# iOS TestFlight 发布清单（Paper Reader / papertok-reader）
 
-本文档记录 papertok-reader iOS 版本的 TestFlight 发布流程、"新项目化"改造要点与常见问题。
+本文档记录 **papertok-reader（产品发行版）** 的 iOS TestFlight 发布流程、产品化（branding + identifiers）改造要点与常见问题。
+
+> 适用范围
+> - 本仓库：`ViffyGwaanl/papertok-reader`（private）
+> - App 显示名：**Paper Reader**
 
 ---
 
-## 1. 新项目化改造要点
+## 0. 当前默认标识（Source of Truth）
 
-为避免与 Anx Reader 官方版本（或其他分支）在同一设备上冲突，建议修改 Bundle ID 并独立管理签名。
+> 这些值用于 Apple Developer / App Store Connect / Xcode 签名。
 
-### 1.1 修改 Bundle ID
+- **主 App Bundle ID**：`ai.papertok.paperreader`
+- **Share Extension Bundle ID**：`ai.papertok.paperreader.shareExtension`
+- **RunnerTests Bundle ID**：`ai.papertok.paperreader.RunnerTests`
+- **App Group**（主 App + Share Extension 共享容器）：`group.ai.papertok.paperreader`
 
-编辑 `ios/Runner.xcodeproj/project.pbxproj` 和 Xcode 项目配置：
+相关文件：
+- `ios/Runner.xcodeproj/project.pbxproj`
+- `ios/Runner/Info.plist`（显示名等）
 
-- 原值（示例）：`com.anxcye.anx-reader`
-- 新值（示例）：`com.papertok.reader` 或 `ai.papertok.reader`
+---
 
-确保在 Xcode 中同步修改：
-- Target: Runner → General → Bundle Identifier
-- 所有 Build Configurations (Debug/Profile/Release) 保持一致
+## 1. 产品化改造要点（Branding & Identifiers）
 
-### 1.2 签名与 Provisioning Profile
+为了：
+- 与官方 Anx Reader/其他分支 **可并存安装**（同一设备不冲突）
+- 拥有独立的签名与发布通道（TestFlight / App Store）
 
-- **开发签名**：本地调试可使用 "Automatically manage signing"
-- **发布签名**：TestFlight 需要 **App Store Distribution** 证书与对应的 Provisioning Profile
-  - 在 Apple Developer Portal 创建新的 App ID（使用新 Bundle ID）
-  - 创建 Distribution Provisioning Profile（类型：App Store）
-  - 下载并在 Xcode 中选择
+需要确保：
+- Display Name（用户看到的名字）与 Bundle ID（系统识别的唯一标识）都已产品化。
 
-**常见错误**：
-- `Provisioning profile doesn't include the currently selected device` → 确认使用的是 Distribution profile（不是 Development）
-- `Code signing "Runner" failed` → 确认证书在 Keychain 中有效且未过期
+### 1.1 Display Name（显示名）
 
-### 1.3 版本号策略
+当前显示名为：**Paper Reader**。
 
-版本号由 `pubspec.yaml` 中的 `version` 字段控制：
+检查：
+- `ios/Runner/Info.plist`：`CFBundleDisplayName`
+- `ios/Runner.xcodeproj/project.pbxproj`：`INFOPLIST_KEY_CFBundleDisplayName`
 
-```yaml
-version: 1.2.3+45
+> 备注：如果你希望主 App 与 Share Extension 在系统“分享面板”中显示不同名字，需要分别设置 extension target 的 Display Name（一般不建议，保持一致即可）。
+
+### 1.2 Bundle ID（主 App + Share Extension + Tests）
+
+当前 Bundle IDs 已统一为：
+- `ai.papertok.paperreader`
+- `ai.papertok.paperreader.shareExtension`
+- `ai.papertok.paperreader.RunnerTests`
+
+检查位置：
+- `ios/Runner.xcodeproj/project.pbxproj`：`PRODUCT_BUNDLE_IDENTIFIER`
+
+### 1.3 App Group（Share Extension 共享容器）
+
+Share Extension 与主 App 通过 App Group 共享数据。当前默认：
+- `group.ai.papertok.paperreader`
+
+检查位置：
+- `ios/Runner.xcodeproj/project.pbxproj`：`CUSTOM_GROUP_ID`
+- `ios/Runner/Info.plist`：`AppGroupId = $(CUSTOM_GROUP_ID)`
+- `ios/ShareExtension/Info.plist`：`AppGroupId = $(CUSTOM_GROUP_ID)`
+
+> 注意：App Group 需要在 Xcode 的 **Signing & Capabilities → App Groups** 中启用，并在 Apple Developer Portal 里创建同名 group。否则会出现 share extension 运行时写入失败/找不到共享容器。
+
+---
+
+## 2. “一键切换到你自己的反向域名根”指南（强烈建议收藏）
+
+当你需要把标识从：
+
+- `ai.papertok.paperreader`
+
+切到比如：
+
+- `ai.yourdomain.paperreader`
+
+请遵循 **“单点真值 + 清单式替换 + 验证命令”**，避免漏改。
+
+### 2.1 需要替换的标识集合
+
+建议把下面四个值当作一组同时替换：
+
+- `APP_BUNDLE_ID = ai.papertok.paperreader`
+- `EXT_BUNDLE_ID = ai.papertok.paperreader.shareExtension`
+- `TEST_BUNDLE_ID = ai.papertok.paperreader.RunnerTests`
+- `APP_GROUP_ID = group.ai.papertok.paperreader`
+
+### 2.2 iOS 必改文件清单
+
+| 文件 | 必改项 | 说明 |
+|---|---|---|
+| `ios/Runner.xcodeproj/project.pbxproj` | `PRODUCT_BUNDLE_IDENTIFIER`（Runner/Tests/ShareExtension） | Bundle ID 真值源 |
+| `ios/Runner.xcodeproj/project.pbxproj` | `CUSTOM_GROUP_ID` | App Group 真值源 |
+| `ios/Runner/Info.plist` | `CFBundleDisplayName` | 显示名（Paper Reader） |
+| `ios/fastlane/Matchfile` | `app_identifier(...)` | match/签名脚本使用 |
+| `ios/fastlane/Fastfile` | identifiers mapping | match/上传流程 |
+
+> 如果你不用 fastlane，可以忽略 fastlane 两项，但推荐保留一致性（未来 CI 会用到）。
+
+### 2.3 快速验证命令（改完必须跑）
+
+```bash
+# 1) 确认 bundle ids / app group 已替换
+rg -n "PRODUCT_BUNDLE_IDENTIFIER =|CUSTOM_GROUP_ID =" ios/Runner.xcodeproj/project.pbxproj
+
+# 2) 生成 iOS 构建配置（刷新 Generated.xcconfig）
+flutter clean
+flutter pub get
+flutter gen-l10n
+# 如项目使用 build_runner：
+dart run build_runner build --delete-conflicting-outputs
+
+# 3) 最快的回归：跑单测（避免改包名引入字符串/路径问题）
+flutter test -j 1
 ```
 
-- `1.2.3`：Version（CFBundleShortVersionString）
-- `45`：Build Number（CFBundleVersion）
-
-**注意**：
-- TestFlight 要求每次上传的 Build Number 必须递增（即使 Version 不变）
-- 修改 `pubspec.yaml` 后需确保 `ios/Flutter/Generated.xcconfig` 已更新（见下文）
-
 ---
 
-## 2. 发布流程（完整清单）
+## 3. 发布流程（完整清单）
 
-### Step 1: 确认版本号
-
-编辑 `pubspec.yaml`：
+### Step 1: 确认版本号（pubspec.yaml）
 
 ```yaml
 version: 1.2.3+46  # Build Number 递增
 ```
+
+- `1.2.3`：Version（CFBundleShortVersionString）
+- `46`：Build Number（CFBundleVersion，TestFlight 每次必须递增）
 
 ### Step 2: 清理并生成 iOS 构建配置
 
@@ -68,151 +139,96 @@ dart run build_runner build --delete-conflicting-outputs
 flutter build ios --release --no-codesign
 ```
 
-**用途**：
-- `flutter clean`：清理缓存，确保 `Generated.xcconfig` 重新生成
-- `flutter build ios --release --no-codesign`：生成 Release 配置但不签名（签名由 Xcode Archive 完成）
-
-### Step 3: 验证 Generated.xcconfig
-
-检查 `ios/Flutter/Generated.xcconfig` 中的版本号是否正确：
+### Step 3: 验证 Generated.xcconfig（Build Number）
 
 ```bash
-cat ios/Flutter/Generated.xcconfig | grep FLUTTER_BUILD_NUMBER
+cat ios/Flutter/Generated.xcconfig | rg FLUTTER_BUILD_NUMBER
 ```
 
-预期输出示例：
-
-```
-FLUTTER_BUILD_NUMBER=46
-```
-
-如果显示旧的 Build Number，重新执行 Step 2。
-
-### Step 4: 打开 Xcode 并 Archive
+### Step 4: Xcode Archive
 
 ```bash
 open ios/Runner.xcworkspace
 ```
 
 在 Xcode 中：
-1. 选择 Target: **Runner**
-2. 选择 Scheme: **Runner** (Release)
-3. 设备选择：**Any iOS Device (arm64)**
-4. 菜单：**Product → Archive**
-
-**常见问题**：
-- Archive 显示的 Build Number 仍是旧值 → 见 [Troubleshooting: Archive 显示旧版本号](#troubleshooting-archive-显示旧版本号)
-- Archive 失败提示 `Signing for "Runner" requires a development team` → 在 Target → Signing & Capabilities 中选择正确的 Team 和 Provisioning Profile
+1. Scheme: **Runner**（Release）
+2. Device: **Any iOS Device (arm64)**
+3. Product → **Archive**
 
 ### Step 5: 上传到 App Store Connect
 
-Archive 成功后，Organizer 窗口自动打开：
-1. 选择刚才的 Archive
-2. 点击 **Distribute App**
-3. 选择 **App Store Connect**
-4. 选择 **Upload**
-5. 确认签名选项（通常选 "Automatically manage signing"）
-6. 点击 **Upload**
+Organizer → Distribute App → App Store Connect → Upload。
 
-上传成功后，Apple 会进行处理（通常 5-15 分钟），处理完成后可在 App Store Connect 中看到新的 Build。
+### Step 6: TestFlight 配置与分发
 
-### Step 6: 在 App Store Connect 中配置 TestFlight
-
-1. 登录 [App Store Connect](https://appstoreconnect.apple.com/)
-2. 进入 **My Apps** → 选择你的 App
-3. 进入 **TestFlight** 标签
-4. 等待 Build 处理完成（状态从 "Processing" 变为 "Ready to Submit"）
-5. 添加测试人员（Internal Testing 或 External Testing）
-6. 如果是首次发布，需要填写 **Export Compliance Information**（通常选 "No" 如果不涉及加密）
+App Store Connect → TestFlight：添加内测/外测测试人员。
 
 ---
 
-## 3. Troubleshooting
+## 4. Troubleshooting（常见坑）
 
-### Archive 显示旧版本号
+### 4.1 Archive 显示旧版本号
 
-**症状**：修改了 `pubspec.yaml` 的 Build Number，但 Xcode Archive 仍显示旧值。
+原因：`ios/Flutter/Generated.xcconfig` 没刷新。
 
-**原因**：`ios/Flutter/Generated.xcconfig` 未刷新。
-
-**解决方案**：
-
+解决：
 ```bash
 flutter clean
 flutter pub get
 flutter build ios --release --no-codesign
 ```
 
-然后重新 Archive。
+### 4.2 Provisioning Profile 与 Bundle ID 不匹配
 
-### Archive 失败：Provisioning profile doesn't match
+症状：Archive 报错 profile 不匹配。
 
-**症状**：Archive 时提示 Provisioning Profile 与 Bundle ID 不匹配。
+解决：
+1) Apple Developer Portal 为 **新的 Bundle ID** 创建 App ID
+2) 生成对应的 Distribution profile（App Store）
+3) Xcode 里选择正确的 Team/Profile（Runner 与 shareExtension 都要配）
 
-**解决方案**：
-1. 在 Apple Developer Portal 确认已为新 Bundle ID 创建 App ID
-2. 创建对应的 Distribution Provisioning Profile（类型：App Store）
-3. 下载并在 Xcode 中手动选择（Target → Signing & Capabilities → Provisioning Profile）
+### 4.3 Share Extension 能打开，但导入/写入失败
 
-### TestFlight 上传成功但一直"Processing"
+高概率原因：App Groups 未正确配置（或 group 名不一致）。
 
-**症状**：上传成功，但 Build 在 App Store Connect 中长时间显示 "Processing"。
+检查：
+- Xcode → Runner / ShareExtension → Signing & Capabilities → App Groups 是否都勾选了同一个 `group.*`
+- Apple Developer Portal 里是否创建了该 App Group
 
-**可能原因**：
-- Apple 服务延迟（通常 5-30 分钟）
-- Build 包含问题（例如缺少必要的 Entitlements）
+### 4.4 TestFlight Processing 卡住
 
-**解决方案**：
-- 等待 30 分钟
-- 检查邮件（Apple 会发送错误通知）
-- 在 App Store Connect 中查看 Build 详情是否有警告
+一般是 Apple 延迟（5–30 分钟），或 entitlements/签名有问题。
 
-### 本地调试正常，但 Archive 失败
-
-**常见原因**：
-- Debug 配置使用的签名与 Release 配置不同
-- Entitlements 配置不完整（例如 iCloud、App Groups）
-
-**解决方案**：
-1. 在 Xcode 中检查 Target → Signing & Capabilities
-2. 确保 Release 配置选择了正确的 Distribution Provisioning Profile
-3. 检查 `ios/Runner/Runner.entitlements` 与 Provisioning Profile 权限一致
-
-### 构建时提示 "Multiple commands produce..."
-
-**症状**：构建时提示多个命令生成同一文件。
-
-**常见原因**：Xcode 项目配置冲突（例如重复的 Build Phase）。
-
-**解决方案**：
-```bash
-flutter clean
-cd ios
-pod deintegrate
-pod install
-cd ..
-flutter build ios --release --no-codesign
-```
+做法：
+- 先等 30 分钟
+- 看 App Store Connect 的 Build 详情警告
+- 看 Apple 邮件通知
 
 ---
 
-## 4. 参考资料
+## 5. 未来可能要做的发布准备（与 Bundle ID 相关）
 
-- [Apple Developer - TestFlight](https://developer.apple.com/testflight/)
-- [Flutter - Build and release an iOS app](https://docs.flutter.dev/deployment/ios)
-- [Troubleshooting: iOS Archive 版本号问题](../troubleshooting.md#ios-archive-shows-old-build-number-testflight)
+这些不是本次发布必需，但一旦做就会与 Bundle ID 强绑定：
+
+1) **Universal Links（iOS）/ App Links（Android）**
+- 需要在 `papertok.ai` 部署 AASA / assetlinks，并填入 **TeamID + BundleID / packageName**。
+
+2) OAuth / 登录回调（Redirect URI）
+- 若把 App 作为 OAuth client，回调与包名/Bundle ID 绑定。
 
 ---
 
-## 5. 快速检查清单
+## 6. 快速检查清单
 
 发布前确认：
 
-- [ ] `pubspec.yaml` 中的 Build Number 已递增
-- [ ] 已执行 `flutter clean && flutter pub get && flutter build ios --release --no-codesign`
-- [ ] `ios/Flutter/Generated.xcconfig` 中的 `FLUTTER_BUILD_NUMBER` 正确
-- [ ] Xcode 中的 Bundle Identifier 正确（与 Apple Developer Portal 一致）
-- [ ] Xcode Target → Signing & Capabilities 中选择了正确的 Team 和 Provisioning Profile
-- [ ] Archive 成功且版本号正确
-- [ ] 上传到 App Store Connect 成功
-- [ ] App Store Connect 中 Build 状态为 "Ready to Submit"
+- [ ] Bundle ID：`ai.papertok.paperreader`（Runner）
+- [ ] Share Extension：`ai.papertok.paperreader.shareExtension`
+- [ ] App Group：`group.ai.papertok.paperreader`
+- [ ] `pubspec.yaml` Build Number 已递增
+- [ ] 已执行：`flutter clean && flutter pub get && flutter gen-l10n`
+- [ ] 已执行：`dart run build_runner build --delete-conflicting-outputs`（如适用）
+- [ ] `flutter test -j 1` 通过
+- [ ] Xcode Archive 成功
+- [ ] 上传 App Store Connect 成功
