@@ -4,11 +4,8 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/page/settings_page/developer/developer_options_page.dart';
-import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/settings/link_icon.dart';
-import 'package:anx_reader/utils/check_update.dart';
-import 'package:anx_reader/widgets/settings/show_donate_dialog.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -134,17 +131,6 @@ Future<void> openAboutDialog() async {
                     _handleDeveloperUnlockTap(context);
                   },
                 ),
-                if (EnvVar.enableCheckUpdate)
-                  ListTile(
-                      title: Text(L10n.of(context).aboutCheckForUpdates),
-                      onTap: () => checkUpdate(true)),
-                if (EnvVar.enableDonation)
-                  ListTile(
-                    title: Text(L10n.of(context).appDonate),
-                    onTap: () {
-                      showDonateDialog(context);
-                    },
-                  ),
                 ListTile(
                   title: Text(L10n.of(context).appLicense),
                   onTap: () {
@@ -159,50 +145,21 @@ Future<void> openAboutDialog() async {
                   title: Text(L10n.of(context).appAuthor),
                   onTap: () {
                     launchUrl(
-                      Uri.parse(
-                          'https://github.com/Anxcye/anx-reader/graphs/contributors'),
+                      Uri.parse('https://github.com/ViffyGwaanl'),
                       mode: LaunchMode.externalApplication,
                     );
                   },
                 ),
                 ListTile(
-                  title: Text(L10n.of(context).aboutPrivacyPolicy),
-                  onTap: () async {
-                    launchUrl(
-                      Uri.parse('https://anx.anxcye.com/privacy'),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text(L10n.of(context).aboutTermsOfUse),
-                  onTap: () async {
-                    launchUrl(
-                      Uri.parse('https://anx.anxcye.com/terms'),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text(L10n.of(context).aboutHelp),
-                  onTap: () async {
-                    launchUrl(
-                      Uri.parse('https://anx.anxcye.com/docs'),
-                      mode: LaunchMode.externalApplication,
-                    );
+                  title: const Text('公众号'),
+                  subtitle: const Text('书同文Suwin'),
+                  onTap: () {
+                    Clipboard.setData(
+                        const ClipboardData(text: '书同文Suwin'));
+                    AnxToast.show('已复制：书同文Suwin');
                   },
                 ),
                 const Divider(),
-                if (EnvVar.showBeian) ...[
-                  GestureDetector(
-                    onTap: () {
-                      launchUrl(Uri.parse('https://beian.miit.gov.cn/'),
-                          mode: LaunchMode.externalApplication);
-                    },
-                    child: const Text('闽ICP备2025091402号-1A'),
-                  ),
-                  const Divider(),
-                ],
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -213,42 +170,15 @@ Future<void> openAboutDialog() async {
                             IonIcons.earth,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
-                          url: 'https://anx.anxcye.com',
+                          url: 'https://papertok.ai',
                           mode: LaunchMode.externalApplication),
                       linkIcon(
                           icon: Icon(
                             IonIcons.logo_github,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
-                          url: 'https://github.com/Anxcye/anx-reader',
-                          mode: LaunchMode.externalApplication),
-                      if (EnvVar.showTelegramLink)
-                        linkIcon(
-                            icon: Icon(
-                              Icons.telegram,
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
-                            url: 'https://t.me/AnxReader',
-                            mode: LaunchMode.externalApplication),
-                      linkIcon(
-                          icon: Image.asset(
-                            'assets/images/xiaohongshu.png',
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
                           url:
-                              'https://www.xiaohongshu.com/user/profile/5d403f3e00000000100151ff',
-                          mode: LaunchMode.externalApplication),
-                      linkIcon(
-                          icon: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Image.asset(
-                              'assets/images/qq.png',
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
-                          ),
-                          // qq group url is so crazy
-                          url:
-                              'http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=8BYItJOMz4RCQJoHAAei7FV-nGB0iT8O&authKey=MD6a7gI%2FENiMr32rQRTLx2BpzTaa1wO9Qfmhx9ETcaLS%2FdcOFeptvVH9FWfvUpL2&noverify=0&group_code=1042905699',
+                              'https://github.com/ViffyGwaanl/papertok-reader',
                           mode: LaunchMode.externalApplication),
                     ],
                   ),

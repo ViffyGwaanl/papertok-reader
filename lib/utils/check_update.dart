@@ -11,6 +11,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+const _githubReleasesApi =
+    'https://api.github.com/repos/ViffyGwaanl/papertok-reader/releases/latest';
+const _githubReleasesPage =
+    'https://github.com/ViffyGwaanl/papertok-reader/releases/latest';
+
 Future<void> checkUpdate(bool manualCheck) async {
   if (!EnvVar.enableCheckUpdate) {
     return;
@@ -26,7 +31,10 @@ Future<void> checkUpdate(bool manualCheck) async {
   BuildContext context = navigatorKey.currentContext!;
   Response response;
   try {
-    response = await Dio().get('https://api.anx.anxcye.com/api/info/latest');
+    response = await Dio().get(
+      _githubReleasesApi,
+      options: Options(headers: {'Accept': 'application/vnd.github+json'}),
+    );
   } catch (e) {
     if (manualCheck) {
       AnxToast.show(L10n.of(context).commonFailed);
@@ -34,7 +42,12 @@ Future<void> checkUpdate(bool manualCheck) async {
     AnxLog.severe('Update: Failed to check for updates $e');
     return;
   }
-  String newVersion = response.data['version'].toString().substring(1);
+
+  // GitHub returns tag_name like "v1.2.3"
+  final tagName = response.data['tag_name']?.toString() ?? '';
+  final newVersion =
+      tagName.startsWith('v') ? tagName.substring(1) : tagName;
+  final releaseBody = response.data['body']?.toString() ?? '';
   String currentVersion = (await getAppVersion()).split('+').first;
   AnxLog.info('Update: new version $newVersion');
 
@@ -43,9 +56,11 @@ Future<void> checkUpdate(bool manualCheck) async {
   AnxLog.info(
       'Current version: $currentVersionList, New version: $newVersionList');
   bool needUpdate = false;
-  for (int i = 0; i < newVersionList.length; i++) {
-    int newVer = int.parse(newVersionList[i]);
-    int curVer = int.parse(currentVersionList[i]);
+  for (int i = 0;
+      i < newVersionList.length && i < currentVersionList.length;
+      i++) {
+    final newVer = int.tryParse(newVersionList[i]) ?? 0;
+    final curVer = int.tryParse(currentVersionList[i]) ?? 0;
     if (newVer > curVer) {
       needUpdate = true;
       break;
@@ -62,7 +77,7 @@ Future<void> checkUpdate(bool manualCheck) async {
     SmartDialog.show(
       builder: (BuildContext context) {
         final body =
-            response.data['body'].toString().split('\n').skip(1).join('\n');
+            releaseBody.split('\n').skip(1).join('\n');
         return AlertDialog(
           title: Text(L10n.of(context).commonNewVersion,
               style: const TextStyle(
@@ -84,18 +99,10 @@ $body'''),
             TextButton(
               onPressed: () {
                 launchUrl(
-                    Uri.parse(
-                        'https://github.com/Anxcye/anx-reader/releases/latest'),
+                    Uri.parse(_githubReleasesPage),
                     mode: LaunchMode.externalApplication);
               },
               child: Text(L10n.of(context).updateViaGithub),
-            ),
-            TextButton(
-              onPressed: () {
-                launchUrl(Uri.parse('https://anx.anxcye.com/download'),
-                    mode: LaunchMode.externalApplication);
-              },
-              child: Text(L10n.of(context).updateViaOfficialWebsite),
             ),
           ],
         );

@@ -43,29 +43,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           body: SingleChildScrollView(
             controller: _scrollController,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 80),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).padding.bottom +
+                    kBottomNavigationBarHeight,
+              ),
               child: Column(
                 children: [
-                  GestureDetector(
-                    onTap: () {},
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 60, 0, 20),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Container(
-                          constraints: const BoxConstraints(maxWidth: 500),
-                          child: Text(
-                            'Paper Reader',
-                            style: TextStyle(
-                              fontSize: 130,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
                   const Divider(),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(20, 8, 10, 8),
