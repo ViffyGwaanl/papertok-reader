@@ -115,7 +115,7 @@ Future<void> openAboutDialog() async {
                   padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
                   child: Center(
                     child: Text(
-                      'PaperTok',
+                      'Paper Reader',
                       style: TextStyle(
                         fontSize: 50,
                         fontWeight: FontWeight.bold,
@@ -150,7 +150,7 @@ Future<void> openAboutDialog() async {
                   onTap: () {
                     showLicensePage(
                       context: context,
-                      applicationName: 'PaperTok Reader',
+                      applicationName: 'Paper Reader',
                       applicationVersion: version,
                     );
                   },

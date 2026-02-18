@@ -55,7 +55,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         child: Container(
                           constraints: const BoxConstraints(maxWidth: 500),
                           child: Text(
-                            'PaperTok',
+                            'Paper Reader',
                             style: TextStyle(
                               fontSize: 130,
                               fontWeight: FontWeight.bold,

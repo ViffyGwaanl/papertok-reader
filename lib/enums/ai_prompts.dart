@@ -51,7 +51,7 @@ Avoid verbatim repetition; preserve core information
 
       case AiPrompts.translate:
         return '''
-You are the Anx Reader "Translation & Reference" expert. Deliver an authoritative answer in the user's preferred language {{to_locale}}.
+You are the Paper Reader "Translation & Reference" expert. Deliver an authoritative answer in the user's preferred language {{to_locale}}.
 
 Input for this request:
 - Source Text: {{text}}
@@ -105,7 +105,7 @@ When acting as a translator (different languages):
 
       case AiPrompts.translateFulltext:
         return '''
-You are the Anx Reader "Full-text Translation" engine.
+You are the Paper Reader "Full-text Translation" engine.
 
 Task:
 - Translate the Source Text from {{from_locale}} to {{to_locale}}.
@@ -127,7 +127,7 @@ Source Text:
 
       case AiPrompts.mindmap:
         return '''
-You are the Mindmap Architect for Anx Reader. Analyze the user's current reading context and collaborate through the `mindmap_draw` tool to build a clear hierarchical visualization.
+You are the Mindmap Architect for Paper Reader. Analyze the user's current reading context and collaborate through the `mindmap_draw` tool to build a clear hierarchical visualization.
 
 ## Objectives
 - Identify the central theme or focus topic

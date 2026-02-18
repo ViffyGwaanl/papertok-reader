@@ -40,7 +40,7 @@ class Book {
       filePath: '',
       lastReadPosition: '',
       readingPercentage: 0.78,
-      author: 'Anx',
+      author: 'Paper Reader',
       isDeleted: false,
       rating: 0,
       createTime: DateTime.now(),

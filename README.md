@@ -2,7 +2,7 @@
 
 <br>
 
-> **PaperTok Reader** — A customized distribution based on [Anx Reader](https://github.com/Anxcye/anx-reader), integrating **PaperTok** (academic paper feed) and enhanced **AI/Translation** capabilities.
+> **Paper Reader** — A customized distribution based on [Anx Reader](https://github.com/Anxcye/anx-reader), integrating **PaperTok** (academic paper feed) and enhanced **AI/Translation** capabilities.
 > 📚 [Product Documentation](./docs/README.md) | [Engineering Workflow](./docs/engineering/WORKFLOW_zh.md) | [Upstream Contribution](./docs/engineering/UPSTREAM_CONTRIB_zh.md)
 
 <br>
@@ -10,7 +10,7 @@
 <p align="center">
   <img src="./docs/images/Anx-logo.jpg" alt="Anx-logo" width="100" />
 </p>
-<h1 align="center">Anx Reader</h1>
+<h1 align="center">Paper Reader</h1>
 <p align="center"><a href="https://trendshift.io/repositories/10329" target="_blank"><img src="https://trendshift.io/api/badge/repositories/10329" alt="Anxcye%2Fanx-reader | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a></p>
 
 <p align="center">
@@ -27,7 +27,7 @@
   <a href="https://github.com/anxcye/anx-reader/stargazers"><img src="https://img.shields.io/github/stars/anxcye/anx-reader" alt="stars"></a>
 </p>
 
-Anx Reader, a thoughtfully crafted e-book reader for book lovers. Featuring powerful AI capabilities and supporting various e-book formats, it makes reading smarter and more focused. With its modern interface design, we're committed to delivering pure reading pleasure.
+Paper Reader, a thoughtfully crafted e-book reader distribution based on Anx Reader. Featuring PaperTok integration and enhanced AI/translation capabilities, it supports various e-book formats and keeps reading smarter and more focused.
 
 
 ![](./docs/images/main.jpg)

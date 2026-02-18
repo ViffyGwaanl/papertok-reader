@@ -1,4 +1,4 @@
-# Docs Index (papertok-reader)
+# Docs Index (Paper Reader / papertok-reader)
 
 本目录包含 **papertok-reader**（阅读器发行版 + PaperTok 集成）的功能说明与工程文档。
 

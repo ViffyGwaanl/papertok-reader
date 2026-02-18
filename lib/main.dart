@@ -184,7 +184,7 @@ class _MyAppState extends ConsumerState<MyApp>
             locale: prefsNotifier.locale,
             localizationsDelegates: L10n.localizationsDelegates,
             supportedLocales: L10n.supportedLocales,
-            title: 'Anx Reader',
+            title: 'Paper Reader',
             themeMode: prefsNotifier.themeMode,
             theme: colorSchema(prefsNotifier, context, Brightness.light),
             darkTheme: colorSchema(prefsNotifier, context, Brightness.dark),

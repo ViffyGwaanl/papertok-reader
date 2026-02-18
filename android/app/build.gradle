@@ -29,7 +29,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.anxcye.anx_reader"
+    namespace "com.gwaanl.paperreader"
     // compileSdk flutter.compileSdkVersion
     compileSdk 35
     ndkVersion flutter.ndkVersion
@@ -48,7 +48,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.anxcye.anx_reader"
+        applicationId "com.gwaanl.paperreader"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdkVersion flutter.minSdkVersion
