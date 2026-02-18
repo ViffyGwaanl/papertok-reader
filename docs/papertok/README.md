@@ -1,6 +1,6 @@
-# PaperTok (Papers Feed) — Integration Notes (Fork)
+# PaperTok (Papers Feed) — Integration Notes (papertok-reader)
 
-This fork integrates **PaperTok** into Anx Reader as a first-class home tab.
+papertok-reader 将 **PaperTok**（论文流/解释服务）集成进阅读器，作为一级 Home tab。
 
 ## Summary
 
@@ -15,6 +15,7 @@ This fork integrates **PaperTok** into Anx Reader as a first-class home tab.
 ## Data source
 
 - Default API base: `https://papertok.ai`
+- Service repo: `ViffyGwaanl/papertok`（PaperTok 服务端；本仓库为客户端阅读器）
 - Endpoints used:
   - Feed: `GET /api/papers/random?limit=20&lang=zh`
   - Detail: `GET /api/papers/{id}?lang=zh`

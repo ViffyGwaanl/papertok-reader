@@ -6,6 +6,15 @@
 
 ## Developer: build fails / analyzer errors about generated files
 
+> papertok-reader 维护约定：切分支/拉代码后优先跑一遍 codegen + test（并发用 -j 1 更稳）：
+>
+> ```bash
+> flutter pub get
+> flutter gen-l10n
+> dart run build_runner build --delete-conflicting-outputs
+> flutter test -j 1
+> ```
+
 If you see errors like:
 
 - `Target of URI doesn't exist: package:anx_reader/l10n/generated/L10n.dart`

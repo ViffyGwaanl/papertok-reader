@@ -1,6 +1,6 @@
 # AI Panel UX / Config / Sync — Design & Implementation Notes
 
-> Maintainer note (fork): This folder documents the AI-related UX/config/sync improvements for the Anx Reader fork, with a strong focus on iPad reading ergonomics and “Cherry-style” provider/chat UX.
+> Maintainer note: 本目录记录 papertok-reader 中 AI/翻译相关的 UX、配置、同步与实现细节。该能力同时在 public fork 中维护一条 Contrib Track，用于向上游 Anx Reader 提交 PR。
 
 ## Scope
 
