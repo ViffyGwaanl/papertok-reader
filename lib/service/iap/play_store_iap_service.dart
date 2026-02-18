@@ -13,7 +13,7 @@ class PlayStoreIAPService extends BaseIAPService {
         _trialStartDate = DateTime.fromMillisecondsSinceEpoch(0);
 
   static const MethodChannel _installInfoChannel =
-      MethodChannel('com.gwaanl.paperreader/install_info');
+      MethodChannel('ai.papertok.paperreader/install_info');
   final InAppPurchase _inAppPurchase;
   DateTime _trialStartDate;
   final String _productId = 'anx_reader_lifetime';

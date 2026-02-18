@@ -330,11 +330,24 @@ class DBHelper {
       case 1:
         // add a column (rating) to tb_books
         await db.execute('ALTER TABLE tb_books ADD COLUMN rating REAL');
-        // remove '/data/user/0/com.anxcye.anx_reader/app_flutter/' from file_path & cover_path
-        await db.execute(
-            "UPDATE tb_books SET file_path = REPLACE(file_path, '/data/user/0/com.anxcye.anx_reader/app_flutter/', '')");
-        await db.execute(
-            "UPDATE tb_books SET cover_path = REPLACE(cover_path, '/data/user/0/com.anxcye.anx_reader/app_flutter/', '')");
+        // Remove absolute Android app_flutter prefixes from imported databases.
+        //
+        // Why: when users import/export databases across forks/distributions, some
+        // older DB snapshots may have absolute paths like:
+        //   /data/user/0/<package>/app_flutter/...
+        // We normalize them into relative paths so the current install can
+        // resolve files under its own sandbox.
+        const androidAppFlutterPrefixes = [
+          '/data/user/0/com.anxcye.anx_reader/app_flutter/',
+          '/data/user/0/com.gwaanl.paperreader/app_flutter/',
+          '/data/user/0/ai.papertok.paperreader/app_flutter/',
+        ];
+        for (final prefix in androidAppFlutterPrefixes) {
+          await db.execute(
+              "UPDATE tb_books SET file_path = REPLACE(file_path, '$prefix', '')");
+          await db.execute(
+              "UPDATE tb_books SET cover_path = REPLACE(cover_path, '$prefix', '')");
+        }
         continue case2;
       case2:
       case 2:

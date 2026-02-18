@@ -26,7 +26,7 @@ String getSharedPrefsFileName() {
       return 'shared_preferences.json';
     case AnxPlatformEnum.macos:
     case AnxPlatformEnum.ios:
-      return 'com.gwaanl.paperreader.plist';
+      return 'ai.papertok.paperreader.plist';
     case AnxPlatformEnum.ohos:
       return 'FlutterSharedPreferences';
   }

@@ -8,7 +8,7 @@
 PRODUCT_NAME = Paper Reader
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.gwaanl.paperreader
+PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2024 com.anxcye. All rights reserved.

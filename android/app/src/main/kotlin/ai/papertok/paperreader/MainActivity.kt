@@ -1,4 +1,4 @@
-package com.gwaanl.paperreader
+package ai.papertok.paperreader
 
 import android.content.pm.PackageManager
 import android.content.Intent
@@ -51,6 +51,6 @@ class MainActivity : AudioServiceActivity() {
     }
 
     companion object {
-        private const val INSTALL_INFO_CHANNEL = "com.gwaanl.paperreader/install_info"
+        private const val INSTALL_INFO_CHANNEL = "ai.papertok.paperreader/install_info"
     }
 }

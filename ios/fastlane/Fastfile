@@ -34,8 +34,8 @@ platform :ios do
 
 
     # get_certificates
-    # get_provisioning_profile(app_identifier: "com.gwaanl.paperreader")
-    # get_provisioning_profile(app_identifier: "com.gwaanl.paperreader.shareExtension")
+    # get_provisioning_profile(app_identifier: "ai.papertok.paperreader")
+    # get_provisioning_profile(app_identifier: "ai.papertok.paperreader.shareExtension")
   
     if is_ci
       create_keychain(
@@ -86,8 +86,8 @@ platform :ios do
       export_options: {
         teamID: "28W956D5K8",
         provisioningProfiles: {
-          "com.gwaanl.paperreader" => "match AppStore com.gwaanl.paperreader",
-          "com.gwaanl.paperreader.shareExtension" => "match AppStore com.gwaanl.paperreader.shareExtension"
+          "ai.papertok.paperreader" => "match AppStore ai.papertok.paperreader",
+          "ai.papertok.paperreader.shareExtension" => "match AppStore ai.papertok.paperreader.shareExtension"
         }
       }
     )
