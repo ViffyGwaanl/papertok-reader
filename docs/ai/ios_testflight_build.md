@@ -1,6 +1,12 @@
 # iOS TestFlight Build Notes (Flutter)
 
-This note documents the recommended “stable path” to produce TestFlight builds for this fork.
+This note documents the recommended “stable path” to produce TestFlight builds.
+
+> Note: In papertok-reader (product), the authoritative docs live under `docs/engineering/`:
+> - iOS deploy/install: `docs/engineering/IOS_DEPLOY_zh.md`
+> - iOS TestFlight checklist: `docs/engineering/RELEASE_IOS_TESTFLIGHT_zh.md`
+> - Identifiers source-of-truth: `docs/engineering/IDENTIFIERS_zh.md`
+
 
 > TL;DR: use **Xcode Archive → Upload**. Keep build numbers in `pubspec.yaml` and make sure Flutter regenerates `ios/Flutter/Generated.xcconfig`.
 

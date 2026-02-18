@@ -2,6 +2,8 @@
 
 本文档记录 **papertok-reader（产品发行版）** 的 iOS TestFlight 发布流程、产品化（branding + identifiers）改造要点与常见问题。
 
+> 如果你是第一次跑通 iOS 真机安装/签名，建议先读：`docs/engineering/IOS_DEPLOY_zh.md`。
+
 > 适用范围
 > - 本仓库：`ViffyGwaanl/papertok-reader`（private）
 > - App 显示名：**Paper Reader**

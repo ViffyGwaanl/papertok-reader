@@ -26,8 +26,9 @@
 - [路线图（工程视角）](./engineering/ROADMAP_zh.md) - 已完成功能与下一阶段计划
 
 ### 发布清单
-- [iOS TestFlight 发布清单](./engineering/RELEASE_IOS_TESTFLIGHT_zh.md) - Bundle ID / App Group / 签名 / 版本号（当前默认：`ai.papertok.paperreader`）
-- [Android 发布清单](./engineering/RELEASE_ANDROID_zh.md) - applicationId / namespace / 签名 / 构建与发布（当前默认：`ai.papertok.paperreader`）
+- [iOS 部署/安装测试教程](./engineering/IOS_DEPLOY_zh.md) - 从拉代码到真机安装、再到 TestFlight
+- [iOS TestFlight 发布清单](./engineering/RELEASE_IOS_TESTFLIGHT_zh.md) - Bundle ID / App Group / 签名 / 版本号（默认值见 Identifiers 总表）
+- [Android 发布清单](./engineering/RELEASE_ANDROID_zh.md) - applicationId / namespace / 签名 / 构建与发布（默认值见 Identifiers 总表）
 
 ## Troubleshooting
 
