@@ -10,7 +10,7 @@
 
 ## 0. 当前默认标识（Source of Truth）
 
-- **applicationId / namespace**：`ai.papertok.paperreader`
+> **以总表为准**：[`docs/engineering/IDENTIFIERS_zh.md`](./IDENTIFIERS_zh.md)
 
 相关文件：
 - `android/app/build.gradle`

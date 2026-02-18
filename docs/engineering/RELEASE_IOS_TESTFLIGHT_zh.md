@@ -11,11 +11,9 @@
 ## 0. 当前默认标识（Source of Truth）
 
 > 这些值用于 Apple Developer / App Store Connect / Xcode 签名。
+> **以总表为准**：[`docs/engineering/IDENTIFIERS_zh.md`](./IDENTIFIERS_zh.md)
 
-- **主 App Bundle ID**：`ai.papertok.paperreader`
-- **Share Extension Bundle ID**：`ai.papertok.paperreader.shareExtension`
-- **RunnerTests Bundle ID**：`ai.papertok.paperreader.RunnerTests`
-- **App Group**（主 App + Share Extension 共享容器）：`group.ai.papertok.paperreader`
+（iOS 重点关注：主 App Bundle ID / Share Extension Bundle ID / App Group）
 
 相关文件：
 - `ios/Runner.xcodeproj/project.pbxproj`

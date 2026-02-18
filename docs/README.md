@@ -21,6 +21,7 @@
 
 ### 开发工作流
 - [工程工作流：Product + Upstream](./engineering/WORKFLOW_zh.md) - 仓库职责、分支策略、同步方式
+- [Identifiers 总表（真值源）](./engineering/IDENTIFIERS_zh.md) - Display Name / Bundle ID / applicationId / App Group
 - [上游贡献指南（Anx Reader）](./engineering/UPSTREAM_CONTRIB_zh.md) - 如何向上游提交 PR
 - [路线图（工程视角）](./engineering/ROADMAP_zh.md) - 已完成功能与下一阶段计划
 
