@@ -170,7 +170,7 @@ flutter:
     - assets/images/book_share/
     - assets/images/bgimg/
     - assets/icon/
-    - assets/CHANGELOG.md
+    # - assets/CHANGELOG.md (removed)
 
   fonts:
     - family: SourceHanSerif
