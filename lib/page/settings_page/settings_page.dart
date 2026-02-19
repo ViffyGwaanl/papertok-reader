@@ -62,6 +62,7 @@ class _SettingsPageBodyState extends State<SettingsPageBody> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       child: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return widget.isMobile

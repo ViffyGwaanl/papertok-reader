@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:url_launcher/url_launcher.dart';
-
 import 'package:anx_reader/dao/database.dart';
 import 'package:anx_reader/enums/sync_protocol.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
@@ -62,28 +60,6 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                 onPressed: (context) async {
                   showWebdavDialog(context);
                 }),
-            CustomSettingsTile(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(40, 0, 20, 10),
-                child: GestureDetector(
-                  onTap: () async {
-                    if (!await launchUrl(
-                        Uri.parse('https://anx.anxcye.com/docs/sync/webdav'),
-                        mode: LaunchMode.externalApplication)) {
-                      AnxToast.show(L10n.of(context).commonFailed);
-                    }
-                  },
-                  child: Text(
-                    L10n.of(context).settingsNarrateClickForHelp,
-                    style: TextStyle(
-                      color: Theme.of(context).primaryColor,
-                      decoration: TextDecoration.underline,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ),
             SettingsTile.navigation(
                 title: Text(L10n.of(context).settingsSyncWebdavSyncNow),
                 leading: const Icon(Icons.sync_alt),

@@ -4,9 +4,6 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/md5_statistics.dart';
 import 'package:anx_reader/page/settings_page/subpage/chapter_split_rules_page.dart';
 import 'package:anx_reader/page/settings_page/subpage/log_page.dart';
-import 'package:anx_reader/page/changelog_screen.dart';
-import 'package:anx_reader/page/onboarding_screen.dart';
-import 'package:anx_reader/utils/app_version.dart';
 import 'package:anx_reader/service/md5_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
@@ -14,7 +11,6 @@ import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:anx_reader/main.dart';
 
 class AdvancedSetting extends StatefulWidget {
   const AdvancedSetting({super.key});
@@ -176,16 +172,6 @@ class _AdvancedSettingState extends State<AdvancedSetting> {
                 AnxToast.show(L10n.of(context).allHintsWillBeShownAgain);
               },
             ),
-            SettingsTile.navigation(
-              title: Text(L10n.of(context).viewChangelog),
-              leading: const Icon(Icons.update),
-              onPressed: _showChangelog,
-            ),
-            SettingsTile.navigation(
-              title: Text(L10n.of(context).viewOnboarding),
-              leading: const Icon(Icons.menu_book_outlined),
-              onPressed: _showOnboarding,
-            ),
           ],
         ),
       ],
@@ -324,39 +310,6 @@ class _AdvancedSettingState extends State<AdvancedSetting> {
       }
     }
   }
-}
-
-Future<void> _showChangelog(BuildContext context) async {
-  final currentVersion = await getAppVersion();
-  final lastVersion = Prefs().lastAppVersion ?? currentVersion;
-
-  showCupertinoSheet(
-    context: navigatorKey.currentContext ?? context,
-    builder: (sheetContext) => ChangelogScreen(
-      lastVersion: lastVersion,
-      currentVersion: currentVersion,
-      onComplete: () {
-        Prefs().lastAppVersion = currentVersion;
-        Navigator.pop(sheetContext);
-      },
-    ),
-  );
-}
-
-Future<void> _showOnboarding(BuildContext context) async {
-  final currentVersion = await getAppVersion();
-
-  showCupertinoSheet(
-    context: navigatorKey.currentContext ?? context,
-    builder: (sheetContext) => Scaffold(
-      body: OnboardingScreen(
-        onComplete: () {
-          Prefs().lastAppVersion = currentVersion;
-          Navigator.pop(sheetContext);
-        },
-      ),
-    ),
-  );
 }
 
 void onLogPressed(BuildContext context) {

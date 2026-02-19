@@ -36,11 +36,20 @@ Widget settingsTitle({
 Widget settingsSections({
   required List<AbstractSettingsSection> sections,
 }) {
-  // return SettingsList(sections: sections);
-  return ListView.builder(
-    itemCount: sections.length,
-    itemBuilder: (context, index) {
-      return sections[index];
+  // Many settings subpages return only `settingsSections(...)` without a
+  // Scaffold/Material wrapper. Ensure we always paint an opaque background to
+  // avoid the previous page bleeding through during navigation.
+  return Builder(
+    builder: (context) {
+      return ColoredBox(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: ListView.builder(
+          itemCount: sections.length,
+          itemBuilder: (context, index) {
+            return sections[index];
+          },
+        ),
+      );
     },
   );
 }

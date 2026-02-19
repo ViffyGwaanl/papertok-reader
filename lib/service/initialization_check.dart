@@ -1,12 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/version_check_type.dart';
-import 'package:anx_reader/main.dart';
 import 'package:anx_reader/utils/app_version.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:anx_reader/page/onboarding_screen.dart';
-import 'package:anx_reader/page/changelog_screen.dart';
 import 'package:anx_reader/utils/log/common.dart';
-import 'package:flutter/material.dart';
 
 class InitializationCheck {
   static String? _lastVersion;
@@ -53,41 +48,15 @@ class InitializationCheck {
   }
 
   static Future<void> _handleFirstLaunch() async {
-    AnxLog.info('First launch detected, showing onboarding');
+    AnxLog.info('First launch detected, skipping onboarding');
     final cv = await currentVersion;
-    // wait 0.8 seconds to ensure the app is ready
-    Future.delayed(const Duration(milliseconds: 800), () {
-      showCupertinoSheet(
-        context: navigatorKey.currentContext!,
-        builder: (context) => Scaffold(
-          body: OnboardingScreen(
-            onComplete: () async {
-              Prefs().lastAppVersion = cv;
-              Navigator.pop(context);
-            },
-          ),
-        ),
-      );
-    });
+    Prefs().lastAppVersion = cv;
   }
 
   static Future<void> _handleUpdateAvailable() async {
-    final lv = await lastVersion;
     final cv = await currentVersion;
-    AnxLog.info('Version update detected: $lv -> $cv');
-    Future.delayed(const Duration(milliseconds: 800), () {
-      showCupertinoSheet(
-        context: navigatorKey.currentContext!,
-        builder: (context) => ChangelogScreen(
-          lastVersion: lv,
-          currentVersion: cv,
-          onComplete: () {
-            Prefs().lastAppVersion = cv;
-            Navigator.pop(context);
-          },
-        ),
-      );
-    });
+    AnxLog.info('Version update detected, skipping changelog');
+    Prefs().lastAppVersion = cv;
   }
 
   static void _handleNormalStartup() {
