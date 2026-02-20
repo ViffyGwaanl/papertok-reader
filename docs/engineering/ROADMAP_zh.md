@@ -2,6 +2,13 @@
 
 本文档以工程交付为中心，记录已完成内容与下一阶段计划。
 
+## 测试覆盖现状
+
+- ✅ iOS（iPhone/iPad）已做真机验证
+- ⏳ Android / 桌面端尚未系统性回归（计划中）
+
+> 建议：如你现在需要多端稳定使用，请以 **Anx Reader** 上游版本为主；Paper Reader 当前以 iOS 优先做产品化验证。
+
 ## 0. 当前结构
 - 产品仓库（private）：`ViffyGwaanl/papertok-reader`（main）
 - 上游贡献仓库（public fork）：`ViffyGwaanl/anx-reader`（contrib/ai-translate）

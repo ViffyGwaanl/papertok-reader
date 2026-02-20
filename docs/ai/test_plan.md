@@ -2,10 +2,10 @@
 
 ## Devices / Platforms
 
-- iPadOS (>=600 width, e.g. iPad 11")
-- iOS iPhone (<600 width)
-- Android tablet/phone (optional)
-- Desktop (optional)
+- ✅ iPadOS (>=600 width, e.g. iPad 11")
+- ✅ iOS iPhone (<600 width)
+- ⏳ Android tablet/phone (planned; not validated in this repo yet)
+- ⏳ Desktop (planned; not validated in this repo yet)
 
 ---
 

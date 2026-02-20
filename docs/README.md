@@ -2,6 +2,13 @@
 
 本目录包含 **papertok-reader**（阅读器发行版 + PaperTok 集成）的功能说明与工程文档。
 
+## 多端状态（重要）
+
+- ✅ **已测试：** iOS（iPhone）+ iPadOS（iPad）
+- ⚠️ **暂未测试：** Android / 桌面端（macOS/Windows/Linux）
+
+如果你需要稳定的多端体验，建议使用上游项目 **Anx Reader**；本仓库以 iOS 优先做产品验证，后续会补 Android/桌面端回归。
+
 ## 产品功能文档
 
 ### PaperTok 集成
@@ -21,6 +28,7 @@
 
 ### 开发工作流
 - [工程工作流：Product + Upstream](./engineering/WORKFLOW_zh.md) - 仓库职责、分支策略、同步方式
+- [平台测试状态](./engineering/PLATFORM_TEST_STATUS_zh.md) - 当前已验证平台范围与回归建议
 - [Identifiers 总表（真值源）](./engineering/IDENTIFIERS_zh.md) - Display Name / Bundle ID / applicationId / App Group
 - [上游贡献指南（Anx Reader）](./engineering/UPSTREAM_CONTRIB_zh.md) - 如何向上游提交 PR
 - [路线图（工程视角）](./engineering/ROADMAP_zh.md) - 已完成功能与下一阶段计划

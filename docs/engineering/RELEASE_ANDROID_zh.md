@@ -2,6 +2,11 @@
 
 本文档记录 **papertok-reader（产品发行版）** 的 Android 发布流程、产品化（branding + identifiers）改造要点与常见问题。
 
+> ⚠️ 现状说明（非常重要）
+> - 本仓库目前只完成了 **iOS（iPhone/iPad）真机测试**。
+> - **Android 端尚未进行系统性回归测试**（后续会补）。
+> - 如果你当前必须稳定使用 Android/桌面端，请优先使用上游项目 **Anx Reader**。
+
 > 适用范围
 > - 本仓库：`ViffyGwaanl/papertok-reader`（private）
 > - App 显示名：**Paper Reader**
