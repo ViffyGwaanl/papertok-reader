@@ -79,190 +79,53 @@ class SettingsTile extends AbstractSettingsTile {
 
   @override
   Widget build(BuildContext context) {
-    return AndroidSettingsTile(
-      description: description,
-      onPressed: onPressed,
-      onToggle: onToggle,
-      tileType: tileType,
-      value: value,
-      leading: leading,
-      title: title,
-      enabled: enabled,
-      activeSwitchColor: activeSwitchColor,
-      initialValue: initialValue ?? false,
-      trailing: trailing,
-    );
-  }
-}
+    final subtitle = value ?? description;
 
-class AndroidSettingsTile extends StatelessWidget {
-  const AndroidSettingsTile({
-    required this.tileType,
-    required this.leading,
-    required this.title,
-    required this.description,
-    required this.onPressed,
-    required this.onToggle,
-    required this.value,
-    required this.initialValue,
-    required this.activeSwitchColor,
-    required this.enabled,
-    required this.trailing,
-    super.key,
-  });
-
-  final SettingsTileType tileType;
-  final Widget? leading;
-  final Widget? title;
-  final Widget? description;
-  final Function(BuildContext context)? onPressed;
-  final Function(bool value)? onToggle;
-  final Widget? value;
-  final bool initialValue;
-  final bool enabled;
-  final Color? activeSwitchColor;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    const scaleFactor = 0.6;
-
-    final cantShowAnimation = tileType == SettingsTileType.switchTile
-        ? onToggle == null && onPressed == null
-        : onPressed == null;
-
-    return IgnorePointer(
-      ignoring: !enabled,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: cantShowAnimation
-              ? null
-              : () {
-                  if (tileType == SettingsTileType.switchTile) {
-                    onToggle?.call(!initialValue);
-                  } else {
-                    onPressed?.call(context);
-                  }
-                },
-          highlightColor: Theme.of(context).listTileTheme.selectedColor,
-          child: Row(
+    switch (tileType) {
+      case SettingsTileType.switchTile:
+        final v = initialValue ?? false;
+        return ListTile(
+          leading: leading,
+          title: title,
+          subtitle: subtitle,
+          enabled: enabled,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (leading != null)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 8),
-                  child: IconTheme(
-                    data: IconTheme.of(context).copyWith(
-                      color: enabled
-                          ? Theme.of(context).iconTheme.color
-                          : Theme.of(context).disabledColor,
-                    ),
-                    child: leading!,
-                  ),
-                ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    start: 10,
-                    end: 8,
-                    bottom: 19 * scaleFactor,
-                    top: 19 * scaleFactor,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DefaultTextStyle(
-                        style: TextStyle(
-                          color: enabled
-                              ? Theme.of(context).textTheme.bodyLarge!.color!
-                              : Theme.of(context).disabledColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        child: title ?? Container(),
-                      ),
-                      if (value != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: DefaultTextStyle(
-                            style: TextStyle(
-                              color: enabled
-                                  ? Theme.of(context)
-                                      .textTheme
-                                      .bodySmall!
-                                      .color!
-                                  : Theme.of(context).disabledColor,
-                            ),
-                            child: value!,
-                          ),
-                        )
-                      else if (description != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: DefaultTextStyle(
-                            style: TextStyle(
-                              color: enabled
-                                  ? Theme.of(context)
-                                      .textTheme
-                                      .bodySmall!
-                                      .color!
-                                  : Theme.of(context).disabledColor,
-                            ),
-                            child: description!,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+              if (trailing != null) ...[
+                trailing!,
+                const SizedBox(width: 8),
+              ],
+              Switch.adaptive(
+                value: v,
+                onChanged: enabled ? onToggle : null,
+                activeColor: activeSwitchColor,
               ),
-              if (trailing != null && tileType == SettingsTileType.switchTile)
-                Row(
-                  children: [
-                    trailing!,
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 8),
-                      child: Switch(
-                        value: initialValue,
-                        onChanged: onToggle,
-                        activeThumbColor: enabled
-                            ? activeSwitchColor
-                            : Theme.of(context).disabledColor,
-                      ),
-                    ),
-                  ],
-                )
-              else if (tileType == SettingsTileType.switchTile)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 16, end: 8),
-                  child: Switch(
-                    value: initialValue,
-                    onChanged: onToggle,
-                    activeThumbColor: enabled
-                        ? activeSwitchColor
-                        : Theme.of(context).disabledColor,
-                  ),
-                )
-              else if (tileType == SettingsTileType.navigationTile)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 8),
-                  child: trailing ??
-                      Icon(
-                        Icons.chevron_right_sharp,
-                        color: enabled
-                            ? Theme.of(context).iconTheme.color
-                            : Theme.of(context).disabledColor,
-                      ),
-                )
-              else if (trailing != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: trailing!,
-                )
             ],
           ),
-        ),
-      ),
-    );
+          onTap: enabled ? () => onToggle?.call(!v) : null,
+        );
+
+      case SettingsTileType.navigationTile:
+        return ListTile(
+          leading: leading,
+          title: title,
+          subtitle: subtitle,
+          enabled: enabled,
+          trailing: trailing ?? const Icon(Icons.chevron_right),
+          onTap: enabled ? () => onPressed?.call(context) : null,
+        );
+
+      case SettingsTileType.simpleTile:
+        return ListTile(
+          leading: leading,
+          title: title,
+          subtitle: subtitle,
+          enabled: enabled,
+          trailing: trailing,
+          onTap: enabled ? () => onPressed?.call(context) : null,
+        );
+    }
   }
 }
 

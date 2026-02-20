@@ -11,6 +11,7 @@ import 'package:anx_reader/page/settings_page/reading.dart';
 import 'package:anx_reader/page/settings_page/storege.dart';
 import 'package:anx_reader/page/settings_page/sync.dart';
 import 'package:anx_reader/page/settings_page/translate.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
 import 'package:flutter/cupertino.dart';
@@ -78,8 +79,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               Navigator.push(
                                 context,
                                 CupertinoPageRoute(
-                                  builder: (context) =>
-                                      const AppearanceSetting(),
+                                  builder: (context) => SettingsSubpageScaffold(
+                                    title: L10n.of(context).settingsAppearance,
+                                    child: const AppearanceSetting(),
+                                  ),
                                 ),
                               );
                             },
@@ -93,7 +96,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               Navigator.push(
                                 context,
                                 CupertinoPageRoute(
-                                  builder: (context) => const ReadingSettings(),
+                                  builder: (context) => SettingsSubpageScaffold(
+                                    title: L10n.of(context).settingsReading,
+                                    child: const ReadingSettings(),
+                                  ),
                                 ),
                               );
                             },
@@ -107,7 +113,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               Navigator.push(
                                 context,
                                 CupertinoPageRoute(
-                                  builder: (context) => const SyncSetting(),
+                                  builder: (context) => SettingsSubpageScaffold(
+                                    title: L10n.of(context).settingsSync,
+                                    child: const SyncSetting(),
+                                  ),
                                 ),
                               );
                             },
@@ -121,8 +130,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               Navigator.push(
                                 context,
                                 CupertinoPageRoute(
-                                  builder: (context) =>
-                                      const TranslateSetting(),
+                                  builder: (context) => SettingsSubpageScaffold(
+                                    title: L10n.of(context).settingsTranslate,
+                                    child: const TranslateSetting(),
+                                  ),
                                 ),
                               );
                             },
@@ -136,7 +147,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               Navigator.push(
                                 context,
                                 CupertinoPageRoute(
-                                  builder: (context) => const NarrateSettings(),
+                                  builder: (context) => SettingsSubpageScaffold(
+                                    title: L10n.of(context).settingsNarrate,
+                                    child: const NarrateSettings(),
+                                  ),
                                 ),
                               );
                             },
@@ -151,7 +165,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 Navigator.push(
                                   context,
                                   CupertinoPageRoute(
-                                    builder: (context) => const AISettings(),
+                                    builder: (context) =>
+                                        SettingsSubpageScaffold(
+                                      title: L10n.of(context).settingsAi,
+                                      child: const AISettings(),
+                                    ),
                                   ),
                                 );
                               },
@@ -182,7 +200,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               Navigator.push(
                                 context,
                                 CupertinoPageRoute(
-                                  builder: (context) => const StorageSettings(),
+                                  builder: (context) => SettingsSubpageScaffold(
+                                    title: L10n.of(context).storage,
+                                    child: const StorageSettings(),
+                                  ),
                                 ),
                               );
                             },
@@ -196,7 +217,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               Navigator.push(
                                 context,
                                 CupertinoPageRoute(
-                                  builder: (context) => const AdvancedSetting(),
+                                  builder: (context) => SettingsSubpageScaffold(
+                                    title: L10n.of(context).settingsAdvanced,
+                                    child: const AdvancedSetting(),
+                                  ),
                                 ),
                               );
                             },

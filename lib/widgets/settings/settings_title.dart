@@ -43,8 +43,10 @@ Widget settingsSections({
     builder: (context) {
       return ColoredBox(
         color: Theme.of(context).scaffoldBackgroundColor,
-        child: ListView.builder(
+        child: ListView.separated(
+          padding: const EdgeInsets.only(top: 8, bottom: 24),
           itemCount: sections.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             return sections[index];
           },

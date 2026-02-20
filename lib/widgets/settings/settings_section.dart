@@ -1,4 +1,3 @@
-import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:flutter/material.dart';
 
@@ -24,7 +23,6 @@ class SettingsSection extends AbstractSettingsSection {
   }
 
   Widget buildSectionBody(BuildContext context) {
-    const scaleFactor = 0.5;
     final tileList = buildTileList();
 
     if (title == null) {
@@ -35,33 +33,30 @@ class SettingsSection extends AbstractSettingsSection {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsetsDirectional.only(
-            top: 24 * scaleFactor,
-            bottom: 10 * scaleFactor,
-            start: 24,
-            end: 24,
-          ),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
           child: DefaultTextStyle(
-            style: TextStyle(
-              color: Theme.of(context).primaryColor,
-            ),
+            style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
             child: title!,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: FilledContainer(
-            padding: EdgeInsetsGeometry.zero,
-            child: tileList,
-          ),
-        ),
+        tileList,
       ],
     );
   }
 
   Widget buildTileList() {
+    final children = <Widget>[];
+    for (var i = 0; i < tiles.length; i++) {
+      children.add(tiles[i]);
+      if (i != tiles.length - 1) {
+        children.add(const Divider(height: 1));
+      }
+    }
+
     return Column(
-      children: tiles,
+      children: children,
     );
   }
 }
