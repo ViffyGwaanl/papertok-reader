@@ -281,159 +281,81 @@ class _HomePageState extends ConsumerState<HomePage> {
           );
         } else {
           // Apple-style floating tab bar on phones.
-          //
-          // Problems we must solve:
-          // 1) BottomNavigationBar inside Scaffold.bottomNavigationBar is hard
-          //    to tap in our pill + blur setup (hit targets feel too small).
-          // 2) When keyboard dismisses, the input box should *not* drop to the
-          //    very bottom and then be pushed up by the tab bar.
-          //
-          // Solution:
-          // - Render the tab bar as an overlay (Stack) so it never affects page
-          //   layout (no "push" / jitter).
-          // - Use full-width Expanded InkWells for reliable hit targets.
-          // - AI input reserves space for the tab bar via AiChatStream.bottomPadding.
+          final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
 
-          final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
-          final bottomInset = MediaQuery.of(context).padding.bottom;
+          // Global keyboard policy: when keyboard is visible, hide the tab bar.
+          // This avoids the bar being lifted above the keyboard and keeps the
+          // input area unobstructed.
+          final showTabBar = !keyboardVisible;
 
-          const barHeight = 66.0;
-          const bottomGap = 0.0;
-
-          final desired = keyboardInset > 0 ? 0.0 : 1.0;
-
-          final duration = keyboardInset > 0
-              ? const Duration(milliseconds: 180)
-              : const Duration(milliseconds: 900);
-
-          Widget tabItem({
-            required IconData icon,
-            required String label,
-            required bool selected,
-            required VoidCallback onTap,
-          }) {
-            final theme = Theme.of(context);
-            final cs = theme.colorScheme;
-            final color = selected ? cs.primary : cs.onSurfaceVariant;
-
-            return Expanded(
-              child: InkResponse(
-                onTap: onTap,
-                containedInkWell: true,
-                highlightShape: BoxShape.rectangle,
-                child: SizedBox(
-                  height: barHeight,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icon, size: 24, color: color),
-                      const SizedBox(height: 4),
-                      Text(
-                        label,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: color,
-                          height: 1.0,
+          Widget? tabBar;
+          if (showTabBar) {
+            tabBar = SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
+                    child: Container(
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainer
+                            .withAlpha(170),
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withAlpha(110),
+                          width: 0.5,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 18,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
                       ),
-                    ],
+                      child: Theme(
+                        data: Theme.of(context).copyWith(
+                          splashFactory: NoSplash.splashFactory,
+                          highlightColor: Colors.transparent,
+                        ),
+                        child: BottomNavigationBar(
+                          selectedFontSize: 11,
+                          unselectedFontSize: 11,
+                          type: BottomNavigationBarType.fixed,
+                          landscapeLayout:
+                              BottomNavigationBarLandscapeLayout.linear,
+                          currentIndex: currentIndex,
+                          onTap: (int index) => onBottomTap(index, false),
+                          items: bottomBarItems,
+                          backgroundColor: Colors.transparent,
+                          elevation: 0,
+                          showUnselectedLabels: true,
+                          selectedItemColor:
+                              Theme.of(context).colorScheme.primary,
+                          unselectedItemColor:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          iconSize: 22,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             );
           }
 
-          return TweenAnimationBuilder<double>(
-            tween: Tween<double>(end: desired),
-            duration: duration,
-            curve: Curves.easeOutCubic,
-            builder: (context, t, _) {
-              final opacity = t;
-              final dy = (1 - t) * 12.0;
-
-              final bar = Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding:
-                      EdgeInsets.fromLTRB(16, 0, 16, bottomInset + bottomGap),
-                  child: Transform.translate(
-                    offset: Offset(0, dy),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(32),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
-                        child: Container(
-                          height: barHeight,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainer
-                                .withAlpha(170),
-                            borderRadius: BorderRadius.circular(32),
-                            border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outline
-                                  .withAlpha(110),
-                              width: 0.5,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x33000000),
-                                blurRadius: 18,
-                                offset: Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 6),
-                              child: Row(
-                                children: [
-                                  for (var i = 0; i < navBarItems.length; i++)
-                                    tabItem(
-                                      icon: navBarItems[i]['icon'] as IconData,
-                                      label: navBarItems[i]['label'] as String,
-                                      selected: i == currentIndex,
-                                      onTap: () => onBottomTap(i, false),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-
-              return Scaffold(
-                extendBody: true,
-                body: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: pages(currentIndex, constraints, null),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: IgnorePointer(
-                        ignoring: opacity < 0.05,
-                        child: Opacity(
-                          opacity: opacity,
-                          child: bar,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+          return Scaffold(
+            extendBody: true,
+            body: pages(currentIndex, constraints, null),
+            bottomNavigationBar: tabBar,
           );
         }
       },

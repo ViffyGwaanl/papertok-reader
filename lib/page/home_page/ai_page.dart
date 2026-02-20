@@ -14,14 +14,15 @@ class AiPage extends StatelessWidget {
     return AnimatedBuilder(
       animation: Prefs(),
       builder: (context, _) {
-        // Reserve space for the floating home tab bar so the input box never
-        // drops to the very bottom and then gets pushed.
+        // Reserve space for the floating home tab bar so the input box is
+        // never covered by it.
+        //
+        // Phone tab bar (HomePage): height=64, bottom padding=12, wrapped by
+        // SafeArea(top:false) → includes device bottom inset.
+        final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
         final bottomInset = MediaQuery.of(context).padding.bottom;
-        const barHeight = 66.0;
-        const bottomGap = 0.0;
-        final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
         final bottomPadding =
-            keyboardInset > 0 ? 0.0 : (barHeight + bottomInset + bottomGap);
+            keyboardVisible ? 0.0 : (64.0 + 12.0 + bottomInset);
 
         return AiChatStream(
           bottomPadding: bottomPadding,
