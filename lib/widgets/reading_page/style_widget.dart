@@ -62,34 +62,504 @@ class StyleWidgetState extends State<StyleWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        children: [
-          widgetTitle(L10n.of(context).readingPageStyle, ReadingSettings.theme),
-          sliders(),
-          const SizedBox(height: 10),
-          fontAndPageTurn(),
-          const Divider(),
-          Row(
-            children: [
-              Expanded(child: themeSelector()),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _fontSizeSliderRow(theme),
+            const SizedBox(height: 12),
+            _marginStepperRow(theme),
+            const SizedBox(height: 10),
+            _lineHeightStepperRow(theme),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _pillMenuButton(
+                    theme,
+                    label: _currentFontLabel(context),
+                    onTap: () => _showFontPicker(context),
+                  ),
                 ),
-                onPressed: () {
-                  widget.setCurrentPage(const BgimgSelector());
-                },
-                icon: const Icon(Icons.arrow_forward_ios),
-                iconAlignment: IconAlignment.end,
-                label: Text(L10n.of(context).readingPageStyleBackground),
-              )
-            ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _pillMenuButton(
+                    theme,
+                    label: _indentLabel(context),
+                    onTap: () => _showIndentPicker(context),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _pillMenuButton(
+                    theme,
+                    label: _pageTurnLabel(context),
+                    onTap: () => _showPageTurnPicker(context),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: Text(
+                L10n.of(context).readingPageStyle,
+                style: theme.textTheme.titleSmall,
+              ),
+              subtitle: Text(
+                L10n.of(context).readingPageStyleBackground,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              children: [
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(child: themeSelector()),
+                    const SizedBox(width: 10),
+                    _pillMenuButton(
+                      theme,
+                      label: L10n.of(context).readingPageStyleBackground,
+                      onTap: () => widget.setCurrentPage(const BgimgSelector()),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pill(
+    ThemeData theme, {
+    required Widget child,
+    VoidCallback? onTap,
+    bool selected = false,
+    EdgeInsetsGeometry padding =
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+  }) {
+    final cs = theme.colorScheme;
+    final bg = selected
+        ? cs.primary.withAlpha(40)
+        : cs.surfaceContainerHighest.withAlpha(140);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: Material(
+        color: bg,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            padding: padding,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: cs.outline.withAlpha(90),
+                width: 0.5,
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: DefaultTextStyle(
+              style: theme.textTheme.bodyMedium!.copyWith(
+                color: cs.onSurface,
+              ),
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pillMenuButton(
+    ThemeData theme, {
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return _pill(
+      theme,
+      onTap: onTap,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.chevron_right, size: 18),
+        ],
+      ),
+    );
+  }
+
+  void _applyBookStyle(BookStyle next) {
+    setState(() {
+      bookStyle = next;
+    });
+    widget.epubPlayerKey.currentState?.changeStyle(next);
+    Prefs().saveBookStyleToPrefs(next);
+  }
+
+  int _nearestIndex(double value, List<double> options) {
+    var bestIdx = 0;
+    var bestDist = (value - options[0]).abs();
+    for (var i = 1; i < options.length; i++) {
+      final d = (value - options[i]).abs();
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+    return bestIdx;
+  }
+
+  Widget _fontSizeSliderRow(ThemeData theme) {
+    final cs = theme.colorScheme;
+    final enabled = !Prefs().useBookStyles;
+
+    const min = 0.5;
+    const max = 3.0;
+    final t = ((bookStyle.fontSize - min) / (max - min)).clamp(0.0, 1.0);
+
+    final display = (bookStyle.fontSize * 14).round();
+
+    return _pill(
+      theme,
+      selected: true,
+      onTap: null,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Text(
+            'A',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SizedBox(
+              height: 36,
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 2,
+                      overlayShape: const RoundSliderOverlayShape(
+                        overlayRadius: 18,
+                      ),
+                      thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: 0,
+                      ),
+                      activeTrackColor: cs.onSurfaceVariant.withAlpha(160),
+                      inactiveTrackColor: cs.onSurfaceVariant.withAlpha(60),
+                    ),
+                    child: Slider(
+                      value: bookStyle.fontSize,
+                      onChanged: enabled
+                          ? (value) {
+                              _applyBookStyle(bookStyle.copyWith(
+                                fontSize: value,
+                              ));
+                            }
+                          : null,
+                      min: min,
+                      max: max,
+                      divisions: 25,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Align(
+                      alignment: Alignment(-1 + 2 * t, 0),
+                      child: IgnorePointer(
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest.withAlpha(220),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: cs.outline.withAlpha(120),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$display',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'A',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _marginStepperRow(ThemeData theme) {
+    final enabled = !Prefs().useBookStyles;
+    const options = <double>[2, 6, 12];
+    final idx = _nearestIndex(bookStyle.sideMargin, options);
+
+    String levelLabel() {
+      return switch (idx) {
+        0 => '小',
+        1 => '中',
+        _ => '大',
+      };
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _pill(
+            theme,
+            onTap: enabled && idx > 0
+                ? () => _applyBookStyle(
+                      bookStyle.copyWith(sideMargin: options[idx - 1]),
+                    )
+                : null,
+            child: const Center(child: Text('小')),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _pill(
+            theme,
+            selected: true,
+            onTap: null,
+            child: Center(child: Text('边距 ${levelLabel()}')),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _pill(
+            theme,
+            onTap: enabled && idx < options.length - 1
+                ? () => _applyBookStyle(
+                      bookStyle.copyWith(sideMargin: options[idx + 1]),
+                    )
+                : null,
+            child: const Center(child: Text('大')),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _lineHeightStepperRow(ThemeData theme) {
+    final enabled = !Prefs().useBookStyles;
+    const options = <double>[1.4, 1.8, 2.2];
+    final idx = _nearestIndex(bookStyle.lineHeight, options);
+
+    String levelLabel() {
+      return switch (idx) {
+        0 => '紧',
+        1 => '标准',
+        _ => '松',
+      };
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _pill(
+            theme,
+            onTap: enabled && idx > 0
+                ? () => _applyBookStyle(
+                      bookStyle.copyWith(lineHeight: options[idx - 1]),
+                    )
+                : null,
+            child: const Center(child: Text('紧')),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _pill(
+            theme,
+            selected: true,
+            onTap: null,
+            child: Center(child: Text('行距 ${levelLabel()}')),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _pill(
+            theme,
+            onTap: enabled && idx < options.length - 1
+                ? () => _applyBookStyle(
+                      bookStyle.copyWith(lineHeight: options[idx + 1]),
+                    )
+                : null,
+            child: const Center(child: Text('松')),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _currentFontLabel(BuildContext context) {
+    final label = Prefs().font.label.trim();
+    return label.isEmpty ? L10n.of(context).font : label;
+  }
+
+  String _indentLabel(BuildContext context) {
+    final v = bookStyle.indent;
+    final state = v <= 0 ? '无' : (v <= 2 ? '标准' : '较大');
+    return '首行缩进 $state';
+  }
+
+  String _pageTurnLabel(BuildContext context) {
+    return Prefs().pageTurnStyle.getLabel(context);
+  }
+
+  Future<void> _showFontPicker(BuildContext context) async {
+    final l10n = L10n.of(context);
+    final all = fonts();
+    final selected = await showModalBottomSheet<FontModel>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: ListView(
+            children: all
+                .map(
+                  (f) => ListTile(
+                    title: Text(f.label),
+                    trailing: f.path == Prefs().font.path
+                        ? const Icon(Icons.check)
+                        : null,
+                    onTap: () => Navigator.of(ctx).pop(f),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        );
+      },
+    );
+
+    if (selected == null) return;
+
+    if (selected.name == 'newFont') {
+      widget.hideAppBarAndBottomBar(false);
+      await importFont();
+      return;
+    }
+
+    if (selected.name == 'download') {
+      widget.hideAppBarAndBottomBar(false);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const FontsSettingPage()),
+      );
+      return;
+    }
+
+    widget.epubPlayerKey.currentState?.changeFont(selected);
+    Prefs().font = selected;
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.commonSaved)),
+    );
+
+    setState(() {});
+  }
+
+  Future<void> _showIndentPicker(BuildContext context) async {
+    if (Prefs().useBookStyles) return;
+    final options = <double, String>{
+      0: '无',
+      2: '标准',
+      4: '较大',
+    };
+
+    final selected = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: options.entries
+                .map(
+                  (e) => ListTile(
+                    title: Text(e.value),
+                    trailing: bookStyle.indent == e.key
+                        ? const Icon(Icons.check)
+                        : null,
+                    onTap: () => Navigator.of(ctx).pop(e.key),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        );
+      },
+    );
+
+    if (selected == null) return;
+    _applyBookStyle(bookStyle.copyWith(indent: selected));
+  }
+
+  Future<void> _showPageTurnPicker(BuildContext context) async {
+    final selected = await showModalBottomSheet<PageTurn>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: PageTurn.values
+                .map(
+                  (v) => ListTile(
+                    title: Text(v.getLabel(context)),
+                    trailing: Prefs().pageTurnStyle == v
+                        ? const Icon(Icons.check)
+                        : null,
+                    onTap: () => Navigator.of(ctx).pop(v),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        );
+      },
+    );
+
+    if (selected == null) return;
+    Prefs().pageTurnStyle = selected;
+    widget.epubPlayerKey.currentState?.changePageTurnStyle(selected);
+    setState(() {});
   }
 
   List<FontModel> fonts() {

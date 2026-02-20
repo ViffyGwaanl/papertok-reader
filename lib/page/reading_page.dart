@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/reading_time.dart';
@@ -941,51 +942,141 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                   enableDrag: false,
                   builder: (context) => SafeArea(
                     top: false,
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setState) {
-                          final hasContent = !identical(_currentPage, empty);
-                          return IntrinsicHeight(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (hasContent)
-                                  Expanded(
-                                    child: _currentPage,
-                                  ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.toc),
-                                      onPressed: tocHandler,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(EvaIcons.edit),
-                                      onPressed: noteHandler,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.data_usage),
-                                      onPressed: progressHandler,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.color_lens),
-                                      onPressed: () {
-                                        styleHandler(setState);
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(EvaIcons.headphones),
-                                      onPressed: ttsHandler,
-                                    ),
-                                  ],
-                                ),
-                              ],
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 600),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainer
+                                  .withAlpha(170),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withAlpha(110),
+                                width: 0.5,
+                              ),
                             ),
-                          );
-                        },
+                            child: StatefulBuilder(
+                              builder:
+                                  (BuildContext context, StateSetter setState) {
+                                final hasContent =
+                                    !identical(_currentPage, empty);
+
+                                Widget buildBottomBar() {
+                                  Widget barIcon(
+                                    IconData icon,
+                                    VoidCallback onTap,
+                                  ) {
+                                    return IconButton(
+                                      icon: Icon(icon),
+                                      onPressed: onTap,
+                                      splashRadius: 22,
+                                    );
+                                  }
+
+                                  return Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        12, 0, 12, 12),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(28),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                          sigmaX: 18.0,
+                                          sigmaY: 18.0,
+                                        ),
+                                        child: Container(
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .surfaceContainer
+                                                .withAlpha(170),
+                                            borderRadius:
+                                                BorderRadius.circular(28),
+                                            border: Border.all(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .outline
+                                                  .withAlpha(110),
+                                              width: 0.5,
+                                            ),
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                color: Color(0x33000000),
+                                                blurRadius: 18,
+                                                offset: Offset(0, 8),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Theme(
+                                            data: Theme.of(context).copyWith(
+                                              splashFactory:
+                                                  NoSplash.splashFactory,
+                                              highlightColor:
+                                                  Colors.transparent,
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceAround,
+                                              children: [
+                                                barIcon(Icons.toc, tocHandler),
+                                                barIcon(
+                                                  EvaIcons.edit,
+                                                  noteHandler,
+                                                ),
+                                                barIcon(
+                                                  Icons.data_usage,
+                                                  progressHandler,
+                                                ),
+                                                barIcon(
+                                                  Icons.color_lens,
+                                                  () => styleHandler(setState),
+                                                ),
+                                                barIcon(
+                                                  EvaIcons.headphones,
+                                                  ttsHandler,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                return IntrinsicHeight(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (hasContent)
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              12,
+                                              8,
+                                              12,
+                                              0,
+                                            ),
+                                            child: _currentPage,
+                                          ),
+                                        ),
+                                      buildBottomBar(),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
