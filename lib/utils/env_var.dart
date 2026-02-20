@@ -16,12 +16,9 @@ class EnvVar {
 
   static bool get isStoreBuild => isAppStore || isPlayStore;
 
-  static bool get showIapPlaceHolder => isOhosStore;
-
   static bool get enableCheckUpdate =>
       !isStoreBuild && !isFdroid && !isOhosStore;
   static bool get enableDonation => !isStoreBuild && !isOhosStore;
-  static bool get enableInAppPurchase => isStoreBuild;
 
   static bool get showBeian =>
       (isAppStore && _isChineseMainlandLocale) || isOhosStore;

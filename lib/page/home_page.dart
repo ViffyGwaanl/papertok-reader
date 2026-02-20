@@ -20,7 +20,6 @@ import 'package:anx_reader/utils/load_default_font.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/providers/sync.dart';
-import 'package:anx_reader/providers/iap.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
@@ -104,9 +103,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> initAnx() async {
-    if (EnvVar.enableInAppPurchase) {
-      ref.read(iapProvider.future);
-    }
     AnxToast.init(context);
     checkUpdate(false);
     InitializationCheck.check();
