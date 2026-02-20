@@ -66,9 +66,11 @@ class _HomePageState extends ConsumerState<HomePage> {
             TextButton(
               onPressed: () => {
                 launchUrl(
-                    Uri.parse(
-                        'https://developer.microsoft.com/en-us/microsoft-edge/webview2'),
-                    mode: LaunchMode.externalApplication)
+                  Uri.parse(
+                    'https://developer.microsoft.com/en-us/microsoft-edge/webview2',
+                  ),
+                  mode: LaunchMode.externalApplication,
+                ),
               },
               child: Text(L10n.of(context).webview2Install),
             ),
@@ -78,7 +80,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     } else {
       webViewEnvironment = await WebViewEnvironment.create(
         settings: WebViewEnvironmentSettings(
-            userDataFolder: (await getAnxTempDir()).path),
+          userDataFolder: (await getAnxTempDir()).path,
+        ),
       );
     }
   }
@@ -170,12 +173,14 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (def != null) navBarItems.add(def);
     }
 
-    int currentIndex = navBarItems
-        .indexWhere((element) => element['identifier'] == _currentTab);
+    int currentIndex = navBarItems.indexWhere(
+      (element) => element['identifier'] == _currentTab,
+    );
     if (currentIndex == -1) {
       _currentTab = Prefs.homeTabPapers;
-      currentIndex = navBarItems
-          .indexWhere((element) => element['identifier'] == _currentTab);
+      currentIndex = navBarItems.indexWhere(
+        (element) => element['identifier'] == _currentTab,
+      );
       if (currentIndex == -1 && navBarItems.isNotEmpty) {
         currentIndex = 0;
         _currentTab = navBarItems[0]['identifier'];
@@ -221,13 +226,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       return NavigationRailDestination(
         icon: Icon(item['icon'] as IconData),
         label: Text(item['label'] as String),
-      );
-    }).toList();
-
-    List<BottomNavigationBarItem> bottomBarItems = navBarItems.map((item) {
-      return BottomNavigationBarItem(
-        icon: Icon(item['icon'] as IconData),
-        label: item['label'] as String,
       );
     }).toList();
 
@@ -290,6 +288,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
           Widget? tabBar;
           if (showTabBar) {
+            final cs = Theme.of(context).colorScheme;
             tabBar = SafeArea(
               top: false,
               child: Padding(
@@ -301,16 +300,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: Container(
                       height: 64,
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainer
-                            .withAlpha(170),
+                        color: cs.surfaceContainer.withAlpha(170),
                         borderRadius: BorderRadius.circular(32),
                         border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withAlpha(110),
+                          color: cs.outline.withAlpha(110),
                           width: 0.5,
                         ),
                         boxShadow: const [
@@ -321,28 +314,64 @@ class _HomePageState extends ConsumerState<HomePage> {
                           ),
                         ],
                       ),
-                      child: Theme(
-                        data: Theme.of(context).copyWith(
-                          splashFactory: NoSplash.splashFactory,
-                          highlightColor: Colors.transparent,
-                        ),
-                        child: BottomNavigationBar(
-                          selectedFontSize: 11,
-                          unselectedFontSize: 11,
-                          type: BottomNavigationBarType.fixed,
-                          landscapeLayout:
-                              BottomNavigationBarLandscapeLayout.linear,
-                          currentIndex: currentIndex,
-                          onTap: (int index) => onBottomTap(index, false),
-                          items: bottomBarItems,
-                          backgroundColor: Colors.transparent,
-                          elevation: 0,
-                          showUnselectedLabels: true,
-                          selectedItemColor:
-                              Theme.of(context).colorScheme.primary,
-                          unselectedItemColor:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
-                          iconSize: 22,
+                      // Custom tab row: every segment is fully tappable
+                      // (GestureDetector + HitTestBehavior.opaque guarantees
+                      // the whole cell, not just the icon/label, is the hit
+                      // target). No framework animation; color changes are
+                      // instant so there is nothing to notice on fast taps.
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Row(
+                          children: List.generate(navBarItems.length, (i) {
+                            final item = navBarItems[i];
+                            final selected = i == currentIndex;
+                            final color = selected
+                                ? cs.primary
+                                : cs.onSurfaceVariant;
+
+                            return Expanded(
+                              child: Semantics(
+                                button: true,
+                                selected: selected,
+                                label: item['label'] as String,
+                                child: InkResponse(
+                                  onTap: () => onBottomTap(i, false),
+                                  containedInkWell: true,
+                                  highlightShape: BoxShape.rectangle,
+                                  highlightColor: cs.primary.withAlpha(18),
+                                  splashColor: Colors.transparent,
+                                  child: SizedBox(
+                                    height: 64,
+                                    width: double.infinity,
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          item['icon'] as IconData,
+                                          color: color,
+                                          size: 22,
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          item['label'] as String,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: color,
+                                            fontWeight: selected
+                                                ? FontWeight.w600
+                                                : FontWeight.normal,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
                         ),
                       ),
                     ),
