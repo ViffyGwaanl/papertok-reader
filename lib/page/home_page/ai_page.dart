@@ -50,11 +50,12 @@ class AiPage extends StatelessWidget {
 
             final top = prompts.take(3).toList(growable: false);
 
-            return Center(
+            return Align(
+              alignment: Alignment.bottomCenter,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 460),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -64,7 +65,7 @@ class AiPage extends StatelessWidget {
                         style: theme.textTheme.titleMedium,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       if (top.isNotEmpty) ...[
                         for (final p in top) ...[
                           actionButton(title: p.name, prompt: p.content),
