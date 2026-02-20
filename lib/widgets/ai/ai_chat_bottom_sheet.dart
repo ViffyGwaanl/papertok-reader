@@ -12,6 +12,14 @@ import 'package:flutter/material.dart';
 ///   the assistant continues streaming.
 /// - Persist the last sheet height.
 /// - Avoid dismissing the sheet via drag (ReadingPage uses enableDrag=false).
+enum AiChatBottomSheetMinimizeBehavior {
+  /// Minimize into a small bar (DraggableScrollableSheet min size).
+  toBar,
+
+  /// Close/dismiss the sheet.
+  close,
+}
+
 class AiChatBottomSheet extends StatefulWidget {
   const AiChatBottomSheet({
     super.key,
@@ -21,6 +29,7 @@ class AiChatBottomSheet extends StatefulWidget {
     this.quickPromptChips = const [],
     this.initialSizeOverride,
     this.rememberSize = true,
+    this.minimizeBehavior = AiChatBottomSheetMinimizeBehavior.toBar,
     this.onRequestClose,
   });
 
@@ -36,6 +45,9 @@ class AiChatBottomSheet extends StatefulWidget {
   /// Whether to persist sheet height while dragging.
   /// Note: minimized state is not persisted.
   final bool rememberSize;
+
+  /// Minimize behavior.
+  final AiChatBottomSheetMinimizeBehavior minimizeBehavior;
 
   /// Close callback.
   /// - Modal sheet: pass `Navigator.pop`.
@@ -89,6 +101,13 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
   }
 
   Future<void> _toggleMinimize() async {
+    if (widget.minimizeBehavior == AiChatBottomSheetMinimizeBehavior.close) {
+      // In some contexts (e.g. Home AI as a Cupertino sheet), the preferred
+      // behavior is to dismiss the sheet entirely.
+      final close = widget.onRequestClose ?? () => Navigator.of(context).pop();
+      close();
+      return;
+    }
     double size = _maxSize;
     try {
       size = _sheetController.size;

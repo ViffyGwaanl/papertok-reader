@@ -14,16 +14,14 @@ void main() {
     expect(parseApiKeysFromString('["k1","k2"]'), ['k1', 'k2']);
   });
 
-  test('ApiKeyRoundRobin picks keys in order per provider', () {
+  test('ApiKeyRoundRobin stores per-provider indices', () {
     final rr = ApiKeyRoundRobin();
-    final keys = ['a', 'b', 'c'];
 
-    expect(rr.pick(providerId: 'p1', keys: keys), 'a');
-    expect(rr.pick(providerId: 'p1', keys: keys), 'b');
-    expect(rr.pick(providerId: 'p1', keys: keys), 'c');
-    expect(rr.pick(providerId: 'p1', keys: keys), 'a');
+    expect(rr.startIndex('p1'), 0);
+    rr.advance('p1', 2);
+    expect(rr.startIndex('p1'), 2);
 
     // Different provider maintains separate index.
-    expect(rr.pick(providerId: 'p2', keys: keys), 'a');
+    expect(rr.startIndex('p2'), 0);
   });
 }

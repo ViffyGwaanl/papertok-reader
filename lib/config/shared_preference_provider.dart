@@ -162,6 +162,7 @@ class Prefs extends ChangeNotifier {
           final decoded = jsonDecode(value);
           if (decoded is Map<String, dynamic>) {
             decoded.remove('api_key');
+            decoded.remove('api_keys');
             value = jsonEncode(decoded);
           } else if (decoded is Map) {
             final map = decoded.cast<String, dynamic>();
@@ -224,6 +225,7 @@ class Prefs extends ChangeNotifier {
 
                   // Never import api keys from plain backup.
                   map.remove('api_key');
+                  map.remove('api_keys');
 
                   if (existingApiKey != null && existingApiKey.isNotEmpty) {
                     map['api_key'] = existingApiKey;

@@ -1288,13 +1288,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       // When used inside DraggableScrollableSheet, we must always attach the
       // provided ScrollController to a ScrollView; otherwise the sheet
       // controller won't be attached and programmatic minimize won't work.
-      return ListView(
+      //
+      // Use SliverFillRemaining to make the empty state fill the available
+      // space, avoiding the "invisible frame" / clipped chip area.
+      return CustomScrollView(
         controller: _scrollController,
-        padding: EdgeInsets.zero,
         physics: const ClampingScrollPhysics(),
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.6,
+        slivers: [
+          SliverFillRemaining(
+            hasScrollBody: false,
             child: content,
           ),
         ],

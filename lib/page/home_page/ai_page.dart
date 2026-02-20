@@ -47,6 +47,8 @@ class _AiPageState extends State<AiPage> {
               // persist size here to avoid getting stuck in a tiny state.
               initialSizeOverride: 0.95,
               rememberSize: false,
+              // Home: minimize should dismiss the sheet (not keep a bar).
+              minimizeBehavior: AiChatBottomSheetMinimizeBehavior.close,
               onRequestClose: () => Navigator.of(context).maybePop(),
             ),
           ),

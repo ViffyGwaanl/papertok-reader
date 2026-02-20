@@ -28,6 +28,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     // Remove secrets.
     final safe = Map<String, dynamic>.from(stored);
     safe.remove('api_key');
+    safe.remove('api_keys');
 
     // Only keep non-empty values.
     safe.removeWhere((k, v) => v == null || v.toString().trim().isEmpty);
@@ -106,15 +107,19 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
 
         final current = prefs.getAiConfig(id);
         final apiKey = current['api_key'];
+        final apiKeys = current['api_keys'];
 
         final merged = <String, String>{};
         for (final e in remoteConfig.entries) {
           merged[e.key.toString()] = e.value?.toString() ?? '';
         }
 
-        // Ensure api_key remains local-only.
+        // Ensure api_key(s) remain local-only.
         if (apiKey != null && apiKey.trim().isNotEmpty) {
           merged['api_key'] = apiKey;
+        }
+        if (apiKeys != null && apiKeys.trim().isNotEmpty) {
+          merged['api_keys'] = apiKeys;
         }
 
         prefs.saveAiConfig(id, merged);

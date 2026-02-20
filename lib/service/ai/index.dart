@@ -110,70 +110,126 @@ Stream<String> _generateStream({
   // Multi API keys support (round-robin per request):
   // Users can input multiple keys in the API key field separated by comma/semicolon/newline,
   // or a JSON array string.
-  final apiKeys = parseApiKeysFromString(config.apiKey);
-  if (apiKeys.length > 1) {
-    final picked = apiKeyRoundRobin.pick(
-      providerId: selectedProviderId,
-      keys: apiKeys,
-    );
-    config = config.copyWith(apiKey: picked);
-    AnxLog.info(
-      'aiGenerateStream: apiKey rotation enabled provider=$selectedProviderId keys=${apiKeys.length}',
-    );
-  }
+  final rawMergedConfig = <String, String>{}
+    ..addAll(savedConfig)
+    ..addAll(overrideConfig ?? const {});
+
+  final apiKeys = parseApiKeysFromConfig(rawMergedConfig);
 
   AnxLog.info(
     'aiGenerateStream: $selectedProviderId($registryIdentifier), model: ${config.model}, baseUrl: ${config.baseUrl}',
   );
 
-  final pipeline = registry.resolve(config, useAgent: useAgent);
-  final model = pipeline.model;
-
-  Stream<String> stream;
-  if (useAgent) {
-    final inputMessage = _latestUserMessage(sanitizedMessages);
-    if (inputMessage == null) {
-      yield 'No user input provided';
-      return;
+  bool shouldRetry(Object error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('401') ||
+        message.contains('unauthorized') ||
+        message.contains('invalid api key')) {
+      return true;
     }
-
-    final tools = pipeline.tools;
-    if (tools.isEmpty) {
-      yield 'Agent mode not supported for this provider.';
-      return;
+    if (message.contains('429') || message.contains('rate limit')) {
+      return true;
     }
-
-    final historyMessages = sanitizedMessages
-        .sublist(0, sanitizedMessages.length - 1)
-        .toList(growable: false);
-
-    stream = runner.streamAgent(
-      model: model,
-      tools: tools,
-      history: historyMessages,
-      input: inputMessage,
-      systemMessage: pipeline.systemMessage,
-    );
-  } else {
-    final prompt = PromptValue.chat(sanitizedMessages);
-    stream = runner.stream(model: model, prompt: prompt);
+    if (message.contains('503') || message.contains('bad gateway')) {
+      return true;
+    }
+    return false;
   }
 
-  var buffer = '';
+  // Multi-key failover:
+  // - Round-robin starting point is tracked per provider id.
+  // - If a request fails immediately (no streamed output yet) with an auth/rate
+  //   limit error, we retry with the next key.
+  final keys = apiKeys;
+  final startIndex = apiKeyRoundRobin.startIndex(selectedProviderId);
+  final attempts = keys.isEmpty ? 1 : keys.length;
 
-  try {
-    await for (final chunk in stream) {
-      buffer = chunk;
-      yield buffer;
+  for (var attempt = 0; attempt < attempts; attempt++) {
+    final attemptKey = keys.isEmpty
+        ? config.apiKey
+        : keys[(startIndex + attempt) % keys.length];
+    final attemptConfig = config.copyWith(apiKey: attemptKey);
+
+    if (keys.length > 1) {
+      AnxLog.info(
+        'aiGenerateStream: apiKey rotation provider=$selectedProviderId keys=${keys.length} attempt=${attempt + 1}/$attempts',
+      );
     }
-  } catch (error, stack) {
-    final mapped = _mapError(error);
-    AnxLog.severe('AI error: $mapped\n$stack');
-    yield mapped;
-  } finally {
+
+    final pipeline = registry.resolve(attemptConfig, useAgent: useAgent);
+    final model = pipeline.model;
+
+    Stream<String> stream;
+    if (useAgent) {
+      final inputMessage = _latestUserMessage(sanitizedMessages);
+      if (inputMessage == null) {
+        yield 'No user input provided';
+        try {
+          model.close();
+        } catch (_) {}
+        return;
+      }
+
+      final tools = pipeline.tools;
+      if (tools.isEmpty) {
+        yield 'Agent mode not supported for this provider.';
+        try {
+          model.close();
+        } catch (_) {}
+        return;
+      }
+
+      final historyMessages = sanitizedMessages
+          .sublist(0, sanitizedMessages.length - 1)
+          .toList(growable: false);
+
+      stream = runner.streamAgent(
+        model: model,
+        tools: tools,
+        history: historyMessages,
+        input: inputMessage,
+        systemMessage: pipeline.systemMessage,
+      );
+    } else {
+      final prompt = PromptValue.chat(sanitizedMessages);
+      stream = runner.stream(model: model, prompt: prompt);
+    }
+
+    var buffer = '';
+
     try {
-      model.close();
-    } catch (_) {}
+      await for (final chunk in stream) {
+        buffer = chunk;
+        yield buffer;
+      }
+
+      // Success: advance round-robin index for next request.
+      if (keys.length > 1) {
+        apiKeyRoundRobin.advance(selectedProviderId, startIndex + attempt + 1);
+      }
+      return;
+    } catch (error, stack) {
+      // Retry only if:
+      // - multi-key enabled
+      // - no partial output yet
+      // - error looks like auth/rate-limit
+      final canRetry = keys.length > 1 && buffer.isEmpty && shouldRetry(error);
+      if (canRetry && attempt < attempts - 1) {
+        AnxLog.info(
+          'aiGenerateStream: retry with next apiKey provider=$selectedProviderId attempt=${attempt + 1}/$attempts error=${_mapError(error)}',
+        );
+        continue;
+      }
+
+      final mapped = _mapError(error);
+      AnxLog.severe('AI error: $mapped\n$stack');
+      yield mapped;
+      return;
+    } finally {
+      try {
+        model.close();
+      } catch (_) {}
+    }
   }
 }
 

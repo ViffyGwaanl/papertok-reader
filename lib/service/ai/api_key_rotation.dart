@@ -29,7 +29,7 @@ List<String> parseApiKeysFromString(String raw) {
 
   final parts = t
       .replaceAll('\r', '\n')
-      .split(RegExp(r'[\n,;]+'))
+      .split(RegExp(r'[\n,;，；]+'))
       .map((e) => e.trim())
       .where((e) => e.isNotEmpty)
       .toList(growable: false);
@@ -53,14 +53,12 @@ List<String> parseApiKeysFromConfig(Map<String, String> raw) {
 class ApiKeyRoundRobin {
   final Map<String, int> _nextIndexByProvider = <String, int>{};
 
-  String pick({required String providerId, required List<String> keys}) {
-    if (keys.isEmpty) return '';
-    if (keys.length == 1) return keys.first;
+  int startIndex(String providerId) {
+    return _nextIndexByProvider[providerId] ?? 0;
+  }
 
-    final current = _nextIndexByProvider[providerId] ?? 0;
-    final idx = current % keys.length;
-    _nextIndexByProvider[providerId] = current + 1;
-    return keys[idx];
+  void advance(String providerId, int nextIndex) {
+    _nextIndexByProvider[providerId] = nextIndex;
   }
 }
 
