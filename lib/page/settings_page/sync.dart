@@ -257,12 +257,22 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
     if (includeEncryptedApiKeys) {
       try {
-        final apiKeys = <String, String>{};
-        for (final option in buildDefaultAiServices()) {
-          final cfg = Prefs().getAiConfig(option.identifier);
-          final key = (cfg['api_key'] ?? '').trim();
-          if (key.isEmpty || key == 'YOUR_API_KEY') continue;
-          apiKeys[option.identifier] = key;
+        final apiKeys = <String, Map<String, String>>{};
+
+        // Include keys for all providers (built-in + custom).
+        for (final p in Prefs().aiProvidersV1) {
+          final cfg = Prefs().getAiConfig(p.id);
+          final apiKey = (cfg['api_key'] ?? '').trim();
+          final apiKeysRaw = (cfg['api_keys'] ?? '').trim();
+
+          final hasSingle = apiKey.isNotEmpty && apiKey != 'YOUR_API_KEY';
+          final hasMulti = apiKeysRaw.isNotEmpty;
+          if (!hasSingle && !hasMulti) continue;
+
+          apiKeys[p.id] = {
+            if (hasSingle) 'api_key': apiKey,
+            if (hasMulti) 'api_keys': apiKeysRaw,
+          };
         }
 
         final plaintext = jsonEncode(apiKeys);
@@ -318,7 +328,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     }
   }
 
-  Future<Map<String, String>?> _loadEncryptedApiKeysFromBackup(
+  Future<Map<String, Map<String, String>>?> _loadEncryptedApiKeysFromBackup(
       String extractPath) async {
     final l10n = L10n.of(navigatorKey.currentContext!);
     final manifestFile = File('$extractPath/$_backupManifestFileName');
@@ -374,7 +384,32 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       final keysDecoded = jsonDecode(plaintext);
       if (keysDecoded is! Map) return null;
 
-      return keysDecoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+      // Backward compatibility:
+      // - v1: { providerId: "apiKey" }
+      // - v2+: { providerId: { api_key: "...", api_keys: "..." } }
+      final result = <String, Map<String, String>>{};
+      for (final entry in keysDecoded.entries) {
+        final id = entry.key.toString();
+        final v = entry.value;
+        if (v is String) {
+          final apiKey = v.trim();
+          if (apiKey.isNotEmpty) {
+            result[id] = {'api_key': apiKey};
+          }
+          continue;
+        }
+        if (v is Map) {
+          final map = <String, String>{};
+          for (final e in v.entries) {
+            map[e.key.toString()] = e.value?.toString() ?? '';
+          }
+          if (map.values.any((s) => s.trim().isNotEmpty)) {
+            result[id] = map;
+          }
+        }
+      }
+
+      return result.isEmpty ? null : result;
     } catch (e) {
       AnxLog.info('importData: failed to decrypt api keys: $e');
       AnxToast.show(l10n.backupDecryptFailed);
@@ -382,13 +417,23 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     }
   }
 
-  void _applyApiKeysToPrefs(Map<String, String> apiKeys) {
+  void _applyApiKeysToPrefs(Map<String, Map<String, String>> apiKeys) {
     for (final entry in apiKeys.entries) {
       final id = entry.key;
-      final apiKey = entry.value.trim();
-      if (apiKey.isEmpty) continue;
+      final payload = entry.value;
+
       final cfg = Prefs().getAiConfig(id);
-      cfg['api_key'] = apiKey;
+
+      final apiKey = (payload['api_key'] ?? '').trim();
+      final apiKeysRaw = (payload['api_keys'] ?? '').trim();
+
+      if (apiKey.isNotEmpty) {
+        cfg['api_key'] = apiKey;
+      }
+      if (apiKeysRaw.isNotEmpty) {
+        cfg['api_keys'] = apiKeysRaw;
+      }
+
       Prefs().saveAiConfig(id, cfg);
     }
   }
