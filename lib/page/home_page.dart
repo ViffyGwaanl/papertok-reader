@@ -25,7 +25,7 @@ import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+// import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -280,70 +280,64 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           );
         } else {
-          // Allow selecting AI tab on phones (Home AI is now a normal tab page).
+          // Apple-style floating tab bar on phones.
           final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
           final isAiTab = navBarItems.isNotEmpty &&
               navBarItems[currentIndex]['identifier'] == Prefs.homeTabAI;
 
-          // When typing in Home AI on phone, hide the floating tab bar to avoid
-          // it jumping above the keyboard and covering the input box.
-          if (keyboardVisible && isAiTab) {
-            return Scaffold(
-              extendBody: true,
-              body: pages(currentIndex, constraints, null),
+          // When typing in Home AI, hide the tab bar to avoid it being lifted
+          // above the keyboard and covering the input area.
+          final showTabBar = !(keyboardVisible && isAiTab);
+
+          Widget? tabBar;
+          if (showTabBar) {
+            tabBar = SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
+                    child: Container(
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainer
+                            .withAlpha(160),
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withAlpha(120),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: BottomNavigationBar(
+                        selectedFontSize: 11,
+                        unselectedFontSize: 11,
+                        type: BottomNavigationBarType.fixed,
+                        landscapeLayout:
+                            BottomNavigationBarLandscapeLayout.linear,
+                        currentIndex: currentIndex,
+                        onTap: (int index) => onBottomTap(index, false),
+                        items: bottomBarItems,
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             );
           }
 
           return Scaffold(
             extendBody: true,
-            body: BottomBar(
-              width: 330,
-              body: (_, controller) =>
-                  pages(currentIndex, constraints, controller),
-              hideOnScroll: Prefs().autoHideBottomBar,
-              scrollOpposite: false,
-              curve: Curves.easeIn,
-              barColor: Colors.transparent,
-              iconDecoration: BoxDecoration(
-                color: Prefs().autoHideBottomBar
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(500),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(32),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                  child: Container(
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainer
-                          .withAlpha(123),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outline,
-                        width: 0.5,
-                      ),
-                    ),
-                    child: BottomNavigationBar(
-                      selectedFontSize: 12,
-                      enableFeedback: true,
-                      type: BottomNavigationBarType.fixed,
-                      landscapeLayout:
-                          BottomNavigationBarLandscapeLayout.linear,
-                      currentIndex: currentIndex,
-                      onTap: (int index) => onBottomTap(index, false),
-                      items: bottomBarItems,
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      // height: 64,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            body: pages(currentIndex, constraints, null),
+            bottomNavigationBar: tabBar,
           );
         }
       },
