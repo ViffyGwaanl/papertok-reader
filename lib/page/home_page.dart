@@ -281,21 +281,29 @@ class _HomePageState extends ConsumerState<HomePage> {
           );
         } else {
           // Apple-style floating tab bar on phones.
-          final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-
-          // Global keyboard policy: hide the tab bar while keyboard is visible.
-          // Use an animated height to avoid a jarring jump when keyboard
-          // dismisses and the bar re-appears.
+          //
+          // UX: when the keyboard is dismissed (including interactive
+          // drag-to-dismiss), the tab bar should re-appear smoothly instead of
+          // popping in and pushing the input box abruptly.
+          //
+          // Implementation: drive height/opacity from `viewInsets.bottom`.
+          final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
           final bottomInset = MediaQuery.of(context).padding.bottom;
+
           const barHeight = 60.0;
-          const bottomGap = 6.0;
-          final targetHeight =
-              keyboardVisible ? 0.0 : (barHeight + bottomInset + bottomGap);
+          const bottomGap = 2.0;
+          const revealRange = 180.0;
+
+          final t = (1 - (keyboardInset / revealRange)).clamp(0.0, 1.0);
+          final eased = Curves.easeOutCubic.transform(t);
+
+          final targetHeight = (barHeight + bottomInset + bottomGap) * eased;
+          final paddingBottom = (bottomInset + bottomGap) * eased;
 
           final bar = Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset + bottomGap),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, paddingBottom),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(32),
                 child: BackdropFilter(
@@ -353,15 +361,18 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           );
 
-          final animatedBar = AnimatedContainer(
-            duration: const Duration(milliseconds: 260),
-            curve: Curves.easeOutCubic,
-            height: targetHeight,
-            child: ClipRect(
-              child: AnimatedOpacity(
-                opacity: keyboardVisible ? 0 : 1,
-                duration: const Duration(milliseconds: 180),
-                child: keyboardVisible ? const SizedBox.shrink() : bar,
+          final animatedBar = ClipRect(
+            child: SizedBox(
+              height: targetHeight,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: IgnorePointer(
+                  ignoring: eased < 0.95,
+                  child: Opacity(
+                    opacity: eased,
+                    child: bar,
+                  ),
+                ),
               ),
             ),
           );

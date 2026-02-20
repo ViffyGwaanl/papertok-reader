@@ -38,7 +38,7 @@ class AiPage extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 14,
+                      vertical: 12,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -55,7 +55,7 @@ class AiPage extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 460),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -65,11 +65,14 @@ class AiPage extends StatelessWidget {
                         style: theme.textTheme.titleMedium,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
                       if (top.isNotEmpty) ...[
-                        for (final p in top) ...[
-                          actionButton(title: p.name, prompt: p.content),
-                          const SizedBox(height: 10),
+                        for (var i = 0; i < top.length; i++) ...[
+                          actionButton(
+                            title: top[i].name,
+                            prompt: top[i].content,
+                          ),
+                          if (i != top.length - 1) const SizedBox(height: 10),
                         ],
                       ] else ...[
                         Text(
