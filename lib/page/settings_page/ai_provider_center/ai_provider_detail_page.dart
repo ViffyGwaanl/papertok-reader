@@ -1,10 +1,15 @@
+import 'dart:convert';
+
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/models/ai_api_key_entry.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/ai_models_service.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/service/ai/langchain_ai_config.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 class AiProviderDetailPage extends StatefulWidget {
   const AiProviderDetailPage({
@@ -23,11 +28,15 @@ class AiProviderDetailPage extends StatefulWidget {
 class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
   late AiProviderMeta _provider;
 
+  static const _uuid = Uuid();
+
   late final TextEditingController _nameController;
   late final TextEditingController _urlController;
   late final TextEditingController _modelController;
-  late final TextEditingController _apiKeyController;
-  bool _obscureApiKey = true;
+
+  // Managed API keys list (local-only secrets).
+  late List<AiApiKeyEntry> _apiKeys;
+  bool _revealKeys = false;
 
   bool _includeThoughts = true;
 
@@ -50,10 +59,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       text:
           (stored['model'] ?? widget.builtInOption?.defaultModel ?? '').trim(),
     );
-    _apiKeyController = TextEditingController(
-      text: (stored['api_key'] ?? widget.builtInOption?.defaultApiKey ?? '')
-          .trim(),
-    );
+    _apiKeys = _decodeApiKeysFromStored(stored);
 
     if (_provider.type == AiProviderType.gemini) {
       final raw = (stored['include_thoughts'] ?? 'true').trim().toLowerCase();
@@ -72,16 +78,101 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     _nameController.dispose();
     _urlController.dispose();
     _modelController.dispose();
-    _apiKeyController.dispose();
     super.dispose();
+  }
+
+  List<AiApiKeyEntry> _decodeApiKeysFromStored(Map<String, String> stored) {
+    final rawMulti = (stored['api_keys'] ?? '').trim();
+    if (rawMulti.isNotEmpty) {
+      // JSON array of entries.
+      if (rawMulti.startsWith('[')) {
+        try {
+          final decoded = jsonDecode(rawMulti);
+          if (decoded is List) {
+            final list = <AiApiKeyEntry>[];
+            for (final item in decoded) {
+              if (item is Map) {
+                final entry = AiApiKeyEntry.fromJson(
+                  item.cast<String, dynamic>(),
+                );
+                if (entry.key.trim().isNotEmpty) {
+                  list.add(entry);
+                }
+              }
+            }
+            if (list.isNotEmpty) return list;
+          }
+        } catch (_) {
+          // fallthrough
+        }
+      }
+
+      // Legacy multi-line/comma/semicolon input.
+      final parts = rawMulti
+          .replaceAll('\r', '\n')
+          .split(RegExp(r'[\n,;，；]+'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
+      if (parts.isNotEmpty) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        return parts
+            .toSet()
+            .map(
+              (k) => AiApiKeyEntry(
+                id: _uuid.v4(),
+                name: 'Key',
+                key: k,
+                enabled: true,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            )
+            .toList(growable: false);
+      }
+    }
+
+    // Fallback: single api_key.
+    final single = (stored['api_key'] ?? '').trim();
+    if (single.isEmpty) return const [];
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return [
+      AiApiKeyEntry(
+        id: _uuid.v4(),
+        name: 'Key 1',
+        key: single,
+        enabled: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ];
+  }
+
+  String _encodeApiKeys() {
+    return encodeAiApiKeyEntries(_apiKeys);
+  }
+
+  String _activeApiKey() {
+    for (final e in _apiKeys) {
+      if (e.enabled && e.key.trim().isNotEmpty) return e.key.trim();
+    }
+    return '';
   }
 
   Map<String, String> _buildConfigMap() {
     final map = <String, String>{
       'url': _urlController.text.trim(),
       'model': _modelController.text.trim(),
-      'api_key': _apiKeyController.text.trim(),
     };
+
+    // Keys are local-only secrets.
+    if (_apiKeys.isNotEmpty) {
+      map['api_keys'] = _encodeApiKeys();
+      map['api_key'] = _activeApiKey();
+    } else {
+      map['api_key'] = '';
+    }
 
     // Gemini thinking-related configuration.
     // Default is enabled (per user preference).
@@ -228,6 +319,461 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     Navigator.of(context).pop();
   }
 
+  void _setApiKeys(List<AiApiKeyEntry> next) {
+    setState(() {
+      _apiKeys = next;
+    });
+  }
+
+  Future<void> _showEditKeyDialog({AiApiKeyEntry? existing}) async {
+    final l10n = L10n.of(context);
+    final nameController = TextEditingController(text: existing?.name ?? '');
+    final keyController = TextEditingController(text: existing?.key ?? '');
+    bool enabled = existing?.enabled ?? true;
+    bool obscure = true;
+
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setInner) {
+              return AlertDialog(
+                title: Text(existing == null ? 'Add API Key' : 'Edit API Key'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Name (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: keyController,
+                        obscureText: obscure,
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          labelText: 'Key',
+                          suffixIcon: IconButton(
+                            onPressed: () => setInner(() => obscure = !obscure),
+                            icon: Icon(
+                              obscure ? Icons.visibility_off : Icons.visibility,
+                            ),
+                          ),
+                        ),
+                        maxLines: 3,
+                        minLines: 1,
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Enabled'),
+                        value: enabled,
+                        onChanged: (v) => setInner(() => enabled = v),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Security: API keys are stored locally only. They are NOT synced via WebDAV and are excluded from plain backups.',
+                        style: Theme.of(ctx).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: Text(l10n.commonCancel),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: Text(l10n.commonSave),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+
+      if (ok != true || !mounted) return;
+
+      final key = keyController.text.trim();
+      if (key.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.commonFailed}: empty key')),
+        );
+        return;
+      }
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final name = nameController.text.trim();
+
+      final updated = existing == null
+          ? AiApiKeyEntry(
+              id: _uuid.v4(),
+              name: name.isEmpty ? 'Key ${_apiKeys.length + 1}' : name,
+              key: key,
+              enabled: enabled,
+              createdAt: now,
+              updatedAt: now,
+            )
+          : existing.copyWith(
+              name: name.isEmpty ? existing.name : name,
+              key: key,
+              enabled: enabled,
+              updatedAt: now,
+            );
+
+      final next = [..._apiKeys];
+      final idx =
+          existing == null ? -1 : next.indexWhere((e) => e.id == existing.id);
+      if (idx == -1) {
+        next.add(updated);
+      } else {
+        next[idx] = updated;
+      }
+
+      _setApiKeys(next);
+    } finally {
+      nameController.dispose();
+      keyController.dispose();
+    }
+  }
+
+  Future<void> _showBulkImportDialog() async {
+    final l10n = L10n.of(context);
+    final controller = TextEditingController();
+
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          return AlertDialog(
+            title: const Text('Import API Keys'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText:
+                    'Paste keys here (one per line / separated by comma/semicolon)',
+              ),
+              minLines: 4,
+              maxLines: 10,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(l10n.commonCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(l10n.commonConfirm),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (ok != true || !mounted) return;
+
+      final raw = controller.text.trim();
+      if (raw.isEmpty) return;
+
+      final parts = raw
+          .replaceAll('\r', '\n')
+          .split(RegExp(r'[\n,;，；]+'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
+
+      if (parts.isEmpty) return;
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final existingKeys = _apiKeys.map((e) => e.key.trim()).toSet();
+
+      final next = [..._apiKeys];
+      var added = 0;
+      for (final k in parts.toSet()) {
+        if (existingKeys.contains(k)) continue;
+        next.add(
+          AiApiKeyEntry(
+            id: _uuid.v4(),
+            name: 'Key ${next.length + 1}',
+            key: k,
+            enabled: true,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+        added++;
+      }
+
+      _setApiKeys(next);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Imported $added key(s)')),
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  Future<void> _deleteKey(AiApiKeyEntry entry) async {
+    final l10n = L10n.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.commonDelete),
+        content: Text(
+            'Delete ${entry.name.isEmpty ? entry.maskedKey() : entry.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true || !mounted) return;
+    _setApiKeys(
+        _apiKeys.where((e) => e.id != entry.id).toList(growable: false));
+  }
+
+  Future<void> _testKey(AiApiKeyEntry entry) async {
+    final l10n = L10n.of(context);
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    try {
+      final cfg = _buildConfigMap();
+      cfg.remove('api_keys');
+      cfg['api_key'] = entry.key.trim();
+
+      final models = await AiModelsService.fetchModels(
+        provider: _provider,
+        rawConfig: cfg,
+      );
+
+      if (!mounted) return;
+
+      final msg = models.isEmpty ? 'OK' : 'OK (${models.length} models)';
+      _setApiKeys(
+        _apiKeys
+            .map(
+              (e) => e.id == entry.id
+                  ? e.copyWith(
+                      lastTestAt: now,
+                      lastTestOk: true,
+                      lastTestMessage: msg,
+                      updatedAt: now,
+                    )
+                  : e,
+            )
+            .toList(growable: false),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Test success: ${entry.name}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _setApiKeys(
+        _apiKeys
+            .map(
+              (k) => k.id == entry.id
+                  ? k.copyWith(
+                      lastTestAt: now,
+                      lastTestOk: false,
+                      lastTestMessage: e.toString(),
+                      updatedAt: now,
+                    )
+                  : k,
+            )
+            .toList(growable: false),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.commonFailed}: $e')),
+      );
+    }
+  }
+
+  Future<void> _testAllEnabledKeys() async {
+    for (final k in _apiKeys) {
+      if (!k.enabled) continue;
+      await _testKey(k);
+    }
+  }
+
+  Widget _buildApiKeysSection(L10n l10n) {
+    final activeKey = _activeApiKey();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'API Keys',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const Spacer(),
+            IconButton(
+              tooltip: 'Import',
+              onPressed: _showBulkImportDialog,
+              icon: const Icon(Icons.playlist_add),
+            ),
+            IconButton(
+              tooltip: 'Add',
+              onPressed: () => _showEditKeyDialog(),
+              icon: const Icon(Icons.add),
+            ),
+            IconButton(
+              tooltip: 'Test',
+              onPressed: _testAllEnabledKeys,
+              icon: const Icon(Icons.check_circle_outline),
+            ),
+            IconButton(
+              tooltip: _revealKeys ? 'Hide' : 'Reveal',
+              onPressed: () => setState(() => _revealKeys = !_revealKeys),
+              icon: Icon(_revealKeys ? Icons.visibility_off : Icons.visibility),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Keys are stored locally only (not synced via WebDAV; excluded from plain backups).',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        if (_apiKeys.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).dividerColor),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text('No API keys configured.'),
+          )
+        else
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).dividerColor),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: _apiKeys.map((e) {
+                final isActive = e.enabled && e.key.trim() == activeKey;
+                final subtitle = _revealKeys
+                    ? e.key.trim()
+                    : (e.maskedKey().isEmpty ? '••••' : e.maskedKey());
+
+                final testText = e.lastTestAt == null
+                    ? ''
+                    : (e.lastTestOk == true
+                        ? ' • last test: OK'
+                        : ' • last test: FAIL');
+
+                return Column(
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        Icons.key,
+                        color: e.enabled
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).disabledColor,
+                      ),
+                      title: Text(
+                        '${e.name}${isActive ? ' (active)' : ''}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '$subtitle$testText',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => _showEditKeyDialog(existing: e),
+                      onLongPress: () {
+                        Clipboard.setData(ClipboardData(text: e.key.trim()));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Key copied')),
+                        );
+                      },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Test',
+                            onPressed: () => _testKey(e),
+                            icon: const Icon(Icons.play_circle_outline),
+                          ),
+                          PopupMenuButton<String>(
+                            onSelected: (value) {
+                              switch (value) {
+                                case 'copy':
+                                  Clipboard.setData(
+                                    ClipboardData(text: e.key.trim()),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Key copied')),
+                                  );
+                                  break;
+                                case 'delete':
+                                  _deleteKey(e);
+                                  break;
+                                default:
+                                  break;
+                              }
+                            },
+                            itemBuilder: (ctx) => [
+                              const PopupMenuItem(
+                                value: 'copy',
+                                child: Text('Copy'),
+                              ),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text(l10n.commonDelete),
+                              ),
+                            ],
+                          ),
+                          Switch.adaptive(
+                            value: e.enabled,
+                            onChanged: (v) {
+                              final now = DateTime.now().millisecondsSinceEpoch;
+                              _setApiKeys(
+                                _apiKeys
+                                    .map(
+                                      (k) => k.id == e.id
+                                          ? k.copyWith(
+                                              enabled: v,
+                                              updatedAt: now,
+                                            )
+                                          : k,
+                                    )
+                                    .toList(growable: false),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (e.id != _apiKeys.last.id) const Divider(height: 1),
+                  ],
+                );
+              }).toList(growable: false),
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
@@ -347,23 +893,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
             ),
           if (_provider.type == AiProviderType.gemini)
             const SizedBox(height: 12),
-          TextField(
-            controller: _apiKeyController,
-            obscureText: _obscureApiKey,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              labelText: l10n.settingsAiProviderCenterApiKeyLabel,
-              helperText: '支持多个 key：用逗号/分号/换行分隔，将自动轮询',
-              helperMaxLines: 2,
-              suffixIcon: IconButton(
-                onPressed: () =>
-                    setState(() => _obscureApiKey = !_obscureApiKey),
-                icon: Icon(
-                  _obscureApiKey ? Icons.visibility_off : Icons.visibility,
-                ),
-              ),
-            ),
-          ),
+          _buildApiKeysSection(l10n),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _applyAsDefault,

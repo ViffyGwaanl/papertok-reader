@@ -44,7 +44,65 @@ List<String> parseApiKeysFromString(String raw) {
 List<String> parseApiKeysFromConfig(Map<String, String> raw) {
   final multi = raw['api_keys'];
   if (multi != null && multi.trim().isNotEmpty) {
-    return parseApiKeysFromString(multi);
+    final t = multi.trim();
+
+    // Prefer structured JSON.
+    if (t.startsWith('{') || t.startsWith('[')) {
+      try {
+        final decoded = jsonDecode(t);
+
+        // 1) JSON array: either ["k1","k2"] or [{key,enabled}, ...]
+        if (decoded is List) {
+          final keys = <String>[];
+          for (final item in decoded) {
+            if (item is String) {
+              final k = item.trim();
+              if (k.isNotEmpty) keys.add(k);
+              continue;
+            }
+            if (item is Map) {
+              final map = item.cast<String, dynamic>();
+              final enabled = map['enabled'];
+              if (enabled == false) continue;
+              final k = map['key']?.toString().trim() ?? '';
+              if (k.isNotEmpty) keys.add(k);
+            }
+          }
+          final uniq = keys.toSet().toList(growable: false);
+          if (uniq.isNotEmpty) return uniq;
+        }
+
+        // 2) Wrapper object: { keys: [...] }
+        if (decoded is Map) {
+          final map = decoded.cast<String, dynamic>();
+          final list = map['keys'];
+          if (list is List) {
+            final keys = <String>[];
+            for (final item in list) {
+              if (item is String) {
+                final k = item.trim();
+                if (k.isNotEmpty) keys.add(k);
+                continue;
+              }
+              if (item is Map) {
+                final m = item.cast<String, dynamic>();
+                final enabled = m['enabled'];
+                if (enabled == false) continue;
+                final k = m['key']?.toString().trim() ?? '';
+                if (k.isNotEmpty) keys.add(k);
+              }
+            }
+            final uniq = keys.toSet().toList(growable: false);
+            if (uniq.isNotEmpty) return uniq;
+          }
+        }
+      } catch (_) {
+        // Fall back.
+      }
+    }
+
+    // Legacy delimiter-separated string.
+    return parseApiKeysFromString(t);
   }
   return parseApiKeysFromString(raw['api_key'] ?? '');
 }

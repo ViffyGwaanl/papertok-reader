@@ -14,6 +14,21 @@ void main() {
     expect(parseApiKeysFromString('["k1","k2"]'), ['k1', 'k2']);
   });
 
+  test('parseApiKeysFromConfig supports structured api_keys list objects', () {
+    final keys = parseApiKeysFromConfig({
+      'api_keys':
+          '[{"key":"k1","enabled":true},{"key":"k2","enabled":false},{"key":"k3"}]',
+    });
+    expect(keys, containsAll(['k1', 'k3']));
+    expect(keys, isNot(contains('k2')));
+  });
+
+  test('parseApiKeysFromConfig supports wrapper {keys:[...] }', () {
+    final keys = parseApiKeysFromConfig(
+        {'api_keys': '{"keys":["k1",{"key":"k2","enabled":true}]}'});
+    expect(keys, containsAll(['k1', 'k2']));
+  });
+
   test('ApiKeyRoundRobin stores per-provider indices', () {
     final rr = ApiKeyRoundRobin();
 
