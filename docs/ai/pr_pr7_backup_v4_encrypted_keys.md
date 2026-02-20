@@ -36,7 +36,7 @@ We address both problems while keeping WebDAV policy intact (WebDAV never syncs 
    - import reads manifest; prompts for password; decrypts and restores api keys
 
 3. Safety:
-   - `anx_shared_prefs.json` (prefs backup) **never contains** plain `api_key`
+   - `paper_reader_shared_prefs.json` (prefs backup; legacy: `anx_shared_prefs.json`) **never contains** plain `api_key`
    - prefs restore **never overwrites/clears** local `api_key`
    - only encrypted manifest can restore api keys
 
@@ -79,7 +79,7 @@ Implementation uses `package:cryptography`.
 }
 ```
 
-Plain prefs backup remains `anx_shared_prefs.json`.
+Plain prefs backup is `paper_reader_shared_prefs.json` (older backups may use `anx_shared_prefs.json`).
 
 ## Implementation details
 

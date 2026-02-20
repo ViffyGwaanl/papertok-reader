@@ -32,7 +32,10 @@ import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/utils/crypto/backup_crypto.dart';
 
-const String _prefsBackupFileName = 'anx_shared_prefs.json';
+// Backup file names are product-facing. Keep a legacy name for backward
+// compatibility when importing older backups.
+const String _prefsBackupFileName = 'paper_reader_shared_prefs.json';
+const String _legacyPrefsBackupFileName = 'anx_shared_prefs.json';
 const String _backupManifestFileName = 'manifest.json';
 
 class SyncSetting extends ConsumerStatefulWidget {
@@ -309,7 +312,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       // );
       // final filePath = await FlutterFileDialog.saveFile(params: params);
       String fileName =
-          'AnxReader-Backup-${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}-v4.zip';
+          'PaperReader-Backup-${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}-v4.zip';
 
       String? filePath = await saveFileToDownload(
           sourceFilePath: file.path,
@@ -746,10 +749,23 @@ Future<File> _createPrefsBackupFile() async {
 }
 
 Future<bool> _restorePrefsFromBackup(String extractPath) async {
-  final File backupFile = File('$extractPath/$_prefsBackupFileName');
-  if (!await backupFile.exists()) {
+  final candidates = <File>[
+    File('$extractPath/$_prefsBackupFileName'),
+    File('$extractPath/$_legacyPrefsBackupFileName'),
+  ];
+
+  File? backupFile;
+  for (final f in candidates) {
+    if (await f.exists()) {
+      backupFile = f;
+      break;
+    }
+  }
+
+  if (backupFile == null) {
     return false;
   }
+
   try {
     final dynamic decoded = jsonDecode(await backupFile.readAsString());
     if (decoded is Map<String, dynamic>) {

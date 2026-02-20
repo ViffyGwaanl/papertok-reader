@@ -15,7 +15,7 @@ Anx Reader already has **Export/Import** in `Settings → Sync`:
 - Export creates a ZIP (legacy: `...-v3.zip`; fork enhancement: `...-v4.zip`) containing:
   - documents assets (file/cover/font/bgimg)
   - database dir
-  - shared prefs backup map (`anx_shared_prefs.json`)
+  - shared prefs backup map (`paper_reader_shared_prefs.json`, legacy: `anx_shared_prefs.json`)
 - Import picks a ZIP via `file_picker` and then **overwrites local** data.
 
 This is already close to “manual iCloud backup/restore” on iOS because the Files picker can access iCloud Drive.
@@ -91,7 +91,7 @@ Example (as implemented in the fork):
 
 Notes:
 - API keys are only stored if the user explicitly enables the option.
-- `anx_shared_prefs.json` never contains plain `api_key` / `api_keys` entries.
+- `paper_reader_shared_prefs.json` never contains plain `api_key` / `api_keys` entries (older backups may use `anx_shared_prefs.json`).
 - Encrypted payload stores per-provider keys:
   - `api_key` (active key)
   - `api_keys` (managed list; JSON)
