@@ -31,7 +31,7 @@ We want AI-related configuration to be **portable across devices**, but with str
 ### Include
 
 - Selected AI service id
-- Service configs **excluding** `api_key` (keep `url`, `model`, optional headers)
+- Service configs **excluding** `api_key` / `api_keys` (keep `url`, `model`, optional headers)
 - Prompt templates (`ai_prompts` overrides)
 - User custom prompts
 - Input quick prompts
@@ -134,7 +134,7 @@ Implementation detail:
 
 - Support multiple OpenAI-compatible providers (custom entries).
 - Sync non-secret fields for custom providers (url/model/headers/params).
-- Continue to exclude api_key from WebDAV sync.
+- Continue to exclude api_key / api_keys from WebDAV sync.
 
 Defer until we see real conflict pain in the wild.
 

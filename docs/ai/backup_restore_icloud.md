@@ -26,7 +26,9 @@ This is already close to “manual iCloud backup/restore” on iOS because the F
 2. Offer **directional overwrite** clarity:
    - Local → iCloud (export)
    - iCloud → Local (import)
-3. Optional: include API key **encrypted** (password-based), for Apple-only migration.
+3. Optional: include API keys **encrypted** (password-based), for Apple-only migration.
+   - Supports Provider Center: built-in + custom providers
+   - Supports multi-key list (`api_keys`) and active key (`api_key`)
 4. Safe restore with rollback and WAL cleanup (reuse DB replacement approach).
 
 ## 2. UX Design
@@ -48,10 +50,10 @@ This is already close to “manual iCloud backup/restore” on iOS because the F
 
 On Export:
 
-- Toggle: “Include API key (encrypted)”
+- Toggle: “Include API keys (encrypted)”
 - If enabled:
   - prompt for password (twice)
-  - store `encrypted_api_key` blob in manifest
+  - store `encryptedApiKeys` blob in manifest (can include multiple providers)
 
 On Import:
 
@@ -89,7 +91,10 @@ Example (as implemented in the fork):
 
 Notes:
 - API keys are only stored if the user explicitly enables the option.
-- `anx_shared_prefs.json` never contains plain `api_key` entries.
+- `anx_shared_prefs.json` never contains plain `api_key` / `api_keys` entries.
+- Encrypted payload stores per-provider keys:
+  - `api_key` (active key)
+  - `api_keys` (managed list; JSON)
 
 ## 4. Crypto Details
 

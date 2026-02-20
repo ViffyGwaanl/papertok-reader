@@ -37,10 +37,13 @@ We store **non-secret provider metadata** separately from **secret config**:
   - name/type/enabled/logo/createdAt/updatedAt
 - Per-provider config (may include secrets locally): `aiConfig_<providerId>`
   - URL/baseUrl/model/headers/etc
-  - `api_key` is stored locally, but:
-    - NOT synced via WebDAV
+  - API keys are stored locally (managed list):
+    - `api_keys` (JSON list of entries; supports enable/disable + test metadata)
+    - `api_key` (compat: current active key; derived from the enabled list)
+  - Security policy:
+    - NOT synced via WebDAV (`api_key` / `api_keys` are local-only)
     - NOT included in plaintext backups
-    - only included in manual backup when encrypted
+    - Can be included in manual backup **only when encrypted**
 - Models cache (ephemeral, excluded from backups): `aiModelsCacheV1_<providerId>`
 
 ### 1.3 Runtime mapping
