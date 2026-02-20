@@ -335,7 +335,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   AiThinkingMode _thinkingModeForProvider(String providerId) {
     final existing = Prefs().getAiConfig(providerId);
-    return aiThinkingModeFromString(existing['thinking_mode'] ?? 'off');
+    return aiThinkingModeFromString(existing['thinking_mode'] ?? 'auto');
   }
 
   bool _includeThoughtsForProvider(AiProviderMeta provider) {

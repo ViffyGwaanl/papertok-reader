@@ -132,7 +132,7 @@ class LangchainAiConfig {
         value == null ? null : int.tryParse(value.trim());
 
     final thinkingMode =
-        aiThinkingModeFromString(raw['thinking_mode'] ?? 'off');
+        aiThinkingModeFromString(raw['thinking_mode'] ?? 'auto');
     final includeThoughtsRaw =
         (raw['include_thoughts'] ?? 'false').trim().toLowerCase();
     final includeThoughts = includeThoughtsRaw == 'true' ||
