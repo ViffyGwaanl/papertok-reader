@@ -1,19 +1,13 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
-import 'package:anx_reader/widgets/ai/ai_chat_bottom_sheet.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
 
-class AiPage extends StatefulWidget {
+/// Home AI page (non-modal).
+///
+/// Note: This is a normal tab page like Bookshelf/Settings, not a popup.
+class AiPage extends StatelessWidget {
   const AiPage({super.key});
-
-  @override
-  State<AiPage> createState() => _AiPageState();
-}
-
-class _AiPageState extends State<AiPage> {
-  final GlobalKey<AiChatStreamState> _aiChatKey =
-      GlobalKey<AiChatStreamState>();
 
   List<AiQuickPromptChip> _buildQuickPromptChips() {
     // Home AI page doesn't have a "current book" context, so we only show
@@ -36,22 +30,8 @@ class _AiPageState extends State<AiPage> {
     return AnimatedBuilder(
       animation: Prefs(),
       builder: (context, _) {
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: SafeArea(
-            top: false,
-            child: AiChatBottomSheet(
-              aiChatKey: _aiChatKey,
-              quickPromptChips: _buildQuickPromptChips(),
-              // Home AI is already presented as a Cupertino sheet; do not
-              // persist size here to avoid getting stuck in a tiny state.
-              initialSizeOverride: 0.95,
-              rememberSize: false,
-              // Home: minimize should dismiss the sheet (not keep a bar).
-              minimizeBehavior: AiChatBottomSheetMinimizeBehavior.close,
-              onRequestClose: () => Navigator.of(context).maybePop(),
-            ),
-          ),
+        return AiChatStream(
+          quickPromptChips: _buildQuickPromptChips(),
         );
       },
     );

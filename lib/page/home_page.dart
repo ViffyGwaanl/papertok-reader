@@ -22,7 +22,6 @@ import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/utils/toast/common.dart';
-import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
 import 'package:flutter/cupertino.dart';
@@ -192,7 +191,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         case Prefs.homeTabStatistics:
           return StatisticPage(controller: controller);
         case Prefs.homeTabAI:
-          return AiChatStream();
+          return const AiPage();
         case Prefs.homeTabNotes:
           return NotesPage(controller: controller);
         case Prefs.homeTabSettings:
@@ -213,11 +212,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     void onBottomTap(int index, bool fromRail) {
       VibrationService.heavy();
-      if (navBarItems[index]['identifier'] == Prefs.homeTabAI && !fromRail) {
-        showCupertinoSheet(
-            context: context, builder: (context) => const AiPage());
-        return;
-      }
       setState(() {
         _currentTab = navBarItems[index]['identifier'];
       });
