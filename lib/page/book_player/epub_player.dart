@@ -66,14 +66,19 @@ class EpubPlayer extends ConsumerStatefulWidget {
   final List<ReadTheme> initialThemes;
   final Function updateParent;
 
-  const EpubPlayer(
-      {super.key,
-      required this.showOrHideAppBarAndBottomBar,
-      required this.book,
-      this.cfi,
-      required this.onLoadEnd,
-      required this.initialThemes,
-      required this.updateParent});
+  /// Optional callback: request opening AI chat (reading page UX convenience).
+  final VoidCallback? onRequestAiChat;
+
+  const EpubPlayer({
+    super.key,
+    required this.showOrHideAppBarAndBottomBar,
+    required this.book,
+    this.cfi,
+    required this.onLoadEnd,
+    required this.initialThemes,
+    required this.updateParent,
+    this.onRequestAiChat,
+  });
 
   @override
   ConsumerState<EpubPlayer> createState() => EpubPlayerState();
@@ -931,7 +936,11 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           _translateHudVisible = true;
           _hudMarkStart(cacheKey: cacheKey);
 
-          final futures = <Future<({String text, InlineFullTextTranslateFailureReason? failureReason})>>[];
+          final futures = <Future<
+              ({
+                String text,
+                InlineFullTextTranslateFailureReason? failureReason
+              })>>[];
           for (final seg in rawSegments) {
             if (seg is! Map) {
               futures.add(
@@ -964,7 +973,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
             // Pick the most common failure reason among segments.
             final counts = <InlineFullTextTranslateFailureReason, int>{};
             for (final o in outcomes) {
-              final r = o.failureReason ?? InlineFullTextTranslateFailureReason.unknown;
+              final r = o.failureReason ??
+                  InlineFullTextTranslateFailureReason.unknown;
               counts[r] = (counts[r] ?? 0) + 1;
             }
             InlineFullTextTranslateFailureReason best =
@@ -1194,6 +1204,17 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       style: textStyle,
     );
 
+    if (widget.onRequestAiChat != null) {
+      chapterProgressWidget = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onRequestAiChat,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          child: chapterProgressWidget,
+        ),
+      );
+    }
+
     Widget bookProgressWidget =
         Text('${(percentage * 100).toStringAsFixed(2)}%', style: textStyle);
 
@@ -1338,7 +1359,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
     final lower = t.toLowerCase();
     if (lower.startsWith('error:')) return true;
-    if (lower.contains('translate error') || lower.contains('翻译错误')) return true;
+    if (lower.contains('translate error') || lower.contains('翻译错误'))
+      return true;
     if (lower.contains('authentication failed')) return true;
     if (lower.contains('rate limit') || lower.contains('429')) return true;
     if (lower.contains('ai service not configured')) return true;
@@ -1496,7 +1518,10 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
                               final candidates =
                                   (v['candidates'] as num?)?.toInt();
                               if (started != null && candidates != null) {
-                                return (started: started, candidates: candidates);
+                                return (
+                                  started: started,
+                                  candidates: candidates
+                                );
                               }
                             }
                           } catch (_) {}
