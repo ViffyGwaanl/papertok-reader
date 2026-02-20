@@ -280,12 +280,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           );
         } else {
-          if (navBarItems.isNotEmpty &&
-              navBarItems[currentIndex]['identifier'] == Prefs.homeTabAI) {
-            final fallbackIndex = navBarItems
-                .indexWhere((e) => e['identifier'] != Prefs.homeTabAI);
-            currentIndex = fallbackIndex == -1 ? 0 : fallbackIndex;
-          }
+          // Allow selecting AI tab on phones (Home AI is now a normal tab page).
           return Scaffold(
             extendBody: true,
             body: BottomBar(
