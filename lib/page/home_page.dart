@@ -282,12 +282,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         } else {
           // Apple-style floating tab bar on phones.
           final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-          final isAiTab = navBarItems.isNotEmpty &&
-              navBarItems[currentIndex]['identifier'] == Prefs.homeTabAI;
 
-          // When typing in Home AI, hide the tab bar to avoid it being lifted
-          // above the keyboard and covering the input area.
-          final showTabBar = !(keyboardVisible && isAiTab);
+          // Global keyboard policy: when keyboard is visible, hide the tab bar.
+          // This avoids the bar being lifted above the keyboard and keeps the
+          // input area unobstructed.
+          final showTabBar = !keyboardVisible;
 
           Widget? tabBar;
           if (showTabBar) {
@@ -305,27 +304,46 @@ class _HomePageState extends ConsumerState<HomePage> {
                         color: Theme.of(context)
                             .colorScheme
                             .surfaceContainer
-                            .withAlpha(160),
+                            .withAlpha(170),
                         borderRadius: BorderRadius.circular(32),
                         border: Border.all(
                           color: Theme.of(context)
                               .colorScheme
                               .outline
-                              .withAlpha(120),
+                              .withAlpha(110),
                           width: 0.5,
                         ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 18,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
                       ),
-                      child: BottomNavigationBar(
-                        selectedFontSize: 11,
-                        unselectedFontSize: 11,
-                        type: BottomNavigationBarType.fixed,
-                        landscapeLayout:
-                            BottomNavigationBarLandscapeLayout.linear,
-                        currentIndex: currentIndex,
-                        onTap: (int index) => onBottomTap(index, false),
-                        items: bottomBarItems,
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
+                      child: Theme(
+                        data: Theme.of(context).copyWith(
+                          splashFactory: NoSplash.splashFactory,
+                          highlightColor: Colors.transparent,
+                        ),
+                        child: BottomNavigationBar(
+                          selectedFontSize: 11,
+                          unselectedFontSize: 11,
+                          type: BottomNavigationBarType.fixed,
+                          landscapeLayout:
+                              BottomNavigationBarLandscapeLayout.linear,
+                          currentIndex: currentIndex,
+                          onTap: (int index) => onBottomTap(index, false),
+                          items: bottomBarItems,
+                          backgroundColor: Colors.transparent,
+                          elevation: 0,
+                          showUnselectedLabels: true,
+                          selectedItemColor:
+                              Theme.of(context).colorScheme.primary,
+                          unselectedItemColor:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          iconSize: 22,
+                        ),
                       ),
                     ),
                   ),
