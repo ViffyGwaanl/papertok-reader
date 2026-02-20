@@ -10,6 +10,7 @@ import 'package:anx_reader/service/ai/langchain_registry.dart';
 import 'package:anx_reader/service/ai/langchain_runner.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:anx_reader/service/ai/api_key_rotation.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
@@ -104,6 +105,21 @@ Stream<String> _generateStream({
     final override =
         LangchainAiConfig.fromPrefs(registryIdentifier, overrideConfig);
     config = mergeConfigs(config, override);
+  }
+
+  // Multi API keys support (round-robin per request):
+  // Users can input multiple keys in the API key field separated by comma/semicolon/newline,
+  // or a JSON array string.
+  final apiKeys = parseApiKeysFromString(config.apiKey);
+  if (apiKeys.length > 1) {
+    final picked = apiKeyRoundRobin.pick(
+      providerId: selectedProviderId,
+      keys: apiKeys,
+    );
+    config = config.copyWith(apiKey: picked);
+    AnxLog.info(
+      'aiGenerateStream: apiKey rotation enabled provider=$selectedProviderId keys=${apiKeys.length}',
+    );
   }
 
   AnxLog.info(

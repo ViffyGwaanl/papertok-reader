@@ -353,6 +353,8 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
               labelText: l10n.settingsAiProviderCenterApiKeyLabel,
+              helperText: '支持多个 key：用逗号/分号/换行分隔，将自动轮询',
+              helperMaxLines: 2,
               suffixIcon: IconButton(
                 onPressed: () =>
                     setState(() => _obscureApiKey = !_obscureApiKey),
