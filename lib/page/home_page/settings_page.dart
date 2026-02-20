@@ -223,7 +223,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           },
                         ),
                       ),
-                    const About(),
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: ListTile(
+                        leading: const Icon(Icons.info_outline),
+                        title: Text(L10n.of(context).appAbout),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          openAboutDialog();
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),

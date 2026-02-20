@@ -1,10 +1,19 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
+import 'package:anx_reader/widgets/ai/ai_chat_bottom_sheet.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
 
-class AiPage extends StatelessWidget {
+class AiPage extends StatefulWidget {
   const AiPage({super.key});
+
+  @override
+  State<AiPage> createState() => _AiPageState();
+}
+
+class _AiPageState extends State<AiPage> {
+  final GlobalKey<AiChatStreamState> _aiChatKey =
+      GlobalKey<AiChatStreamState>();
 
   List<AiQuickPromptChip> _buildQuickPromptChips() {
     // Home AI page doesn't have a "current book" context, so we only show
@@ -28,8 +37,14 @@ class AiPage extends StatelessWidget {
       animation: Prefs(),
       builder: (context, _) {
         return Scaffold(
-          body: AiChatStream(
-            quickPromptChips: _buildQuickPromptChips(),
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            top: false,
+            child: AiChatBottomSheet(
+              aiChatKey: _aiChatKey,
+              quickPromptChips: _buildQuickPromptChips(),
+              onRequestClose: () => Navigator.of(context).maybePop(),
+            ),
           ),
         );
       },
