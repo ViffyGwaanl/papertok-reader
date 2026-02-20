@@ -282,45 +282,83 @@ class _HomePageState extends ConsumerState<HomePage> {
         } else {
           // Apple-style floating tab bar on phones.
           //
-          // UX: when the keyboard is dismissed (including interactive
-          // drag-to-dismiss), the tab bar should re-appear smoothly instead of
-          // popping in and pushing the input box abruptly.
+          // Problems we must solve:
+          // 1) BottomNavigationBar inside Scaffold.bottomNavigationBar is hard
+          //    to tap in our pill + blur setup (hit targets feel too small).
+          // 2) When keyboard dismisses, the input box should *not* drop to the
+          //    very bottom and then be pushed up by the tab bar.
           //
-          // Implementation: drive height/opacity from `viewInsets.bottom`.
+          // Solution:
+          // - Render the tab bar as an overlay (Stack) so it never affects page
+          //   layout (no "push" / jitter).
+          // - Use full-width Expanded InkWells for reliable hit targets.
+          // - AI input reserves space for the tab bar via AiChatStream.bottomPadding.
+
           final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
           final bottomInset = MediaQuery.of(context).padding.bottom;
 
           const barHeight = 66.0;
           const bottomGap = 0.0;
-          const revealRange = 340.0;
 
-          final t = (1 - (keyboardInset / revealRange)).clamp(0.0, 1.0);
-          final desired = Curves.easeOut.transform(t);
+          final desired = keyboardInset > 0 ? 0.0 : 1.0;
 
-          // Slow down the tab bar re-appear after keyboard dismiss.
-          // (Users perceive iOS as slightly slower + more settled here.)
-          final duration = keyboardInset < 1
-              ? const Duration(milliseconds: 720)
-              : const Duration(milliseconds: 160);
+          final duration = keyboardInset > 0
+              ? const Duration(milliseconds: 180)
+              : const Duration(milliseconds: 900);
+
+          Widget tabItem({
+            required IconData icon,
+            required String label,
+            required bool selected,
+            required VoidCallback onTap,
+          }) {
+            final theme = Theme.of(context);
+            final cs = theme.colorScheme;
+            final color = selected ? cs.primary : cs.onSurfaceVariant;
+
+            return Expanded(
+              child: InkResponse(
+                onTap: onTap,
+                containedInkWell: true,
+                highlightShape: BoxShape.rectangle,
+                child: SizedBox(
+                  height: barHeight,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: 24, color: color),
+                      const SizedBox(height: 4),
+                      Text(
+                        label,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: color,
+                          height: 1.0,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
 
           return TweenAnimationBuilder<double>(
             tween: Tween<double>(end: desired),
             duration: duration,
             curve: Curves.easeOutCubic,
-            builder: (context, eased, _) {
-              final targetHeight =
-                  (barHeight + bottomInset + bottomGap) * eased;
-              final paddingBottom = (bottomInset + bottomGap) * eased;
-
-              // Subtle slide-in for iOS-like feel.
-              final slideDy = (1 - eased) * 10.0;
+            builder: (context, t, _) {
+              final opacity = t;
+              final dy = (1 - t) * 12.0;
 
               final bar = Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, paddingBottom),
+                  padding:
+                      EdgeInsets.fromLTRB(16, 0, 16, bottomInset + bottomGap),
                   child: Transform.translate(
-                    offset: Offset(0, slideDy),
+                    offset: Offset(0, dy),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(32),
                       child: BackdropFilter(
@@ -348,41 +386,21 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ),
                             ],
                           ),
-                          child: Theme(
-                            data: Theme.of(context).copyWith(
-                              splashFactory: NoSplash.splashFactory,
-                              highlightColor: Colors.transparent,
-                            ),
-                            child: Center(
-                              // BottomNavigationBar tends to sit slightly high
-                              // in a custom pill; center it vertically.
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 6),
-                                child: BottomNavigationBar(
-                                  selectedFontSize: 11,
-                                  unselectedFontSize: 11,
-                                  selectedLabelStyle:
-                                      const TextStyle(height: 1.0),
-                                  unselectedLabelStyle:
-                                      const TextStyle(height: 1.0),
-                                  type: BottomNavigationBarType.fixed,
-                                  landscapeLayout:
-                                      BottomNavigationBarLandscapeLayout.linear,
-                                  currentIndex: currentIndex,
-                                  onTap: (int index) =>
-                                      onBottomTap(index, false),
-                                  items: bottomBarItems,
-                                  backgroundColor: Colors.transparent,
-                                  elevation: 0,
-                                  showUnselectedLabels: true,
-                                  selectedItemColor:
-                                      Theme.of(context).colorScheme.primary,
-                                  unselectedItemColor: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  iconSize: 24,
-                                ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 6),
+                              child: Row(
+                                children: [
+                                  for (var i = 0; i < navBarItems.length; i++)
+                                    tabItem(
+                                      icon: navBarItems[i]['icon'] as IconData,
+                                      label: navBarItems[i]['label'] as String,
+                                      selected: i == currentIndex,
+                                      onTap: () => onBottomTap(i, false),
+                                    ),
+                                ],
                               ),
                             ),
                           ),
@@ -393,28 +411,27 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               );
 
-              final animatedBar = ClipRect(
-                child: SizedBox(
-                  height: targetHeight,
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: IgnorePointer(
-                      // Make taps responsive even while the bar is still
-                      // revealing.
-                      ignoring: eased < 0.15,
-                      child: Opacity(
-                        opacity: eased,
-                        child: bar,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-
               return Scaffold(
                 extendBody: true,
-                body: pages(currentIndex, constraints, null),
-                bottomNavigationBar: animatedBar,
+                body: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: pages(currentIndex, constraints, null),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: IgnorePointer(
+                        ignoring: opacity < 0.05,
+                        child: Opacity(
+                          opacity: opacity,
+                          child: bar,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           );

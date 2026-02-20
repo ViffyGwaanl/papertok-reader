@@ -14,7 +14,17 @@ class AiPage extends StatelessWidget {
     return AnimatedBuilder(
       animation: Prefs(),
       builder: (context, _) {
+        // Reserve space for the floating home tab bar so the input box never
+        // drops to the very bottom and then gets pushed.
+        final bottomInset = MediaQuery.of(context).padding.bottom;
+        const barHeight = 66.0;
+        const bottomGap = 0.0;
+        final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
+        final bottomPadding =
+            keyboardInset > 0 ? 0.0 : (barHeight + bottomInset + bottomGap);
+
         return AiChatStream(
+          bottomPadding: bottomPadding,
           // Keep the Home AI empty state clean (no right-bottom overlay chips).
           emptyStateBuilder: (context, send) {
             final theme = Theme.of(context);
