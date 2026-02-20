@@ -1115,16 +1115,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       padding: const EdgeInsets.all(4),
       radius: 15,
       child: SafeArea(
+        top: false,
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                SizedBox.shrink(),
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    reverse: true,
                     child: Row(
                       spacing: 8,
                       children: quickPrompts.map((prompt) {
