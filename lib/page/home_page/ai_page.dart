@@ -1,5 +1,5 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
 
@@ -9,37 +9,80 @@ import 'package:flutter/material.dart';
 class AiPage extends StatelessWidget {
   const AiPage({super.key});
 
-  List<AiQuickPromptChip> _buildQuickPromptChips() {
-    // Home AI page doesn't have a "current book" context, so we only show
-    // user-defined prompts here.
-    return Prefs()
-        .userPrompts
-        .where((p) => p.enabled)
-        .map(
-          (p) => AiQuickPromptChip(
-            icon: Icons.person_outline,
-            label: p.name,
-            prompt: p.content,
-          ),
-        )
-        .toList(growable: false);
-  }
-
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Prefs(),
       builder: (context, _) {
-        final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-
-        // Home (phone) uses a floating bottom tab bar (64px height + 10px
-        // padding top/bottom inside the floating BottomBar widget).
-        // Add extra space so the input box is never covered by the tab bar.
-        final bottomPadding = keyboardVisible ? 0.0 : (64.0 + 20.0);
-
         return AiChatStream(
-          quickPromptChips: _buildQuickPromptChips(),
-          bottomPadding: bottomPadding,
+          // Keep the Home AI empty state clean (no right-bottom overlay chips).
+          emptyStateBuilder: (context, send) {
+            final theme = Theme.of(context);
+            final l10n = L10n.of(context);
+            final prompts =
+                Prefs().userPrompts.where((p) => p.enabled).toList();
+
+            Widget actionButton({
+              required String title,
+              required String prompt,
+            }) {
+              return SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: () => send(prompt),
+                  icon: const Icon(Icons.person_outline),
+                  label: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final top = prompts.take(3).toList(growable: false);
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.tryAQuickPrompt,
+                        style: theme.textTheme.titleMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      if (top.isNotEmpty) ...[
+                        for (final p in top) ...[
+                          actionButton(title: p.name, prompt: p.content),
+                          const SizedBox(height: 10),
+                        ],
+                      ] else ...[
+                        Text(
+                          '你还没有配置「用户提示词」。\n可以在设置里添加常用快捷入口。',
+                          style: theme.textTheme.bodySmall,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );

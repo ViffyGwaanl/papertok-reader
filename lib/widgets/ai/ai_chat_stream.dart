@@ -37,6 +37,7 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.scrollController,
     this.onRequestMinimize,
     this.bottomPadding = 0,
+    this.emptyStateBuilder,
   });
 
   final String? initialMessage;
@@ -52,9 +53,16 @@ class AiChatStream extends ConsumerStatefulWidget {
   /// Optional callback used by bottom-sheet mode to minimize the sheet.
   final VoidCallback? onRequestMinimize;
 
-  /// Extra bottom padding used to avoid being covered by external overlays
-  /// (e.g. floating home tab bar).
+  /// Extra bottom padding used to avoid being covered by external overlays.
   final double bottomPadding;
+
+  /// Custom empty state builder.
+  ///
+  /// This is mainly for the Home AI tab where we want a cleaner design.
+  /// The callback can be used to send a prompt directly.
+  final Widget Function(
+          BuildContext context, void Function(String prompt) send)?
+      emptyStateBuilder;
 
   @override
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
@@ -1214,6 +1222,28 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
 
     Widget buildEmptyState() {
+      if (widget.emptyStateBuilder != null) {
+        final content = widget.emptyStateBuilder!(
+          context,
+          (prompt) {
+            inputController.text = prompt;
+            _sendMessage();
+          },
+        );
+
+        // Keep scroll controller attached for DraggableScrollableSheet.
+        return CustomScrollView(
+          controller: _scrollController,
+          physics: const ClampingScrollPhysics(),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: content,
+            ),
+          ],
+        );
+      }
+
       final theme = Theme.of(context);
 
       Widget buildQuickChipColumn() {

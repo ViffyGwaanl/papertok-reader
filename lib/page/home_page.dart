@@ -293,13 +293,13 @@ class _HomePageState extends ConsumerState<HomePage> {
             tabBar = SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(32),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
                     child: Container(
-                      height: 64,
+                      height: 60,
                       decoration: BoxDecoration(
                         color: Theme.of(context)
                             .colorScheme
