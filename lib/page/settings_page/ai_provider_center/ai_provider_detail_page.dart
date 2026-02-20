@@ -48,6 +48,12 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
   bool _isFetchingModels = false;
   List<String> _cachedModels = const [];
 
+  // API key failover/cooldown policy (per provider).
+  int _apiKeyFailureThreshold = 3;
+  int _apiKeyAuthCooldownMinutes = 60;
+  int _apiKeyRateLimitCooldownMinutes = 5;
+  int _apiKeyServiceCooldownMinutes = 1;
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +80,21 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       final raw = (stored['include_thoughts'] ?? 'false').trim().toLowerCase();
       _includeThoughts = raw == 'true' || raw == '1' || raw == 'yes';
     }
+
+    int parseInt(String key, int fallback) {
+      final v = (stored[key] ?? '').trim();
+      if (v.isEmpty) return fallback;
+      return int.tryParse(v) ?? fallback;
+    }
+
+    _apiKeyFailureThreshold =
+        parseInt('api_key_policy_failure_threshold', 3).clamp(1, 10);
+    _apiKeyAuthCooldownMinutes =
+        parseInt('api_key_policy_auth_cooldown_min', 60).clamp(1, 24 * 60);
+    _apiKeyRateLimitCooldownMinutes =
+        parseInt('api_key_policy_rate_limit_cooldown_min', 5).clamp(1, 24 * 60);
+    _apiKeyServiceCooldownMinutes =
+        parseInt('api_key_policy_service_cooldown_min', 1).clamp(1, 24 * 60);
 
     final modelsCache = Prefs().getAiModelsCacheV1(_provider.id);
     _cachedModels = modelsCache?.models ?? const [];
@@ -223,6 +244,16 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     if (_provider.type == AiProviderType.gemini) {
       map['include_thoughts'] = _includeThoughts ? 'true' : 'false';
     }
+
+    // Multi-key policy (non-secret).
+    map['api_key_policy_failure_threshold'] =
+        _apiKeyFailureThreshold.clamp(1, 10).toString();
+    map['api_key_policy_auth_cooldown_min'] =
+        _apiKeyAuthCooldownMinutes.clamp(1, 24 * 60).toString();
+    map['api_key_policy_rate_limit_cooldown_min'] =
+        _apiKeyRateLimitCooldownMinutes.clamp(1, 24 * 60).toString();
+    map['api_key_policy_service_cooldown_min'] =
+        _apiKeyServiceCooldownMinutes.clamp(1, 24 * 60).toString();
 
     return map;
   }
@@ -607,6 +638,48 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
         _apiKeys.where((e) => e.id != entry.id).toList(growable: false));
   }
 
+  void _clearCooldownForKey(AiApiKeyEntry entry) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _setApiKeys(
+      _apiKeys
+          .map(
+            (e) => e.id == entry.id
+                ? e.copyWith(
+                    consecutiveFailures: 0,
+                    disabledUntil: null,
+                    updatedAt: now,
+                  )
+                : e,
+          )
+          .toList(growable: false),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cooldown cleared')),
+    );
+  }
+
+  void _resetStatsForKey(AiApiKeyEntry entry) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _setApiKeys(
+      _apiKeys
+          .map(
+            (e) => e.id == entry.id
+                ? e.copyWith(
+                    successCount: 0,
+                    failureCount: 0,
+                    consecutiveFailures: 0,
+                    disabledUntil: null,
+                    updatedAt: now,
+                  )
+                : e,
+          )
+          .toList(growable: false),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Stats reset')),
+    );
+  }
+
   Future<void> _testKey(AiApiKeyEntry entry) async {
     final l10n = L10n.of(context);
 
@@ -797,6 +870,12 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                                     const SnackBar(content: Text('Key copied')),
                                   );
                                   break;
+                                case 'clear_cooldown':
+                                  _clearCooldownForKey(e);
+                                  break;
+                                case 'reset_stats':
+                                  _resetStatsForKey(e);
+                                  break;
                                 case 'delete':
                                   _deleteKey(e);
                                   break;
@@ -808,6 +887,14 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                               const PopupMenuItem(
                                 value: 'copy',
                                 child: Text('Copy'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'clear_cooldown',
+                                child: Text('解除冷却'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'reset_stats',
+                                child: Text('重置统计'),
                               ),
                               PopupMenuItem(
                                 value: 'delete',
@@ -842,6 +929,102 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
               }).toList(growable: false),
             ),
           ),
+        const SizedBox(height: 12),
+        ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          title: const Text('高级策略'),
+          subtitle: const Text('失败阈值 / 冷却时间（对话+翻译共用）'),
+          children: [
+            DropdownButtonFormField<int>(
+              value: _apiKeyFailureThreshold,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: '连续失败阈值',
+              ),
+              items: const [1, 2, 3, 4, 5, 6, 8, 10]
+                  .map(
+                    (v) => DropdownMenuItem(
+                      value: v,
+                      child: Text('$v'),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _apiKeyFailureThreshold = v);
+                _scheduleAutoSave();
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              value: _apiKeyAuthCooldownMinutes,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: '401/鉴权失败 冷却(分钟)',
+              ),
+              items: const [1, 5, 10, 30, 60, 120, 360]
+                  .map(
+                    (v) => DropdownMenuItem(
+                      value: v,
+                      child: Text('$v'),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _apiKeyAuthCooldownMinutes = v);
+                _scheduleAutoSave();
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              value: _apiKeyRateLimitCooldownMinutes,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: '429/限流 冷却(分钟)',
+              ),
+              items: const [1, 2, 5, 10, 30, 60]
+                  .map(
+                    (v) => DropdownMenuItem(
+                      value: v,
+                      child: Text('$v'),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _apiKeyRateLimitCooldownMinutes = v);
+                _scheduleAutoSave();
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              value: _apiKeyServiceCooldownMinutes,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: '503/网关/服务错误 冷却(分钟)',
+              ),
+              items: const [1, 2, 5, 10, 30]
+                  .map(
+                    (v) => DropdownMenuItem(
+                      value: v,
+                      child: Text('$v'),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _apiKeyServiceCooldownMinutes = v);
+                _scheduleAutoSave();
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '说明：当请求在尚未产生任何流式输出前失败，并且错误被判定为可重试（401/429/503）时，会自动切换到下一把 Key；达到连续失败阈值后，当前 Key 会进入冷却。',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
       ],
     );
   }

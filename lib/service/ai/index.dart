@@ -121,14 +121,33 @@ Stream<String> _generateStream({
   final hasManagedList = (savedConfig['api_keys'] ?? '').trim().isNotEmpty;
   final nowMs = DateTime.now().millisecondsSinceEpoch;
 
+  int parseInt(String key, int fallback) {
+    final v = (rawMergedConfig[key] ?? '').trim();
+    if (v.isEmpty) return fallback;
+    return int.tryParse(v) ?? fallback;
+  }
+
+  final failureThreshold =
+      parseInt('api_key_policy_failure_threshold', 3).clamp(1, 10);
+  final authCooldownMs = Duration(
+    minutes: parseInt('api_key_policy_auth_cooldown_min', 60).clamp(1, 24 * 60),
+  ).inMilliseconds;
+  final rateLimitCooldownMs = Duration(
+    minutes:
+        parseInt('api_key_policy_rate_limit_cooldown_min', 5).clamp(1, 24 * 60),
+  ).inMilliseconds;
+  final serviceCooldownMs = Duration(
+    minutes:
+        parseInt('api_key_policy_service_cooldown_min', 1).clamp(1, 24 * 60),
+  ).inMilliseconds;
+
   bool isCoolingDown(AiApiKeyEntry e) {
     final until = e.disabledUntil;
     return until != null && until > nowMs;
   }
 
   final eligibleEntries = managedEntries
-      .where((e) =>
-          e.enabled && e.key.trim().isNotEmpty && !isCoolingDown(e))
+      .where((e) => e.enabled && e.key.trim().isNotEmpty && !isCoolingDown(e))
       .toList(growable: false);
 
   AnxLog.info(
@@ -156,15 +175,15 @@ Stream<String> _generateStream({
     if (message.contains('401') ||
         message.contains('unauthorized') ||
         message.contains('invalid api key')) {
-      return const Duration(hours: 1).inMilliseconds;
+      return authCooldownMs;
     }
     if (message.contains('429') || message.contains('rate limit')) {
-      return const Duration(minutes: 5).inMilliseconds;
+      return rateLimitCooldownMs;
     }
     if (message.contains('503') || message.contains('bad gateway')) {
-      return const Duration(minutes: 1).inMilliseconds;
+      return serviceCooldownMs;
     }
-    return const Duration(minutes: 1).inMilliseconds;
+    return serviceCooldownMs;
   }
 
   List<AiApiKeyEntry> _replaceEntry(
@@ -302,7 +321,7 @@ Stream<String> _generateStream({
         final nextConsecutive = (attemptEntry.consecutiveFailures ?? 0) + 1;
 
         int? disabledUntil;
-        if (retryable && nextConsecutive >= 3) {
+        if (retryable && nextConsecutive >= failureThreshold) {
           disabledUntil = nowMs + cooldownMsFor(error);
         }
 
