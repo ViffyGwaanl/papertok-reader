@@ -49,6 +49,7 @@ class AiFullTextTranslateProvider extends TranslateServiceProvider {
     return StreamBuilder<String>(
       stream: aiGenerateStream(
         messages,
+        scope: AiRequestScope.translate,
         identifier: providerId.isEmpty ? null : providerId,
         config: model.isEmpty ? null : {'model': model},
         regenerate: false,
@@ -85,6 +86,7 @@ class AiFullTextTranslateProvider extends TranslateServiceProvider {
 
       await for (final result in aiGenerateStream(
         messages,
+        scope: AiRequestScope.translate,
         identifier: providerId.isEmpty ? null : providerId,
         config: model.isEmpty ? null : {'model': model},
         regenerate: false,

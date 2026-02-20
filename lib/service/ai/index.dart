@@ -14,10 +14,22 @@ import 'package:riverpod/riverpod.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
 
-final CancelableLangchainRunner _runner = CancelableLangchainRunner();
+enum AiRequestScope { chat, translate }
+
+final CancelableLangchainRunner _chatRunner = CancelableLangchainRunner();
+final CancelableLangchainRunner _translationRunner =
+    CancelableLangchainRunner();
+
+CancelableLangchainRunner _runnerForScope(AiRequestScope scope) {
+  return switch (scope) {
+    AiRequestScope.chat => _chatRunner,
+    AiRequestScope.translate => _translationRunner,
+  };
+}
 
 Stream<String> aiGenerateStream(
   List<ChatMessage> messages, {
+  AiRequestScope scope = AiRequestScope.chat,
   String? identifier,
   Map<String, String>? config,
   bool regenerate = false,
@@ -30,20 +42,27 @@ Stream<String> aiGenerateStream(
   LangchainAiRegistry registry = LangchainAiRegistry(ref);
 
   return _generateStream(
-      messages: messages,
-      identifier: identifier,
-      overrideConfig: config,
-      regenerate: regenerate,
-      useAgent: useAgent,
-      registry: registry);
+    messages: messages,
+    identifier: identifier,
+    overrideConfig: config,
+    regenerate: regenerate,
+    useAgent: useAgent,
+    registry: registry,
+    runner: _runnerForScope(scope),
+  );
 }
 
 void cancelActiveAiRequest() {
-  _runner.cancel();
+  _chatRunner.cancel();
+}
+
+void cancelActiveTranslationRequest() {
+  _translationRunner.cancel();
 }
 
 Stream<String> _generateStream({
   required List<ChatMessage> messages,
+  required CancelableLangchainRunner runner,
   String? identifier,
   Map<String, String>? overrideConfig,
   required bool regenerate,
@@ -112,7 +131,7 @@ Stream<String> _generateStream({
         .sublist(0, sanitizedMessages.length - 1)
         .toList(growable: false);
 
-    stream = _runner.streamAgent(
+    stream = runner.streamAgent(
       model: model,
       tools: tools,
       history: historyMessages,
@@ -121,7 +140,7 @@ Stream<String> _generateStream({
     );
   } else {
     final prompt = PromptValue.chat(sanitizedMessages);
-    stream = _runner.stream(model: model, prompt: prompt);
+    stream = runner.stream(model: model, prompt: prompt);
   }
 
   var buffer = '';

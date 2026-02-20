@@ -68,6 +68,7 @@ class AiTranslateProvider extends TranslateServiceProvider {
 
       await for (final result in aiGenerateStream(
         messages,
+        scope: AiRequestScope.translate,
         identifier: providerId.isEmpty ? null : providerId,
         config: model.isEmpty ? null : {'model': model},
         regenerate: false,
