@@ -43,6 +43,10 @@ class _AiPageState extends State<AiPage> {
             child: AiChatBottomSheet(
               aiChatKey: _aiChatKey,
               quickPromptChips: _buildQuickPromptChips(),
+              // Home AI is already presented as a Cupertino sheet; do not
+              // persist size here to avoid getting stuck in a tiny state.
+              initialSizeOverride: 0.95,
+              rememberSize: false,
               onRequestClose: () => Navigator.of(context).maybePop(),
             ),
           ),

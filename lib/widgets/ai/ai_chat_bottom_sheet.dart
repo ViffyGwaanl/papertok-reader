@@ -49,10 +49,18 @@ class AiChatBottomSheet extends StatefulWidget {
 class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
   static const double _minSize = 0.12;
   static const double _maxSize = 0.95;
+
+  /// When the sheet height is below this threshold, we treat it as "minimized"
+  /// and never persist it as the default opening size.
+  static const double _minPersistSize = 0.25;
+
   static const double _minimizedEpsilon = 0.02;
 
   final _sheetController = DraggableScrollableController();
   Timer? _saveDebounce;
+
+  /// Last non-minimized size used for toggle expand.
+  double _lastExpandedSize = 0.6;
 
   @override
   void dispose() {
@@ -67,8 +75,10 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
     }
 
     final clamped = size.clamp(_minSize, _maxSize).toDouble();
-    // Don't persist the minimized bar state; reopening should start expanded.
-    if (clamped <= _minSize + _minimizedEpsilon) {
+
+    // Never persist minimized / too-small sizes, otherwise users can get
+    // stuck opening the chat in a tiny state.
+    if (clamped < _minPersistSize) {
       return;
     }
 
@@ -78,7 +88,34 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
     });
   }
 
-  Future<void> _minimize() async {
+  Future<void> _toggleMinimize() async {
+    double size = _maxSize;
+    try {
+      size = _sheetController.size;
+    } catch (_) {
+      // ignore (controller might not be attached yet)
+    }
+
+    final isMinimized = size <= _minSize + _minimizedEpsilon;
+
+    // Expand.
+    if (isMinimized) {
+      final target = _lastExpandedSize.clamp(_minPersistSize, _maxSize);
+      try {
+        await _sheetController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        );
+      } catch (_) {}
+      return;
+    }
+
+    // Minimize.
+    if (size >= _minPersistSize) {
+      _lastExpandedSize = size;
+    }
+
     try {
       await _sheetController.animateTo(
         _minSize,
@@ -86,7 +123,7 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
         curve: Curves.easeOut,
       );
     } catch (_) {
-      // ignore (controller might not be attached yet)
+      // ignore
     }
   }
 
@@ -96,10 +133,13 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
         .clamp(_minSize, _maxSize)
         .toDouble();
 
-    // If we ever persisted a minimized size, ignore it on open.
-    if (initial <= _minSize + _minimizedEpsilon) {
+    // If we ever persisted a too-small size, ignore it on open.
+    if (initial < _minPersistSize) {
       initial = _maxSize;
     }
+
+    // Seed last expanded size.
+    _lastExpandedSize = initial;
 
     return NotificationListener<DraggableScrollableNotification>(
       onNotification: (n) {
@@ -131,11 +171,11 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
               sendImmediate: widget.sendImmediate,
               quickPromptChips: widget.quickPromptChips,
               scrollController: scrollController,
-              onRequestMinimize: _minimize,
+              onRequestMinimize: _toggleMinimize,
               trailing: [
                 IconButton(
                   icon: const Icon(Icons.keyboard_arrow_down),
-                  onPressed: _minimize,
+                  onPressed: _toggleMinimize,
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
