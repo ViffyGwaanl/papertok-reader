@@ -281,6 +281,19 @@ class _HomePageState extends ConsumerState<HomePage> {
           );
         } else {
           // Allow selecting AI tab on phones (Home AI is now a normal tab page).
+          final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+          final isAiTab = navBarItems.isNotEmpty &&
+              navBarItems[currentIndex]['identifier'] == Prefs.homeTabAI;
+
+          // When typing in Home AI on phone, hide the floating tab bar to avoid
+          // it jumping above the keyboard and covering the input box.
+          if (keyboardVisible && isAiTab) {
+            return Scaffold(
+              extendBody: true,
+              body: pages(currentIndex, constraints, null),
+            );
+          }
+
           return Scaffold(
             extendBody: true,
             body: BottomBar(

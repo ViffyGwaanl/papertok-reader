@@ -36,6 +36,7 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.trailing,
     this.scrollController,
     this.onRequestMinimize,
+    this.bottomPadding = 0,
   });
 
   final String? initialMessage;
@@ -50,6 +51,10 @@ class AiChatStream extends ConsumerStatefulWidget {
 
   /// Optional callback used by bottom-sheet mode to minimize the sheet.
   final VoidCallback? onRequestMinimize;
+
+  /// Extra bottom padding used to avoid being covered by external overlays
+  /// (e.g. floating home tab bar).
+  final double bottomPadding;
 
   @override
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
@@ -1352,6 +1357,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ),
             ),
             inputBox,
+            if (widget.bottomPadding > 0)
+              SizedBox(height: widget.bottomPadding),
           ],
         ),
       ),

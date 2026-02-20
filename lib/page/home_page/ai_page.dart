@@ -30,8 +30,16 @@ class AiPage extends StatelessWidget {
     return AnimatedBuilder(
       animation: Prefs(),
       builder: (context, _) {
+        final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+
+        // Home (phone) uses a floating bottom tab bar (64px height + 10px
+        // padding top/bottom inside the floating BottomBar widget).
+        // Add extra space so the input box is never covered by the tab bar.
+        final bottomPadding = keyboardVisible ? 0.0 : (64.0 + 20.0);
+
         return AiChatStream(
           quickPromptChips: _buildQuickPromptChips(),
+          bottomPadding: bottomPadding,
         );
       },
     );
