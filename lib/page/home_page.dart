@@ -295,64 +295,70 @@ class _HomePageState extends ConsumerState<HomePage> {
           const revealRange = 180.0;
 
           final t = (1 - (keyboardInset / revealRange)).clamp(0.0, 1.0);
-          final eased = Curves.easeOutCubic.transform(t);
+          // iOS-like easing: decelerate quickly then settle.
+          final eased = Curves.easeOut.transform(t);
 
           final targetHeight = (barHeight + bottomInset + bottomGap) * eased;
           final paddingBottom = (bottomInset + bottomGap) * eased;
+
+          final slideDy = (1 - eased) * 10.0;
 
           final bar = Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, 0, 16, paddingBottom),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(32),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
-                  child: Container(
-                    height: barHeight,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainer
-                          .withAlpha(170),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
+              child: Transform.translate(
+                offset: Offset(0, slideDy),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
+                    child: Container(
+                      height: barHeight,
+                      decoration: BoxDecoration(
                         color: Theme.of(context)
                             .colorScheme
-                            .outline
-                            .withAlpha(110),
-                        width: 0.5,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x33000000),
-                          blurRadius: 18,
-                          offset: Offset(0, 8),
+                            .surfaceContainer
+                            .withAlpha(170),
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withAlpha(110),
+                          width: 0.5,
                         ),
-                      ],
-                    ),
-                    child: Theme(
-                      data: Theme.of(context).copyWith(
-                        splashFactory: NoSplash.splashFactory,
-                        highlightColor: Colors.transparent,
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x33000000),
+                            blurRadius: 18,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
                       ),
-                      child: BottomNavigationBar(
-                        selectedFontSize: 11,
-                        unselectedFontSize: 11,
-                        type: BottomNavigationBarType.fixed,
-                        landscapeLayout:
-                            BottomNavigationBarLandscapeLayout.linear,
-                        currentIndex: currentIndex,
-                        onTap: (int index) => onBottomTap(index, false),
-                        items: bottomBarItems,
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
-                        showUnselectedLabels: true,
-                        selectedItemColor:
-                            Theme.of(context).colorScheme.primary,
-                        unselectedItemColor:
-                            Theme.of(context).colorScheme.onSurfaceVariant,
-                        iconSize: 22,
+                      child: Theme(
+                        data: Theme.of(context).copyWith(
+                          splashFactory: NoSplash.splashFactory,
+                          highlightColor: Colors.transparent,
+                        ),
+                        child: BottomNavigationBar(
+                          selectedFontSize: 11,
+                          unselectedFontSize: 11,
+                          type: BottomNavigationBarType.fixed,
+                          landscapeLayout:
+                              BottomNavigationBarLandscapeLayout.linear,
+                          currentIndex: currentIndex,
+                          onTap: (int index) => onBottomTap(index, false),
+                          items: bottomBarItems,
+                          backgroundColor: Colors.transparent,
+                          elevation: 0,
+                          showUnselectedLabels: true,
+                          selectedItemColor:
+                              Theme.of(context).colorScheme.primary,
+                          unselectedItemColor:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          iconSize: 22,
+                        ),
                       ),
                     ),
                   ),
