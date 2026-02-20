@@ -290,17 +290,18 @@ class _HomePageState extends ConsumerState<HomePage> {
           final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
           final bottomInset = MediaQuery.of(context).padding.bottom;
 
-          const barHeight = 60.0;
-          const bottomGap = 2.0;
-          const revealRange = 260.0;
+          const barHeight = 66.0;
+          const bottomGap = 0.0;
+          const revealRange = 340.0;
 
           final t = (1 - (keyboardInset / revealRange)).clamp(0.0, 1.0);
           final desired = Curves.easeOut.transform(t);
 
           // Slow down the tab bar re-appear after keyboard dismiss.
+          // (Users perceive iOS as slightly slower + more settled here.)
           final duration = keyboardInset < 1
-              ? const Duration(milliseconds: 420)
-              : const Duration(milliseconds: 180);
+              ? const Duration(milliseconds: 720)
+              : const Duration(milliseconds: 160);
 
           return TweenAnimationBuilder<double>(
             tween: Tween<double>(end: desired),
@@ -352,32 +353,36 @@ class _HomePageState extends ConsumerState<HomePage> {
                               splashFactory: NoSplash.splashFactory,
                               highlightColor: Colors.transparent,
                             ),
-                            child: Padding(
-                              // Visual centering: BottomNavigationBar content
-                              // tends to sit a bit high inside a tight pill.
-                              padding: const EdgeInsets.only(top: 2),
-                              child: BottomNavigationBar(
-                                selectedFontSize: 11,
-                                unselectedFontSize: 11,
-                                selectedLabelStyle:
-                                    const TextStyle(height: 1.1),
-                                unselectedLabelStyle:
-                                    const TextStyle(height: 1.1),
-                                type: BottomNavigationBarType.fixed,
-                                landscapeLayout:
-                                    BottomNavigationBarLandscapeLayout.linear,
-                                currentIndex: currentIndex,
-                                onTap: (int index) => onBottomTap(index, false),
-                                items: bottomBarItems,
-                                backgroundColor: Colors.transparent,
-                                elevation: 0,
-                                showUnselectedLabels: true,
-                                selectedItemColor:
-                                    Theme.of(context).colorScheme.primary,
-                                unselectedItemColor: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                                iconSize: 22,
+                            child: Center(
+                              // BottomNavigationBar tends to sit slightly high
+                              // in a custom pill; center it vertically.
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 6),
+                                child: BottomNavigationBar(
+                                  selectedFontSize: 11,
+                                  unselectedFontSize: 11,
+                                  selectedLabelStyle:
+                                      const TextStyle(height: 1.0),
+                                  unselectedLabelStyle:
+                                      const TextStyle(height: 1.0),
+                                  type: BottomNavigationBarType.fixed,
+                                  landscapeLayout:
+                                      BottomNavigationBarLandscapeLayout.linear,
+                                  currentIndex: currentIndex,
+                                  onTap: (int index) =>
+                                      onBottomTap(index, false),
+                                  items: bottomBarItems,
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  showUnselectedLabels: true,
+                                  selectedItemColor:
+                                      Theme.of(context).colorScheme.primary,
+                                  unselectedItemColor: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                  iconSize: 24,
+                                ),
                               ),
                             ),
                           ),
@@ -394,7 +399,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                   child: Align(
                     alignment: Alignment.bottomCenter,
                     child: IgnorePointer(
-                      ignoring: eased < 0.95,
+                      // Make taps responsive even while the bar is still
+                      // revealing.
+                      ignoring: eased < 0.15,
                       child: Opacity(
                         opacity: eased,
                         child: bar,
