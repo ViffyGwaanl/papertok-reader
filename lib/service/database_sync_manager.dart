@@ -31,6 +31,7 @@ class DatabaseSyncManager {
   static Future<DatabaseSyncResult> safeDownloadDatabase({
     required SyncClientBase client,
     required String remoteDbFileName,
+    String remoteRoot = 'anx',
     void Function(int received, int total)? onProgress,
   }) async {
     final databasesPath = await getAnxDataBasesPath();
@@ -51,7 +52,7 @@ class DatabaseSyncManager {
 
       // Step 1: Download to temp file
       await client.downloadFile(
-        'anx/$remoteDbFileName',
+        '$remoteRoot/$remoteDbFileName',
         tempDbPath,
         onProgress: onProgress,
       );
@@ -69,7 +70,8 @@ class DatabaseSyncManager {
       }
 
       AnxLog.info(
-          'DatabaseSync: Validation passed, proceeding with replacement');
+        'DatabaseSync: Validation passed, proceeding with replacement',
+      );
 
       // Step 3: Backup current database
       final backupPath = await _createBackup(localDbPath);
@@ -82,7 +84,8 @@ class DatabaseSyncManager {
       final finalValidation = await _validateDatabase(localDbPath);
       if (!finalValidation.isValid) {
         AnxLog.severe(
-            'DatabaseSync: Final validation failed, recovering from backup');
+          'DatabaseSync: Final validation failed, recovering from backup',
+        );
         await _recoverFromBackup(backupPath, localDbPath);
         return DatabaseSyncResult.failure(
           'Database replacement validation failed, recovered from backup',
@@ -95,7 +98,8 @@ class DatabaseSyncManager {
       await _cleanupTempFile(tempDbPath);
 
       AnxLog.info(
-          'DatabaseSync: Safe database download completed successfully');
+        'DatabaseSync: Safe database download completed successfully',
+      );
       return DatabaseSyncResult.success('Database synchronized successfully');
     } catch (e) {
       AnxLog.severe('DatabaseSync: Error during safe download: $e');
@@ -110,7 +114,8 @@ class DatabaseSyncManager {
 
   /// Validate database integrity
   static Future<DatabaseValidationResult> _validateDatabase(
-      String dbPath) async {
+    String dbPath,
+  ) async {
     try {
       // Check if file exists and is not empty
       final dbFile = io.File(dbPath);
@@ -122,7 +127,8 @@ class DatabaseSyncManager {
       if (fileSize < 1024) {
         // Database file should be at least 1KB
         return DatabaseValidationResult.invalid(
-            'Database file too small: ${fileSize}B');
+          'Database file too small: ${fileSize}B',
+        );
       }
 
       // First, ensure the database is converted from WAL mode to DELETE mode
@@ -159,20 +165,23 @@ class DatabaseSyncManager {
         if (integrityResult.isEmpty ||
             integrityResult.first.values.first != 'ok') {
           return DatabaseValidationResult.invalid(
-              'Database integrity check failed');
+            'Database integrity check failed',
+          );
         }
 
         // Check if required tables exist
         final tables = await db.rawQuery(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('tb_books', 'tb_themes', 'tb_styles')");
+          "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('tb_books', 'tb_themes', 'tb_styles')",
+        );
 
         if (tables.length < 3) {
           return DatabaseValidationResult.invalid('Missing required tables');
         }
 
         // Check if tb_books table is empty
-        final bookCount =
-            await db.rawQuery('SELECT COUNT(*) as count FROM tb_books');
+        final bookCount = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM tb_books',
+        );
         final count = bookCount.first['count'] as int;
 
         if (count == 0) {
@@ -185,11 +194,13 @@ class DatabaseSyncManager {
 
         if (dbVersion > currentDbVersion) {
           return DatabaseValidationResult.invalid(
-              'Database version ($dbVersion) is newer than current version ($currentDbVersion)');
+            'Database version ($dbVersion) is newer than current version ($currentDbVersion)',
+          );
         }
 
         AnxLog.info(
-            'DatabaseSync: Validation passed - $count books found, version $dbVersion');
+          'DatabaseSync: Validation passed - $count books found, version $dbVersion',
+        );
         return DatabaseValidationResult.valid();
       } finally {
         await db?.close();
@@ -217,7 +228,9 @@ class DatabaseSyncManager {
 
   /// Atomic replace database
   static Future<void> _atomicReplaceDatabase(
-      String tempDbPath, String localDbPath) async {
+    String tempDbPath,
+    String localDbPath,
+  ) async {
     // Ensure database is closed
     await DBHelper.close();
 
@@ -235,7 +248,9 @@ class DatabaseSyncManager {
 
   /// Recover database from backup
   static Future<void> _recoverFromBackup(
-      String backupPath, String localDbPath) async {
+    String backupPath,
+    String localDbPath,
+  ) async {
     try {
       await DBHelper.close();
       // Ensure clean state before recovery
@@ -245,7 +260,8 @@ class DatabaseSyncManager {
       await DBHelper().initDB();
 
       AnxLog.info(
-          'DatabaseSync: Successfully recovered from backup: $backupPath');
+        'DatabaseSync: Successfully recovered from backup: $backupPath',
+      );
     } catch (e) {
       AnxLog.severe('DatabaseSync: Failed to recover from backup: $e');
       rethrow;
@@ -276,8 +292,9 @@ class DatabaseSyncManager {
           .toList();
 
       // Sort by modification time, keep the latest ones
-      backupFiles
-          .sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+      backupFiles.sort(
+        (a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()),
+      );
 
       if (backupFiles.length > _maxBackupCount) {
         final filesToDelete = backupFiles.skip(_maxBackupCount);
@@ -391,8 +408,9 @@ class DatabaseSyncResult {
       DatabaseSyncResult._(true, message, null);
 
   factory DatabaseSyncResult.failure(
-          String message, DatabaseSyncFailureType type) =>
-      DatabaseSyncResult._(false, message, type);
+    String message,
+    DatabaseSyncFailureType type,
+  ) => DatabaseSyncResult._(false, message, type);
 }
 
 ///  Database sync failure types

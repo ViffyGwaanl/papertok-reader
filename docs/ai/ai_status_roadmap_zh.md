@@ -87,7 +87,7 @@
 - prompt 编辑器 maxLength 提升到 **20,000**。
 
 **WebDAV 同步（已完成）**
-- `anx/config/ai_settings.json`
+- `paper_reader/config/ai_settings.json`（兼容旧路径：`anx/config/ai_settings.json`）
 - 冲突策略：整文件 `updatedAt` newer-wins（Phase 1）。
 - 明确排除：`api_key`。
 

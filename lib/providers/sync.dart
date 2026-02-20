@@ -45,6 +45,65 @@ class Sync extends _$Sync {
   // Flag to prevent multiple sync direction dialogs
   bool _isShowingDirectionDialog = false;
 
+  // Remote root directory ('paper_reader' or legacy 'anx').
+  // Detected once per sync via _detectRemoteRoot(); defaults to the new name.
+  static const String _newRoot = 'paper_reader';
+  static const String _legacyRoot = 'anx';
+  String _remoteRoot = _newRoot;
+
+  /// Auto-detect whether the server has a paper_reader/ or anx/ root.
+  /// Logs a warning when falling back to the legacy root.
+  Future<void> _detectRemoteRoot() async {
+    final client = _syncClient;
+    if (client == null) {
+      _remoteRoot = _newRoot;
+      return;
+    }
+    try {
+      if (await client.isExist('/$_newRoot')) {
+        _remoteRoot = _newRoot;
+        return;
+      }
+    } catch (_) {}
+    try {
+      if (await client.isExist('/$_legacyRoot')) {
+        AnxLog.warning(
+          'WebDAV: remote root "$_legacyRoot/" found; "$_newRoot/" is missing. '
+          'Using legacy path for compatibility.',
+        );
+        _remoteRoot = _legacyRoot;
+        return;
+      }
+    } catch (_) {}
+    // Neither exists → fresh setup, use new root.
+    _remoteRoot = _newRoot;
+  }
+
+  /// Ensure the remote root is detected before standalone operations
+  /// (downloadBook, releaseBook, etc.) that may be called outside syncData().
+  Future<void> _ensureRemoteRoot() async {
+    // _remoteRoot already has a sensible default; only do IO if it has never
+    // been explicitly detected (i.e. still the static default after app start).
+    // We use a nullable sentinel instead of re-running on every standalone call.
+    if (_remoteRootDetected) return;
+    await _detectRemoteRoot();
+    _remoteRootDetected = true;
+  }
+
+  bool _remoteRootDetected = false;
+
+  String _remoteRel(String path) {
+    final clean = path.startsWith('/') ? path.substring(1) : path;
+    if (clean.isEmpty) return _remoteRoot;
+    return '$_remoteRoot/$clean';
+  }
+
+  String _remoteAbs(String path) {
+    final clean = path.startsWith('/') ? path.substring(1) : path;
+    if (clean.isEmpty) return '/$_remoteRoot';
+    return '/$_remoteRoot/$clean';
+  }
+
   @override
   SyncStateModel build() {
     return const SyncStateModel(
@@ -77,13 +136,16 @@ class Sync extends _$Sync {
     AnxLog.info('${client.protocolName}: init');
   }
 
-  Future<void> _createAnxDir() async {
+  Future<void> _createRemoteDir() async {
     final client = _syncClient;
     if (client == null) return;
 
-    if (!await client.isExist('/anx/data/file')) {
-      await client.mkdirAll('anx/data/file');
-      await client.mkdirAll('anx/data/cover');
+    await _ensureRemoteRoot();
+
+    if (!await client.isExist(_remoteAbs('data/file'))) {
+      await client.mkdirAll(_remoteRel('data/file'));
+      await client.mkdirAll(_remoteRel('data/cover'));
+      await client.mkdirAll(_remoteRel('config'));
     }
   }
 
@@ -93,8 +155,9 @@ class Sync extends _$Sync {
     }
 
     if (Prefs().onlySyncWhenWifi &&
-        !(await Connectivity().checkConnectivity())
-            .contains(ConnectivityResult.wifi)) {
+        !(await Connectivity().checkConnectivity()).contains(
+          ConnectivityResult.wifi,
+        )) {
       if (Prefs().syncCompletedToast) {
         AnxToast.show(L10n.of(navigatorKey.currentContext!).webdavOnlyWifi);
       }
@@ -105,19 +168,23 @@ class Sync extends _$Sync {
   }
 
   Future<SyncDirection?> determineSyncDirection(
-      SyncDirection requestedDirection) async {
+    SyncDirection requestedDirection,
+  ) async {
     final client = _syncClient;
     if (client == null) return null;
 
     String remoteDbFileName = 'database$currentDbVersion.db';
 
+    await _detectRemoteRoot();
+    _remoteRootDetected = true;
+
     // Check for version mismatch
     List<RemoteFile> remoteFiles = [];
     try {
-      remoteFiles = await client.safeReadDir('/anx');
+      remoteFiles = await client.safeReadDir(_remoteAbs(''));
     } catch (e) {
-      await _createAnxDir();
-      remoteFiles = await client.safeReadDir('/anx');
+      await _createRemoteDir();
+      remoteFiles = await client.safeReadDir(_remoteAbs(''));
     }
 
     for (var file in remoteFiles) {
@@ -134,7 +201,7 @@ class Sync extends _$Sync {
       }
     }
 
-    RemoteFile? remoteDb = await client.readProps('anx/$remoteDbFileName');
+    RemoteFile? remoteDb = await client.readProps(_remoteRel(remoteDbFileName));
     final databasePath = await getAnxDataBasesPath();
     final localDbPath = join(databasePath, 'app_database.db');
     io.File localDb = io.File(localDbPath);
@@ -169,7 +236,9 @@ class Sync extends _$Sync {
   }
 
   Future<SyncDirection?> _showSyncDirectionDialog(
-      io.File localDb, RemoteFile remoteDb) async {
+    io.File localDb,
+    RemoteFile remoteDb,
+  ) async {
     // Prevent multiple dialogs from showing simultaneously
     if (_isShowingDirectionDialog) {
       AnxLog.info('Sync direction dialog already showing, skipping');
@@ -190,9 +259,11 @@ class Sync extends _$Sync {
               Text(L10n.of(context).webdavSyncDirection),
               SizedBox(height: 10),
               Text(
-                  '${L10n.of(context).bookSyncStatusLocalUpdateTime} ${localDb.lastModifiedSync()}'),
+                '${L10n.of(context).bookSyncStatusLocalUpdateTime} ${localDb.lastModifiedSync()}',
+              ),
               Text(
-                  '${L10n.of(context).syncRemoteDataUpdateTime} ${remoteDb.mTime}'),
+                '${L10n.of(context).syncRemoteDataUpdateTime} ${remoteDb.mTime}',
+              ),
             ],
           ),
           actionsOverflowDirection: VerticalDirection.up,
@@ -225,7 +296,8 @@ class Sync extends _$Sync {
       builder: (context) => AlertDialog(
         title: Text(L10n.of(context).webdavSyncAborted),
         content: Text(
-            L10n.of(context).syncMismatchTip(currentDbVersion, remoteVersion)),
+          L10n.of(context).syncMismatchTip(currentDbVersion, remoteVersion),
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -266,7 +338,7 @@ class Sync extends _$Sync {
     // Test ping and initialize
     try {
       await client.ping();
-      await _createAnxDir();
+      await _createRemoteDir();
     } catch (e) {
       AnxLog.severe('Sync connection failed, ping failed2\n${e.toString()}');
       return;
@@ -297,7 +369,8 @@ class Sync extends _$Sync {
       } else {
         if (Prefs().syncCompletedToast) {
           AnxToast.show(
-              L10n.of(navigatorKey.currentContext!).webdavSyncingFiles);
+            L10n.of(navigatorKey.currentContext!).webdavSyncingFiles,
+          );
         }
 
         await syncFiles();
@@ -336,12 +409,14 @@ class Sync extends _$Sync {
     final client = _syncClient;
     if (client == null) return;
 
-    const remotePath = 'anx/config/ai_settings.json';
+    await _ensureRemoteRoot();
+
+    final remotePath = _remoteRel('config/ai_settings.json');
 
     try {
-      await client.mkdirAll('anx/config');
+      await client.mkdirAll(_remoteRel('config'));
     } catch (e) {
-      AnxLog.info('Sync: failed to ensure anx/config: $e');
+      AnxLog.info('Sync: failed to ensure $_remoteRoot/config: $e');
     }
 
     final localUpdatedAt = Prefs().aiSettingsUpdatedAt;
@@ -397,6 +472,8 @@ class Sync extends _$Sync {
     final client = _syncClient;
     if (client == null) return;
 
+    await _ensureRemoteRoot();
+
     AnxLog.info('Sync: syncFiles');
     List<String> currentBooks = await bookDao.getCurrentBooks();
     List<String> currentCover = await bookDao.getCurrentCover();
@@ -404,19 +481,28 @@ class Sync extends _$Sync {
     List<String> remoteBooksName = [];
     List<String> remoteCoversName = [];
 
-    List<RemoteFile> remoteBooks = await client.safeReadDir('/anx/data/file');
+    List<RemoteFile> remoteBooks = await client.safeReadDir(
+      _remoteAbs('data/file'),
+    );
     remoteBooksName = List.generate(
-        remoteBooks.length, (index) => 'file/${remoteBooks[index].name!}');
+      remoteBooks.length,
+      (index) => 'file/${remoteBooks[index].name!}',
+    );
 
-    List<RemoteFile> remoteCovers = await client.safeReadDir('/anx/data/cover');
+    List<RemoteFile> remoteCovers = await client.safeReadDir(
+      _remoteAbs('data/cover'),
+    );
     remoteCoversName = List.generate(
-        remoteCovers.length, (index) => 'cover/${remoteCovers[index].name!}');
+      remoteCovers.length,
+      (index) => 'cover/${remoteCovers[index].name!}',
+    );
 
     List<String> totalCurrentFiles = [...currentCover, ...currentBooks];
     List<String> totalRemoteFiles = [...remoteBooksName, ...remoteCoversName];
 
-    List<String> localBooks =
-        io.Directory(getBasePath('file')).listSync().map((e) {
+    List<String> localBooks = io.Directory(getBasePath('file')).listSync().map((
+      e,
+    ) {
       return 'file/${basename(e.path)}';
     }).toList();
     List<String> localCovers =
@@ -434,25 +520,25 @@ class Sync extends _$Sync {
     // Sync cover files
     for (var file in currentCover) {
       if (!remoteCoversName.contains(file) && localCovers.contains(file)) {
-        await uploadFile(getBasePath(file), 'anx/data/$file');
+        await uploadFile(getBasePath(file), _remoteRel('data/$file'));
       }
       if (!io.File(getBasePath(file)).existsSync() &&
           remoteCoversName.contains(file)) {
-        await downloadFile('anx/data/$file', getBasePath(file));
+        await downloadFile(_remoteRel('data/$file'), getBasePath(file));
       }
     }
 
     // Sync book files
     for (var file in currentBooks) {
       if (!remoteBooksName.contains(file) && localBooks.contains(file)) {
-        await uploadFile(getBasePath(file), 'anx/data/$file');
+        await uploadFile(getBasePath(file), _remoteRel('data/$file'));
       }
     }
 
     // Remove remote files not in database
     for (var file in totalRemoteFiles) {
       if (!totalCurrentFiles.contains(file)) {
-        await client.remove('anx/data/$file');
+        await client.remove(_remoteRel('data/$file'));
       }
     }
 
@@ -469,8 +555,11 @@ class Sync extends _$Sync {
     final client = _syncClient;
     if (client == null) return;
 
+    await _detectRemoteRoot();
+    _remoteRootDetected = true;
+
     String remoteDbFileName = 'database$currentDbVersion.db';
-    RemoteFile? remoteDb = await client.readProps('anx/$remoteDbFileName');
+    RemoteFile? remoteDb = await client.readProps(_remoteRel(remoteDbFileName));
 
     final databasePath = await getAnxDataBasesPath();
     final localDbPath = join(databasePath, 'app_database.db');
@@ -482,7 +571,7 @@ class Sync extends _$Sync {
           // Use VACUUM INTO to create a snapshot, avoiding database locking/closing
           final snapshotPath = await DBHelper.prepareUploadSnapshot();
           try {
-            await uploadFile(snapshotPath, 'anx/$remoteDbFileName');
+            await uploadFile(snapshotPath, _remoteRel(remoteDbFileName));
           } finally {
             // Clean up snapshot file
             final snapshotFile = io.File(snapshotPath);
@@ -498,14 +587,17 @@ class Sync extends _$Sync {
             final result = await DatabaseSyncManager.safeDownloadDatabase(
               client: client,
               remoteDbFileName: remoteDbFileName,
+              remoteRoot: _remoteRoot,
               onProgress: (received, total) {
-                changeState(state.copyWith(
-                  direction: SyncDirection.download,
-                  fileName: remoteDbFileName,
-                  isSyncing: received < total,
-                  count: received,
-                  total: total,
-                ));
+                changeState(
+                  state.copyWith(
+                    direction: SyncDirection.download,
+                    fileName: remoteDbFileName,
+                    isSyncing: received < total,
+                    count: received,
+                    total: total,
+                  ),
+                );
               },
             );
 
@@ -527,7 +619,7 @@ class Sync extends _$Sync {
             // Use VACUUM INTO to create a snapshot, avoiding database locking/closing
             final snapshotPath = await DBHelper.prepareUploadSnapshot();
             try {
-              await uploadFile(snapshotPath, 'anx/$remoteDbFileName');
+              await uploadFile(snapshotPath, _remoteRel(remoteDbFileName));
             } finally {
               // Clean up snapshot file
               final snapshotFile = io.File(snapshotPath);
@@ -540,14 +632,17 @@ class Sync extends _$Sync {
             final result = await DatabaseSyncManager.safeDownloadDatabase(
               client: client,
               remoteDbFileName: remoteDbFileName,
+              remoteRoot: _remoteRoot,
               onProgress: (received, total) {
-                changeState(state.copyWith(
-                  direction: SyncDirection.download,
-                  fileName: remoteDbFileName,
-                  isSyncing: received < total,
-                  count: received,
-                  total: total,
-                ));
+                changeState(
+                  state.copyWith(
+                    direction: SyncDirection.download,
+                    fileName: remoteDbFileName,
+                    isSyncing: received < total,
+                    count: received,
+                    total: total,
+                  ),
+                );
               },
             );
 
@@ -562,7 +657,9 @@ class Sync extends _$Sync {
       }
 
       // Update last sync time
-      RemoteFile? newRemoteDb = await client.readProps('anx/$remoteDbFileName');
+      RemoteFile? newRemoteDb = await client.readProps(
+        _remoteRel(remoteDbFileName),
+      );
       if (newRemoteDb != null) {
         Prefs().lastUploadBookDate = newRemoteDb.mTime;
       }
@@ -577,10 +674,12 @@ class Sync extends _$Sync {
     String remotePath, [
     bool replace = true,
   ]) async {
-    changeState(state.copyWith(
-      direction: SyncDirection.upload,
-      fileName: localPath.split('/').last,
-    ));
+    changeState(
+      state.copyWith(
+        direction: SyncDirection.upload,
+        fileName: localPath.split('/').last,
+      ),
+    );
 
     final client = _syncClient;
     if (client != null) {
@@ -590,11 +689,9 @@ class Sync extends _$Sync {
         remotePath,
         replace: replace,
         onProgress: (sent, total) {
-          changeState(state.copyWith(
-            isSyncing: true,
-            count: sent,
-            total: total,
-          ));
+          changeState(
+            state.copyWith(isSyncing: true, count: sent, total: total),
+          );
         },
       );
       ref.read(syncStatusProvider.notifier).removeUploading(remotePath);
@@ -604,10 +701,12 @@ class Sync extends _$Sync {
   }
 
   Future<void> downloadFile(String remotePath, String localPath) async {
-    changeState(state.copyWith(
-      direction: SyncDirection.download,
-      fileName: remotePath.split('/').last,
-    ));
+    changeState(
+      state.copyWith(
+        direction: SyncDirection.download,
+        fileName: remotePath.split('/').last,
+      ),
+    );
 
     final client = _syncClient;
     if (client != null) {
@@ -616,11 +715,9 @@ class Sync extends _$Sync {
         remotePath,
         localPath,
         onProgress: (received, total) {
-          changeState(state.copyWith(
-            isSyncing: true,
-            count: received,
-            total: total,
-          ));
+          changeState(
+            state.copyWith(isSyncing: true, count: received, total: total),
+          );
         },
       );
       ref.read(syncStatusProvider.notifier).removeDownloading(remotePath);
@@ -633,7 +730,9 @@ class Sync extends _$Sync {
     final client = _syncClient;
     if (client == null) return [];
 
-    final remoteFiles = await client.safeReadDir('/anx/data/file');
+    await _ensureRemoteRoot();
+
+    final remoteFiles = await client.safeReadDir(_remoteAbs('data/file'));
     return remoteFiles.map((e) => e.name!).toList();
   }
 
@@ -641,8 +740,9 @@ class Sync extends _$Sync {
     final syncStatus = await ref.read(syncStatusProvider.future);
 
     if (!syncStatus.remoteOnly.contains(book.id)) {
-      AnxToast.show(L10n.of(navigatorKey.currentContext!)
-          .bookSyncStatusBookNotFoundRemote);
+      AnxToast.show(
+        L10n.of(navigatorKey.currentContext!).bookSyncStatusBookNotFoundRemote,
+      );
       return;
     }
 
@@ -662,12 +762,14 @@ class Sync extends _$Sync {
 
     Future<void> uploadBook() async {
       try {
-        final remotePath = 'anx/data/${book.filePath}';
+        await _ensureRemoteRoot();
+        final remotePath = _remoteRel('data/${book.filePath}');
         final localPath = getBasePath(book.filePath);
         await uploadFile(localPath, remotePath);
       } catch (e) {
         AnxToast.show(
-            L10n.of(navigatorKey.currentContext!).bookSyncStatusUploadFailed);
+          L10n.of(navigatorKey.currentContext!).bookSyncStatusUploadFailed,
+        );
         AnxLog.severe('Failed to upload book\n$e');
         rethrow;
       }
@@ -675,7 +777,8 @@ class Sync extends _$Sync {
 
     if (syncStatus.remoteOnly.contains(book.id)) {
       AnxToast.show(
-          L10n.of(navigatorKey.currentContext!).bookSyncStatusSpaceReleased);
+        L10n.of(navigatorKey.currentContext!).bookSyncStatusSpaceReleased,
+      );
       return;
     } else if (syncStatus.both.contains(book.id)) {
       await deleteLocalBook();
@@ -686,14 +789,16 @@ class Sync extends _$Sync {
         await deleteLocalBook();
       } catch (e) {
         AnxToast.show(
-            L10n.of(navigatorKey.currentContext!).bookSyncStatusUploadFailed);
+          L10n.of(navigatorKey.currentContext!).bookSyncStatusUploadFailed,
+        );
       }
     }
   }
 
   Future<void> downloadMultipleBooks(List<int> bookIds) async {
     AnxLog.info(
-        'WebDAV: Starting download for ${bookIds.length} remote books.');
+      'WebDAV: Starting download for ${bookIds.length} remote books.',
+    );
     int successCount = 0;
     int failCount = 0;
 
@@ -706,7 +811,8 @@ class Sync extends _$Sync {
       }
     } catch (e) {
       AnxLog.severe(
-          'WebDAV connection failed before batch download, ping failed\n${e.toString()}');
+        'WebDAV connection failed before batch download, ping failed\n${e.toString()}',
+      );
       return;
     }
 
@@ -722,22 +828,33 @@ class Sync extends _$Sync {
       }
     }
 
-    AnxLog.info(L10n.of(navigatorKey.currentContext!)
-        .webdavBatchDownloadFinishedReport(successCount, failCount));
-    AnxToast.show(L10n.of(navigatorKey.currentContext!)
-        .webdavBatchDownloadFinishedReport(successCount, failCount));
+    AnxLog.info(
+      L10n.of(
+        navigatorKey.currentContext!,
+      ).webdavBatchDownloadFinishedReport(successCount, failCount),
+    );
+    AnxToast.show(
+      L10n.of(
+        navigatorKey.currentContext!,
+      ).webdavBatchDownloadFinishedReport(successCount, failCount),
+    );
   }
 
   Future<void> _downloadBook(Book book) async {
     try {
-      AnxToast.show(L10n.of(navigatorKey.currentContext!)
-          .bookSyncStatusDownloadingBook(book.filePath));
-      final remotePath = 'anx/data/${book.filePath}';
+      AnxToast.show(
+        L10n.of(
+          navigatorKey.currentContext!,
+        ).bookSyncStatusDownloadingBook(book.filePath),
+      );
+      await _ensureRemoteRoot();
+      final remotePath = _remoteRel('data/${book.filePath}');
       final localPath = getBasePath(book.filePath);
       await downloadFile(remotePath, localPath);
     } catch (e) {
       AnxToast.show(
-          L10n.of(navigatorKey.currentContext!).bookSyncStatusDownloadFailed);
+        L10n.of(navigatorKey.currentContext!).bookSyncStatusDownloadFailed,
+      );
       AnxLog.severe('Failed to download book\n$e');
       rethrow;
     }

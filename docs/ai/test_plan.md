@@ -75,7 +75,7 @@
 
 ### WebDAV AI settings sync
 
-- [ ] Upload/download `anx/config/ai_settings.json`
+- [ ] Upload/download `paper_reader/config/ai_settings.json` (legacy: `anx/config/ai_settings.json`)
 - [ ] Does not sync `api_key`
 - [ ] Conflict resolution uses `updatedAt` newer-wins
 

@@ -17,26 +17,23 @@ class WebdavClient extends SyncClientBase {
     required String username,
     required String password,
   }) {
-    _config = {
-      'url': url,
-      'username': username,
-      'password': password,
-    };
+    _config = {'url': url, 'username': username, 'password': password};
     _initClient();
   }
 
   void _initClient() {
-    _client = newClient(
-      _config['url'],
-      user: _config['username'],
-      password: _config['password'],
-      debug: false,
-    )
-      ..setHeaders({
-        'accept-charset': 'utf-8',
-        'Content-Type': 'application/octet-stream'
-      })
-      ..setConnectTimeout(8000);
+    _client =
+        newClient(
+            _config['url'],
+            user: _config['username'],
+            password: _config['password'],
+            debug: false,
+          )
+          ..setHeaders({
+            'accept-charset': 'utf-8',
+            'Content-Type': 'application/octet-stream',
+          })
+          ..setConnectTimeout(8000);
   }
 
   @override
@@ -59,7 +56,7 @@ class WebdavClient extends SyncClientBase {
 
   @override
   Future<void> testFullCapabilities() async {
-    const testDir = 'anx/.test';
+    const testDir = 'paper_reader/.test';
     const testFile = '$testDir/test.txt';
     io.File? localTestFile;
     io.File? downloadTestFile;
@@ -72,7 +69,8 @@ class WebdavClient extends SyncClientBase {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       localTestFile = io.File('${tempDir.path}/webdav_test_$timestamp.txt');
 
-      final testContent = 'Anx Reader WebDAV Test\n'
+      final testContent =
+          'Paper Reader WebDAV Test\n'
           'Test Time: ${DateTime.now()}\n'
           'Platform: ${AnxPlatform.type.name}\n'
           'Timestamp: $timestamp\n';
@@ -100,15 +98,17 @@ class WebdavClient extends SyncClientBase {
 
       // 4. Download and verify content
       try {
-        downloadTestFile =
-            io.File('${tempDir.path}/webdav_download_test_$timestamp.txt');
+        downloadTestFile = io.File(
+          '${tempDir.path}/webdav_download_test_$timestamp.txt',
+        );
         await downloadFile(testFile, downloadTestFile.path);
         final downloadedContent = await downloadTestFile.readAsString();
         AnxLog.info('WebDAV full test: Downloaded test file');
 
         if (downloadedContent != testContent) {
           AnxLog.severe(
-              'WebDAV full test: Content mismatch\nExpected: $testContent\nGot: $downloadedContent');
+            'WebDAV full test: Content mismatch\nExpected: $testContent\nGot: $downloadedContent',
+          );
           throw Exception('Test file content mismatch, data integrity issue');
         }
         AnxLog.info('WebDAV full test: Content verification passed');
@@ -135,7 +135,8 @@ class WebdavClient extends SyncClientBase {
         AnxLog.info('WebDAV full test: Deleted test directory');
       } catch (e) {
         AnxLog.info(
-            'WebDAV full test: Could not delete test directory (may not be empty)');
+          'WebDAV full test: Could not delete test directory (may not be empty)',
+        );
         // Ignore error - directory might not be empty or already deleted
       }
 
@@ -176,9 +177,9 @@ class WebdavClient extends SyncClientBase {
 
   @override
   Future<List<RemoteFile>> readDir(String path) async {
-    return (await _client.readDir(path))
-        .map((file) => file.toRemoteFile())
-        .toList();
+    return (await _client.readDir(
+      path,
+    )).map((file) => file.toRemoteFile()).toList();
   }
 
   @override

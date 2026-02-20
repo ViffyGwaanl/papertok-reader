@@ -41,7 +41,7 @@ Anx Reader already has WebDAV sync for the database and files; we extend that pi
 
 ## Design
 
-- Remote path: `anx/config/ai_settings.json`
+- Remote path: `paper_reader/config/ai_settings.json` (legacy: `anx/config/ai_settings.json`)
 - Merge strategy (Phase 1): **whole-file snapshot** + `updatedAt` **newer-wins**
 - Local timestamp: `Prefs().aiSettingsUpdatedAt`
   - bumped when **syncable** AI settings change
@@ -81,5 +81,5 @@ Manual test matrix:
 
 ## Rollback
 
-- Removing/ignoring `anx/config/ai_settings.json` will simply revert to device-local settings.
+- Removing/ignoring `paper_reader/config/ai_settings.json` (or legacy `anx/config/ai_settings.json`) will simply revert to device-local settings.
 - Older clients will ignore unknown files and continue syncing DB/files.

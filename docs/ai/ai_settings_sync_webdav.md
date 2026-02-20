@@ -53,7 +53,7 @@ We want AI-related configuration to be **portable across devices**, but with str
 
 ### Remote path
 
-- `anx/config/ai_settings.json`
+- `paper_reader/config/ai_settings.json` (legacy: `anx/config/ai_settings.json`)
 
 ### JSON schema (v1)
 

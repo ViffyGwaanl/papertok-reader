@@ -20,7 +20,7 @@ This file tracks what is implemented in the fork and what remains, written as an
 
 ### Config / Sync / Backup
 
-- [x] WebDAV sync of AI settings snapshot (`anx/config/ai_settings.json`)
+- [x] WebDAV sync of AI settings snapshot (`paper_reader/config/ai_settings.json` (legacy: `anx/config/ai_settings.json`))
   - whole-file timestamp newer-wins
   - **exclude api_key**
 - [x] Manual backup/restore via Files/iCloud
