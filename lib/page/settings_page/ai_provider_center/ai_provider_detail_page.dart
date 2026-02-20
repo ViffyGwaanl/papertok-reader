@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
@@ -36,7 +37,11 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
   // Managed API keys list (local-only secrets).
   late List<AiApiKeyEntry> _apiKeys;
+  String _lastApiKeysRaw = '';
   bool _revealKeys = false;
+
+  // Auto-save (debounced) to avoid requiring explicit Save taps for key changes.
+  Timer? _autoSaveDebounce;
 
   bool _includeThoughts = true;
 
@@ -60,6 +65,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
           (stored['model'] ?? widget.builtInOption?.defaultModel ?? '').trim(),
     );
     _apiKeys = _decodeApiKeysFromStored(stored);
+    _lastApiKeysRaw = (stored['api_keys'] ?? '').trim();
 
     if (_provider.type == AiProviderType.gemini) {
       final raw = (stored['include_thoughts'] ?? 'true').trim().toLowerCase();
@@ -71,10 +77,36 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
     final modelsCache = Prefs().getAiModelsCacheV1(_provider.id);
     _cachedModels = modelsCache?.models ?? const [];
+
+    // Auto-save for text fields.
+    _urlController.addListener(_scheduleAutoSave);
+    _modelController.addListener(_scheduleAutoSave);
+    if (!_provider.isBuiltIn) {
+      _nameController.addListener(_scheduleAutoSave);
+    }
+
+    // Keep local state in sync with runtime-updated stats (failure counters,
+    // cooldown, active key) written back to Prefs.
+    Prefs().addListener(_handlePrefsChange);
+  }
+
+  void _handlePrefsChange() {
+    if (!mounted) return;
+    final stored = Prefs().getAiConfig(_provider.id);
+    final raw = (stored['api_keys'] ?? '').trim();
+    if (raw == _lastApiKeysRaw) return;
+    _lastApiKeysRaw = raw;
+    setState(() {
+      _apiKeys = _decodeApiKeysFromStored(stored);
+    });
   }
 
   @override
   void dispose() {
+    _autoSaveDebounce?.cancel();
+    try {
+      Prefs().removeListener(_handlePrefsChange);
+    } catch (_) {}
     _nameController.dispose();
     _urlController.dispose();
     _modelController.dispose();
@@ -154,6 +186,18 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
   }
 
   String _activeApiKey() {
+    // Prefer the last active key stored in config (updated by runtime rotation
+    // on success), so list order does NOT imply priority.
+    final stored = Prefs().getAiConfig(_provider.id);
+    final hint = (stored['api_key'] ?? '').trim();
+    if (hint.isNotEmpty) {
+      for (final e in _apiKeys) {
+        if (e.enabled && e.key.trim() == hint) {
+          return hint;
+        }
+      }
+    }
+
     for (final e in _apiKeys) {
       if (e.enabled && e.key.trim().isNotEmpty) return e.key.trim();
     }
@@ -183,11 +227,10 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     return map;
   }
 
-  void _save() {
+  void _persist({required bool showSnackBar}) {
     final l10n = L10n.of(context);
 
     final map = _buildConfigMap();
-
     Prefs().saveAiConfig(_provider.id, map);
 
     if (!_provider.isBuiltIn) {
@@ -202,10 +245,26 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       }
     }
 
-    setState(() {});
+    if (showSnackBar) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.commonSaved)),
+      );
+    }
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.commonSaved)),
+  void _save() {
+    _persist(showSnackBar: true);
+    setState(() {});
+  }
+
+  void _scheduleAutoSave() {
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () {
+        if (!mounted) return;
+        _persist(showSnackBar: false);
+      },
     );
   }
 
@@ -323,6 +382,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     setState(() {
       _apiKeys = next;
     });
+    _scheduleAutoSave();
   }
 
   Future<void> _showEditKeyDialog({AiApiKeyEntry? existing}) async {
@@ -681,6 +741,18 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                         ? ' • last test: OK'
                         : ' • last test: FAIL');
 
+                final fails = e.failureCount ?? 0;
+                final consec = e.consecutiveFailures ?? 0;
+                final failText = fails > 0
+                    ? ' • fails: $fails${consec > 0 ? ' (x$consec)' : ''}'
+                    : '';
+
+                final nowMs = DateTime.now().millisecondsSinceEpoch;
+                final cooldownUntil = e.disabledUntil;
+                final inCooldown =
+                    cooldownUntil != null && cooldownUntil > nowMs;
+                final cooldownText = inCooldown ? ' • cooldown' : '';
+
                 return Column(
                   children: [
                     ListTile(
@@ -695,7 +767,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Text(
-                        '$subtitle$testText',
+                        '$subtitle$testText$failText$cooldownText',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -889,6 +961,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                 setState(() {
                   _includeThoughts = v;
                 });
+                _scheduleAutoSave();
               },
             ),
           if (_provider.type == AiProviderType.gemini)

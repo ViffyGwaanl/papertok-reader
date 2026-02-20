@@ -999,8 +999,12 @@ class Prefs extends ChangeNotifier {
 
   void saveAiConfig(String identifier, Map<String, String> config) {
     final before = getAiConfig(identifier);
-    final beforeSafe = Map<String, String>.from(before)..remove('api_key');
-    final afterSafe = Map<String, String>.from(config)..remove('api_key');
+    final beforeSafe = Map<String, String>.from(before)
+      ..remove('api_key')
+      ..remove('api_keys');
+    final afterSafe = Map<String, String>.from(config)
+      ..remove('api_key')
+      ..remove('api_keys');
     if (!_safeAiConfigEquals(beforeSafe, afterSafe)) {
       touchAiSettingsUpdatedAt();
     }
