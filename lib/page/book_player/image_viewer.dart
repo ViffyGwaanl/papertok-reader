@@ -106,7 +106,10 @@ class _ImageViewerState extends State<ImageViewer> {
                         IconButton(
                           onPressed: () {
                             SaveImg.downloadImg(
-                                imageBytes!, imgType!, widget.bookName);
+                              imageBytes!,
+                              imgType!,
+                              'PaperReader_${widget.bookName}',
+                            );
                           },
                           icon: const Icon(Icons.download, color: Colors.white),
                         ),
@@ -115,7 +118,7 @@ class _ImageViewerState extends State<ImageViewer> {
                             final path = await saveB64ImageToPath(
                               widget.image,
                               (await getAnxTempDir()).path,
-                              "AnxReader_${widget.bookName}",
+                              "PaperReader_${widget.bookName}",
                             );
 
                             await shareFile(filePath: path);

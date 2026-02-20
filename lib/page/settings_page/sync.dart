@@ -675,7 +675,8 @@ Future<String> createZipFile(Map<String, dynamic> params) async {
   BackgroundIsolateBinaryMessenger.ensureInitialized(token);
   final date =
       '${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}';
-  final zipPath = '${(await getAnxTempDir()).path}/AnxReader-Backup-$date.zip';
+  final zipPath =
+      '${(await getAnxTempDir()).path}/PaperReader-Backup-$date.zip';
   final docPath = await getAnxDocumentsPath();
   final directoryList = [
     getFileDir(path: docPath),
