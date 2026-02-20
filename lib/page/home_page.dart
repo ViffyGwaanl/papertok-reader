@@ -292,101 +292,124 @@ class _HomePageState extends ConsumerState<HomePage> {
 
           const barHeight = 60.0;
           const bottomGap = 2.0;
-          const revealRange = 180.0;
+          const revealRange = 260.0;
 
           final t = (1 - (keyboardInset / revealRange)).clamp(0.0, 1.0);
-          // iOS-like easing: decelerate quickly then settle.
-          final eased = Curves.easeOut.transform(t);
+          final desired = Curves.easeOut.transform(t);
 
-          final targetHeight = (barHeight + bottomInset + bottomGap) * eased;
-          final paddingBottom = (bottomInset + bottomGap) * eased;
+          // Slow down the tab bar re-appear after keyboard dismiss.
+          final duration = keyboardInset < 1
+              ? const Duration(milliseconds: 420)
+              : const Duration(milliseconds: 180);
 
-          final slideDy = (1 - eased) * 10.0;
+          return TweenAnimationBuilder<double>(
+            tween: Tween<double>(end: desired),
+            duration: duration,
+            curve: Curves.easeOutCubic,
+            builder: (context, eased, _) {
+              final targetHeight =
+                  (barHeight + bottomInset + bottomGap) * eased;
+              final paddingBottom = (bottomInset + bottomGap) * eased;
 
-          final bar = Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, paddingBottom),
-              child: Transform.translate(
-                offset: Offset(0, slideDy),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
-                    child: Container(
-                      height: barHeight,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainer
-                            .withAlpha(170),
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withAlpha(110),
-                          width: 0.5,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 18,
-                            offset: Offset(0, 8),
+              // Subtle slide-in for iOS-like feel.
+              final slideDy = (1 - eased) * 10.0;
+
+              final bar = Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, paddingBottom),
+                  child: Transform.translate(
+                    offset: Offset(0, slideDy),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(32),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
+                        child: Container(
+                          height: barHeight,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainer
+                                .withAlpha(170),
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withAlpha(110),
+                              width: 0.5,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x33000000),
+                                blurRadius: 18,
+                                offset: Offset(0, 8),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Theme(
-                        data: Theme.of(context).copyWith(
-                          splashFactory: NoSplash.splashFactory,
-                          highlightColor: Colors.transparent,
-                        ),
-                        child: BottomNavigationBar(
-                          selectedFontSize: 11,
-                          unselectedFontSize: 11,
-                          type: BottomNavigationBarType.fixed,
-                          landscapeLayout:
-                              BottomNavigationBarLandscapeLayout.linear,
-                          currentIndex: currentIndex,
-                          onTap: (int index) => onBottomTap(index, false),
-                          items: bottomBarItems,
-                          backgroundColor: Colors.transparent,
-                          elevation: 0,
-                          showUnselectedLabels: true,
-                          selectedItemColor:
-                              Theme.of(context).colorScheme.primary,
-                          unselectedItemColor:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
-                          iconSize: 22,
+                          child: Theme(
+                            data: Theme.of(context).copyWith(
+                              splashFactory: NoSplash.splashFactory,
+                              highlightColor: Colors.transparent,
+                            ),
+                            child: Padding(
+                              // Visual centering: BottomNavigationBar content
+                              // tends to sit a bit high inside a tight pill.
+                              padding: const EdgeInsets.only(top: 2),
+                              child: BottomNavigationBar(
+                                selectedFontSize: 11,
+                                unselectedFontSize: 11,
+                                selectedLabelStyle:
+                                    const TextStyle(height: 1.1),
+                                unselectedLabelStyle:
+                                    const TextStyle(height: 1.1),
+                                type: BottomNavigationBarType.fixed,
+                                landscapeLayout:
+                                    BottomNavigationBarLandscapeLayout.linear,
+                                currentIndex: currentIndex,
+                                onTap: (int index) => onBottomTap(index, false),
+                                items: bottomBarItems,
+                                backgroundColor: Colors.transparent,
+                                elevation: 0,
+                                showUnselectedLabels: true,
+                                selectedItemColor:
+                                    Theme.of(context).colorScheme.primary,
+                                unselectedItemColor: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                iconSize: 22,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
+              );
 
-          final animatedBar = ClipRect(
-            child: SizedBox(
-              height: targetHeight,
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: IgnorePointer(
-                  ignoring: eased < 0.95,
-                  child: Opacity(
-                    opacity: eased,
-                    child: bar,
+              final animatedBar = ClipRect(
+                child: SizedBox(
+                  height: targetHeight,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: IgnorePointer(
+                      ignoring: eased < 0.95,
+                      child: Opacity(
+                        opacity: eased,
+                        child: bar,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          );
+              );
 
-          return Scaffold(
-            extendBody: true,
-            body: pages(currentIndex, constraints, null),
-            bottomNavigationBar: animatedBar,
+              return Scaffold(
+                extendBody: true,
+                body: pages(currentIndex, constraints, null),
+                bottomNavigationBar: animatedBar,
+              );
+            },
           );
         }
       },

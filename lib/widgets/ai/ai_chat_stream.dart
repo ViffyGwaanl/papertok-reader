@@ -1249,33 +1249,53 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           return const SizedBox.shrink();
         }
 
-        final chips = <Widget>[];
-        for (var i = 0; i < widget.quickPromptChips.length; i++) {
-          final chip = widget.quickPromptChips[i];
-          chips.add(
-            Padding(
-              padding: EdgeInsets.only(top: i == 0 ? 0 : 8.0),
-              child: ActionChip(
-                avatar: Icon(chip.icon, size: 18),
-                label: Text(chip.label),
-                onPressed: () {
-                  inputController.text = chip.prompt;
-                  _sendMessage();
-                },
+        Widget actionButton(AiQuickPromptChip chip) {
+          return SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              onPressed: () {
+                inputController.text = chip.prompt;
+                _sendMessage();
+              },
+              icon: Icon(chip.icon, size: 18),
+              label: Text(
+                chip.label,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
           );
         }
 
-        return Positioned(
-          right: 16,
-          bottom: 16,
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.3,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: chips,
+        final buttons = widget.quickPromptChips
+            .map(
+              (chip) => Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: actionButton(chip),
+              ),
+            )
+            .toList(growable: false);
+
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: buttons,
+                ),
               ),
             ),
           ),
