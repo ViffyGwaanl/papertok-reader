@@ -2,6 +2,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/ai.dart';
 import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
+import 'package:anx_reader/page/settings_page/ai_image_analysis.dart';
 import 'package:anx_reader/page/settings_page/advanced.dart';
 import 'package:anx_reader/page/settings_page/appearance.dart';
 import 'package:anx_reader/page/settings_page/developer/developer_options_page.dart';
@@ -180,8 +181,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             const Divider(height: 1),
                             ListTile(
                               leading: const Icon(Icons.hub_outlined),
-                              title: Text(L10n.of(context)
-                                  .settingsAiProviderCenterTitle),
+                              title: Text(
+                                L10n.of(context).settingsAiProviderCenterTitle,
+                              ),
                               trailing: const Icon(Icons.chevron_right),
                               onTap: () {
                                 Navigator.push(
@@ -189,6 +191,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   CupertinoPageRoute(
                                     builder: (context) =>
                                         const AiProviderCenterPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                            const Divider(height: 1),
+                            ListTile(
+                              leading: const Icon(Icons.image_outlined),
+                              title: Text(
+                                L10n.of(context).settingsAiImageAnalysisTitle,
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  CupertinoPageRoute(
+                                    builder: (context) =>
+                                        SettingsSubpageScaffold(
+                                      title: L10n.of(context)
+                                          .settingsAiImageAnalysisTitle,
+                                      child:
+                                          const AiImageAnalysisSettingsPage(),
+                                    ),
                                   ),
                                 );
                               },
