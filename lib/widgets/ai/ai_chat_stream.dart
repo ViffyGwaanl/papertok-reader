@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -111,6 +112,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   // Attachments for multimodal chat
   final List<AttachmentItem> _attachments = [];
+
+  // Cache decoded base64 images for chat bubbles to avoid flicker during
+  // streaming rebuilds.
+  // Key: base64 string (no data: prefix).
+  final LinkedHashMap<String, Uint8List> _decodedImageCache = LinkedHashMap();
+  static const int _decodedImageCacheMaxEntries = 32;
 
   late final List<AiServiceOption> _builtInOptions;
   late final Map<String, AiServiceOption> _builtInById;
@@ -1240,6 +1247,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                             width: 64,
                             height: 64,
                             fit: BoxFit.cover,
+                            gaplessPlayback: true,
                           ),
                         );
                       } else {
@@ -2274,8 +2282,24 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     final out = <Uint8List>[];
     for (final imgPart in images) {
+      final key = imgPart.data;
+
+      // LRU-ish: if present, move to the end.
+      final cached = _decodedImageCache.remove(key);
+      if (cached != null) {
+        _decodedImageCache[key] = cached;
+        out.add(cached);
+        continue;
+      }
+
       try {
-        out.add(base64Decode(imgPart.data));
+        final decoded = base64Decode(key);
+        _decodedImageCache[key] = decoded;
+        out.add(decoded);
+
+        while (_decodedImageCache.length > _decodedImageCacheMaxEntries) {
+          _decodedImageCache.remove(_decodedImageCache.keys.first);
+        }
       } catch (_) {
         // ignore
       }
@@ -2337,6 +2361,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   width: 64,
                   height: 64,
                   fit: BoxFit.cover,
+                  gaplessPlayback: true,
                 ),
               );
             },

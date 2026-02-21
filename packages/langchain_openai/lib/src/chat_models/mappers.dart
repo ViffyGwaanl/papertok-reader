@@ -137,14 +137,25 @@ extension ChatMessageListMapper on List<ChatMessage> {
     }
   }
 
+  String _stripDataUrlToRawBase64(String input) {
+    final raw = input.trim();
+    final match = RegExp(
+      r'^data:[^;]+;base64,(.*)$',
+      caseSensitive: false,
+      dotAll: true,
+    ).firstMatch(raw);
+    return match?.group(1)?.trim() ?? raw;
+  }
+
   ChatCompletionMessageContentPartImage _mapMessageContentPartImage(
     final ChatMessageContentImage c,
     final OpenAiImageUrlFormat imageUrlFormat,
   ) {
     final imageData = c.data.replaceAll(RegExp(r'\s'), '').trim();
-    final isUrl = imageData.startsWith('http');
+    final isHttpUrl =
+        imageData.startsWith('http://') || imageData.startsWith('https://');
     String url;
-    if (isUrl) {
+    if (isHttpUrl) {
       url = imageData;
     } else {
       if (c.mimeType == null) {
@@ -156,13 +167,20 @@ extension ChatMessageListMapper on List<ChatMessage> {
 
       switch (imageUrlFormat) {
         case OpenAiImageUrlFormat.dataUrl:
-          final mimeType = _normalizeOpenAiImageMimeType(c.mimeType!);
-          url = 'data:$mimeType;base64,$imageData';
+          // If the payload already looks like a data URL, keep it as-is.
+          if (imageData.startsWith('data:')) {
+            url = imageData;
+          } else {
+            final mimeType = _normalizeOpenAiImageMimeType(c.mimeType!);
+            url = 'data:$mimeType;base64,$imageData';
+          }
           break;
         case OpenAiImageUrlFormat.rawBase64:
           // Some OpenAI-compatible providers (e.g. Volcengine Ark) expect the
           // raw base64 string here instead of a data URL.
-          url = imageData;
+          //
+          // Defensive: if upstream accidentally passed a data URL, strip it.
+          url = _stripDataUrlToRawBase64(imageData);
           break;
       }
     }
