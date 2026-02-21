@@ -109,6 +109,19 @@ extension ChatMessageListMapper on List<ChatMessage> {
     return ChatCompletionUserMessageContentString(c.text);
   }
 
+  String _normalizeOpenAiImageMimeType(String raw) {
+    final mime = raw.trim().toLowerCase();
+    switch (mime) {
+      case 'image/jpg':
+      case 'image/pjpeg':
+        return 'image/jpeg';
+      case 'image/x-png':
+        return 'image/png';
+      default:
+        return raw.trim();
+    }
+  }
+
   ChatCompletionMessageContentPartImage _mapMessageContentPartImage(
     final ChatMessageContentImage c,
   ) {
@@ -124,7 +137,8 @@ extension ChatMessageListMapper on List<ChatMessage> {
           'ChatMessageContentImage.mimeType',
         );
       }
-      url = 'data:${c.mimeType};base64,$imageData';
+      final mimeType = _normalizeOpenAiImageMimeType(c.mimeType!);
+      url = 'data:$mimeType;base64,$imageData';
     }
 
     return ChatCompletionMessageContentPartImage(

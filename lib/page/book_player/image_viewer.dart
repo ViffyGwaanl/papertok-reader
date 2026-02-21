@@ -15,6 +15,7 @@ import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image/image.dart' as img;
 import 'package:langchain_core/chat_models.dart';
 import 'package:photo_view/photo_view.dart';
 
@@ -40,6 +41,31 @@ class ImageViewer extends StatefulWidget {
 
 class _ImageViewerState extends State<ImageViewer> {
   late PhotoViewController _controller;
+
+  static const int _maxImageSize = 1536;
+  static const int _jpegQuality = 82;
+
+  Uint8List? _compressToJpeg(Uint8List bytes) {
+    try {
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return null;
+
+      final w = decoded.width;
+      final h = decoded.height;
+
+      img.Image resized = decoded;
+      if (w > _maxImageSize || h > _maxImageSize) {
+        final scale = _maxImageSize / (w > h ? w : h);
+        final targetW = (w * scale).round().clamp(1, _maxImageSize);
+        final targetH = (h * scale).round().clamp(1, _maxImageSize);
+        resized = img.copyResize(decoded, width: targetW, height: targetH);
+      }
+
+      return Uint8List.fromList(img.encodeJpg(resized, quality: _jpegQuality));
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   void initState() {
@@ -218,14 +244,25 @@ class _ImageViewerState extends State<ImageViewer> {
                         ),
                         IconButton(
                           onPressed: () {
-                            if (base64 == null || base64!.isEmpty) {
+                            final jpegBytes = _compressToJpeg(imageBytes!);
+                            if (jpegBytes == null || jpegBytes.isEmpty) {
+                              // Most likely a vector image (e.g. SVG) or an
+                              // unsupported bitmap format.
+                              AnxToast.show(
+                                '当前图片格式暂不支持解析（仅支持常见位图图片）。',
+                              );
+                              return;
+                            }
+
+                            final jpegB64 = base64Encode(jpegBytes);
+                            if (jpegB64.isEmpty) {
                               AnxToast.show(L10n.of(context).commonFailed);
                               return;
                             }
 
                             _showAnalyzeSheet(
-                              base64: base64!,
-                              mimeType: mimeType ?? 'image/jpeg',
+                              base64: jpegB64,
+                              mimeType: 'image/jpeg',
                             );
                           },
                           tooltip: L10n.of(context).imageAnalyze,
