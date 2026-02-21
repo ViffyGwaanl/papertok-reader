@@ -24,8 +24,15 @@ class AttachmentPickerDialog extends StatelessWidget {
   final void Function(List<AttachmentItem> items) onPicked;
 
   static const int _maxTextChars = 200000;
-  static const int _maxImageSize = 1536;
-  static const int _jpegQuality = 82;
+
+  // NOTE:
+  // Some OpenAI-compatible gateways incorrectly count base64 image payloads as
+  // text tokens. When the user attaches multiple images, we compress more
+  // aggressively to reduce prompt size.
+  static const int _maxImageSizeSingle = 1536;
+  static const int _jpegQualitySingle = 82;
+  static const int _maxImageSizeMulti = 1024;
+  static const int _jpegQualityMulti = 78;
 
   Future<void> _handlePick(
     BuildContext context,
@@ -43,7 +50,11 @@ class AttachmentPickerDialog extends StatelessWidget {
     }
   }
 
-  Uint8List? _compressToJpeg(Uint8List bytes) {
+  Uint8List? _compressToJpeg(
+    Uint8List bytes, {
+    required int maxSize,
+    required int quality,
+  }) {
     try {
       final decoded = img.decodeImage(bytes);
       if (decoded == null) return null;
@@ -52,21 +63,29 @@ class AttachmentPickerDialog extends StatelessWidget {
       final h = decoded.height;
 
       img.Image resized = decoded;
-      if (w > _maxImageSize || h > _maxImageSize) {
-        final scale = _maxImageSize / (w > h ? w : h);
-        final targetW = (w * scale).round().clamp(1, _maxImageSize);
-        final targetH = (h * scale).round().clamp(1, _maxImageSize);
+      if (w > maxSize || h > maxSize) {
+        final scale = maxSize / (w > h ? w : h);
+        final targetW = (w * scale).round().clamp(1, maxSize);
+        final targetH = (h * scale).round().clamp(1, maxSize);
         resized = img.copyResize(decoded, width: targetW, height: targetH);
       }
 
-      return Uint8List.fromList(img.encodeJpg(resized, quality: _jpegQuality));
+      return Uint8List.fromList(img.encodeJpg(resized, quality: quality));
     } catch (_) {
       return null;
     }
   }
 
-  AttachmentItem? _bytesToImageAttachment(Uint8List originalBytes) {
-    final jpegBytes = _compressToJpeg(originalBytes);
+  AttachmentItem? _bytesToImageAttachment(
+    Uint8List originalBytes, {
+    required int maxSize,
+    required int quality,
+  }) {
+    final jpegBytes = _compressToJpeg(
+      originalBytes,
+      maxSize: maxSize,
+      quality: quality,
+    );
     if (jpegBytes == null || jpegBytes.isEmpty) return null;
 
     final base64 = base64Encode(jpegBytes);
@@ -81,7 +100,11 @@ class AttachmentPickerDialog extends StatelessWidget {
     if (image == null) return const [];
 
     final bytes = await image.readAsBytes();
-    final item = _bytesToImageAttachment(bytes);
+    final item = _bytesToImageAttachment(
+      bytes,
+      maxSize: _maxImageSizeSingle,
+      quality: _jpegQualitySingle,
+    );
     return item == null ? const [] : [item];
   }
 
@@ -91,10 +114,15 @@ class AttachmentPickerDialog extends StatelessWidget {
       final images = await picker.pickMultiImage();
       if (images.isEmpty) return const [];
 
+      final isMulti = images.length > 1;
       final out = <AttachmentItem>[];
       for (final image in images) {
         final bytes = await image.readAsBytes();
-        final item = _bytesToImageAttachment(bytes);
+        final item = _bytesToImageAttachment(
+          bytes,
+          maxSize: isMulti ? _maxImageSizeMulti : _maxImageSizeSingle,
+          quality: isMulti ? _jpegQualityMulti : _jpegQualitySingle,
+        );
         if (item != null) out.add(item);
       }
       return out;
@@ -103,7 +131,11 @@ class AttachmentPickerDialog extends StatelessWidget {
       final image = await picker.pickImage(source: ImageSource.gallery);
       if (image == null) return const [];
       final bytes = await image.readAsBytes();
-      final item = _bytesToImageAttachment(bytes);
+      final item = _bytesToImageAttachment(
+        bytes,
+        maxSize: _maxImageSizeSingle,
+        quality: _jpegQualitySingle,
+      );
       return item == null ? const [] : [item];
     }
   }
@@ -117,11 +149,17 @@ class AttachmentPickerDialog extends StatelessWidget {
 
     if (result == null || result.files.isEmpty) return const [];
 
+    final isMulti = result.files.length > 1;
+
     final out = <AttachmentItem>[];
     for (final file in result.files) {
       final bytes = file.bytes;
       if (bytes == null || bytes.isEmpty) continue;
-      final item = _bytesToImageAttachment(bytes);
+      final item = _bytesToImageAttachment(
+        bytes,
+        maxSize: isMulti ? _maxImageSizeMulti : _maxImageSizeSingle,
+        quality: isMulti ? _jpegQualityMulti : _jpegQualitySingle,
+      );
       if (item != null) out.add(item);
     }
 

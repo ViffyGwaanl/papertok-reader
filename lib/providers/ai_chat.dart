@@ -396,7 +396,53 @@ class AiChat extends _$AiChat {
       }
     }
 
-    return messages;
+    return _stripHistoryImagesFromPrompt(messages);
+  }
+
+  /// OpenAI-compatible servers may count base64 image payloads as text tokens.
+  ///
+  /// To avoid context explosion (and `context_length_exceeded`), we strip image
+  /// parts from older turns and keep images only for the latest human message
+  /// in the prompt.
+  List<ChatMessage> _stripHistoryImagesFromPrompt(List<ChatMessage> messages) {
+    final lastHumanIndex =
+        messages.lastIndexWhere((m) => m is HumanChatMessage);
+    if (lastHumanIndex <= 0) {
+      return messages;
+    }
+
+    var changed = false;
+    final out = <ChatMessage>[];
+
+    for (var i = 0; i < messages.length; i++) {
+      final msg = messages[i];
+      if (i != lastHumanIndex &&
+          msg is HumanChatMessage &&
+          msg.content is ChatMessageContentMultiModal) {
+        final mm = msg.content as ChatMessageContentMultiModal;
+
+        var removedImages = 0;
+        final newParts = <ChatMessageContent>[];
+        for (final part in mm.parts) {
+          if (part is ChatMessageContentImage) {
+            removedImages += 1;
+            continue;
+          }
+          newParts.add(part);
+        }
+
+        if (removedImages > 0) {
+          changed = true;
+          // Keep a short marker so the model knows a prior image existed.
+          newParts.add(ChatMessageContent.text('[[image omitted from history]]'));
+          out.add(ChatMessage.human(ChatMessageContent.multiModal(newParts)));
+          continue;
+        }
+      }
+      out.add(msg);
+    }
+
+    return changed ? out : messages;
   }
 
   /// Switches the active variant for the message at [messageIndex] by [delta]
