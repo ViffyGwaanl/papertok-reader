@@ -8,6 +8,7 @@ import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/home_page/ai_page.dart';
+import 'package:anx_reader/page/home_page/home_bottom_inset_scope.dart';
 import 'package:anx_reader/service/initialization_check.dart';
 import 'package:anx_reader/page/home_page/bookshelf_page.dart';
 import 'package:anx_reader/page/home_page/papers_page.dart';
@@ -290,17 +291,20 @@ class _HomePageState extends ConsumerState<HomePage> {
           final showTabBar = !keyboardVisible;
 
           final bottomInset = MediaQuery.of(context).padding.bottom;
-          const tabBarHeight = 64.0;
-          const tabBarBottomPadding = 12.0;
-
-          final reservedBottom = showTabBar
-              ? (tabBarHeight + tabBarBottomPadding + bottomInset)
-              : 0.0;
 
           bool useCupertinoNativeTabBar() {
             if (kIsWeb) return false;
             return defaultTargetPlatform == TargetPlatform.iOS;
           }
+
+          final tabBarHeight = useCupertinoNativeTabBar() ? 76.0 : 64.0;
+          const tabBarBottomPadding = 10.0;
+
+          // Content should extend behind the floating tab bar. Pages that have
+          // bottom interactive UI (e.g. chat input) should add their own
+          // internal padding.
+          final contentBottomInset =
+              showTabBar ? (tabBarHeight + tabBarBottomPadding) : 0.0;
 
           String symbolForId(String id) {
             switch (id) {
@@ -413,7 +417,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       label: item['label'] as String,
                       icon: CNSymbol(
                         symbolForId(item['identifier'] as String),
-                        size: 18,
+                        size: 19,
                       ),
                     ),
                 ],
@@ -440,8 +444,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             extendBody: false,
             body: Stack(
               children: [
-                Padding(
-                  padding: EdgeInsets.only(bottom: reservedBottom),
+                HomeBottomInsetScope(
+                  bottomInset: contentBottomInset,
                   child: pages(currentIndex, constraints, null),
                 ),
                 if (showTabBar)

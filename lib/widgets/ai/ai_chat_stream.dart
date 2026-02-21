@@ -41,6 +41,7 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.scrollController,
     this.onRequestMinimize,
     this.bottomPadding = 0,
+    this.inputSafeAreaBottom = true,
     this.resizeToAvoidBottomInset = true,
     this.emptyStateBuilder,
   });
@@ -58,8 +59,17 @@ class AiChatStream extends ConsumerStatefulWidget {
   /// Optional callback used by bottom-sheet mode to minimize the sheet.
   final VoidCallback? onRequestMinimize;
 
-  /// Extra bottom padding used to avoid being covered by external overlays.
+  /// Extra bottom padding used for bottom overlays (e.g. floating home tab bar).
+  ///
+  /// This is applied as *internal* padding inside the input box so the bar can
+  /// float above the content without leaving a visible blank gap.
   final double bottomPadding;
+
+  /// Whether the input box should add the system bottom safe area.
+  ///
+  /// On Home AI tab we set this to false because HomePage already places a
+  /// floating tab bar with its own bottom safe area.
+  final bool inputSafeAreaBottom;
 
   /// When AiChatStream is used inside another Scaffold (e.g. Home tab page),
   /// letting both Scaffolds handle viewInsets can cause the keyboard inset to be
@@ -1202,154 +1212,160 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       radius: 15,
       child: SafeArea(
         top: false,
-        child: Column(
-          children: [
-            // Attachments strip
-            if (_attachments.isNotEmpty)
-              Container(
-                height: 80,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _attachments.length,
-                  itemBuilder: (context, index) {
-                    final attachment = _attachments[index];
-                    Widget thumbnail;
-                    if (attachment.type == AttachmentType.image) {
-                      thumbnail = ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.memory(
-                          attachment.bytes,
+        bottom: widget.inputSafeAreaBottom,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: widget.bottomPadding),
+          child: Column(
+            children: [
+              // Attachments strip
+              if (_attachments.isNotEmpty)
+                Container(
+                  height: 80,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _attachments.length,
+                    itemBuilder: (context, index) {
+                      final attachment = _attachments[index];
+                      Widget thumbnail;
+                      if (attachment.type == AttachmentType.image) {
+                        thumbnail = ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.memory(
+                            attachment.bytes,
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                      } else {
+                        thumbnail = Container(
                           width: 64,
                           height: 64,
-                          fit: BoxFit.cover,
-                        ),
-                      );
-                    } else {
-                      thumbnail = Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color:
-                              Theme.of(context).colorScheme.secondaryContainer,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Center(
-                          child: Icon(Icons.description, size: 28),
-                        ),
-                      );
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Stack(
-                        children: [
-                          thumbnail,
-                          Positioned(
-                            top: 0,
-                            right: 0,
-                            child: GestureDetector(
-                              onTap: () => _removeAttachment(index),
-                              child: Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .secondaryContainer,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Center(
+                            child: Icon(Icons.description, size: 28),
+                          ),
+                        );
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Stack(
+                          children: [
+                            thumbnail,
+                            Positioned(
+                              top: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: () => _removeAttachment(index),
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close,
+                                      size: 14, color: Colors.white),
                                 ),
-                                child: const Icon(Icons.close,
-                                    size: 14, color: Colors.white),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            Row(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      spacing: 8,
-                      children: quickPrompts.map((prompt) {
-                        return ActionChip(
-                          // labelPadding: EdgeInsets.all(0),
-                          label: Text(prompt['label']!),
-                          onPressed: () => _useQuickPrompt(prompt['prompt']!),
-                        );
-                      }).toList(),
+              Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        spacing: 8,
+                        children: quickPrompts.map((prompt) {
+                          return ActionChip(
+                            // labelPadding: EdgeInsets.all(0),
+                            label: Text(prompt['label']!),
+                            onPressed: () => _useQuickPrompt(prompt['prompt']!),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 4),
-            TextField(
-              controller: inputController,
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: L10n.of(context).aiHintInputPlaceholder,
-                border: InputBorder.none,
+                ],
               ),
-              maxLines: 5,
-              minLines: 1,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendMessage(),
-            ),
-            SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.attach_file, size: 18),
-                        onPressed: _showAttachmentPicker,
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(child: aiService),
-                      const SizedBox(width: 6),
-                      IconButton(
-                        icon: Icon(
-                          _thinkingIcon(
-                            _thinkingModeForProvider(_selectedProviderId),
-                          ),
-                          size: 18,
+              SizedBox(height: 4),
+              TextField(
+                controller: inputController,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: L10n.of(context).aiHintInputPlaceholder,
+                  border: InputBorder.none,
+                ),
+                maxLines: 5,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendMessage(),
+              ),
+              SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.attach_file, size: 18),
+                          onPressed: _showAttachmentPicker,
                         ),
-                        tooltip: L10n.of(context).aiThinkingTitle,
-                        onPressed: _editThinkingMode,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.tune, size: 18),
-                        tooltip: L10n.of(context).aiChatEditModelTitle,
-                        onPressed: _editCurrentModel,
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Flexible(child: aiService),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: Icon(
+                            _thinkingIcon(
+                              _thinkingModeForProvider(_selectedProviderId),
+                            ),
+                            size: 18,
+                          ),
+                          tooltip: L10n.of(context).aiThinkingTitle,
+                          onPressed: _editThinkingMode,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.tune, size: 18),
+                          tooltip: L10n.of(context).aiChatEditModelTitle,
+                          onPressed: _editCurrentModel,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                if (widget.onRequestMinimize != null)
+                  if (widget.onRequestMinimize != null)
+                    IconButton(
+                      icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                      onPressed: widget.onRequestMinimize,
+                    ),
                   IconButton(
-                    icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-                    onPressed: widget.onRequestMinimize,
+                    icon: Icon(
+                      chatIsStreaming ? Icons.stop : Icons.send,
+                      size: 18,
+                    ),
+                    onPressed:
+                        chatIsStreaming ? _cancelStreaming : _sendMessage,
                   ),
-                IconButton(
-                  icon: Icon(
-                    chatIsStreaming ? Icons.stop : Icons.send,
-                    size: 18,
-                  ),
-                  onPressed: chatIsStreaming ? _cancelStreaming : _sendMessage,
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1564,8 +1580,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ),
             ),
             inputBox,
-            if (widget.bottomPadding > 0)
-              SizedBox(height: widget.bottomPadding),
           ],
         ),
       ),

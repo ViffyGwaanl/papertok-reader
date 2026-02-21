@@ -1,5 +1,6 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/page/home_page/home_bottom_inset_scope.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
 
@@ -7,20 +8,29 @@ import 'package:flutter/material.dart';
 ///
 /// Note: This is a normal tab page like Bookshelf/Settings, not a popup.
 class AiPage extends StatelessWidget {
-  const AiPage({super.key});
+  const AiPage({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Prefs(),
       builder: (context, _) {
-        // HomePage already reserves bottom space for the floating tab bar.
-        // Don't add extra bottom padding here; it causes large blank gaps.
+        // HomePage overlays a floating tab bar on phones.
+        // We keep the AI page full-height (no external padding) so the bar can
+        // visually float above the content.
+        //
+        // To prevent the input controls from being covered, we add the tab bar
+        // height as *internal* padding inside the input box.
+        final homeBottomInset = HomeBottomInsetScope.of(context);
+
         return AiChatStream(
-          bottomPadding: 0,
+          bottomPadding: homeBottomInset,
           // AiChatStream is an inner Scaffold under HomePage's Scaffold.
           // Avoid double-applying the keyboard inset.
           resizeToAvoidBottomInset: false,
+          inputSafeAreaBottom: false,
           // Keep the Home AI empty state clean (no right-bottom overlay chips).
           emptyStateBuilder: (context, send) {
             final theme = Theme.of(context);
