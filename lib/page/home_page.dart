@@ -298,7 +298,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           }
 
           final tabBarHeight = useCupertinoNativeTabBar() ? 76.0 : 64.0;
-          const tabBarBottomPadding = 10.0;
+          // Visual lift above the very bottom edge.
+          const tabBarBottomPadding = 4.0;
 
           // Content should extend behind the floating tab bar. Pages that have
           // bottom interactive UI (e.g. chat input) should add their own
@@ -452,7 +453,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: 0,
+                    // Move the floating tab bar closer to the bottom edge.
+                    // SafeArea inside [buildTabBar] would otherwise push it up
+                    // by the iOS home indicator inset.
+                    bottom: -bottomInset,
                     child: buildTabBar(),
                   ),
               ],
