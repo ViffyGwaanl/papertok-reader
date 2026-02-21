@@ -86,3 +86,27 @@
 - [ ] Optional encrypted api_key flow (password prompt)
 - [ ] Rollback on failure (rename `.bak.<ts>` restore)
 - [ ] Unit: `flutter test test/service/backup_crypto_test.dart`
+
+---
+
+## 6) Multimodal / EPUB image analysis (product)
+
+### Chat attachments
+
+- [ ] Attach button opens picker (camera/photos/files)
+- [ ] Max 4 images enforced
+- [ ] Text file is injected into prompt with filename marker
+- [ ] Edit + regenerate preserves attachments
+- [ ] Attachments are not synced and not included in backup
+
+### EPUB image analysis
+
+- [ ] Tap EPUB image sends `{dataUrl, contextText, alt, title}`
+- [ ] SVG image: rasterize to bitmap and can be analyzed
+- [ ] Analyze uses dedicated provider/model settings (Settings → AI → Image Analysis)
+- [ ] Image analysis does not cancel ongoing chat streaming
+
+### OpenAI-compatible provider quirks
+
+- [ ] Non-standard MIME types are normalized (jpg/png)
+- [ ] Volcengine Ark (`volces.com/api/v3`) accepts image payload (raw base64 `image_url.url`)

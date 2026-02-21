@@ -15,7 +15,7 @@
 - [PaperTok（论文流）集成说明](./papertok/README.md) - 论文流 UX、导入行为、Home 导航配置
 
 ### AI 对话与翻译
-- [AI 对话/翻译（设计与实现总览）](./ai/README.md) - AI 面板 UX、Provider Center、对话树、全文翻译
+- [AI 对话/翻译（设计与实现总览）](./ai/README.md) - AI 面板 UX、Provider Center、对话树、全文翻译、多模态与图片解析
 - [AI 改造状态与路线图（中文）](./ai/ai_status_roadmap_zh.md)
 - [AI 面板 UX 技术设计](./ai/ai_panel_ux_tech_design.md)
 - [AI Provider 配置 UX](./ai/ai_provider_config_ux.md)

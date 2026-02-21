@@ -110,7 +110,7 @@ Fix:
 
 ### 3.2 Xcode build setting `CURRENT_PROJECT_VERSION`
 
-To avoid confusion, this fork aligns Runner’s `CURRENT_PROJECT_VERSION` with Flutter:
+To avoid confusion, this repo aligns Runner’s `CURRENT_PROJECT_VERSION` with Flutter:
 
 - `CURRENT_PROJECT_VERSION = $(FLUTTER_BUILD_NUMBER)`
 
@@ -118,7 +118,7 @@ This makes the Xcode UI consistent with Flutter-driven versioning.
 
 ### 3.3 Export compliance (cryptography)
 
-This fork uses `package:cryptography` for encrypted backup (AES-GCM / PBKDF2).
+This repo uses `package:cryptography` for encrypted backup (AES-GCM / PBKDF2).
 
 App Store Connect may ask export compliance questions.
 

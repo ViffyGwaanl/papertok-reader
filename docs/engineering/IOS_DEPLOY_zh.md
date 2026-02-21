@@ -37,8 +37,11 @@ iOS 安装测试通常分两条路线：
 
 ### 1.1 环境
 - macOS + Xcode（建议最新版稳定）
+  - 如果构建时报 `iOS XX.X is not installed`：到 **Xcode → Settings → Components** 安装对应 iOS Platform
 - Flutter SDK（与项目兼容的版本）
 - CocoaPods（通过 Xcode/Pods 自动处理即可，必要时手动安装）
+
+> 备注：本项目的 iPhone 浮动 TabBar 使用 `cupertino_native`（原生 UITabBar / Liquid Glass），因此对 Xcode/平台组件完整性更敏感。
 
 ### 1.2 设备
 - iPhone/iPad 打开 **开发者模式**（iOS 16+）：

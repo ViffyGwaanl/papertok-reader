@@ -1,11 +1,11 @@
-# papertok-reader 工程工作流（Product + Upstream）
+# papertok-reader 工程工作流（Product-first）
 
-本文档定义 **papertok-reader** 的长期工程工作流：如何在保持产品快速迭代的同时，把可通用的 AI/翻译能力稳定地贡献回上游 Anx Reader。
+本文档定义 **papertok-reader** 的工程工作流（以产品交付为中心）。
 
 > TL;DR
-> - **产品开发（含 PaperTok）**：在 `ViffyGwaanl/papertok-reader`（private）完成
-> - **上游贡献（AI + 翻译）**：在 `ViffyGwaanl/anx-reader` 的 `contrib/ai-translate` 完成，然后提 PR 到 `Anxcye/anx-reader:develop`
-> - **同步方向**：Contrib → Product（不要反向）
+> - **产品开发（含 PaperTok + AI + 翻译 + 多模态）**：在 `ViffyGwaanl/papertok-reader`（private）完成
+> - **默认不做上游 PR**：上游贡献（Anx Reader）不是当前交付必需项
+> - 如未来要上游化：再单独建立/维护 contrib track，并保持“无 PaperTok/无产品专属 UX”
 
 ---
 
@@ -21,7 +21,7 @@
   - 标识真值源：`docs/engineering/IDENTIFIERS_zh.md`
 - 负责：TestFlight/签名/默认导航策略/产品文档
 
-### 1.3 `ViffyGwaanl/anx-reader`（public fork，上游贡献工厂）
+### 1.3 （可选）`ViffyGwaanl/anx-reader`（public fork，上游贡献工厂）
 - 负责：可上游化的通用能力（AI 对话 + 翻译）
 - 负责：向 `Anxcye/anx-reader` 提交 PR
 - **约束**：不得混入 PaperTok/Papers Tab（避免上游 review/合并阻力）
@@ -32,14 +32,14 @@
 
 ### 2.1 Product Track（papertok-reader）
 - 默认分支：`main`
-- 允许：PaperTok、产品默认值、发行版差异
+- 允许：PaperTok、产品默认值、发行版差异、iOS 优先 UX（如 TabBar/键盘交互）
 
 建议约定：
 - `feat/<topic>`：功能分支（合并回 main）
 - `fix/<topic>`：修复分支
 - `release/<version>`：发布准备分支（可选）
 
-### 2.2 Contrib Track（fork: anx-reader）
+### 2.2 （可选）Contrib Track（fork: anx-reader）
 - 基线分支：`contrib/ai-translate`
 - 只包含：AI 对话 + 翻译（不含 PaperTok）
 

@@ -28,9 +28,9 @@ flutter gen-l10n
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-## Developer (fork): switching branches may change path dependencies
+## Developer: switching branches may change path dependencies
 
-The fork may use local path dependencies (e.g. `packages/langchain_openai`).
+This repo may use local path dependencies (e.g. `packages/langchain_openai`).
 
 If you switch branches and see pub resolution errors, always run:
 
@@ -55,14 +55,37 @@ flutter build ios --release --no-codesign
 
 Then Archive again.
 
-## Reading-page AI: minimize should not interrupt streaming (fork)
+## iOS: “iOS XX.X is not installed” when building
+
+If Xcode says something like:
+
+- `iOS 26.x is not installed. Please download and install the platform from Xcode > Settings > Components.`
+
+Install the corresponding iOS Platform in **Xcode → Settings → Components**, then rebuild.
+
+## AI: EPUB image analysis / multimodal image errors (OpenAI-compatible)
+
+### “Invalid MIME type. Only image types are supported.”
+
+Cause: the backend rejects the image MIME type (e.g. SVG or non-standard types).
+
+Fix (implemented): the app normalizes image MIME types and re-encodes images to **JPEG** before sending.
+SVG images are rasterized to bitmap first.
+
+### Volcengine Ark: “Invalid base64 image_url”
+
+Cause: some OpenAI-compatible backends require `image_url.url` to be **raw base64** (without `data:image/...;base64,` prefix).
+
+Fix (implemented): for `volces.com/api/v3` providers, the client uses a compatible image encoding format.
+
+## Reading-page AI: minimize should not interrupt streaming
 
 If minimizing the bottom sheet interrupts generation:
 
-- Confirm you are on the latest `feat/ai-all-in-one`.
+- Confirm you are on the latest product build (repo `main`).
 - Export logs after reproducing (Settings → More → Advanced → Logs).
 
-The fork moved streaming ownership into `aiChatProvider` so UI minimize/close should not cancel.
+Streaming ownership is inside `aiChatProvider`, so UI minimize/close should not cancel. If it does, it's likely a regression.
 
 ## Translation: AI full-text translation looks weird or fails
 
@@ -72,7 +95,7 @@ The fork moved streaming ownership into `aiChatProvider` so UI minimize/close sh
   - if long paragraphs fail, reduce the translated chunk size (or try a non-AI provider)
 - For scanned PDFs (no selectable text): OCR is required before translation can be reliable.
 
-## PaperTok (Papers feed) issues (fork)
+## PaperTok (Papers feed) issues
 
 ### PaperTok images / EPUB / PDF show 404
 
@@ -84,7 +107,7 @@ The fork moved streaming ownership into `aiChatProvider` so UI minimize/close sh
 
 ### Import succeeds but doesn’t auto-open
 
-- In this fork, PaperTok import uses a dedicated “download → import → open Reading Page” flow.
+- PaperTok import uses a dedicated “download → import → open Reading Page” flow.
 - If it doesn’t auto-open, export logs (Settings → More Settings → Advanced → Logs) and check for WebView errors during metadata extraction.
 
 ---
@@ -117,9 +140,9 @@ flutter gen-l10n
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-## 开发者（fork）：切分支后 pub 依赖可能变化
+## 开发者：切分支后 pub 依赖可能变化
 
-fork 里可能使用 path 依赖（例如 `packages/langchain_openai`）。
+本仓库可能使用 path 依赖（例如 `packages/langchain_openai`）。
 
 切分支后如果遇到依赖解析问题，先执行：
 
@@ -144,14 +167,37 @@ flutter build ios --release --no-codesign
 
 然后再 Archive。
 
-## 阅读页 AI：最小化不应中断生成（fork）
+## iOS：构建时报 “iOS XX.X is not installed”
+
+如果 Xcode 报类似：
+
+- `iOS 26.x is not installed. Please download and install the platform from Xcode > Settings > Components.`
+
+说明当前 Xcode 没安装对应的 iOS Platform 组件。
+请在 **Xcode → Settings → Components** 安装对应 iOS Platform 后重试。
+
+## AI：EPUB 图片解析/多模态图片相关报错（OpenAI-compatible）
+
+### “Invalid MIME type. Only image types are supported.”
+
+原因：后端对图片 MIME type 白名单校验严格（例如 SVG 或非标准 MIME）。
+
+解决（已实现）：客户端会把图片统一转成 **JPEG** 再发送；SVG 会先在 WebView 侧 rasterize 成位图。
+
+### 火山 Ark：“Invalid base64 image_url”
+
+原因：部分 OpenAI-compatible 后端要求 `image_url.url` 直接传 **raw base64**，而不是 `data:image/...;base64,...` 这种 data URL。
+
+解决（已实现）：对 `volces.com/api/v3` 的 provider，客户端会自动使用兼容格式。
+
+## 阅读页 AI：最小化不应中断生成
 
 如果你发现 bottom sheet 最小化后中断生成：
 
-- 确认已更新到 `feat/ai-all-in-one` 最新提交
+- 确认已更新到产品最新版本（repo `main`）
 - 重现后导出日志（设置 → 更多设置 → 高级 → 日志）
 
-fork 已将 streaming 所有权迁移到 `aiChatProvider`，UI 最小化/关闭不应取消生成。
+streaming 所有权在 `aiChatProvider` 内部，UI 最小化/关闭不应取消生成；若出现中断，大概率是回归。
 
 ## 翻译：AI 全文翻译效果怪 / 无法翻译
 

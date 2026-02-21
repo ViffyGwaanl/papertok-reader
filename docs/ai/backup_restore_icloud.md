@@ -2,7 +2,7 @@
 
 ## 0. Implementation Status
 
-- Implemented in fork branch: `feat/backup-restore-encrypted-api-key-squashed`
+- Implementation status: integrated in product repo `main`
 - Adds:
   - v4 backup ZIP with `manifest.json`
   - optional encrypted API keys
@@ -12,7 +12,7 @@
 
 Anx Reader already has **Export/Import** in `Settings → Sync`:
 
-- Export creates a ZIP (legacy: `...-v3.zip`; fork enhancement: `...-v4.zip`) containing:
+- Export creates a ZIP (legacy: `...-v3.zip`; current: `...-v4.zip`) containing:
   - documents assets (file/cover/font/bgimg)
   - database dir
   - shared prefs backup map (`paper_reader_shared_prefs.json`, legacy: `anx_shared_prefs.json`)
@@ -67,7 +67,7 @@ Export produces a v4 ZIP (filename suffix `-v4.zip`) and adds:
 
 - `manifest.json` (schemaVersion = 4)
 
-Example (as implemented in the fork):
+Example (as implemented in the product repo):
 
 ```json
 {
@@ -95,10 +95,11 @@ Notes:
 - Encrypted payload stores per-provider keys:
   - `api_key` (active key)
   - `api_keys` (managed list; JSON)
+- Multimodal chat attachments are **not included** in backups.
 
 ## 4. Crypto Details
 
-Implementation (fork): uses `package:cryptography`.
+Implementation (product): uses `package:cryptography`.
 
 - KDF: PBKDF2-HMAC-SHA256, 150000 iterations, 16-byte salt
 - Cipher: AES-256-GCM, 12-byte nonce, 16-byte tag
@@ -117,7 +118,7 @@ Implementation (fork): uses `package:cryptography`.
 8. If encrypted api key included and password ok, apply key.
 9. If any step fails: rollback by deleting partial new dirs and renaming `.bak.*` back.
 
-Implementation status (fork): this rollback approach is implemented in PR-7 branch.
+Implementation status (product): rollback-safe restore is implemented.
 
 ## 6. Testing
 
