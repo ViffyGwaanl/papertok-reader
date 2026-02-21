@@ -42,8 +42,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               controller: _scrollController,
               child: Padding(
                 padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).padding.bottom +
-                      kBottomNavigationBarHeight,
+                  // HomePage already reserves enough space for the floating tab
+                  // bar on phones. Avoid double-padding here.
+                  bottom: MediaQuery.of(context).size.width <= 600
+                      ? 12
+                      : (MediaQuery.of(context).padding.bottom + 12),
                 ),
                 child: Column(
                   children: [

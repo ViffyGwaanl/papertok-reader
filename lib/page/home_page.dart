@@ -1,5 +1,8 @@
 import 'dart:ui';
 
+import 'package:cupertino_native/cupertino_native.dart';
+import 'package:flutter/foundation.dart';
+
 import 'package:anx_reader/dao/database.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
@@ -278,101 +281,121 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           );
         } else {
-          // Apple-style floating tab bar on phones.
+          // Floating tab bar on phones.
           final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
 
-          // Global keyboard policy: when keyboard is visible, hide the tab bar.
+          // Recommended policy: when keyboard is visible, hide the tab bar.
           // This avoids the bar being lifted above the keyboard and keeps the
           // input area unobstructed.
           final showTabBar = !keyboardVisible;
 
-          Widget? tabBar;
-          if (showTabBar) {
-            final cs = Theme.of(context).colorScheme;
-            tabBar = SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
-                    child: Container(
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainer.withAlpha(170),
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(
-                          color: cs.outline.withAlpha(110),
-                          width: 0.5,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 18,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      // Custom tab row: every segment is fully tappable
-                      // (GestureDetector + HitTestBehavior.opaque guarantees
-                      // the whole cell, not just the icon/label, is the hit
-                      // target). No framework animation; color changes are
-                      // instant so there is nothing to notice on fast taps.
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Row(
-                          children: List.generate(navBarItems.length, (i) {
-                            final item = navBarItems[i];
-                            final selected = i == currentIndex;
-                            final color =
-                                selected ? cs.primary : cs.onSurfaceVariant;
+          final bottomInset = MediaQuery.of(context).padding.bottom;
+          const tabBarHeight = 64.0;
+          const tabBarBottomPadding = 12.0;
 
-                            return Expanded(
-                              child: Semantics(
-                                button: true,
-                                selected: selected,
-                                label: item['label'] as String,
-                                child: InkResponse(
-                                  onTap: () => onBottomTap(i, false),
-                                  containedInkWell: true,
-                                  highlightShape: BoxShape.rectangle,
-                                  highlightColor: cs.primary.withAlpha(18),
-                                  splashColor: Colors.transparent,
-                                  child: SizedBox(
-                                    height: 64,
-                                    width: double.infinity,
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          item['icon'] as IconData,
-                                          color: color,
-                                          size: 22,
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          item['label'] as String,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: color,
-                                            fontWeight: selected
-                                                ? FontWeight.w600
-                                                : FontWeight.normal,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 1,
-                                        ),
-                                      ],
+          final reservedBottom = showTabBar
+              ? (tabBarHeight + tabBarBottomPadding + bottomInset)
+              : 0.0;
+
+          bool useCupertinoNativeTabBar() {
+            if (kIsWeb) return false;
+            return defaultTargetPlatform == TargetPlatform.iOS;
+          }
+
+          String symbolForId(String id) {
+            switch (id) {
+              case Prefs.homeTabPapers:
+                return 'doc.text.fill';
+              case Prefs.homeTabBookshelf:
+                return 'books.vertical.fill';
+              case Prefs.homeTabStatistics:
+                return 'chart.bar.fill';
+              case Prefs.homeTabAI:
+                return 'sparkles';
+              case Prefs.homeTabNotes:
+                return 'note.text';
+              case Prefs.homeTabSettings:
+                return 'gearshape.fill';
+              default:
+                return 'circle.fill';
+            }
+          }
+
+          Widget buildMaterialFloatingTabBar() {
+            final cs = Theme.of(context).colorScheme;
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
+                child: Container(
+                  height: tabBarHeight,
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainer.withAlpha(170),
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(
+                      color: cs.outline.withAlpha(110),
+                      width: 0.5,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x33000000),
+                        blurRadius: 18,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  // Custom tab row: every segment is fully tappable.
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Row(
+                      children: List.generate(navBarItems.length, (i) {
+                        final item = navBarItems[i];
+                        final selected = i == currentIndex;
+                        final color =
+                            selected ? cs.primary : cs.onSurfaceVariant;
+
+                        return Expanded(
+                          child: Semantics(
+                            button: true,
+                            selected: selected,
+                            label: item['label'] as String,
+                            child: InkResponse(
+                              onTap: () => onBottomTap(i, false),
+                              containedInkWell: true,
+                              highlightShape: BoxShape.rectangle,
+                              highlightColor: cs.primary.withAlpha(18),
+                              splashColor: Colors.transparent,
+                              child: SizedBox(
+                                height: tabBarHeight,
+                                width: double.infinity,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      item['icon'] as IconData,
+                                      color: color,
+                                      size: 22,
                                     ),
-                                  ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      item['label'] as String,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: color,
+                                        fontWeight: selected
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ],
                                 ),
                               ),
-                            );
-                          }),
-                        ),
-                      ),
+                            ),
+                          ),
+                        );
+                      }),
                     ),
                   ),
                 ),
@@ -380,14 +403,56 @@ class _HomePageState extends ConsumerState<HomePage> {
             );
           }
 
+          Widget buildCupertinoNativeTabBar() {
+            return SizedBox(
+              height: tabBarHeight,
+              child: CNTabBar(
+                items: [
+                  for (final item in navBarItems)
+                    CNTabBarItem(
+                      label: item['label'] as String,
+                      icon: CNSymbol(
+                        symbolForId(item['identifier'] as String),
+                        size: 18,
+                      ),
+                    ),
+                ],
+                currentIndex: currentIndex,
+                onTap: (i) => onBottomTap(i, false),
+              ),
+            );
+          }
+
+          Widget buildTabBar() {
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding:
+                    const EdgeInsets.fromLTRB(16, 0, 16, tabBarBottomPadding),
+                child: useCupertinoNativeTabBar()
+                    ? buildCupertinoNativeTabBar()
+                    : buildMaterialFloatingTabBar(),
+              ),
+            );
+          }
+
           return Scaffold(
-            // Don't extend under the floating tab bar.
-            // Home AI contains an inner Scaffold (AiChatStream). Extending the
-            // body makes it easy to end up with extra blank gaps / double insets
-            // on iOS when the keyboard shows.
             extendBody: false,
-            body: pages(currentIndex, constraints, null),
-            bottomNavigationBar: tabBar,
+            body: Stack(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(bottom: reservedBottom),
+                  child: pages(currentIndex, constraints, null),
+                ),
+                if (showTabBar)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: buildTabBar(),
+                  ),
+              ],
+            ),
           );
         }
       },
