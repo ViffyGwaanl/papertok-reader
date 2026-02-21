@@ -2,6 +2,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/ai.dart';
 import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
+import 'package:anx_reader/page/settings_page/ai_image_analysis.dart';
 import 'package:anx_reader/page/settings_page/advanced.dart';
 import 'package:anx_reader/page/settings_page/appearance.dart';
 import 'package:anx_reader/page/settings_page/developer/developer_options_page.dart';
@@ -135,6 +136,14 @@ class _SubMoreSettingsState extends State<SubMoreSettings> {
                   "sections": const AiProviderCenterPage(),
                   "subtitles": [
                     L10n.of(context).settingsAiProviderCenterDesc,
+                  ],
+                },
+                {
+                  "title": L10n.of(context).settingsAiImageAnalysisTitle,
+                  "icon": Icons.image_outlined,
+                  "sections": const AiImageAnalysisSettingsPage(),
+                  "subtitles": [
+                    L10n.of(context).settingsAiImageAnalysisDesc,
                   ],
                 },
               ],

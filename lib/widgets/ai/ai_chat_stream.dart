@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
@@ -19,6 +21,8 @@ import 'package:anx_reader/widgets/ai/tool_tiles/organize_bookshelf_step_tile.da
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
+import 'package:anx_reader/widgets/ai/attachment_picker_dialog.dart';
+import 'package:anx_reader/models/attachment_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -88,6 +92,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   // For each user turn, the assistant may have multiple generated variants.
   // We keep a lightweight UI-only selection index per turn.
   final Map<int, int> _selectedVariantByUserIndex = {};
+
+  // Attachments for multimodal chat
+  final List<AttachmentItem> _attachments = [];
 
   late final List<AiServiceOption> _builtInOptions;
   late final Map<String, AiServiceOption> _builtInById;
@@ -741,7 +748,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   String _deriveTitle(AiChatHistoryEntry entry) {
     for (final message in entry.messages) {
       if (message is HumanChatMessage) {
-        final content = message.contentAsString.trim();
+        final content = _extractUserTextFromHuman(message).trim();
         if (content.isNotEmpty) {
           final firstLine = content.split('\n').first.trim();
           return firstLine;
@@ -803,12 +810,25 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       return;
     }
 
-    if (inputController.text.trim().isEmpty) return;
     final message = inputController.text.trim();
+    if (message.isEmpty && _attachments.isEmpty) return;
+
     inputController.clear();
 
+    final attachments =
+        _attachments.isEmpty ? null : List<AttachmentItem>.from(_attachments);
+    if (_attachments.isNotEmpty) {
+      setState(() {
+        _attachments.clear();
+      });
+    }
+
     _pinnedToBottom = true;
-    ref.read(aiChatProvider.notifier).startStreaming(message, false);
+    ref.read(aiChatProvider.notifier).startStreaming(
+          message,
+          false,
+          attachments: attachments,
+        );
     _scrollToBottom(force: true);
   }
 
@@ -970,6 +990,66 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     });
   }
 
+  Future<void> _showAttachmentPicker() async {
+    if (_isStreaming) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return AttachmentPickerDialog(
+          onPicked: (items) {
+            _addAttachments(items);
+          },
+        );
+      },
+    );
+  }
+
+  void _addAttachments(List<AttachmentItem> items) {
+    if (items.isEmpty) return;
+
+    var imageCount =
+        _attachments.where((a) => a.type == AttachmentType.image).length;
+
+    final accepted = <AttachmentItem>[];
+    var exceeded = false;
+
+    for (final attachment in items) {
+      if (attachment.type == AttachmentType.image) {
+        if (imageCount >= 4) {
+          exceeded = true;
+          continue;
+        }
+        imageCount += 1;
+      }
+      accepted.add(attachment);
+    }
+
+    if (exceeded) {
+      AnxToast.show(L10n.of(context).attachmentMaxImages);
+    }
+
+    if (accepted.isEmpty) return;
+
+    setState(() {
+      _attachments.addAll(accepted);
+    });
+  }
+
+  void _removeAttachment(int index) {
+    setState(() {
+      if (index >= 0 && index < _attachments.length) {
+        _attachments.removeAt(index);
+      }
+    });
+  }
+
+  void _clearAttachments() {
+    setState(() {
+      _attachments.clear();
+    });
+  }
+
   void _regenerateLastMessage() {
     if (_isStreaming) {
       return;
@@ -1118,6 +1198,73 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         top: false,
         child: Column(
           children: [
+            // Attachments strip
+            if (_attachments.isNotEmpty)
+              Container(
+                height: 80,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _attachments.length,
+                  itemBuilder: (context, index) {
+                    final attachment = _attachments[index];
+                    Widget thumbnail;
+                    if (attachment.type == AttachmentType.image) {
+                      thumbnail = ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.memory(
+                          attachment.bytes,
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.cover,
+                        ),
+                      );
+                    } else {
+                      thumbnail = Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color:
+                              Theme.of(context).colorScheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Center(
+                          child: Icon(Icons.description, size: 28),
+                        ),
+                      );
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Stack(
+                        children: [
+                          thumbnail,
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: () => _removeAttachment(index),
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close,
+                                    size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
             Row(
               children: [
                 Expanded(
@@ -1157,6 +1304,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 Expanded(
                   child: Row(
                     children: [
+                      IconButton(
+                        icon: const Icon(Icons.attach_file, size: 18),
+                        onPressed: _showAttachmentPicker,
+                      ),
+                      const SizedBox(width: 6),
                       Flexible(child: aiService),
                       const SizedBox(width: 6),
                       IconButton(
@@ -1558,7 +1710,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     required int? lastHumanIndex,
   }) {
     final isUser = message is HumanChatMessage;
-    final content = message.contentAsString;
+    final content = isUser
+        ? _extractUserTextFromHuman(message as HumanChatMessage)
+        : message.contentAsString;
     final isLongMessage = content.length > 300;
 
     final prevHumanIndex =
@@ -1596,7 +1750,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   isUser
-                      ? _buildCollapsibleText(content, isLongMessage)
+                      ? _buildHumanMessageBody(message as HumanChatMessage)
                       : _buildAssistantSections(content, isStreaming),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -1642,7 +1796,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   Widget _buildUserMessageItem(_UserChatItem item) {
-    final content = item.message.contentAsString;
+    final content = _extractUserTextFromHuman(item.message);
     final isLongMessage = content.length > 300;
 
     return Padding(
@@ -1667,7 +1821,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildCollapsibleText(content, isLongMessage),
+                  _buildHumanMessageBody(item.message),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -2023,6 +2177,165 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
+  // --- Multimodal user message helpers ---
+
+  static const String _textFileAttachmentPrefix = '[[file:';
+  static const String _textFileAttachmentSuffix = ']]';
+
+  String _extractUserTextFromHuman(HumanChatMessage message) {
+    final content = message.content;
+    if (content is ChatMessageContentText) {
+      return content.text;
+    }
+
+    if (content is ChatMessageContentMultiModal) {
+      final buffer = StringBuffer();
+      for (final part in content.parts) {
+        if (part is! ChatMessageContentText) continue;
+        final text = part.text;
+        if (text.startsWith(_textFileAttachmentPrefix)) {
+          continue; // Hide file contents from chat bubble text.
+        }
+        final trimmed = text.trim();
+        if (trimmed.isEmpty) continue;
+        if (buffer.isNotEmpty) buffer.writeln();
+        buffer.write(trimmed);
+      }
+      return buffer.toString();
+    }
+
+    // Image-only message.
+    return '';
+  }
+
+  List<_TextFileAttachmentInfo> _extractTextFilesFromHuman(
+    HumanChatMessage message,
+  ) {
+    final content = message.content;
+    if (content is! ChatMessageContentMultiModal) {
+      return const [];
+    }
+
+    final out = <_TextFileAttachmentInfo>[];
+    for (final part in content.parts) {
+      if (part is! ChatMessageContentText) continue;
+      final text = part.text;
+      if (!text.startsWith(_textFileAttachmentPrefix)) continue;
+
+      final suffixIndex = text.indexOf(_textFileAttachmentSuffix);
+      if (suffixIndex <= _textFileAttachmentPrefix.length) continue;
+
+      final filename =
+          text.substring(_textFileAttachmentPrefix.length, suffixIndex).trim();
+      final body =
+          text.substring(suffixIndex + _textFileAttachmentSuffix.length);
+      final normalizedBody = body.startsWith('\n') ? body.substring(1) : body;
+
+      out.add(
+        _TextFileAttachmentInfo(
+          filename: filename.isEmpty ? 'text' : filename,
+          text: normalizedBody,
+        ),
+      );
+    }
+    return out;
+  }
+
+  List<Uint8List> _extractImagesFromHuman(HumanChatMessage message) {
+    final content = message.content;
+    final images = <ChatMessageContentImage>[];
+
+    if (content is ChatMessageContentImage) {
+      images.add(content);
+    } else if (content is ChatMessageContentMultiModal) {
+      images.addAll(content.parts.whereType<ChatMessageContentImage>());
+    }
+
+    final out = <Uint8List>[];
+    for (final imgPart in images) {
+      try {
+        out.add(base64Decode(imgPart.data));
+      } catch (_) {
+        // ignore
+      }
+    }
+    return out;
+  }
+
+  Widget _buildHumanMessageBody(HumanChatMessage message) {
+    final text = _extractUserTextFromHuman(message);
+    final files = _extractTextFilesFromHuman(message);
+    final images = _extractImagesFromHuman(message);
+
+    final isLongMessage = text.length > 300;
+
+    final children = <Widget>[];
+
+    if (text.isNotEmpty) {
+      children.add(_buildCollapsibleText(text, isLongMessage));
+    }
+
+    if (files.isNotEmpty) {
+      children.add(const SizedBox(height: 8));
+      children.add(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final f in files)
+              Tooltip(
+                message: f.text.length > 400
+                    ? '${f.text.substring(0, 400)}…'
+                    : f.text,
+                child: Chip(
+                  avatar: const Icon(Icons.description, size: 18),
+                  label: Text(
+                    f.filename,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    if (images.isNotEmpty) {
+      children.add(const SizedBox(height: 8));
+      children.add(
+        SizedBox(
+          height: 64,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemBuilder: (context, index) {
+              final bytes = images[index];
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.memory(
+                  bytes,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                ),
+              );
+            },
+            separatorBuilder: (_, __) => const SizedBox(width: 6),
+            itemCount: images.length,
+          ),
+        ),
+      );
+    }
+
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
   Widget _buildCollapsibleText(String text, bool isLongMessage) {
     if (!isLongMessage) {
       return SelectableText(
@@ -2030,12 +2343,21 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         selectionControls: MaterialTextSelectionControls(),
       );
     }
-
     return _CollapsibleText(text: text);
   }
 }
 
-abstract class _ChatItem {
+class _TextFileAttachmentInfo {
+  const _TextFileAttachmentInfo({
+    required this.filename,
+    required this.text,
+  });
+
+  final String filename;
+  final String text;
+}
+
+sealed class _ChatItem {
   const _ChatItem();
 }
 

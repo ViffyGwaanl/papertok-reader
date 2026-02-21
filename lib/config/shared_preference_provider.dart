@@ -809,6 +809,70 @@ class Prefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- AI Image Analysis (provider/model override) ---
+
+  static const String _aiImageAnalysisProviderIdKey =
+      'aiImageAnalysisProviderIdV1';
+  static const String _aiImageAnalysisModelKey = 'aiImageAnalysisModelV1';
+
+  /// AI provider id used for EPUB image analysis.
+  ///
+  /// Empty means "follow current AI chat provider".
+  String get aiImageAnalysisProviderId {
+    return prefs.getString(_aiImageAnalysisProviderIdKey) ?? '';
+  }
+
+  set aiImageAnalysisProviderId(String id) {
+    final v = id.trim();
+    if (aiImageAnalysisProviderId.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiImageAnalysisProviderIdKey, v);
+    notifyListeners();
+  }
+
+  /// Effective provider id for AI image analysis.
+  ///
+  /// Rules:
+  /// - If user-selected provider is enabled, use it.
+  /// - Else fallback to selectedAiService (if enabled).
+  /// - Else fallback to the first enabled provider.
+  String get aiImageAnalysisProviderIdEffective {
+    final preferred = aiImageAnalysisProviderId.trim();
+    if (preferred.isNotEmpty) {
+      final meta = getAiProviderMeta(preferred);
+      if (meta != null && meta.enabled) return preferred;
+    }
+
+    final fallback = selectedAiService.trim();
+    final fallbackMeta = getAiProviderMeta(fallback);
+    if (fallback.isNotEmpty && fallbackMeta != null && fallbackMeta.enabled) {
+      return fallback;
+    }
+
+    for (final p in aiProvidersV1) {
+      if (p.enabled) return p.id;
+    }
+
+    return fallback.isNotEmpty ? fallback : preferred;
+  }
+
+  /// Model id used for AI image analysis.
+  ///
+  /// Empty means "follow provider config".
+  String get aiImageAnalysisModel {
+    return prefs.getString(_aiImageAnalysisModelKey) ?? '';
+  }
+
+  set aiImageAnalysisModel(String model) {
+    final v = model.trim();
+    if (aiImageAnalysisModel.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiImageAnalysisModelKey, v);
+    notifyListeners();
+  }
+
   // set convertChineseMode(ConvertChineseMode mode) {
   //   prefs.setString('convertChineseMode', mode.name);
   //   notifyListeners();
