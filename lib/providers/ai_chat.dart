@@ -5,6 +5,7 @@ import 'package:anx_reader/providers/ai_history.dart';
 import 'package:anx_reader/service/ai/ai_history.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/models/ai_conversation_tree.dart';
+import 'package:anx_reader/models/attachment_item.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:langchain_core/chat_models.dart';
@@ -79,6 +80,7 @@ class AiChat extends _$AiChat {
     bool isRegenerate, {
     int? regenerateFromUserIndex,
     bool replaceUserMessage = false,
+    List<AttachmentItem>? attachments,
   }) {
     if (_generationSub != null) {
       return;
@@ -110,10 +112,48 @@ class AiChat extends _$AiChat {
     // 1) Mutate tree.
     var parentId = _activeNodeIds.isEmpty ? _tree.rootId : _activeNodeIds.last;
 
+    // Build multimodal content if attachments provided
+    ChatMessageContent messageContent;
+    if (attachments != null && attachments!.isNotEmpty) {
+      final parts = <ChatMessageContent>[];
+
+      // Add user input text if provided
+      if (message.isNotEmpty) {
+        parts.add(ChatMessageContent.text(message));
+      }
+
+      // Add text file content (as separate parts with filename header)
+      final textAttachments =
+          attachments!.where((a) => a.type == AttachmentType.textFile);
+      for (final attachment in textAttachments) {
+        final filename = (attachment.filename ?? 'text').trim();
+        final text = (attachment.text ?? '').trim();
+        if (text.isEmpty) continue;
+        parts.add(ChatMessageContent.text('[[file:$filename]]\\n$text'));
+      }
+
+      // Add images
+      final imageAttachments =
+          attachments!.where((a) => a.type == AttachmentType.image);
+      for (final image in imageAttachments) {
+        if (image.base64 != null) {
+          parts.add(ChatMessageContent.image(
+            data: image.base64!,
+            mimeType: 'image/jpeg',
+          ));
+        }
+      }
+
+      messageContent = ChatMessageContent.multiModal(parts);
+    } else {
+      // No attachments, use simple text content
+      messageContent = ChatMessageContent.text(message);
+    }
+
     if (!isRegenerate && !replaceUserMessage) {
       _tree = _tree.appendChild(
         parentId: parentId,
-        message: ChatMessage.humanText(message),
+        message: ChatMessage.human(messageContent),
       );
       parentId = _tree.nodes[parentId]!.activeChildId!;
     } else {
@@ -127,11 +167,43 @@ class AiChat extends _$AiChat {
           final parentOfUser = userNode.parentId ?? _tree.rootId;
 
           if (replaceUserMessage) {
-            _tree = _tree.appendChild(
-              parentId: parentOfUser,
-              message: ChatMessage.humanText(message),
-            );
-            parentId = _tree.nodes[parentOfUser]!.activeChildId!;
+            // Replace only the text parts for multimodal messages
+            final existingMessage = userNode.toChatMessage();
+            if (existingMessage is HumanChatMessage &&
+                existingMessage.content is ChatMessageContentMultiModal) {
+              final multiModal =
+                  existingMessage.content as ChatMessageContentMultiModal;
+              // Replace the primary user text part, but preserve attachments.
+              final preserved = <ChatMessageContent>[];
+              for (final part in multiModal.parts) {
+                if (part is ChatMessageContentImage) {
+                  preserved.add(part);
+                } else if (part is ChatMessageContentText &&
+                    part.text.startsWith('[[file:')) {
+                  preserved.add(part);
+                }
+              }
+
+              final newParts = <ChatMessageContent>[
+                ChatMessageContent.text(message),
+                ...preserved,
+              ];
+
+              _tree = _tree.appendChild(
+                parentId: parentOfUser,
+                message: ChatMessage.human(
+                  ChatMessageContent.multiModal(newParts),
+                ),
+              );
+              parentId = _tree.nodes[parentOfUser]!.activeChildId!;
+            } else {
+              // Simple text message, replace directly
+              _tree = _tree.appendChild(
+                parentId: parentOfUser,
+                message: ChatMessage.humanText(message),
+              );
+              parentId = _tree.nodes[parentOfUser]!.activeChildId!;
+            }
           } else {
             parentId = userNodeId;
           }

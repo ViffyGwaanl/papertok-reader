@@ -928,5 +928,12 @@
   "papersEpubEditionZh": "Chinese",
   "papersEpubEditionBilingual": "Bilingual",
   "papersTabExplain": "Explain",
-  "papersTabOriginal": "Original"
+  "papersTabOriginal": "Original",
+  "attachmentCamera": "Camera",
+  "attachmentPhotos": "Photos",
+  "attachmentImages": "Images",
+  "attachmentTextFile": "Text File",
+  "attachmentMaxImages": "Maximum 4 images allowed",
+  "attachmentRemove": "Remove",
+  "attachmentClearAll": "Clear all"
 }

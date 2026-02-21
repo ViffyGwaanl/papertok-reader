@@ -103,7 +103,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "de": [
@@ -210,7 +217,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "es": [
@@ -317,7 +331,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "fr": [
@@ -424,7 +445,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "it": [
@@ -531,7 +559,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "ja": [
@@ -638,7 +673,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "ko": [
@@ -745,7 +787,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "pt": [
@@ -852,7 +901,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "ro": [
@@ -959,7 +1015,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "ru": [
@@ -1066,7 +1129,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "tr": [
@@ -1173,7 +1243,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "zh": [
@@ -1280,7 +1357,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "zh_LZH": [
@@ -1387,7 +1471,14 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ],
 
   "zh_TW": [
@@ -1494,6 +1585,13 @@
     "aiSectionTools",
     "aiChatRegenerateFromHereConfirmTitle",
     "aiChatRegenerateFromHereConfirmBody",
-    "aiChatEditUserMessageTitle"
+    "aiChatEditUserMessageTitle",
+    "attachmentCamera",
+    "attachmentPhotos",
+    "attachmentImages",
+    "attachmentTextFile",
+    "attachmentMaxImages",
+    "attachmentRemove",
+    "attachmentClearAll"
   ]
 }

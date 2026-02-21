@@ -928,5 +928,12 @@
   "papersEpubEditionZh": "中文",
   "papersEpubEditionBilingual": "双语",
   "papersTabExplain": "讲解",
-  "papersTabOriginal": "原文"
+  "papersTabOriginal": "原文",
+  "attachmentCamera": "相机",
+  "attachmentPhotos": "相册",
+  "attachmentImages": "图片",
+  "attachmentTextFile": "文本文件",
+  "attachmentMaxImages": "最多添加 4 张图片",
+  "attachmentRemove": "移除",
+  "attachmentClearAll": "清空全部"
 }
