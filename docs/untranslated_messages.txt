@@ -126,7 +126,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "de": [
@@ -256,7 +265,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "es": [
@@ -386,7 +404,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "fr": [
@@ -516,7 +543,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "it": [
@@ -646,7 +682,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "ja": [
@@ -776,7 +821,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "ko": [
@@ -906,7 +960,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "pt": [
@@ -1036,7 +1099,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "ro": [
@@ -1166,7 +1238,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "ru": [
@@ -1296,7 +1377,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "tr": [
@@ -1426,7 +1516,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "zh": [
@@ -1556,7 +1655,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "zh_LZH": [
@@ -1686,7 +1794,16 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ],
 
   "zh_TW": [
@@ -1816,6 +1933,15 @@
     "settingsAiImageAnalysisModelCustom",
     "settingsAiImageAnalysisModelCustomDesc",
     "settingsAiImageAnalysisModelCustomHint",
-    "settingsAiImageAnalysisModelEmpty"
+    "settingsAiImageAnalysisModelEmpty",
+    "settingsAiImageAnalysisPrompt",
+    "settingsAiImageAnalysisPromptDescTile",
+    "settingsAiImageAnalysisPromptDefaultShort",
+    "settingsAiImageAnalysisPromptCustomShort",
+    "settingsAiImageAnalysisPromptTitle",
+    "settingsAiImageAnalysisPromptDesc",
+    "settingsAiImageAnalysisPromptHint",
+    "settingsAiImageAnalysisPromptVariablesHelp",
+    "settingsAiImageAnalysisPromptReset"
   ]
 }

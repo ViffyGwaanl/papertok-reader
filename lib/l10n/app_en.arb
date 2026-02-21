@@ -951,5 +951,15 @@
   "settingsAiImageAnalysisModelCustom": "Custom model",
   "settingsAiImageAnalysisModelCustomDesc": "Manually set a model id.",
   "settingsAiImageAnalysisModelCustomHint": "e.g. gpt-4o, claude-3-7-sonnet",
-  "settingsAiImageAnalysisModelEmpty": "No models cached. Tap Refresh."
+  "settingsAiImageAnalysisModelEmpty": "No models cached. Tap Refresh.",
+
+  "settingsAiImageAnalysisPrompt": "Prompt",
+  "settingsAiImageAnalysisPromptDescTile": "Customize the image analysis prompt template.",
+  "settingsAiImageAnalysisPromptDefaultShort": "Default",
+  "settingsAiImageAnalysisPromptCustomShort": "Custom",
+  "settingsAiImageAnalysisPromptTitle": "Image analysis prompt",
+  "settingsAiImageAnalysisPromptDesc": "You can customize the prompt template. The following variables will be replaced at runtime.",
+  "settingsAiImageAnalysisPromptHint": "Enter prompt template...",
+  "settingsAiImageAnalysisPromptVariablesHelp": "Variables: alt, title, contextText (wrap with double braces)",
+  "settingsAiImageAnalysisPromptReset": "Reset"
 }

@@ -106,26 +106,20 @@ class _ImageViewerState extends State<ImageViewer> {
     final title = (widget.title ?? '').trim();
     final contextText = (widget.contextText ?? '').trim();
 
-    final prompt = StringBuffer()
-      ..writeln('你是一个阅读器里的AI助手。请对用户点击的 EPUB 图片做“图注解析/图片解析”。')
-      ..writeln()
-      ..writeln('要求：')
-      ..writeln('1) 先用 3-6 句话描述图片内容（对象/场景/图表/要点）。')
-      ..writeln('2) 如果是图表/流程图/信息图，请分点解释每个部分的含义。')
-      ..writeln('3) 结合上下文说明这张图在当前段落可能表达什么。')
-      ..writeln('4) 如果图片里包含文字/标题/坐标轴/图例，请尽量读出来并解释。')
-      ..writeln()
-      ..writeln('已知元信息：')
-      ..writeln('- alt: ${alt.isEmpty ? '(empty)' : alt}')
-      ..writeln('- title: ${title.isEmpty ? '(empty)' : title}')
-      ..writeln()
-      ..writeln('上下文（可能截断）：')
-      ..writeln(contextText.isEmpty ? '(empty)' : contextText);
+    String applyTemplate(String template) {
+      return template
+          .replaceAll('{{alt}}', alt.isEmpty ? '(empty)' : alt)
+          .replaceAll('{{title}}', title.isEmpty ? '(empty)' : title)
+          .replaceAll(
+              '{{contextText}}', contextText.isEmpty ? '(empty)' : contextText);
+    }
+
+    final prompt = applyTemplate(Prefs().aiImageAnalysisPromptEffective);
 
     final messages = <ChatMessage>[
       ChatMessage.human(
         ChatMessageContent.multiModal([
-          ChatMessageContent.text(prompt.toString()),
+          ChatMessageContent.text(prompt),
           ChatMessageContent.image(
             data: base64,
             mimeType: mimeType,

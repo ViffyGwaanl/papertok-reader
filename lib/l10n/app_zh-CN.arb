@@ -951,5 +951,15 @@
   "settingsAiImageAnalysisModelCustom": "自定义模型",
   "settingsAiImageAnalysisModelCustomDesc": "手动输入模型 ID。",
   "settingsAiImageAnalysisModelCustomHint": "例如：gpt-4o、claude-3-7-sonnet",
-  "settingsAiImageAnalysisModelEmpty": "未缓存模型列表，请点击刷新。"
+  "settingsAiImageAnalysisModelEmpty": "未缓存模型列表，请点击刷新。",
+
+  "settingsAiImageAnalysisPrompt": "提示词",
+  "settingsAiImageAnalysisPromptDescTile": "可自定义“图注解析/图片解析”的提示词模板。",
+  "settingsAiImageAnalysisPromptDefaultShort": "默认",
+  "settingsAiImageAnalysisPromptCustomShort": "自定义",
+  "settingsAiImageAnalysisPromptTitle": "图片解析提示词",
+  "settingsAiImageAnalysisPromptDesc": "你可以自定义提示词模板。下列变量会在运行时自动替换。",
+  "settingsAiImageAnalysisPromptHint": "输入提示词模板...",
+  "settingsAiImageAnalysisPromptVariablesHelp": "可用变量：alt、title、contextText（用双大括号包裹）",
+  "settingsAiImageAnalysisPromptReset": "重置为默认"
 }

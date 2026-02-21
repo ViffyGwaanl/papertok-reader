@@ -64,6 +64,12 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
         prefs.inlineFullTextTranslateConcurrency,
   };
 
+  final imageAnalysis = <String, dynamic>{
+    'aiImageAnalysisProviderIdV1': prefs.aiImageAnalysisProviderId,
+    'aiImageAnalysisModelV1': prefs.aiImageAnalysisModel,
+    'aiImageAnalysisPromptV1': prefs.aiImageAnalysisPrompt,
+  };
+
   return {
     'schemaVersion': aiSettingsSchemaVersion,
     'updatedAt': prefs.aiSettingsUpdatedAt,
@@ -75,6 +81,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
         prefs.aiInputQuickPrompts.map((e) => e.toJson()).toList(),
     'ui': ui,
     'translate': translate,
+    'imageAnalysis': imageAnalysis,
   };
 }
 
@@ -209,6 +216,25 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
           (translate['inlineFullTextTranslateConcurrency'] as num?)?.toInt();
       if (concurrency != null) {
         prefs.inlineFullTextTranslateConcurrency = concurrency;
+      }
+    }
+
+    final imageAnalysis = json['imageAnalysis'];
+    if (imageAnalysis is Map) {
+      final providerId =
+          imageAnalysis['aiImageAnalysisProviderIdV1']?.toString();
+      if (providerId != null) {
+        prefs.aiImageAnalysisProviderId = providerId;
+      }
+
+      final model = imageAnalysis['aiImageAnalysisModelV1']?.toString();
+      if (model != null) {
+        prefs.aiImageAnalysisModel = model;
+      }
+
+      final prompt = imageAnalysis['aiImageAnalysisPromptV1']?.toString();
+      if (prompt != null) {
+        prefs.aiImageAnalysisPrompt = prompt;
       }
     }
   } catch (e) {

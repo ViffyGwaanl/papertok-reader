@@ -814,6 +814,7 @@ class Prefs extends ChangeNotifier {
   static const String _aiImageAnalysisProviderIdKey =
       'aiImageAnalysisProviderIdV1';
   static const String _aiImageAnalysisModelKey = 'aiImageAnalysisModelV1';
+  static const String _aiImageAnalysisPromptKey = 'aiImageAnalysisPromptV1';
 
   /// AI provider id used for EPUB image analysis.
   ///
@@ -871,6 +872,42 @@ class Prefs extends ChangeNotifier {
     }
     prefs.setString(_aiImageAnalysisModelKey, v);
     notifyListeners();
+  }
+
+  /// Prompt template used for EPUB image analysis.
+  ///
+  /// Empty means "use built-in default".
+  String get aiImageAnalysisPrompt {
+    return prefs.getString(_aiImageAnalysisPromptKey) ?? '';
+  }
+
+  set aiImageAnalysisPrompt(String prompt) {
+    final v = prompt.trim();
+    if (aiImageAnalysisPrompt.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiImageAnalysisPromptKey, v);
+    notifyListeners();
+  }
+
+  String get aiImageAnalysisPromptEffective {
+    final p = aiImageAnalysisPrompt.trim();
+    if (p.isNotEmpty) return p;
+
+    return '''你是一个阅读器里的 AI 助手。请对用户点击的 EPUB 图片做“图注解析/图片解析”。
+
+要求：
+1) 先用 3-6 句话描述图片内容（对象/场景/图表/要点）。
+2) 如果是图表/流程图/信息图，请分点解释每个部分的含义。
+3) 结合上下文说明这张图在当前段落可能表达什么。
+4) 如果图片里包含文字/标题/坐标轴/图例，请尽量读出来并解释。
+
+已知元信息：
+- alt: {{alt}}
+- title: {{title}}
+
+上下文（可能截断）：
+{{contextText}}''';
   }
 
   // set convertChineseMode(ConvertChineseMode mode) {

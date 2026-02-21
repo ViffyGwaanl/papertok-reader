@@ -77,6 +77,81 @@ class _AiImageAnalysisSettingsPageState
     );
   }
 
+  Future<void> _editPrompt() async {
+    final controller = TextEditingController(
+      text: Prefs().aiImageAnalysisPrompt.trim().isEmpty
+          ? Prefs().aiImageAnalysisPromptEffective
+          : Prefs().aiImageAnalysisPrompt,
+    );
+
+    final result = await showDialog<_PromptEditResult>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(L10n.of(context).settingsAiImageAnalysisPromptTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                L10n.of(context).settingsAiImageAnalysisPromptDesc,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintText: L10n.of(context).settingsAiImageAnalysisPromptHint,
+                ),
+                maxLines: 10,
+                minLines: 6,
+                maxLength: 20000,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                L10n.of(context).settingsAiImageAnalysisPromptVariablesHelp,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, _PromptEditResult.cancel),
+              child: Text(L10n.of(context).commonCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, _PromptEditResult.reset),
+              child: Text(L10n.of(context).settingsAiImageAnalysisPromptReset),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, _PromptEditResult.save),
+              child: Text(L10n.of(context).commonConfirm),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || result == null || result == _PromptEditResult.cancel) {
+      controller.dispose();
+      return;
+    }
+
+    if (result == _PromptEditResult.reset) {
+      Prefs().aiImageAnalysisPrompt = '';
+      setState(() {});
+      controller.dispose();
+      return;
+    }
+
+    // Save
+    final value = controller.text.trim();
+    final defaultValue = Prefs().aiImageAnalysisPromptEffective.trim();
+    Prefs().aiImageAnalysisPrompt = (value == defaultValue) ? '' : value;
+    setState(() {});
+    controller.dispose();
+  }
+
   Future<void> _pickModel() async {
     final providerId = Prefs().aiImageAnalysisProviderIdEffective;
     final meta = Prefs().getAiProviderMeta(providerId);
@@ -245,6 +320,10 @@ class _AiImageAnalysisSettingsPageState
         ? L10n.of(context).settingsAiImageAnalysisModelFollowProviderShort
         : model;
 
+    final promptCustom = Prefs().aiImageAnalysisPrompt.trim();
+    final promptLabel = promptCustom.isEmpty
+        ? L10n.of(context).settingsAiImageAnalysisPromptDefaultShort
+        : L10n.of(context).settingsAiImageAnalysisPromptCustomShort;
     return settingsSections(
       sections: [
         SettingsSection(
@@ -268,9 +347,23 @@ class _AiImageAnalysisSettingsPageState
                   Text(L10n.of(context).settingsAiImageAnalysisModelDesc),
               onPressed: (_) => _pickModel(),
             ),
+            SettingsTile.navigation(
+              leading: const Icon(Icons.edit_note_outlined),
+              title: Text(L10n.of(context).settingsAiImageAnalysisPrompt),
+              value: Text(promptLabel),
+              description:
+                  Text(L10n.of(context).settingsAiImageAnalysisPromptDescTile),
+              onPressed: (_) => _editPrompt(),
+            ),
           ],
         ),
       ],
     );
   }
+}
+
+enum _PromptEditResult {
+  cancel,
+  reset,
+  save,
 }
