@@ -255,7 +255,7 @@ Stream<String> _generateStream({
 
     Stream<String> stream;
     if (useAgent) {
-      final inputMessage = _latestUserMessage(sanitizedMessages);
+      final inputMessage = _latestUserChatMessage(sanitizedMessages);
       if (inputMessage == null) {
         yield 'No user input provided';
         try {
@@ -273,15 +273,18 @@ Stream<String> _generateStream({
         return;
       }
 
-      final historyMessages = sanitizedMessages
-          .sublist(0, sanitizedMessages.length - 1)
-          .toList(growable: false);
+      final inputIndex = sanitizedMessages.lastIndexWhere(
+        (m) => m is HumanChatMessage,
+      );
+      final historyMessages = inputIndex > 0
+          ? sanitizedMessages.sublist(0, inputIndex).toList(growable: false)
+          : const <ChatMessage>[];
 
       stream = runner.streamAgent(
         model: model,
         tools: tools,
         history: historyMessages,
-        input: inputMessage,
+        inputMessage: inputMessage,
         systemMessage: pipeline.systemMessage,
       );
     } else {
@@ -421,11 +424,11 @@ List<ChatMessage> _sanitizeMessagesForPrompt(List<ChatMessage> messages) {
   }).toList(growable: false);
 }
 
-String? _latestUserMessage(List<ChatMessage> messages) {
+HumanChatMessage? _latestUserChatMessage(List<ChatMessage> messages) {
   for (var i = messages.length - 1; i >= 0; i--) {
     final message = messages[i];
     if (message is HumanChatMessage) {
-      return message.contentAsString;
+      return message;
     }
   }
   return null;

@@ -138,7 +138,7 @@ class CancelableLangchainRunner {
     required BaseChatModel model,
     required List<Tool> tools,
     required List<ChatMessage> history,
-    required String input,
+    required HumanChatMessage inputMessage,
     ChatMessage? systemMessage,
     int maxIterations = 120,
   }) {
@@ -211,7 +211,7 @@ class CancelableLangchainRunner {
         return <ChatMessage>[
           if (systemMessage != null) systemMessage,
           ...history,
-          ChatMessage.humanText(input),
+          inputMessage,
           ...buildScratchpad(),
         ];
       }
