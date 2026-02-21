@@ -298,19 +298,15 @@ class _HomePageState extends ConsumerState<HomePage> {
             return defaultTargetPlatform == TargetPlatform.iOS;
           }
 
-          final tabBarHeight = useCupertinoNativeTabBar() ? 64.0 : 58.0;
+          // Keep stable dimensions regardless of whether labels are shown.
+          final tabBarHeight = useCupertinoNativeTabBar() ? 76.0 : 64.0;
           // Visual lift above the very bottom edge.
-          const tabBarBottomPadding = 2.0;
+          const tabBarBottomPadding = 4.0;
 
-          // Content should extend behind the floating tab bar.
-          //
-          // Since the bar is placed into the bottom safe-area region, the part
-          // that overlaps the system home-indicator area doesn't need extra
-          // avoidance padding from pages.
-          final contentBottomInset = showTabBar
-              ? (tabBarHeight + tabBarBottomPadding - bottomInset)
-                  .clamp(0.0, 999.0)
-              : 0.0;
+          // Pages with bottom interactive UI (e.g. chat input) should avoid
+          // being covered by the floating tab bar.
+          final contentBottomInset =
+              showTabBar ? (tabBarHeight + tabBarBottomPadding) : 0.0;
 
           String symbolForId(String id) {
             switch (id) {

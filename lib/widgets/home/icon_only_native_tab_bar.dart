@@ -133,7 +133,11 @@ class _IconOnlyNativeTabBarState extends State<IconOnlyNativeTabBar> {
             onPlatformViewCreated: _onCreated,
           );
 
-    return SizedBox(height: widget.height ?? 50.0, child: platformView);
+    return SizedBox(
+      height: widget.height ?? 50.0,
+      width: double.infinity,
+      child: platformView,
+    );
   }
 
   void _onCreated(int id) {
