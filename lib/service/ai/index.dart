@@ -16,16 +16,19 @@ import 'package:riverpod/riverpod.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
 
-enum AiRequestScope { chat, translate }
+enum AiRequestScope { chat, translate, imageAnalysis }
 
 final CancelableLangchainRunner _chatRunner = CancelableLangchainRunner();
 final CancelableLangchainRunner _translationRunner =
+    CancelableLangchainRunner();
+final CancelableLangchainRunner _imageAnalysisRunner =
     CancelableLangchainRunner();
 
 CancelableLangchainRunner _runnerForScope(AiRequestScope scope) {
   return switch (scope) {
     AiRequestScope.chat => _chatRunner,
     AiRequestScope.translate => _translationRunner,
+    AiRequestScope.imageAnalysis => _imageAnalysisRunner,
   };
 }
 
@@ -60,6 +63,10 @@ void cancelActiveAiRequest() {
 
 void cancelActiveTranslationRequest() {
   _translationRunner.cancel();
+}
+
+void cancelActiveImageAnalysisRequest() {
+  _imageAnalysisRunner.cancel();
 }
 
 Stream<String> _generateStream({

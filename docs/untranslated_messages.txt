@@ -110,7 +110,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "de": [
@@ -224,7 +240,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "es": [
@@ -338,7 +370,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "fr": [
@@ -452,7 +500,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "it": [
@@ -566,7 +630,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "ja": [
@@ -680,7 +760,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "ko": [
@@ -794,7 +890,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "pt": [
@@ -908,7 +1020,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "ro": [
@@ -1022,7 +1150,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "ru": [
@@ -1136,7 +1280,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "tr": [
@@ -1250,7 +1410,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "zh": [
@@ -1364,7 +1540,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "zh_LZH": [
@@ -1478,7 +1670,23 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ],
 
   "zh_TW": [
@@ -1592,6 +1800,22 @@
     "attachmentTextFile",
     "attachmentMaxImages",
     "attachmentRemove",
-    "attachmentClearAll"
+    "attachmentClearAll",
+    "imageAnalyze",
+    "settingsAiImageAnalysisTitle",
+    "settingsAiImageAnalysisDesc",
+    "settingsAiImageAnalysisProvider",
+    "settingsAiImageAnalysisProviderDesc",
+    "settingsAiImageAnalysisModel",
+    "settingsAiImageAnalysisModelDesc",
+    "settingsAiImageAnalysisFollowChatProvider",
+    "settingsAiImageAnalysisFollowChatProviderDesc",
+    "settingsAiImageAnalysisModelFollowProvider",
+    "settingsAiImageAnalysisModelFollowProviderDesc",
+    "settingsAiImageAnalysisModelFollowProviderShort",
+    "settingsAiImageAnalysisModelCustom",
+    "settingsAiImageAnalysisModelCustomDesc",
+    "settingsAiImageAnalysisModelCustomHint",
+    "settingsAiImageAnalysisModelEmpty"
   ]
 }

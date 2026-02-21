@@ -784,14 +784,42 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     controller.addJavaScriptHandler(
       handlerName: 'onImageClick',
       callback: (args) {
-        String image = args[0];
+        if (args.isEmpty) return;
+
+        final payload = args[0];
+
+        String? image;
+        String? contextText;
+        String? alt;
+        String? title;
+
+        if (payload is String) {
+          // Legacy payload.
+          image = payload;
+        } else if (payload is Map) {
+          final map = payload.map(
+            (key, value) => MapEntry(key.toString(), value),
+          );
+          image = map['dataUrl']?.toString();
+          contextText = map['contextText']?.toString();
+          alt = map['alt']?.toString();
+          title = map['title']?.toString();
+        }
+
+        if (image == null || image.isEmpty) return;
+
         Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => ImageViewer(
-                      image: image,
-                      bookName: widget.book.title,
-                    )));
+          context,
+          MaterialPageRoute(
+            builder: (context) => ImageViewer(
+              image: image!,
+              bookName: widget.book.title,
+              contextText: contextText,
+              alt: alt,
+              title: title,
+            ),
+          ),
+        );
       },
     );
     controller.addJavaScriptHandler(

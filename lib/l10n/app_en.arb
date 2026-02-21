@@ -935,5 +935,21 @@
   "attachmentTextFile": "Text File",
   "attachmentMaxImages": "Maximum 4 images allowed",
   "attachmentRemove": "Remove",
-  "attachmentClearAll": "Clear all"
+  "attachmentClearAll": "Clear all",
+  "imageAnalyze": "Analyze",
+  "settingsAiImageAnalysisTitle": "Image analysis",
+  "settingsAiImageAnalysisDesc": "Choose provider and model for EPUB image analysis.",
+  "settingsAiImageAnalysisProvider": "Provider",
+  "settingsAiImageAnalysisProviderDesc": "Provider used for image analysis.",
+  "settingsAiImageAnalysisModel": "Model",
+  "settingsAiImageAnalysisModelDesc": "Model override used for image analysis.",
+  "settingsAiImageAnalysisFollowChatProvider": "Follow chat provider",
+  "settingsAiImageAnalysisFollowChatProviderDesc": "Use the current AI chat provider.",
+  "settingsAiImageAnalysisModelFollowProvider": "Follow provider config",
+  "settingsAiImageAnalysisModelFollowProviderDesc": "Use the provider-configured model.",
+  "settingsAiImageAnalysisModelFollowProviderShort": "Follow provider",
+  "settingsAiImageAnalysisModelCustom": "Custom model",
+  "settingsAiImageAnalysisModelCustomDesc": "Manually set a model id.",
+  "settingsAiImageAnalysisModelCustomHint": "e.g. gpt-4o, claude-3-7-sonnet",
+  "settingsAiImageAnalysisModelEmpty": "No models cached. Tap Refresh."
 }

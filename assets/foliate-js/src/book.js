@@ -980,16 +980,43 @@ class Reader {
       })
     })
     view.addEventListener('click-image', async e => {
-      // console.log('click-image', e.detail.img.src)
-      const blobUrl = e.detail.img.src
+      const imgEl = e.detail?.img
+      if (!imgEl) return
+
+      const blobUrl = imgEl.src
       const blob = await fetch(blobUrl).then(r => r.blob())
-      const base64 = await new Promise((resolve, reject) => {
+      const dataUrl = await new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onloadend = () => resolve(reader.result)
         reader.onerror = reject
         reader.readAsDataURL(blob)
       })
-      callFlutter('onImageClick', base64)
+
+      const alt = imgEl.getAttribute('alt') ?? ''
+      const title = imgEl.getAttribute('title') ?? ''
+
+      const chunks = []
+      const pushText = el => {
+        if (!el) return
+        const txt = (el.innerText ?? '').trim()
+        if (!txt) return
+        // Avoid extremely long chunks.
+        chunks.push(txt.length > 1500 ? txt.slice(0, 1500) : txt)
+      }
+
+      const baseEl = imgEl.closest('figure') || imgEl.closest('p') || imgEl.parentElement
+      pushText(baseEl)
+      pushText(baseEl?.previousElementSibling)
+      pushText(baseEl?.nextElementSibling)
+
+      const contextText = chunks.join('\n\n').slice(0, 4000)
+
+      callFlutter('onImageClick', {
+        dataUrl,
+        contextText,
+        alt,
+        title
+      })
     })
   }
 
