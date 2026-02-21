@@ -14,18 +14,13 @@ class AiPage extends StatelessWidget {
     return AnimatedBuilder(
       animation: Prefs(),
       builder: (context, _) {
-        // Reserve space for the floating home tab bar so the input box is
-        // never covered by it.
-        //
-        // Phone tab bar (HomePage): height=64, bottom padding=12, wrapped by
-        // SafeArea(top:false) → includes device bottom inset.
-        final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-        final bottomInset = MediaQuery.of(context).padding.bottom;
-        final bottomPadding =
-            keyboardVisible ? 0.0 : (64.0 + 12.0 + bottomInset);
-
+        // HomePage already reserves bottom space for the floating tab bar.
+        // Don't add extra bottom padding here; it causes large blank gaps.
         return AiChatStream(
-          bottomPadding: bottomPadding,
+          bottomPadding: 0,
+          // AiChatStream is an inner Scaffold under HomePage's Scaffold.
+          // Avoid double-applying the keyboard inset.
+          resizeToAvoidBottomInset: false,
           // Keep the Home AI empty state clean (no right-bottom overlay chips).
           emptyStateBuilder: (context, send) {
             final theme = Theme.of(context);

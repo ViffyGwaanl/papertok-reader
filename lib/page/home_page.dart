@@ -325,9 +325,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                           children: List.generate(navBarItems.length, (i) {
                             final item = navBarItems[i];
                             final selected = i == currentIndex;
-                            final color = selected
-                                ? cs.primary
-                                : cs.onSurfaceVariant;
+                            final color =
+                                selected ? cs.primary : cs.onSurfaceVariant;
 
                             return Expanded(
                               child: Semantics(
@@ -382,7 +381,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           }
 
           return Scaffold(
-            extendBody: true,
+            // Don't extend under the floating tab bar.
+            // Home AI contains an inner Scaffold (AiChatStream). Extending the
+            // body makes it easy to end up with extra blank gaps / double insets
+            // on iOS when the keyboard shows.
+            extendBody: false,
             body: pages(currentIndex, constraints, null),
             bottomNavigationBar: tabBar,
           );

@@ -41,6 +41,7 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.scrollController,
     this.onRequestMinimize,
     this.bottomPadding = 0,
+    this.resizeToAvoidBottomInset = true,
     this.emptyStateBuilder,
   });
 
@@ -59,6 +60,11 @@ class AiChatStream extends ConsumerStatefulWidget {
 
   /// Extra bottom padding used to avoid being covered by external overlays.
   final double bottomPadding;
+
+  /// When AiChatStream is used inside another Scaffold (e.g. Home tab page),
+  /// letting both Scaffolds handle viewInsets can cause the keyboard inset to be
+  /// applied twice on iOS, leaving a large blank gap above the keyboard.
+  final bool resizeToAvoidBottomInset;
 
   /// Custom empty state builder.
   ///
@@ -1513,6 +1519,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
       appBar: AppBar(
         title: Text(L10n.of(context).aiChat),
         leading: IconButton(
