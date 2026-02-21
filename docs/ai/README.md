@@ -1,10 +1,12 @@
 # AI Panel UX / Config / Sync — Design & Implementation Notes
 
-> Maintainer note: 本目录记录 papertok-reader 中 AI/翻译相关的 UX、配置、同步与实现细节。该能力同时在 public fork 中维护一条 Contrib Track，用于向上游 Anx Reader 提交 PR。
+> Maintainer note: 本目录记录 **Paper Reader（papertok-reader）** 中 AI/翻译相关的 UX、配置、同步与实现细节。
+> 
+> 上游贡献（Anx Reader）目前不是产品交付的必需项；如未来需要上游化，会单独整理成“干净的 contrib track”（不混入 PaperTok/产品专属 UX）。
 
 ## Scope
 
-### Implemented (fork, `feat/ai-all-in-one`)
+### Implemented (product repo, `main`)
 
 #### Reading-page AI panel UX (iPad/iPhone)
 
@@ -32,6 +34,21 @@
 - Per-turn assistant variants (left/right switch)
 - Conversation tree v2 (`conversationV2`) with rollback via per-message variant switcher
 
+#### Multimodal / Image Analysis (new)
+
+- Multimodal chat attachments (v1):
+  - images + plain text files
+  - max **4** images per send
+  - attachments are **not synced** and **not included in backup**
+- EPUB image analysis:
+  - tap an image in EPUB → open viewer → analyze with a multimodal model
+  - dedicated provider/model settings (Settings → AI → Image Analysis)
+  - independent request scope so it does **not cancel** ongoing chat streaming
+- Compatibility hardening:
+  - normalize image MIME types for OpenAI-compatible providers
+  - rasterize SVG images to bitmap before sending (many backends do not accept SVG)
+  - Volcengine Ark (`volces.com/api/v3`) image_url base64 format compatibility
+
 #### Config / Sync / Backup
 
 - Configurable input quick prompts chips
@@ -44,11 +61,11 @@
 
 #### OpenAI-compatible “thinking content” compatibility
 
-- If an OpenAI-compatible backend returns `reasoning_content` (or `reasoning`) in responses/stream deltas, the fork maps it to the app’s `<think>...</think>` channel so it shows inside the Thinking section.
+- If an OpenAI-compatible backend returns `reasoning_content` (or `reasoning`) in responses/stream deltas, the app maps it to the `<think>...</think>` channel so it shows inside the Thinking section.
 
 ---
 
-## Other modules (fork)
+## Other modules (product)
 
 - [PaperTok (papers feed) — UX + import behavior](../papertok/README.md)
 
@@ -72,13 +89,11 @@ To allow provider-owned agent streaming (reading tools), tool code paths now acc
 
 ---
 
-## Branch / PR Stack (fork)
+## Branch / Release notes
 
-Primary integration branch for local install + iPhone/iPad testing:
+The product repository uses `main` as the integration branch for iPhone/iPad testing and TestFlight.
 
-- `feat/ai-all-in-one`
-
-This branch includes all AI-related changes (PR-1..7 line + Provider Center/chat UX stack + reading-page UX fixes).
+All AI/translation/multimodal/image-analysis changes are already integrated into `main`.
 
 ---
 

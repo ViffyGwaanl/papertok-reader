@@ -14,7 +14,7 @@ We want AI-related configuration to be **portable across devices**, but with str
 
 ## 1. Implementation Status
 
-- Implemented in fork branch: `feat/ai-settings-webdav-sync`
+- Implementation status: integrated in product repo `main`
 - Key files:
   - `lib/service/sync/ai_settings_sync.dart` (schema v1 serializer + applier)
   - `lib/providers/sync.dart` (`syncAiSettings()` called from the main sync flow)

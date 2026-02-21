@@ -20,7 +20,7 @@
 - 不做全书 embeddings/RAG（已确认现阶段不优先）。
 - 不通过 WebDAV 同步 API key（安全策略）。
 
-## 2. Current Implementation Summary (fork)
+## 2. Current Implementation Summary (product repo)
 
 ### 2.1 Dock resize + persistence
 

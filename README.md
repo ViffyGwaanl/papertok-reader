@@ -8,6 +8,8 @@
 
 - **PaperTok** (academic paper feed)
 - Enhanced **AI chat** (Provider Center, thinking levels, conversation tree)
+- **Multimodal chat attachments** (images + plain text files)
+- **EPUB image analysis** (tap image → analyze with a multimodal model)
 - In-reader **inline full-text translation** (immersive “translation below original”)
 
 ## Platform status (important)
@@ -44,7 +46,8 @@ flutter test -j 1
 ## Relationship to upstream
 
 This repository focuses on **product distribution + PaperTok integration + iOS-first QA**.
-General AI/translation improvements are designed to be upstream-friendly and may be contributed back via a clean contrib track.
+
+Upstream contribution is currently **not required for product delivery**. If/when we decide to upstream generic AI/translation improvements later, we will do it via a clean contrib track (without PaperTok/product-only UX changes).
 
 ## License
 

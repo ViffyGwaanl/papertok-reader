@@ -1,8 +1,8 @@
-# AI 改造（fork）— 当前已完成 & 路线图（中文）
+# AI 改造（Paper Reader）— 当前已完成 & 路线图（中文）
 
 > 本文是面向 **真实实现** 的“项目状态 + 路线图”汇总，便于你随时对齐：哪些已经做完、哪些还在计划、下一步怎么验收。
 >
-> 集成验收分支：`feat/ai-all-in-one`
+> 集成验收分支：`main`（产品仓库 `ViffyGwaanl/papertok-reader`）
 
 ---
 
@@ -104,6 +104,25 @@
 
 ---
 
+### 2.7 多模态附件 + EPUB 图片解析（已完成）
+
+**多模态对话附件（v1）**
+- 支持：图片 + 纯文本文件（文本文件会注入 prompt）。
+- 图片限制：每次最多 **4 张**。
+- 存储策略：附件 **不参与 WebDAV 同步**，也 **不包含在备份**（避免体积膨胀与隐私泄漏）。
+
+**EPUB 图片解析（图注解析/图片解析）**
+- 点击 EPUB 图片 → ImageViewer → “图片解析”按钮：发送（文字 prompt + 图片）到多模态模型。
+- 独立配置：可在设置页选择“图片解析专用 provider/model”。
+- 运行隔离：使用独立 request scope，避免图片解析 cancel 正在进行的对话 streaming。
+
+**兼容性增强**
+- 统一图片为 JPEG（1536px/q82）再发送，避免后端对 MIME type 的严格校验导致 400。
+- SVG 图片：在 WebView 侧优先 rasterize 成位图，再进入同一条 JPEG 编码链路。
+- Volcengine Ark：针对 `volces.com/api/v3` 兼容其对 `image_url` base64 格式的差异（部分后端要求 raw base64 而非 data URL）。
+
+---
+
 ## 3. 仍需验证（建议作为验收任务）
 
 这些是“工程上必须用真机/真实网络压力验证”的点：
@@ -122,13 +141,12 @@
 - 为 streaming session 增加更明确的可观测 UI（例如 minimized bar 上的 generating 状态、可停止入口、错误提示）。
 - 增加 1 个关键 widget test：验证 edit+regen 生成分支后切回旧 variant 会恢复旧子树。
 
-### P1：OpenAI-compatible Thinking 的“兜底模式”
+### P1：Thinking 内容策略（当前结论：不做提示词兜底）
 
-背景：很多 OpenAI-compatible 提供方不会返回 `reasoning_content`。
+- 策略：**只展示供应商返回的思考数据**（`reasoning_content` / `reasoning` / Anthropic thinking / Gemini thoughts）。
+- 不做：通过提示词生成“兜底摘要”（避免误导用户、避免泄露/伪造思考内容）。
 
-- 增加可选“thinking summary”模式：
-  - 输出的是短摘要（非 chain-of-thought），安全且可控。
-  - 仍走 `<think>...</think>` 展示。
+> 如果未来确实需要“可控的思考摘要”，建议做成独立字段（例如 `analysis_summary`），并明确标注“摘要/非原始思考”。
 
 ### P1：AI 翻译体验（EPUB/PDF）
 
@@ -152,7 +170,7 @@
 当前策略是典型的“PR 栈 + 集成分支验收”：
 
 - 小分支：每个分支只做一个可 review、可回滚的变更面（降低风险、降低冲突）。
-- 集成分支：`feat/ai-all-in-one` 汇总所有 AI 改动用于真机安装与验收。
+- 集成分支：产品仓库 `main` 汇总所有 AI 改动用于真机安装与验收。
 
 后续建议（工程治理）：
 

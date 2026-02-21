@@ -2,7 +2,7 @@
 
 ## 0. Status
 
-**Implemented (fork).**
+**Implemented (product repo, `main`).**
 
 This doc is no longer just a proposal; it documents the current Provider Center architecture + the remaining planned enhancements.
 
@@ -10,7 +10,7 @@ This doc is no longer just a proposal; it documents the current Provider Center 
 
 ---
 
-## 1. Current State (fork)
+## 1. Current State (product)
 
 ### 1.1 Information architecture
 
@@ -54,6 +54,9 @@ We store **non-secret provider metadata** separately from **secret config**:
   - Anthropic → `claude`
   - Gemini → `gemini`
 
+OpenAI-compatible quirks handled in client:
+- Some providers require different image encoding for `image_url` (e.g. Volcengine Ark expects raw base64 instead of a data URL). The client auto-detects `volces.com/api/v3` and adjusts request format.
+
 ---
 
 ## 2. What users can do
@@ -75,7 +78,7 @@ We store **non-secret provider metadata** separately from **secret config**:
 
 ### 3.2 “Thinking” UX per provider
 
-- OpenAI-compatible: optional “thinking summary” mode when `reasoning_content` is not provided
+- 策略：只展示供应商返回的思考数据；不使用提示词生成兜底 thinking。
 - Gemini: includeThoughts toggle is supported; ensure default ON per preference
 
 ### 3.3 Sync policy extensions

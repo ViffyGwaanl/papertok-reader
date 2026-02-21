@@ -1,8 +1,8 @@
-# Implementation Plan (AI stack on fork)
+# Implementation Plan (AI stack, product repo)
 
-This file tracks what is implemented in the fork and what remains, written as an engineering checklist.
+This file tracks what is implemented in the product repo and what remains, written as an engineering checklist.
 
-> Primary integration branch: `feat/ai-all-in-one`
+> Primary integration branch: `main` (`ViffyGwaanl/papertok-reader`)
 
 ---
 
@@ -42,6 +42,12 @@ This file tracks what is implemented in the fork and what remains, written as an
 
 - [x] Map `reasoning_content` / `reasoning` to Thinking section when provided by backend.
 
+### Multimodal / Image Analysis
+
+- [x] Chat multimodal attachments (images + plain text files; max 4 images)
+- [x] EPUB image analysis (tap image → analyze with multimodal model)
+- [x] SVG rasterize + MIME normalization + Ark base64 image_url compatibility
+
 ---
 
 ## Root-cause fix: provider-managed streaming (DONE)
@@ -63,38 +69,29 @@ This file tracks what is implemented in the fork and what remains, written as an
 
 ### Acceptance criteria
 
-- [ ] Reading page: minimize bottom sheet → generation continues (no interruption)
-- [ ] Close the sheet (not exit reading page) → generation continues
-- [ ] Stop button cancels immediately
-- [ ] No crashes/assertions during rapid minimize/expand
+- [x] Reading page: minimize bottom sheet → generation continues (no interruption)
+- [x] Close the sheet (not exit reading page) → generation continues
+- [x] Stop button cancels immediately
+- [x] No crashes/assertions during rapid minimize/expand
 
 ---
 
 ## Next work (planned)
 
-### A) OpenAI-compatible “thinking” (provider-only)
+### A) iPhone TabBar UX 收敛（产品向）
 
-Background: many OpenAI-compatible providers do not return `reasoning_content`.
+- [ ] 调整浮动 TabBar 参数（高度/底部偏移/模糊/背景），确保不遮挡底部交互区。
+- [ ] 统一 iOS native bar 与非 iOS fallback 的视觉规范（如需要）。
 
-- [ ] Do NOT add prompt-based thinking fallback. If provider returns nothing, show nothing.
-- [ ] Ensure `reasoning_content`/`reasoning` is preserved end-to-end and rendered as Thinking.
-- [ ] thinkingMode=off: do not request reasoning; but if backend still returns reasoning_content, display it.
-- [ ] Add unit tests for streaming parsing (metadata reasoning_content/reasoning).
-- [ ] Update docs: `ai_thinking_openai_provider_only_zh.md`
+### B) 多模态与图片解析 QA
 
-### B) Provider Center stability / iPad navigation
+- [ ] 增加 1 个 widget/unit test：覆盖 image_url 编码策略（data URL vs raw base64）。
+- [ ] 真机验证 SVG 解析、Ark/自建网关兼容性与错误提示。
 
-- [ ] Re-test `_dependents.isEmpty` assertion under rapid navigation
-- [ ] Remove any remaining redundant `Prefs().initPrefs()` patterns if still present
+### C) 发布链路与文档
 
-### C) Conversation tree v2 test hardening
-
-- [ ] Add widget test: edit+regen creates branch, then switch variant back and assert previous subtree restores
-
-### D) iOS install / TestFlight polish
-
-- [ ] Add a short “install checklist” section to docs for common signing/entitlements issues
-- [ ] Capture known Xcode error signatures and fixes
+- [ ] 完善 iOS 构建常见错误的排查（例如 Xcode Components 缺失导致 `iOS XX.X is not installed`）。
+- [ ] 维护 docs 与当前实现一致（尤其是 Settings 入口与同步/备份策略）。
 
 ---
 

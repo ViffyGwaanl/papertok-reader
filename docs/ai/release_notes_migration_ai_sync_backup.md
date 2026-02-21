@@ -1,6 +1,6 @@
 # Release Notes / Migration Notes — AI sync, backup, Provider Center, streaming
 
-This note summarizes user-visible behavior changes introduced by the AI stack on the fork (`feat/ai-all-in-one`).
+This note summarizes user-visible behavior changes introduced by the AI/translation stack in the product repo (`papertok-reader:main`).
 
 ---
 
@@ -10,6 +10,7 @@ This note summarizes user-visible behavior changes introduced by the AI stack on
 
 - AI configuration (provider list + url/model/prompts/UI prefs) can be synced via WebDAV.
 - Reduces repetitive setup across devices.
+- WebDAV remote root is **`paper_reader/`** (legacy fallback: `anx/`).
 
 ### Security policy
 
@@ -69,6 +70,20 @@ This note summarizes user-visible behavior changes introduced by the AI stack on
 
 - Gemini: optional includeThoughts to display Thinking section.
 - OpenAI-compatible: if backend returns `reasoning_content`/`reasoning`, it is displayed as Thinking content.
+
+---
+
+## 6) Multimodal attachments + EPUB image analysis
+
+### What users get
+
+- Chat attachments (v1): images + plain text files.
+- EPUB image analysis: tap an image → analyze with a multimodal model + surrounding context.
+- Image analysis can use a dedicated provider/model (separate from chat/translation).
+
+### Privacy / sync policy
+
+- Attachments are **not synced** and **not included in backup**.
 
 ---
 

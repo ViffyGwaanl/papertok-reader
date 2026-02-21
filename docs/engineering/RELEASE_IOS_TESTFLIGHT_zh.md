@@ -205,6 +205,15 @@ flutter build ios --release --no-codesign
 - 看 App Store Connect 的 Build 详情警告
 - 看 Apple 邮件通知
 
+### 4.5 构建时报 “iOS XX.X is not installed”
+
+如果 `flutter build ios` / Xcode Archive 报类似：
+
+- `iOS 26.x is not installed. Please download and install the platform from Xcode > Settings > Components.`
+
+说明当前 Xcode 缺少对应 iOS Platform 组件。
+请在 **Xcode → Settings → Components** 安装后重试。
+
 ---
 
 ## 5. 未来可能要做的发布准备（与 Bundle ID 相关）

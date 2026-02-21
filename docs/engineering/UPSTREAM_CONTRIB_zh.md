@@ -2,6 +2,8 @@
 
 本文档说明如何把 papertok-reader 中的 **AI + 翻译** 通用能力贡献到上游：`Anxcye/anx-reader`（base 分支：`develop`）。
 
+> 当前状态：产品交付阶段 **不要求上游 PR**。本指南作为“未来可选项”保留。
+
 ## 1. 上游/分支
 - Upstream：`Anxcye/anx-reader`
 - Base：`develop`
