@@ -27,6 +27,7 @@ import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/home/icon_only_native_tab_bar.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
 import 'package:flutter/cupertino.dart';
 // import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
@@ -297,15 +298,19 @@ class _HomePageState extends ConsumerState<HomePage> {
             return defaultTargetPlatform == TargetPlatform.iOS;
           }
 
-          final tabBarHeight = useCupertinoNativeTabBar() ? 76.0 : 64.0;
+          final tabBarHeight = useCupertinoNativeTabBar() ? 64.0 : 58.0;
           // Visual lift above the very bottom edge.
-          const tabBarBottomPadding = 4.0;
+          const tabBarBottomPadding = 2.0;
 
-          // Content should extend behind the floating tab bar. Pages that have
-          // bottom interactive UI (e.g. chat input) should add their own
-          // internal padding.
-          final contentBottomInset =
-              showTabBar ? (tabBarHeight + tabBarBottomPadding) : 0.0;
+          // Content should extend behind the floating tab bar.
+          //
+          // Since the bar is placed into the bottom safe-area region, the part
+          // that overlaps the system home-indicator area doesn't need extra
+          // avoidance padding from pages.
+          final contentBottomInset = showTabBar
+              ? (tabBarHeight + tabBarBottomPadding - bottomInset)
+                  .clamp(0.0, 999.0)
+              : 0.0;
 
           String symbolForId(String id) {
             switch (id) {
@@ -349,7 +354,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ],
                   ),
-                  // Custom tab row: every segment is fully tappable.
+                  // Icon-only tab row: every segment is fully tappable.
                   child: Material(
                     color: Colors.transparent,
                     child: Row(
@@ -373,28 +378,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                               child: SizedBox(
                                 height: tabBarHeight,
                                 width: double.infinity,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      item['icon'] as IconData,
-                                      color: color,
-                                      size: 22,
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      item['label'] as String,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: color,
-                                        fontWeight: selected
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ],
+                                child: Center(
+                                  child: Icon(
+                                    item['icon'] as IconData,
+                                    color: color,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
                             ),
@@ -409,22 +398,17 @@ class _HomePageState extends ConsumerState<HomePage> {
           }
 
           Widget buildCupertinoNativeTabBar() {
-            return SizedBox(
+            return IconOnlyNativeTabBar(
               height: tabBarHeight,
-              child: CNTabBar(
-                items: [
-                  for (final item in navBarItems)
-                    CNTabBarItem(
-                      label: item['label'] as String,
-                      icon: CNSymbol(
-                        symbolForId(item['identifier'] as String),
-                        size: 19,
-                      ),
-                    ),
-                ],
-                currentIndex: currentIndex,
-                onTap: (i) => onBottomTap(i, false),
-              ),
+              items: [
+                for (final item in navBarItems)
+                  CNSymbol(
+                    symbolForId(item['identifier'] as String),
+                    size: 20,
+                  ),
+              ],
+              currentIndex: currentIndex,
+              onTap: (i) => onBottomTap(i, false),
             );
           }
 
@@ -453,9 +437,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    // Move the floating tab bar closer to the bottom edge.
-                    // SafeArea inside [buildTabBar] would otherwise push it up
-                    // by the iOS home indicator inset.
+                    // Place the bar into the bottom safe-area region to reduce
+                    // content obstruction.
                     bottom: -bottomInset,
                     child: buildTabBar(),
                   ),
