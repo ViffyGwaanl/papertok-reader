@@ -63,12 +63,18 @@ class LangchainAiConfig {
         break;
     }
 
+    final url = (baseUrl ?? '').toLowerCase();
+    final imageUrlFormat = url.contains('volces.com/api/v3')
+        ? OpenAiImageUrlFormat.rawBase64
+        : OpenAiImageUrlFormat.dataUrl;
+
     return ChatOpenAIOptions(
       model: model.isEmpty ? null : model,
       reasoningEffort: effort,
       temperature: temperature,
       topP: topP,
       maxTokens: maxTokens,
+      imageUrlFormat: imageUrlFormat,
     );
   }
 

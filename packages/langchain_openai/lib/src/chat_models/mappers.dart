@@ -16,7 +16,11 @@ CreateChatCompletionRequest createChatCompletionRequest(
   required final ChatOpenAIOptions defaultOptions,
   final bool stream = false,
 }) {
-  final messagesDtos = messages.toChatCompletionMessages();
+  final imageUrlFormat =
+      options?.imageUrlFormat ?? defaultOptions.imageUrlFormat;
+  final messagesDtos = messages.toChatCompletionMessages(
+    imageUrlFormat: imageUrlFormat,
+  );
   final toolsDtos = (options?.tools ?? defaultOptions.tools)
       ?.toChatCompletionTool();
   final toolChoice = (options?.toolChoice ?? defaultOptions.toolChoice)
@@ -66,14 +70,21 @@ CreateChatCompletionRequest createChatCompletionRequest(
 }
 
 extension ChatMessageListMapper on List<ChatMessage> {
-  List<ChatCompletionMessage> toChatCompletionMessages() {
-    return map(_mapMessage).toList(growable: false);
+  List<ChatCompletionMessage> toChatCompletionMessages({
+    final OpenAiImageUrlFormat imageUrlFormat = OpenAiImageUrlFormat.dataUrl,
+  }) {
+    return map(
+      (msg) => _mapMessage(msg, imageUrlFormat),
+    ).toList(growable: false);
   }
 
-  ChatCompletionMessage _mapMessage(final ChatMessage msg) {
+  ChatCompletionMessage _mapMessage(
+    final ChatMessage msg,
+    final OpenAiImageUrlFormat imageUrlFormat,
+  ) {
     return switch (msg) {
       final SystemChatMessage msg => _mapSystemMessage(msg),
-      final HumanChatMessage msg => _mapHumanMessage(msg),
+      final HumanChatMessage msg => _mapHumanMessage(msg, imageUrlFormat),
       final AIChatMessage msg => _mapAIMessage(msg),
       final ToolChatMessage msg => _mapToolMessage(msg),
       CustomChatMessage() => throw UnsupportedError(
@@ -90,15 +101,19 @@ extension ChatMessageListMapper on List<ChatMessage> {
 
   ChatCompletionMessage _mapHumanMessage(
     final HumanChatMessage humanChatMessage,
+    final OpenAiImageUrlFormat imageUrlFormat,
   ) {
     return ChatCompletionMessage.user(
       content: switch (humanChatMessage.content) {
         final ChatMessageContentText c => _mapMessageContentString(c),
         final ChatMessageContentImage c =>
           ChatCompletionUserMessageContent.parts([
-            _mapMessageContentPartImage(c),
+            _mapMessageContentPartImage(c, imageUrlFormat),
           ]),
-        final ChatMessageContentMultiModal c => _mapMessageContentPart(c),
+        final ChatMessageContentMultiModal c => _mapMessageContentPart(
+          c,
+          imageUrlFormat,
+        ),
       },
     );
   }
@@ -124,8 +139,9 @@ extension ChatMessageListMapper on List<ChatMessage> {
 
   ChatCompletionMessageContentPartImage _mapMessageContentPartImage(
     final ChatMessageContentImage c,
+    final OpenAiImageUrlFormat imageUrlFormat,
   ) {
-    final imageData = c.data.trim();
+    final imageData = c.data.replaceAll(RegExp(r'\s'), '').trim();
     final isUrl = imageData.startsWith('http');
     String url;
     if (isUrl) {
@@ -137,8 +153,18 @@ extension ChatMessageListMapper on List<ChatMessage> {
           'ChatMessageContentImage.mimeType',
         );
       }
-      final mimeType = _normalizeOpenAiImageMimeType(c.mimeType!);
-      url = 'data:$mimeType;base64,$imageData';
+
+      switch (imageUrlFormat) {
+        case OpenAiImageUrlFormat.dataUrl:
+          final mimeType = _normalizeOpenAiImageMimeType(c.mimeType!);
+          url = 'data:$mimeType;base64,$imageData';
+          break;
+        case OpenAiImageUrlFormat.rawBase64:
+          // Some OpenAI-compatible providers (e.g. Volcengine Ark) expect the
+          // raw base64 string here instead of a data URL.
+          url = imageData;
+          break;
+      }
     }
 
     return ChatCompletionMessageContentPartImage(
@@ -158,6 +184,7 @@ extension ChatMessageListMapper on List<ChatMessage> {
 
   ChatCompletionMessageContentParts _mapMessageContentPart(
     final ChatMessageContentMultiModal c,
+    final OpenAiImageUrlFormat imageUrlFormat,
   ) {
     final partsList = c.parts
         .map(
@@ -166,10 +193,11 @@ extension ChatMessageListMapper on List<ChatMessage> {
               ChatCompletionMessageContentPartText(text: c.text),
             ],
             final ChatMessageContentImage img => [
-              _mapMessageContentPartImage(img),
+              _mapMessageContentPartImage(img, imageUrlFormat),
             ],
             final ChatMessageContentMultiModal c => _mapMessageContentPart(
               c,
+              imageUrlFormat,
             ).value,
           },
         )

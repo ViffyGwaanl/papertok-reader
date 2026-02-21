@@ -985,12 +985,44 @@ class Reader {
 
       const blobUrl = imgEl.src
       const blob = await fetch(blobUrl).then(r => r.blob())
-      const dataUrl = await new Promise((resolve, reject) => {
+      let dataUrl = await new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onloadend = () => resolve(reader.result)
         reader.onerror = reject
         reader.readAsDataURL(blob)
       })
+
+      // SVG images are not supported by most OpenAI-compatible vision backends.
+      // Try to rasterize them to a PNG data URL so Flutter can decode and we can
+      // re-encode to JPEG before sending.
+      try {
+        const mime = (blob.type || '').toLowerCase()
+        const header = (typeof dataUrl === 'string' ? dataUrl : '').split(',')[0]
+        const isSvg = mime.includes('svg') || header.startsWith('data:image/svg')
+        if (isSvg && typeof dataUrl === 'string') {
+          const fallbackW = imgEl.naturalWidth || imgEl.width || imgEl.clientWidth || 1024
+          const fallbackH = imgEl.naturalHeight || imgEl.height || imgEl.clientHeight || 1024
+
+          dataUrl = await new Promise((resolve, reject) => {
+            const raster = new Image()
+            raster.onload = () => {
+              const w = raster.naturalWidth || fallbackW
+              const h = raster.naturalHeight || fallbackH
+              const canvas = document.createElement('canvas')
+              canvas.width = Math.max(1, w)
+              canvas.height = Math.max(1, h)
+              const ctx = canvas.getContext('2d')
+              if (!ctx) return reject(new Error('canvas context unavailable'))
+              ctx.drawImage(raster, 0, 0, canvas.width, canvas.height)
+              resolve(canvas.toDataURL('image/png'))
+            }
+            raster.onerror = reject
+            raster.src = dataUrl
+          })
+        }
+      } catch (err) {
+        console.warn('Failed to rasterize SVG image:', err)
+      }
 
       const alt = imgEl.getAttribute('alt') ?? ''
       const title = imgEl.getAttribute('title') ?? ''

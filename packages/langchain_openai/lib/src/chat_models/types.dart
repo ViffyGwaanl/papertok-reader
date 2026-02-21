@@ -75,6 +75,15 @@ import 'package:meta/meta.dart';
 /// Mind that the list may be outdated.
 /// See https://platform.openai.com/docs/models for the latest list.
 /// {@endtemplate}
+enum OpenAiImageUrlFormat {
+  /// Standard OpenAI format: a data URL like `data:image/png;base64,<...>`.
+  dataUrl,
+
+  /// Put the raw base64 string into `image_url.url` (some OpenAI-compatible
+  /// backends require this).
+  rawBase64,
+}
+
 @immutable
 class ChatOpenAIOptions extends ChatModelOptions {
   /// {@macro chat_openai_options}
@@ -101,6 +110,7 @@ class ChatOpenAIOptions extends ChatModelOptions {
     this.serviceTier,
     this.user,
     this.verbosity,
+    this.imageUrlFormat = OpenAiImageUrlFormat.dataUrl,
     super.concurrencyLimit,
   });
 
@@ -228,6 +238,9 @@ class ChatOpenAIOptions extends ChatModelOptions {
   /// See https://platform.openai.com/docs/api-reference/chat/create#chat-create-verbosity
   final ChatOpenAIVerbosity? verbosity;
 
+  /// How to encode images in `image_url.url`.
+  final OpenAiImageUrlFormat imageUrlFormat;
+
   @override
   ChatOpenAIOptions copyWith({
     final String? model,
@@ -252,6 +265,7 @@ class ChatOpenAIOptions extends ChatModelOptions {
     final ChatOpenAIServiceTier? serviceTier,
     final String? user,
     final ChatOpenAIVerbosity? verbosity,
+    final OpenAiImageUrlFormat? imageUrlFormat,
     final int? concurrencyLimit,
   }) {
     return ChatOpenAIOptions(
@@ -277,6 +291,7 @@ class ChatOpenAIOptions extends ChatModelOptions {
       serviceTier: serviceTier ?? this.serviceTier,
       user: user ?? this.user,
       verbosity: verbosity ?? this.verbosity,
+      imageUrlFormat: imageUrlFormat ?? this.imageUrlFormat,
       concurrencyLimit: concurrencyLimit ?? this.concurrencyLimit,
     );
   }
@@ -306,6 +321,7 @@ class ChatOpenAIOptions extends ChatModelOptions {
       serviceTier: other?.serviceTier,
       user: other?.user,
       verbosity: other?.verbosity,
+      imageUrlFormat: other?.imageUrlFormat,
       concurrencyLimit: other?.concurrencyLimit,
     );
   }
@@ -342,6 +358,7 @@ class ChatOpenAIOptions extends ChatModelOptions {
             serviceTier == other.serviceTier &&
             user == other.user &&
             verbosity == other.verbosity &&
+            imageUrlFormat == other.imageUrlFormat &&
             concurrencyLimit == other.concurrencyLimit;
   }
 
@@ -369,6 +386,7 @@ class ChatOpenAIOptions extends ChatModelOptions {
         serviceTier.hashCode ^
         user.hashCode ^
         verbosity.hashCode ^
+        imageUrlFormat.hashCode ^
         concurrencyLimit.hashCode;
   }
 }
