@@ -2,11 +2,17 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/main.dart';
+import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:flutter/material.dart';
 import 'package:langchain/langchain.dart';
 
 class CancelableLangchainRunner {
   static const String thinkTag = '<think/>';
+  static const Duration _toolApprovalTimeout = Duration(minutes: 2);
+
   StreamSubscription<ChatResult>? _subscription;
 
   bool get _aiDebugEnabled {
@@ -26,6 +32,108 @@ class CancelableLangchainRunner {
   void cancel() {
     _subscription?.cancel();
     _subscription = null;
+  }
+
+  Future<bool> _requestToolApproval({
+    required String toolName,
+    required Map<String, dynamic> toolInput,
+  }) async {
+    final context = navigatorKey.currentContext;
+    if (context == null) {
+      AnxLog.warning(
+        'AiToolApproval: No UI context available; denying tool execution for $toolName',
+      );
+      return false;
+    }
+
+    final l10n = L10n.of(context);
+    final def = AiToolRegistry.byId(toolName);
+    final displayName = def?.displayNameOrDefault(l10n) ?? toolName;
+    final description = def?.descriptionOrDefault(l10n) ?? '';
+
+    final inputPretty = const JsonEncoder.withIndent('  ').convert(toolInput);
+
+    final nav = navigatorKey.currentState;
+    Timer? timeoutTimer;
+
+    try {
+      timeoutTimer = Timer(_toolApprovalTimeout, () {
+        try {
+          if (nav != null && nav.mounted && nav.canPop()) {
+            nav.pop(false);
+          }
+        } catch (_) {
+          // ignore
+        }
+      });
+
+      final approved = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              return AlertDialog(
+                title: Text(l10n.aiToolApprovalTitle),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${l10n.aiToolApprovalToolLabel}: $displayName',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      if (description.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          '${l10n.aiToolApprovalDescriptionLabel}:\n$description',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.aiToolApprovalInputLabel,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          inputPretty,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(fontFamily: 'monospace'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(l10n.aiToolApprovalDeny),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: Text(l10n.aiToolApprovalApprove),
+                  ),
+                ],
+              );
+            },
+          ) ??
+          false;
+
+      return approved;
+    } finally {
+      timeoutTimer?.cancel();
+    }
   }
 
   Stream<String> stream({
@@ -337,6 +445,33 @@ class CancelableLangchainRunner {
               } catch (e) {
                 message = 'Invalid tool input: $e';
               }
+              final requiresApproval =
+                  AiToolRegistry.byId(agentAction.tool)?.requiresApproval ??
+                      false;
+
+              if (requiresApproval) {
+                final approved = await _requestToolApproval(
+                  toolName: agentAction.tool,
+                  toolInput: inputJson,
+                );
+
+                if (!approved) {
+                  const denied = 'Error: denied_by_user';
+                  toolStep.status = ToolStepStatus.failed;
+                  toolStep.error = denied;
+                  toolStep.output = denied;
+                  toolStep.observation = denied;
+                  emit();
+                  steps.add(
+                    AgentStep(
+                      action: agentAction,
+                      observation: denied,
+                    ),
+                  );
+                  continue;
+                }
+              }
+
               final observation = message == null
                   ? await tool.invoke(toolInput)
                   : 'Error: $message';

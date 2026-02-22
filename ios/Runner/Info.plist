@@ -50,12 +50,20 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-		<string>We need access to your photo library to save images.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-		<string>We need access to your photo library to save images.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Paper Reader needs full calendar access to view and create events.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Paper Reader needs calendar access to view and create events.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Paper Reader needs write-only calendar access to add events.</string>
 	<key>NSCameraUsageDescription</key>
-		<string>Need camera access to capture images for analysis.</string>
+	<string>Need camera access to capture images for analysis.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need access to your photo library to save images.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library to save images.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Paper Reader needs reminders access to create reminders.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

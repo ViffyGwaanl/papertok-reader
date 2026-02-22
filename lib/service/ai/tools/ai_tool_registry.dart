@@ -6,6 +6,9 @@ import 'package:anx_reader/service/ai/tools/books_tags_list_tool.dart';
 import 'package:anx_reader/service/ai/tools/bookshelf_lookup_tool.dart';
 import 'package:anx_reader/service/ai/tools/bookshelf_organize_tool.dart';
 import 'package:anx_reader/service/ai/tools/calculator_tool.dart';
+import 'package:anx_reader/service/ai/tools/calendar_create_event_tool.dart';
+import 'package:anx_reader/service/ai/tools/calendar_list_calendars_tool.dart';
+import 'package:anx_reader/service/ai/tools/calendar_list_events_tool.dart';
 import 'package:anx_reader/service/ai/tools/chapter_content_by_href_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_book_toc_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_chapter_content_tool.dart';
@@ -14,6 +17,8 @@ import 'package:anx_reader/service/ai/tools/current_time_tool.dart';
 import 'package:anx_reader/service/ai/tools/fetch_url_tool.dart';
 import 'package:anx_reader/service/ai/tools/mindmap_tool.dart';
 import 'package:anx_reader/service/ai/tools/notes_search_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_create_tool.dart';
+import 'package:anx_reader/service/ai/tools/shortcuts_run_tool.dart';
 import 'package:anx_reader/service/ai/tools/reading_history_tool.dart';
 import 'package:anx_reader/service/ai/tools/tags_list_tool.dart';
 import 'package:anx_reader/service/ai/tools/repository/book_content_search_repository.dart';
@@ -49,12 +54,19 @@ class AiToolDefinition {
     required this.displayNameBuilder,
     required this.descriptionBuilder,
     required this.build,
+    this.requiresApproval = false,
   });
 
   final String id;
   final String Function(L10n l10n) displayNameBuilder;
   final String Function(L10n l10n) descriptionBuilder;
   final Tool Function(AiToolContext context) build;
+
+  /// Whether this tool requires explicit human approval before each execution.
+  ///
+  /// Use this for write/destructive operations (e.g., creating calendar events,
+  /// writing reminders, triggering system actions).
+  final bool requiresApproval;
 
   String displayName(L10n l10n) => displayNameBuilder(l10n);
 
@@ -72,6 +84,11 @@ class AiToolRegistry {
     calculatorToolDefinition,
     currentTimeToolDefinition,
     fetchUrlToolDefinition,
+    calendarListCalendarsToolDefinition,
+    calendarListEventsToolDefinition,
+    calendarCreateEventToolDefinition,
+    remindersCreateToolDefinition,
+    shortcutsRunToolDefinition,
     mindmapToolDefinition,
     bookContentSearchToolDefinition,
     bookshelfLookupToolDefinition,
