@@ -183,6 +183,7 @@
   "commonOk": "OK",
   "commonSuccess": "Success",
   "commonFailed": "Failed",
+  "commonInvalid": "Invalid input",
   "commonUploading": "Uploading",
   "commonDownloading": "Downloading",
   "commonCopy": "Copy",
@@ -729,6 +730,30 @@
   "settingsAiToolApprovalPolicyNeverDesc": "Do not ask for confirmation (not recommended).",
   "settingsAiToolForceConfirmDestructive": "Always confirm high-risk tools",
   "settingsAiToolForceConfirmDestructiveDesc": "Even if confirmation is disabled, still ask for approval when a tool is high-risk.",
+  "settingsMcpServers": "MCP Servers",
+  "settingsMcpServersDesc": "Manage external MCP (Streamable HTTP) tool servers. Secrets are stored locally.",
+  "settingsMcpAddServer": "Add MCP server",
+  "settingsMcpAddServerDesc": "Add a Streamable HTTP MCP endpoint.",
+  "settingsMcpEditServer": "Edit MCP server",
+  "settingsMcpServerName": "Name",
+  "settingsMcpServerEndpoint": "Endpoint",
+  "settingsMcpServerHeaders": "Headers (local only)",
+  "settingsMcpServerHeadersDesc": "Optional request headers for this server (local only; not synced). Use JSON object format.",
+  "settingsMcpRefreshTools": "Refresh tools",
+  "settingsMcpToolsTitle": "Tools — {serverName}",
+  "@settingsMcpToolsTitle": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "settingsMcpDeleteServer": "Delete MCP server",
+  "settingsMcpDeleteConfirm": "Delete \"{serverName}\"? This will also clear local secrets and tool cache.",
+  "@settingsMcpDeleteConfirm": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "settingsMcpEmpty": "No MCP servers yet.",
   "aiToolRiskReadOnly": "Read-only",
   "aiToolRiskWrite": "Write",
   "aiToolRiskDestructive": "High risk",

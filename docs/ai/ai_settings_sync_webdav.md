@@ -35,8 +35,12 @@ We want AI-related configuration to be **portable across devices**, but with str
 - Prompt templates (`ai_prompts` overrides)
 - User custom prompts
 - Input quick prompts
-- Enabled AI tool ids (non-secret):
+- Enabled AI tools (non-secret):
   - `enabledIds`: list of tool ids enabled in "Settings → AI Tools"
+  - `approvalPolicy`: always | writesOnly | never
+  - `forceConfirmDestructive`: boolean (recommended true)
+- MCP servers (non-secret):
+  - `mcp.servers`: list of MCP server metas (id/name/endpoint/enabled); **secrets/headers not synced**
 - AI translation prefs (safe, no secrets):
   - translation-dedicated provider id + model override
   - inline full-text translation concurrency
@@ -82,7 +86,19 @@ We want AI-related configuration to be **portable across devices**, but with str
     {"id": "...", "label": "...", "prompt": "...", "enabled": true, "order": 0}
   ],
   "tools": {
-    "enabledIds": ["calculator", "current_time"]
+    "enabledIds": ["calculator", "current_time"],
+    "approvalPolicy": "always",
+    "forceConfirmDestructive": true
+  },
+  "mcp": {
+    "servers": [
+      {
+        "id": "<uuid>",
+        "name": "My MCP",
+        "endpoint": "https://example.com/mcp",
+        "enabled": true
+      }
+    ]
   },
   "ui": {
     "aiPadPanelMode": "dock",

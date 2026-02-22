@@ -3,6 +3,8 @@ import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
 import 'package:anx_reader/enums/ai_tool_risk_level.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:anx_reader/page/settings_page/mcp_servers.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
@@ -112,6 +114,21 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
         },
         title: Text(l10n.settingsAiToolForceConfirmDestructive),
         description: Text(l10n.settingsAiToolForceConfirmDestructiveDesc),
+      ),
+      SettingsTile.navigation(
+        title: Text(l10n.settingsMcpServers),
+        description: Text(l10n.settingsMcpServersDesc),
+        onPressed: (_) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SettingsSubpageScaffold(
+                title: l10n.settingsMcpServers,
+                child: const McpServersSettingsPage(),
+              ),
+            ),
+          );
+        },
       ),
     ];
 

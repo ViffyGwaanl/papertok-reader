@@ -183,6 +183,7 @@
   "commonOk": "好",
   "commonSuccess": "成功",
   "commonFailed": "失败",
+  "commonInvalid": "输入无效",
   "commonUploading": "上传中",
   "commonDownloading": "下载中",
   "commonCopy": "复制",
@@ -729,6 +730,30 @@
   "settingsAiToolApprovalPolicyNeverDesc": "不再弹出确认（不推荐）。",
   "settingsAiToolForceConfirmDestructive": "高风险工具始终需要确认",
   "settingsAiToolForceConfirmDestructiveDesc": "即使关闭确认，也会对高风险工具弹出确认。",
+  "settingsMcpServers": "MCP 服务器",
+  "settingsMcpServersDesc": "管理外部 MCP（Streamable HTTP）工具服务器。密钥/Headers 仅保存在本地。",
+  "settingsMcpAddServer": "添加 MCP 服务器",
+  "settingsMcpAddServerDesc": "添加一个 Streamable HTTP MCP endpoint。",
+  "settingsMcpEditServer": "编辑 MCP 服务器",
+  "settingsMcpServerName": "名称",
+  "settingsMcpServerEndpoint": "Endpoint",
+  "settingsMcpServerHeaders": "请求头（仅本地）",
+  "settingsMcpServerHeadersDesc": "可选：为该服务器设置请求头（仅本地，不会同步）。请使用 JSON 对象格式。",
+  "settingsMcpRefreshTools": "刷新工具列表",
+  "settingsMcpToolsTitle": "工具列表 — {serverName}",
+  "@settingsMcpToolsTitle": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "settingsMcpDeleteServer": "删除 MCP 服务器",
+  "settingsMcpDeleteConfirm": "确定删除「{serverName}」吗？同时会清理本地密钥与工具缓存。",
+  "@settingsMcpDeleteConfirm": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "settingsMcpEmpty": "还没有添加 MCP 服务器。",
   "aiToolRiskReadOnly": "只读",
   "aiToolRiskWrite": "写入",
   "aiToolRiskDestructive": "高风险",
