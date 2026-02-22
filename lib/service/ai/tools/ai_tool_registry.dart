@@ -11,6 +11,7 @@ import 'package:anx_reader/service/ai/tools/current_book_toc_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_chapter_content_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_reading_metadata_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_time_tool.dart';
+import 'package:anx_reader/service/ai/tools/fetch_url_tool.dart';
 import 'package:anx_reader/service/ai/tools/mindmap_tool.dart';
 import 'package:anx_reader/service/ai/tools/notes_search_tool.dart';
 import 'package:anx_reader/service/ai/tools/reading_history_tool.dart';
@@ -70,6 +71,7 @@ class AiToolRegistry {
   static final List<AiToolDefinition> _definitions = [
     calculatorToolDefinition,
     currentTimeToolDefinition,
+    fetchUrlToolDefinition,
     mindmapToolDefinition,
     bookContentSearchToolDefinition,
     bookshelfLookupToolDefinition,

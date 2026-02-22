@@ -722,6 +722,8 @@
   "aiToolCalculatorDescription": "在需要数值结果时计算算术表达式。",
   "aiToolCurrentTimeName": "当前时间",
   "aiToolCurrentTimeDescription": "获取设备当前时间，用于回复中的时间戳。",
+  "aiToolFetchUrlName": "抓取链接",
+  "aiToolFetchUrlDescription": "抓取 HTTP/HTTPS 链接内容并返回截断预览（文本/HTML/JSON）。",
   "aiToolMindmapName": "思维导图",
   "aiToolMindmapDescription": "将分层的项目符号列表转换为思维导图使用的 JSON。",
   "aiToolBookContentSearchName": "书内搜索",

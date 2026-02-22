@@ -722,6 +722,8 @@
   "aiToolCalculatorDescription": "Evaluate arithmetic expressions when you need a numeric answer.",
   "aiToolCurrentTimeName": "Current Time",
   "aiToolCurrentTimeDescription": "Retrieve the device current time to reference timestamps in replies.",
+  "aiToolFetchUrlName": "Fetch URL",
+  "aiToolFetchUrlDescription": "Fetch remote HTTP/HTTPS content and return a truncated preview (text/html/json).",
   "aiToolMindmapName": "Mindmap",
   "aiToolMindmapDescription": "Transform a hierarchical bullet outline into the JSON used for mind maps.",
   "aiToolBookContentSearchName": "Book Content Search",
