@@ -159,15 +159,33 @@ class Server {
   }
 
   shelf.Response _handleBookRequest(shelf.Request request) {
-    final bookPath = Uri.decodeComponent(request.url.path.substring(5));
-    final file = File(bookPath);
-    AnxLog.info('Server: Request for book: $bookPath');
+    final bookPathRaw = Uri.decodeComponent(request.url.path.substring(5));
+
+    // Phase A mitigation: prevent path traversal / arbitrary file reads.
+    // Only allow serving files under the app-managed books directory.
+    final baseDir = path.canonicalize(getFileDir().path);
+    final baseDirWithSep = baseDir.endsWith(path.separator)
+        ? baseDir
+        : '$baseDir${path.separator}';
+
+    final resolvedPath = path.canonicalize(bookPathRaw);
+
+    if (!resolvedPath.startsWith(baseDirWithSep)) {
+      AnxLog.warning(
+        'Server: Forbidden book path: raw="$bookPathRaw" resolved="$resolvedPath" base="$baseDir"',
+      );
+      return shelf.Response.forbidden('Access denied');
+    }
+
+    final file = File(resolvedPath);
+    AnxLog.info('Server: Request for book: $resolvedPath');
     if (!file.existsSync()) {
       return shelf.Response.notFound('Book not found');
     }
+
+    // Note: CORS is not required for our same-origin loopback setup.
     final headers = {
       'Content-Type': 'application/epub+zip',
-      'Access-Control-Allow-Origin': '*',
     };
     return shelf.Response.ok(file.openRead(), headers: headers);
   }
