@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anx_reader/enums/ai_tool_risk_level.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
@@ -147,6 +148,6 @@ final AiToolDefinition calendarCreateEventToolDefinition = AiToolDefinition(
   id: 'calendar_create_event',
   displayNameBuilder: (L10n l10n) => l10n.aiToolCalendarCreateEventName,
   descriptionBuilder: (L10n l10n) => l10n.aiToolCalendarCreateEventDescription,
-  requiresApproval: true,
+  riskLevel: AiToolRiskLevel.write,
   build: (context) => CalendarCreateEventTool().tool,
 );

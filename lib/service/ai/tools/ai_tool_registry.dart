@@ -1,3 +1,4 @@
+import 'package:anx_reader/enums/ai_tool_risk_level.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/ai/tools/apply_book_tags_tool.dart';
@@ -48,13 +49,15 @@ class AiToolContext {
   bool get isReading => ref.read(currentReadingProvider).isReading;
 }
 
+/// AiToolRiskLevel is defined in lib/enums/ai_tool_risk_level.dart.
+
 class AiToolDefinition {
   const AiToolDefinition({
     required this.id,
     required this.displayNameBuilder,
     required this.descriptionBuilder,
     required this.build,
-    this.requiresApproval = false,
+    this.riskLevel = AiToolRiskLevel.readOnly,
   });
 
   final String id;
@@ -62,11 +65,8 @@ class AiToolDefinition {
   final String Function(L10n l10n) descriptionBuilder;
   final Tool Function(AiToolContext context) build;
 
-  /// Whether this tool requires explicit human approval before each execution.
-  ///
-  /// Use this for write/destructive operations (e.g., creating calendar events,
-  /// writing reminders, triggering system actions).
-  final bool requiresApproval;
+  /// Tool risk level for approval decisions.
+  final AiToolRiskLevel riskLevel;
 
   String displayName(L10n l10n) => displayNameBuilder(l10n);
 

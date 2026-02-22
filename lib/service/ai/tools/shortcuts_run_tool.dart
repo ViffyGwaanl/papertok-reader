@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anx_reader/enums/ai_tool_risk_level.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
@@ -89,6 +90,6 @@ final AiToolDefinition shortcutsRunToolDefinition = AiToolDefinition(
   id: 'shortcuts_run',
   displayNameBuilder: (L10n l10n) => l10n.aiToolShortcutsRunName,
   descriptionBuilder: (L10n l10n) => l10n.aiToolShortcutsRunDescription,
-  requiresApproval: true,
+  riskLevel: AiToolRiskLevel.destructive,
   build: (context) => ShortcutsRunTool().tool,
 );

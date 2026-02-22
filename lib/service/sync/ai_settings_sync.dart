@@ -5,6 +5,7 @@ import 'package:anx_reader/enums/ai_dock_side.dart';
 import 'package:anx_reader/enums/ai_pad_panel_mode.dart';
 import 'package:anx_reader/enums/ai_panel_position.dart';
 import 'package:anx_reader/enums/ai_prompts.dart';
+import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
 import 'package:anx_reader/models/ai_input_quick_prompt.dart';
 import 'package:anx_reader/models/user_prompt.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
@@ -72,6 +73,8 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
 
   final tools = <String, dynamic>{
     'enabledIds': prefs.enabledAiToolIds,
+    'approvalPolicy': prefs.aiToolApprovalPolicy.code,
+    'forceConfirmDestructive': prefs.aiToolForceConfirmDestructive,
   };
 
   return {
@@ -186,6 +189,21 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
       if (enabled is List) {
         prefs.enabledAiToolIds =
             enabled.map((e) => e.toString()).toList(growable: false);
+      }
+
+      final policy = tools['approvalPolicy']?.toString();
+      if (policy != null) {
+        prefs.aiToolApprovalPolicy = AiToolApprovalPolicy.fromCode(policy);
+      }
+
+      final force = tools['forceConfirmDestructive'];
+      if (force is bool) {
+        prefs.aiToolForceConfirmDestructive = force;
+      } else if (force is String) {
+        final v = force.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.aiToolForceConfirmDestructive = v == 'true';
+        }
       }
     }
 

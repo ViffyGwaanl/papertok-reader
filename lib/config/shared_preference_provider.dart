@@ -18,6 +18,7 @@ import 'package:anx_reader/enums/text_alignment.dart';
 import 'package:anx_reader/enums/ai_panel_position.dart';
 import 'package:anx_reader/enums/ai_dock_side.dart';
 import 'package:anx_reader/enums/ai_pad_panel_mode.dart';
+import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
 import 'package:anx_reader/enums/code_highlight_theme.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
@@ -67,6 +68,9 @@ class Prefs extends ChangeNotifier {
   static const String _chapterSplitCustomRulesKey = 'chapterSplitCustomRules';
   static const String _statisticsDashboardTilesKey = 'statisticsDashboardTiles';
   static const String _enabledAiToolsKey = 'enabledAiTools';
+  static const String _aiToolApprovalPolicyKey = 'aiToolApprovalPolicyV1';
+  static const String _aiToolForceConfirmDestructiveKey =
+      'aiToolForceConfirmDestructiveV1';
   static const String _userPromptsKey = 'userPrompts';
 
   // Home tabs config (order + enable), backed by SharedPreferences.
@@ -1330,6 +1334,35 @@ class Prefs extends ChangeNotifier {
       touchAiSettingsUpdatedAt();
     }
     prefs.remove(key);
+    notifyListeners();
+  }
+
+  AiToolApprovalPolicy get aiToolApprovalPolicy {
+    return AiToolApprovalPolicy.fromCode(
+      prefs.getString(_aiToolApprovalPolicyKey),
+    );
+  }
+
+  set aiToolApprovalPolicy(AiToolApprovalPolicy policy) {
+    final next = policy.code;
+    if ((prefs.getString(_aiToolApprovalPolicyKey) ??
+            AiToolApprovalPolicy.always.code) !=
+        next) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiToolApprovalPolicyKey, next);
+    notifyListeners();
+  }
+
+  bool get aiToolForceConfirmDestructive {
+    return prefs.getBool(_aiToolForceConfirmDestructiveKey) ?? true;
+  }
+
+  set aiToolForceConfirmDestructive(bool value) {
+    if ((prefs.getBool(_aiToolForceConfirmDestructiveKey) ?? true) != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_aiToolForceConfirmDestructiveKey, value);
     notifyListeners();
   }
 

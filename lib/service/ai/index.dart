@@ -39,6 +39,7 @@ Stream<String> aiGenerateStream(
   Map<String, String>? config,
   bool regenerate = false,
   bool useAgent = false,
+  String? conversationId,
   Ref? ref,
 }) {
   if (useAgent) {
@@ -52,6 +53,7 @@ Stream<String> aiGenerateStream(
     overrideConfig: config,
     regenerate: regenerate,
     useAgent: useAgent,
+    conversationId: conversationId,
     registry: registry,
     runner: _runnerForScope(scope),
   );
@@ -76,6 +78,7 @@ Stream<String> _generateStream({
   Map<String, String>? overrideConfig,
   required bool regenerate,
   required bool useAgent,
+  String? conversationId,
   required LangchainAiRegistry registry,
 }) async* {
   AnxLog.info('aiGenerateStream called identifier: $identifier');
@@ -285,6 +288,7 @@ Stream<String> _generateStream({
         tools: tools,
         history: historyMessages,
         inputMessage: inputMessage,
+        conversationId: conversationId,
         systemMessage: pipeline.systemMessage,
       );
     } else {

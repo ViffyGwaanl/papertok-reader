@@ -253,6 +253,7 @@ class AiChat extends _$AiChat {
       promptMessages,
       regenerate: isRegenerate,
       useAgent: true,
+      conversationId: sessionId,
       ref: ref,
     );
 
@@ -434,7 +435,8 @@ class AiChat extends _$AiChat {
         if (removedImages > 0) {
           changed = true;
           // Keep a short marker so the model knows a prior image existed.
-          newParts.add(ChatMessageContent.text('[[image omitted from history]]'));
+          newParts
+              .add(ChatMessageContent.text('[[image omitted from history]]'));
           out.add(ChatMessage.human(ChatMessageContent.multiModal(newParts)));
           continue;
         }

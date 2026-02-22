@@ -2,9 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
+import 'package:anx_reader/enums/ai_tool_risk_level.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:anx_reader/service/ai/tools/tool_approval_decider.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/material.dart';
 import 'package:langchain/langchain.dart';
@@ -12,6 +15,12 @@ import 'package:langchain/langchain.dart';
 class CancelableLangchainRunner {
   static const String thinkTag = '<think/>';
   static const Duration _toolApprovalTimeout = Duration(minutes: 2);
+  static const Duration _toolTempAllowDuration = Duration(minutes: 5);
+
+  /// In-memory per-conversation temporary allowances.
+  ///
+  /// conversationId -> (toolName -> expiresAtMs)
+  static final Map<String, Map<String, int>> _tempAllows = {};
 
   StreamSubscription<ChatResult>? _subscription;
 
@@ -34,22 +43,55 @@ class CancelableLangchainRunner {
     _subscription = null;
   }
 
-  Future<bool> _requestToolApproval({
+  bool _isTempAllowed(String conversationId, String toolName) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final map = _tempAllows[conversationId];
+    if (map == null) return false;
+
+    final expiresAt = map[toolName];
+    if (expiresAt == null) return false;
+
+    if (expiresAt <= now) {
+      map.remove(toolName);
+      if (map.isEmpty) {
+        _tempAllows.remove(conversationId);
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  void _grantTempAllow(String conversationId, String toolName) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final expiresAt = now + _toolTempAllowDuration.inMilliseconds;
+    final map = _tempAllows.putIfAbsent(conversationId, () => {});
+    map[toolName] = expiresAt;
+  }
+
+  Future<({bool approved, bool remember})> _requestToolApproval({
     required String toolName,
+    required String displayName,
+    required String description,
+    required AiToolRiskLevel riskLevel,
     required Map<String, dynamic> toolInput,
+    required bool canRemember,
   }) async {
     final context = navigatorKey.currentContext;
     if (context == null) {
       AnxLog.warning(
         'AiToolApproval: No UI context available; denying tool execution for $toolName',
       );
-      return false;
+      return (approved: false, remember: false);
     }
 
     final l10n = L10n.of(context);
-    final def = AiToolRegistry.byId(toolName);
-    final displayName = def?.displayNameOrDefault(l10n) ?? toolName;
-    final description = def?.descriptionOrDefault(l10n) ?? '';
+
+    final riskLabel = switch (riskLevel) {
+      AiToolRiskLevel.readOnly => l10n.aiToolRiskReadOnly,
+      AiToolRiskLevel.write => l10n.aiToolRiskWrite,
+      AiToolRiskLevel.destructive => l10n.aiToolRiskDestructive,
+    };
 
     final inputPretty = const JsonEncoder.withIndent('  ').convert(toolInput);
 
@@ -60,77 +102,106 @@ class CancelableLangchainRunner {
       timeoutTimer = Timer(_toolApprovalTimeout, () {
         try {
           if (nav != null && nav.mounted && nav.canPop()) {
-            nav.pop(false);
+            nav.pop((approved: false, remember: false));
           }
         } catch (_) {
           // ignore
         }
       });
 
-      final approved = await showDialog<bool>(
+      final result = await showDialog<({bool approved, bool remember})>(
             context: context,
             barrierDismissible: false,
             builder: (context) {
-              return AlertDialog(
-                title: Text(l10n.aiToolApprovalTitle),
-                content: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${l10n.aiToolApprovalToolLabel}: $displayName',
-                        style: Theme.of(context).textTheme.titleSmall,
+              var remember = false;
+
+              return StatefulBuilder(
+                builder: (context, setDialogState) {
+                  return AlertDialog(
+                    title: Text(l10n.aiToolApprovalTitle),
+                    content: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${l10n.aiToolApprovalToolLabel}: $displayName',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${l10n.aiToolApprovalRiskLabel}: $riskLabel',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (description.trim().isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              '${l10n.aiToolApprovalDescriptionLabel}:\n$description',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n.aiToolApprovalInputLabel,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              inputPretty,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(fontFamily: 'monospace'),
+                            ),
+                          ),
+                          if (canRemember) ...[
+                            const SizedBox(height: 8),
+                            CheckboxListTile(
+                              contentPadding: EdgeInsets.zero,
+                              value: remember,
+                              onChanged: (v) {
+                                setDialogState(() {
+                                  remember = v ?? false;
+                                });
+                              },
+                              title: Text(
+                                l10n.aiToolApprovalRememberForConversation5min,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      if (description.trim().isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          '${l10n.aiToolApprovalDescriptionLabel}:\n$description',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.aiToolApprovalInputLabel,
-                        style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context)
+                            .pop((approved: false, remember: false)),
+                        child: Text(l10n.aiToolApprovalDeny),
                       ),
-                      const SizedBox(height: 6),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          inputPretty,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(fontFamily: 'monospace'),
-                        ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context)
+                            .pop((approved: true, remember: remember)),
+                        child: Text(l10n.aiToolApprovalApprove),
                       ),
                     ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: Text(l10n.aiToolApprovalDeny),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: Text(l10n.aiToolApprovalApprove),
-                  ),
-                ],
+                  );
+                },
               );
             },
           ) ??
-          false;
+          (approved: false, remember: false);
 
-      return approved;
+      return result;
     } finally {
       timeoutTimer?.cancel();
     }
@@ -247,6 +318,7 @@ class CancelableLangchainRunner {
     required List<Tool> tools,
     required List<ChatMessage> history,
     required HumanChatMessage inputMessage,
+    String? conversationId,
     ChatMessage? systemMessage,
     int maxIterations = 120,
   }) {
@@ -445,17 +517,43 @@ class CancelableLangchainRunner {
               } catch (e) {
                 message = 'Invalid tool input: $e';
               }
-              final requiresApproval =
-                  AiToolRegistry.byId(agentAction.tool)?.requiresApproval ??
-                      false;
+              final def = AiToolRegistry.byId(agentAction.tool);
+              final riskLevel = def?.riskLevel ?? AiToolRiskLevel.destructive;
 
-              if (requiresApproval) {
-                final approved = await _requestToolApproval(
+              final policy = Prefs().aiToolApprovalPolicy;
+              final forceConfirmDestructive =
+                  Prefs().aiToolForceConfirmDestructive;
+
+              var shouldPrompt = ToolApprovalDecider.shouldPrompt(
+                policy: policy,
+                riskLevel: riskLevel,
+                forceConfirmDestructive: forceConfirmDestructive,
+              );
+
+              final convoId = conversationId?.trim();
+              if (shouldPrompt && convoId != null && convoId.isNotEmpty) {
+                if (_isTempAllowed(convoId, agentAction.tool)) {
+                  shouldPrompt = false;
+                }
+              }
+
+              if (shouldPrompt) {
+                final ctx = navigatorKey.currentContext;
+                final l10n = ctx == null ? null : L10n.of(ctx);
+                final displayName =
+                    def?.displayNameOrDefault(l10n) ?? agentAction.tool;
+                final description = def?.descriptionOrDefault(l10n) ?? '';
+
+                final approval = await _requestToolApproval(
                   toolName: agentAction.tool,
+                  displayName: displayName,
+                  description: description,
+                  riskLevel: riskLevel,
                   toolInput: inputJson,
+                  canRemember: convoId != null && convoId.isNotEmpty,
                 );
 
-                if (!approved) {
+                if (!approval.approved) {
                   const denied = 'Error: denied_by_user';
                   toolStep.status = ToolStepStatus.failed;
                   toolStep.error = denied;
@@ -469,6 +567,12 @@ class CancelableLangchainRunner {
                     ),
                   );
                   continue;
+                }
+
+                if (approval.remember &&
+                    convoId != null &&
+                    convoId.isNotEmpty) {
+                  _grantTempAllow(convoId, agentAction.tool);
                 }
               }
 
