@@ -35,6 +35,8 @@ We want AI-related configuration to be **portable across devices**, but with str
 - Prompt templates (`ai_prompts` overrides)
 - User custom prompts
 - Input quick prompts
+- Enabled AI tool ids (non-secret):
+  - `enabledIds`: list of tool ids enabled in "Settings → AI Tools"
 - AI translation prefs (safe, no secrets):
   - translation-dedicated provider id + model override
   - inline full-text translation concurrency
@@ -79,6 +81,9 @@ We want AI-related configuration to be **portable across devices**, but with str
   "inputQuickPrompts": [
     {"id": "...", "label": "...", "prompt": "...", "enabled": true, "order": 0}
   ],
+  "tools": {
+    "enabledIds": ["calculator", "current_time"]
+  },
   "ui": {
     "aiPadPanelMode": "dock",
     "aiDockSide": "right",
