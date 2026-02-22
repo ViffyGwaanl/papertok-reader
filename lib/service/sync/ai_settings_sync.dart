@@ -70,6 +70,10 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'aiImageAnalysisPromptV1': prefs.aiImageAnalysisPrompt,
   };
 
+  final tools = <String, dynamic>{
+    'enabledIds': prefs.enabledAiToolIds,
+  };
+
   return {
     'schemaVersion': aiSettingsSchemaVersion,
     'updatedAt': prefs.aiSettingsUpdatedAt,
@@ -79,6 +83,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'userPrompts': prefs.userPrompts.map((e) => e.toJson()).toList(),
     'inputQuickPrompts':
         prefs.aiInputQuickPrompts.map((e) => e.toJson()).toList(),
+    'tools': tools,
     'ui': ui,
     'translate': translate,
     'imageAnalysis': imageAnalysis,
@@ -173,6 +178,15 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
         }
       }
       prefs.aiInputQuickPrompts = list;
+    }
+
+    final tools = json['tools'];
+    if (tools is Map) {
+      final enabled = tools['enabledIds'];
+      if (enabled is List) {
+        prefs.enabledAiToolIds =
+            enabled.map((e) => e.toString()).toList(growable: false);
+      }
     }
 
     final ui = json['ui'];

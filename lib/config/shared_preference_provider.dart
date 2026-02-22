@@ -1349,9 +1349,30 @@ class Prefs extends ChangeNotifier {
   }
 
   set enabledAiToolIds(List<String> ids) {
+    final next = AiToolRegistry.sanitizeIds(ids);
+
+    bool sameList(List<String> a, List<String> b) {
+      if (identical(a, b)) return true;
+      if (a.length != b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (a[i] != b[i]) return false;
+      }
+      return true;
+    }
+
+    // If never set, the effective value is the default enabled list.
+    final stored = prefs.getStringList(_enabledAiToolsKey);
+    final currentEffective = stored == null
+        ? AiToolRegistry.defaultEnabledToolIds()
+        : AiToolRegistry.sanitizeIds(stored);
+
+    if (!sameList(currentEffective, next)) {
+      touchAiSettingsUpdatedAt();
+    }
+
     prefs.setStringList(
       _enabledAiToolsKey,
-      AiToolRegistry.sanitizeIds(ids),
+      next,
     );
     notifyListeners();
   }
@@ -1361,6 +1382,14 @@ class Prefs extends ChangeNotifier {
   }
 
   void resetEnabledAiTools() {
+    final stored = prefs.getStringList(_enabledAiToolsKey);
+    if (stored != null) {
+      final sanitized = AiToolRegistry.sanitizeIds(stored);
+      if (sanitized.isNotEmpty) {
+        touchAiSettingsUpdatedAt();
+      }
+    }
+
     prefs.remove(_enabledAiToolsKey);
     notifyListeners();
   }

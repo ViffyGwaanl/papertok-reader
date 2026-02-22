@@ -3,6 +3,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/ai.dart';
 import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
 import 'package:anx_reader/page/settings_page/ai_image_analysis.dart';
+import 'package:anx_reader/page/settings_page/ai_tools.dart';
 import 'package:anx_reader/page/settings_page/advanced.dart';
 import 'package:anx_reader/page/settings_page/appearance.dart';
 import 'package:anx_reader/page/settings_page/developer/developer_options_page.dart';
@@ -191,6 +192,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   CupertinoPageRoute(
                                     builder: (context) =>
                                         const AiProviderCenterPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                            const Divider(height: 1),
+                            ListTile(
+                              leading: const Icon(Icons.handyman_outlined),
+                              title: Text(L10n.of(context).settingsAiTools),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  CupertinoPageRoute(
+                                    builder: (context) =>
+                                        SettingsSubpageScaffold(
+                                      title: L10n.of(context).settingsAiTools,
+                                      child: const AiToolsSettingsPage(),
+                                    ),
                                   ),
                                 );
                               },

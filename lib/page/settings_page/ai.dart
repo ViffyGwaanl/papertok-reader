@@ -8,8 +8,9 @@ import 'package:anx_reader/providers/user_prompts.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/service/ai/prompt_generate.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
+import 'package:anx_reader/page/settings_page/ai_tools.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/widgets/ai/ai_stream.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
@@ -372,41 +373,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
       ),
     );
 
-    final toolDefs = AiToolRegistry.definitions;
-    final enabledToolIds = Prefs().enabledAiToolIds;
-
-    final toolsTile = CustomSettingsTile(
-      child: Column(
-        children: [
-          for (final tool in toolDefs)
-            SettingsTile.switchTile(
-              initialValue: enabledToolIds.contains(tool.id),
-              onToggle: (value) {
-                final next = Set<String>.from(enabledToolIds);
-                if (value) {
-                  next.add(tool.id);
-                } else {
-                  next.remove(tool.id);
-                }
-                Prefs().enabledAiToolIds = next.toList();
-                setState(() {});
-              },
-              title: Text(tool.displayName(l10n)),
-              description: Text(tool.description(l10n)),
-            ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                Prefs().resetEnabledAiTools();
-                setState(() {});
-              },
-              child: Text(l10n.commonReset),
-            ),
-          ),
-        ],
-      ),
-    );
+    // AI tools are managed in Settings → AI Tools.
 
     return settingsSections(sections: [
       SettingsSection(
@@ -442,7 +409,21 @@ class _AISettingsState extends ConsumerState<AISettings> {
       SettingsSection(
         title: Text(l10n.settingsAiTools),
         tiles: [
-          toolsTile,
+          SettingsTile.navigation(
+            title: Text(l10n.settingsAiTools),
+            trailing: const Icon(Icons.chevron_right),
+            onPressed: (context) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsSubpageScaffold(
+                    title: l10n.settingsAiTools,
+                    child: const AiToolsSettingsPage(),
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
       // iPad-specific AI panel settings (only show on larger screens)
