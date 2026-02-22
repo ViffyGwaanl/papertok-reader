@@ -21,6 +21,7 @@ import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/icon_and_text.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:anx_reader/utils/book_file_types.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -139,7 +140,8 @@ class BookBottomSheet extends ConsumerWidget {
 
     Future<void> handleReplace(BuildContext context) async {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
+        type: FileType.custom,
+        allowedExtensions: kAllowBookExtensions,
         allowMultiple: false,
       );
 
@@ -147,13 +149,19 @@ class BookBottomSheet extends ConsumerWidget {
       PlatformFile newFile = result.files.first;
       String extension =
           p.extension(newFile.name).replaceAll('.', '').toLowerCase();
-      if (!allowBookExtensions.contains(extension)) {
+      if (!kAllowBookExtensions.contains(extension)) {
         AnxToast.show(
             L10n.of(context).bookBottomSheetUnsupportedFileFormat(extension));
         return;
       }
 
       File newFileObj = File(newFile.path!);
+
+      final magicErr = await validateBookMagicBytes(newFileObj);
+      if (magicErr != null) {
+        AnxToast.show(magicErr);
+        return;
+      }
 
       if (!context.mounted) return;
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:anx_reader/dao/book.dart';
+import 'package:anx_reader/utils/book_file_types.dart';
 import 'package:anx_reader/dao/theme.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
@@ -34,25 +35,31 @@ import 'package:path/path.dart' as path;
 import 'book_player/book_player_server.dart';
 
 AnxHeadlessWebView? headlessInAppWebView;
-final allowBookExtensions = ["epub", "mobi", "azw3", "fb2", "txt", "pdf"];
 
 /// import book list and **delete file**
 void importBookList(List<File> fileList, BuildContext context, WidgetRef ref) {
   AnxLog.info('importBook fileList: ${fileList.toString()}');
 
+  final unsupportedReasons = <String, String>{};
+
   List<File> supportedFiles = fileList.where((file) {
-    return allowBookExtensions
-        .contains(file.path.split('.').last.toLowerCase());
+    final ok =
+        kAllowBookExtensions.contains(file.path.split('.').last.toLowerCase());
+    if (!ok) {
+      unsupportedReasons[file.path] = 'Unsupported file extension.';
+    }
+    return ok;
   }).toList();
 
   List<File> unsupportedFiles = fileList.where((file) {
-    return !allowBookExtensions
+    return !kAllowBookExtensions
         .contains(file.path.split('.').last.toLowerCase());
   }).toList();
 
   _checkDuplicatesAndShowDialog(
     supportedFiles,
     unsupportedFiles,
+    unsupportedReasons,
     fileList,
     context,
     ref,
@@ -60,11 +67,13 @@ void importBookList(List<File> fileList, BuildContext context, WidgetRef ref) {
 }
 
 void _checkDuplicatesAndShowDialog(
-    List<File> supportedFiles,
-    List<File> unsupportedFiles,
-    List<File> fileList,
-    BuildContext context,
-    WidgetRef ref) async {
+  List<File> supportedFiles,
+  List<File> unsupportedFiles,
+  Map<String, String> unsupportedReasons,
+  List<File> fileList,
+  BuildContext context,
+  WidgetRef ref,
+) async {
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -82,6 +91,19 @@ void _checkDuplicatesAndShowDialog(
   );
 
   try {
+    // Phase A mitigation: basic magic-bytes validation for common types.
+    final validSupported = <File>[];
+    for (final f in supportedFiles) {
+      final err = await validateBookMagicBytes(f);
+      if (err != null) {
+        unsupportedFiles.add(f);
+        unsupportedReasons[f.path] = err;
+      } else {
+        validSupported.add(f);
+      }
+    }
+    supportedFiles = validSupported;
+
     final filePaths = supportedFiles.map((f) => f.path).toList();
     final checkResults = await MD5Service.checkImportFiles(filePaths);
 
@@ -108,6 +130,7 @@ void _checkDuplicatesAndShowDialog(
       duplicateFiles,
       duplicateInfo,
       unsupportedFiles,
+      unsupportedReasons,
       fileList,
       ref,
     );
@@ -119,6 +142,7 @@ void _checkDuplicatesAndShowDialog(
       [],
       {},
       unsupportedFiles,
+      unsupportedReasons,
       fileList,
       ref,
     );
@@ -130,6 +154,7 @@ void _showImportDialog(
   List<File> duplicateFiles,
   Map<String, Book> duplicateInfo,
   List<File> unsupportedFiles,
+  Map<String, String> unsupportedReasons,
   List<File> fileList,
   WidgetRef ref,
 ) {
@@ -235,7 +260,7 @@ void _showImportDialog(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(L10n.of(context)
-                      .importSupportTypes(allowBookExtensions.join(' / '))),
+                      .importSupportTypes(kAllowBookExtensions.join(' / '))),
 
                   const SizedBox(height: 10),
 
@@ -268,7 +293,11 @@ void _showImportDialog(
                         .importNBooksNotSupport(unsupportedFiles.length))
                   ],
                   for (var file in unsupportedFiles)
-                    bookItem(file.path, const Icon(Icons.error)),
+                    bookItem(
+                      file.path,
+                      const Icon(Icons.error),
+                      errorMessage: unsupportedReasons[file.path],
+                    ),
 
                   // show duplicate files
                   if (duplicateFiles.isNotEmpty) ...[
