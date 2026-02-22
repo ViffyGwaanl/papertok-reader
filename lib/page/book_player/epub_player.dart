@@ -248,22 +248,24 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     ''');
   }
 
-  void goToHref(String href) =>
-      webViewController.evaluateJavascript(source: "goToHref('$href')");
+  void goToHref(String href) => webViewController.evaluateJavascript(
+        source: 'goToHref(${jsonEncode(href)})',
+      );
 
-  void goToCfi(String cfi) =>
-      webViewController.evaluateJavascript(source: "goToCfi('$cfi')");
+  void goToCfi(String cfi) => webViewController.evaluateJavascript(
+        source: 'goToCfi(${jsonEncode(cfi)})',
+      );
 
   void addAnnotation(BookNote bookNote) {
-    final noteContent =
-        (bookNote.content).replaceAll('\n', ' ').replaceAll("'", "\\'");
+    // NOTE: Use jsonEncode for all JS string literals to avoid injection.
+    final noteContent = bookNote.content;
     webViewController.evaluateJavascript(source: '''
       addAnnotation({
         id: ${bookNote.id},
-        type: '${bookNote.type}',
-        value: '${bookNote.cfi}',
-        color: '#${bookNote.color}',
-        note: '$noteContent',
+        type: ${jsonEncode(bookNote.type)},
+        value: ${jsonEncode(bookNote.cfi)},
+        color: ${jsonEncode('#${bookNote.color}')},
+        note: ${jsonEncode(noteContent)},
       })
       ''');
   }
@@ -273,7 +275,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       addAnnotation({
         id: ${bookmark.id},
         type: 'bookmark',
-        value: '${bookmark.cfi}',
+        value: ${jsonEncode(bookmark.cfi)},
         color: '#000000',
         note: 'None',
       })
@@ -286,8 +288,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       ''');
   }
 
-  void removeAnnotation(String cfi) =>
-      webViewController.evaluateJavascript(source: "removeAnnotation('$cfi')");
+  void removeAnnotation(String cfi) => webViewController.evaluateJavascript(
+        source: 'removeAnnotation(${jsonEncode(cfi)})',
+      );
 
   void clearSearch() {
     ref.read(tocSearchProvider.notifier).clear();
@@ -303,7 +306,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     _clearSearchHighlights();
     ref.read(tocSearchProvider.notifier).start(sanitized);
     webViewController.evaluateJavascript(source: '''
-      search('$sanitized', {
+      search(${jsonEncode(sanitized)}, {
         'scope': 'book',
         'matchCase': false,
         'matchDiacritics': false,
@@ -1030,7 +1033,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   }
 
   Future<void> onWebViewCreated(InAppWebViewController controller) async {
-    if (AnxPlatform.isAndroid) {
+    if (AnxPlatform.isAndroid && kDebugMode) {
       await InAppWebViewController.setWebContentsDebuggingEnabled(true);
     }
     webViewController = controller;
