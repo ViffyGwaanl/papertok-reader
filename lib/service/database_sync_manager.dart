@@ -31,7 +31,7 @@ class DatabaseSyncManager {
   static Future<DatabaseSyncResult> safeDownloadDatabase({
     required SyncClientBase client,
     required String remoteDbFileName,
-    String remoteRoot = 'anx',
+    String remoteRoot = 'paper_reader',
     void Function(int received, int total)? onProgress,
   }) async {
     final databasesPath = await getAnxDataBasesPath();
@@ -410,7 +410,8 @@ class DatabaseSyncResult {
   factory DatabaseSyncResult.failure(
     String message,
     DatabaseSyncFailureType type,
-  ) => DatabaseSyncResult._(false, message, type);
+  ) =>
+      DatabaseSyncResult._(false, message, type);
 }
 
 ///  Database sync failure types
