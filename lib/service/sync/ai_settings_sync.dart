@@ -8,6 +8,7 @@ import 'package:anx_reader/enums/ai_prompts.dart';
 import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
 import 'package:anx_reader/models/ai_input_quick_prompt.dart';
 import 'package:anx_reader/models/user_prompt.dart';
+import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/utils/log/common.dart';
 
@@ -77,6 +78,11 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'forceConfirmDestructive': prefs.aiToolForceConfirmDestructive,
   };
 
+  final mcp = <String, dynamic>{
+    'servers':
+        prefs.mcpServersV1.map((e) => e.toJson()).toList(growable: false),
+  };
+
   return {
     'schemaVersion': aiSettingsSchemaVersion,
     'updatedAt': prefs.aiSettingsUpdatedAt,
@@ -87,6 +93,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'inputQuickPrompts':
         prefs.aiInputQuickPrompts.map((e) => e.toJson()).toList(),
     'tools': tools,
+    'mcp': mcp,
     'ui': ui,
     'translate': translate,
     'imageAnalysis': imageAnalysis,
@@ -204,6 +211,22 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
         if (v == 'true' || v == 'false') {
           prefs.aiToolForceConfirmDestructive = v == 'true';
         }
+      }
+    }
+
+    final mcp = json['mcp'];
+    if (mcp is Map) {
+      final servers = mcp['servers'];
+      if (servers is List) {
+        final list = <McpServerMeta>[];
+        for (final item in servers) {
+          if (item is Map<String, dynamic>) {
+            list.add(McpServerMeta.fromJson(item));
+          } else if (item is Map) {
+            list.add(McpServerMeta.fromJson(item.cast<String, dynamic>()));
+          }
+        }
+        prefs.mcpServersV1 = list;
       }
     }
 

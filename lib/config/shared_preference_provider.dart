@@ -34,6 +34,8 @@ import 'package:anx_reader/models/reading_info.dart';
 import 'package:anx_reader/models/reading_rules.dart';
 import 'package:anx_reader/models/user_prompt.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
+import 'package:anx_reader/models/mcp_server_meta.dart';
+import 'package:anx_reader/models/mcp_tool_meta.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:anx_reader/models/window_info.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
@@ -154,7 +156,9 @@ class Prefs extends ChangeNotifier {
     };
     for (final String key in prefs.getKeys()) {
       // Skip ephemeral caches.
-      if (key.startsWith(_aiModelsCacheV1Prefix)) {
+      if (key.startsWith(_aiModelsCacheV1Prefix) ||
+          key.startsWith(_mcpToolsCacheV1Prefix) ||
+          key.startsWith(_mcpServerSecretV1Prefix)) {
         continue;
       }
 
@@ -191,7 +195,9 @@ class Prefs extends ChangeNotifier {
       final String key = entry.key;
       if (key == prefsBackupVersionKey ||
           _prefsImportSkipKeys.contains(key) ||
-          key.startsWith(_aiModelsCacheV1Prefix)) {
+          key.startsWith(_aiModelsCacheV1Prefix) ||
+          key.startsWith(_mcpToolsCacheV1Prefix) ||
+          key.startsWith(_mcpServerSecretV1Prefix)) {
         continue;
       }
       final dynamic entryValue = entry.value;
@@ -1256,6 +1262,12 @@ class Prefs extends ChangeNotifier {
 
   static const String _aiModelsCacheV1Prefix = 'aiModelsCacheV1_';
 
+  // --- MCP (external tools) ---
+
+  static const String _mcpServersV1Key = 'mcpServersV1';
+  static const String _mcpServerSecretV1Prefix = 'mcpServerSecretV1_';
+  static const String _mcpToolsCacheV1Prefix = 'mcpToolsCacheV1_';
+
   static String _aiModelsCacheKey(String providerId) {
     return '$_aiModelsCacheV1Prefix$providerId';
   }
@@ -1308,6 +1320,123 @@ class Prefs extends ChangeNotifier {
 
   void clearAiModelsCacheV1(String providerId) {
     prefs.remove(_aiModelsCacheKey(providerId));
+    notifyListeners();
+  }
+
+  // --- MCP servers (non-secret, syncable) ---
+
+  List<McpServerMeta> get mcpServersV1 {
+    final raw = prefs.getString(_mcpServersV1Key);
+    if (raw == null || raw.trim().isEmpty) return const [];
+
+    try {
+      return McpServerMeta.decodeList(raw);
+    } catch (e) {
+      AnxLog.severe('Failed to decode mcpServersV1: $e');
+      return const [];
+    }
+  }
+
+  set mcpServersV1(List<McpServerMeta> servers) {
+    final before = prefs.getString(_mcpServersV1Key) ?? '';
+    final after = McpServerMeta.encodeList(servers);
+    if (before != after) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_mcpServersV1Key, after);
+    notifyListeners();
+  }
+
+  void upsertMcpServer(McpServerMeta meta) {
+    final existing = List<McpServerMeta>.from(mcpServersV1);
+    final idx = existing.indexWhere((e) => e.id == meta.id);
+    if (idx >= 0) {
+      existing[idx] = meta;
+    } else {
+      existing.add(meta);
+    }
+    mcpServersV1 = existing;
+  }
+
+  void deleteMcpServer(String id) {
+    final existing = mcpServersV1;
+    if (existing.isEmpty) return;
+    mcpServersV1 = existing.where((e) => e.id != id).toList(growable: false);
+
+    // Also clear local-only secret/cache.
+    prefs.remove('$_mcpServerSecretV1Prefix$id');
+    prefs.remove('$_mcpToolsCacheV1Prefix$id');
+  }
+
+  // --- MCP secrets (local-only) ---
+
+  McpServerSecret getMcpServerSecret(String id) {
+    final raw = prefs.getString('$_mcpServerSecretV1Prefix$id');
+    if (raw == null || raw.trim().isEmpty) {
+      return const McpServerSecret();
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return McpServerSecret.fromJson(decoded);
+      }
+      if (decoded is Map) {
+        return McpServerSecret.fromJson(decoded.cast<String, dynamic>());
+      }
+    } catch (_) {}
+
+    return const McpServerSecret();
+  }
+
+  void saveMcpServerSecret(String id, McpServerSecret secret) {
+    prefs.setString(
+      '$_mcpServerSecretV1Prefix$id',
+      jsonEncode(secret.toJson()),
+    );
+    notifyListeners();
+  }
+
+  void clearMcpServerSecret(String id) {
+    prefs.remove('$_mcpServerSecretV1Prefix$id');
+    notifyListeners();
+  }
+
+  // --- MCP tools cache (local-only) ---
+
+  ({int updatedAt, List<McpToolMeta> tools})? getMcpToolsCacheV1(String id) {
+    final raw = prefs.getString('$_mcpToolsCacheV1Prefix$id');
+    if (raw == null || raw.trim().isEmpty) return null;
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      final updatedAt = decoded['updatedAt'] is int
+          ? decoded['updatedAt'] as int
+          : DateTime.now().millisecondsSinceEpoch;
+      final toolsRaw = decoded['tools'];
+      if (toolsRaw is! String) return null;
+      final tools = McpToolMeta.decodeList(toolsRaw);
+      return (updatedAt: updatedAt, tools: tools);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void saveMcpToolsCacheV1(String id, List<McpToolMeta> tools) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    prefs.setString(
+      '$_mcpToolsCacheV1Prefix$id',
+      jsonEncode({
+        'updatedAt': now,
+        'tools': McpToolMeta.encodeList(tools),
+      }),
+    );
+    notifyListeners();
+  }
+
+  void clearMcpToolsCacheV1(String id) {
+    prefs.remove('$_mcpToolsCacheV1Prefix$id');
     notifyListeners();
   }
 
