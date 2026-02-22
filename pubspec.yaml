@@ -84,8 +84,7 @@ dependencies:
   fast_gbk: ^1.0.0
   window_manager: ^0.4.3
   screen_retriever: ^0.2.0
-  pretty_dio_logger: ^1.4.0
-  dio_intercept_to_curl: ^0.2.0
+  # debug-only deps removed: pretty_dio_logger, dio_intercept_to_curl
   flutter_gemini: ^3.0.0
   gpt_markdown: ^1.1.4
   pointer_interceptor: ^0.10.1+2
