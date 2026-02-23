@@ -75,6 +75,8 @@ class Prefs extends ChangeNotifier {
       'aiToolForceConfirmDestructiveV1';
   static const String _shortcutsCallbackMaxCharsV1Key =
       'shortcutsCallbackMaxCharsV1';
+  static const String _shortcutsCallbackTimeoutSecV1Key =
+      'shortcutsCallbackTimeoutSecV1';
   static const String _userPromptsKey = 'userPrompts';
 
   // Home tabs config (order + enable), backed by SharedPreferences.
@@ -1521,6 +1523,20 @@ class Prefs extends ChangeNotifier {
     if (before != next) {
       touchAiSettingsUpdatedAt();
       prefs.setInt(_shortcutsCallbackMaxCharsV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  int get shortcutsCallbackTimeoutSecV1 {
+    return prefs.getInt(_shortcutsCallbackTimeoutSecV1Key) ?? 25;
+  }
+
+  set shortcutsCallbackTimeoutSecV1(int value) {
+    final next = value.clamp(3, 300);
+    final before = prefs.getInt(_shortcutsCallbackTimeoutSecV1Key) ?? 25;
+    if (before != next) {
+      touchAiSettingsUpdatedAt();
+      prefs.setInt(_shortcutsCallbackTimeoutSecV1Key, next);
       notifyListeners();
     }
   }

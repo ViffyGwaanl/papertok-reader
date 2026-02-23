@@ -739,6 +739,8 @@
   "settingsMcpAutoRefreshToolsDesc": "开启后，当本地没有工具缓存时自动刷新工具列表（可能增加启动延迟）。",
   "settingsShortcutsCallbackMaxChars": "快捷指令回传结果长度上限",
   "settingsShortcutsCallbackMaxCharsDesc": "限制 paperreader://shortcuts/result 回传数据的最大字符数（超过会截断）。",
+  "settingsShortcutsCallbackTimeout": "快捷指令回传等待超时",
+  "settingsShortcutsCallbackTimeoutDesc": "等待快捷指令回到 App / 回传结果的最长秒数。",
   "settingsMcpAddServer": "添加 MCP 服务器",
   "settingsMcpAddServerDesc": "添加一个 Streamable HTTP MCP endpoint。",
   "settingsMcpEditServer": "编辑 MCP 服务器",

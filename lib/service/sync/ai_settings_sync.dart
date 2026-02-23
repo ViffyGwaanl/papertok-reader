@@ -77,6 +77,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'approvalPolicy': prefs.aiToolApprovalPolicy.code,
     'forceConfirmDestructive': prefs.aiToolForceConfirmDestructive,
     'shortcutsCallbackMaxCharsV1': prefs.shortcutsCallbackMaxCharsV1,
+    'shortcutsCallbackTimeoutSecV1': prefs.shortcutsCallbackTimeoutSecV1,
   };
 
   final mcp = <String, dynamic>{
@@ -222,6 +223,16 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
         final v = int.tryParse(maxChars.trim());
         if (v != null) {
           prefs.shortcutsCallbackMaxCharsV1 = v;
+        }
+      }
+
+      final timeout = tools['shortcutsCallbackTimeoutSecV1'];
+      if (timeout is num) {
+        prefs.shortcutsCallbackTimeoutSecV1 = timeout.toInt();
+      } else if (timeout is String) {
+        final v = int.tryParse(timeout.trim());
+        if (v != null) {
+          prefs.shortcutsCallbackTimeoutSecV1 = v;
         }
       }
     }

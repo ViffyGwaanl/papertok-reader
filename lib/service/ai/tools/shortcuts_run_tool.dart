@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/ai_tool_risk_level.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
@@ -43,7 +44,7 @@ class ShortcutsRunTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
               'callbackTimeoutSec': {
                 'type': 'number',
                 'description':
-                    'Optional. Max seconds to wait for callback when waitForCallback=true. Defaults to 25. Max 120.',
+                    'Optional. Max seconds to wait for callback when waitForCallback=true. When omitted, uses Settings → AI Tools → Shortcuts callback timeout. Range: 3..300.',
               },
             },
             'required': ['name'],
@@ -84,7 +85,9 @@ class ShortcutsRunTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
     final runId = const Uuid().v4();
 
     final waitForCallback = _parseBool(input['waitForCallback'], true);
-    final timeoutSec = _parseInt(input['callbackTimeoutSec'], 25).clamp(1, 120);
+    final defaultTimeout = Prefs().shortcutsCallbackTimeoutSecV1;
+    final timeoutSec =
+        _parseInt(input['callbackTimeoutSec'], defaultTimeout).clamp(3, 300);
 
     // To support callbacks reliably, the shortcut must be able to read runId.
     // That means we need to pass a JSON payload as Shortcut Input, therefore we
