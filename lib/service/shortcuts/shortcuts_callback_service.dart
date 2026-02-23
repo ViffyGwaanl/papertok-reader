@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/utils/log/common.dart';
 
 /// A tiny in-memory callback router for iOS Shortcuts x-callback-url.
@@ -20,7 +21,7 @@ class ShortcutsCallbackService {
   final Map<String, _PendingShortcutsRun> _pending = {};
 
   /// Best-effort guardrails: keep callback payload small.
-  static const int defaultMaxDataChars = 2000;
+  static const int defaultMaxDataChars = 8000;
 
   void handleIncomingUri(Uri uri) {
     if (uri.scheme != 'paperreader') return;
@@ -63,13 +64,16 @@ class ShortcutsCallbackService {
       }
 
       if (decoded != null) {
+        final maxChars =
+            Prefs().shortcutsCallbackMaxCharsV1.clamp(500, 20000).toInt();
         var truncated = false;
-        if (decoded.length > defaultMaxDataChars) {
-          decoded = decoded.substring(0, defaultMaxDataChars);
+        if (decoded.length > maxChars) {
+          decoded = decoded.substring(0, maxChars);
           truncated = true;
         }
         payload['data'] = decoded;
         payload['dataTruncated'] = truncated;
+        payload['dataMaxChars'] = maxChars;
       }
     }
 
@@ -87,13 +91,28 @@ class ShortcutsCallbackService {
     }
 
     if (status == 'success') {
-      // Prefer a /result callback if the shortcut sends one; /success is used as a
-      // fallback completion signal.
+      // Prefer a /result callback if the shortcut sends one. Otherwise, treat
+      // /success as a terminal completion signal (after a short grace period).
       pending.lastSuccessPayload = payload;
+
+      pending.successTimer?.cancel();
+      pending.successTimer = Timer(const Duration(milliseconds: 500), () {
+        final still = _pending[runId];
+        if (still == null) return;
+        if (still.completer.isCompleted) {
+          _pending.remove(runId);
+          return;
+        }
+
+        _pending.remove(runId);
+        still.completer.complete(payload);
+      });
       return;
     }
 
     // Terminal events: result/error/cancel/unknown.
+    pending.successTimer?.cancel();
+
     _pending.remove(runId);
     if (!pending.completer.isCompleted) {
       pending.completer.complete(payload);
@@ -116,6 +135,7 @@ class ShortcutsCallbackService {
       return await pending.completer.future.timeout(timeout);
     } on TimeoutException {
       _pending.remove(runId);
+      pending.successTimer?.cancel();
       if (pending.lastSuccessPayload != null) {
         return pending.lastSuccessPayload!;
       }
@@ -149,4 +169,6 @@ class _PendingShortcutsRun {
   /// Stored when we receive /success. We prefer waiting for /result, but if it
   /// never comes we return this as a fallback upon timeout.
   Map<String, dynamic>? lastSuccessPayload;
+
+  Timer? successTimer;
 }

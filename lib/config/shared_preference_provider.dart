@@ -73,6 +73,8 @@ class Prefs extends ChangeNotifier {
   static const String _aiToolApprovalPolicyKey = 'aiToolApprovalPolicyV1';
   static const String _aiToolForceConfirmDestructiveKey =
       'aiToolForceConfirmDestructiveV1';
+  static const String _shortcutsCallbackMaxCharsV1Key =
+      'shortcutsCallbackMaxCharsV1';
   static const String _userPromptsKey = 'userPrompts';
 
   // Home tabs config (order + enable), backed by SharedPreferences.
@@ -1507,6 +1509,20 @@ class Prefs extends ChangeNotifier {
     }
     prefs.setBool(_aiToolForceConfirmDestructiveKey, value);
     notifyListeners();
+  }
+
+  int get shortcutsCallbackMaxCharsV1 {
+    return prefs.getInt(_shortcutsCallbackMaxCharsV1Key) ?? 8000;
+  }
+
+  set shortcutsCallbackMaxCharsV1(int value) {
+    final next = value.clamp(500, 20000);
+    final before = prefs.getInt(_shortcutsCallbackMaxCharsV1Key) ?? 8000;
+    if (before != next) {
+      touchAiSettingsUpdatedAt();
+      prefs.setInt(_shortcutsCallbackMaxCharsV1Key, next);
+      notifyListeners();
+    }
   }
 
   List<String> get enabledAiToolIds {

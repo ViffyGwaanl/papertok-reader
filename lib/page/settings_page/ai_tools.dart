@@ -8,6 +8,7 @@ import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
+import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:flutter/material.dart';
 
 class AiToolsSettingsPage extends StatefulWidget {
@@ -91,6 +92,84 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     );
   }
 
+  Future<void> _editShortcutsCallbackMaxChars() async {
+    if (!AnxPlatform.isIOS) return;
+
+    final l10n = L10n.of(context);
+    var value = Prefs().shortcutsCallbackMaxCharsV1.toDouble();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.settingsShortcutsCallbackMaxChars,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.settingsShortcutsCallbackMaxCharsDesc,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${value.toInt()} chars',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Slider(
+                      min: 500,
+                      max: 20000,
+                      divisions: ((20000 - 500) ~/ 500),
+                      value: value.clamp(500, 20000),
+                      label: value.toInt().toString(),
+                      onChanged: (v) {
+                        final snapped = (v / 500).round() * 500;
+                        setModalState(() => value = snapped.toDouble());
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(l10n.commonCancel),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () {
+                            Prefs().shortcutsCallbackMaxCharsV1 = value.toInt();
+                            Navigator.pop(context);
+                            setState(() {});
+                          },
+                          child: Text(l10n.commonSave),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
@@ -115,6 +194,13 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
         title: Text(l10n.settingsAiToolForceConfirmDestructive),
         description: Text(l10n.settingsAiToolForceConfirmDestructiveDesc),
       ),
+      if (AnxPlatform.isIOS)
+        SettingsTile.navigation(
+          title: Text(l10n.settingsShortcutsCallbackMaxChars),
+          description: Text(l10n.settingsShortcutsCallbackMaxCharsDesc),
+          trailing: Text('${Prefs().shortcutsCallbackMaxCharsV1}'),
+          onPressed: (_) => _editShortcutsCallbackMaxChars(),
+        ),
       SettingsTile.navigation(
         title: Text(l10n.settingsMcpServers),
         description: Text(l10n.settingsMcpServersDesc),

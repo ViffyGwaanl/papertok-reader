@@ -76,6 +76,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'enabledIds': prefs.enabledAiToolIds,
     'approvalPolicy': prefs.aiToolApprovalPolicy.code,
     'forceConfirmDestructive': prefs.aiToolForceConfirmDestructive,
+    'shortcutsCallbackMaxCharsV1': prefs.shortcutsCallbackMaxCharsV1,
   };
 
   final mcp = <String, dynamic>{
@@ -211,6 +212,16 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
         final v = force.trim().toLowerCase();
         if (v == 'true' || v == 'false') {
           prefs.aiToolForceConfirmDestructive = v == 'true';
+        }
+      }
+
+      final maxChars = tools['shortcutsCallbackMaxCharsV1'];
+      if (maxChars is num) {
+        prefs.shortcutsCallbackMaxCharsV1 = maxChars.toInt();
+      } else if (maxChars is String) {
+        final v = int.tryParse(maxChars.trim());
+        if (v != null) {
+          prefs.shortcutsCallbackMaxCharsV1 = v;
         }
       }
     }
