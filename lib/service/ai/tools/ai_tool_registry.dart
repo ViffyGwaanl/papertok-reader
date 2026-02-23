@@ -19,6 +19,9 @@ import 'package:anx_reader/service/ai/tools/fetch_url_tool.dart';
 import 'package:anx_reader/service/ai/tools/mindmap_tool.dart';
 import 'package:anx_reader/service/ai/tools/notes_search_tool.dart';
 import 'package:anx_reader/service/ai/tools/reminders_create_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_delete_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_list_lists_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_list_tool.dart';
 import 'package:anx_reader/service/ai/tools/shortcuts_run_tool.dart';
 import 'package:anx_reader/service/ai/tools/reading_history_tool.dart';
 import 'package:anx_reader/service/ai/tools/tags_list_tool.dart';
@@ -87,7 +90,10 @@ class AiToolRegistry {
     calendarListCalendarsToolDefinition,
     calendarListEventsToolDefinition,
     calendarCreateEventToolDefinition,
+    remindersListListsToolDefinition,
+    remindersListToolDefinition,
     remindersCreateToolDefinition,
+    remindersDeleteToolDefinition,
     shortcutsRunToolDefinition,
     mindmapToolDefinition,
     bookContentSearchToolDefinition,

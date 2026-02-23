@@ -36,6 +36,11 @@ class RemindersCreateTool
                 'description':
                     'Optional. Target reminders list/calendar identifier. When omitted, uses the default reminders list.',
               },
+              'calendarId': {
+                'type': 'string',
+                'description':
+                    'Optional. Alias of listId for compatibility with other apps.',
+              },
             },
             'required': ['title'],
           },
@@ -67,6 +72,9 @@ class RemindersCreateTool
         'dueIso': input['dueIso']?.toString(),
       if ((input['listId']?.toString().trim() ?? '').isNotEmpty)
         'listId': input['listId']?.toString(),
+      // Cherry compatibility alias.
+      if ((input['calendarId']?.toString().trim() ?? '').isNotEmpty)
+        'listId': input['calendarId']?.toString(),
     };
 
     final result = await _channel.invokeMethod<Map>('create', args);
