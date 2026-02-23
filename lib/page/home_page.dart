@@ -421,24 +421,47 @@ class _HomePageState extends ConsumerState<HomePage> {
             );
           }
 
+          const tabBarAnimDuration = Duration(milliseconds: 220);
+
           return Scaffold(
             extendBody: false,
-            body: Stack(
-              children: [
-                HomeBottomInsetScope(
-                  bottomInset: contentBottomInset,
-                  child: pages(currentIndex, constraints, null),
-                ),
-                if (showTabBar)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    // Place the bar into the bottom safe-area region to reduce
-                    // content obstruction.
-                    bottom: -bottomInset,
-                    child: buildTabBar(),
-                  ),
-              ],
+            body: TweenAnimationBuilder<double>(
+              tween: Tween<double>(end: contentBottomInset),
+              duration: tabBarAnimDuration,
+              curve: Curves.easeOutCubic,
+              builder: (context, animatedInset, _) {
+                return Stack(
+                  children: [
+                    HomeBottomInsetScope(
+                      bottomInset: animatedInset,
+                      child: pages(currentIndex, constraints, null),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      // Place the bar into the bottom safe-area region to
+                      // reduce content obstruction.
+                      bottom: -bottomInset,
+                      child: IgnorePointer(
+                        ignoring: !showTabBar,
+                        child: AnimatedSlide(
+                          duration: tabBarAnimDuration,
+                          curve: Curves.easeOutCubic,
+                          offset: showTabBar
+                              ? const Offset(0, 0)
+                              : const Offset(0, 0.35),
+                          child: AnimatedOpacity(
+                            duration: tabBarAnimDuration,
+                            curve: Curves.easeOutCubic,
+                            opacity: showTabBar ? 1 : 0,
+                            child: buildTabBar(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           );
         }
