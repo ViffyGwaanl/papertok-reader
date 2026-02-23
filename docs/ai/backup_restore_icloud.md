@@ -6,6 +6,7 @@
 - Adds:
   - v4 backup ZIP with `manifest.json`
   - optional encrypted API keys
+  - optional encrypted MCP secrets (headers/tokens; local-only by default)
   - import confirmation + rollback using `.bak.<timestamp>`
 
 ## 1. Background
@@ -26,9 +27,11 @@ This is already close to “manual iCloud backup/restore” on iOS because the F
 2. Offer **directional overwrite** clarity:
    - Local → iCloud (export)
    - iCloud → Local (import)
-3. Optional: include API keys **encrypted** (password-based), for Apple-only migration.
-   - Supports Provider Center: built-in + custom providers
-   - Supports multi-key list (`api_keys`) and active key (`api_key`)
+3. Optional: include **secrets encrypted** (password-based), for Apple-only migration:
+   - API keys (Provider Center: built-in + custom providers)
+     - Supports multi-key list (`api_keys`) and active key (`api_key`)
+   - MCP server secrets (headers/tokens)
+     - Only stored when user explicitly enables the option
 4. Safe restore with rollback and WAL cleanup (reuse DB replacement approach).
 
 ## 2. UX Design
@@ -44,22 +47,23 @@ This is already close to “manual iCloud backup/restore” on iOS because the F
 
 - Show a clear warning:
   - local database and files will be replaced
-  - API keys are *not* restored unless user chose encrypted key inclusion
+  - encrypted secrets (API keys / MCP secrets) are *not* restored unless user explicitly enabled the encrypted inclusion options
 
-### Encrypted API key option
+### Encrypted secrets options
 
 On Export:
 
 - Toggle: “Include API keys (encrypted)”
-- If enabled:
+- Toggle: “Include MCP secrets (encrypted)”
+- If any encrypted option is enabled:
   - prompt for password (twice)
-  - store `encryptedApiKeys` blob in manifest (can include multiple providers)
+  - store `encryptedApiKeys` and/or `encryptedMcpSecrets` blobs in manifest
 
 On Import:
 
-- If manifest indicates encrypted API key:
-  - prompt for password
-  - decrypt and apply
+- If manifest indicates encrypted data:
+  - prompt for password (once)
+  - decrypt and apply to local-only storage
 
 ## 3. Backup Package Format (v4)
 
@@ -74,7 +78,20 @@ Example (as implemented in the product repo):
   "schemaVersion": 4,
   "createdAt": 1730000000000,
   "containsEncryptedApiKeys": true,
+  "containsEncryptedMcpSecrets": true,
   "encryptedApiKeys": {
+    "kdf": {
+      "alg": "PBKDF2-HMAC-SHA256",
+      "saltB64": "...",
+      "iterations": 150000
+    },
+    "encryption": {
+      "alg": "AES-256-GCM",
+      "nonceB64": "..."
+    },
+    "cipherTextB64": "..."
+  },
+  "encryptedMcpSecrets": {
     "kdf": {
       "alg": "PBKDF2-HMAC-SHA256",
       "saltB64": "...",
@@ -115,7 +132,9 @@ Implementation (product): uses `package:cryptography`.
 5. Copy extracted dirs into the original locations.
 6. Reopen DB.
 7. Apply prefs backup map.
-8. If encrypted api key included and password ok, apply key.
+8. If encrypted secrets included and password ok, apply to local-only storage:
+   - API keys → aiConfig
+   - MCP secrets → mcpServerSecretV1_*
 9. If any step fails: rollback by deleting partial new dirs and renaming `.bak.*` back.
 
 Implementation status (product): rollback-safe restore is implemented.

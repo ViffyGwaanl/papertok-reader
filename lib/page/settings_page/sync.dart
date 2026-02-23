@@ -5,6 +5,7 @@ import 'package:anx_reader/dao/database.dart';
 import 'package:anx_reader/enums/sync_protocol.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
+import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/service/sync/sync_client_factory.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
@@ -147,6 +148,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     final l10n = L10n.of(context);
 
     bool includeEncryptedApiKeys = false;
+    bool includeEncryptedMcpSecrets = false;
     final passwordController = TextEditingController();
     final confirmController = TextEditingController();
 
@@ -169,7 +171,17 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                         });
                       },
                     ),
-                    if (includeEncryptedApiKeys) ...[
+                    SwitchListTile(
+                      title: Text(l10n.backupIncludeMcpSecretsEncrypted),
+                      value: includeEncryptedMcpSecrets,
+                      onChanged: (value) {
+                        setState(() {
+                          includeEncryptedMcpSecrets = value;
+                        });
+                      },
+                    ),
+                    if (includeEncryptedApiKeys ||
+                        includeEncryptedMcpSecrets) ...[
                       const SizedBox(height: 8),
                       TextField(
                         controller: passwordController,
@@ -204,7 +216,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                 ),
                 TextButton(
                   onPressed: () {
-                    if (includeEncryptedApiKeys) {
+                    if (includeEncryptedApiKeys || includeEncryptedMcpSecrets) {
                       final p1 = passwordController.text;
                       final p2 = confirmController.text;
                       if (p1.isEmpty || p1 != p2) {
@@ -229,19 +241,26 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       return;
     }
 
-    final password = includeEncryptedApiKeys ? passwordController.text : null;
+    final password = (includeEncryptedApiKeys || includeEncryptedMcpSecrets)
+        ? passwordController.text
+        : null;
     passwordController.dispose();
     confirmController.dispose();
 
     await exportData(
       context,
       includeEncryptedApiKeys: includeEncryptedApiKeys,
+      includeEncryptedMcpSecrets: includeEncryptedMcpSecrets,
       password: password,
     );
   }
 
-  Future<void> exportData(BuildContext context,
-      {bool includeEncryptedApiKeys = false, String? password}) async {
+  Future<void> exportData(
+    BuildContext context, {
+    bool includeEncryptedApiKeys = false,
+    bool includeEncryptedMcpSecrets = false,
+    String? password,
+  }) async {
     AnxLog.info('exportData: start');
     if (!mounted) return;
 
@@ -256,6 +275,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       'schemaVersion': 4,
       'createdAt': DateTime.now().millisecondsSinceEpoch,
       'containsEncryptedApiKeys': false,
+      'containsEncryptedMcpSecrets': false,
     };
 
     if (includeEncryptedApiKeys) {
@@ -290,6 +310,35 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
         SmartDialog.dismiss();
         AnxToast.show(L10n.of(context).backupEncryptFailed);
         AnxLog.info('exportData: failed to encrypt api keys: $e');
+        return;
+      }
+    }
+
+    if (includeEncryptedMcpSecrets) {
+      try {
+        final secrets = <String, Map<String, dynamic>>{};
+
+        // Include secrets for all known MCP servers.
+        for (final s in Prefs().mcpServersV1) {
+          final secret = Prefs().getMcpServerSecret(s.id);
+          if (secret.headers.isEmpty) continue;
+          secrets[s.id] = secret.toJson();
+        }
+
+        if (secrets.isNotEmpty) {
+          final plaintext = jsonEncode(secrets);
+          final secret = await encryptString(
+            plaintext: plaintext,
+            password: password ?? '',
+          );
+
+          manifest['containsEncryptedMcpSecrets'] = true;
+          manifest['encryptedMcpSecrets'] = secret.toJson();
+        }
+      } catch (e) {
+        SmartDialog.dismiss();
+        AnxToast.show(L10n.of(context).backupEncryptMcpSecretsFailed);
+        AnxLog.info('exportData: failed to encrypt mcp secrets: $e');
         return;
       }
     }
@@ -331,8 +380,13 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     }
   }
 
-  Future<Map<String, Map<String, String>>?> _loadEncryptedApiKeysFromBackup(
-      String extractPath) async {
+  Future<
+      ({
+        Map<String, Map<String, String>>? apiKeys,
+        Map<String, McpServerSecret>? mcpSecrets
+      })?> _loadEncryptedSecretsFromBackup(
+    String extractPath,
+  ) async {
     final l10n = L10n.of(navigatorKey.currentContext!);
     final manifestFile = File('$extractPath/$_backupManifestFileName');
     if (!await manifestFile.exists()) {
@@ -343,13 +397,35 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       final decoded = jsonDecode(await manifestFile.readAsString());
       if (decoded is! Map) return null;
       final map = decoded.cast<String, dynamic>();
-      final contains = map['containsEncryptedApiKeys'] == true;
-      if (!contains) return null;
-      final secretRaw = map['encryptedApiKeys'];
-      if (secretRaw is! Map) return null;
 
-      final secret =
-          EncryptedBackupSecret.fromJson(secretRaw.cast<String, dynamic>());
+      final containsApiKeys = map['containsEncryptedApiKeys'] == true;
+      final containsMcpSecrets = map['containsEncryptedMcpSecrets'] == true;
+
+      if (!containsApiKeys && !containsMcpSecrets) {
+        return null;
+      }
+
+      EncryptedBackupSecret? apiKeysSecret;
+      if (containsApiKeys) {
+        final secretRaw = map['encryptedApiKeys'];
+        if (secretRaw is Map) {
+          apiKeysSecret =
+              EncryptedBackupSecret.fromJson(secretRaw.cast<String, dynamic>());
+        }
+      }
+
+      EncryptedBackupSecret? mcpSecretsSecret;
+      if (containsMcpSecrets) {
+        final secretRaw = map['encryptedMcpSecrets'];
+        if (secretRaw is Map) {
+          mcpSecretsSecret =
+              EncryptedBackupSecret.fromJson(secretRaw.cast<String, dynamic>());
+        }
+      }
+
+      if (apiKeysSecret == null && mcpSecretsSecret == null) {
+        return null;
+      }
 
       final passwordController = TextEditingController();
       final ok = await SmartDialog.show<bool>(
@@ -383,39 +459,79 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
         return null;
       }
 
-      final plaintext = await decryptString(secret: secret, password: password);
-      final keysDecoded = jsonDecode(plaintext);
-      if (keysDecoded is! Map) return null;
+      Map<String, Map<String, String>>? apiKeys;
+      if (apiKeysSecret != null) {
+        final plaintext =
+            await decryptString(secret: apiKeysSecret, password: password);
+        final keysDecoded = jsonDecode(plaintext);
 
-      // Backward compatibility:
-      // - v1: { providerId: "apiKey" }
-      // - v2+: { providerId: { api_key: "...", api_keys: "..." } }
-      final result = <String, Map<String, String>>{};
-      for (final entry in keysDecoded.entries) {
-        final id = entry.key.toString();
-        final v = entry.value;
-        if (v is String) {
-          final apiKey = v.trim();
-          if (apiKey.isNotEmpty) {
-            result[id] = {'api_key': apiKey};
+        // Backward compatibility:
+        // - v1: { providerId: "apiKey" }
+        // - v2+: { providerId: { api_key: "...", api_keys: "..." } }
+        if (keysDecoded is Map) {
+          final result = <String, Map<String, String>>{};
+          for (final entry in keysDecoded.entries) {
+            final id = entry.key.toString();
+            final v = entry.value;
+            if (v is String) {
+              final apiKey = v.trim();
+              if (apiKey.isNotEmpty) {
+                result[id] = {'api_key': apiKey};
+              }
+              continue;
+            }
+            if (v is Map) {
+              final m = <String, String>{};
+              for (final e in v.entries) {
+                m[e.key.toString()] = e.value?.toString() ?? '';
+              }
+              if (m.values.any((s) => s.trim().isNotEmpty)) {
+                result[id] = m;
+              }
+            }
           }
-          continue;
-        }
-        if (v is Map) {
-          final map = <String, String>{};
-          for (final e in v.entries) {
-            map[e.key.toString()] = e.value?.toString() ?? '';
-          }
-          if (map.values.any((s) => s.trim().isNotEmpty)) {
-            result[id] = map;
-          }
+          apiKeys = result.isEmpty ? null : result;
         }
       }
 
-      return result.isEmpty ? null : result;
+      Map<String, McpServerSecret>? mcpSecrets;
+      if (mcpSecretsSecret != null) {
+        final plaintext =
+            await decryptString(secret: mcpSecretsSecret, password: password);
+        final secretsDecoded = jsonDecode(plaintext);
+        if (secretsDecoded is Map) {
+          final result = <String, McpServerSecret>{};
+          for (final entry in secretsDecoded.entries) {
+            final id = entry.key.toString();
+            final v = entry.value;
+            if (v is Map) {
+              try {
+                final secret = McpServerSecret.fromJson(
+                  v.cast<String, dynamic>(),
+                );
+                if (secret.headers.isNotEmpty) {
+                  result[id] = secret;
+                }
+              } catch (_) {
+                // ignore invalid entries
+              }
+            }
+          }
+          mcpSecrets = result.isEmpty ? null : result;
+        }
+      }
+
+      if (apiKeys == null && mcpSecrets == null) {
+        return null;
+      }
+
+      return (
+        apiKeys: apiKeys,
+        mcpSecrets: mcpSecrets,
+      );
     } catch (e) {
-      AnxLog.info('importData: failed to decrypt api keys: $e');
-      AnxToast.show(l10n.backupDecryptFailed);
+      AnxLog.info('importData: failed to decrypt encrypted data: $e');
+      AnxToast.show(l10n.backupDecryptEncryptedDataFailed);
       return null;
     }
   }
@@ -438,6 +554,16 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       }
 
       Prefs().saveAiConfig(id, cfg);
+    }
+  }
+
+  void _applyMcpSecretsToPrefs(Map<String, McpServerSecret> secrets) {
+    for (final entry in secrets.entries) {
+      final id = entry.key;
+      final secret = entry.value;
+      if (id.trim().isEmpty) continue;
+      if (secret.headers.isEmpty) continue;
+      Prefs().saveMcpServerSecret(id, secret);
     }
   }
 
@@ -510,8 +636,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
         'destinationPath': extractPath,
       });
 
-      final decryptedApiKeys =
-          await _loadEncryptedApiKeysFromBackup(extractPath);
+      final decryptedSecrets =
+          await _loadEncryptedSecretsFromBackup(extractPath);
 
       final ts = DateTime.now().millisecondsSinceEpoch;
       final bakSuffix = '.bak.$ts';
@@ -562,8 +688,14 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
         await _restorePrefsFromBackup(extractPath);
 
-        if (decryptedApiKeys != null && decryptedApiKeys.isNotEmpty) {
-          _applyApiKeysToPrefs(decryptedApiKeys);
+        final apiKeys = decryptedSecrets?.apiKeys;
+        if (apiKeys != null && apiKeys.isNotEmpty) {
+          _applyApiKeysToPrefs(apiKeys);
+        }
+
+        final mcpSecrets = decryptedSecrets?.mcpSecrets;
+        if (mcpSecrets != null && mcpSecrets.isNotEmpty) {
+          _applyMcpSecretsToPrefs(mcpSecrets);
         }
 
         // Cleanup backups only after everything succeeds.
