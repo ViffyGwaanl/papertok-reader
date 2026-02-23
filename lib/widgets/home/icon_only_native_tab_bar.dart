@@ -43,6 +43,13 @@ class _IconOnlyNativeTabBarState extends State<IconOnlyNativeTabBar> {
   int? _lastTint;
   int? _lastBg;
   bool? _lastIsDark;
+  String? _lastItemsSignature;
+
+  String _itemsSignature() {
+    final symbols = widget.items.map((e) => e.name).join('|');
+    final iconSize = widget.iconSize;
+    return '${widget.items.length}|${iconSize ?? ''}|$symbols';
+  }
 
   bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
   Color? get _effectiveTint =>
@@ -148,6 +155,7 @@ class _IconOnlyNativeTabBarState extends State<IconOnlyNativeTabBar> {
     _lastTint = resolveColorToArgb(_effectiveTint, context);
     _lastBg = resolveColorToArgb(widget.backgroundColor, context);
     _lastIsDark = _isDark;
+    _lastItemsSignature = _itemsSignature();
   }
 
   Future<dynamic> _onMethodCall(MethodCall call) async {
@@ -188,13 +196,19 @@ class _IconOnlyNativeTabBarState extends State<IconOnlyNativeTabBar> {
       await ch.invokeMethod('setStyle', style);
     }
 
-    // Keep items in sync (icons only).
-    final symbols = widget.items.map((e) => e.name).toList(growable: false);
-    await ch.invokeMethod('setItems', {
-      'labels': <String>[],
-      'sfSymbols': symbols,
-      'selectedIndex': widget.currentIndex,
-    });
+    // Avoid calling `setItems` on every rebuild.
+    // Rebuilding tab items resets native selection state and may cause a
+    // "double" or "weird" animation when users tap to switch tabs.
+    final sig = _itemsSignature();
+    if (_lastItemsSignature != sig) {
+      final symbols = widget.items.map((e) => e.name).toList(growable: false);
+      await ch.invokeMethod('setItems', {
+        'labels': <String>[],
+        'sfSymbols': symbols,
+        'selectedIndex': widget.currentIndex,
+      });
+      _lastItemsSignature = sig;
+    }
   }
 
   Future<void> _syncBrightnessIfNeeded() async {
