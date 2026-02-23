@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/service/shortcuts/shortcuts_callback_service.dart';
+import 'package:app_links/app_links.dart';
 import 'package:anx_reader/dao/database.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
@@ -90,15 +94,37 @@ class MyApp extends ConsumerStatefulWidget {
 
 class _MyAppState extends ConsumerState<MyApp>
     with WidgetsBindingObserver, WindowListener {
+  AppLinks? _appLinks;
+  StreamSubscription<Uri>? _linkSub;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     windowManager.addListener(this);
+
+    // iOS Shortcuts callback deep links.
+    if (AnxPlatform.isIOS) {
+      _appLinks = AppLinks();
+
+      _linkSub = _appLinks!.uriLinkStream.listen(
+        (uri) => ShortcutsCallbackService.instance.handleIncomingUri(uri),
+        onError: (err) {
+          // best-effort: ignore
+        },
+      );
+
+      _appLinks!.getInitialLink().then((uri) {
+        if (uri != null) {
+          ShortcutsCallbackService.instance.handleIncomingUri(uri);
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _linkSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
