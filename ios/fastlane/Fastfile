@@ -1,11 +1,17 @@
 import "../../Fastfile"
 
+# Ensure UTF-8 locale for all subprocesses (CocoaPods will crash under C locale)
+ENV["LANG"] ||= "en_US.UTF-8"
+ENV["LC_ALL"] ||= "en_US.UTF-8"
+# Ensure Homebrew binaries (pod, etc.) are visible
+ENV["PATH"] = "/opt/homebrew/bin:#{ENV["PATH"]}" unless ENV["PATH"].to_s.include?("/opt/homebrew/bin")
+
 default_platform(:ios)
 
-
 platform :ios do
-  # Authenticate with Apple Store
-  private_lane :authenticate_apple_store do
+  # Returns an ASC API key object that can be passed to actions like
+  # `latest_testflight_build_number` and `upload_to_testflight`.
+  private_lane :asc_api_key do
     app_store_connect_api_key(
       key_id: ENV["ASC_KEY_ID"],
       issuer_id: ENV["ASC_ISSUER_ID"],
@@ -13,108 +19,159 @@ platform :ios do
       is_key_content_base64: true,
       in_house: false
     )
-
   end
 
-  # Build iOS app
-  lane :build_ipa do
+  private_lane :use_match? do |options|
+    # Allow explicit override
+    if ENV.key?("USE_MATCH")
+      ENV["USE_MATCH"].to_s.downcase == "true"
+    elsif !options[:use_match].nil?
+      options[:use_match]
+    else
+      # Auto mode: only use match if required envs are present
+      !(ENV["MATCH_PASSWORD"].to_s.empty? || ENV["MATCH_GIT_BASIC_AUTHORIZATION"].to_s.empty?)
+    end
+  end
+
+  # Build iOS app (Flutter) and return context:
+  # { ipa_path:, version:, build_number:, api_key: }
+  lane :build_ipa do |options|
     verify_env(envs: [
       "ASC_KEY_ID",
       "ASC_ISSUER_ID",
       "ASC_KEY_P8_BASE64",
       "APP_BUNDLE_ID",
-      "MATCH_PASSWORD",
-      "MATCH_GIT_BASIC_AUTHORIZATION",
     ])
 
-    authenticate_apple_store
+    api_key = asc_api_key
 
-    # Sync certificates and profiles using match
-    UI.message("Syncing certificates and profiles")
+    version_number = options[:version] || get_version_from_pubspec
 
+    # Get next TestFlight build number (must be monotonically increasing)
+    #
+    # ASC processing can lag: a just-uploaded build number may not show up
+    # in the API/UI immediately, which risks reusing a build number.
+    # We keep a local monotonic counter and take max(ASC_latest, local_latest)+1.
+    require "fileutils"
 
-    # get_certificates
-    # get_provisioning_profile(app_identifier: "ai.papertok.paperreader")
-    # get_provisioning_profile(app_identifier: "ai.papertok.paperreader.shareExtension")
-  
-    if is_ci
-      create_keychain(
-        name: "fastlane_tmp_keychain",
-        password: "temp_password",
-        default_keychain: true,
-        unlock: true,
-        timeout: 3600,
-        add_to_search_list: true
-      )
-    end
-    
-    sync_code_signing(
-      type: "appstore",
-      readonly: is_ci,
-      keychain_name: is_ci ? "fastlane_tmp_keychain" : "login.keychain",
-      keychain_password: is_ci ? "temp_password" : nil,
-    )
+    asc_latest = latest_testflight_build_number(
+      api_key: api_key,
+      app_identifier: ENV["APP_BUNDLE_ID"],
+      # NOTE: do NOT pin `version:` here; build numbers must be monotonic across versions.
+      initial_build_number: 1
+    ).to_i
+
+    state_file = "/Users/gwaanl/.openclaw/workspace/state/papertok-reader/last_testflight_build_number.txt"
+    FileUtils.mkdir_p(File.dirname(state_file))
+    local_latest = File.exist?(state_file) ? File.read(state_file).to_i : 0
+
+    next_build = [asc_latest, local_latest].max + 1
+    File.write(state_file, next_build.to_s)
+
+    build_number = next_build.to_s
+    UI.message("Build number: ASC_latest=#{asc_latest}, local_latest=#{local_latest}, next=#{build_number}")
+
     commit = last_git_commit
-    puts "*** Starting iOS release for commit(#{commit[:abbreviated_commit_hash]}) ***"
-    
-    sh_on_root(command: "which pod && which ruby")
+    UI.message("*** iOS TestFlight build: v#{version_number} (#{build_number}) commit=#{commit[:abbreviated_commit_hash]} ***")
 
-  # if is_ci
-  #   UI.message("CI Debug: Checking keychain status...")
-  #   sh_on_root(command: "security list-keychains")
-  #   sh_on_root(command: "security default-keychain")
-    
-  #   UI.message("CI Debug: Checking provisioning profiles...")
-  #   sh_on_root(command: "ls -la ~/Library/MobileDevice/Provisioning\\ Profiles/ || echo 'Provisioning profiles directory not found'")
-    
-  #   UI.message("CI Debug: Checking certificates in keychain...")
-  #   sh_on_root(command: "security find-certificate -a -p | grep 'BEGIN CERTIFICATE' | wc -l")
-  # end
+    if use_match?(options)
+      verify_env(envs: [
+        "MATCH_PASSWORD",
+        "MATCH_GIT_BASIC_AUTHORIZATION",
+      ])
 
-    # # Verify certificates are available
-    # UI.message("Checking available certificates...")
-    # sh_on_root(command: "security find-identity -v -p codesigning")
+      UI.message("Syncing certificates and profiles via match")
+
+      if is_ci
+        create_keychain(
+          name: "fastlane_tmp_keychain",
+          password: "temp_password",
+          default_keychain: true,
+          unlock: true,
+          timeout: 3600,
+          add_to_search_list: true
+        )
+      end
+
+      sync_code_signing(
+        type: "appstore",
+        readonly: is_ci,
+        keychain_name: is_ci ? "fastlane_tmp_keychain" : "login.keychain",
+        keychain_password: is_ci ? "temp_password" : nil,
+      )
+    else
+      UI.message("Skipping match; relying on local Xcode automatic signing on this machine")
+    end
 
     fetch_dependencies
-    
-    sh_on_root(command: "flutter build ipa --release --dart-define=isAppStore=true")
-    
-    build_app(
-      skip_build_archive: true,
-      archive_path: "../build/ios/archive/Runner.xcarchive",
-      export_method: "app-store",
-      export_options: {
-        teamID: "28W956D5K8",
-        provisioningProfiles: {
-          "ai.papertok.paperreader" => "match AppStore ai.papertok.paperreader",
-          "ai.papertok.paperreader.shareExtension" => "match AppStore ai.papertok.paperreader.shareExtension"
-        }
-      }
-    )
+
+    # CocoaPods (pod) can break when invoked under `bundle exec fastlane`
+    # because Bundler env vars (RUBYOPT/BUNDLE_*/GEM_*) leak into subprocesses.
+    # We explicitly sanitize the environment for Flutter/CocoaPods.
+    require "shellwords"
+
+    sanitized_env_tokens = [
+      "env",
+      "-u", "BUNDLE_GEMFILE",
+      "-u", "BUNDLE_BIN_PATH",
+      "-u", "BUNDLER_VERSION",
+      "-u", "RUBYOPT",
+      "-u", "RUBYLIB",
+      "-u", "GEM_HOME",
+      "-u", "GEM_PATH",
+      "LANG=en_US.UTF-8",
+      "LC_ALL=en_US.UTF-8",
+      # PATH may contain spaces (e.g. 'Library/Application Support/...'); must be shell-escaped.
+      "PATH=/opt/homebrew/bin:#{ENV['PATH']}",
+      "COCOAPODS_DISABLE_STATS=1",
+    ]
+
+    sanitized_env = Shellwords.shelljoin(sanitized_env_tokens)
+
+    # Ensure Flutter iOS config exists before pod install (Generated.xcconfig)
+    sh_on_root(command: "#{sanitized_env} flutter pub get")
+
+    # Ensure Pods are in a good state (fast fail with a useful error)
+    sh_on_root(command: "cd ios && #{sanitized_env} pod install")
+
+    export_plist = use_match?(options) ? "ios/ExportOptions-AppStore-Manual.plist" : "ios/ExportOptions-AppStore.plist"
+
+    # Build IPA deterministically using Flutter.
+    # Output will be under: build/ios/ipa/*.ipa
+    sh_on_root(command: [
+      sanitized_env,
+      "flutter build ipa",
+      "--release",
+      "--dart-define=isAppStore=true",
+      "--build-name=#{version_number}",
+      "--build-number=#{build_number}",
+      "--export-options-plist=#{export_plist}",
+    ].join(" "))
+
+    ipa_path = sh("cd #{root_path} && ls -t build/ios/ipa/*.ipa | head -n 1").strip
+    UI.user_error!("IPA not found under build/ios/ipa") if ipa_path.to_s.empty?
+
+    # Make the path absolute: upload_to_testflight resolves relative paths
+    # from the current working directory (often ios/), not the repo root.
+    ipa_path = File.expand_path(ipa_path, root_path)
+    UI.user_error!("IPA not found at path #{ipa_path}") unless File.exist?(ipa_path)
+
+    {
+      ipa_path: ipa_path,
+      version: version_number,
+      build_number: build_number,
+      api_key: api_key,
+    }
   end
 
-
-  desc "Release a new build to Apple Store"
+  desc "Build & upload a new TestFlight build"
   lane :release_app_store do |options|
-
-    build_ipa
+    ctx = build_ipa(options)
 
     upload_to_testflight(
+      api_key: ctx[:api_key],
+      ipa: ctx[:ipa_path],
       skip_waiting_for_build_processing: false
     )
   end
-  
-  # This is a work in progress, requiring ad-hoc export method
-  # desc "Release to Play Store using Firebase App Distribution"
-  # lane :release_to_firebase do |options|
-  #   begin
-  #     build_ipa
-
-  #     firebase_app_distribution(
-  #       app: ENV["FIREBASE_APP_ID"],
-  #       service_credentials_file: google_service_account_json_path,
-  #       ipa_path: "../build/ios/Runner.ipa"
-  #     )
-  #   end
-  # end
 end
