@@ -1265,6 +1265,7 @@ class Prefs extends ChangeNotifier {
   // --- MCP (external tools) ---
 
   static const String _mcpServersV1Key = 'mcpServersV1';
+  static const String _mcpAutoRefreshToolsV1Key = 'mcpAutoRefreshToolsV1';
   static const String _mcpServerSecretV1Prefix = 'mcpServerSecretV1_';
   static const String _mcpToolsCacheV1Prefix = 'mcpToolsCacheV1_';
 
@@ -1324,6 +1325,19 @@ class Prefs extends ChangeNotifier {
   }
 
   // --- MCP servers (non-secret, syncable) ---
+
+  bool get mcpAutoRefreshToolsV1 {
+    return prefs.getBool(_mcpAutoRefreshToolsV1Key) ?? false;
+  }
+
+  set mcpAutoRefreshToolsV1(bool value) {
+    final before = prefs.getBool(_mcpAutoRefreshToolsV1Key) ?? false;
+    if (before != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_mcpAutoRefreshToolsV1Key, value);
+    notifyListeners();
+  }
 
   List<McpServerMeta> get mcpServersV1 {
     final raw = prefs.getString(_mcpServersV1Key);

@@ -111,6 +111,8 @@ class McpToolRegistry {
             args: input,
           );
 
+          final sanitized = _sanitizeToolResult(result);
+
           return jsonEncode({
             'status': 'ok',
             'name': fullName,
@@ -119,7 +121,8 @@ class McpToolRegistry {
               'name': server.name,
             },
             'tool': meta.name,
-            'result': result,
+            'result': sanitized.value,
+            'resultTruncated': sanitized.truncated,
           });
         } catch (e, st) {
           AnxLog.severe('MCP tool call failed: $fullName error=$e\n$st');
@@ -131,6 +134,67 @@ class McpToolRegistry {
         }
       },
       getInputFromJson: (json) => json,
+    );
+  }
+
+  static ({Map<String, dynamic> value, bool truncated}) _sanitizeToolResult(
+    Map<String, dynamic> result,
+  ) {
+    var truncated = false;
+
+    dynamic sanitize(dynamic value, int depth) {
+      if (depth > 6) {
+        truncated = true;
+        return '[max depth reached]';
+      }
+
+      if (value is String) {
+        const maxLen = 8000;
+        if (value.length > maxLen) {
+          truncated = true;
+          return '${value.substring(0, maxLen)}\n…(truncated ${value.length - maxLen} chars)';
+        }
+        return value;
+      }
+
+      if (value is Map) {
+        final out = <String, dynamic>{};
+        var count = 0;
+        for (final entry in value.entries) {
+          count++;
+          if (count > 60) {
+            truncated = true;
+            out['__truncated__'] = 'map has more than 60 entries';
+            break;
+          }
+          out[entry.key.toString()] = sanitize(entry.value, depth + 1);
+        }
+        return out;
+      }
+
+      if (value is List) {
+        final out = <dynamic>[];
+        final limit = value.length > 60 ? 60 : value.length;
+        for (var i = 0; i < limit; i++) {
+          out.add(sanitize(value[i], depth + 1));
+        }
+        if (value.length > limit) {
+          truncated = true;
+          out.add('…(truncated ${value.length - limit} items)');
+        }
+        return out;
+      }
+
+      // Numbers/bools/null/etc.
+      return value;
+    }
+
+    final sanitized = sanitize(result, 0);
+    return (
+      value: sanitized is Map<String, dynamic>
+          ? sanitized
+          : <String, dynamic>{'value': sanitized},
+      truncated: truncated,
     );
   }
 

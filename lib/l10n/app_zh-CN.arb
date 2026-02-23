@@ -732,6 +732,8 @@
   "settingsAiToolForceConfirmDestructiveDesc": "即使关闭确认，也会对高风险工具弹出确认。",
   "settingsMcpServers": "MCP 服务器",
   "settingsMcpServersDesc": "管理外部 MCP（Streamable HTTP）工具服务器。密钥/Headers 仅保存在本地。",
+  "settingsMcpAutoRefreshTools": "自动刷新 MCP 工具",
+  "settingsMcpAutoRefreshToolsDesc": "开启后，当本地没有工具缓存时自动刷新工具列表（可能增加启动延迟）。",
   "settingsMcpAddServer": "添加 MCP 服务器",
   "settingsMcpAddServerDesc": "添加一个 Streamable HTTP MCP endpoint。",
   "settingsMcpEditServer": "编辑 MCP 服务器",

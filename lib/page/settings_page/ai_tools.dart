@@ -130,6 +130,15 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
           );
         },
       ),
+      SettingsTile.switchTile(
+        initialValue: Prefs().mcpAutoRefreshToolsV1,
+        onToggle: (value) {
+          Prefs().mcpAutoRefreshToolsV1 = value;
+          setState(() {});
+        },
+        title: Text(l10n.settingsMcpAutoRefreshTools),
+        description: Text(l10n.settingsMcpAutoRefreshToolsDesc),
+      ),
     ];
 
     final toolsTile = CustomSettingsTile(

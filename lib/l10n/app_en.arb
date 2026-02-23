@@ -732,6 +732,8 @@
   "settingsAiToolForceConfirmDestructiveDesc": "Even if confirmation is disabled, still ask for approval when a tool is high-risk.",
   "settingsMcpServers": "MCP Servers",
   "settingsMcpServersDesc": "Manage external MCP (Streamable HTTP) tool servers. Secrets are stored locally.",
+  "settingsMcpAutoRefreshTools": "Auto refresh MCP tools",
+  "settingsMcpAutoRefreshToolsDesc": "When enabled, refresh MCP tools list automatically when tool cache is missing (may increase startup latency).",
   "settingsMcpAddServer": "Add MCP server",
   "settingsMcpAddServerDesc": "Add a Streamable HTTP MCP endpoint.",
   "settingsMcpEditServer": "Edit MCP server",

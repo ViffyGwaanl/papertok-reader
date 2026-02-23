@@ -39,7 +39,8 @@ We want AI-related configuration to be **portable across devices**, but with str
   - `enabledIds`: list of tool ids enabled in "Settings → AI Tools"
   - `approvalPolicy`: always | writesOnly | never
   - `forceConfirmDestructive`: boolean (recommended true)
-- MCP servers (non-secret):
+- MCP (non-secret):
+  - `mcp.autoRefreshToolsV1`: boolean, auto refresh tools/list when local cache is missing (default false)
   - `mcp.servers`: list of MCP server metas (id/name/endpoint/enabled); **secrets/headers not synced**
 - AI translation prefs (safe, no secrets):
   - translation-dedicated provider id + model override
@@ -91,6 +92,7 @@ We want AI-related configuration to be **portable across devices**, but with str
     "forceConfirmDestructive": true
   },
   "mcp": {
+    "autoRefreshToolsV1": false,
     "servers": [
       {
         "id": "<uuid>",

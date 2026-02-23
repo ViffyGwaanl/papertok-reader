@@ -79,6 +79,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
   };
 
   final mcp = <String, dynamic>{
+    'autoRefreshToolsV1': prefs.mcpAutoRefreshToolsV1,
     'servers':
         prefs.mcpServersV1.map((e) => e.toJson()).toList(growable: false),
   };
@@ -216,6 +217,16 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
 
     final mcp = json['mcp'];
     if (mcp is Map) {
+      final autoRefresh = mcp['autoRefreshToolsV1'];
+      if (autoRefresh is bool) {
+        prefs.mcpAutoRefreshToolsV1 = autoRefresh;
+      } else if (autoRefresh is String) {
+        final v = autoRefresh.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.mcpAutoRefreshToolsV1 = v == 'true';
+        }
+      }
+
       final servers = mcp['servers'];
       if (servers is List) {
         final list = <McpServerMeta>[];

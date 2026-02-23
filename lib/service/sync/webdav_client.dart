@@ -22,18 +22,17 @@ class WebdavClient extends SyncClientBase {
   }
 
   void _initClient() {
-    _client =
-        newClient(
-            _config['url'],
-            user: _config['username'],
-            password: _config['password'],
-            debug: false,
-          )
-          ..setHeaders({
-            'accept-charset': 'utf-8',
-            'Content-Type': 'application/octet-stream',
-          })
-          ..setConnectTimeout(8000);
+    _client = newClient(
+      _config['url'],
+      user: _config['username'],
+      password: _config['password'],
+      debug: false,
+    )
+      ..setHeaders({
+        'accept-charset': 'utf-8',
+        'Content-Type': 'application/octet-stream',
+      })
+      ..setConnectTimeout(8000);
   }
 
   @override
@@ -54,10 +53,35 @@ class WebdavClient extends SyncClientBase {
     }
   }
 
+  static const String _newRoot = 'paper_reader';
+  static const String _legacyRoot = 'anx';
+
+  Future<String> _detectRemoteRootForTest() async {
+    try {
+      if (await isExist('/$_newRoot')) {
+        return _newRoot;
+      }
+    } catch (_) {}
+
+    try {
+      if (await isExist('/$_legacyRoot')) {
+        AnxLog.warning(
+          'WebDAV full test: remote root "$_legacyRoot/" found; "$_newRoot/" is missing. '
+          'Using legacy path for compatibility.',
+        );
+        return _legacyRoot;
+      }
+    } catch (_) {}
+
+    // Fresh setup or limited server; prefer new root.
+    return _newRoot;
+  }
+
   @override
   Future<void> testFullCapabilities() async {
-    const testDir = 'paper_reader/.test';
-    const testFile = '$testDir/test.txt';
+    final root = await _detectRemoteRootForTest();
+    final testDir = '$root/.test';
+    final testFile = '$testDir/test.txt';
     io.File? localTestFile;
     io.File? downloadTestFile;
 
@@ -69,8 +93,7 @@ class WebdavClient extends SyncClientBase {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       localTestFile = io.File('${tempDir.path}/webdav_test_$timestamp.txt');
 
-      final testContent =
-          'Paper Reader WebDAV Test\n'
+      final testContent = 'Paper Reader WebDAV Test\n'
           'Test Time: ${DateTime.now()}\n'
           'Platform: ${AnxPlatform.type.name}\n'
           'Timestamp: $timestamp\n';
@@ -179,7 +202,9 @@ class WebdavClient extends SyncClientBase {
   Future<List<RemoteFile>> readDir(String path) async {
     return (await _client.readDir(
       path,
-    )).map((file) => file.toRemoteFile()).toList();
+    ))
+        .map((file) => file.toRemoteFile())
+        .toList();
   }
 
   @override

@@ -12,6 +12,7 @@ import 'package:anx_reader/service/ai/langchain_runner.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/service/ai/api_key_rotation.dart';
+import 'package:anx_reader/service/mcp/mcp_client_service.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
@@ -117,6 +118,50 @@ Stream<String> _generateStream({
         LangchainAiConfig.fromPrefs(registryIdentifier, overrideConfig);
     config = mergeConfigs(config, override);
   }
+
+  Future<void> maybeAutoRefreshMcpTools() async {
+    if (!useAgent) return;
+    if (!Prefs().mcpAutoRefreshToolsV1) return;
+
+    final enabledServers =
+        Prefs().mcpServersV1.where((s) => s.enabled).toList(growable: false);
+    if (enabledServers.isEmpty) return;
+
+    // Refresh only when cache is missing (default safe behavior).
+    final missingCache = enabledServers
+        .where((s) => Prefs().getMcpToolsCacheV1(s.id) == null)
+        .toList(growable: false);
+    if (missingCache.isEmpty) return;
+
+    AnxLog.info(
+      'MCP: auto refreshing tools for ${missingCache.length} server(s) (cache missing)',
+    );
+
+    final futures = missingCache.map((server) async {
+      try {
+        final tools = await McpClientService.instance
+            .listTools(server)
+            .timeout(const Duration(seconds: 6));
+        Prefs().saveMcpToolsCacheV1(server.id, tools);
+        AnxLog.info(
+          'MCP: tools refreshed serverId=${server.id} tools=${tools.length}',
+        );
+      } catch (e) {
+        AnxLog.warning(
+          'MCP: auto refresh tools failed serverId=${server.id} endpoint=${server.endpoint} error=$e',
+        );
+      }
+    }).toList(growable: false);
+
+    // Best-effort: don't block the chat forever.
+    try {
+      await Future.wait(futures).timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  await maybeAutoRefreshMcpTools();
 
   // Multi API keys support (round-robin per request) + failure stats.
   //
