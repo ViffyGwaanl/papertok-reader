@@ -745,6 +745,32 @@
   "settingsMcpServerHeaders": "请求头（仅本地）",
   "settingsMcpServerHeadersDesc": "可选：为该服务器设置请求头（仅本地，不会同步）。请使用 JSON 对象格式。",
   "settingsMcpRefreshTools": "刷新工具列表",
+  "settingsMcpRefreshAllTools": "刷新全部工具",
+  "settingsMcpRefreshAllToolsDesc": "刷新所有已启用 MCP 服务器的工具列表。",
+  "settingsMcpRefreshingAllTools": "正在刷新工具列表…",
+  "settingsMcpNoEnabledServers": "没有已启用的 MCP 服务器。",
+  "settingsMcpRefreshAllToolsResult": "刷新完成：成功 {ok}，失败 {fail}",
+  "@settingsMcpRefreshAllToolsResult": {
+    "placeholders": {
+      "ok": {},
+      "fail": {}
+    }
+  },
+  "settingsMcpToolsCacheEmpty": "工具缓存：无（点击“刷新工具列表”）",
+  "settingsMcpToolsCacheInfo": "工具缓存：{count} 个，上次更新 {time}",
+  "@settingsMcpToolsCacheInfo": {
+    "placeholders": {
+      "count": {},
+      "time": {}
+    }
+  },
+  "settingsMcpClearToolsCache": "清空工具缓存",
+  "settingsMcpClearToolsCacheConfirm": "清空「{serverName}」的工具缓存？",
+  "@settingsMcpClearToolsCacheConfirm": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
   "settingsMcpToolsTitle": "工具列表 — {serverName}",
   "@settingsMcpToolsTitle": {
     "placeholders": {

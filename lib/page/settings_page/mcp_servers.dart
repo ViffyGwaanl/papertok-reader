@@ -21,6 +21,111 @@ class McpServersSettingsPage extends StatefulWidget {
 class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
   List<McpServerMeta> get _servers => Prefs().mcpServersV1;
 
+  String _formatEpochMs(int epochMs) {
+    final dt = DateTime.fromMillisecondsSinceEpoch(epochMs).toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
+  String _cacheStatusText(L10n l10n, McpServerMeta server) {
+    final cache = Prefs().getMcpToolsCacheV1(server.id);
+    if (cache == null) {
+      return l10n.settingsMcpToolsCacheEmpty;
+    }
+
+    final count = cache.tools.length;
+    final time = _formatEpochMs(cache.updatedAt);
+    return l10n.settingsMcpToolsCacheInfo(count, time);
+  }
+
+  Future<void> _clearToolsCache(McpServerMeta server) async {
+    final l10n = L10n.of(context);
+
+    final ok = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text(l10n.settingsMcpClearToolsCache),
+              content:
+                  Text(l10n.settingsMcpClearToolsCacheConfirm(server.name)),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(l10n.commonCancel),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(l10n.commonConfirm),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!ok) return;
+
+    Prefs().clearMcpToolsCacheV1(server.id);
+    setState(() {});
+    AnxToast.show(l10n.commonSuccess);
+  }
+
+  Future<void> _refreshAllTools() async {
+    final l10n = L10n.of(context);
+    final servers = _servers.where((s) => s.enabled).toList(growable: false);
+    if (servers.isEmpty) {
+      AnxToast.show(l10n.settingsMcpNoEnabledServers);
+      return;
+    }
+
+    // Show a simple progress dialog. Best-effort; do not block forever.
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(l10n.commonRefresh),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              const Center(child: CircularProgressIndicator()),
+              const SizedBox(height: 16),
+              Text(
+                l10n.settingsMcpRefreshingAllTools,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    var okCount = 0;
+    var failCount = 0;
+
+    for (final s in servers) {
+      try {
+        final tools = await McpClientService.instance
+            .listTools(s)
+            .timeout(const Duration(seconds: 12));
+        Prefs().saveMcpToolsCacheV1(s.id, tools);
+        okCount++;
+      } catch (_) {
+        failCount++;
+      }
+    }
+
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    setState(() {});
+    AnxToast.show(l10n.settingsMcpRefreshAllToolsResult(okCount, failCount));
+  }
+
   Future<void> _editServer({McpServerMeta? existing}) async {
     final l10n = L10n.of(context);
 
@@ -252,6 +357,12 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
             onPressed: (_) => _editServer(),
           ),
           const Divider(height: 1),
+          SettingsTile.navigation(
+            title: Text(l10n.settingsMcpRefreshAllTools),
+            description: Text(l10n.settingsMcpRefreshAllToolsDesc),
+            onPressed: (_) => _refreshAllTools(),
+          ),
+          const Divider(height: 1),
           if (servers.isEmpty)
             Padding(
               padding: const EdgeInsets.all(16),
@@ -264,7 +375,17 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
             for (final s in servers) ...[
               ListTile(
                 title: Text(s.name),
-                subtitle: Text(s.endpoint),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.endpoint),
+                    const SizedBox(height: 4),
+                    Text(
+                      _cacheStatusText(l10n, s),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -287,6 +408,9 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
                           case 'tools':
                             _refreshTools(s);
                             break;
+                          case 'clearToolsCache':
+                            _clearToolsCache(s);
+                            break;
                           case 'delete':
                             _deleteServer(s);
                             break;
@@ -305,6 +429,10 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
                           PopupMenuItem(
                             value: 'tools',
                             child: Text(l10n.settingsMcpRefreshTools),
+                          ),
+                          PopupMenuItem(
+                            value: 'clearToolsCache',
+                            child: Text(l10n.settingsMcpClearToolsCache),
                           ),
                           const PopupMenuDivider(),
                           PopupMenuItem(

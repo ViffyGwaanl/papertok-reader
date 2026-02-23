@@ -745,6 +745,32 @@
   "settingsMcpServerHeaders": "Headers (local only)",
   "settingsMcpServerHeadersDesc": "Optional request headers for this server (local only; not synced). Use JSON object format.",
   "settingsMcpRefreshTools": "Refresh tools",
+  "settingsMcpRefreshAllTools": "Refresh tools (all)",
+  "settingsMcpRefreshAllToolsDesc": "Refresh tools list for all enabled MCP servers.",
+  "settingsMcpRefreshingAllTools": "Refreshing tools list…",
+  "settingsMcpNoEnabledServers": "No enabled MCP servers.",
+  "settingsMcpRefreshAllToolsResult": "Refreshed: {ok} ok, {fail} failed",
+  "@settingsMcpRefreshAllToolsResult": {
+    "placeholders": {
+      "ok": {},
+      "fail": {}
+    }
+  },
+  "settingsMcpToolsCacheEmpty": "Tools cache: none (tap Refresh tools)",
+  "settingsMcpToolsCacheInfo": "Tools cache: {count} tools, updated {time}",
+  "@settingsMcpToolsCacheInfo": {
+    "placeholders": {
+      "count": {},
+      "time": {}
+    }
+  },
+  "settingsMcpClearToolsCache": "Clear tools cache",
+  "settingsMcpClearToolsCacheConfirm": "Clear tools cache for \"{serverName}\"?",
+  "@settingsMcpClearToolsCacheConfirm": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
   "settingsMcpToolsTitle": "Tools — {serverName}",
   "@settingsMcpToolsTitle": {
     "placeholders": {
