@@ -5,6 +5,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:device_calendar_plus/device_calendar_plus.dart';
+import 'package:flutter/services.dart';
 
 import 'base_tool.dart';
 
@@ -49,13 +50,52 @@ class CalendarUpdateEventTool
               },
               'timeZone': {
                 'type': 'string',
-                'description': 'Optional. New timezone identifier.',
+                'description': 'Optional. iOS-only. New timezone identifier.',
+              },
+              'calendarId': {
+                'type': 'string',
+                'description':
+                    'Optional. iOS-only. Move event to another calendar.',
+              },
+              'span': {
+                'type': 'string',
+                'description':
+                    'Optional. iOS-only. For recurring events: thisEvent|futureEvents. Defaults to thisEvent.',
+              },
+              'alarmMinutes': {
+                'description':
+                    'Optional. iOS-only. Single number or array. Set alarms at start - N minutes. Empty array clears.',
+                'oneOf': [
+                  {'type': 'number'},
+                  {
+                    'type': 'array',
+                    'items': {'type': 'number'}
+                  },
+                ],
+              },
+              'clearAlarms': {
+                'type': 'boolean',
+                'description':
+                    'Optional. iOS-only. Clear alarms. Default false.',
+              },
+              'recurrence': {
+                'type': 'object',
+                'description':
+                    'Optional. iOS-only. Simple recurrence rule. See calendar_create_event.',
+              },
+              'clearRecurrence': {
+                'type': 'boolean',
+                'description':
+                    'Optional. iOS-only. Clear recurrence rules. Default false.',
               },
             },
             'required': ['eventId'],
           },
-          timeout: const Duration(seconds: 10),
+          timeout: const Duration(seconds: 12),
         );
+
+  static const MethodChannel _iosChannel =
+      MethodChannel('ai.papertok.paperreader/calendar_eventkit');
 
   @override
   JsonMap parseInput(Map<String, dynamic> json) => json;
@@ -103,6 +143,8 @@ class CalendarUpdateEventTool
     final location = input['location']?.toString().trim();
     final description = input['description']?.toString().trim();
     final timeZone = input['timeZone']?.toString().trim();
+    final calendarId = input['calendarId']?.toString().trim();
+    final span = input['span']?.toString().trim();
 
     if ((title == null || title.isEmpty) &&
         start == null &&
@@ -110,12 +152,47 @@ class CalendarUpdateEventTool
         isAllDay == null &&
         (location == null || location.isEmpty) &&
         (description == null || description.isEmpty) &&
-        (timeZone == null || timeZone.isEmpty)) {
+        (timeZone == null || timeZone.isEmpty) &&
+        (calendarId == null || calendarId.isEmpty) &&
+        input['alarmMinutes'] == null &&
+        input['clearAlarms'] == null &&
+        input['recurrence'] == null &&
+        input['clearRecurrence'] == null &&
+        (span == null || span.isEmpty)) {
       throw ArgumentError('At least one field must be provided to update');
     }
 
     if (start != null && end != null && end.isBefore(start)) {
       throw ArgumentError('endIso must be after startIso');
+    }
+
+    if (AnxPlatform.isIOS) {
+      final args = <String, dynamic>{
+        'eventId': eventId,
+        if (title != null) 'title': title,
+        if (input.containsKey('startIso')) 'startIso': input['startIso'],
+        if (input.containsKey('endIso')) 'endIso': input['endIso'],
+        if (isAllDay != null) 'isAllDay': isAllDay,
+        if (location != null) 'location': location,
+        if (description != null) 'description': description,
+        if (timeZone != null && timeZone.isNotEmpty) 'timeZone': timeZone,
+        if (calendarId != null && calendarId.isNotEmpty)
+          'calendarId': calendarId,
+        if (span != null && span.isNotEmpty) 'span': span,
+        if (input.containsKey('alarmMinutes'))
+          'alarmMinutes': input['alarmMinutes'],
+        if (input['clearAlarms'] is bool)
+          'clearAlarms': input['clearAlarms'] as bool,
+        if (input['recurrence'] is Map) 'recurrence': input['recurrence'],
+        if (input['clearRecurrence'] is bool)
+          'clearRecurrence': input['clearRecurrence'] as bool,
+      };
+
+      final raw = await _iosChannel.invokeMethod<Map>('updateEvent', args);
+      if (raw == null) {
+        throw StateError('Failed to update event');
+      }
+      return Map<String, dynamic>.from(raw);
     }
 
     final plugin = DeviceCalendar.instance;

@@ -4,6 +4,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:device_calendar_plus/device_calendar_plus.dart';
+import 'package:flutter/services.dart';
 
 import 'base_tool.dart';
 
@@ -20,6 +21,9 @@ class CalendarListCalendarsTool
           },
           timeout: const Duration(seconds: 8),
         );
+
+  static const MethodChannel _iosChannel =
+      MethodChannel('ai.papertok.paperreader/calendar_eventkit');
 
   @override
   JsonMap parseInput(Map<String, dynamic> json) => json;
@@ -38,6 +42,19 @@ class CalendarListCalendarsTool
   Future<Map<String, dynamic>> run(JsonMap input) async {
     if (!AnxPlatform.isIOS && !AnxPlatform.isAndroid) {
       throw UnsupportedError('notSupported');
+    }
+
+    if (AnxPlatform.isIOS) {
+      final raw = await _iosChannel.invokeMethod<Map>('listCalendars');
+      if (raw == null) {
+        throw StateError('Failed to list calendars');
+      }
+      final map = Map<String, dynamic>.from(raw);
+      final calendars = (map['calendars'] as List?) ?? const [];
+      return {
+        'count': calendars.length,
+        'calendars': calendars,
+      };
     }
 
     final plugin = DeviceCalendar.instance;

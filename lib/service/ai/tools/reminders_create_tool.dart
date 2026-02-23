@@ -41,6 +41,26 @@ class RemindersCreateTool
                 'description':
                     'Optional. Alias of listId for compatibility with other apps.',
               },
+              'priority': {
+                'type': 'number',
+                'description':
+                    'Optional. 0..9. 0 means no priority. 1=highest, 9=lowest.',
+              },
+              'url': {
+                'type': 'string',
+                'description': 'Optional. Attach a URL to the reminder.',
+              },
+              'alarmMinutes': {
+                'description':
+                    'Optional. Single number or array. Adds absolute alarms at dueDate - N minutes. Requires dueIso.',
+                'oneOf': [
+                  {'type': 'number'},
+                  {
+                    'type': 'array',
+                    'items': {'type': 'number'}
+                  },
+                ],
+              },
             },
             'required': ['title'],
           },
@@ -64,17 +84,25 @@ class RemindersCreateTool
       throw ArgumentError('title is required');
     }
 
+    final listId = (input['listId']?.toString().trim() ?? '').isNotEmpty
+        ? input['listId']?.toString()
+        : (input['calendarId']?.toString().trim() ?? '').isNotEmpty
+            ? input['calendarId']?.toString()
+            : null;
+
     final args = <String, dynamic>{
       'title': title,
       if ((input['notes']?.toString().trim() ?? '').isNotEmpty)
         'notes': input['notes']?.toString(),
       if ((input['dueIso']?.toString().trim() ?? '').isNotEmpty)
         'dueIso': input['dueIso']?.toString(),
-      if ((input['listId']?.toString().trim() ?? '').isNotEmpty)
-        'listId': input['listId']?.toString(),
-      // Cherry compatibility alias.
-      if ((input['calendarId']?.toString().trim() ?? '').isNotEmpty)
-        'listId': input['calendarId']?.toString(),
+      if (listId != null) 'listId': listId,
+      if (input['priority'] is num)
+        'priority': (input['priority'] as num).toInt(),
+      if ((input['url']?.toString().trim() ?? '').isNotEmpty)
+        'url': input['url']?.toString(),
+      if (input.containsKey('alarmMinutes'))
+        'alarmMinutes': input['alarmMinutes'],
     };
 
     final result = await _channel.invokeMethod<Map>('create', args);

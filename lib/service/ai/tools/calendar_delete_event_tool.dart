@@ -5,6 +5,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:device_calendar_plus/device_calendar_plus.dart';
+import 'package:flutter/services.dart';
 
 import 'base_tool.dart';
 
@@ -23,11 +24,19 @@ class CalendarDeleteEventTool
                 'description':
                     'Required. Target event id. Use calendar_list_events output eventId (or instanceId for recurring events).',
               },
+              'span': {
+                'type': 'string',
+                'description':
+                    'Optional. iOS-only. For recurring events: thisEvent|futureEvents. Defaults to thisEvent.',
+              },
             },
             'required': ['eventId'],
           },
-          timeout: const Duration(seconds: 10),
+          timeout: const Duration(seconds: 12),
         );
+
+  static const MethodChannel _iosChannel =
+      MethodChannel('ai.papertok.paperreader/calendar_eventkit');
 
   @override
   JsonMap parseInput(Map<String, dynamic> json) => json;
@@ -51,6 +60,22 @@ class CalendarDeleteEventTool
     final eventId = input['eventId']?.toString().trim() ?? '';
     if (eventId.isEmpty) {
       throw ArgumentError('eventId is required');
+    }
+
+    final span = input['span']?.toString().trim();
+
+    if (AnxPlatform.isIOS) {
+      final raw = await _iosChannel.invokeMethod<Map>(
+        'deleteEvent',
+        <String, dynamic>{
+          'eventId': eventId,
+          if (span != null && span.isNotEmpty) 'span': span,
+        },
+      );
+      if (raw == null) {
+        throw StateError('Failed to delete event');
+      }
+      return Map<String, dynamic>.from(raw);
     }
 
     final plugin = DeviceCalendar.instance;

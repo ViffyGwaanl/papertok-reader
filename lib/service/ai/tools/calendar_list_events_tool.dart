@@ -4,6 +4,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:device_calendar_plus/device_calendar_plus.dart';
+import 'package:flutter/services.dart';
 
 import 'base_tool.dart';
 
@@ -48,10 +49,18 @@ class CalendarListEventsTool
                 'description':
                     'Optional. Include event description/notes (may be long). Defaults to false.',
               },
+              'includeAlarms': {
+                'type': 'boolean',
+                'description':
+                    'Optional. iOS-only. Include alarmMinutes[] if available. Defaults to false.',
+              },
             },
           },
           timeout: const Duration(seconds: 10),
         );
+
+  static const MethodChannel _iosChannel =
+      MethodChannel('ai.papertok.paperreader/calendar_eventkit');
 
   @override
   JsonMap parseInput(Map<String, dynamic> json) => json;
@@ -92,9 +101,6 @@ class CalendarListEventsTool
       throw UnsupportedError('notSupported');
     }
 
-    final plugin = DeviceCalendar.instance;
-    await _ensurePermissions(plugin);
-
     final start = _parseIso(input['startIso']) ?? DateTime.now();
 
     final days = _parseInt(input['days'], 7).clamp(1, 60);
@@ -102,6 +108,7 @@ class CalendarListEventsTool
 
     final maxResults = _parseInt(input['maxResults'], 50).clamp(1, 200);
     final includeDescription = _parseBool(input['includeDescription'], false);
+    final includeAlarms = _parseBool(input['includeAlarms'], false);
 
     final calendarIdsRaw = input['calendarIds'];
     final calendarIds = (calendarIdsRaw is List)
@@ -110,6 +117,26 @@ class CalendarListEventsTool
             .where((e) => e.isNotEmpty)
             .toList(growable: false)
         : const <String>[];
+
+    if (AnxPlatform.isIOS) {
+      final args = <String, dynamic>{
+        'startIso': start.toIso8601String(),
+        'endIso': end.toIso8601String(),
+        'maxResults': maxResults,
+        'includeDescription': includeDescription,
+        'includeAlarms': includeAlarms,
+        if (calendarIds.isNotEmpty) 'calendarIds': calendarIds,
+      };
+
+      final raw = await _iosChannel.invokeMethod<Map>('listEvents', args);
+      if (raw == null) {
+        throw StateError('Failed to list events');
+      }
+      return Map<String, dynamic>.from(raw);
+    }
+
+    final plugin = DeviceCalendar.instance;
+    await _ensurePermissions(plugin);
 
     final events = await plugin.listEvents(
       start,

@@ -9,6 +9,7 @@ import 'package:anx_reader/service/ai/tools/bookshelf_organize_tool.dart';
 import 'package:anx_reader/service/ai/tools/calculator_tool.dart';
 import 'package:anx_reader/service/ai/tools/calendar_create_event_tool.dart';
 import 'package:anx_reader/service/ai/tools/calendar_delete_event_tool.dart';
+import 'package:anx_reader/service/ai/tools/calendar_get_event_tool.dart';
 import 'package:anx_reader/service/ai/tools/calendar_list_calendars_tool.dart';
 import 'package:anx_reader/service/ai/tools/calendar_list_events_tool.dart';
 import 'package:anx_reader/service/ai/tools/calendar_update_event_tool.dart';
@@ -20,10 +21,17 @@ import 'package:anx_reader/service/ai/tools/current_time_tool.dart';
 import 'package:anx_reader/service/ai/tools/fetch_url_tool.dart';
 import 'package:anx_reader/service/ai/tools/mindmap_tool.dart';
 import 'package:anx_reader/service/ai/tools/notes_search_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_create_list_tool.dart';
 import 'package:anx_reader/service/ai/tools/reminders_create_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_delete_list_tool.dart';
 import 'package:anx_reader/service/ai/tools/reminders_delete_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_get_tool.dart';
 import 'package:anx_reader/service/ai/tools/reminders_list_lists_tool.dart';
 import 'package:anx_reader/service/ai/tools/reminders_list_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_rename_list_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_complete_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_uncomplete_tool.dart';
+import 'package:anx_reader/service/ai/tools/reminders_update_tool.dart';
 import 'package:anx_reader/service/ai/tools/shortcuts_run_tool.dart';
 import 'package:anx_reader/service/ai/tools/reading_history_tool.dart';
 import 'package:anx_reader/service/ai/tools/tags_list_tool.dart';
@@ -91,13 +99,21 @@ class AiToolRegistry {
     fetchUrlToolDefinition,
     calendarListCalendarsToolDefinition,
     calendarListEventsToolDefinition,
+    calendarGetEventToolDefinition,
     calendarCreateEventToolDefinition,
     calendarUpdateEventToolDefinition,
     calendarDeleteEventToolDefinition,
     remindersListListsToolDefinition,
     remindersListToolDefinition,
+    remindersGetToolDefinition,
     remindersCreateToolDefinition,
+    remindersUpdateToolDefinition,
+    remindersCompleteToolDefinition,
+    remindersUncompleteToolDefinition,
     remindersDeleteToolDefinition,
+    remindersCreateListToolDefinition,
+    remindersRenameListToolDefinition,
+    remindersDeleteListToolDefinition,
     shortcutsRunToolDefinition,
     mindmapToolDefinition,
     bookContentSearchToolDefinition,

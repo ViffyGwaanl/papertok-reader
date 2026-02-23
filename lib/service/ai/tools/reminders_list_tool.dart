@@ -13,7 +13,7 @@ class RemindersListTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
       : super(
           name: 'reminders_list',
           description:
-              'List iOS reminders within a given ISO-8601 time window. Read-only. On non-iOS platforms, returns not supported.',
+              'List iOS reminders within a time window using EventKit. Read-only. Defaults to now..now+7days. On non-iOS platforms, returns not supported.',
           inputJsonSchema: const {
             'type': 'object',
             'properties': {
@@ -25,11 +25,18 @@ class RemindersListTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
               },
               'startIso': {
                 'type': 'string',
-                'description': 'Required. Start datetime (ISO-8601).',
+                'description':
+                    'Optional. Start datetime (ISO-8601). Defaults to now.',
               },
               'endIso': {
                 'type': 'string',
-                'description': 'Required. End datetime (ISO-8601).',
+                'description':
+                    'Optional. End datetime (ISO-8601). Defaults to start+7 days.',
+              },
+              'days': {
+                'type': 'number',
+                'description':
+                    'Optional. When endIso is omitted, end = start + days. Defaults to 7. Range: 1..60.',
               },
               'includeCompleted': {
                 'type': 'boolean',
@@ -41,13 +48,23 @@ class RemindersListTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
                 'description':
                     'Optional. Include reminders without due date. Default false.',
               },
+              'includeNotes': {
+                'type': 'boolean',
+                'description':
+                    'Optional. Include notes/body field. Default false.',
+              },
+              'notesMaxLen': {
+                'type': 'number',
+                'description':
+                    'Optional. When includeNotes=true, truncate notes to this length. Defaults to 400. Max 8000.',
+              },
               'limit': {
                 'type': 'number',
                 'description':
-                    'Optional. Max reminders to return. Default 200.',
+                    'Optional. Max reminders to return. Default 200. Max 1000.',
               },
             },
-            'required': ['listIds', 'startIso', 'endIso'],
+            'required': ['listIds'],
           },
           timeout: const Duration(seconds: 12),
         );
@@ -71,18 +88,20 @@ class RemindersListTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
 
     final startIso = input['startIso']?.toString().trim() ?? '';
     final endIso = input['endIso']?.toString().trim() ?? '';
-    if (startIso.isEmpty || endIso.isEmpty) {
-      throw ArgumentError('startIso/endIso is required');
-    }
 
     final args = <String, dynamic>{
       'listIds': listIds.map((e) => e.toString()).toList(growable: false),
-      'startIso': startIso,
-      'endIso': endIso,
+      if (startIso.isNotEmpty) 'startIso': startIso,
+      if (endIso.isNotEmpty) 'endIso': endIso,
+      if (input['days'] is num) 'days': (input['days'] as num).toInt(),
       if (input['includeCompleted'] is bool)
         'includeCompleted': input['includeCompleted'] as bool,
       if (input['includeUndated'] is bool)
         'includeUndated': input['includeUndated'] as bool,
+      if (input['includeNotes'] is bool)
+        'includeNotes': input['includeNotes'] as bool,
+      if (input['notesMaxLen'] is num)
+        'notesMaxLen': (input['notesMaxLen'] as num).toInt(),
       if (input['limit'] is num) 'limit': (input['limit'] as num).toInt(),
     };
 
