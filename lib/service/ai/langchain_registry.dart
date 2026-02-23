@@ -4,6 +4,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/ai_thinking_mode.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:anx_reader/service/mcp/mcp_tool_registry.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:langchain_anthropic/langchain_anthropic.dart';
 import 'package:langchain_core/chat_models.dart';
@@ -122,13 +123,18 @@ class LangchainAiRegistry {
     if (useAgent) {
       final enabledIds = Prefs().enabledAiToolIds;
       final toolContext = AiToolContext(ref: ref!);
-      tools = AiToolRegistry.buildTools(toolContext, enabledIds);
+      final baseTools = AiToolRegistry.buildTools(toolContext, enabledIds);
+
+      final mcp = McpToolRegistry.buildCachedTools();
+      tools = <Tool>[...baseTools, ...mcp.tools];
+
       final enabledDefs = AiToolRegistry.definitions
           .where((def) => enabledIds.contains(def.id))
           .toList(growable: false);
       systemMessage = _buildAgentSystemMessage(
         isReading: isReading,
         enabledTools: enabledDefs,
+        mcpTools: mcp.descriptors,
       );
     }
 
@@ -142,6 +148,7 @@ class LangchainAiRegistry {
   ChatMessage _buildAgentSystemMessage({
     required bool isReading,
     required List<AiToolDefinition> enabledTools,
+    required List<McpToolDescriptor> mcpTools,
   }) {
     final currentLanguageCode =
         Prefs().locale?.languageCode ?? Platform.localeName;
@@ -189,6 +196,8 @@ $readingStateContext
 
 ## Available Tools & Usage Scenarios
 ${_formatToolCatalog(enabledTools)}
+
+${_formatMcpToolCatalog(mcpTools)}
 
 ## Response Strategy
 
@@ -261,6 +270,28 @@ You are not just a tool executor, but the user's reading companion. Your mission
               '- **${tool.displayNameOrDefault()}** → ${tool.descriptionOrDefault()}',
         )
         .join('\n');
+  }
+
+  String _formatMcpToolCatalog(List<McpToolDescriptor> tools) {
+    if (tools.isEmpty) {
+      return '_No external MCP tools are available (refresh tools in Settings → AI Tools → MCP Servers)._';
+    }
+
+    const maxLines = 25;
+    final items = tools.take(maxLines).toList(growable: false);
+
+    final lines = items
+        .map(
+          (t) =>
+              '- **${t.toolName}** → ${t.serverName} · ${t.displayName}${t.description.trim().isEmpty ? '' : ' — ${t.description.trim()}'}',
+        )
+        .join('\n');
+
+    final truncated = tools.length > maxLines
+        ? '\n_(${tools.length - maxLines} more MCP tools not shown...)_'
+        : '';
+
+    return '### External MCP Tools\n$lines$truncated';
   }
 }
 

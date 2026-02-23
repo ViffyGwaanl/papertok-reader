@@ -8,6 +8,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/ai/tools/tool_approval_decider.dart';
+import 'package:anx_reader/service/mcp/mcp_tool_registry.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/material.dart';
 import 'package:langchain/langchain.dart';
@@ -540,9 +541,23 @@ class CancelableLangchainRunner {
               if (shouldPrompt) {
                 final ctx = navigatorKey.currentContext;
                 final l10n = ctx == null ? null : L10n.of(ctx);
-                final displayName =
+
+                var displayName =
                     def?.displayNameOrDefault(l10n) ?? agentAction.tool;
-                final description = def?.descriptionOrDefault(l10n) ?? '';
+                var description = def?.descriptionOrDefault(l10n) ?? '';
+
+                if (def == null) {
+                  try {
+                    final mcpDesc = McpToolRegistry.describe(agentAction.tool);
+                    if (mcpDesc != null) {
+                      displayName =
+                          '${mcpDesc.serverName} · ${mcpDesc.displayName}';
+                      description = mcpDesc.description;
+                    }
+                  } catch (_) {
+                    // ignore
+                  }
+                }
 
                 final approval = await _requestToolApproval(
                   toolName: agentAction.tool,
