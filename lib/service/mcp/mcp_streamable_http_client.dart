@@ -78,6 +78,7 @@ class McpStreamableHttpClient {
   Future<void> initialize({
     String clientName = 'Paper Reader',
     String clientVersion = '1.0.0',
+    bool allowSessionRetry = false,
   }) async {
     final requestId = _nextId++;
 
@@ -96,7 +97,7 @@ class McpStreamableHttpClient {
       },
     );
 
-    final res = await _postRpc(payload);
+    final res = await _postRpc(payload, allowSessionRetry: allowSessionRetry);
     final result = res['result'];
     if (result is Map) {
       final pv = result['protocolVersion']?.toString();
@@ -109,6 +110,7 @@ class McpStreamableHttpClient {
     await _postRpc(
       _rpc(method: 'notifications/initialized'),
       expectNoBody: true,
+      allowSessionRetry: allowSessionRetry,
     );
   }
 
@@ -185,6 +187,7 @@ class McpStreamableHttpClient {
   Future<Map<String, dynamic>> _postRpc(
     Map<String, dynamic> rpc, {
     bool expectNoBody = false,
+    bool allowSessionRetry = true,
   }) async {
     final req = http.Request('POST', endpoint);
     req.headers.addAll(_baseHeaders(includeAcceptJson: true));
@@ -200,29 +203,121 @@ class McpStreamableHttpClient {
       _sessionId = sid;
     }
 
+    final status = streamed.statusCode;
+    final contentType = (streamed.headers['content-type'] ?? '').toLowerCase();
+
+    bool isSessionInvalidHttp(int code) {
+      return code == 404 || code == 410;
+    }
+
+    bool isRetryableForSession() {
+      final method = rpc['method']?.toString() ?? '';
+      return method != 'initialize' && method != 'notifications/initialized';
+    }
+
     if (expectNoBody) {
-      if (streamed.statusCode != 202 && streamed.statusCode != 200) {
+      if (status < 200 || status >= 300) {
         final body = await streamed.stream.bytesToString();
         throw StateError(
-          'MCP server rejected notification: HTTP ${streamed.statusCode} $body',
+          'MCP server rejected notification: HTTP $status content-type=$contentType body=$body',
         );
       }
       return {};
     }
 
-    final contentType = (streamed.headers['content-type'] ?? '').toLowerCase();
+    if (status < 200 || status >= 300) {
+      final body = await streamed.stream.bytesToString();
+      if (allowSessionRetry &&
+          _sessionId != null &&
+          isSessionInvalidHttp(status) &&
+          isRetryableForSession()) {
+        AnxLog.warning(
+          'MCP HTTP $status indicates session invalid; reinitializing and retrying rpc method=${rpc['method']}',
+        );
+        _sessionId = null;
+        _negotiatedProtocolVersion = null;
+        await initialize(allowSessionRetry: false);
+        return await _postRpc(
+          rpc,
+          expectNoBody: expectNoBody,
+          allowSessionRetry: false,
+        );
+      }
+
+      throw StateError(
+        'MCP server error: HTTP $status content-type=$contentType body=$body',
+      );
+    }
 
     if (contentType.contains('application/json')) {
       final body = await streamed.stream.bytesToString();
       final decoded = jsonDecode(body);
       if (decoded is Map) {
-        return decoded.cast<String, dynamic>();
+        final map = decoded.cast<String, dynamic>();
+
+        final error = map['error'];
+        if (error != null) {
+          final errorStr = error.toString().toLowerCase();
+          final looksLikeSessionInvalid = errorStr.contains('session') &&
+              (errorStr.contains('invalid') ||
+                  errorStr.contains('not found') ||
+                  errorStr.contains('expired'));
+
+          if (allowSessionRetry &&
+              _sessionId != null &&
+              looksLikeSessionInvalid &&
+              isRetryableForSession()) {
+            AnxLog.warning(
+              'MCP JSON-RPC error indicates session invalid; reinitializing and retrying rpc method=${rpc['method']}',
+            );
+            _sessionId = null;
+            _negotiatedProtocolVersion = null;
+            await initialize(allowSessionRetry: false);
+            return await _postRpc(
+              rpc,
+              expectNoBody: expectNoBody,
+              allowSessionRetry: false,
+            );
+          }
+
+          throw StateError('MCP JSON-RPC error: $error');
+        }
+
+        return map;
       }
       throw StateError('Invalid JSON-RPC response');
     }
 
     if (contentType.contains('text/event-stream')) {
-      return await _readSseForResponse(streamed, expectedId: rpc['id']);
+      final map = await _readSseForResponse(streamed, expectedId: rpc['id']);
+      final error = map['error'];
+      if (error != null) {
+        final errorStr = error.toString().toLowerCase();
+        final looksLikeSessionInvalid = errorStr.contains('session') &&
+            (errorStr.contains('invalid') ||
+                errorStr.contains('not found') ||
+                errorStr.contains('expired'));
+
+        if (allowSessionRetry &&
+            _sessionId != null &&
+            looksLikeSessionInvalid &&
+            isRetryableForSession()) {
+          AnxLog.warning(
+            'MCP SSE JSON-RPC error indicates session invalid; reinitializing and retrying rpc method=${rpc['method']}',
+          );
+          _sessionId = null;
+          _negotiatedProtocolVersion = null;
+          await initialize(allowSessionRetry: false);
+          return await _postRpc(
+            rpc,
+            expectNoBody: expectNoBody,
+            allowSessionRetry: false,
+          );
+        }
+
+        throw StateError('MCP JSON-RPC error: $error');
+      }
+      return map;
     }
 
     final body = await streamed.stream.bytesToString();
@@ -273,25 +368,44 @@ class McpStreamableHttpClient {
 
     final completer = Completer<Map<String, dynamic>>();
 
+    var buffer = '';
+
+    Future<void> handleLine(String rawLine) async {
+      if (completer.isCompleted) return;
+
+      var line = rawLine;
+      if (line.endsWith('\r')) {
+        line = line.substring(0, line.length - 1);
+      }
+
+      if (line.isEmpty) {
+        await flushEvent(completer);
+        return;
+      }
+      if (line.startsWith('id:')) {
+        eventId = line.substring(3).trim();
+        return;
+      }
+      if (line.startsWith('data:')) {
+        dataLines.add(line.substring(5).trimLeft());
+        return;
+      }
+      // ignore: event:, retry:, comments
+    }
+
     final sub = stream.listen(
       (chunk) async {
-        // SSE frames are line-based.
-        final lines = chunk.split(RegExp(r'\r?\n'));
-        for (final line in lines) {
+        buffer += chunk;
+
+        while (true) {
+          final idx = buffer.indexOf('\n');
+          if (idx < 0) break;
+
+          final line = buffer.substring(0, idx);
+          buffer = buffer.substring(idx + 1);
+
+          await handleLine(line);
           if (completer.isCompleted) return;
-          if (line.isEmpty) {
-            await flushEvent(completer);
-            continue;
-          }
-          if (line.startsWith('id:')) {
-            eventId = line.substring(3).trim();
-            continue;
-          }
-          if (line.startsWith('data:')) {
-            dataLines.add(line.substring(5).trimLeft());
-            continue;
-          }
-          // ignore: event:, retry:, comments
         }
       },
       onError: (e, st) {
@@ -301,6 +415,11 @@ class McpStreamableHttpClient {
       },
       onDone: () async {
         if (!completer.isCompleted) {
+          if (buffer.isNotEmpty) {
+            await handleLine(buffer);
+            buffer = '';
+          }
+
           // One last flush.
           await flushEvent(completer);
         }
