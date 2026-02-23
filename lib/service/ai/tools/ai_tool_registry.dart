@@ -8,8 +8,10 @@ import 'package:anx_reader/service/ai/tools/bookshelf_lookup_tool.dart';
 import 'package:anx_reader/service/ai/tools/bookshelf_organize_tool.dart';
 import 'package:anx_reader/service/ai/tools/calculator_tool.dart';
 import 'package:anx_reader/service/ai/tools/calendar_create_event_tool.dart';
+import 'package:anx_reader/service/ai/tools/calendar_delete_event_tool.dart';
 import 'package:anx_reader/service/ai/tools/calendar_list_calendars_tool.dart';
 import 'package:anx_reader/service/ai/tools/calendar_list_events_tool.dart';
+import 'package:anx_reader/service/ai/tools/calendar_update_event_tool.dart';
 import 'package:anx_reader/service/ai/tools/chapter_content_by_href_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_book_toc_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_chapter_content_tool.dart';
@@ -90,6 +92,8 @@ class AiToolRegistry {
     calendarListCalendarsToolDefinition,
     calendarListEventsToolDefinition,
     calendarCreateEventToolDefinition,
+    calendarUpdateEventToolDefinition,
+    calendarDeleteEventToolDefinition,
     remindersListListsToolDefinition,
     remindersListToolDefinition,
     remindersCreateToolDefinition,
