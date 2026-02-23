@@ -1,5 +1,14 @@
-git_url("https://github.com/Anxcye/anx-secret.git")
+git_url("https://github.com/ViffyGwaanl/papertok-reader-match.git")
 storage_mode("git")
 type("appstore") # The default type, can be: appstore, adhoc, enterprise or development
+
+# Avoid interactive prompts
+team_id("3LJ45MFB74")
+username(ENV["FASTLANE_APPLE_ID"] || ENV["FASTLANE_USER"])
+
+# Workaround for Ruby 2.6/OpenSSL on macOS: AES-GCM encryption can fail with
+# `couldn't set additional authenticated data`.
+# The match repo is new for this project, so legacy encryption is safe here.
+force_legacy_encryption(true)
 
 app_identifier([ENV["APP_BUNDLE_ID"], "ai.papertok.paperreader.shareExtension"])
