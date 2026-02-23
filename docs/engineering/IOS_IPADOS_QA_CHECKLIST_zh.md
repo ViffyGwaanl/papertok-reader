@@ -94,7 +94,28 @@
 2) 导出 **加密备份**：选择包含密钥（如有该选项），然后导入验证：
    - 预期：导入后 keys 恢复；且导入过程中发生错误时应有 .bak 回滚（无半恢复状态）。
 
-## 8. 结论记录（建议）
+## 8. iOS 系统工具（EventKit：提醒事项/日历）
+
+**目标**：AI 工具能在 iOS 上稳定调用 EventKit 能力，并受到 Tool Safety 审批保护。
+
+### 8.1 Reminders（提醒事项）
+1) 设置 → AI 工具：确保开启（至少开启 reminders_list_lists / reminders_list / reminders_create / reminders_update / reminders_complete / reminders_delete）。
+2) Home → AI：触发一次只读调用：
+   - 让 AI 先调用 `reminders_list_lists`，再用默认清单调用 `reminders_list`（未来7天）。
+3) 触发写入：让 AI 创建一条提醒（预期弹出审批弹窗）。
+4) 更新/完成：让 AI 更新 dueIso，然后 complete，再 uncomplete。
+5) 删除：让 AI 删除该提醒（预期 destructive 强确认）。
+
+### 8.2 Calendar（日历）
+1) 设置 → AI 工具：确保开启（calendar_list_calendars / calendar_list_events / calendar_create_event / calendar_update_event / calendar_delete_event）。
+2) 创建事件：让 AI 创建一个带 `alarmMinutes=10` 的事件（预期审批弹窗）。
+3) 列表确认：让 AI 调用 `calendar_list_events(includeAlarms=true)`，确认能看到 alarmMinutes。
+4) 更新：让 AI 修改标题/时间（预期审批弹窗）。
+5) 删除：让 AI 删除该事件（预期 destructive 强确认）。
+
+> 备注：重复事件（recurrence + span=thisEvent/futureEvents）建议作为加分项验证。
+
+## 9. 结论记录（建议）
 
 每次验收后记录：
 - 测试设备型号 + iOS/iPadOS 版本
