@@ -105,11 +105,13 @@ class McpToolRegistry {
       inputJsonSchema: inputSchema,
       func: (input) async {
         try {
-          final result = await McpClientService.instance.callTool(
-            server,
-            toolName: meta.name,
-            args: input,
-          );
+          final result = await McpClientService.instance
+              .callTool(
+                server,
+                toolName: meta.name,
+                args: input,
+              )
+              .timeout(const Duration(seconds: 25));
 
           final sanitized = _sanitizeToolResult(result);
 
