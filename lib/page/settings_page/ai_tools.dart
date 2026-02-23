@@ -249,6 +249,93 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     );
   }
 
+  String _shortcutsWaitModeLabel(L10n l10n, String code) {
+    return switch (code) {
+      'auto' => l10n.settingsShortcutsWaitModeAuto,
+      'preferResult' => l10n.settingsShortcutsWaitModePreferResult,
+      'successOnly' => l10n.settingsShortcutsWaitModeSuccessOnly,
+      _ => l10n.settingsShortcutsWaitModeAdaptive,
+    };
+  }
+
+  Future<void> _pickShortcutsWaitMode() async {
+    if (!AnxPlatform.isIOS) return;
+
+    final l10n = L10n.of(context);
+    final current = Prefs().shortcutsCallbackWaitModeV1;
+    final learnedCount = Prefs().shortcutsResultKnownNamesV1.length;
+
+    Widget item({
+      required String code,
+      required String title,
+      required String desc,
+    }) {
+      return ListTile(
+        title: Text(title),
+        subtitle: Text(desc),
+        trailing: current == code ? const Icon(Icons.check) : null,
+        onTap: () {
+          Prefs().shortcutsCallbackWaitModeV1 = code;
+          Navigator.pop(context);
+          setState(() {});
+        },
+      );
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            children: [
+              ListTile(
+                title: Text(l10n.settingsShortcutsCallbackWaitMode),
+                subtitle: Text(
+                  '${l10n.settingsShortcutsCallbackWaitModeDesc}\n'
+                  '${l10n.settingsShortcutsResetLearnedDesc} ($learnedCount)',
+                ),
+              ),
+              const Divider(height: 1),
+              item(
+                code: 'adaptive',
+                title: l10n.settingsShortcutsWaitModeAdaptive,
+                desc: l10n.settingsShortcutsWaitModeAdaptiveDesc,
+              ),
+              const Divider(height: 1),
+              item(
+                code: 'auto',
+                title: l10n.settingsShortcutsWaitModeAuto,
+                desc: l10n.settingsShortcutsWaitModeAutoDesc,
+              ),
+              const Divider(height: 1),
+              item(
+                code: 'preferResult',
+                title: l10n.settingsShortcutsWaitModePreferResult,
+                desc: l10n.settingsShortcutsWaitModePreferResultDesc,
+              ),
+              const Divider(height: 1),
+              item(
+                code: 'successOnly',
+                title: l10n.settingsShortcutsWaitModeSuccessOnly,
+                desc: l10n.settingsShortcutsWaitModeSuccessOnlyDesc,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                title: Text(l10n.settingsShortcutsResetLearned),
+                subtitle: Text(l10n.settingsShortcutsResetLearnedDesc),
+                onTap: () {
+                  Prefs().clearShortcutsResultKnownNamesV1();
+                  Navigator.pop(context);
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
@@ -285,6 +372,17 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
           description: Text(l10n.settingsShortcutsCallbackTimeoutDesc),
           trailing: Text('${Prefs().shortcutsCallbackTimeoutSecV1}s'),
           onPressed: (_) => _editShortcutsCallbackTimeoutSec(),
+        ),
+        SettingsTile.navigation(
+          title: Text(l10n.settingsShortcutsCallbackWaitMode),
+          description: Text(l10n.settingsShortcutsCallbackWaitModeDesc),
+          trailing: Text(
+            _shortcutsWaitModeLabel(
+              l10n,
+              Prefs().shortcutsCallbackWaitModeV1,
+            ),
+          ),
+          onPressed: (_) => _pickShortcutsWaitMode(),
         ),
       ],
       SettingsTile.navigation(

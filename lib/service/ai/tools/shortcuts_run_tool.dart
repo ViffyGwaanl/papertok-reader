@@ -46,6 +46,12 @@ class ShortcutsRunTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
                 'description':
                     'Optional. Max seconds to wait for callback when waitForCallback=true. When omitted, uses Settings → AI Tools → Shortcuts callback timeout. Range: 3..300.',
               },
+              'waitMode': {
+                'type': 'string',
+                'enum': ['adaptive', 'auto', 'preferResult', 'successOnly'],
+                'description':
+                    'Optional. Callback waiting strategy override. When omitted, uses Settings → AI Tools → Shortcuts callback wait mode.',
+              },
             },
             'required': ['name'],
           },
@@ -88,6 +94,11 @@ class ShortcutsRunTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
     final defaultTimeout = Prefs().shortcutsCallbackTimeoutSecV1;
     final timeoutSec =
         _parseInt(input['callbackTimeoutSec'], defaultTimeout).clamp(3, 300);
+
+    final waitModeRaw = input['waitMode']?.toString();
+    final waitMode = ShortcutsCallbackWaitMode.fromCode(
+      waitModeRaw ?? Prefs().shortcutsCallbackWaitModeV1,
+    );
 
     // To support callbacks reliably, the shortcut must be able to read runId.
     // That means we need to pass a JSON payload as Shortcut Input, therefore we
@@ -145,6 +156,7 @@ class ShortcutsRunTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
       'runId': runId,
       'callbackScheme': 'paperreader',
       'effectiveInputMode': effectiveInputMode,
+      'waitMode': waitMode.code,
       'note':
           'To return a result, add an "Open URL" action at the end of your shortcut to open: paperreader://shortcuts/result?runId=<runId>&data=<text> (or dataB64=<base64url>). When waitForCallback=true, the tool forces input=text and passes a JSON payload as Shortcut Input containing runId.',
     };
@@ -156,6 +168,8 @@ class ShortcutsRunTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
     final callback = await ShortcutsCallbackService.instance.waitForCallback(
       runId,
       timeout: Duration(seconds: timeoutSec),
+      shortcutName: name,
+      waitMode: waitMode,
     );
 
     return {

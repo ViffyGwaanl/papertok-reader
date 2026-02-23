@@ -78,6 +78,8 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'forceConfirmDestructive': prefs.aiToolForceConfirmDestructive,
     'shortcutsCallbackMaxCharsV1': prefs.shortcutsCallbackMaxCharsV1,
     'shortcutsCallbackTimeoutSecV1': prefs.shortcutsCallbackTimeoutSecV1,
+    'shortcutsCallbackWaitModeV1': prefs.shortcutsCallbackWaitModeV1,
+    'shortcutsResultKnownNamesV1': prefs.shortcutsResultKnownNamesV1,
   };
 
   final mcp = <String, dynamic>{
@@ -234,6 +236,17 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
         if (v != null) {
           prefs.shortcutsCallbackTimeoutSecV1 = v;
         }
+      }
+
+      final waitMode = tools['shortcutsCallbackWaitModeV1'];
+      if (waitMode is String) {
+        prefs.shortcutsCallbackWaitModeV1 = waitMode;
+      }
+
+      final known = tools['shortcutsResultKnownNamesV1'];
+      if (known is List) {
+        prefs.shortcutsResultKnownNamesV1 =
+            known.map((e) => e.toString()).toList(growable: false);
       }
     }
 

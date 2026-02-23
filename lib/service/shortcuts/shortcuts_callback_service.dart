@@ -13,15 +13,42 @@ import 'package:anx_reader/utils/log/common.dart';
 ///   paperreader://shortcuts/cancel?runId=...
 ///
 /// This service lets a tool call wait for a matching callback by runId.
+enum ShortcutsCallbackWaitMode {
+  adaptive,
+  auto,
+  preferResult,
+  successOnly;
+
+  static ShortcutsCallbackWaitMode fromCode(String? raw) {
+    switch ((raw ?? '').trim()) {
+      case 'auto':
+        return ShortcutsCallbackWaitMode.auto;
+      case 'preferResult':
+        return ShortcutsCallbackWaitMode.preferResult;
+      case 'successOnly':
+        return ShortcutsCallbackWaitMode.successOnly;
+      case 'adaptive':
+      default:
+        return ShortcutsCallbackWaitMode.adaptive;
+    }
+  }
+
+  String get code {
+    return switch (this) {
+      ShortcutsCallbackWaitMode.adaptive => 'adaptive',
+      ShortcutsCallbackWaitMode.auto => 'auto',
+      ShortcutsCallbackWaitMode.preferResult => 'preferResult',
+      ShortcutsCallbackWaitMode.successOnly => 'successOnly',
+    };
+  }
+}
+
 class ShortcutsCallbackService {
   ShortcutsCallbackService._();
 
   static final ShortcutsCallbackService instance = ShortcutsCallbackService._();
 
   final Map<String, _PendingShortcutsRun> _pending = {};
-
-  /// Best-effort guardrails: keep callback payload small.
-  static const int defaultMaxDataChars = 8000;
 
   void handleIncomingUri(Uri uri) {
     if (uri.scheme != 'paperreader') return;
@@ -91,10 +118,32 @@ class ShortcutsCallbackService {
     }
 
     if (status == 'success') {
-      // Prefer a /result callback if the shortcut sends one. Otherwise, treat
-      // /success as a terminal completion signal (after a short grace period).
+      // Prefer a /result callback if the shortcut sends one.
       pending.lastSuccessPayload = payload;
 
+      final effectiveMode =
+          pending.waitMode == ShortcutsCallbackWaitMode.adaptive
+              ? (Prefs().isShortcutResultKnownV1(pending.shortcutName)
+                  ? ShortcutsCallbackWaitMode.preferResult
+                  : ShortcutsCallbackWaitMode.auto)
+              : pending.waitMode;
+
+      if (effectiveMode == ShortcutsCallbackWaitMode.successOnly) {
+        pending.successTimer?.cancel();
+        _pending.remove(runId);
+        if (!pending.completer.isCompleted) {
+          pending.completer.complete(payload);
+        }
+        return;
+      }
+
+      if (effectiveMode == ShortcutsCallbackWaitMode.preferResult) {
+        // Keep waiting for /result until timeout.
+        return;
+      }
+
+      // auto: treat /success as a terminal completion signal (after a short grace
+      // period) so that shortcuts without explicit /result callback finish fast.
       pending.successTimer?.cancel();
       pending.successTimer = Timer(const Duration(milliseconds: 500), () {
         final still = _pending[runId];
@@ -113,6 +162,13 @@ class ShortcutsCallbackService {
     // Terminal events: result/error/cancel/unknown.
     pending.successTimer?.cancel();
 
+    if (status == 'result') {
+      // Learn: this shortcut is capable of returning a result.
+      if (pending.shortcutName.trim().isNotEmpty) {
+        Prefs().markShortcutResultKnownV1(pending.shortcutName);
+      }
+    }
+
     _pending.remove(runId);
     if (!pending.completer.isCompleted) {
       pending.completer.complete(payload);
@@ -122,13 +178,19 @@ class ShortcutsCallbackService {
   Future<Map<String, dynamic>> waitForCallback(
     String runId, {
     required Duration timeout,
+    required String shortcutName,
+    required ShortcutsCallbackWaitMode waitMode,
   }) async {
     final existing = _pending[runId];
     if (existing != null && !existing.completer.isCompleted) {
       throw StateError('Already waiting for shortcuts runId=$runId');
     }
 
-    final pending = _PendingShortcutsRun(runId);
+    final pending = _PendingShortcutsRun(
+      runId: runId,
+      shortcutName: shortcutName,
+      waitMode: waitMode,
+    );
     _pending[runId] = pending;
 
     try {
@@ -160,9 +222,16 @@ class ShortcutsCallbackService {
 }
 
 class _PendingShortcutsRun {
-  _PendingShortcutsRun(this.runId);
+  _PendingShortcutsRun({
+    required this.runId,
+    required this.shortcutName,
+    required this.waitMode,
+  });
 
   final String runId;
+  final String shortcutName;
+  final ShortcutsCallbackWaitMode waitMode;
+
   final Completer<Map<String, dynamic>> completer =
       Completer<Map<String, dynamic>>();
 

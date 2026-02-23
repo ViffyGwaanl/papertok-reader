@@ -77,6 +77,10 @@ class Prefs extends ChangeNotifier {
       'shortcutsCallbackMaxCharsV1';
   static const String _shortcutsCallbackTimeoutSecV1Key =
       'shortcutsCallbackTimeoutSecV1';
+  static const String _shortcutsCallbackWaitModeV1Key =
+      'shortcutsCallbackWaitModeV1';
+  static const String _shortcutsResultKnownNamesV1Key =
+      'shortcutsResultKnownNamesV1';
   static const String _userPromptsKey = 'userPrompts';
 
   // Home tabs config (order + enable), backed by SharedPreferences.
@@ -1537,6 +1541,76 @@ class Prefs extends ChangeNotifier {
     if (before != next) {
       touchAiSettingsUpdatedAt();
       prefs.setInt(_shortcutsCallbackTimeoutSecV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  /// Shortcuts callback waiting strategy:
+  /// - adaptive (default): prefer /result if the shortcut has returned /result
+  ///   before; otherwise return on /success after a short grace period.
+  /// - auto: return on /success after a short grace period.
+  /// - preferResult: wait for /result until timeout; fallback to /success on timeout.
+  /// - successOnly: return immediately on /success; ignore /result.
+  String get shortcutsCallbackWaitModeV1 {
+    return prefs.getString(_shortcutsCallbackWaitModeV1Key) ?? 'adaptive';
+  }
+
+  set shortcutsCallbackWaitModeV1(String value) {
+    final v = value.trim();
+    const allowed = {'adaptive', 'auto', 'preferResult', 'successOnly'};
+    final next = allowed.contains(v) ? v : 'adaptive';
+    final before =
+        prefs.getString(_shortcutsCallbackWaitModeV1Key) ?? 'adaptive';
+    if (before != next) {
+      touchAiSettingsUpdatedAt();
+      prefs.setString(_shortcutsCallbackWaitModeV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  List<String> get shortcutsResultKnownNamesV1 {
+    return prefs.getStringList(_shortcutsResultKnownNamesV1Key) ?? const [];
+  }
+
+  set shortcutsResultKnownNamesV1(List<String> value) {
+    final next = value
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+
+    final before = shortcutsResultKnownNamesV1.toSet();
+    if (before.length == next.length && before.containsAll(next)) {
+      return;
+    }
+
+    touchAiSettingsUpdatedAt();
+    prefs.setStringList(_shortcutsResultKnownNamesV1Key, next);
+    notifyListeners();
+  }
+
+  bool isShortcutResultKnownV1(String name) {
+    final n = name.trim();
+    if (n.isEmpty) return false;
+    return shortcutsResultKnownNamesV1.contains(n);
+  }
+
+  void markShortcutResultKnownV1(String name) {
+    final n = name.trim();
+    if (n.isEmpty) return;
+    final current = shortcutsResultKnownNamesV1;
+    if (current.contains(n)) return;
+    final next = [...current, n]..sort();
+    touchAiSettingsUpdatedAt();
+    prefs.setStringList(_shortcutsResultKnownNamesV1Key, next);
+    notifyListeners();
+  }
+
+  void clearShortcutsResultKnownNamesV1() {
+    if (prefs.containsKey(_shortcutsResultKnownNamesV1Key)) {
+      touchAiSettingsUpdatedAt();
+      prefs.remove(_shortcutsResultKnownNamesV1Key);
       notifyListeners();
     }
   }
