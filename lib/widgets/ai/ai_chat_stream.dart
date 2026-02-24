@@ -1099,7 +1099,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   void _cancelStreaming() {
-    if (!_isStreaming) return;
+    // Be tolerant: streaming state might be briefly out-of-sync during rebuilds.
     unawaited(ref.read(aiChatProvider.notifier).cancelStreaming());
   }
 

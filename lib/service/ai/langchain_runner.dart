@@ -25,6 +25,16 @@ class CancelableLangchainRunner {
 
   StreamSubscription<ChatResult>? _subscription;
 
+  /// Cancellation flag used for long-running agent loops.
+  bool _cancelRequested = false;
+
+  /// When running streamAgent we wait for one streaming iteration to finish.
+  /// Cancelling the model subscription does not necessarily trigger onDone, so
+  /// we keep a handle to the active completer and release it on cancel.
+  Completer<void>? _activeAgentIterationCompleter;
+
+  BaseChatModel? _activeModel;
+
   bool get _aiDebugEnabled {
     try {
       return Prefs().aiDebugLogsEnabled;
@@ -40,8 +50,25 @@ class CancelableLangchainRunner {
   }
 
   void cancel() {
-    _subscription?.cancel();
+    _cancelRequested = true;
+
+    try {
+      _subscription?.cancel();
+    } catch (_) {}
     _subscription = null;
+
+    // Release any await point inside streamAgent.
+    final c = _activeAgentIterationCompleter;
+    if (c != null && !c.isCompleted) {
+      c.complete();
+    }
+    _activeAgentIterationCompleter = null;
+
+    // Best-effort: close the active model (e.g. abort SSE).
+    try {
+      _activeModel?.close();
+    } catch (_) {}
+    _activeModel = null;
   }
 
   bool _isTempAllowed(String conversationId, String toolName) {
@@ -220,6 +247,9 @@ class CancelableLangchainRunner {
     late StreamController<String> controller;
     controller = StreamController<String>(
       onListen: () {
+        _cancelRequested = false;
+        _activeModel = model;
+
         _aiDebug(
           'runner.stream start modelType=${model.modelType} model=${model.defaultOptions.model}',
         );
@@ -297,14 +327,19 @@ class CancelableLangchainRunner {
               await controller.close();
             }
             _subscription = null;
+            _activeModel = null;
           },
           cancelOnError: false,
         );
       },
       onCancel: () async {
-        await _subscription?.cancel();
+        _cancelRequested = true;
+        try {
+          await _subscription?.cancel();
+        } catch (_) {}
         _subscription = null;
         await _closeModel(model);
+        _activeModel = null;
         if (!controller.isClosed) {
           await controller.close();
         }
@@ -323,7 +358,23 @@ class CancelableLangchainRunner {
     ChatMessage? systemMessage,
     int maxIterations = 120,
   }) {
-    final controller = StreamController<String>();
+    _cancelRequested = false;
+    _activeModel = model;
+
+    late StreamController<String> controller;
+    controller = StreamController<String>(
+      onCancel: () async {
+        // When the consumer cancels (e.g. user pressed Stop), ensure the
+        // underlying model stream and agent loop can exit promptly.
+        cancel();
+        try {
+          await _closeModel(model);
+        } catch (_) {}
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      },
+    );
 
     Future<void>(() async {
       _aiDebug(
@@ -411,6 +462,8 @@ class CancelableLangchainRunner {
 
           ChatResult? aggregated;
           final completer = Completer<void>();
+          _activeAgentIterationCompleter = completer;
+
           _subscription = model.stream(prompt, options: options).listen(
             (chunk) {
               final metaReasoning = (chunk.metadata['reasoning_content'] ??
@@ -457,6 +510,7 @@ class CancelableLangchainRunner {
               }
             },
             onError: (Object error, StackTrace stack) {
+              _activeAgentIterationCompleter = null;
               streamFailed = true;
               if (!controller.isClosed) {
                 controller.addError(error, stack);
@@ -467,6 +521,7 @@ class CancelableLangchainRunner {
             },
             onDone: () {
               _subscription = null;
+              _activeAgentIterationCompleter = null;
               if (!completer.isCompleted) {
                 completer.complete();
               }
@@ -475,6 +530,11 @@ class CancelableLangchainRunner {
           );
 
           await completer.future;
+
+          // If cancelled, exit gracefully without surfacing errors.
+          if (_cancelRequested || controller.isClosed) {
+            break;
+          }
 
           if (aggregated == null) {
             throw StateError('Model returned no output');
@@ -638,9 +698,15 @@ class CancelableLangchainRunner {
           controller.addError(error, stack);
         }
       } finally {
-        await _subscription?.cancel();
+        try {
+          await _subscription?.cancel();
+        } catch (_) {}
         _subscription = null;
+        _activeAgentIterationCompleter = null;
+
         await _closeModel(model);
+        _activeModel = null;
+
         if (!controller.isClosed) {
           await controller.close();
         }
