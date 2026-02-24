@@ -18,6 +18,7 @@ import 'package:anx_reader/service/ai/tools/current_book_toc_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_chapter_content_tool.dart';
 import 'package:anx_reader/service/ai/tools/resolve_cfi_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_book_fulltext_tool.dart';
+import 'package:anx_reader/service/ai/tools/semantic_search_current_book_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_reading_metadata_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_time_tool.dart';
 import 'package:anx_reader/service/ai/tools/fetch_url_tool.dart';
@@ -129,6 +130,7 @@ class AiToolRegistry {
     chapterContentByHrefToolDefinition,
     currentBookFulltextToolDefinition,
     resolveCfiToolDefinition,
+    semanticSearchCurrentBookToolDefinition,
     tagsListToolDefinition,
     booksTagsListToolDefinition,
     applyBookTagsToolDefinition,
@@ -157,10 +159,7 @@ class AiToolRegistry {
     return filtered;
   }
 
-  static List<Tool> buildTools(
-    AiToolContext context,
-    List<String> enabledIds,
-  ) {
+  static List<Tool> buildTools(AiToolContext context, List<String> enabledIds) {
     final enabled = enabledIds.toSet();
     return _definitions
         .where((def) => enabled.contains(def.id))
