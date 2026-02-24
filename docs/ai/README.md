@@ -63,6 +63,14 @@
 
 - If an OpenAI-compatible backend returns `reasoning_content` (or `reasoning`) in responses/stream deltas, the app maps it to the `<think>...</think>` channel so it shows inside the Thinking section.
 
+#### OpenAI Responses — tool calling stability notes
+
+- For tool-call continuations, we prefer `previous_response_id` (server-provided `response.id`) + `input: [function_call_output...]`.
+  - Rationale: manually replaying `type: "reasoning"` items is brittle and can trigger 400 errors like:
+    - `reasoning was provided without its required following item`
+- The implementation lives in:
+  - `lib/service/ai/openai_responses_chat_model.dart`
+
 ---
 
 ## Other modules (product)
