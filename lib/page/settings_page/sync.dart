@@ -32,6 +32,7 @@ import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/utils/crypto/backup_crypto.dart';
+import 'package:anx_reader/service/backup/backup_zip_entries.dart';
 
 // Backup file names are product-facing. Keep a legacy name for backward
 // compatibility when importing older backups.
@@ -56,73 +57,82 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
           tiles: [
             webdavSwitch(context, setState, ref),
             SettingsTile.navigation(
-                title: Text(L10n.of(context).settingsSyncWebdav),
-                leading: const Icon(Icons.cloud),
-                value: Text(Prefs().getSyncInfo(SyncProtocol.webdav)['url'] ??
-                    'Not set'),
-                // enabled: Prefs().webdavStatus,
-                onPressed: (context) async {
-                  showWebdavDialog(context);
-                }),
+              title: Text(L10n.of(context).settingsSyncWebdav),
+              leading: const Icon(Icons.cloud),
+              value: Text(
+                Prefs().getSyncInfo(SyncProtocol.webdav)['url'] ?? 'Not set',
+              ),
+              // enabled: Prefs().webdavStatus,
+              onPressed: (context) async {
+                showWebdavDialog(context);
+              },
+            ),
             SettingsTile.navigation(
-                title: Text(L10n.of(context).settingsSyncWebdavSyncNow),
-                leading: const Icon(Icons.sync_alt),
-                // value: Text(Prefs().syncDirection),
-                enabled: Prefs().webdavStatus,
-                onPressed: (context) {
-                  chooseDirection(ref);
-                }),
+              title: Text(L10n.of(context).settingsSyncWebdavSyncNow),
+              leading: const Icon(Icons.sync_alt),
+              // value: Text(Prefs().syncDirection),
+              enabled: Prefs().webdavStatus,
+              onPressed: (context) {
+                chooseDirection(ref);
+              },
+            ),
             SettingsTile.switchTile(
-                title: Text(L10n.of(context).webdavOnlyWifi),
-                leading: const Icon(Icons.wifi),
-                initialValue: Prefs().onlySyncWhenWifi,
-                onToggle: (bool value) {
-                  setState(() {
-                    Prefs().onlySyncWhenWifi = value;
-                  });
-                }),
+              title: Text(L10n.of(context).webdavOnlyWifi),
+              leading: const Icon(Icons.wifi),
+              initialValue: Prefs().onlySyncWhenWifi,
+              onToggle: (bool value) {
+                setState(() {
+                  Prefs().onlySyncWhenWifi = value;
+                });
+              },
+            ),
             SettingsTile.switchTile(
-                title: Text(L10n.of(context).settingsSyncCompletedToast),
-                leading: const Icon(Icons.notifications),
-                initialValue: Prefs().syncCompletedToast,
-                onToggle: (bool value) {
-                  setState(() {
-                    Prefs().syncCompletedToast = value;
-                  });
-                }),
+              title: Text(L10n.of(context).settingsSyncCompletedToast),
+              leading: const Icon(Icons.notifications),
+              initialValue: Prefs().syncCompletedToast,
+              onToggle: (bool value) {
+                setState(() {
+                  Prefs().syncCompletedToast = value;
+                });
+              },
+            ),
             SettingsTile.switchTile(
-                title: Text(L10n.of(context).settingsSyncAutoSync),
-                leading: const Icon(Icons.sync),
-                initialValue: Prefs().autoSync,
-                enabled: Prefs().webdavStatus,
-                onToggle: (bool value) {
-                  setState(() {
-                    Prefs().autoSync = value;
-                  });
-                }),
+              title: Text(L10n.of(context).settingsSyncAutoSync),
+              leading: const Icon(Icons.sync),
+              initialValue: Prefs().autoSync,
+              enabled: Prefs().webdavStatus,
+              onToggle: (bool value) {
+                setState(() {
+                  Prefs().autoSync = value;
+                });
+              },
+            ),
             SettingsTile.navigation(
-                title: Text(L10n.of(context).restoreBackup),
-                leading: const Icon(Icons.restore),
-                onPressed: (context) {
-                  ref.read(syncProvider.notifier).showBackupManagementDialog();
-                })
+              title: Text(L10n.of(context).restoreBackup),
+              leading: const Icon(Icons.restore),
+              onPressed: (context) {
+                ref.read(syncProvider.notifier).showBackupManagementDialog();
+              },
+            ),
           ],
         ),
         SettingsSection(
           title: Text(L10n.of(context).exportAndImport),
           tiles: [
             SettingsTile.navigation(
-                title: Text(L10n.of(context).exportAndImportExport),
-                leading: const Icon(Icons.cloud_upload),
-                onPressed: (context) {
-                  _showExportBackupDialog(context);
-                }),
+              title: Text(L10n.of(context).exportAndImportExport),
+              leading: const Icon(Icons.cloud_upload),
+              onPressed: (context) {
+                _showExportBackupDialog(context);
+              },
+            ),
             SettingsTile.navigation(
-                title: Text(L10n.of(context).exportAndImportImport),
-                leading: const Icon(Icons.cloud_download),
-                onPressed: (context) {
-                  importData();
-                }),
+              title: Text(L10n.of(context).exportAndImportImport),
+              leading: const Icon(Icons.cloud_download),
+              onPressed: (context) {
+                importData();
+              },
+            ),
           ],
         ),
       ],
@@ -134,11 +144,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       SmartDialog.show(
         builder: (BuildContext context) => SimpleDialog(
           title: Center(child: Text(title)),
-          children: const [
-            Center(
-              child: CircularProgressIndicator(),
-            ),
-          ],
+          children: const [Center(child: CircularProgressIndicator())],
         ),
       );
     });
@@ -147,6 +153,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
   Future<void> _showExportBackupDialog(BuildContext context) async {
     final l10n = L10n.of(context);
 
+    bool includeAiIndexDb = false;
+    bool includeMemory = true;
     bool includeEncryptedApiKeys = false;
     bool includeEncryptedMcpSecrets = false;
     final passwordController = TextEditingController();
@@ -162,6 +170,25 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    SwitchListTile(
+                      title: Text(l10n.backupIncludeMemory),
+                      value: includeMemory,
+                      onChanged: (value) {
+                        setState(() {
+                          includeMemory = value;
+                        });
+                      },
+                    ),
+                    SwitchListTile(
+                      title: Text(l10n.backupIncludeAiIndexDb),
+                      value: includeAiIndexDb,
+                      onChanged: (value) {
+                        setState(() {
+                          includeAiIndexDb = value;
+                        });
+                      },
+                    ),
+                    const Divider(height: 1),
                     SwitchListTile(
                       title: Text(l10n.backupIncludeApiKeyEncrypted),
                       value: includeEncryptedApiKeys,
@@ -249,6 +276,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
     await exportData(
       context,
+      includeAiIndexDb: includeAiIndexDb,
+      includeMemory: includeMemory,
       includeEncryptedApiKeys: includeEncryptedApiKeys,
       includeEncryptedMcpSecrets: includeEncryptedMcpSecrets,
       password: password,
@@ -257,6 +286,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
   Future<void> exportData(
     BuildContext context, {
+    bool includeAiIndexDb = false,
+    bool includeMemory = true,
     bool includeEncryptedApiKeys = false,
     bool includeEncryptedMcpSecrets = false,
     String? password,
@@ -272,11 +303,28 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     final manifestPath = '${tempDir.path}/$_backupManifestFileName';
 
     Map<String, dynamic> manifest = {
-      'schemaVersion': 4,
+      'schemaVersion': 5,
       'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'containsAiIndexDb': false,
+      'containsMemory': false,
       'containsEncryptedApiKeys': false,
       'containsEncryptedMcpSecrets': false,
     };
+
+    // Optional payloads are inclusion-based.
+    try {
+      final docPath = await getAnxDocumentsPath();
+      final memDir = getMemoryDir(path: docPath);
+      manifest['containsMemory'] = includeMemory && memDir.existsSync();
+
+      final dbDir = await getAnxDataBasesDir();
+      final aiIndex = File(path.join(dbDir.path, kAiIndexDbFileName));
+      manifest['containsAiIndexDb'] =
+          includeAiIndexDb && await aiIndex.exists();
+    } catch (e) {
+      // Best-effort only; do not fail export.
+      AnxLog.info('exportData: failed to probe optional files: $e');
+    }
 
     if (includeEncryptedApiKeys) {
       try {
@@ -350,6 +398,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       'token': token,
       'prefsBackupFilePath': prefsBackupFile.path,
       'manifestFilePath': manifestPath,
+      'includeAiIndexDb': includeAiIndexDb,
+      'includeMemory': includeMemory,
     });
 
     final file = File(zipPath);
@@ -361,12 +411,13 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       // );
       // final filePath = await FlutterFileDialog.saveFile(params: params);
       String fileName =
-          'PaperReader-Backup-${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}-v4.zip';
+          'PaperReader-Backup-${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}-v5.zip';
 
       String? filePath = await saveFileToDownload(
-          sourceFilePath: file.path,
-          fileName: fileName,
-          mimeType: 'application/zip');
+        sourceFilePath: file.path,
+        fileName: fileName,
+        mimeType: 'application/zip',
+      );
 
       await file.delete();
 
@@ -381,12 +432,12 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
   }
 
   Future<
-      ({
-        Map<String, Map<String, String>>? apiKeys,
-        Map<String, McpServerSecret>? mcpSecrets
-      })?> _loadEncryptedSecretsFromBackup(
-    String extractPath,
-  ) async {
+    ({
+      Map<String, Map<String, String>>? apiKeys,
+      Map<String, McpServerSecret>? mcpSecrets,
+    })?
+  >
+  _loadEncryptedSecretsFromBackup(String extractPath) async {
     final l10n = L10n.of(navigatorKey.currentContext!);
     final manifestFile = File('$extractPath/$_backupManifestFileName');
     if (!await manifestFile.exists()) {
@@ -409,8 +460,9 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       if (containsApiKeys) {
         final secretRaw = map['encryptedApiKeys'];
         if (secretRaw is Map) {
-          apiKeysSecret =
-              EncryptedBackupSecret.fromJson(secretRaw.cast<String, dynamic>());
+          apiKeysSecret = EncryptedBackupSecret.fromJson(
+            secretRaw.cast<String, dynamic>(),
+          );
         }
       }
 
@@ -418,8 +470,9 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       if (containsMcpSecrets) {
         final secretRaw = map['encryptedMcpSecrets'];
         if (secretRaw is Map) {
-          mcpSecretsSecret =
-              EncryptedBackupSecret.fromJson(secretRaw.cast<String, dynamic>());
+          mcpSecretsSecret = EncryptedBackupSecret.fromJson(
+            secretRaw.cast<String, dynamic>(),
+          );
         }
       }
 
@@ -461,8 +514,10 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
       Map<String, Map<String, String>>? apiKeys;
       if (apiKeysSecret != null) {
-        final plaintext =
-            await decryptString(secret: apiKeysSecret, password: password);
+        final plaintext = await decryptString(
+          secret: apiKeysSecret,
+          password: password,
+        );
         final keysDecoded = jsonDecode(plaintext);
 
         // Backward compatibility:
@@ -496,8 +551,10 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
       Map<String, McpServerSecret>? mcpSecrets;
       if (mcpSecretsSecret != null) {
-        final plaintext =
-            await decryptString(secret: mcpSecretsSecret, password: password);
+        final plaintext = await decryptString(
+          secret: mcpSecretsSecret,
+          password: password,
+        );
         final secretsDecoded = jsonDecode(plaintext);
         if (secretsDecoded is Map) {
           final result = <String, McpServerSecret>{};
@@ -525,10 +582,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
         return null;
       }
 
-      return (
-        apiKeys: apiKeys,
-        mcpSecrets: mcpSecrets,
-      );
+      return (apiKeys: apiKeys, mcpSecrets: mcpSecrets);
     } catch (e) {
       AnxLog.info('importData: failed to decrypt encrypted data: $e');
       AnxToast.show(l10n.backupDecryptEncryptedDataFailed);
@@ -572,26 +626,74 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     if (!mounted) return;
 
     final l10n = L10n.of(navigatorKey.currentContext!);
-    final confirmed = await SmartDialog.show<bool>(
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.backupImportConfirmTitle),
-        content: Text(l10n.backupImportConfirmBody),
-        actions: [
-          TextButton(
-            onPressed: () => SmartDialog.dismiss(result: false),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => SmartDialog.dismiss(result: true),
-            child: Text(l10n.commonConfirm),
-          ),
-        ],
-      ),
-    );
 
-    if (confirmed != true) {
+    bool restoreAiIndexDb = false;
+    bool restoreMemory = true;
+
+    final options =
+        await SmartDialog.show<({bool restoreAiIndexDb, bool restoreMemory})?>(
+          builder: (ctx) => StatefulBuilder(
+            builder: (ctx, setState) => AlertDialog(
+              title: Text(l10n.backupImportConfirmTitle),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.backupImportConfirmBody),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.backupImportOptionsTitle,
+                      style: Theme.of(ctx).textTheme.titleSmall,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.backupImportRestoreMemory),
+                      value: restoreMemory,
+                      onChanged: (value) {
+                        setState(() {
+                          restoreMemory = value;
+                        });
+                      },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.backupImportRestoreAiIndexDb),
+                      value: restoreAiIndexDb,
+                      onChanged: (value) {
+                        setState(() {
+                          restoreAiIndexDb = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => SmartDialog.dismiss(result: null),
+                  child: Text(l10n.commonCancel),
+                ),
+                TextButton(
+                  onPressed: () => SmartDialog.dismiss(
+                    result: (
+                      restoreAiIndexDb: restoreAiIndexDb,
+                      restoreMemory: restoreMemory,
+                    ),
+                  ),
+                  child: Text(l10n.commonConfirm),
+                ),
+              ],
+            ),
+          ),
+        );
+
+    if (options == null) {
       return;
     }
+
+    restoreAiIndexDb = options.restoreAiIndexDb;
+    restoreMemory = options.restoreMemory;
 
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -606,7 +708,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     if (filePath == null) {
       AnxLog.info('importData: cannot get file path');
       AnxToast.show(
-          L10n.of(navigatorKey.currentContext!).importCannotGetFilePath);
+        L10n.of(navigatorKey.currentContext!).importCannotGetFilePath,
+      );
       return;
     }
 
@@ -614,7 +717,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     if (!await zipFile.exists()) {
       AnxLog.info('importData: zip file not found');
       AnxToast.show(
-          L10n.of(navigatorKey.currentContext!).importCannotGetFilePath);
+        L10n.of(navigatorKey.currentContext!).importCannotGetFilePath,
+      );
       return;
     }
 
@@ -636,8 +740,9 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
         'destinationPath': extractPath,
       });
 
-      final decryptedSecrets =
-          await _loadEncryptedSecretsFromBackup(extractPath);
+      final decryptedSecrets = await _loadEncryptedSecretsFromBackup(
+        extractPath,
+      );
 
       final ts = DateTime.now().millisecondsSinceEpoch;
       final bakSuffix = '.bak.$ts';
@@ -647,17 +752,20 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       final coverDir = getCoverDir(path: docPath);
       final fontDir = getFontDir(path: docPath);
       final bgimgDir = getBgimgDir(path: docPath);
+      final memoryDir = getMemoryDir(path: docPath);
 
       final srcFileDir = Directory('$extractPath${pathSeparator}file');
       final srcCoverDir = Directory('$extractPath${pathSeparator}cover');
       final srcFontDir = Directory('$extractPath${pathSeparator}font');
       final srcBgimgDir = Directory('$extractPath${pathSeparator}bgimg');
+      final srcMemoryDir = Directory('$extractPath${pathSeparator}memory');
       final srcDbDir = Directory('$extractPath${pathSeparator}databases');
 
       Directory? fileBak;
       Directory? coverBak;
       Directory? fontBak;
       Directory? bgimgBak;
+      Directory? memoryBak;
       Directory? dbBak;
 
       try {
@@ -678,11 +786,24 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
           _copyDirectorySync(srcBgimgDir, bgimgDir);
         }
 
+        if (restoreMemory && srcMemoryDir.existsSync()) {
+          memoryBak = _backupDirIfExists(memoryDir, bakSuffix);
+          _copyDirectorySync(srcMemoryDir, memoryDir);
+        }
+
         if (srcDbDir.existsSync()) {
           DBHelper.close();
           final dbDir = await getAnxDataBasesDir();
           dbBak = _backupDirIfExists(dbDir, bakSuffix);
           _copyDirectorySync(srcDbDir, dbDir);
+
+          final srcAiIndexExists = File(
+            path.join(srcDbDir.path, kAiIndexDbFileName),
+          ).existsSync();
+          if (!restoreAiIndexDb || !srcAiIndexExists) {
+            _restoreAiIndexFromDbBackup(dbBak, dbDir);
+          }
+
           DBHelper().initDB();
         }
 
@@ -703,17 +824,20 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
         _deleteDirIfExists(coverBak);
         _deleteDirIfExists(fontBak);
         _deleteDirIfExists(bgimgBak);
+        _deleteDirIfExists(memoryBak);
         _deleteDirIfExists(dbBak);
 
         AnxLog.info('importData: import success');
         AnxToast.show(
-            L10n.of(navigatorKey.currentContext!).importSuccessRestartApp);
+          L10n.of(navigatorKey.currentContext!).importSuccessRestartApp,
+        );
       } catch (e) {
         // Rollback best-effort.
         _rollbackDir(fileBak, fileDir);
         _rollbackDir(coverBak, coverDir);
         _rollbackDir(fontBak, fontDir);
         _rollbackDir(bgimgBak, bgimgDir);
+        _rollbackDir(memoryBak, memoryDir);
         // Databases directory is not under documents path.
         if (dbBak != null) {
           final dbDir = await getAnxDataBasesDir();
@@ -724,7 +848,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     } catch (e) {
       AnxLog.info('importData: error while unzipping or copying files: $e');
       AnxToast.show(
-          L10n.of(navigatorKey.currentContext!).importFailed(e.toString()));
+        L10n.of(navigatorKey.currentContext!).importFailed(e.toString()),
+      );
     } finally {
       SmartDialog.dismiss();
       await Directory(extractPath).delete(recursive: true);
@@ -785,7 +910,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     }
     destination.createSync(recursive: true);
     source.listSync(recursive: false).forEach((entity) {
-      final newPath = destination.path +
+      final newPath =
+          destination.path +
           Platform.pathSeparator +
           path.basename(entity.path);
       if (entity is File) {
@@ -795,67 +921,81 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       }
     });
   }
+
+  void _restoreAiIndexFromDbBackup(Directory? dbBak, Directory dbDir) {
+    if (dbBak == null) return;
+    if (!dbBak.existsSync()) return;
+
+    for (final name in kAiIndexDbRelatedFileNames) {
+      final src = File(path.join(dbBak.path, name));
+      if (!src.existsSync()) continue;
+
+      try {
+        final dstPath = path.join(dbDir.path, name);
+        src.copySync(dstPath);
+      } catch (e) {
+        // Best-effort only; the index can be rebuilt.
+        AnxLog.info('importData: failed to restore $name from backup: $e');
+      }
+    }
+  }
 }
 
 Future<String> createZipFile(Map<String, dynamic> params) async {
   RootIsolateToken token = params['token'];
   final String prefsBackupFilePath = params['prefsBackupFilePath'];
   final String? manifestFilePath = params['manifestFilePath'] as String?;
+  final bool includeAiIndexDb = params['includeAiIndexDb'] == true;
+  final bool includeMemory = params['includeMemory'] != false;
+
   final File prefsBackupFile = File(prefsBackupFilePath);
-  final File? manifestFile =
-      manifestFilePath == null ? null : File(manifestFilePath);
+  final File? manifestFile = manifestFilePath == null
+      ? null
+      : File(manifestFilePath);
+
   BackgroundIsolateBinaryMessenger.ensureInitialized(token);
+
   final date =
       '${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}';
   final zipPath =
       '${(await getAnxTempDir()).path}/PaperReader-Backup-$date.zip';
-  final docPath = await getAnxDocumentsPath();
-  final directoryList = [
-    getFileDir(path: docPath),
-    getCoverDir(path: docPath),
-    getFontDir(path: docPath),
-    getBgimgDir(path: docPath),
-    if (!AnxPlatform.isOhos) await getAnxDataBasesDir(),
-    // await getAnxSharedPrefsDir(),
-    // await getAnxShredPrefsFile(),
-    prefsBackupFile,
-  ];
 
-  AnxLog.info('exportData: directoryList: $directoryList');
+  final docPath = await getAnxDocumentsPath();
+  final dbDir = await getAnxDataBasesDir();
+
+  final entries = collectBackupZipEntries(
+    fileDir: getFileDir(path: docPath),
+    coverDir: getCoverDir(path: docPath),
+    fontDir: getFontDir(path: docPath),
+    bgimgDir: getBgimgDir(path: docPath),
+    memoryDir: getMemoryDir(path: docPath),
+    databasesDir: dbDir,
+    prefsBackupFile: prefsBackupFile,
+    manifestFile: manifestFile,
+    options: BackupZipOptions(
+      includeAiIndexDb: includeAiIndexDb,
+      includeMemory: includeMemory,
+    ),
+  );
+
+  AnxLog.info('exportData: zip entries: ${entries.length}');
 
   final encoder = ZipFileEncoder();
   encoder.create(zipPath);
 
-  if (AnxPlatform.isOhos) {
-    final dbDir = await getAnxDataBasesDir();
-    final dbFile = File('${dbDir.path}/app_database.db');
-    if (await dbFile.exists()) {
-      await encoder.addFile(dbFile, 'databases/app_database.db');
-    }
-  } else {
-    final dbDir = await getAnxDataBasesDir();
-    await encoder.addDirectory(dbDir);
-  }
-
-  for (final dir in directoryList) {
-    if (dir is Directory) {
-      await encoder.addDirectory(dir);
-    } else if (dir is File) {
-      await encoder.addFile(dir);
-    }
-  }
-
-  if (manifestFile != null && await manifestFile.exists()) {
-    await encoder.addFile(manifestFile, _backupManifestFileName);
+  for (final entry in entries) {
+    await encoder.addFile(entry.file, entry.archivePath);
   }
 
   encoder.close();
-  if (await prefsBackupFile.exists()) {
+
+  if (prefsBackupFile.existsSync()) {
     await prefsBackupFile.delete();
   }
-  if (manifestFile != null && await manifestFile.exists()) {
+  if (manifestFile != null && manifestFile.existsSync()) {
     await manifestFile.delete();
   }
+
   return zipPath;
 }
 
@@ -917,10 +1057,12 @@ void showWebdavDialog(BuildContext context) {
   // final prefs = Prefs().saveWebdavInfo;
   final webdavInfo = Prefs().getSyncInfo(SyncProtocol.webdav);
   final webdavUrlController = TextEditingController(text: webdavInfo['url']);
-  final webdavUsernameController =
-      TextEditingController(text: webdavInfo['username']);
-  final webdavPasswordController =
-      TextEditingController(text: webdavInfo['password']);
+  final webdavUsernameController = TextEditingController(
+    text: webdavInfo['username'],
+  );
+  final webdavPasswordController = TextEditingController(
+    text: webdavInfo['password'],
+  );
   Widget buildTextField(String labelText, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -945,11 +1087,17 @@ void showWebdavDialog(BuildContext context) {
         contentPadding: const EdgeInsets.all(20),
         children: [
           buildTextField(
-              L10n.of(context).settingsSyncWebdavUrl, webdavUrlController),
-          buildTextField(L10n.of(context).settingsSyncWebdavUsername,
-              webdavUsernameController),
-          buildTextField(L10n.of(context).settingsSyncWebdavPassword,
-              webdavPasswordController),
+            L10n.of(context).settingsSyncWebdavUrl,
+            webdavUrlController,
+          ),
+          buildTextField(
+            L10n.of(context).settingsSyncWebdavUsername,
+            webdavUsernameController,
+          ),
+          buildTextField(
+            L10n.of(context).settingsSyncWebdavPassword,
+            webdavPasswordController,
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
