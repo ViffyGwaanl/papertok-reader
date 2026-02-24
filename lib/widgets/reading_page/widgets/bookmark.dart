@@ -5,6 +5,7 @@ import 'package:anx_reader/providers/bookmark.dart';
 import 'package:anx_reader/utils/error_handler.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
+import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:anx_reader/utils/text/word_count.dart';
 import 'package:riverpod/riverpod.dart';
 
 import 'base_tool.dart';
@@ -51,8 +52,14 @@ class ChapterContentByHrefTool
       href: input.href,
       maxCharacters: input.maxCharacters,
     );
+    final stats = TextStats.fromText(content);
     return {
       'content': content,
+      'stats': {
+        'characters': stats.characters,
+        'nonWhitespaceCharacters': stats.nonWhitespaceCharacters,
+        'estimatedWords': stats.estimatedWords,
+      },
     };
   }
 }

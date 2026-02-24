@@ -8,6 +8,7 @@ import 'package:anx_reader/widgets/reading_page/widget_title.dart';
 import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/page/settings_page/narrate.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/more_settings.dart';
+import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'dart:async';

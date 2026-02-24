@@ -12,6 +12,7 @@ import 'package:anx_reader/widgets/book_share/excerpt_share_service.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
 import 'package:anx_reader/widgets/tips/notes_tips.dart';
+import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';

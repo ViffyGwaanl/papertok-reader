@@ -1357,6 +1357,87 @@ class Reader {
     return content
   }
 
+  getBookContent = async (options = {}) => {
+    if (!this.view?.book?.sections) {
+      return { content: '', truncated: false, charCount: 0, sectionCount: 0, includedSections: 0 }
+    }
+
+    const rawStop = options?.stopAtChars
+    const numericStop = rawStop == null ? null : Number(rawStop)
+    const stopAtChars = Number.isFinite(numericStop) && numericStop > 0
+      ? Math.floor(numericStop)
+      : null
+
+    const rawMax = options?.maxChars
+    const numericMax = rawMax == null ? null : Number(rawMax)
+    const maxChars = Number.isFinite(numericMax) && numericMax > 0
+      ? Math.floor(numericMax)
+      : null
+
+    const includeHeadings = !!options?.includeHeadings
+
+    const sections = this.view.book.sections
+    let out = ''
+    let truncated = false
+    let includedSections = 0
+
+    for (let index = 0; index < sections.length; index++) {
+      const section = sections[index]
+      if (!section?.createDocument) continue
+
+      const doc = await section.createDocument()
+      const body = doc?.body
+      let content = this.#getOriginalTextContent(body) ?? ''
+      content = content.trim()
+      if (!content) continue
+
+      if (includeHeadings) {
+        try {
+          const range = doc.createRange()
+          range.selectNodeContents(body || doc.documentElement)
+          const progress = this.view.getProgressOf?.(index, range)
+          const tocItem = progress?.tocItem
+          const label = tocItem?.label ?? ''
+          const href = tocItem?.href ?? section?.id ?? ''
+          const headingTitle = (label && label.trim()) ? label.trim() : (href && href.trim()) ? href.trim() : `Section ${index + 1}`
+          out += `
+
+# ${headingTitle}
+
+`
+        } catch (e) {
+          // ignore
+          if (out) out += '\n\n'
+        }
+      } else {
+        if (out) out += '\n\n'
+      }
+
+      out += content
+      includedSections += 1
+
+      if (stopAtChars != null && out.length >= stopAtChars) {
+        out = out.slice(0, stopAtChars)
+        truncated = true
+        break
+      }
+      if (maxChars != null && out.length >= maxChars) {
+        out = out.slice(0, maxChars)
+        truncated = true
+        break
+      }
+    }
+
+    return {
+      content: out,
+      truncated,
+      charCount: out.length,
+      sectionCount: sections.length,
+      includedSections,
+    }
+  }
+
+
   getPreviousContent = (count = 2000) => {
     let currentContainer = this.view.lastLocation?.range?.endContainer?.parentElement
     if (!currentContainer) return ''
@@ -1879,6 +1960,36 @@ window.previousContent = (count = 2000) => reader.getPreviousContent(count)
 
 window.getChapterContentByHref = async (href, opts) =>
   reader.getChapterContentByHref(href, opts)
+
+
+window.getBookContent = async (opts) =>
+  reader.getBookContent(opts)
+
+window.resolveCfi = async (cfi) => {
+  try {
+    if (!cfi) return { ok: false, error: 'cfi is required' }
+    const view = reader?.view
+    if (!view) return { ok: false, error: 'reader not ready' }
+
+    const resolved = view.resolveNavigation?.(cfi)
+    if (!resolved || resolved.index == null) {
+      return { ok: false, error: 'unable to resolve cfi' }
+    }
+
+    const tocItem = await view.getTOCItemOf?.(cfi)
+
+    return {
+      ok: true,
+      cfi,
+      index: resolved.index,
+      title: tocItem?.label ?? null,
+      href: tocItem?.href ?? null,
+      tocItem: tocItem ?? null,
+    }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+}
 
 // window.convertChinese = (mode) => reader.convertChinese(mode)
 

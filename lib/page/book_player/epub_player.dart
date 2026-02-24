@@ -22,7 +22,6 @@ import 'package:anx_reader/models/search_result_model.dart';
 import 'package:anx_reader/models/toc_item.dart';
 import 'package:anx_reader/page/book_player/image_viewer.dart';
 import 'package:anx_reader/page/home_page.dart';
-import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/providers/book_list.dart';
 import 'package:anx_reader/providers/book_toc.dart';
 import 'package:anx_reader/providers/bookmark.dart';
@@ -69,6 +68,10 @@ class EpubPlayer extends ConsumerStatefulWidget {
   /// Optional callback: request opening AI chat (reading page UX convenience).
   final VoidCallback? onRequestAiChat;
 
+  /// Optional callback invoked on user interactions (click/gestures)
+  /// so the host page can reset its awake timer.
+  final VoidCallback? onUserInteraction;
+
   const EpubPlayer({
     super.key,
     required this.showOrHideAppBarAndBottomBar,
@@ -78,6 +81,7 @@ class EpubPlayer extends ConsumerStatefulWidget {
     required this.initialThemes,
     required this.updateParent,
     this.onRequestAiChat,
+    this.onUserInteraction,
   });
 
   @override
@@ -442,6 +446,63 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     return '';
   }
 
+  Future<Map<String, dynamic>> _resolveCfi(String cfi) async {
+    if (cfi.trim().isEmpty) {
+      return {
+        'ok': false,
+        'error': 'cfi is required',
+      };
+    }
+
+    final result = await webViewController.callAsyncJavaScript(
+      functionBody: 'return await resolveCfi(${jsonEncode(cfi.trim())})',
+    );
+
+    final value = result?.value;
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return {
+      'ok': false,
+      'error': 'resolveCfi returned non-object',
+    };
+  }
+
+  Future<Map<String, dynamic>> _getBookContent({
+    int? maxCharacters,
+    int? stopAtCharacters,
+    bool includeHeadings = false,
+  }) async {
+    final payload = <String, dynamic>{
+      'maxChars': maxCharacters,
+      'stopAtChars': stopAtCharacters,
+      'includeHeadings': includeHeadings,
+    }..removeWhere((key, value) => value == null);
+
+    final result = await webViewController.callAsyncJavaScript(
+      functionBody: 'return await getBookContent(${jsonEncode(payload)})',
+    );
+
+    final value = result?.value;
+    if (value is Map) {
+      final map = Map<String, dynamic>.from(value);
+      final content = map['content'];
+      if (content is String) {
+        final normalized = _normalizeChapterContent(content, maxCharacters);
+        map['content'] = normalized;
+        map['charCount'] = normalized.length;
+      }
+      return map;
+    }
+    return {
+      'content': '',
+      'truncated': false,
+      'charCount': 0,
+      'sectionCount': 0,
+      'includedSections': 0,
+    };
+  }
+
   String _normalizeChapterContent(String? content, int? maxCharacters) {
     if (content == null || content.isEmpty) {
       return '';
@@ -462,6 +523,17 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           _getCurrentChapterContent(maxCharacters: maxCharacters),
       fetchChapterByHref: (href, {int? maxCharacters}) =>
           _getChapterContentByHref(href, maxCharacters: maxCharacters),
+      resolveCfi: _resolveCfi,
+      fetchBookContent: ({
+        int? maxCharacters,
+        int? stopAtCharacters,
+        bool includeHeadings = false,
+      }) =>
+          _getBookContent(
+        maxCharacters: maxCharacters,
+        stopAtCharacters: stopAtCharacters,
+        includeHeadings: includeHeadings,
+      ),
     );
   }
 
@@ -534,7 +606,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   }
 
   void onClick(Map<String, dynamic> location) {
-    readingPageKey.currentState?.resetAwakeTimer();
+    widget.onUserInteraction?.call();
     if (contextMenuEntry != null) {
       removeOverlay();
       return;
@@ -662,7 +734,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
               );
           widget.updateParent();
           saveReadingProgress();
-          readingPageKey.currentState?.resetAwakeTimer();
+          widget.onUserInteraction?.call();
         });
     controller.addJavaScriptHandler(
         handlerName: 'onClick',

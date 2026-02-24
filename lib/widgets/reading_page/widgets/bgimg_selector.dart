@@ -8,6 +8,7 @@ import 'package:anx_reader/models/bgimg.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/providers/bgimg.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
+import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';

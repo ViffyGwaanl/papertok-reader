@@ -1,5 +1,5 @@
 import 'package:anx_reader/models/toc_item.dart';
-import 'package:anx_reader/page/reading_page.dart';
+import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'book_toc.g.dart';

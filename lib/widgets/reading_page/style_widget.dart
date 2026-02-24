@@ -18,6 +18,7 @@ import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/read_theme.dart';
 import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/widgets/reading_page/widgets/bgimg_selector.dart';
+import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 

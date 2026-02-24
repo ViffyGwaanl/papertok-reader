@@ -17,6 +17,7 @@ import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/models/read_theme.dart';
 import 'package:anx_reader/page/book_detail.dart';
 import 'package:anx_reader/page/book_player/epub_player.dart';
+import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/service/ai/prompt_generate.dart';
@@ -65,7 +66,6 @@ class ReadingPage extends ConsumerStatefulWidget {
 
 final GlobalKey<ReadingPageState> readingPageKey =
     GlobalKey<ReadingPageState>();
-final epubPlayerKey = GlobalKey<EpubPlayerState>();
 
 class ReadingPageState extends ConsumerState<ReadingPage>
     with WidgetsBindingObserver, TickerProviderStateMixin {
@@ -558,6 +558,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                 onRequestAiChat: () {
                   showAiChat();
                 },
+                onUserInteraction: resetAwakeTimer,
               ),
               // Swipe up from lower-middle area to open AI bottom sheet.
               if (_shouldUseAiBottomSheet(context))

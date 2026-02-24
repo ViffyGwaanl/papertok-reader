@@ -16,6 +16,8 @@ import 'package:anx_reader/service/ai/tools/calendar_update_event_tool.dart';
 import 'package:anx_reader/service/ai/tools/chapter_content_by_href_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_book_toc_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_chapter_content_tool.dart';
+import 'package:anx_reader/service/ai/tools/resolve_cfi_tool.dart';
+import 'package:anx_reader/service/ai/tools/current_book_fulltext_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_reading_metadata_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_time_tool.dart';
 import 'package:anx_reader/service/ai/tools/fetch_url_tool.dart';
@@ -125,6 +127,8 @@ class AiToolRegistry {
     currentBookTocToolDefinition,
     currentChapterContentToolDefinition,
     chapterContentByHrefToolDefinition,
+    currentBookFulltextToolDefinition,
+    resolveCfiToolDefinition,
     tagsListToolDefinition,
     booksTagsListToolDefinition,
     applyBookTagsToolDefinition,
