@@ -7,6 +7,8 @@ import 'package:anx_reader/service/mcp/mcp_client_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
+import 'package:anx_reader/page/settings_page/mcp_server_detail_page.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -444,7 +446,17 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
                     ),
                   ],
                 ),
-                onTap: () => _editServer(existing: s),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SettingsSubpageScaffold(
+                        title: s.name,
+                        child: McpServerDetailPage(serverId: s.id),
+                      ),
+                    ),
+                  );
+                },
               ),
               const Divider(height: 1),
             ],

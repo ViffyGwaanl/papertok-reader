@@ -753,14 +753,18 @@
   "settingsShortcutsWaitModeSuccessOnlyDesc": "Finish immediately on /success and do not wait for /result.",
   "settingsShortcutsResetLearned": "Reset learned shortcuts",
   "settingsShortcutsResetLearnedDesc": "Clear the remembered list of shortcuts that return /result.",
+  "settingsMcpServer": "MCP server",
   "settingsMcpAddServer": "Add MCP server",
   "settingsMcpAddServerDesc": "Add a Streamable HTTP MCP endpoint.",
   "settingsMcpEditServer": "Edit MCP server",
+  "settingsMcpEditServerDesc": "Edit name and endpoint.",
+  "settingsMcpServerNotFound": "Server not found.",
   "settingsMcpServerName": "Name",
   "settingsMcpServerEndpoint": "Endpoint",
   "settingsMcpServerHeaders": "Headers (local only)",
   "settingsMcpServerHeadersDesc": "Optional request headers for this server (local only; not synced). Use JSON object format.",
   "settingsMcpRefreshTools": "Refresh tools",
+  "settingsMcpRefreshToolsDesc": "Fetch tools list from the server and update local cache.",
   "settingsMcpRefreshAllTools": "Refresh tools (all)",
   "settingsMcpRefreshAllToolsDesc": "Refresh tools list for all enabled MCP servers.",
   "settingsMcpRefreshingAllTools": "Refreshing tools list…",
@@ -781,6 +785,7 @@
     }
   },
   "settingsMcpClearToolsCache": "Clear tools cache",
+  "settingsMcpClearToolsCacheDesc": "Remove local cached tools list for this server.",
   "settingsMcpClearToolsCacheConfirm": "Clear tools cache for \"{serverName}\"?",
   "@settingsMcpClearToolsCacheConfirm": {
     "placeholders": {
@@ -788,6 +793,8 @@
     }
   },
   "settingsMcpToolsTitle": "Tools — {serverName}",
+  "settingsMcpToolsListEmpty": "No tools cached yet. Tap \"Refresh tools\" to fetch.",
+  "settingsMcpToolSchema": "Input schema",
   "@settingsMcpToolsTitle": {
     "placeholders": {
       "serverName": {}

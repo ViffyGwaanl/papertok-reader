@@ -753,14 +753,18 @@
   "settingsShortcutsWaitModeSuccessOnlyDesc": "收到 /success 就立刻结束，不再等待 /result。",
   "settingsShortcutsResetLearned": "清空已学习快捷指令",
   "settingsShortcutsResetLearnedDesc": "清空“会回传 /result 的快捷指令”记忆列表。",
+  "settingsMcpServer": "MCP 服务器",
   "settingsMcpAddServer": "添加 MCP 服务器",
   "settingsMcpAddServerDesc": "添加一个 Streamable HTTP MCP endpoint。",
   "settingsMcpEditServer": "编辑 MCP 服务器",
+  "settingsMcpEditServerDesc": "编辑名称与 endpoint。",
+  "settingsMcpServerNotFound": "服务器不存在。",
   "settingsMcpServerName": "名称",
   "settingsMcpServerEndpoint": "Endpoint",
   "settingsMcpServerHeaders": "请求头（仅本地）",
   "settingsMcpServerHeadersDesc": "可选：为该服务器设置请求头（仅本地，不会同步）。请使用 JSON 对象格式。",
   "settingsMcpRefreshTools": "刷新工具列表",
+  "settingsMcpRefreshToolsDesc": "从服务器拉取工具列表并更新本地缓存。",
   "settingsMcpRefreshAllTools": "刷新全部工具",
   "settingsMcpRefreshAllToolsDesc": "刷新所有已启用 MCP 服务器的工具列表。",
   "settingsMcpRefreshingAllTools": "正在刷新工具列表…",
@@ -781,6 +785,7 @@
     }
   },
   "settingsMcpClearToolsCache": "清空工具缓存",
+  "settingsMcpClearToolsCacheDesc": "删除该服务器的本地工具缓存。",
   "settingsMcpClearToolsCacheConfirm": "清空「{serverName}」的工具缓存？",
   "@settingsMcpClearToolsCacheConfirm": {
     "placeholders": {
@@ -788,6 +793,8 @@
     }
   },
   "settingsMcpToolsTitle": "工具列表 — {serverName}",
+  "settingsMcpToolsListEmpty": "暂无缓存工具。点击“刷新工具列表”以拉取。",
+  "settingsMcpToolSchema": "输入 Schema",
   "@settingsMcpToolsTitle": {
     "placeholders": {
       "serverName": {}
