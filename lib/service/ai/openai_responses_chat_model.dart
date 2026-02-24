@@ -489,28 +489,29 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       }
     }
 
-    // Replay reasoning items together with tool outputs when applicable.
+    // Replay reasoning items together with tool calls when applicable.
     //
-    // We must not prepend them to the whole conversation (that would change
-    // semantics). Instead, insert them right before the first
-    // function_call_output.
+    // OpenAI Responses expects a `reasoning` item to be followed by the next
+    // assistant output item (commonly a `function_call`). If we place reasoning
+    // items right before `function_call_output`, the API may reject the request
+    // with: "reasoning was provided without its required following item".
     //
-    // See OpenAI docs note: reasoning items returned with tool calls must be
-    // passed back with tool call outputs.
+    // Therefore, insert replayed reasoning items right before the first
+    // `function_call` item.
     var replayInserted = false;
     if (hasToolOutputs && _replayReasoningItems.isNotEmpty) {
       for (var i = 0; i < inputItems.length; i++) {
-        if (inputItems[i]['type']?.toString() == 'function_call_output') {
+        if (inputItems[i]['type']?.toString() == 'function_call') {
           inputItems.insertAll(i, _replayReasoningItems);
           replayInserted = true;
           break;
         }
       }
 
-      // If we couldn't find a tool output item (unexpected), fall back to
-      // appending.
+      // If we couldn't find a function_call item (unexpected), skip replay to
+      // avoid sending an invalid request.
       if (!replayInserted) {
-        inputItems.addAll(_replayReasoningItems);
+        _aiDebug('skipping reasoning replay: no function_call found');
       }
     }
 

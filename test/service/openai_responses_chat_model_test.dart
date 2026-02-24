@@ -280,7 +280,7 @@ void main() {
     final input = (secondBody['input'] as List).cast<dynamic>();
     expect(input.isNotEmpty, isTrue);
 
-    // Order should be: function_call (from AI toolCalls), reasoning replay,
+    // Order should be: reasoning replay, then function_call (from AI toolCalls),
     // then function_call_output.
     final types = input
         .map((e) => (e as Map)['type']?.toString())
@@ -288,11 +288,15 @@ void main() {
         .toList(growable: false);
 
     final reasoningIndex = types.indexOf('reasoning');
+    final callIndex = types.indexOf('function_call');
     final outputIndex = types.indexOf('function_call_output');
 
     expect(reasoningIndex, greaterThanOrEqualTo(0));
+    expect(callIndex, greaterThanOrEqualTo(0));
     expect(outputIndex, greaterThanOrEqualTo(0));
-    expect(reasoningIndex, lessThan(outputIndex));
+
+    expect(reasoningIndex, lessThan(callIndex));
+    expect(callIndex, lessThan(outputIndex));
 
     final reasoningItem = input[reasoningIndex] as Map;
     expect(reasoningItem['id'], 'rs_1');
