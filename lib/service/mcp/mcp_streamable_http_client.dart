@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_tool_meta.dart';
 import 'package:anx_reader/service/mcp/mcp_http_exception.dart';
+import 'package:anx_reader/service/mcp/mcp_sse_ended_exception.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:http/http.dart' as http;
 
@@ -327,7 +328,23 @@ class McpStreamableHttpClient implements McpRpcClient {
     }
 
     if (contentType.contains('text/event-stream')) {
-      final map = await _readSseForResponse(streamed, expectedId: rpc['id']);
+      Map<String, dynamic> map;
+      try {
+        map = await _readSseForResponse(streamed, expectedId: rpc['id']);
+      } on McpSseEndedException catch (e) {
+        // Best-effort resume for Streamable HTTP SSE streams.
+        if (e.lastEventId != null && e.lastEventId!.trim().isNotEmpty) {
+          final retryMs = (e.retryMs ?? 500).clamp(100, 5000);
+          await Future<void>.delayed(Duration(milliseconds: retryMs));
+          map = await _resumeGetSseForResponse(
+            expectedId: rpc['id'],
+            lastEventId: e.lastEventId!,
+          );
+        } else {
+          rethrow;
+        }
+      }
+
       final error = map['error'];
       if (error != null) {
         final errorStr = error.toString().toLowerCase();
@@ -367,6 +384,42 @@ class McpStreamableHttpClient implements McpRpcClient {
     );
   }
 
+  Future<Map<String, dynamic>> _resumeGetSseForResponse({
+    required Object? expectedId,
+    required String lastEventId,
+  }) async {
+    final req = http.Request('GET', endpoint);
+    req.headers.addAll({
+      'Accept': 'text/event-stream',
+      'Last-Event-ID': lastEventId,
+      // session id is optional but helps strict servers.
+      if (_sessionId != null) 'MCP-Session-Id': _sessionId!,
+      'MCP-Protocol-Version': _negotiatedProtocolVersion ?? protocolVersion,
+      ...secret.headers,
+    });
+
+    final streamed = await _http.send(req);
+    final status = streamed.statusCode;
+    final contentType = (streamed.headers['content-type'] ?? '').toLowerCase();
+
+    if (status < 200 ||
+        status >= 300 ||
+        !contentType.contains('text/event-stream')) {
+      final body = await streamed.stream.bytesToString();
+      throw McpHttpException(
+        statusCode: status,
+        body: body,
+        contentType: contentType,
+        allow: streamed.headers['allow'],
+      );
+    }
+
+    return await _readSseForResponse(
+      streamed,
+      expectedId: expectedId,
+    );
+  }
+
   Future<Map<String, dynamic>> _readSseForResponse(
     http.StreamedResponse response, {
     required Object? expectedId,
@@ -375,6 +428,9 @@ class McpStreamableHttpClient implements McpRpcClient {
     final stream = response.stream.transform(decoder);
 
     String? eventId;
+    String? lastEventId;
+    int? retryMs;
+
     final dataLines = <String>[];
 
     Future<void> flushEvent(Completer<Map<String, dynamic>> completer) async {
@@ -390,6 +446,11 @@ class McpStreamableHttpClient implements McpRpcClient {
       if (data.trim().isEmpty) {
         eventId = null;
         return;
+      }
+
+      // Capture last event id for resuming.
+      if (eventId != null && eventId!.trim().isNotEmpty) {
+        lastEventId = eventId;
       }
 
       try {
@@ -427,11 +488,18 @@ class McpStreamableHttpClient implements McpRpcClient {
         eventId = line.substring(3).trim();
         return;
       }
+      if (line.startsWith('retry:')) {
+        final v = int.tryParse(line.substring(6).trim());
+        if (v != null) {
+          retryMs = v.clamp(100, 30000);
+        }
+        return;
+      }
       if (line.startsWith('data:')) {
         dataLines.add(line.substring(5).trimLeft());
         return;
       }
-      // ignore: event:, retry:, comments
+      // ignore: event:, comments
     }
 
     final sub = stream.listen(
@@ -465,14 +533,17 @@ class McpStreamableHttpClient implements McpRpcClient {
           await flushEvent(completer);
         }
         if (!completer.isCompleted) {
-          completer.completeError(StateError('SSE ended before response'));
+          completer.completeError(
+            McpSseEndedException(lastEventId: lastEventId, retryMs: retryMs),
+          );
         }
       },
       cancelOnError: true,
     );
 
     try {
-      return await completer.future.timeout(const Duration(seconds: 30));
+      // Timeout is controlled by the outer call (per-server settings).
+      return await completer.future;
     } finally {
       await sub.cancel();
     }
