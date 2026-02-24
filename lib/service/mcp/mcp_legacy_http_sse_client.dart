@@ -322,8 +322,9 @@ class McpLegacyHttpSseClient implements McpRpcClient {
   Future<Map<String, dynamic>> callTool({
     required String name,
     required Map<String, dynamic> arguments,
+    int? requestId,
   }) async {
-    final id = _nextId++;
+    final id = requestId ?? _nextId++;
     final payload = {
       'jsonrpc': '2.0',
       'id': id,
@@ -350,6 +351,7 @@ class McpLegacyHttpSseClient implements McpRpcClient {
     };
   }
 
+  @override
   Future<void> sendCancelled({
     required int requestId,
     String reason = 'User requested cancellation',

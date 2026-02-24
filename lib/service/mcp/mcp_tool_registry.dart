@@ -105,15 +105,14 @@ class McpToolRegistry {
       inputJsonSchema: inputSchema,
       func: (input) async {
         try {
-          final result = await McpClientService.instance
-              .callTool(
-                server,
-                toolName: meta.name,
-                args: input,
-              )
-              .timeout(const Duration(seconds: 25));
+          final result = await McpClientService.instance.callTool(
+            server,
+            toolName: meta.name,
+            args: input,
+          );
 
-          final sanitized = _sanitizeToolResult(result);
+          final sanitized =
+              _sanitizeToolResult(result, maxChars: server.maxResultCharsV1);
 
           return jsonEncode({
             'status': 'ok',
@@ -140,8 +139,9 @@ class McpToolRegistry {
   }
 
   static ({Map<String, dynamic> value, bool truncated}) _sanitizeToolResult(
-    Map<String, dynamic> result,
-  ) {
+    Map<String, dynamic> result, {
+    required int maxChars,
+  }) {
     var truncated = false;
 
     dynamic sanitize(dynamic value, int depth) {
@@ -151,7 +151,7 @@ class McpToolRegistry {
       }
 
       if (value is String) {
-        const maxLen = 8000;
+        final maxLen = maxChars.clamp(1000, 50000);
         if (value.length > maxLen) {
           truncated = true;
           return '${value.substring(0, maxLen)}\n…(truncated ${value.length - maxLen} chars)';

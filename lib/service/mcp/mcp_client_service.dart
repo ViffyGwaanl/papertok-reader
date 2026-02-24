@@ -153,9 +153,28 @@ class McpClientService {
     }
   }
 
+  int _rpcId = 1;
+
+  final Map<int, ({String serverId, McpRpcClient client, int startedAtMs})>
+      _inFlight = {};
+
+  Future<void> cancelAllInFlight(
+      {String reason = 'User requested cancellation'}) async {
+    final items = _inFlight.entries.toList(growable: false);
+    _inFlight.clear();
+
+    for (final e in items) {
+      try {
+        await e.value.client.sendCancelled(requestId: e.key, reason: reason);
+      } catch (_) {}
+    }
+  }
+
   Future<List<McpToolMeta>> listTools(McpServerMeta server) async {
     final client = await _ensureClient(server);
-    return await client.listTools();
+    return await client
+        .listTools()
+        .timeout(Duration(seconds: server.listToolsTimeoutSecV1));
   }
 
   Future<Map<String, dynamic>> callTool(
@@ -164,7 +183,29 @@ class McpClientService {
     required Map<String, dynamic> args,
   }) async {
     final client = await _ensureClient(server);
-    return await client.callTool(name: toolName, arguments: args);
+
+    final requestId = _rpcId++;
+    _inFlight[requestId] = (
+      serverId: server.id,
+      client: client,
+      startedAtMs: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    try {
+      return await client
+          .callTool(name: toolName, arguments: args, requestId: requestId)
+          .timeout(Duration(seconds: server.callToolTimeoutSecV1));
+    } on TimeoutException {
+      try {
+        await client.sendCancelled(
+          requestId: requestId,
+          reason: 'Client timeout',
+        );
+      } catch (_) {}
+      rethrow;
+    } finally {
+      _inFlight.remove(requestId);
+    }
   }
 
   Future<void> closeServer(String serverId) async {

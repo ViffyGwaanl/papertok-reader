@@ -171,11 +171,12 @@ class McpStreamableHttpClient implements McpRpcClient {
   Future<Map<String, dynamic>> callTool({
     required String name,
     required Map<String, dynamic> arguments,
+    int? requestId,
   }) async {
-    final requestId = _nextId++;
+    final id = requestId ?? _nextId++;
     final payload = _rpc(
       method: 'tools/call',
-      id: requestId,
+      id: id,
       params: {
         'name': name,
         'arguments': arguments,
@@ -196,6 +197,23 @@ class McpStreamableHttpClient implements McpRpcClient {
         }
       ],
     };
+  }
+
+  @override
+  Future<void> sendCancelled({
+    required int requestId,
+    String reason = 'User requested cancellation',
+  }) async {
+    final payload = _rpc(
+      method: 'notifications/cancelled',
+      id: null,
+      params: {
+        'requestId': requestId,
+        'reason': reason,
+      },
+    );
+
+    await _postRpc(payload, expectNoBody: true);
   }
 
   Future<Map<String, dynamic>> _postRpc(

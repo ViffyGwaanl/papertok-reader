@@ -9,6 +9,9 @@ class McpServerMeta {
     required this.endpoint,
     required this.enabled,
     this.transportModeV1 = McpTransportMode.auto,
+    this.listToolsTimeoutSecV1 = 15,
+    this.callToolTimeoutSecV1 = 25,
+    this.maxResultCharsV1 = 8000,
   });
 
   final String id;
@@ -23,12 +26,24 @@ class McpServerMeta {
 
   final McpTransportMode transportModeV1;
 
+  /// Timeout for tools/list.
+  final int listToolsTimeoutSecV1;
+
+  /// Timeout for tools/call.
+  final int callToolTimeoutSecV1;
+
+  /// Max characters to keep in tool result strings.
+  final int maxResultCharsV1;
+
   McpServerMeta copyWith({
     String? id,
     String? name,
     String? endpoint,
     bool? enabled,
     McpTransportMode? transportModeV1,
+    int? listToolsTimeoutSecV1,
+    int? callToolTimeoutSecV1,
+    int? maxResultCharsV1,
   }) {
     return McpServerMeta(
       id: id ?? this.id,
@@ -36,6 +51,10 @@ class McpServerMeta {
       endpoint: endpoint ?? this.endpoint,
       enabled: enabled ?? this.enabled,
       transportModeV1: transportModeV1 ?? this.transportModeV1,
+      listToolsTimeoutSecV1:
+          listToolsTimeoutSecV1 ?? this.listToolsTimeoutSecV1,
+      callToolTimeoutSecV1: callToolTimeoutSecV1 ?? this.callToolTimeoutSecV1,
+      maxResultCharsV1: maxResultCharsV1 ?? this.maxResultCharsV1,
     );
   }
 
@@ -46,10 +65,19 @@ class McpServerMeta {
       'endpoint': endpoint,
       'enabled': enabled,
       'transportModeV1': transportModeV1.code,
+      'listToolsTimeoutSecV1': listToolsTimeoutSecV1,
+      'callToolTimeoutSecV1': callToolTimeoutSecV1,
+      'maxResultCharsV1': maxResultCharsV1,
     };
   }
 
   static McpServerMeta fromJson(Map<String, dynamic> json) {
+    final listTimeout =
+        int.tryParse(json['listToolsTimeoutSecV1']?.toString() ?? '');
+    final callTimeout =
+        int.tryParse(json['callToolTimeoutSecV1']?.toString() ?? '');
+    final maxChars = int.tryParse(json['maxResultCharsV1']?.toString() ?? '');
+
     return McpServerMeta(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
@@ -57,6 +85,9 @@ class McpServerMeta {
       enabled: json['enabled'] == true,
       transportModeV1:
           McpTransportMode.fromCode(json['transportModeV1']?.toString()),
+      listToolsTimeoutSecV1: (listTimeout ?? 15).clamp(3, 120),
+      callToolTimeoutSecV1: (callTimeout ?? 25).clamp(3, 300),
+      maxResultCharsV1: (maxChars ?? 8000).clamp(1000, 50000),
     );
   }
 

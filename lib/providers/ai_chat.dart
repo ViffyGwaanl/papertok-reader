@@ -4,6 +4,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/providers/ai_history.dart';
 import 'package:anx_reader/service/ai/ai_history.dart';
 import 'package:anx_reader/service/ai/index.dart';
+import 'package:anx_reader/service/mcp/mcp_client_service.dart';
 import 'package:anx_reader/models/ai_conversation_tree.dart';
 import 'package:anx_reader/models/attachment_item.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -284,6 +285,13 @@ class AiChat extends _$AiChat {
     }
 
     cancelActiveAiRequest();
+
+    // Best-effort: cancel any in-flight MCP tool calls.
+    // This avoids long-running external tool calls after user presses Stop.
+    try {
+      await McpClientService.instance
+          .cancelAllInFlight(reason: 'User pressed stop');
+    } catch (_) {}
 
     try {
       await _generationSub?.cancel();

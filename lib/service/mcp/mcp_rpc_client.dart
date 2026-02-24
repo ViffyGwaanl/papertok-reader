@@ -14,6 +14,12 @@ abstract class McpRpcClient {
   Future<Map<String, dynamic>> callTool({
     required String name,
     required Map<String, dynamic> arguments,
+    int? requestId,
+  });
+
+  Future<void> sendCancelled({
+    required int requestId,
+    String reason,
   });
 
   Future<void> close();
