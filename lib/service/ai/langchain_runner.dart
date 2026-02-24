@@ -580,19 +580,24 @@ class CancelableLangchainRunner {
               }
               final def = AiToolRegistry.byId(agentAction.tool);
               final riskLevel = def?.riskLevel ?? AiToolRiskLevel.destructive;
+              final alwaysRequireApproval = def?.alwaysRequireApproval ?? false;
 
               final policy = Prefs().aiToolApprovalPolicy;
               final forceConfirmDestructive =
                   Prefs().aiToolForceConfirmDestructive;
 
-              var shouldPrompt = ToolApprovalDecider.shouldPrompt(
-                policy: policy,
-                riskLevel: riskLevel,
-                forceConfirmDestructive: forceConfirmDestructive,
-              );
+              var shouldPrompt = alwaysRequireApproval ||
+                  ToolApprovalDecider.shouldPrompt(
+                    policy: policy,
+                    riskLevel: riskLevel,
+                    forceConfirmDestructive: forceConfirmDestructive,
+                  );
 
               final convoId = conversationId?.trim();
-              if (shouldPrompt && convoId != null && convoId.isNotEmpty) {
+              if (!alwaysRequireApproval &&
+                  shouldPrompt &&
+                  convoId != null &&
+                  convoId.isNotEmpty) {
                 if (_isTempAllowed(convoId, agentAction.tool)) {
                   shouldPrompt = false;
                 }
@@ -625,7 +630,9 @@ class CancelableLangchainRunner {
                   description: description,
                   riskLevel: riskLevel,
                   toolInput: inputJson,
-                  canRemember: convoId != null && convoId.isNotEmpty,
+                  canRemember: !alwaysRequireApproval &&
+                      convoId != null &&
+                      convoId.isNotEmpty,
                 );
 
                 if (!approval.approved) {
@@ -644,7 +651,8 @@ class CancelableLangchainRunner {
                   continue;
                 }
 
-                if (approval.remember &&
+                if (!alwaysRequireApproval &&
+                    approval.remember &&
                     convoId != null &&
                     convoId.isNotEmpty) {
                   _grantTempAllow(convoId, agentAction.tool);

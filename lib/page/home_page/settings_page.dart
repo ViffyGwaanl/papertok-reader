@@ -4,6 +4,7 @@ import 'package:anx_reader/page/settings_page/ai.dart';
 import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
 import 'package:anx_reader/page/settings_page/ai_image_analysis.dart';
 import 'package:anx_reader/page/settings_page/ai_tools.dart';
+import 'package:anx_reader/page/settings_page/memory.dart';
 import 'package:anx_reader/page/settings_page/advanced.dart';
 import 'package:anx_reader/page/settings_page/appearance.dart';
 import 'package:anx_reader/page/settings_page/developer/developer_options_page.dart';
@@ -221,6 +222,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                         title: L10n.of(context).settingsAiTools,
                                         child: const AiToolsSettingsPage(),
                                       ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const Divider(height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.psychology_outlined),
+                                title: Text(L10n.of(context).settingsMemory),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    CupertinoPageRoute(
+                                      builder: (context) =>
+                                          const MemorySettingsPage(),
                                     ),
                                   );
                                 },

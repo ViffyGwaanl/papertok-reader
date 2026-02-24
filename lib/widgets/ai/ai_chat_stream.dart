@@ -7,6 +7,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/providers/ai_chat.dart';
+import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/providers/ai_history.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/service/ai/ai_history.dart';
@@ -92,6 +93,17 @@ class AiChatStream extends ConsumerStatefulWidget {
 class AiChatStreamState extends ConsumerState<AiChatStream> {
   final TextEditingController inputController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  bool _suppressDraftSync = false;
+
+  void _onDraftInputChanged() {
+    if (_suppressDraftSync) return;
+    try {
+      ref.read(aiChatDraftInputProvider.notifier).set(inputController.text);
+    } catch (_) {
+      // Best-effort.
+    }
+  }
 
   late ScrollController _scrollController;
   bool _ownsScrollController = false;
@@ -213,7 +225,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       _selectedProviderId = _fallbackProviderId(_providers);
       Prefs().selectedAiService = _selectedProviderId;
     }
-    inputController.text = widget.initialMessage ?? '';
+    // Shared draft input (allows other pages to insert snippets).
+    final draft = ref.read(aiChatDraftInputProvider);
+    final initial = draft.isNotEmpty ? draft : (widget.initialMessage ?? '');
+    inputController.text = initial;
+    ref.read(aiChatDraftInputProvider.notifier).set(initial);
+    inputController.addListener(_onDraftInputChanged);
+
     _suggestedPrompts = const [];
     if (widget.sendImmediate) {
       _sendMessage();
@@ -258,6 +276,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   @override
   void dispose() {
+    try {
+      inputController.removeListener(_onDraftInputChanged);
+    } catch (_) {}
     inputController.dispose();
     try {
       _scrollController.removeListener(_handleScroll);
@@ -1139,6 +1160,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   @override
   Widget build(BuildContext context) {
+    // Sync external draft updates (e.g. Memory page insertion) into the input.
+    ref.listen<String>(aiChatDraftInputProvider, (_, next) {
+      if (!mounted) return;
+      if (next == inputController.text) return;
+
+      _suppressDraftSync = true;
+      inputController.value = TextEditingValue(
+        text: next,
+        selection: TextSelection.collapsed(offset: next.length),
+      );
+      _suppressDraftSync = false;
+    });
+
     final quickPrompts = _getQuickPrompts(context);
     final chatIsStreaming = ref.watch(aiChatStreamingProvider);
 

@@ -23,6 +23,7 @@ import 'package:anx_reader/service/ai/tools/current_time_tool.dart';
 import 'package:anx_reader/service/ai/tools/fetch_url_tool.dart';
 import 'package:anx_reader/service/ai/tools/mindmap_tool.dart';
 import 'package:anx_reader/service/ai/tools/notes_search_tool.dart';
+import 'package:anx_reader/service/ai/tools/memory_tools.dart';
 import 'package:anx_reader/service/ai/tools/reminders_create_list_tool.dart';
 import 'package:anx_reader/service/ai/tools/reminders_create_tool.dart';
 import 'package:anx_reader/service/ai/tools/reminders_delete_list_tool.dart';
@@ -73,6 +74,7 @@ class AiToolDefinition {
     required this.descriptionBuilder,
     required this.build,
     this.riskLevel = AiToolRiskLevel.readOnly,
+    this.alwaysRequireApproval = false,
   });
 
   final String id;
@@ -82,6 +84,12 @@ class AiToolDefinition {
 
   /// Tool risk level for approval decisions.
   final AiToolRiskLevel riskLevel;
+
+  /// Force Tool Safety approval prompt even if user config would skip prompts.
+  ///
+  /// Used for sensitive write tools (e.g. local memory mutations) that must be
+  /// explicitly approved each time.
+  final bool alwaysRequireApproval;
 
   String displayName(L10n l10n) => displayNameBuilder(l10n);
 
@@ -132,6 +140,12 @@ class AiToolRegistry {
     tagsListToolDefinition,
     booksTagsListToolDefinition,
     applyBookTagsToolDefinition,
+
+    // Local Markdown memory tools (Phase 4).
+    memoryReadToolDefinition,
+    memorySearchToolDefinition,
+    memoryAppendToolDefinition,
+    memoryReplaceToolDefinition,
   ];
 
   static final Map<String, AiToolDefinition> _definitionMap = {
