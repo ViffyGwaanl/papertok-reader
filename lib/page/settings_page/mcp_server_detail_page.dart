@@ -342,6 +342,94 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
     );
   }
 
+  Future<void> _editIntSetting({
+    required String title,
+    required String desc,
+    required int min,
+    required int max,
+    required int step,
+    required int value,
+    required void Function(int next) onSave,
+    String unit = '',
+  }) async {
+    final l10n = L10n.of(context);
+
+    var v = value.clamp(min, max).toDouble();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final snapped = ((v / step).round() * step).clamp(min, max).toInt();
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      desc,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '$snapped${unit.isNotEmpty ? ' $unit' : ''}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Slider(
+                      min: min.toDouble(),
+                      max: max.toDouble(),
+                      divisions: ((max - min) ~/ step).clamp(1, 200),
+                      value: v.clamp(min.toDouble(), max.toDouble()),
+                      label: snapped.toString(),
+                      onChanged: (next) {
+                        setModalState(() => v = next);
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(l10n.commonCancel),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () {
+                            onSave(snapped);
+                            Navigator.pop(context);
+                            setState(() {});
+                          },
+                          child: Text(l10n.commonSave),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _showToolDetail(McpToolMeta tool) async {
     final l10n = L10n.of(context);
 
@@ -442,6 +530,63 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
               description: Text(l10n.settingsMcpTransportDesc),
               trailing: Text(_transportLabel(l10n, server.transportModeV1)),
               onPressed: (_) => _pickTransport(server),
+            ),
+            SettingsTile.navigation(
+              title: Text(l10n.settingsMcpListToolsTimeout),
+              description: Text(l10n.settingsMcpListToolsTimeoutDesc),
+              trailing: Text('${server.listToolsTimeoutSecV1}s'),
+              onPressed: (_) => _editIntSetting(
+                title: l10n.settingsMcpListToolsTimeout,
+                desc: l10n.settingsMcpListToolsTimeoutDesc,
+                min: 3,
+                max: 120,
+                step: 1,
+                value: server.listToolsTimeoutSecV1,
+                unit: 's',
+                onSave: (next) {
+                  Prefs().upsertMcpServer(
+                    server.copyWith(listToolsTimeoutSecV1: next),
+                  );
+                },
+              ),
+            ),
+            SettingsTile.navigation(
+              title: Text(l10n.settingsMcpCallToolTimeout),
+              description: Text(l10n.settingsMcpCallToolTimeoutDesc),
+              trailing: Text('${server.callToolTimeoutSecV1}s'),
+              onPressed: (_) => _editIntSetting(
+                title: l10n.settingsMcpCallToolTimeout,
+                desc: l10n.settingsMcpCallToolTimeoutDesc,
+                min: 3,
+                max: 300,
+                step: 1,
+                value: server.callToolTimeoutSecV1,
+                unit: 's',
+                onSave: (next) {
+                  Prefs().upsertMcpServer(
+                    server.copyWith(callToolTimeoutSecV1: next),
+                  );
+                },
+              ),
+            ),
+            SettingsTile.navigation(
+              title: Text(l10n.settingsMcpMaxResultChars),
+              description: Text(l10n.settingsMcpMaxResultCharsDesc),
+              trailing: Text('${server.maxResultCharsV1}'),
+              onPressed: (_) => _editIntSetting(
+                title: l10n.settingsMcpMaxResultChars,
+                desc: l10n.settingsMcpMaxResultCharsDesc,
+                min: 1000,
+                max: 50000,
+                step: 1000,
+                value: server.maxResultCharsV1,
+                unit: 'chars',
+                onSave: (next) {
+                  Prefs().upsertMcpServer(
+                    server.copyWith(maxResultCharsV1: next),
+                  );
+                },
+              ),
             ),
             SettingsTile.navigation(
               title: Text(l10n.settingsMcpAuth),
