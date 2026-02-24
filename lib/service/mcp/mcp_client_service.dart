@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_tool_meta.dart';
+import 'package:anx_reader/service/mcp/mcp_connection_test_result.dart';
 import 'package:anx_reader/service/mcp/mcp_streamable_http_client.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:http/http.dart' as http;
 
 class McpClientService {
   McpClientService._();
@@ -13,6 +15,69 @@ class McpClientService {
 
   final Map<String, McpStreamableHttpClient> _clients = {};
   final Map<String, Future<McpStreamableHttpClient>> _pending = {};
+
+  Future<McpConnectionTestResult> testConnection(
+    McpServerMeta server, {
+    Duration timeout = const Duration(seconds: 15),
+    bool probeGetSse = true,
+  }) async {
+    try {
+      // Force a fresh client to avoid stale sessions.
+      await closeServer(server.id);
+
+      final client = await _ensureClient(server).timeout(timeout);
+      final tools = await client.listTools().timeout(timeout);
+
+      bool? getSseSupport;
+      int? httpStatus;
+      String? allow;
+
+      if (probeGetSse) {
+        try {
+          final secret = Prefs().getMcpServerSecret(server.id);
+          final res = await http.get(
+            Uri.parse(server.endpoint.trim()),
+            headers: {
+              'Accept': 'text/event-stream',
+              if (client.sessionId?.trim().isNotEmpty == true)
+                'MCP-Session-Id': client.sessionId!,
+              'MCP-Protocol-Version':
+                  client.negotiatedProtocolVersion?.trim().isNotEmpty == true
+                      ? client.negotiatedProtocolVersion!
+                      : McpStreamableHttpClient.protocolVersion,
+              ...secret.headers,
+            },
+          ).timeout(const Duration(seconds: 6));
+
+          httpStatus = res.statusCode;
+          allow = res.headers['allow'];
+          if (res.statusCode == 405) {
+            getSseSupport = false;
+          } else {
+            final ct = (res.headers['content-type'] ?? '').toLowerCase();
+            getSseSupport = ct.contains('text/event-stream');
+          }
+        } catch (_) {
+          // ignore probe errors
+        }
+      }
+
+      return McpConnectionTestResult(
+        ok: true,
+        toolsCount: tools.length,
+        protocolVersion: client.negotiatedProtocolVersion,
+        sessionId: client.sessionId,
+        getSseSupport: getSseSupport,
+        httpStatus: httpStatus,
+        allowHeader: allow,
+      );
+    } catch (e) {
+      return McpConnectionTestResult(
+        ok: false,
+        message: e.toString(),
+      );
+    }
+  }
 
   String _keyFor(McpServerMeta server) {
     return '${server.id}::${server.endpoint.trim()}';

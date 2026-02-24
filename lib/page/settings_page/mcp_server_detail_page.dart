@@ -4,6 +4,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_tool_meta.dart';
+import 'package:anx_reader/page/settings_page/mcp_auth_editor.dart';
 import 'package:anx_reader/service/mcp/mcp_client_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
@@ -208,6 +209,57 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
     }
   }
 
+  Future<void> _testConnection(McpServerMeta server) async {
+    final l10n = L10n.of(context);
+
+    AnxToast.show(l10n.settingsMcpRefreshingAllTools);
+
+    final res = await McpClientService.instance.testConnection(server);
+
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final lines = <String>[];
+        lines.add(res.ok ? '✅ ok' : '❌ failed');
+        if (res.toolsCount != null) {
+          lines.add('tools: ${res.toolsCount}');
+        }
+        if (res.protocolVersion != null) {
+          lines.add('protocol: ${res.protocolVersion}');
+        }
+        if (res.sessionId != null) {
+          lines.add('session: ${res.sessionId}');
+        }
+        if (res.getSseSupport != null) {
+          lines.add(
+              'GET SSE: ${res.getSseSupport == true ? 'supported' : 'not supported'}');
+        }
+        if (res.httpStatus != null) {
+          lines.add('GET status: ${res.httpStatus}');
+        }
+        if (res.allowHeader != null) {
+          lines.add('Allow: ${res.allowHeader}');
+        }
+        if (res.message != null && res.message!.trim().isNotEmpty) {
+          lines.add('error: ${res.message}');
+        }
+
+        return AlertDialog(
+          title: Text(l10n.settingsMcpTestConnectionResultTitle),
+          content: SelectableText(lines.join('\n')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonOk),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _clearToolsCache(McpServerMeta server) async {
     final l10n = L10n.of(context);
 
@@ -336,6 +388,17 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
               onPressed: (_) => _editServer(server),
             ),
             SettingsTile.navigation(
+              title: Text(l10n.settingsMcpAuth),
+              description: Text(l10n.settingsMcpAuthDesc),
+              onPressed: (_) {
+                McpAuthEditor.show(
+                  context,
+                  server: server,
+                  onSaved: () => setState(() {}),
+                );
+              },
+            ),
+            SettingsTile.navigation(
               title: Text(l10n.settingsMcpServerHeaders),
               description: Text(l10n.settingsMcpServerHeadersDesc),
               onPressed: (_) => _editHeaders(server),
@@ -353,6 +416,11 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
+            ),
+            SettingsTile.navigation(
+              title: Text(l10n.settingsMcpTestConnection),
+              description: Text(l10n.settingsMcpTestConnectionDesc),
+              onPressed: (_) => _testConnection(server),
             ),
             SettingsTile.navigation(
               title: Text(l10n.settingsMcpRefreshTools),

@@ -25,6 +25,8 @@ class McpStreamableHttpClient {
 
   String? get sessionId => _sessionId;
 
+  String? get negotiatedProtocolVersion => _negotiatedProtocolVersion;
+
   Future<void> close() async {
     _http.close();
   }
