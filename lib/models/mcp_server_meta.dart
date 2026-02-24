@@ -1,32 +1,41 @@
 import 'dart:convert';
 
+import 'package:anx_reader/models/mcp_transport_mode.dart';
+
 class McpServerMeta {
   const McpServerMeta({
     required this.id,
     required this.name,
     required this.endpoint,
     required this.enabled,
+    this.transportModeV1 = McpTransportMode.auto,
   });
 
   final String id;
   final String name;
 
-  /// MCP endpoint URL (Streamable HTTP), e.g. https://example.com/mcp
+  /// MCP server URL. In auto mode, this may point to either:
+  /// - Streamable HTTP MCP endpoint, e.g. https://example.com/mcp
+  /// - Legacy HTTP+SSE SSE endpoint
   final String endpoint;
 
   final bool enabled;
+
+  final McpTransportMode transportModeV1;
 
   McpServerMeta copyWith({
     String? id,
     String? name,
     String? endpoint,
     bool? enabled,
+    McpTransportMode? transportModeV1,
   }) {
     return McpServerMeta(
       id: id ?? this.id,
       name: name ?? this.name,
       endpoint: endpoint ?? this.endpoint,
       enabled: enabled ?? this.enabled,
+      transportModeV1: transportModeV1 ?? this.transportModeV1,
     );
   }
 
@@ -36,6 +45,7 @@ class McpServerMeta {
       'name': name,
       'endpoint': endpoint,
       'enabled': enabled,
+      'transportModeV1': transportModeV1.code,
     };
   }
 
@@ -45,6 +55,8 @@ class McpServerMeta {
       name: json['name']?.toString() ?? '',
       endpoint: json['endpoint']?.toString() ?? '',
       enabled: json['enabled'] == true,
+      transportModeV1:
+          McpTransportMode.fromCode(json['transportModeV1']?.toString()),
     );
   }
 

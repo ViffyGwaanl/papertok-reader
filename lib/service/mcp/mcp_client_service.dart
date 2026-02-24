@@ -3,7 +3,11 @@ import 'dart:async';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_tool_meta.dart';
+import 'package:anx_reader/models/mcp_transport_mode.dart';
 import 'package:anx_reader/service/mcp/mcp_connection_test_result.dart';
+import 'package:anx_reader/service/mcp/mcp_http_exception.dart';
+import 'package:anx_reader/service/mcp/mcp_legacy_http_sse_client.dart';
+import 'package:anx_reader/service/mcp/mcp_rpc_client.dart';
 import 'package:anx_reader/service/mcp/mcp_streamable_http_client.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:http/http.dart' as http;
@@ -13,8 +17,8 @@ class McpClientService {
 
   static final McpClientService instance = McpClientService._();
 
-  final Map<String, McpStreamableHttpClient> _clients = {};
-  final Map<String, Future<McpStreamableHttpClient>> _pending = {};
+  final Map<String, McpRpcClient> _clients = {};
+  final Map<String, Future<McpRpcClient>> _pending = {};
 
   Future<McpConnectionTestResult> testConnection(
     McpServerMeta server, {
@@ -83,7 +87,7 @@ class McpClientService {
     return '${server.id}::${server.endpoint.trim()}';
   }
 
-  Future<McpStreamableHttpClient> _ensureClient(McpServerMeta server) async {
+  Future<McpRpcClient> _ensureClient(McpServerMeta server) async {
     final key = _keyFor(server);
     final existing = _clients[key];
     if (existing != null) return existing;
@@ -91,16 +95,50 @@ class McpClientService {
     final pending = _pending[key];
     if (pending != null) return pending;
 
-    final completer = Completer<McpStreamableHttpClient>();
+    final completer = Completer<McpRpcClient>();
     _pending[key] = completer.future;
 
     try {
       final endpoint = Uri.parse(server.endpoint.trim());
       final secret = Prefs().getMcpServerSecret(server.id);
 
-      final client =
-          McpStreamableHttpClient(endpoint: endpoint, secret: secret);
-      await client.initialize();
+      Future<McpRpcClient> buildStreamable() async {
+        final client =
+            McpStreamableHttpClient(endpoint: endpoint, secret: secret);
+        await client.initialize();
+        return client;
+      }
+
+      Future<McpRpcClient> buildLegacy() async {
+        final client =
+            McpLegacyHttpSseClient(clientEndpoint: endpoint, secret: secret);
+        await client.initialize();
+        return client;
+      }
+
+      final mode = server.transportModeV1;
+      McpRpcClient client;
+
+      if (mode == McpTransportMode.streamableHttp) {
+        client = await buildStreamable();
+      } else if (mode == McpTransportMode.legacyHttpSse) {
+        client = await buildLegacy();
+      } else {
+        // auto: try Streamable HTTP first; if initialize fails with 400/404/405,
+        // fallback to legacy HTTP+SSE as per MCP spec.
+        try {
+          client = await buildStreamable();
+        } catch (e) {
+          if (e is McpHttpException &&
+              (e.statusCode == 400 ||
+                  e.statusCode == 404 ||
+                  e.statusCode == 405)) {
+            client = await buildLegacy();
+          } else {
+            rethrow;
+          }
+        }
+      }
 
       _clients[key] = client;
       completer.complete(client);

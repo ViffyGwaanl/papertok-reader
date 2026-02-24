@@ -4,6 +4,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_tool_meta.dart';
+import 'package:anx_reader/models/mcp_transport_mode.dart';
 import 'package:anx_reader/page/settings_page/mcp_auth_editor.dart';
 import 'package:anx_reader/service/mcp/mcp_client_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
@@ -292,6 +293,55 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
     AnxToast.show(l10n.commonSuccess);
   }
 
+  String _transportLabel(L10n l10n, McpTransportMode mode) {
+    return switch (mode) {
+      McpTransportMode.auto => l10n.settingsMcpTransportAuto,
+      McpTransportMode.streamableHttp => l10n.settingsMcpTransportStreamable,
+      McpTransportMode.legacyHttpSse => l10n.settingsMcpTransportLegacy,
+    };
+  }
+
+  Future<void> _pickTransport(McpServerMeta server) async {
+    final l10n = L10n.of(context);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final current = server.transportModeV1;
+
+        Widget tile(McpTransportMode mode) {
+          return ListTile(
+            title: Text(_transportLabel(l10n, mode)),
+            trailing: current == mode ? const Icon(Icons.check) : null,
+            onTap: () {
+              Prefs().upsertMcpServer(server.copyWith(transportModeV1: mode));
+              Navigator.pop(context);
+              setState(() {});
+            },
+          );
+        }
+
+        return SafeArea(
+          child: ListView(
+            children: [
+              ListTile(
+                title: Text(l10n.settingsMcpTransport),
+                subtitle: Text(l10n.settingsMcpTransportDesc),
+              ),
+              const Divider(height: 1),
+              tile(McpTransportMode.auto),
+              const Divider(height: 1),
+              tile(McpTransportMode.streamableHttp),
+              const Divider(height: 1),
+              tile(McpTransportMode.legacyHttpSse),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showToolDetail(McpToolMeta tool) async {
     final l10n = L10n.of(context);
 
@@ -386,6 +436,12 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
               title: Text(l10n.commonEdit),
               description: Text(l10n.settingsMcpEditServerDesc),
               onPressed: (_) => _editServer(server),
+            ),
+            SettingsTile.navigation(
+              title: Text(l10n.settingsMcpTransport),
+              description: Text(l10n.settingsMcpTransportDesc),
+              trailing: Text(_transportLabel(l10n, server.transportModeV1)),
+              onPressed: (_) => _pickTransport(server),
             ),
             SettingsTile.navigation(
               title: Text(l10n.settingsMcpAuth),

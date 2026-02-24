@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
+import 'package:anx_reader/models/mcp_transport_mode.dart';
 import 'package:anx_reader/service/mcp/mcp_client_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
@@ -22,6 +23,123 @@ class McpServersSettingsPage extends StatefulWidget {
 
 class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
   List<McpServerMeta> get _servers => Prefs().mcpServersV1;
+
+  Future<void> _importFromJson() async {
+    final l10n = L10n.of(context);
+
+    final controller = TextEditingController();
+
+    final ok = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text(l10n.settingsMcpImportJson),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.settingsMcpImportJsonDesc,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                    ),
+                    minLines: 6,
+                    maxLines: 12,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(l10n.commonCancel),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(l10n.commonConfirm),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!ok) {
+      controller.dispose();
+      return;
+    }
+
+    try {
+      final decoded = jsonDecode(controller.text);
+      int imported = 0;
+
+      Map<String, dynamic>? servers;
+      if (decoded is Map) {
+        final mcpServers = decoded['mcpServers'];
+        if (mcpServers is Map) {
+          servers = mcpServers.cast<String, dynamic>();
+        }
+      }
+
+      if (servers == null) {
+        throw const FormatException('mcpServers missing');
+      }
+
+      for (final entry in servers.entries) {
+        final name = entry.key.toString().trim();
+        if (name.isEmpty) continue;
+
+        final raw = entry.value;
+        if (raw is! Map) continue;
+
+        final url = raw['url']?.toString().trim() ?? '';
+        if (url.isEmpty) continue;
+
+        final type = raw['type']?.toString().trim();
+
+        final id = const Uuid().v4();
+        final meta = McpServerMeta(
+          id: id,
+          name: name,
+          endpoint: url,
+          enabled: true,
+          transportModeV1: McpTransportMode.fromCode(type),
+        );
+        Prefs().upsertMcpServer(meta);
+
+        final headersRaw = raw['headers'];
+        if (headersRaw is Map) {
+          final headers = <String, String>{};
+          for (final e in headersRaw.entries) {
+            final k = e.key.toString().trim();
+            final v = e.value?.toString().trim() ?? '';
+            if (k.isNotEmpty && v.isNotEmpty) {
+              headers[k] = v;
+            }
+          }
+          if (headers.isNotEmpty) {
+            Prefs().saveMcpServerSecret(
+              id,
+              McpServerSecret(headers: headers),
+            );
+          }
+        }
+
+        imported++;
+      }
+
+      if (!mounted) return;
+      setState(() {});
+      AnxToast.show(l10n.settingsMcpImportJsonResult(imported));
+    } catch (_) {
+      AnxToast.show(l10n.commonInvalid);
+    } finally {
+      controller.dispose();
+    }
+  }
 
   String _formatEpochMs(int epochMs) {
     final dt = DateTime.fromMillisecondsSinceEpoch(epochMs).toLocal();
@@ -469,6 +587,14 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
         SettingsSection(
           title: Text(l10n.settingsMcpServers),
           tiles: [
+            SettingsTile.navigation(
+              title: Text(l10n.settingsMcpImportJson),
+              description: Text(l10n.settingsMcpImportJsonDesc),
+              onPressed: (_) => _importFromJson(),
+            ),
+            const CustomSettingsTile(
+              child: Divider(height: 1),
+            ),
             listTile,
           ],
         ),

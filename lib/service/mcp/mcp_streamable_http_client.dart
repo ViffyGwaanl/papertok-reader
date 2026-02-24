@@ -3,10 +3,13 @@ import 'dart:convert';
 
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_tool_meta.dart';
+import 'package:anx_reader/service/mcp/mcp_http_exception.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:http/http.dart' as http;
 
-class McpStreamableHttpClient {
+import 'package:anx_reader/service/mcp/mcp_rpc_client.dart';
+
+class McpStreamableHttpClient implements McpRpcClient {
   McpStreamableHttpClient({
     required this.endpoint,
     required this.secret,
@@ -23,10 +26,16 @@ class McpStreamableHttpClient {
   String? _sessionId;
   String? _negotiatedProtocolVersion;
 
+  @override
+  String get transportCode => 'streamable_http';
+
+  @override
   String? get sessionId => _sessionId;
 
+  @override
   String? get negotiatedProtocolVersion => _negotiatedProtocolVersion;
 
+  @override
   Future<void> close() async {
     _http.close();
   }
@@ -77,6 +86,7 @@ class McpStreamableHttpClient {
     return obj;
   }
 
+  @override
   Future<void> initialize({
     String clientName = 'Paper Reader',
     String clientVersion = '1.0.0',
@@ -116,6 +126,7 @@ class McpStreamableHttpClient {
     );
   }
 
+  @override
   Future<List<McpToolMeta>> listTools() async {
     String? cursor;
     final tools = <McpToolMeta>[];
@@ -156,6 +167,7 @@ class McpStreamableHttpClient {
     return tools;
   }
 
+  @override
   Future<Map<String, dynamic>> callTool({
     required String name,
     required Map<String, dynamic> arguments,
@@ -220,8 +232,11 @@ class McpStreamableHttpClient {
     if (expectNoBody) {
       if (status < 200 || status >= 300) {
         final body = await streamed.stream.bytesToString();
-        throw StateError(
-          'MCP server rejected notification: HTTP $status content-type=$contentType body=$body',
+        throw McpHttpException(
+          statusCode: status,
+          body: body,
+          contentType: contentType,
+          allow: streamed.headers['allow'],
         );
       }
       return {};
@@ -246,8 +261,11 @@ class McpStreamableHttpClient {
         );
       }
 
-      throw StateError(
-        'MCP server error: HTTP $status content-type=$contentType body=$body',
+      throw McpHttpException(
+        statusCode: status,
+        body: body,
+        contentType: contentType,
+        allow: streamed.headers['allow'],
       );
     }
 
@@ -323,8 +341,11 @@ class McpStreamableHttpClient {
     }
 
     final body = await streamed.stream.bytesToString();
-    throw StateError(
-      'Unexpected MCP response: HTTP ${streamed.statusCode} content-type=$contentType body=$body',
+    throw McpHttpException(
+      statusCode: streamed.statusCode,
+      body: body,
+      contentType: contentType,
+      allow: streamed.headers['allow'],
     );
   }
 
