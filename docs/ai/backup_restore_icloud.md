@@ -4,7 +4,9 @@
 
 - Implementation status: integrated in product repo `main`
 - Adds:
-  - v4 backup ZIP with `manifest.json`
+  - v5 backup ZIP with `manifest.json`
+  - optional: include **Memory** directory (`memory/`)
+  - optional: include AI index database (`databases/ai_index.db`, default OFF)
   - optional encrypted API keys
   - optional encrypted MCP secrets (headers/tokens; local-only by default)
   - import confirmation + rollback using `.bak.<timestamp>`
@@ -13,7 +15,7 @@
 
 Anx Reader already has **Export/Import** in `Settings → Sync`:
 
-- Export creates a ZIP (legacy: `...-v3.zip`; current: `...-v4.zip`) containing:
+- Export creates a ZIP (legacy: `...-v3.zip`; current: `...-v5.zip`) containing:
   - documents assets (file/cover/font/bgimg)
   - database dir
   - shared prefs backup map (`paper_reader_shared_prefs.json`, legacy: `anx_shared_prefs.json`)
@@ -65,18 +67,23 @@ On Import:
   - prompt for password (once)
   - decrypt and apply to local-only storage
 
-## 3. Backup Package Format (v4)
+## 3. Backup Package Format (v5)
 
-Export produces a v4 ZIP (filename suffix `-v4.zip`) and adds:
+Export produces a v5 ZIP (filename suffix `-v5.zip`) and adds:
 
-- `manifest.json` (schemaVersion = 4)
+- `manifest.json` (schemaVersion = 5)
+- Optional payload flags:
+  - `containsMemory`
+  - `containsAiIndexDb`
 
 Example (as implemented in the product repo):
 
 ```json
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "createdAt": 1730000000000,
+  "containsMemory": true,
+  "containsAiIndexDb": false,
   "containsEncryptedApiKeys": true,
   "containsEncryptedMcpSecrets": true,
   "encryptedApiKeys": {
@@ -109,6 +116,8 @@ Example (as implemented in the product repo):
 Notes:
 - API keys are only stored if the user explicitly enables the option.
 - `paper_reader_shared_prefs.json` never contains plain `api_key` / `api_keys` entries (older backups may use `anx_shared_prefs.json`).
+- `memory/` is only included if the user enables the option.
+- `databases/ai_index.db` is only included if the user enables the option (default OFF).
 - Encrypted payload stores per-provider keys:
   - `api_key` (active key)
   - `api_keys` (managed list; JSON)
@@ -128,8 +137,10 @@ Implementation (product): uses `package:cryptography`.
 3. Close DB and stop readers (`DBHelper.close()` etc.)
 4. **In-place backup** existing local dirs by renaming to `.bak.<timestamp>` (cheap + same filesystem):
    - documents: `file/ cover/ font/ bgimg`
-   - databases dir
+   - optionally: `memory/` (only if user chooses to restore it)
+   - databases dir (`databases/`)
 5. Copy extracted dirs into the original locations.
+   - if user does **not** restore `ai_index.db`, keep the local index by copying it back from the `.bak.*` databases backup
 6. Reopen DB.
 7. Apply prefs backup map.
 8. If encrypted secrets included and password ok, apply to local-only storage:

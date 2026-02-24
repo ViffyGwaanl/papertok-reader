@@ -36,7 +36,8 @@ Future<String> getAnxDocumentsPath() async {
       } else {
         // Permission lost, clear the custom path
         AnxLog.warning(
-            'Custom storage path no longer accessible, resetting to default');
+          'Custom storage path no longer accessible, resetting to default',
+        );
         Prefs().customStoragePath = null;
       }
     }
@@ -106,4 +107,13 @@ Directory getFileDir({String? path}) {
 Directory getBgimgDir({String? path}) {
   path ??= documentPath;
   return Directory('$path${Platform.pathSeparator}bgimg');
+}
+
+/// Optional storage for AI "memory".
+///
+/// This directory is not required for core reading features; it is included in
+/// manual backups only when the user enables the option.
+Directory getMemoryDir({String? path}) {
+  path ??= documentPath;
+  return Directory('$path${Platform.pathSeparator}memory');
 }
