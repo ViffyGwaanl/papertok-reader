@@ -108,6 +108,7 @@ All AI/translation/multimodal/image-analysis changes are already integrated into
 ## Documents
 
 - [AI 改造：已完成 & 路线图（中文）](./ai_status_roadmap_zh.md)
+- [Phase 3：全书库 RAG + 批量索引队列（中文）](./rag_phase3_library_rag_zh.md)
 - [P1：OpenAI-compatible Thinking（仅展示供应商数据，无兜底）（中文）](./ai_thinking_openai_provider_only_zh.md)
 - [AI panel UX tech design](./ai_panel_ux_tech_design.md)
 - [AI provider config UX (Provider Center)](./ai_provider_config_ux.md)
