@@ -26,7 +26,11 @@ class McpToolDescriptor {
 }
 
 class McpToolRegistry {
-  static const String _toolNamePrefix = 'mcp.';
+  /// Tool name prefix.
+  ///
+  /// Note: OpenAI tool/function names must match `^[a-zA-Z0-9_-]+$`.
+  /// We therefore avoid dots in MCP tool names.
+  static const String _toolNamePrefix = 'mcp_';
 
   static final Map<String, McpToolDescriptor> _descriptors = {};
 
@@ -87,9 +91,15 @@ class McpToolRegistry {
   }
 
   static Tool _buildTool(McpServerMeta server, McpToolMeta meta) {
+    // Keep tool names OpenAI-compatible (see _toolNamePrefix comment) and
+    // conservatively fit within common provider limits (64 chars).
     final safeServerKey = _safeNameSegment(server.id, maxLen: 12);
-    final safeToolKey = _safeNameSegment(meta.name, maxLen: 64);
-    final fullName = '$_toolNamePrefix$safeServerKey.$safeToolKey';
+    final remaining = 64 - _toolNamePrefix.length - safeServerKey.length - 1;
+    final safeToolKey = _safeNameSegment(
+      meta.name,
+      maxLen: remaining.clamp(1, 64).toInt(),
+    );
+    final fullName = '$_toolNamePrefix${safeServerKey}_$safeToolKey';
 
     final inputSchema = (meta.inputSchema == null || meta.inputSchema!.isEmpty)
         ? const {'type': 'object'}
@@ -201,10 +211,12 @@ class McpToolRegistry {
   }
 
   static String _safeNameSegment(String raw, {required int maxLen}) {
+    // OpenAI-compatible segment: only letters/numbers/underscore/hyphen.
     final cleaned = raw
         .trim()
-        .replaceAll(RegExp(r'[^A-Za-z0-9_.-]'), '_')
-        .replaceAll(RegExp(r'_+'), '_');
+        .replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
 
     if (cleaned.isEmpty) return 'x';
     if (cleaned.length <= maxLen) return cleaned;
