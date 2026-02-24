@@ -107,6 +107,8 @@ All AI/translation/multimodal/image-analysis changes are already integrated into
 - [Backup/restore (Files/iCloud) tech design](./backup_restore_icloud.md)
 - [iOS EventKit 系统工具（Reminders/Calendar）说明（中文）](./eventkit_tools_zh.md)
 - [iOS Shortcuts 工具：回到 App + 回传结果（中文）](./shortcuts_callback_zh.md)
+- [RAG（强上下文）+ Markdown 记忆系统（计划）](./rag_memory_plan_zh.md)
+- [RAG（强上下文）+ Markdown 记忆系统（任务拆解）](./rag_memory_tasks_zh.md)
 - [PDF AI chaptering & OCR (MinerU) design](./pdf_ai_chaptering_and_ocr.md)
 - [AI translation design notes](./ai_translation_design.md)
 - [iOS TestFlight build notes](./ios_testflight_build.md)
