@@ -38,6 +38,12 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
   http.Client? _client;
   StreamSubscription<List<int>>? _activeSubscription;
 
+  /// Last server-side response id (e.g. `resp_...`).
+  ///
+  /// Used for tool-call continuations via `previous_response_id` to avoid
+  /// manually replaying provider reasoning items.
+  String? _lastServerResponseId;
+
   /// Accumulated reasoning items from previous Responses calls within the same
   /// agent loop.
   ///
@@ -162,17 +168,32 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
         }
 
         final decoder = _SseDecoder();
-        final responseId = _randomId();
+        final localResponseId = _randomId();
 
         String? accumulatedThinking;
         final pendingCallsByItemId = <String, _PendingFunctionCall>{};
         final seenReasoningItemIds = <String>{};
 
+        String? serverResponseId;
+        void maybeCaptureResponseId(Map<String, dynamic> data) {
+          try {
+            final resp = data['response'];
+            if (resp is Map) {
+              final id = resp['id']?.toString();
+              if (id != null && id.trim().isNotEmpty) {
+                serverResponseId = id.trim();
+              }
+            }
+          } catch (_) {
+            // ignore
+          }
+        }
+
         void emitTextDelta(String delta) {
           if (delta.isEmpty || controller.isClosed) return;
           controller.add(
             ChatResult(
-              id: responseId,
+              id: serverResponseId ?? localResponseId,
               output: AIChatMessage(content: delta),
               finishReason: FinishReason.unspecified,
               metadata: const {},
@@ -189,7 +210,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
           // Emit an empty chunk with metadata so the runner can pick it up.
           controller.add(
             ChatResult(
-              id: responseId,
+              id: serverResponseId ?? localResponseId,
               output: AIChatMessage(content: ''),
               finishReason: FinishReason.unspecified,
               metadata: {
@@ -241,7 +262,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
 
           controller.add(
             ChatResult(
-              id: responseId,
+              id: serverResponseId ?? localResponseId,
               output: AIChatMessage(content: '', toolCalls: toolCalls),
               finishReason: FinishReason.toolCalls,
               metadata: {
@@ -261,6 +282,8 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
               final type = event.type;
               final data = event.data;
               if (type == null || data == null) continue;
+
+              maybeCaptureResponseId(data);
 
               if (type == 'response.output_text.delta') {
                 final delta = data['delta']?.toString() ?? '';
@@ -410,6 +433,11 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
                   emitToolCallsAndFinish(calls);
                 }
 
+                // Persist the last server response id for tool-call continuation.
+                if (serverResponseId != null && serverResponseId!.isNotEmpty) {
+                  _lastServerResponseId = serverResponseId;
+                }
+
                 if (!controller.isClosed) {
                   unawaited(controller.close());
                 }
@@ -461,14 +489,62 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     final model = options.model ?? defaultOptions.model;
 
     // If we're starting a fresh run (no tool outputs in the scratchpad), clear
-    // replay items.
+    // replay items and previous-response tracking.
     final hasToolOutputs = messages.any((m) => m is ToolChatMessage);
     if (!hasToolOutputs) {
       _replayReasoningItems.clear();
+      _lastServerResponseId = null;
     }
 
     // Prefer mapping the first system message into `instructions`.
     String? instructions;
+
+    // Tool-call continuation path:
+    // If we have a server-side response id, use `previous_response_id` and only
+    // submit tool outputs. This avoids manual replay of provider reasoning items
+    // (which is brittle and may violate item adjacency constraints).
+    if (hasToolOutputs &&
+        _lastServerResponseId != null &&
+        _lastServerResponseId!.trim().isNotEmpty) {
+      final outputs = <Map<String, dynamic>>[];
+      for (final msg in messages) {
+        if (msg is ToolChatMessage) {
+          final item = _mapChatMessageToResponseInput(msg);
+          if (item is Map<String, dynamic>) {
+            outputs.add(item);
+          }
+        }
+      }
+
+      final tools = (options.tools ?? const <ToolSpec>[])
+          .map(
+            (tool) => {
+              'type': 'function',
+              'name': tool.name,
+              'description': tool.description,
+              'parameters': tool.inputJsonSchema,
+              'strict': tool.strict,
+            },
+          )
+          .toList(growable: false);
+
+      final reasoning = _buildReasoningBlock(options.reasoningEffort);
+
+      return {
+        'model': model,
+        'previous_response_id': _lastServerResponseId,
+        'input': outputs,
+        'stream': true,
+        if (tools.isNotEmpty) 'tools': tools,
+        'tool_choice': _mapToolChoice(options.toolChoice) ?? 'auto',
+        if (reasoning != null) 'reasoning': reasoning,
+        if (options.temperature != null) 'temperature': options.temperature,
+        if (options.topP != null) 'top_p': options.topP,
+        if (options.maxTokens != null) 'max_output_tokens': options.maxTokens,
+        'parallel_tool_calls': true,
+      };
+    }
+
     final inputItems = <Map<String, dynamic>>[];
 
     for (final msg in messages) {
@@ -489,15 +565,9 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       }
     }
 
-    // Replay reasoning items together with tool calls when applicable.
-    //
-    // OpenAI Responses expects a `reasoning` item to be followed by the next
-    // assistant output item (commonly a `function_call`). If we place reasoning
-    // items right before `function_call_output`, the API may reject the request
-    // with: "reasoning was provided without its required following item".
-    //
-    // Therefore, insert replayed reasoning items right before the first
-    // `function_call` item.
+    // Fallback (no previous_response_id available): keep best-effort reasoning
+    // replay for tool-call loops. This may be required for some reasoning
+    // models, but can be rejected by strict servers.
     var replayInserted = false;
     if (hasToolOutputs && _replayReasoningItems.isNotEmpty) {
       for (var i = 0; i < inputItems.length; i++) {
@@ -508,8 +578,6 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
         }
       }
 
-      // If we couldn't find a function_call item (unexpected), skip replay to
-      // avoid sending an invalid request.
       if (!replayInserted) {
         _aiDebug('skipping reasoning replay: no function_call found');
       }

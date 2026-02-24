@@ -203,7 +203,7 @@ void main() {
     expect(last.output.toolCalls.first.argumentsRaw, '{"location":"Paris"}');
   });
 
-  test('replays reasoning items when tool outputs are present in next call',
+  test('uses previous_response_id for tool-output continuation when available',
       () async {
     final first = StringBuffer()
       ..write(_sseEvent('response.output_item.done', {
@@ -228,6 +228,7 @@ void main() {
       }))
       ..write(_sseEvent('response.completed', {
         'response': {
+          'id': 'resp_1',
           'reasoning': {'summary': null}
         }
       }));
@@ -236,6 +237,7 @@ void main() {
       ..write(_sseEvent('response.output_text.delta', {'delta': 'OK'}))
       ..write(_sseEvent('response.completed', {
         'response': {
+          'id': 'resp_2',
           'reasoning': {'summary': null}
         }
       }));
@@ -249,7 +251,7 @@ void main() {
       client: client,
     );
 
-    // First call: captures reasoning items.
+    // First call: tool call returned, captures server response id.
     await model
         .stream(
           PromptValue.chat([
@@ -258,7 +260,7 @@ void main() {
         )
         .toList();
 
-    // Second call: includes tool output, should replay reasoning items.
+    // Second call: only tool outputs should be submitted with previous_response_id.
     final toolCall = AIChatMessageToolCall(
       id: 'call_1',
       name: 'get_weather',
@@ -277,28 +279,11 @@ void main() {
 
     expect(client.sentJsonBodies, hasLength(2));
     final secondBody = client.sentJsonBodies[1];
+
+    expect(secondBody['previous_response_id'], 'resp_1');
+
     final input = (secondBody['input'] as List).cast<dynamic>();
-    expect(input.isNotEmpty, isTrue);
-
-    // Order should be: reasoning replay, then function_call (from AI toolCalls),
-    // then function_call_output.
-    final types = input
-        .map((e) => (e as Map)['type']?.toString())
-        .whereType<String>()
-        .toList(growable: false);
-
-    final reasoningIndex = types.indexOf('reasoning');
-    final callIndex = types.indexOf('function_call');
-    final outputIndex = types.indexOf('function_call_output');
-
-    expect(reasoningIndex, greaterThanOrEqualTo(0));
-    expect(callIndex, greaterThanOrEqualTo(0));
-    expect(outputIndex, greaterThanOrEqualTo(0));
-
-    expect(reasoningIndex, lessThan(callIndex));
-    expect(callIndex, lessThan(outputIndex));
-
-    final reasoningItem = input[reasoningIndex] as Map;
-    expect(reasoningItem['id'], 'rs_1');
+    expect(input, hasLength(1));
+    expect((input.first as Map)['type'], 'function_call_output');
   });
 }
