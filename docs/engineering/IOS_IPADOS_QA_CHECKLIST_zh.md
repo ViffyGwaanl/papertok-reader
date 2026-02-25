@@ -68,7 +68,25 @@
 - 触发一次 `paperreader://shortcuts/result?...`
 - 预期：App 内 Shortcuts 等待器能收到回传，不应被 reader 路由误判。
 
-## 5. 阅读页 AI（带书籍上下文）
+## 5. AI 索引（书库）/ 全库检索（Phase 3）
+
+**目标**：书库索引队列与 `semantic_search_library` 可用、稳定。
+
+1) Settings → 顶层 **AI 索引（书库）**：
+   - 切换筛选：未索引/过期/已索引（应为 DB 真值）。
+   - 手动多选几本书加入队列。
+2) 队列控制：
+   - Pause → Resume
+   - Cancel（running/queued）
+   - Clear finished
+   - 失败自动重试一次（第二次失败落 failed 并显示错误摘要）
+3) Home → AI（Agent 模式）：让模型调用 `semantic_search_library`：
+   - 预期返回 evidence 列表含 `jumpLink`，并且以 `paperreader://reader/open?...` 开头。
+4) 点 evidence 的 jumpLink：
+   - 同书应在当前阅读器内跳转。
+   - 跨书应打开对应书并定位（best-effort）。
+
+## 6. 阅读页 AI（带书籍上下文）
 
 **目标**：阅读页 AI 面板打开/最小化/继续流式，且不抢焦点/不乱滚动。
 

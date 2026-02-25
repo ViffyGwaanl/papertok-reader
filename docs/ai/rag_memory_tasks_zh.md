@@ -26,7 +26,7 @@
 
 ---
 
-## Phase 3（进行中）— 全书库 RAG + 批量索引队列
+## Phase 3（已完成，待合入 main）— 全书库 RAG + 批量索引队列
 
 ### 已完成（截至 2026-02-25）
 
@@ -38,12 +38,12 @@
 
 ### 待完成（Phase 3 剩余成品项）
 
-- [ ] 书籍列表筛选与索引状态联动（DB 真值驱动）：
-  - [ ] 未索引 / 过期 / 已索引 的筛选必须来自索引库元信息，而非仅 UI 状态
-  - [ ] 列表展示与索引队列状态（queued/running/failed/succeeded）一致且可解释
-- [ ] `semantic_search_library`：全库检索工具 + 检索管线（Hybrid：FTS/BM25 + vector + MMR 去重）
-- [ ] 引用/evidence 跨书跳转体验打磨：
-  - [ ] 跳转位置 best-effort（href/cfi/page/anchor）覆盖主要格式
+- [x] 书籍列表筛选与索引状态联动（DB 真值驱动）：
+  - [x] 未索引 / 过期 / 已索引 的筛选来自索引库元信息（md5/provider/model/index_version）
+  - [x] 列表展示与索引队列状态（queued/running/failed/succeeded）一致且可解释
+- [x] `semantic_search_library`：全库检索工具 + 检索管线（Hybrid：FTS/BM25 + vector + MMR 去重）
+- [x] 引用/evidence 跨书跳转体验打磨：
+  - [x] jumpLink 统一为 `paperreader://reader/open?...`（bookId + cfi/href）
   - [ ] 对缺失定位信息的 fallback 行为可预期（例如章节开头）
 - [ ] QA checklist + 回归（建议至少包含）：
   - [ ] 队列暂停/恢复/取消/clear finished 在边界状态下行为正确
@@ -52,7 +52,7 @@
   - [ ] 网络失败/限流：重试与错误提示可理解
 - [ ] 合入 `product/main`（完成上述验收后）
 
-交付状态：🚧 进行中（目标分支：`product/feat/rag-phase3-library-rag` → `product/main`）
+交付状态：✅ 已在 `product/feat/rag-phase3-library-rag` 完成实现（待回归后合入 `product/main`）
 
 ---
 

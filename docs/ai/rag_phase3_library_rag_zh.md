@@ -20,11 +20,13 @@
 - Settings 顶层入口：**AI 索引（书库）** 页面（支持手动多选加入队列 + 队列控制）。
 - Reader jump links：已切换为 `paperreader://reader/open?...`（不再生成 `anx://...`）。
 
-### 仍待完成（Phase 3 剩余成品项）
+### 仍待完成（Phase 3 收尾成品项）
 
-- 书籍列表筛选与索引状态联动：未索引/过期/已索引需要由 DB 真值驱动（不是仅 UI chip）。
-- `semantic_search_library` 工具 + 全库检索（Hybrid：FTS/BM25 + vector + MMR 去重）。
-- 引用/evidence 的跨书跳转体验打磨与 QA checklist，并最终合入 `product/main`。
+- QA checklist（iOS/Android）：
+  - 外部点击 `paperreader://reader/open?...` 拉起与定位（href/cfi）。
+  - 队列 pause/resume/cancel/clear finished、失败自动重试一次、重启恢复。
+  - 大书/多书索引下前台卡顿、内存、耗电。
+- 最终合入 `product/main`（并在 `main` 做真机回归）。
 
 ---
 

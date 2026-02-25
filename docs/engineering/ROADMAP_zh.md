@@ -49,6 +49,11 @@
 
 ## 2. 进行中
 
+### 2.x Phase 3：全书库 RAG + 批量索引队列（待合入 main）
+- 当前实现位于 feature branch：`product/feat/rag-phase3-library-rag`
+- 已具备：headless reader 索引任意书、索引队列（自动重试一次+重启恢复）、Settings 顶层 AI 索引（书库）、`semantic_search_library`（Hybrid+MMR）、`paperreader://reader/open` 跳转
+- 待办：真机 QA checklist + 合入 `product/main`
+
 ### 2.1 iOS 体验收敛（TabBar / 键盘 / 底部遮挡）
 - iPhone 浮动 TabBar（cupertino_native，icon-only）参数收敛：高度、底部偏移、blur/背景一致性。
 - 目标：不遮挡输入框/列表内容，键盘弹出/收起无跳动。

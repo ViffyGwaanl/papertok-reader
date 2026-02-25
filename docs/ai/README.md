@@ -78,7 +78,7 @@
   - `paperreader://reader/open?bookId=<id>&href=<chapterHrefOrAnchor>`
 - Shortcuts callback deep links keep using:
   - `paperreader://shortcuts/...`
-- Note: legacy `anx://...` jump links are **deprecated** in the product repo and should not be generated.
+- Note: legacy `anx://...` jump links are **removed** in the product repo. New links must use `paperreader://reader/open?...`.
 
 ---
 
@@ -94,8 +94,6 @@
   - Settings entry: **AI 索引（书库）** page
   - reader jump links standardized to `paperreader://reader/open?...` (no `anx://...` generation)
 - Remaining for merge:
-  - `semantic_search_library` tool + hybrid retrieval (FTS/BM25 + vector + MMR)
-  - book list filters driven by DB truth (unindexed/expired/indexed)
   - QA checklist + final integration into `product/main`
 
 Docs:

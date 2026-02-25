@@ -42,6 +42,7 @@ We want AI-related configuration to be **portable across devices**, but with str
 - MCP (non-secret):
   - `mcp.autoRefreshToolsV1`: boolean, auto refresh tools/list when local cache is missing (default false)
   - `mcp.servers`: list of MCP server metas (id/name/endpoint/enabled); **secrets/headers not synced**
+  - See: `docs/ai/mcp_servers_zh.md`
 - AI translation prefs (safe, no secrets):
   - translation-dedicated provider id + model override
   - inline full-text translation concurrency

@@ -2,6 +2,9 @@
 
 ## 0. Implementation Status
 
+See also:
+- `docs/ai/mcp_servers_zh.md` (MCP secrets and server meta policies)
+
 - Implementation status: integrated in product repo `main`
 - Adds:
   - v5 backup ZIP with `manifest.json`
