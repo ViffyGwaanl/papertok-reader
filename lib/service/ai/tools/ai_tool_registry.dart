@@ -19,6 +19,7 @@ import 'package:anx_reader/service/ai/tools/current_chapter_content_tool.dart';
 import 'package:anx_reader/service/ai/tools/resolve_cfi_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_book_fulltext_tool.dart';
 import 'package:anx_reader/service/ai/tools/semantic_search_current_book_tool.dart';
+import 'package:anx_reader/service/ai/tools/semantic_search_library_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_reading_metadata_tool.dart';
 import 'package:anx_reader/service/ai/tools/current_time_tool.dart';
 import 'package:anx_reader/service/ai/tools/fetch_url_tool.dart';
@@ -139,6 +140,7 @@ class AiToolRegistry {
     currentBookFulltextToolDefinition,
     resolveCfiToolDefinition,
     semanticSearchCurrentBookToolDefinition,
+    semanticSearchLibraryToolDefinition,
     tagsListToolDefinition,
     booksTagsListToolDefinition,
     applyBookTagsToolDefinition,

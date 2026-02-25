@@ -16,6 +16,8 @@ class AiBookIndexInfo {
     this.embeddingModel,
     this.providerId,
     this.bookMd5,
+    this.indexStatus,
+    this.indexVersion,
     this.createdAt,
     this.updatedAt,
   });
@@ -25,6 +27,11 @@ class AiBookIndexInfo {
   final String? embeddingModel;
   final String? providerId;
   final String? bookMd5;
+
+  /// v2 columns
+  final String? indexStatus;
+  final int? indexVersion;
+
   final int? createdAt;
   final int? updatedAt;
 }
@@ -137,13 +144,43 @@ class AiIndexDatabase {
       limit: 1,
     );
     if (rows.isEmpty) return null;
-    final r = rows.first;
+    return _mapIndexInfo(rows.first);
+  }
+
+  Future<Map<int, AiBookIndexInfo>> getBookIndexInfos(
+    Iterable<int> bookIds,
+  ) async {
+    final unique = bookIds.where((e) => e > 0).toSet().toList(growable: false);
+    if (unique.isEmpty) return const <int, AiBookIndexInfo>{};
+
+    final db = await database;
+    final placeholders = List.filled(unique.length, '?').join(',');
+    final rows = await db.query(
+      'ai_book_index',
+      where: 'book_id IN ($placeholders)',
+      whereArgs: unique,
+    );
+
+    final out = <int, AiBookIndexInfo>{};
+    for (final r in rows) {
+      final info = _mapIndexInfo(r);
+      if (info.bookId <= 0) continue;
+      out[info.bookId] = info;
+    }
+
+    return out;
+  }
+
+  AiBookIndexInfo _mapIndexInfo(Map<String, Object?> r) {
+    final bookId = (r['book_id'] as num?)?.toInt() ?? 0;
     return AiBookIndexInfo(
-      bookId: (r['book_id'] as num?)?.toInt() ?? bookId,
+      bookId: bookId,
       chunkCount: (r['chunk_count'] as num?)?.toInt() ?? 0,
       embeddingModel: r['embedding_model']?.toString(),
       providerId: r['provider_id']?.toString(),
       bookMd5: r['book_md5']?.toString(),
+      indexStatus: r['index_status']?.toString(),
+      indexVersion: (r['index_version'] as num?)?.toInt(),
       createdAt: (r['created_at'] as num?)?.toInt(),
       updatedAt: (r['updated_at'] as num?)?.toInt(),
     );

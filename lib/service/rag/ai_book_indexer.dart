@@ -53,7 +53,10 @@ class AiBookIndexer {
 
   static const int _maxChapterCharacters = 80000;
   static const int _batchSize = 16;
-  static const int _indexAlgorithmVersion = 1;
+
+  /// Bump this when the indexing algorithm changes in a way that makes
+  /// previous book indexes incompatible.
+  static const int indexAlgorithmVersion = 1;
 
   final AiTextChunker _chunker = const AiTextChunker();
 
@@ -175,7 +178,7 @@ class AiBookIndexer {
           'index_status': 'running',
           'failed_reason': null,
           'retry_count': 0,
-          'index_version': _indexAlgorithmVersion,
+          'index_version': indexAlgorithmVersion,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
