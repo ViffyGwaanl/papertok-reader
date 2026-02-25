@@ -1095,6 +1095,8 @@
   },
   "settingsAiProviderCenterIncludeThoughtsTitle": "Include thought summary",
   "settingsAiProviderCenterIncludeThoughtsDesc": "When enabled, Gemini returns a thought summary that can be shown in the Thinking section. This may increase cost and latency.",
+  "settingsAiProviderCenterUsePreviousResponseIdTitle": "Use previous_response_id continuation (Responses)",
+  "settingsAiProviderCenterUsePreviousResponseIdDesc": "Keeps conversation state on the server for tool-call continuation. Disable this for some third-party Responses gateways that reject this parameter.",
   "aiThinkingTitle": "Thinking level",
   "aiThinkingOff": "Off",
   "aiThinkingAuto": "Auto",

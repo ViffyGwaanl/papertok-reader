@@ -1095,6 +1095,8 @@
   },
   "settingsAiProviderCenterIncludeThoughtsTitle": "包含思考摘要",
   "settingsAiProviderCenterIncludeThoughtsDesc": "开启后，Gemini 会返回可用于“思考”区域展示的思考摘要，可能会增加费用与首字延迟。",
+  "settingsAiProviderCenterUsePreviousResponseIdTitle": "使用 previous_response_id 续写（Responses）",
+  "settingsAiProviderCenterUsePreviousResponseIdDesc": "用于工具调用后的续写（conversation state）。部分第三方 Responses 网关不支持该参数时请关闭。",
   "aiThinkingTitle": "思考强度",
   "aiThinkingOff": "关闭",
   "aiThinkingAuto": "自动",

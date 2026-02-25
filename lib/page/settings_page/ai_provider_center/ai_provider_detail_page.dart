@@ -45,6 +45,8 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
   bool _includeThoughts = true;
 
+  bool _responsesUsePreviousResponseId = true;
+
   bool _isFetchingModels = false;
   List<String> _cachedModels = const [];
 
@@ -79,6 +81,14 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     } else {
       final raw = (stored['include_thoughts'] ?? 'false').trim().toLowerCase();
       _includeThoughts = raw == 'true' || raw == '1' || raw == 'yes';
+    }
+
+    if (_provider.type == AiProviderType.openaiResponses) {
+      final raw = (stored['responses_use_previous_response_id'] ?? 'true')
+          .trim()
+          .toLowerCase();
+      _responsesUsePreviousResponseId =
+          raw != 'false' && raw != '0' && raw != 'no';
     }
 
     int parseInt(String key, int fallback) {
@@ -243,6 +253,12 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     // Default is enabled (per user preference).
     if (_provider.type == AiProviderType.gemini) {
       map['include_thoughts'] = _includeThoughts ? 'true' : 'false';
+    }
+
+    // Responses API continuation policy (non-secret).
+    if (_provider.type == AiProviderType.openaiResponses) {
+      map['responses_use_previous_response_id'] =
+          _responsesUsePreviousResponseId ? 'true' : 'false';
     }
 
     // Multi-key policy (non-secret).
@@ -1148,6 +1164,23 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
               },
             ),
           if (_provider.type == AiProviderType.gemini)
+            const SizedBox(height: 12),
+          if (_provider.type == AiProviderType.openaiResponses)
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title:
+                  Text(l10n.settingsAiProviderCenterUsePreviousResponseIdTitle),
+              subtitle:
+                  Text(l10n.settingsAiProviderCenterUsePreviousResponseIdDesc),
+              value: _responsesUsePreviousResponseId,
+              onChanged: (v) {
+                setState(() {
+                  _responsesUsePreviousResponseId = v;
+                });
+                _scheduleAutoSave();
+              },
+            ),
+          if (_provider.type == AiProviderType.openaiResponses)
             const SizedBox(height: 12),
           _buildApiKeysSection(l10n),
           const SizedBox(height: 16),

@@ -19,6 +19,7 @@ class LangchainAiConfig {
     this.maxOutputTokens,
     this.thinkingMode = AiThinkingMode.off,
     this.includeThoughts = false,
+    this.responsesUsePreviousResponseId,
     this.additional,
   }) : headers = Map.unmodifiable(headers ?? const {});
 
@@ -37,6 +38,13 @@ class LangchainAiConfig {
 
   /// Gemini thought summary toggle.
   final bool includeThoughts;
+
+  /// Responses API: whether to use server-side conversation state via
+  /// `previous_response_id` for tool-output continuation.
+  ///
+  /// Some third-party "Responses-compatible" gateways do not support this
+  /// parameter; turn this off for compatibility.
+  final bool? responsesUsePreviousResponseId;
 
   final Map<String, dynamic>? additional;
 
@@ -145,6 +153,14 @@ class LangchainAiConfig {
         includeThoughtsRaw == '1' ||
         includeThoughtsRaw == 'yes';
 
+    bool? responsesUsePreviousResponseId;
+    final prevValue = raw['responses_use_previous_response_id'];
+    if (prevValue != null && prevValue.trim().isNotEmpty) {
+      final prevRaw = prevValue.trim().toLowerCase();
+      responsesUsePreviousResponseId =
+          !(prevRaw == 'false' || prevRaw == '0' || prevRaw == 'no');
+    }
+
     return LangchainAiConfig(
       identifier: identifier,
       apiKey: apiKey,
@@ -157,6 +173,7 @@ class LangchainAiConfig {
       maxOutputTokens: parseInt(raw['max_output_tokens']),
       thinkingMode: thinkingMode,
       includeThoughts: includeThoughts,
+      responsesUsePreviousResponseId: responsesUsePreviousResponseId,
       additional: additional,
     );
   }
@@ -172,6 +189,7 @@ class LangchainAiConfig {
     int? maxOutputTokens,
     AiThinkingMode? thinkingMode,
     bool? includeThoughts,
+    bool? responsesUsePreviousResponseId,
     Map<String, dynamic>? additional,
   }) {
     return LangchainAiConfig(
@@ -186,6 +204,8 @@ class LangchainAiConfig {
       maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
       thinkingMode: thinkingMode ?? this.thinkingMode,
       includeThoughts: includeThoughts ?? this.includeThoughts,
+      responsesUsePreviousResponseId:
+          responsesUsePreviousResponseId ?? this.responsesUsePreviousResponseId,
       additional: additional ?? this.additional,
     );
   }
@@ -283,6 +303,8 @@ LangchainAiConfig mergeConfigs(
     topP: override.topP ?? base.topP,
     maxTokens: override.maxTokens ?? base.maxTokens,
     maxOutputTokens: override.maxOutputTokens ?? base.maxOutputTokens,
+    responsesUsePreviousResponseId: override.responsesUsePreviousResponseId ??
+        base.responsesUsePreviousResponseId,
     additional: mergeMaps(base.additional, override.additional),
   );
 }

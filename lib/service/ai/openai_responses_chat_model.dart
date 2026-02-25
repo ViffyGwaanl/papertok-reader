@@ -27,6 +27,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     required this.baseUrl,
     required this.apiKey,
     this.headers,
+    this.usePreviousResponseId = true,
     required super.defaultOptions,
     http.Client? client,
   }) : _client = client;
@@ -34,6 +35,13 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
   final String baseUrl;
   final String apiKey;
   final Map<String, String>? headers;
+
+  /// Whether to use server-side conversation state via `previous_response_id`
+  /// for tool-output continuation.
+  ///
+  /// Some third-party "Responses-compatible" gateways do not support this
+  /// parameter.
+  final bool usePreviousResponseId;
 
   http.Client? _client;
   StreamSubscription<List<int>>? _activeSubscription;
@@ -503,7 +511,8 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     // If we have a server-side response id, use `previous_response_id` and only
     // submit tool outputs. This avoids manual replay of provider reasoning items
     // (which is brittle and may violate item adjacency constraints).
-    if (hasToolOutputs &&
+    if (usePreviousResponseId &&
+        hasToolOutputs &&
         _lastServerResponseId != null &&
         _lastServerResponseId!.trim().isNotEmpty) {
       final outputs = <Map<String, dynamic>>[];
