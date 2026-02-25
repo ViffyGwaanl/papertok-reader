@@ -5,7 +5,7 @@
 ## 当前结论
 
 - ✅ 已验证：iOS（iPhone） / iPadOS（iPad）
-- ⏳ 计划验证：Android
+- ⏳ 计划验证：Android（见 Android QA checklist）
 - ⏳ 计划验证：桌面端（macOS/Windows/Linux）
 
 > 如果你当前必须稳定使用 Android/桌面端，请优先使用上游项目 **Anx Reader**。
@@ -35,11 +35,12 @@ flutter test -j 1
 
 ## Android（计划中）
 
-- 先跑 `flutter test -j 1` + `flutter run -d <android>`
-- 验证 identifiers（applicationId/namespace）
-- 验证 PaperTok / AI / 翻译基本链路
+- Checklist：`docs/engineering/ANDROID_QA_CHECKLIST_zh.md`
+- 建议先跑：`flutter test -j 1` + `flutter run -d <android>`
+- 核心覆盖：deep links、AI 索引（书库）、MCP、备份恢复、翻译
 
-详见：`docs/engineering/RELEASE_ANDROID_zh.md`
+详见：
+- `docs/engineering/RELEASE_ANDROID_zh.md`
 
 ## 桌面端（计划中）
 
