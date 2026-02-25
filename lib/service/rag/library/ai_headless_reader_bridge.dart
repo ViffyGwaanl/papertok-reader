@@ -122,6 +122,13 @@ class AiHeadlessReaderBridge {
         ),
       );
     }
+
+    // Best-effort: ask foliate-js to emit TOC.
+    try {
+      await _controller?.evaluateJavascript(source: 'refreshToc()');
+    } catch (_) {
+      // ignore
+    }
   }
 
   Future<List<TocItem>> getToc(

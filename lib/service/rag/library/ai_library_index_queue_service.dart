@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
 import 'package:anx_reader/service/rag/ai_book_indexer.dart';
 import 'package:anx_reader/service/rag/ai_index_database.dart';
 import 'package:anx_reader/service/rag/library/ai_library_index_job.dart';
@@ -147,17 +148,19 @@ class AiLibraryIndexQueueService
 
     try {
       final indexer = AiBookIndexer(ref, database: _database);
-      await indexer.buildCurrentBook(
-        // We rebuild the specific book by id using database clear+index.
-        // buildCurrentBook() currently indexes the active reading book; Phase 3
-        // extends indexer to support arbitrary bookId.
-        // For now, fail fast so we don't silently do the wrong thing.
-        onProgress: (p) async {
-          await _repo.updateJob(
-            job.id,
-            progress: p.progress,
-            currentChapterHref: p.chapterHref,
-            currentChapterTitle: p.chapterTitle,
+
+      // TODO: resolve embeddingModel from user settings.
+      await indexer.buildBook(
+        book: (await BooksRepository().fetchByIds([job.bookId]))[job.bookId]!,
+        rebuild: true,
+        onProgress: (p) {
+          unawaited(
+            _repo.updateJob(
+              job.id,
+              progress: p.progress,
+              currentChapterHref: p.currentChapterHref,
+              currentChapterTitle: p.currentChapterTitle,
+            ),
           );
         },
       );

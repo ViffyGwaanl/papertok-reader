@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/models/toc_item.dart';
 import 'package:anx_reader/providers/book_toc.dart';
 import 'package:anx_reader/providers/chapter_content_bridge.dart';
@@ -11,6 +12,7 @@ import 'package:anx_reader/service/rag/ai_index_database.dart';
 import 'package:anx_reader/service/rag/ai_text_chunker.dart';
 import 'package:anx_reader/service/rag/vector_math.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:anx_reader/service/rag/library/ai_headless_reader_bridge_service.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -51,6 +53,7 @@ class AiBookIndexer {
 
   static const int _maxChapterCharacters = 80000;
   static const int _batchSize = 16;
+  static const int _indexAlgorithmVersion = 1;
 
   final AiTextChunker _chunker = const AiTextChunker();
 
@@ -70,8 +73,6 @@ class AiBookIndexer {
     }
 
     final book = reading.book!;
-    final bookId = book.id;
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
 
     final toc = ref.read(bookTocProvider);
     final chapters = _flattenToc(toc);
@@ -90,6 +91,65 @@ class AiBookIndexer {
       throw StateError('No chapters available for indexing.');
     }
 
+    return _build(
+      book: book,
+      rebuild: rebuild,
+      embeddingModel: embeddingModel,
+      onProgress: onProgress,
+      chapters: targetChapters,
+      fetchChapterByHref: (href) => handlers.fetchChapterByHref(
+        href,
+        maxCharacters: _maxChapterCharacters,
+      ),
+    );
+  }
+
+  /// Build index for an arbitrary book (library indexing).
+  ///
+  /// Uses a headless foliate-js session (see [AiHeadlessReaderBridgeService]).
+  Future<AiBookIndexInfo> buildBook({
+    required Book book,
+    required bool rebuild,
+    AiBookIndexProgressCallback? onProgress,
+    String embeddingModel = AiEmbeddingsService.defaultEmbeddingModel,
+  }) async {
+    final bridgeService = ref.read(aiHeadlessReaderBridgeProvider);
+    final bridge = await bridgeService.open(book.id);
+
+    try {
+      final toc = await bridge.getToc();
+      final chapters = _flattenToc(toc);
+      if (chapters.isEmpty) {
+        throw StateError('No chapters available for indexing.');
+      }
+
+      return await _build(
+        book: book,
+        rebuild: rebuild,
+        embeddingModel: embeddingModel,
+        onProgress: onProgress,
+        chapters: chapters,
+        fetchChapterByHref: (href) => bridge.getChapterContentByHref(
+          href,
+          maxCharacters: _maxChapterCharacters,
+        ),
+      );
+    } finally {
+      bridgeService.scheduleDispose();
+    }
+  }
+
+  Future<AiBookIndexInfo> _build({
+    required Book book,
+    required bool rebuild,
+    required String embeddingModel,
+    required List<({String href, String title})> chapters,
+    required Future<String> Function(String href) fetchChapterByHref,
+    AiBookIndexProgressCallback? onProgress,
+  }) async {
+    final bookId = book.id;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+
     final existing = await _database.getBookIndexInfo(bookId);
     if (!rebuild && existing != null && existing.chunkCount > 0) {
       return existing;
@@ -99,7 +159,6 @@ class AiBookIndexer {
     final db = await _database.database;
 
     await db.transaction((txn) async {
-      // Always clear old chunks to avoid duplicates.
       await txn.delete('ai_chunks', where: 'book_id = ?', whereArgs: [bookId]);
 
       await txn.insert(
@@ -112,6 +171,11 @@ class AiBookIndexer {
           'chunk_count': 0,
           'created_at': nowMs,
           'updated_at': nowMs,
+          // v2 columns
+          'index_status': 'running',
+          'failed_reason': null,
+          'retry_count': 0,
+          'index_version': _indexAlgorithmVersion,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -121,7 +185,7 @@ class AiBookIndexer {
     var doneChunks = 0;
     var totalChunks = 0;
 
-    for (final ch in targetChapters) {
+    for (final ch in chapters) {
       final href = ch.href;
       final title = ch.title;
 
@@ -129,7 +193,7 @@ class AiBookIndexer {
         AiBookIndexProgress(
           phase: 'fetch',
           doneChapters: doneChapters,
-          totalChapters: targetChapters.length,
+          totalChapters: chapters.length,
           doneChunks: doneChunks,
           totalChunks: totalChunks,
           currentChapterHref: href,
@@ -139,10 +203,7 @@ class AiBookIndexer {
 
       String chapterText;
       try {
-        chapterText = await handlers.fetchChapterByHref(
-          href,
-          maxCharacters: _maxChapterCharacters,
-        );
+        chapterText = await fetchChapterByHref(href);
       } catch (e) {
         AnxLog.warning('AiIndex: failed to fetch chapter href=$href error=$e');
         doneChapters++;
@@ -171,7 +232,7 @@ class AiBookIndexer {
           AiBookIndexProgress(
             phase: 'embed',
             doneChapters: doneChapters,
-            totalChapters: targetChapters.length,
+            totalChapters: chapters.length,
             doneChunks: doneChunks,
             totalChunks: totalChunks,
             currentChapterHref: href,
@@ -214,7 +275,7 @@ class AiBookIndexer {
         AiBookIndexProgress(
           phase: 'chapter_done',
           doneChapters: doneChapters,
-          totalChapters: targetChapters.length,
+          totalChapters: chapters.length,
           doneChunks: doneChunks,
           totalChunks: totalChunks,
           currentChapterHref: href,
@@ -228,6 +289,9 @@ class AiBookIndexer {
       {
         'chunk_count': doneChunks,
         'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'indexed_at': DateTime.now().millisecondsSinceEpoch,
+        'index_status': 'succeeded',
+        'failed_reason': null,
       },
       where: 'book_id = ?',
       whereArgs: [bookId],
