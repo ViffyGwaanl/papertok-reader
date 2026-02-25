@@ -18,6 +18,11 @@ class AiBookIndexInfo {
     this.bookMd5,
     this.indexStatus,
     this.indexVersion,
+    this.chunkTargetChars,
+    this.chunkMaxChars,
+    this.chunkMinChars,
+    this.chunkOverlapChars,
+    this.maxChapterCharacters,
     this.createdAt,
     this.updatedAt,
   });
@@ -31,6 +36,13 @@ class AiBookIndexInfo {
   /// v2 columns
   final String? indexStatus;
   final int? indexVersion;
+
+  /// v4 columns
+  final int? chunkTargetChars;
+  final int? chunkMaxChars;
+  final int? chunkMinChars;
+  final int? chunkOverlapChars;
+  final int? maxChapterCharacters;
 
   final int? createdAt;
   final int? updatedAt;
@@ -181,6 +193,11 @@ class AiIndexDatabase {
       bookMd5: r['book_md5']?.toString(),
       indexStatus: r['index_status']?.toString(),
       indexVersion: (r['index_version'] as num?)?.toInt(),
+      chunkTargetChars: (r['chunk_target_chars'] as num?)?.toInt(),
+      chunkMaxChars: (r['chunk_max_chars'] as num?)?.toInt(),
+      chunkMinChars: (r['chunk_min_chars'] as num?)?.toInt(),
+      chunkOverlapChars: (r['chunk_overlap_chars'] as num?)?.toInt(),
+      maxChapterCharacters: (r['max_chapter_characters'] as num?)?.toInt(),
       createdAt: (r['created_at'] as num?)?.toInt(),
       updatedAt: (r['updated_at'] as num?)?.toInt(),
     );

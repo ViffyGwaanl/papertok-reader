@@ -77,7 +77,8 @@ class SemanticSearchCurrentBook {
     required int bookId,
     required String query,
     int maxResults = 6,
-    String embeddingModel = AiEmbeddingsService.defaultEmbeddingModel,
+    String? embeddingModel,
+    String? providerId,
   }) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
@@ -130,9 +131,20 @@ class SemanticSearchCurrentBook {
       );
     }
 
+    final effectiveModelRaw = (embeddingModel ??
+            info.embeddingModel ??
+            AiEmbeddingsService.defaultEmbeddingModel)
+        .trim();
+    final effectiveModel = effectiveModelRaw.isEmpty
+        ? AiEmbeddingsService.defaultEmbeddingModel
+        : effectiveModelRaw;
+
+    final effectiveProviderId = (providerId ?? info.providerId ?? '').trim();
+
     final qVec = await AiEmbeddingsService.embedQuery(
       trimmed,
-      model: embeddingModel,
+      model: effectiveModel,
+      providerId: effectiveProviderId.isEmpty ? null : effectiveProviderId,
     );
     final qNorm = VectorMath.l2Norm(qVec);
 

@@ -1,3 +1,4 @@
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/rag/ai_book_indexer.dart';
 import 'package:anx_reader/service/rag/ai_index_database.dart';
@@ -42,8 +43,8 @@ class AiBookIndexingState {
 
 final aiBookIndexingProvider =
     StateNotifierProvider<AiBookIndexingNotifier, AiBookIndexingState>((ref) {
-      return AiBookIndexingNotifier(ref);
-    });
+  return AiBookIndexingNotifier(ref);
+});
 
 class AiBookIndexingNotifier extends StateNotifier<AiBookIndexingState> {
   AiBookIndexingNotifier(this.ref) : super(AiBookIndexingState.idle);
@@ -69,8 +70,22 @@ class AiBookIndexingNotifier extends StateNotifier<AiBookIndexingState> {
 
     try {
       final indexer = AiBookIndexer(ref);
+
+      final providerId = Prefs().aiLibraryIndexProviderIdEffective;
+      final embeddingModel = Prefs().aiLibraryIndexEmbeddingModelEffective;
+
       final info = await indexer.buildCurrentBook(
         rebuild: rebuild,
+        embeddingProviderId: providerId,
+        embeddingModel: embeddingModel,
+        embeddingBatchSize: Prefs().aiLibraryIndexEmbeddingBatchSize,
+        embeddingsTimeoutSeconds:
+            Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds,
+        chunkTargetChars: Prefs().aiLibraryIndexChunkTargetChars,
+        chunkMaxChars: Prefs().aiLibraryIndexChunkMaxChars,
+        chunkMinChars: Prefs().aiLibraryIndexChunkMinChars,
+        chunkOverlapChars: Prefs().aiLibraryIndexChunkOverlapChars,
+        maxChapterCharacters: Prefs().aiLibraryIndexMaxChapterCharacters,
         onProgress: (p) {
           state = state.copyWith(
             status: AiBookIndexingStatus.indexing,
@@ -136,8 +151,8 @@ class AiBookIndexingNotifier extends StateNotifier<AiBookIndexingState> {
 
 final currentBookAiIndexInfoProvider =
     FutureProvider.autoDispose<AiBookIndexInfo?>((ref) async {
-      final reading = ref.watch(currentReadingProvider);
-      final bookId = reading.book?.id;
-      if (!reading.isReading || bookId == null) return null;
-      return AiIndexDatabase.instance.getBookIndexInfo(bookId);
-    });
+  final reading = ref.watch(currentReadingProvider);
+  final bookId = reading.book?.id;
+  if (!reading.isReading || bookId == null) return null;
+  return AiIndexDatabase.instance.getBookIndexInfo(bookId);
+});

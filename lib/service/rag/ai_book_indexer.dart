@@ -51,8 +51,12 @@ class AiBookIndexer {
   final Ref ref;
   final AiIndexDatabase _database;
 
-  static const int _maxChapterCharacters = 80000;
-  static const int _batchSize = 16;
+  /// Default maximum characters to fetch per chapter during indexing.
+  ///
+  /// This is a safety guard against very large chapters causing memory spikes.
+  static const int defaultMaxChapterCharacters = 80000;
+
+  static const int defaultEmbeddingBatchSize = 16;
 
   /// Bump this when the indexing algorithm changes in a way that makes
   /// previous book indexes incompatible.
@@ -64,6 +68,14 @@ class AiBookIndexer {
     required bool rebuild,
     AiBookIndexProgressCallback? onProgress,
     String embeddingModel = AiEmbeddingsService.defaultEmbeddingModel,
+    String? embeddingProviderId,
+    int embeddingBatchSize = defaultEmbeddingBatchSize,
+    int embeddingsTimeoutSeconds = 60,
+    int chunkTargetChars = AiTextChunker.defaultTargetChars,
+    int chunkMaxChars = AiTextChunker.defaultMaxChars,
+    int chunkMinChars = AiTextChunker.defaultMinChars,
+    int chunkOverlapChars = AiTextChunker.defaultOverlapChars,
+    int maxChapterCharacters = defaultMaxChapterCharacters,
   }) async {
     final reading = ref.read(currentReadingProvider);
     if (!reading.isReading || reading.book == null) {
@@ -98,11 +110,19 @@ class AiBookIndexer {
       book: book,
       rebuild: rebuild,
       embeddingModel: embeddingModel,
+      embeddingProviderId: embeddingProviderId,
+      embeddingBatchSize: embeddingBatchSize,
+      embeddingsTimeoutSeconds: embeddingsTimeoutSeconds,
+      chunkTargetChars: chunkTargetChars,
+      chunkMaxChars: chunkMaxChars,
+      chunkMinChars: chunkMinChars,
+      chunkOverlapChars: chunkOverlapChars,
+      maxChapterCharacters: maxChapterCharacters,
       onProgress: onProgress,
       chapters: targetChapters,
       fetchChapterByHref: (href) => handlers.fetchChapterByHref(
         href,
-        maxCharacters: _maxChapterCharacters,
+        maxCharacters: maxChapterCharacters,
       ),
     );
   }
@@ -115,6 +135,14 @@ class AiBookIndexer {
     required bool rebuild,
     AiBookIndexProgressCallback? onProgress,
     String embeddingModel = AiEmbeddingsService.defaultEmbeddingModel,
+    String? embeddingProviderId,
+    int embeddingBatchSize = defaultEmbeddingBatchSize,
+    int embeddingsTimeoutSeconds = 60,
+    int chunkTargetChars = AiTextChunker.defaultTargetChars,
+    int chunkMaxChars = AiTextChunker.defaultMaxChars,
+    int chunkMinChars = AiTextChunker.defaultMinChars,
+    int chunkOverlapChars = AiTextChunker.defaultOverlapChars,
+    int maxChapterCharacters = defaultMaxChapterCharacters,
   }) async {
     final bridgeService = ref.read(aiHeadlessReaderBridgeProvider);
     final bridge = await bridgeService.open(book.id);
@@ -130,11 +158,19 @@ class AiBookIndexer {
         book: book,
         rebuild: rebuild,
         embeddingModel: embeddingModel,
+        embeddingProviderId: embeddingProviderId,
+        embeddingBatchSize: embeddingBatchSize,
+        embeddingsTimeoutSeconds: embeddingsTimeoutSeconds,
+        chunkTargetChars: chunkTargetChars,
+        chunkMaxChars: chunkMaxChars,
+        chunkMinChars: chunkMinChars,
+        chunkOverlapChars: chunkOverlapChars,
+        maxChapterCharacters: maxChapterCharacters,
         onProgress: onProgress,
         chapters: chapters,
         fetchChapterByHref: (href) => bridge.getChapterContentByHref(
           href,
-          maxCharacters: _maxChapterCharacters,
+          maxCharacters: maxChapterCharacters,
         ),
       );
     } finally {
@@ -146,6 +182,14 @@ class AiBookIndexer {
     required Book book,
     required bool rebuild,
     required String embeddingModel,
+    String? embeddingProviderId,
+    required int embeddingBatchSize,
+    required int embeddingsTimeoutSeconds,
+    required int chunkTargetChars,
+    required int chunkMaxChars,
+    required int chunkMinChars,
+    required int chunkOverlapChars,
+    required int maxChapterCharacters,
     required List<({String href, String title})> chapters,
     required Future<String> Function(String href) fetchChapterByHref,
     AiBookIndexProgressCallback? onProgress,
@@ -158,7 +202,8 @@ class AiBookIndexer {
       return existing;
     }
 
-    final providerId = Prefs().selectedAiService;
+    final providerId =
+        (embeddingProviderId ?? Prefs().selectedAiService).trim();
     final db = await _database.database;
 
     await db.transaction((txn) async {
@@ -171,6 +216,11 @@ class AiBookIndexer {
           'book_md5': book.md5,
           'provider_id': providerId,
           'embedding_model': embeddingModel,
+          'chunk_target_chars': chunkTargetChars,
+          'chunk_max_chars': chunkMaxChars,
+          'chunk_min_chars': chunkMinChars,
+          'chunk_overlap_chars': chunkOverlapChars,
+          'max_chapter_characters': maxChapterCharacters,
           'chunk_count': 0,
           'created_at': nowMs,
           'updated_at': nowMs,
@@ -219,7 +269,13 @@ class AiBookIndexer {
         continue;
       }
 
-      final chunks = _chunker.chunk(rawText);
+      final chunks = _chunker.chunk(
+        rawText,
+        targetChars: chunkTargetChars,
+        maxChars: chunkMaxChars,
+        minChars: chunkMinChars,
+        overlapChars: chunkOverlapChars,
+      );
       if (chunks.isEmpty) {
         doneChapters++;
         continue;
@@ -227,9 +283,10 @@ class AiBookIndexer {
 
       totalChunks += chunks.length;
 
-      for (var offset = 0; offset < chunks.length; offset += _batchSize) {
+      final batchSize = embeddingBatchSize.clamp(1, 64);
+      for (var offset = 0; offset < chunks.length; offset += batchSize) {
         final batch =
-            chunks.skip(offset).take(_batchSize).toList(growable: false);
+            chunks.skip(offset).take(batchSize).toList(growable: false);
 
         onProgress?.call(
           AiBookIndexProgress(
@@ -247,6 +304,8 @@ class AiBookIndexer {
         final vectors = await AiEmbeddingsService.embedDocuments(
           texts,
           model: embeddingModel,
+          providerId: providerId,
+          timeoutSeconds: embeddingsTimeoutSeconds,
         );
 
         await db.transaction((txn) async {

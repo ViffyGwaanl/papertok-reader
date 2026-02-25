@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
 import 'package:anx_reader/service/rag/ai_book_indexer.dart';
 import 'package:anx_reader/service/rag/ai_index_database.dart';
@@ -178,9 +179,21 @@ class AiLibraryIndexQueueService
 
     final indexer = AiBookIndexer(ref, database: _database);
 
+    final providerId = Prefs().aiLibraryIndexProviderIdEffective;
+    final embeddingModel = Prefs().aiLibraryIndexEmbeddingModelEffective;
+
     await indexer.buildBook(
       book: book,
       rebuild: true,
+      embeddingProviderId: providerId,
+      embeddingModel: embeddingModel,
+      embeddingBatchSize: Prefs().aiLibraryIndexEmbeddingBatchSize,
+      embeddingsTimeoutSeconds: Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds,
+      chunkTargetChars: Prefs().aiLibraryIndexChunkTargetChars,
+      chunkMaxChars: Prefs().aiLibraryIndexChunkMaxChars,
+      chunkMinChars: Prefs().aiLibraryIndexChunkMinChars,
+      chunkOverlapChars: Prefs().aiLibraryIndexChunkOverlapChars,
+      maxChapterCharacters: Prefs().aiLibraryIndexMaxChapterCharacters,
       onProgress: (p) {
         if (cancelToken.cancelled) return;
         onProgress(p.progress, p.currentChapterHref, p.currentChapterTitle);
