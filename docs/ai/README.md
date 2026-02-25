@@ -71,6 +71,15 @@
 - The implementation lives in:
   - `lib/service/ai/openai_responses_chat_model.dart`
 
+#### Deep links (Paper Reader)
+
+- Reader navigation deep links use the **Paper Reader** URL scheme (system-level):
+  - `paperreader://reader/open?bookId=<id>&cfi=<epubcfi(...)>`
+  - `paperreader://reader/open?bookId=<id>&href=<chapterHrefOrAnchor>`
+- Shortcuts callback deep links keep using:
+  - `paperreader://shortcuts/...`
+- Note: legacy `anx://...` jump links are **deprecated** in the product repo and should not be generated.
+
 ---
 
 ## Other modules (product)

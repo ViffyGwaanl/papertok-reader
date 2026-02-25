@@ -6,6 +6,28 @@
 
 ---
 
+## 实现进度（以产品仓库 papertok-reader 为准）
+
+> 本文最初是 Phase 3 的设计稿。产品仓库已开始按“可交付成品”的方式实现，且实现路径与早期设计存在差异（主要是复用 Phase2 的 `ai_index.db` 与现有 headless webview 基建）。
+
+### 已完成（截至 2026-02-25）
+
+- `ai_index.db` v2 迁移：新增 `ai_index_jobs`（队列持久化表）+ 扩展 `ai_book_index`（状态/重试/版本字段）。
+- Headless Reader Bridge：支持不打开阅读页也能为任意 `bookId` 拉取 TOC/章节文本（用于书库索引）。
+- Library index queue：
+  - Runner（纯逻辑）：自动重试一次（maxRetries=1）+ 重启归一化（running→queued）+ 单测。
+  - Service（Riverpod）：pause/resume/cancel/clear finished，并做进度刷新节流。
+- Settings 顶层入口：**AI 索引（书库）** 页面（支持手动多选加入队列 + 队列控制）。
+- Reader jump links：已切换为 `paperreader://reader/open?...`（不再生成 `anx://...`）。
+
+### 仍待完成（Phase 3 剩余成品项）
+
+- 书籍列表筛选与索引状态联动：未索引/过期/已索引需要由 DB 真值驱动（不是仅 UI chip）。
+- `semantic_search_library` 工具 + 全库检索（Hybrid：FTS/BM25 + vector + MMR 去重）。
+- 引用/evidence 的跨书跳转体验打磨与 QA checklist，并最终合入 `product/main`。
+
+---
+
 ## 0. 范围与原则
 
 ### 0.1 Phase 3 解决什么问题

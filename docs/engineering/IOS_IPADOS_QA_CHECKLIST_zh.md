@@ -54,7 +54,21 @@
 3) 验证“思考强度默认值”：
    - 未显式设置 thinking_mode 的情况下，默认应为 **Auto**。
 
-## 4. 阅读页 AI（带书籍上下文）
+## 4. Deep Links（Reader 导航 / Shortcuts 回传）
+
+**目标**：`paperreader://...` deep link 行为正确，且不影响 Shortcuts 回传。
+
+1) 在 iOS 备忘录（或任意可点击链接的地方）粘贴并点击：
+- `paperreader://reader/open?bookId=<id>&href=<href>`
+- `paperreader://reader/open?bookId=<id>&cfi=<epubcfi(...)>`
+
+预期：能拉起 App 并打开对应书，定位到 href/cfi（best-effort）。
+
+2) Shortcuts 回传（如果你有现成 shortcut）：
+- 触发一次 `paperreader://shortcuts/result?...`
+- 预期：App 内 Shortcuts 等待器能收到回传，不应被 reader 路由误判。
+
+## 5. 阅读页 AI（带书籍上下文）
 
 **目标**：阅读页 AI 面板打开/最小化/继续流式，且不抢焦点/不乱滚动。
 

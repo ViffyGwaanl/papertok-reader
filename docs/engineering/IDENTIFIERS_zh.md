@@ -113,6 +113,25 @@
 
 ---
 
+## 4.5 URL Scheme / Deep Links（本地 scheme）
+
+### paperreader scheme
+- **Scheme**：`paperreader`
+- 用途：
+  - **Reader 导航**：`paperreader://reader/open?bookId=...&cfi=...` 或 `...&href=...`
+  - **iOS Shortcuts 回传**：`paperreader://shortcuts/result?...` 等
+
+位置（实现）：
+- Flutter：`lib/main.dart`（`app_links` 监听 + 路由）
+- Reader deep link parse：`lib/service/deeplink/paperreader_reader_intent.dart`
+- Deep link handler：`lib/service/deeplink/paperreader_deeplink_handler.dart`
+
+位置（平台注册）：
+- iOS：`ios/Runner/Info.plist`（URL Types）
+- Android：`android/app/src/main/AndroidManifest.xml`（intent-filter，`android:scheme="paperreader"`）
+
+---
+
 ## 5. 未来能力与域名绑定点（做之前先看这里）
 
 以下能力一旦启用，会与 **域名 + identifiers** 强绑定：

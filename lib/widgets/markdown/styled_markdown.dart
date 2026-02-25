@@ -73,7 +73,7 @@ class StyledMarkdown extends StatelessWidget {
     final target = (uri == null) ? null : _extractReaderTargetFromPaperUri(uri);
     if (target != null) {
       // Same-book fast path.
-      if (player != null) {
+      if (player != null && player.widget.book.id == target.bookId) {
         final cfi = target.cfi;
         final href = target.href;
         if (cfi != null && cfi.trim().isNotEmpty) {
