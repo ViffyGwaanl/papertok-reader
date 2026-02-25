@@ -34,13 +34,13 @@
 |---|---|---|---|
 | 1 | RAG 基建与索引落库（基础形态） | `ai_index.db` 基础 schema / 索引写入路径 / 工具注册与调用链路 | ✅ 已完成（已合入 `product/main`） |
 | 2 | 单书 RAG（当前书范围） | `semantic_search_current_book`（或等价能力）；索引构建入口；引用片段与跳转链接（`paperreader://`） | ✅ 已完成（已合入 `product/main`） |
-| 3 | 全书库 RAG + 批量索引队列 | `ai_index.db` 扩展（jobs/状态/FTS）；Headless Reader Bridge；“AI 索引（书库）”入口；全库检索工具 `semantic_search_library` | ✅ 已完成（待合入 `product/main`；当前在 `product/feat/rag-phase3-library-rag`） |
+| 3 | 全书库 RAG + 批量索引队列 | `ai_index.db` 扩展（jobs/状态/FTS）；Headless Reader Bridge；“AI 索引（书库）”入口；全库检索工具 `semantic_search_library` | ✅ 已合入 `product/main` |
 | 4 | Memory（本地 Markdown 记忆） | `<documents>/memory/`（MEMORY.md + daily notes）；memory_* tools；Memory 设置/编辑页 | ✅ 已完成（已合入 `product/main`） |
 | 5 | 备份/恢复增强（可选包含索引/记忆） | v5 backup：manifest flags；可选包含 `memory/` 与 `databases/ai_index.db(+wal/shm)`；导入回滚与“可选恢复” | ✅ 已完成（已合入 `product/main`） |
 
 ---
 
-## 2. Phase 3（已完成，待合入 main）验收边界（成品口径）
+## 2. Phase 3（已合入 main）验收边界（成品口径）
 
 Phase 3 的“成品”定义为：用户能在 **Settings → AI → AI 索引（书库）** 看到队列与索引状态，并在 AI 对话中选择/触发 **全书库检索**，且引用来源可点击跳转到对应书籍位置。
 

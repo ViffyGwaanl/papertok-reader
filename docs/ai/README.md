@@ -93,8 +93,7 @@
   - library indexing queue runner/service (pause/resume/cancel + restart normalization)
   - Settings entry: **AI 索引（书库）** page
   - reader jump links standardized to `paperreader://reader/open?...` (no `anx://...` generation)
-- Remaining for merge:
-  - QA checklist + final integration into `product/main`
+- Status: merged into `product/main` (run QA on iOS/Android before TestFlight).
 
 Docs:
 - [RAG + Memory（Phase 1–5）总体计划与状态（中文）](./rag_memory_plan_zh.md)

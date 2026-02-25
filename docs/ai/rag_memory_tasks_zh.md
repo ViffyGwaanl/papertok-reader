@@ -26,7 +26,7 @@
 
 ---
 
-## Phase 3（已完成，待合入 main）— 全书库 RAG + 批量索引队列
+## Phase 3（已完成并合入 main）— 全书库 RAG + 批量索引队列
 
 ### 已完成（截至 2026-02-25）
 
@@ -52,7 +52,7 @@
   - [ ] 网络失败/限流：重试与错误提示可理解
 - [ ] 合入 `product/main`（完成上述验收后）
 
-交付状态：✅ 已在 `product/feat/rag-phase3-library-rag` 完成实现（待回归后合入 `product/main`）
+交付状态：✅ 已合入 `product/main`（建议按 QA checklist 做真机回归后再发 TestFlight）
 
 ---
 
