@@ -2,7 +2,7 @@ import 'package:anx_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
 
 // NOTE: This DB is intended to be rebuildable. Keep migrations forward-only.
-const int kAiIndexDbVersion = 2;
+const int kAiIndexDbVersion = 3;
 
 class AiIndexMigrations {
   const AiIndexMigrations._();
@@ -26,6 +26,8 @@ class AiIndexMigrations {
           await _v1(db);
         case 2:
           await _v2(db);
+        case 3:
+          await _v3(db);
       }
     }
   }
@@ -121,5 +123,59 @@ CREATE TABLE IF NOT EXISTS ai_index_jobs (
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_ai_index_jobs_book ON ai_index_jobs(book_id)',
     );
+  }
+
+  static Future<void> _v3(Database db) async {
+    // Optional: Full-text search table for ai_chunks.
+    //
+    // This migration is best-effort and must not fail the entire DB open.
+    // Some SQLite builds may not ship with FTS5 enabled.
+    try {
+      await db.execute('''
+CREATE VIRTUAL TABLE IF NOT EXISTS ai_chunks_fts USING fts5(
+  text,
+  chapter_title,
+  book_id UNINDEXED,
+  chapter_href UNINDEXED,
+  content='ai_chunks',
+  content_rowid='id'
+)
+''');
+
+      // Keep FTS in sync with ai_chunks.
+      await db.execute('''
+CREATE TRIGGER IF NOT EXISTS ai_chunks_fts_ai
+AFTER INSERT ON ai_chunks
+BEGIN
+  INSERT INTO ai_chunks_fts(rowid, text, chapter_title, book_id, chapter_href)
+  VALUES (new.id, new.text, new.chapter_title, new.book_id, new.chapter_href);
+END;
+''');
+
+      await db.execute('''
+CREATE TRIGGER IF NOT EXISTS ai_chunks_fts_ad
+AFTER DELETE ON ai_chunks
+BEGIN
+  INSERT INTO ai_chunks_fts(ai_chunks_fts, rowid, text, chapter_title, book_id, chapter_href)
+  VALUES('delete', old.id, old.text, old.chapter_title, old.book_id, old.chapter_href);
+END;
+''');
+
+      await db.execute('''
+CREATE TRIGGER IF NOT EXISTS ai_chunks_fts_au
+AFTER UPDATE ON ai_chunks
+BEGIN
+  INSERT INTO ai_chunks_fts(ai_chunks_fts, rowid, text, chapter_title, book_id, chapter_href)
+  VALUES('delete', old.id, old.text, old.chapter_title, old.book_id, old.chapter_href);
+  INSERT INTO ai_chunks_fts(rowid, text, chapter_title, book_id, chapter_href)
+  VALUES (new.id, new.text, new.chapter_title, new.book_id, new.chapter_href);
+END;
+''');
+
+      // Backfill existing rows.
+      await db.execute("INSERT INTO ai_chunks_fts(ai_chunks_fts) VALUES('rebuild')");
+    } catch (e) {
+      AnxLog.warning('AiIndexDB: FTS5 not available, skip FTS migration: $e');
+    }
   }
 }
