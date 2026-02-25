@@ -22,6 +22,15 @@ class AiLibraryIndexQueueState {
   final bool isPaused;
   final String? lastError;
 
+  AiLibraryIndexJob? get activeJob {
+    final id = activeJobId;
+    if (id == null) return null;
+    for (final j in jobs) {
+      if (j.id == id) return j;
+    }
+    return null;
+  }
+
   AiLibraryIndexQueueState copyWith({
     List<AiLibraryIndexJob>? jobs,
     int? activeJobId,
@@ -66,7 +75,9 @@ class AiLibraryIndexQueueService
 
   bool _running = false;
   bool _paused = false;
-  int? _activeJobId;
+
+  // UI refresh throttling while a job is running.
+  int _lastProgressRefreshMs = 0;
 
   Future<void> _init() async {
     await _runner.normalizeAfterRestart();
@@ -76,9 +87,15 @@ class AiLibraryIndexQueueService
 
   Future<void> refresh() async {
     final jobs = await _repo.listJobs();
+    final active = jobs
+        .where((j) => j.status == AiLibraryIndexJobStatus.running)
+        .map((j) => j.id)
+        .cast<int?>()
+        .firstOrNull;
+
     state = state.copyWith(
       jobs: jobs,
-      activeJobId: _activeJobId,
+      activeJobId: active,
       isPaused: _paused,
     );
   }
@@ -113,9 +130,6 @@ class AiLibraryIndexQueueService
 
   Future<void> cancelJob(int jobId) async {
     await _runner.cancelJob(jobId);
-    if (_activeJobId == jobId) {
-      _activeJobId = null;
-    }
     await refresh();
   }
 
@@ -136,29 +150,9 @@ class AiLibraryIndexQueueService
     _running = true;
     try {
       while (!_paused) {
-        final jobs = await _repo.listJobs();
-        final next = jobs.firstWhere(
-          (j) => j.status == AiLibraryIndexJobStatus.queued,
-          orElse: () => const AiLibraryIndexJob(
-            id: -1,
-            bookId: -1,
-            status: AiLibraryIndexJobStatus.failed,
-            retryCount: 0,
-            maxRetries: 1,
-            progress: 0,
-          ),
-        );
-        if (next.id <= 0) break;
-
-        _activeJobId = next.id;
-        state = state.copyWith(activeJobId: _activeJobId);
-
-        await _runner.runOnce();
-
-        _activeJobId = null;
-        state = state.copyWith(activeJobId: null);
-
+        final executed = await _runner.runOnce();
         await refresh();
+        if (executed == null) break;
       }
     } finally {
       _running = false;
@@ -190,9 +184,20 @@ class AiLibraryIndexQueueService
       onProgress: (p) {
         if (cancelToken.cancelled) return;
         onProgress(p.progress, p.currentChapterHref, p.currentChapterTitle);
+
+        // Throttle UI refresh while indexing.
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (now - _lastProgressRefreshMs > 300) {
+          _lastProgressRefreshMs = now;
+          unawaited(refresh());
+        }
       },
     );
   }
+}
+
+extension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }
 
 final aiLibraryIndexQueueProvider =
