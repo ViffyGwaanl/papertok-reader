@@ -51,12 +51,17 @@ class ReadingPage extends ConsumerStatefulWidget {
     super.key,
     required this.book,
     this.cfi,
+    this.openHref,
     required this.initialThemes,
     this.heroTag,
   });
 
   final Book book;
   final String? cfi;
+
+  /// Optional href/anchor to navigate to after initial load.
+  final String? openHref;
+
   final List<ReadTheme> initialThemes;
   final String? heroTag;
 
@@ -443,6 +448,15 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   }
 
   Future<void> onLoadEnd() async {
+    final pendingHref = widget.openHref;
+    if (pendingHref != null && pendingHref.trim().isNotEmpty) {
+      try {
+        epubPlayerKey.currentState?.goToHref(pendingHref.trim());
+      } catch (_) {
+        // best-effort
+      }
+    }
+
     if (Prefs().autoSummaryPreviousContent) {
       final previousContent =
           await epubPlayerKey.currentState!.previousContent(2000);

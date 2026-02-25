@@ -6,7 +6,7 @@ import 'package:anx_reader/dao/theme.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/main.dart';
+import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/models/current_reading_state.dart';
 import 'package:anx_reader/page/home_page.dart';
@@ -450,6 +450,7 @@ Future<void> pushToReadingPage(
   BuildContext context,
   Book book, {
   String? cfi,
+  String? openHref,
   String? heroTag,
 }) async {
   if (book.isDeleted) {
@@ -482,6 +483,7 @@ Future<void> pushToReadingPage(
         key: readingPageKey,
         book: book,
         cfi: cfi,
+        openHref: openHref,
         initialThemes: initialThemes,
         heroTag: heroTag,
       ),

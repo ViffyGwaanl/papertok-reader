@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:anx_reader/service/rag/ai_embeddings_service.dart';
 import 'package:anx_reader/service/rag/ai_index_database.dart';
+import 'package:anx_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:anx_reader/service/rag/vector_math.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -18,20 +19,20 @@ class AiSemanticSearchEvidence {
   final String href;
   final String anchor;
 
-  /// Best-effort internal navigation link.
+  /// Best-effort navigation deep link.
   ///
-  /// Prefer `anx://cfi?...` when available, otherwise fall back to `anx://href?...`.
+  /// This uses Paper Reader's app URL scheme.
   final String jumpLink;
 
   final double score;
 
   Map<String, dynamic> toJson() => {
-    'text': text,
-    'href': href,
-    'anchor': anchor,
-    'jumpLink': jumpLink,
-    'score': score,
-  };
+        'text': text,
+        'href': href,
+        'anchor': anchor,
+        'jumpLink': jumpLink,
+        'score': score,
+      };
 }
 
 class AiSemanticSearchResult {
@@ -52,23 +53,23 @@ class AiSemanticSearchResult {
   final AiBookIndexInfo? indexInfo;
 
   Map<String, dynamic> toJson() => {
-    'ok': ok,
-    'bookId': bookId,
-    'query': query,
-    if (message != null) 'message': message,
-    if (indexInfo != null)
-      'index': {
-        'chunkCount': indexInfo!.chunkCount,
-        'embeddingModel': indexInfo!.embeddingModel,
-        'updatedAt': indexInfo!.updatedAt,
-      },
-    'evidence': evidence.map((e) => e.toJson()).toList(growable: false),
-  };
+        'ok': ok,
+        'bookId': bookId,
+        'query': query,
+        if (message != null) 'message': message,
+        if (indexInfo != null)
+          'index': {
+            'chunkCount': indexInfo!.chunkCount,
+            'embeddingModel': indexInfo!.embeddingModel,
+            'updatedAt': indexInfo!.updatedAt,
+          },
+        'evidence': evidence.map((e) => e.toJson()).toList(growable: false),
+      };
 }
 
 class SemanticSearchCurrentBook {
   SemanticSearchCurrentBook({AiIndexDatabase? database})
-    : _db = database ?? AiIndexDatabase.instance;
+      : _db = database ?? AiIndexDatabase.instance;
 
   final AiIndexDatabase _db;
 
@@ -166,30 +167,30 @@ class SemanticSearchCurrentBook {
     final k = maxResults.clamp(1, 10);
     final top = scored.take(k).toList(growable: false);
 
-    final evidence = top
-        .map((it) {
-          final r = it.row;
-          final href = r['chapter_href']?.toString() ?? '';
-          final title = (r['chapter_title']?.toString() ?? '').trim();
-          final anchor = title.isEmpty ? href : title;
+    final evidence = top.map((it) {
+      final r = it.row;
+      final href = r['chapter_href']?.toString() ?? '';
+      final title = (r['chapter_title']?.toString() ?? '').trim();
+      final anchor = title.isEmpty ? href : title;
 
-          final rawText = r['text']?.toString() ?? '';
-          final snippet = rawText.length <= 450
-              ? rawText
-              : '${rawText.substring(0, 450)}…';
+      final rawText = r['text']?.toString() ?? '';
+      final snippet =
+          rawText.length <= 450 ? rawText : '${rawText.substring(0, 450)}…';
 
-          // Best-effort: we currently only have href, not per-chunk CFI.
-          final jumpLink = 'anx://href?value=${Uri.encodeComponent(href)}';
+      // Best-effort: we currently only have href, not per-chunk CFI.
+      final jumpLink = PaperReaderReaderIntent(
+        bookId: bookId,
+        href: href,
+      ).toUri().toString();
 
-          return AiSemanticSearchEvidence(
-            text: snippet,
-            href: href,
-            anchor: anchor,
-            jumpLink: jumpLink,
-            score: it.score,
-          );
-        })
-        .toList(growable: false);
+      return AiSemanticSearchEvidence(
+        text: snippet,
+        href: href,
+        anchor: anchor,
+        jumpLink: jumpLink,
+        score: it.score,
+      );
+    }).toList(growable: false);
 
     return AiSemanticSearchResult(
       ok: true,

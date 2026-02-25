@@ -19,63 +19,30 @@ class StyledMarkdown extends StatelessWidget {
   final String data;
   final bool selectable;
 
-  String? _extractCfiFromAnxUri(Uri uri) {
+  ({int bookId, String? cfi, String? href})? _extractReaderTargetFromPaperUri(
+    Uri uri,
+  ) {
     // Supported:
-    // - anx://cfi?value=<cfi>
-    // - anx://cfi/<urlEncodedCfi>
-    // - anx://goto?cfi=<cfi>
-    final host = uri.host.toLowerCase();
+    // paperreader://reader/open?bookId=123&cfi=...
+    // paperreader://reader/open?bookId=123&href=...
+    if (uri.scheme.toLowerCase() != 'paperreader') return null;
+    if (uri.host.toLowerCase() != 'reader') return null;
 
-    if (host == 'cfi') {
-      final q = uri.queryParameters['value'] ?? uri.queryParameters['cfi'];
-      if (q != null && q.trim().isNotEmpty) return q.trim();
-
-      final path = uri.path;
-      if (path.isNotEmpty && path != '/') {
-        return Uri.decodeComponent(
-                path.startsWith('/') ? path.substring(1) : path)
-            .trim();
-      }
+    if (uri.pathSegments.isEmpty || uri.pathSegments.first != 'open') {
+      return null;
     }
 
-    if (host == 'goto') {
-      final cfi = uri.queryParameters['cfi'] ?? uri.queryParameters['value'];
-      if (cfi != null && cfi.trim().isNotEmpty) return cfi.trim();
-    }
+    final bookId = int.tryParse((uri.queryParameters['bookId'] ?? '').trim());
+    if (bookId == null || bookId <= 0) return null;
 
-    // Alternative: anx:///cfi/<encoded>
-    if (uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'cfi') {
-      final rest = uri.pathSegments.skip(1).join('/');
-      if (rest.trim().isNotEmpty) return Uri.decodeComponent(rest).trim();
-    }
+    final cfi = (uri.queryParameters['cfi'] ?? '').trim();
+    final href = (uri.queryParameters['href'] ?? '').trim();
 
-    return null;
-  }
-
-  String? _extractHrefFromAnxUri(Uri uri) {
-    // Supported:
-    // - anx://href?value=<href>
-    // - anx://href/<urlEncodedHref>
-    final host = uri.host.toLowerCase();
-
-    if (host == 'href') {
-      final q = uri.queryParameters['value'] ?? uri.queryParameters['href'];
-      if (q != null && q.trim().isNotEmpty) return q.trim();
-
-      final path = uri.path;
-      if (path.isNotEmpty && path != '/') {
-        return Uri.decodeComponent(
-                path.startsWith('/') ? path.substring(1) : path)
-            .trim();
-      }
-    }
-
-    if (uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'href') {
-      final rest = uri.pathSegments.skip(1).join('/');
-      if (rest.trim().isNotEmpty) return Uri.decodeComponent(rest).trim();
-    }
-
-    return null;
+    return (
+      bookId: bookId,
+      cfi: cfi.isEmpty ? null : cfi,
+      href: href.isEmpty ? null : href,
+    );
   }
 
   Future<void> _handleLinkTap(String href) async {
@@ -103,18 +70,25 @@ class StyledMarkdown extends StatelessWidget {
     }
 
     final uri = Uri.tryParse(trimmed);
-    if (uri != null && uri.scheme.toLowerCase() == 'anx') {
-      final cfi = _extractCfiFromAnxUri(uri);
-      if (cfi != null && player != null) {
-        player.goToCfi(cfi);
-        return;
+    final target = (uri == null) ? null : _extractReaderTargetFromPaperUri(uri);
+    if (target != null) {
+      // Same-book fast path.
+      if (player != null) {
+        final cfi = target.cfi;
+        final href = target.href;
+        if (cfi != null && cfi.trim().isNotEmpty) {
+          player.goToCfi(cfi);
+          return;
+        }
+        if (href != null && href.trim().isNotEmpty) {
+          player.goToHref(href);
+          return;
+        }
       }
 
-      final targetHref = _extractHrefFromAnxUri(uri);
-      if (targetHref != null && player != null) {
-        player.goToHref(targetHref);
-        return;
-      }
+      // Cross-book navigation: open via OS-level deep link (handled by app_links).
+      await launchUrlString(trimmed, mode: LaunchMode.externalApplication);
+      return;
     }
 
     // 2) Fallback to opening as external.

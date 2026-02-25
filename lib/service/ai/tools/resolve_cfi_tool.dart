@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:anx_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:riverpod/riverpod.dart';
 
 import 'base_tool.dart';
@@ -44,13 +46,18 @@ class ResolveCfiTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
 
     final resolved = await _repository.resolveCfi(_ref, cfi);
 
-    // Internal link format supported by StyledMarkdown.
-    final jumpLink = 'anx://cfi?value=${Uri.encodeComponent(cfi)}';
+    // Use Paper Reader deep link.
+    final reading = _ref.read(currentReadingProvider);
+    final bookId = reading.book?.id;
+
+    final jumpLink = (bookId == null)
+        ? null
+        : PaperReaderReaderIntent(bookId: bookId, cfi: cfi).toUri().toString();
 
     return {
       ...resolved,
-      'jumpLink': jumpLink,
-      'markdownJumpLink': '[Jump]($jumpLink)',
+      if (jumpLink != null) 'jumpLink': jumpLink,
+      if (jumpLink != null) 'markdownJumpLink': '[Jump]($jumpLink)',
     };
   }
 }

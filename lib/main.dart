@@ -1,8 +1,12 @@
 import 'dart:async';
 
+export 'package:anx_reader/app/app_globals.dart' show navigatorKey;
+
+import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/service/deeplink/paperreader_deeplink_handler.dart';
 import 'package:anx_reader/service/shortcuts/shortcuts_callback_service.dart';
 import 'package:app_links/app_links.dart';
 import 'package:anx_reader/dao/database.dart';
@@ -29,7 +33,6 @@ import 'package:heroine/heroine.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:window_manager/window_manager.dart';
 
-final navigatorKey = GlobalKey<NavigatorState>();
 late AudioHandler audioHandler;
 final heroineController = HeroineController();
 
@@ -103,12 +106,14 @@ class _MyAppState extends ConsumerState<MyApp>
     WidgetsBinding.instance.addObserver(this);
     windowManager.addListener(this);
 
-    // iOS Shortcuts callback deep links.
-    if (AnxPlatform.isIOS) {
+    // App deep links (iOS/Android):
+    // - paperreader://shortcuts/... (Shortcuts callbacks)
+    // - paperreader://reader/open?... (Reader navigation)
+    if (AnxPlatform.isIOS || AnxPlatform.isAndroid) {
       _appLinks = AppLinks();
 
       _linkSub = _appLinks!.uriLinkStream.listen(
-        (uri) => ShortcutsCallbackService.instance.handleIncomingUri(uri),
+        (uri) => PaperReaderDeepLinkHandler.handleIncomingUri(ref, uri),
         onError: (err) {
           // best-effort: ignore
         },
@@ -116,7 +121,7 @@ class _MyAppState extends ConsumerState<MyApp>
 
       _appLinks!.getInitialLink().then((uri) {
         if (uri != null) {
-          ShortcutsCallbackService.instance.handleIncomingUri(uri);
+          PaperReaderDeepLinkHandler.handleIncomingUri(ref, uri);
         }
       });
     }
