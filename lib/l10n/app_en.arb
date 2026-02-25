@@ -1095,6 +1095,8 @@
   },
   "settingsAiProviderCenterIncludeThoughtsTitle": "Include thought summary",
   "settingsAiProviderCenterIncludeThoughtsDesc": "When enabled, Gemini returns a thought summary that can be shown in the Thinking section. This may increase cost and latency.",
+  "settingsAiProviderCenterUsePreviousResponseIdTitle": "Use previous_response_id continuation (Responses)",
+  "settingsAiProviderCenterUsePreviousResponseIdDesc": "Keeps conversation state on the server for tool-call continuation. Disable this for some third-party Responses gateways that reject this parameter.",
   "aiThinkingTitle": "Thinking level",
   "aiThinkingOff": "Off",
   "aiThinkingAuto": "Auto",
@@ -1158,6 +1160,46 @@
 
   "settingsAiLibraryIndexTitle": "AI Index (Library)",
   "settingsAiLibraryIndexSubtitle": "Batch index books for library search and citations",
+  "aiLibraryIndexConfigTitle": "Indexing settings",
+  "aiLibraryIndexConfigDialogTitle": "Indexing settings",
+  "aiLibraryIndexConfigFollowSelectedTitle": "Follow chat provider",
+  "aiLibraryIndexConfigFollowSelectedDesc": "Use the current AI chat provider for indexing/embeddings.",
+  "aiLibraryIndexConfigProviderLabel": "Provider",
+  "aiLibraryIndexConfigModelLabel": "Embedding model",
+  "aiLibraryIndexConfigChunkSectionTitle": "Chunking",
+  "aiLibraryIndexConfigAdvancedSectionTitle": "Advanced",
+  "aiLibraryIndexConfigBatchLabel": "Embedding batch size",
+  "aiLibraryIndexConfigTimeoutLabel": "Embeddings timeout (sec)",
+  "aiLibraryIndexConfigChunkTargetLabel": "Target chars",
+  "aiLibraryIndexConfigChunkMaxLabel": "Max chars",
+  "aiLibraryIndexConfigChunkMinLabel": "Min chars",
+  "aiLibraryIndexConfigChunkOverlapLabel": "Overlap chars",
+  "aiLibraryIndexConfigMaxChapterLabel": "Max chapter chars",
+  "aiLibraryIndexConfigChunkHint": "Changing these settings will mark existing indexes as expired and require rebuilding.",
+  "aiLibraryIndexConfigSummaryFollow": "Provider: {provider} · Model: {model} (follow chat)",
+  "@aiLibraryIndexConfigSummaryFollow": {
+    "placeholders": {
+      "provider": {},
+      "model": {}
+    }
+  },
+  "aiLibraryIndexConfigSummaryExplicit": "Provider: {provider} · Model: {model} (fixed)",
+  "@aiLibraryIndexConfigSummaryExplicit": {
+    "placeholders": {
+      "provider": {},
+      "model": {}
+    }
+  },
+  "aiLibraryIndexConfigSummaryChunk": "Chunks: target {target}, max {max}, min {min}, overlap {overlap} · Chapter max {chapterMax}",
+  "@aiLibraryIndexConfigSummaryChunk": {
+    "placeholders": {
+      "target": {},
+      "max": {},
+      "min": {},
+      "overlap": {},
+      "chapterMax": {}
+    }
+  },
   "aiLibraryIndexFilterUnindexed": "Unindexed",
   "aiLibraryIndexFilterExpired": "Expired",
   "aiLibraryIndexFilterIndexed": "Indexed",

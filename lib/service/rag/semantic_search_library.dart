@@ -14,6 +14,7 @@ typedef AiLibraryBookTitleResolver = Future<Map<int, String>> Function(
 typedef AiEmbedQueryFn = Future<List<double>> Function(
   String query, {
   required String model,
+  String? providerId,
 });
 
 class AiSemanticSearchLibraryEvidence {
@@ -135,6 +136,7 @@ SELECT
   c.embedding_json,
   c.embedding_norm,
   b.embedding_model,
+  b.provider_id,
   bm25(ai_chunks_fts) AS bm25,
   snippet(ai_chunks_fts, 0, '', '', '…', 18) AS snippet
 FROM ai_chunks_fts
@@ -189,7 +191,8 @@ SELECT
   c.text,
   c.embedding_json,
   c.embedding_norm,
-  b.embedding_model
+  b.embedding_model,
+  b.provider_id
 FROM ai_chunks c
 JOIN ai_book_index b ON b.book_id = c.book_id
 WHERE ($indexedFilter)
@@ -228,19 +231,29 @@ LIMIT ?
       }
     }
 
-    // Cache query embeddings per embedding model.
-    final qVecByModel = <String, ({List<double> v, double norm})>{};
+    // Cache query embeddings per (provider, model).
+    final qVecByKey = <String, ({List<double> v, double norm})>{};
 
-    Future<({List<double> v, double norm})> getQueryVec(String model) async {
-      final cached = qVecByModel[model];
+    Future<({List<double> v, double norm})> getQueryVec(
+      String model, {
+      String? providerId,
+    }) async {
+      final key = '${providerId ?? ''}|$model';
+      final cached = qVecByKey[key];
       if (cached != null) return cached;
+
       final fn = _embedQuery;
       final qVec = fn != null
-          ? await fn(trimmed, model: model)
-          : await AiEmbeddingsService.embedQuery(trimmed, model: model);
+          ? await fn(trimmed, model: model, providerId: providerId)
+          : await AiEmbeddingsService.embedQuery(
+              trimmed,
+              model: model,
+              providerId: providerId,
+            );
+
       final qNorm = VectorMath.l2Norm(qVec);
       final value = (v: qVec, norm: qNorm);
-      qVecByModel[model] = value;
+      qVecByKey[key] = value;
       return value;
     }
 
@@ -259,7 +272,12 @@ LIMIT ?
               ? r['embedding_model']!.toString().trim()
               : AiEmbeddingsService.defaultEmbeddingModel;
 
-      final q = await getQueryVec(model);
+      final providerId = (r['provider_id']?.toString() ?? '').trim();
+
+      final q = await getQueryVec(
+        model,
+        providerId: providerId.isEmpty ? null : providerId,
+      );
       final vNorm = (r['embedding_norm'] as num?)?.toDouble();
       final sim = VectorMath.cosineSimilarity(
         q.v,

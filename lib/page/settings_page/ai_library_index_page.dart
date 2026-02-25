@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
 import 'package:anx_reader/service/rag/ai_book_indexer.dart';
 import 'package:anx_reader/service/rag/ai_embeddings_service.dart';
 import 'package:anx_reader/service/rag/ai_index_database.dart';
+import 'package:anx_reader/service/rag/ai_text_chunker.dart';
 import 'package:anx_reader/service/rag/library/ai_library_index_job.dart';
 import 'package:anx_reader/service/rag/library/ai_library_index_queue_service.dart';
 import 'package:flutter/material.dart';
@@ -142,6 +144,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
+            _buildConfigTile(context),
             _buildFilterBar(context),
             const Divider(height: 1),
             _buildQueueSection(context, queue, queueSvc),
@@ -203,6 +206,352 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     setState(() {
       _selectedBookIds.clear();
     });
+  }
+
+  Widget _buildConfigTile(BuildContext context) {
+    final l10n = L10n.of(context);
+
+    final follow = Prefs().aiLibraryIndexFollowSelectedProvider;
+    final providerId = Prefs().aiLibraryIndexProviderIdEffective;
+    final providerName =
+        Prefs().getAiProviderMeta(providerId)?.name ?? providerId;
+    final embeddingModel = Prefs().aiLibraryIndexEmbeddingModelEffective;
+
+    final chunkTargetChars = Prefs().aiLibraryIndexChunkTargetChars;
+    final chunkMaxChars = Prefs().aiLibraryIndexChunkMaxChars;
+    final chunkMinChars = Prefs().aiLibraryIndexChunkMinChars;
+    final chunkOverlapChars = Prefs().aiLibraryIndexChunkOverlapChars;
+    final maxChapterChars = Prefs().aiLibraryIndexMaxChapterCharacters;
+
+    final line1 = follow
+        ? l10n.aiLibraryIndexConfigSummaryFollow(providerName, embeddingModel)
+        : l10n.aiLibraryIndexConfigSummaryExplicit(
+            providerName, embeddingModel);
+
+    final line2 = l10n.aiLibraryIndexConfigSummaryChunk(
+      chunkTargetChars,
+      chunkMaxChars,
+      chunkMinChars,
+      chunkOverlapChars,
+      maxChapterChars,
+    );
+
+    return ListTile(
+      leading: const Icon(Icons.tune),
+      title: Text(l10n.aiLibraryIndexConfigTitle),
+      subtitle: Text('$line1\n$line2'),
+      isThreeLine: true,
+      onTap: () => _showIndexConfigDialog(context),
+    );
+  }
+
+  Future<void> _showIndexConfigDialog(BuildContext context) async {
+    final l10n = L10n.of(context);
+
+    var follow = Prefs().aiLibraryIndexFollowSelectedProvider;
+    var providerId = Prefs().aiLibraryIndexProviderId;
+
+    final modelController = TextEditingController(
+      text: Prefs().aiLibraryIndexEmbeddingModel.trim(),
+    );
+
+    final targetController = TextEditingController(
+      text: Prefs().aiLibraryIndexChunkTargetChars.toString(),
+    );
+    final maxController = TextEditingController(
+      text: Prefs().aiLibraryIndexChunkMaxChars.toString(),
+    );
+    final minController = TextEditingController(
+      text: Prefs().aiLibraryIndexChunkMinChars.toString(),
+    );
+    final overlapController = TextEditingController(
+      text: Prefs().aiLibraryIndexChunkOverlapChars.toString(),
+    );
+    final maxChapterController = TextEditingController(
+      text: Prefs().aiLibraryIndexMaxChapterCharacters.toString(),
+    );
+
+    final batchSizeController = TextEditingController(
+      text: Prefs().aiLibraryIndexEmbeddingBatchSize.toString(),
+    );
+    final timeoutController = TextEditingController(
+      text: Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds.toString(),
+    );
+
+    List<String> eligibleProviderIds() {
+      final providers = Prefs().aiProvidersV1;
+      return providers
+          .where(
+            (p) =>
+                p.enabled &&
+                (p.type == AiProviderType.openaiCompatible ||
+                    p.type == AiProviderType.openaiResponses),
+          )
+          .map((p) => p.id)
+          .toList(growable: false);
+    }
+
+    int parseIntOr(String raw, int fallback) {
+      final v = int.tryParse(raw.trim());
+      return v ?? fallback;
+    }
+
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setState) {
+              final eligible = eligibleProviderIds();
+
+              // Keep providerId valid.
+              if (!eligible.contains(providerId)) {
+                providerId = eligible.isEmpty ? '' : eligible.first;
+              }
+
+              return AlertDialog(
+                title: Text(l10n.aiLibraryIndexConfigDialogTitle),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title:
+                            Text(l10n.aiLibraryIndexConfigFollowSelectedTitle),
+                        subtitle:
+                            Text(l10n.aiLibraryIndexConfigFollowSelectedDesc),
+                        value: follow,
+                        onChanged: (v) {
+                          setState(() {
+                            follow = v;
+                          });
+                        },
+                      ),
+                      if (!follow) ...[
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: providerId.trim().isEmpty ? null : providerId,
+                          decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
+                            labelText: l10n.aiLibraryIndexConfigProviderLabel,
+                          ),
+                          items: eligible
+                              .map(
+                                (id) => DropdownMenuItem(
+                                  value: id,
+                                  child: Text(
+                                    Prefs().getAiProviderMeta(id)?.name ?? id,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(growable: false),
+                          onChanged: (v) {
+                            setState(() {
+                              providerId = v ?? '';
+                            });
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: modelController,
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          labelText: l10n.aiLibraryIndexConfigModelLabel,
+                          hintText: 'text-embedding-3-large',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        title: Text(l10n.aiLibraryIndexConfigChunkSectionTitle),
+                        children: [
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: targetController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              labelText:
+                                  l10n.aiLibraryIndexConfigChunkTargetLabel,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: maxController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              labelText: l10n.aiLibraryIndexConfigChunkMaxLabel,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: minController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              labelText: l10n.aiLibraryIndexConfigChunkMinLabel,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: overlapController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              labelText:
+                                  l10n.aiLibraryIndexConfigChunkOverlapLabel,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: maxChapterController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              labelText:
+                                  l10n.aiLibraryIndexConfigMaxChapterLabel,
+                            ),
+                          ),
+                        ],
+                      ),
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        title:
+                            Text(l10n.aiLibraryIndexConfigAdvancedSectionTitle),
+                        children: [
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: batchSizeController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              labelText: l10n.aiLibraryIndexConfigBatchLabel,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: timeoutController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              labelText: l10n.aiLibraryIndexConfigTimeoutLabel,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.aiLibraryIndexConfigChunkHint,
+                            style: Theme.of(ctx).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        follow = true;
+                        providerId = '';
+                        modelController.text = '';
+                        targetController.text =
+                            AiTextChunker.defaultTargetChars.toString();
+                        maxController.text =
+                            AiTextChunker.defaultMaxChars.toString();
+                        minController.text =
+                            AiTextChunker.defaultMinChars.toString();
+                        overlapController.text =
+                            AiTextChunker.defaultOverlapChars.toString();
+                        maxChapterController.text = AiBookIndexer
+                            .defaultMaxChapterCharacters
+                            .toString();
+                        batchSizeController.text =
+                            AiBookIndexer.defaultEmbeddingBatchSize.toString();
+                        timeoutController.text = '60';
+                      });
+                    },
+                    child: Text(l10n.commonReset),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(l10n.commonCancel),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      final target = parseIntOr(
+                        targetController.text,
+                        Prefs().aiLibraryIndexChunkTargetChars,
+                      );
+                      final maxChars = parseIntOr(
+                        maxController.text,
+                        Prefs().aiLibraryIndexChunkMaxChars,
+                      );
+                      final minChars = parseIntOr(
+                        minController.text,
+                        Prefs().aiLibraryIndexChunkMinChars,
+                      );
+                      final overlap = parseIntOr(
+                        overlapController.text,
+                        Prefs().aiLibraryIndexChunkOverlapChars,
+                      );
+                      final maxChapter = parseIntOr(
+                        maxChapterController.text,
+                        Prefs().aiLibraryIndexMaxChapterCharacters,
+                      );
+
+                      final batch = parseIntOr(
+                        batchSizeController.text,
+                        Prefs().aiLibraryIndexEmbeddingBatchSize,
+                      );
+
+                      final timeoutSec = parseIntOr(
+                        timeoutController.text,
+                        Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds,
+                      );
+
+                      Prefs().aiLibraryIndexFollowSelectedProvider = follow;
+                      Prefs().aiLibraryIndexProviderId = providerId;
+                      Prefs().aiLibraryIndexEmbeddingModel =
+                          modelController.text;
+                      Prefs().aiLibraryIndexChunkTargetChars = target;
+                      Prefs().aiLibraryIndexChunkMaxChars = maxChars;
+                      Prefs().aiLibraryIndexChunkMinChars = minChars;
+                      Prefs().aiLibraryIndexChunkOverlapChars = overlap;
+                      Prefs().aiLibraryIndexMaxChapterCharacters = maxChapter;
+                      Prefs().aiLibraryIndexEmbeddingBatchSize = batch;
+                      Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds =
+                          timeoutSec;
+
+                      Navigator.of(ctx).pop();
+
+                      if (!mounted) return;
+                      this.setState(() {
+                        _booksFuture =
+                            _loadBooks(filter: _filter, token: ++_loadToken);
+                      });
+                    },
+                    child: Text(l10n.commonSave),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      modelController.dispose();
+      targetController.dispose();
+      maxController.dispose();
+      minController.dispose();
+      overlapController.dispose();
+      maxChapterController.dispose();
+      batchSizeController.dispose();
+      timeoutController.dispose();
+    }
   }
 
   Widget _buildFilterBar(BuildContext context) {
@@ -525,8 +874,13 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     final ids = results.map((e) => e.book.id).toList(growable: false);
     final idx = await aiDb.getBookIndexInfos(ids);
 
-    final providerId = Prefs().selectedAiService;
-    final embeddingModel = AiEmbeddingsService.defaultEmbeddingModel;
+    final providerId = Prefs().aiLibraryIndexProviderIdEffective;
+    final embeddingModel = Prefs().aiLibraryIndexEmbeddingModelEffective;
+    final chunkTargetChars = Prefs().aiLibraryIndexChunkTargetChars;
+    final chunkMaxChars = Prefs().aiLibraryIndexChunkMaxChars;
+    final chunkMinChars = Prefs().aiLibraryIndexChunkMinChars;
+    final chunkOverlapChars = Prefs().aiLibraryIndexChunkOverlapChars;
+    final maxChapterCharacters = Prefs().aiLibraryIndexMaxChapterCharacters;
     final indexVersion = AiBookIndexer.indexAlgorithmVersion;
 
     _BookIndexStatus classify(BookSearchResult r) {
@@ -543,10 +897,26 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       final indexedModel = (info.embeddingModel ?? '').trim();
       final indexedVersion = info.indexVersion ?? 0;
 
+      final indexedChunkTarget =
+          info.chunkTargetChars ?? AiTextChunker.defaultTargetChars;
+      final indexedChunkMax =
+          info.chunkMaxChars ?? AiTextChunker.defaultMaxChars;
+      final indexedChunkMin =
+          info.chunkMinChars ?? AiTextChunker.defaultMinChars;
+      final indexedChunkOverlap =
+          info.chunkOverlapChars ?? AiTextChunker.defaultOverlapChars;
+      final indexedMaxChapter = info.maxChapterCharacters ??
+          AiBookIndexer.defaultMaxChapterCharacters;
+
       final expired = indexedMd5 != bookMd5 ||
           indexedProvider != providerId ||
           indexedModel != embeddingModel ||
-          indexedVersion != indexVersion;
+          indexedVersion != indexVersion ||
+          indexedChunkTarget != chunkTargetChars ||
+          indexedChunkMax != chunkMaxChars ||
+          indexedChunkMin != chunkMinChars ||
+          indexedChunkOverlap != chunkOverlapChars ||
+          indexedMaxChapter != maxChapterCharacters;
 
       return expired ? _BookIndexStatus.expired : _BookIndexStatus.indexed;
     }

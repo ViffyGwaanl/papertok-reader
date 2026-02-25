@@ -928,6 +928,226 @@ class Prefs extends ChangeNotifier {
 {{contextText}}''';
   }
 
+  // --- AI Indexing (library + current book) (provider/model/chunk params) ---
+
+  static const String _aiLibraryIndexFollowSelectedProviderKey =
+      'aiLibraryIndexFollowSelectedProviderV1';
+  static const String _aiLibraryIndexProviderIdKey =
+      'aiLibraryIndexProviderIdV1';
+  static const String _aiLibraryIndexEmbeddingModelKey =
+      'aiLibraryIndexEmbeddingModelV1';
+
+  static const String _aiLibraryIndexChunkTargetCharsKey =
+      'aiLibraryIndexChunkTargetCharsV1';
+  static const String _aiLibraryIndexChunkMaxCharsKey =
+      'aiLibraryIndexChunkMaxCharsV1';
+  static const String _aiLibraryIndexChunkMinCharsKey =
+      'aiLibraryIndexChunkMinCharsV1';
+  static const String _aiLibraryIndexChunkOverlapCharsKey =
+      'aiLibraryIndexChunkOverlapCharsV1';
+
+  static const String _aiLibraryIndexMaxChapterCharsKey =
+      'aiLibraryIndexMaxChapterCharsV1';
+
+  static const String _aiLibraryIndexEmbeddingBatchSizeKey =
+      'aiLibraryIndexEmbeddingBatchSizeV1';
+  static const String _aiLibraryIndexEmbeddingsTimeoutSecKey =
+      'aiLibraryIndexEmbeddingsTimeoutSecV1';
+
+  /// Whether indexing should follow the current chat provider.
+  ///
+  /// When true, [aiLibraryIndexProviderId] is ignored.
+  bool get aiLibraryIndexFollowSelectedProvider {
+    return prefs.getBool(_aiLibraryIndexFollowSelectedProviderKey) ?? true;
+  }
+
+  set aiLibraryIndexFollowSelectedProvider(bool value) {
+    if (aiLibraryIndexFollowSelectedProvider != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_aiLibraryIndexFollowSelectedProviderKey, value);
+    notifyListeners();
+  }
+
+  /// Explicit provider id for AI indexing/embeddings.
+  ///
+  /// Only used when [aiLibraryIndexFollowSelectedProvider] is false.
+  String get aiLibraryIndexProviderId {
+    return prefs.getString(_aiLibraryIndexProviderIdKey) ?? '';
+  }
+
+  set aiLibraryIndexProviderId(String id) {
+    final v = id.trim();
+    if (aiLibraryIndexProviderId.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiLibraryIndexProviderIdKey, v);
+    notifyListeners();
+  }
+
+  /// Effective provider id for AI indexing/embeddings.
+  ///
+  /// Rules:
+  /// - If followSelectedProvider=true: prefer selectedAiService (if enabled and OpenAI-like)
+  /// - Else use explicit providerId (if enabled and OpenAI-like)
+  /// - Else fallback to the first enabled OpenAI-like provider.
+  String get aiLibraryIndexProviderIdEffective {
+    String? candidate;
+    if (aiLibraryIndexFollowSelectedProvider) {
+      candidate = selectedAiService.trim();
+    } else {
+      candidate = aiLibraryIndexProviderId.trim();
+    }
+
+    bool isOpenAiLike(String id) {
+      final meta = getAiProviderMeta(id);
+      if (meta == null || !meta.enabled) return false;
+      return meta.type == AiProviderType.openaiCompatible ||
+          meta.type == AiProviderType.openaiResponses;
+    }
+
+    if (candidate != null && candidate.isNotEmpty && isOpenAiLike(candidate)) {
+      return candidate;
+    }
+
+    // Fallback: try selected service.
+    final selected = selectedAiService.trim();
+    if (selected.isNotEmpty && isOpenAiLike(selected)) return selected;
+
+    // Otherwise pick the first enabled OpenAI-like provider.
+    for (final p in aiProvidersV1) {
+      if (p.enabled &&
+          (p.type == AiProviderType.openaiCompatible ||
+              p.type == AiProviderType.openaiResponses)) {
+        return p.id;
+      }
+    }
+
+    return selected.isNotEmpty ? selected : (candidate ?? '');
+  }
+
+  /// Embedding model id used for indexing/search.
+  ///
+  /// Empty means default embedding model.
+  String get aiLibraryIndexEmbeddingModel {
+    return prefs.getString(_aiLibraryIndexEmbeddingModelKey) ?? '';
+  }
+
+  set aiLibraryIndexEmbeddingModel(String model) {
+    final v = model.trim();
+    if (aiLibraryIndexEmbeddingModel.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiLibraryIndexEmbeddingModelKey, v);
+    notifyListeners();
+  }
+
+  String get aiLibraryIndexEmbeddingModelEffective {
+    final m = aiLibraryIndexEmbeddingModel.trim();
+    if (m.isNotEmpty) return m;
+    // Keep in sync with AiEmbeddingsService.defaultEmbeddingModel.
+    return 'text-embedding-3-large';
+  }
+
+  int get aiLibraryIndexChunkTargetChars {
+    // Keep in sync with AiTextChunker.defaultTargetChars.
+    return prefs.getInt(_aiLibraryIndexChunkTargetCharsKey) ?? 900;
+  }
+
+  set aiLibraryIndexChunkTargetChars(int value) {
+    if (aiLibraryIndexChunkTargetChars != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexChunkTargetCharsKey, value);
+    notifyListeners();
+  }
+
+  int get aiLibraryIndexChunkMaxChars {
+    // Keep in sync with AiTextChunker.defaultMaxChars.
+    return prefs.getInt(_aiLibraryIndexChunkMaxCharsKey) ?? 1200;
+  }
+
+  set aiLibraryIndexChunkMaxChars(int value) {
+    if (aiLibraryIndexChunkMaxChars != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexChunkMaxCharsKey, value);
+    notifyListeners();
+  }
+
+  int get aiLibraryIndexChunkMinChars {
+    // Keep in sync with AiTextChunker.defaultMinChars.
+    return prefs.getInt(_aiLibraryIndexChunkMinCharsKey) ?? 200;
+  }
+
+  set aiLibraryIndexChunkMinChars(int value) {
+    if (aiLibraryIndexChunkMinChars != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexChunkMinCharsKey, value);
+    notifyListeners();
+  }
+
+  int get aiLibraryIndexChunkOverlapChars {
+    // Keep in sync with AiTextChunker.defaultOverlapChars.
+    return prefs.getInt(_aiLibraryIndexChunkOverlapCharsKey) ?? 150;
+  }
+
+  set aiLibraryIndexChunkOverlapChars(int value) {
+    if (aiLibraryIndexChunkOverlapChars != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexChunkOverlapCharsKey, value);
+    notifyListeners();
+  }
+
+  /// Max chapter characters to fetch into the indexer.
+  ///
+  /// Default matches AiBookIndexer._maxChapterCharacters.
+  int get aiLibraryIndexMaxChapterCharacters {
+    return prefs.getInt(_aiLibraryIndexMaxChapterCharsKey) ?? 80000;
+  }
+
+  set aiLibraryIndexMaxChapterCharacters(int value) {
+    if (aiLibraryIndexMaxChapterCharacters != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexMaxChapterCharsKey, value);
+    notifyListeners();
+  }
+
+  /// Embedding request batch size during indexing.
+  ///
+  /// Default matches AiBookIndexer._batchSize (historical behavior).
+  int get aiLibraryIndexEmbeddingBatchSize {
+    final v = prefs.getInt(_aiLibraryIndexEmbeddingBatchSizeKey) ?? 16;
+    return v.clamp(1, 64);
+  }
+
+  set aiLibraryIndexEmbeddingBatchSize(int value) {
+    final v = value.clamp(1, 64);
+    if (aiLibraryIndexEmbeddingBatchSize != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexEmbeddingBatchSizeKey, v);
+    notifyListeners();
+  }
+
+  /// Timeout for a single embeddings HTTP request.
+  int get aiLibraryIndexEmbeddingsTimeoutSeconds {
+    final v = prefs.getInt(_aiLibraryIndexEmbeddingsTimeoutSecKey) ?? 60;
+    return v.clamp(10, 300);
+  }
+
+  set aiLibraryIndexEmbeddingsTimeoutSeconds(int value) {
+    final v = value.clamp(10, 300);
+    if (aiLibraryIndexEmbeddingsTimeoutSeconds != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexEmbeddingsTimeoutSecKey, v);
+    notifyListeners();
+  }
+
   // set convertChineseMode(ConvertChineseMode mode) {
   //   prefs.setString('convertChineseMode', mode.name);
   //   notifyListeners();

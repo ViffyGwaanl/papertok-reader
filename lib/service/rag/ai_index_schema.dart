@@ -2,7 +2,7 @@ import 'package:anx_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
 
 // NOTE: This DB is intended to be rebuildable. Keep migrations forward-only.
-const int kAiIndexDbVersion = 3;
+const int kAiIndexDbVersion = 4;
 
 class AiIndexMigrations {
   const AiIndexMigrations._();
@@ -28,6 +28,8 @@ class AiIndexMigrations {
           await _v2(db);
         case 3:
           await _v3(db);
+        case 4:
+          await _v4(db);
       }
     }
   }
@@ -173,9 +175,36 @@ END;
 ''');
 
       // Backfill existing rows.
-      await db.execute("INSERT INTO ai_chunks_fts(ai_chunks_fts) VALUES('rebuild')");
+      await db.execute(
+          "INSERT INTO ai_chunks_fts(ai_chunks_fts) VALUES('rebuild')");
     } catch (e) {
       AnxLog.warning('AiIndexDB: FTS5 not available, skip FTS migration: $e');
     }
+  }
+
+  static Future<void> _v4(Database db) async {
+    // Persist indexing parameters that affect chunk layout. This is needed to
+    // determine whether an existing book index is "expired" after the user
+    // changes indexing settings.
+
+    Future<void> addColumn(String ddl) async {
+      try {
+        await db.execute(ddl);
+      } catch (_) {
+        // Ignore duplicate column errors.
+      }
+    }
+
+    await addColumn(
+        'ALTER TABLE ai_book_index ADD COLUMN chunk_target_chars INTEGER');
+    await addColumn(
+        'ALTER TABLE ai_book_index ADD COLUMN chunk_max_chars INTEGER');
+    await addColumn(
+        'ALTER TABLE ai_book_index ADD COLUMN chunk_min_chars INTEGER');
+    await addColumn(
+        'ALTER TABLE ai_book_index ADD COLUMN chunk_overlap_chars INTEGER');
+    await addColumn(
+      'ALTER TABLE ai_book_index ADD COLUMN max_chapter_characters INTEGER',
+    );
   }
 }

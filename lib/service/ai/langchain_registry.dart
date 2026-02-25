@@ -81,6 +81,7 @@ class LangchainAiRegistry {
       apiKey: config.apiKey,
       baseUrl: config.baseUrl ?? 'https://api.openai.com/v1',
       headers: config.headers.isEmpty ? null : config.headers,
+      usePreviousResponseId: config.responsesUsePreviousResponseId ?? true,
       defaultOptions: patchedOptions,
     );
   }

@@ -53,8 +53,9 @@ void main() {
         (Iterable<int> ids) async => {for (final id in ids) id: 'Book $id'};
 
     // Stub embedding to avoid network calls.
-    final embedQuery =
-        (String q, {required String model}) async => <double>[1, 0];
+    final embedQuery = (String q,
+            {required String model, String? providerId}) async =>
+        <double>[1, 0];
 
     final service = SemanticSearchLibrary(
       database: aiDb,

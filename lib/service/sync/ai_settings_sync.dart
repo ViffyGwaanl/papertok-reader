@@ -72,6 +72,23 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'aiImageAnalysisPromptV1': prefs.aiImageAnalysisPrompt,
   };
 
+  // AI Indexing (library + current book) (non-secret, syncable)
+  final libraryIndex = <String, dynamic>{
+    'aiLibraryIndexFollowSelectedProviderV1':
+        prefs.aiLibraryIndexFollowSelectedProvider,
+    'aiLibraryIndexProviderIdV1': prefs.aiLibraryIndexProviderId,
+    'aiLibraryIndexEmbeddingModelV1': prefs.aiLibraryIndexEmbeddingModel,
+    'aiLibraryIndexChunkTargetCharsV1': prefs.aiLibraryIndexChunkTargetChars,
+    'aiLibraryIndexChunkMaxCharsV1': prefs.aiLibraryIndexChunkMaxChars,
+    'aiLibraryIndexChunkMinCharsV1': prefs.aiLibraryIndexChunkMinChars,
+    'aiLibraryIndexChunkOverlapCharsV1': prefs.aiLibraryIndexChunkOverlapChars,
+    'aiLibraryIndexMaxChapterCharsV1': prefs.aiLibraryIndexMaxChapterCharacters,
+    'aiLibraryIndexEmbeddingBatchSizeV1':
+        prefs.aiLibraryIndexEmbeddingBatchSize,
+    'aiLibraryIndexEmbeddingsTimeoutSecV1':
+        prefs.aiLibraryIndexEmbeddingsTimeoutSeconds,
+  };
+
   final tools = <String, dynamic>{
     'enabledIds': prefs.enabledAiToolIds,
     'approvalPolicy': prefs.aiToolApprovalPolicy.code,
@@ -102,6 +119,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'ui': ui,
     'translate': translate,
     'imageAnalysis': imageAnalysis,
+    'libraryIndex': libraryIndex,
   };
 }
 
@@ -336,6 +354,72 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
       final prompt = imageAnalysis['aiImageAnalysisPromptV1']?.toString();
       if (prompt != null) {
         prefs.aiImageAnalysisPrompt = prompt;
+      }
+    }
+
+    final libraryIndex = json['libraryIndex'];
+    if (libraryIndex is Map) {
+      final follow = libraryIndex['aiLibraryIndexFollowSelectedProviderV1'];
+      if (follow is bool) {
+        prefs.aiLibraryIndexFollowSelectedProvider = follow;
+      } else if (follow is String) {
+        final v = follow.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.aiLibraryIndexFollowSelectedProvider = v == 'true';
+        }
+      }
+
+      final providerId = libraryIndex['aiLibraryIndexProviderIdV1']?.toString();
+      if (providerId != null) {
+        prefs.aiLibraryIndexProviderId = providerId;
+      }
+
+      final model = libraryIndex['aiLibraryIndexEmbeddingModelV1']?.toString();
+      if (model != null) {
+        prefs.aiLibraryIndexEmbeddingModel = model;
+      }
+
+      final target =
+          (libraryIndex['aiLibraryIndexChunkTargetCharsV1'] as num?)?.toInt();
+      if (target != null) {
+        prefs.aiLibraryIndexChunkTargetChars = target;
+      }
+
+      final maxChars =
+          (libraryIndex['aiLibraryIndexChunkMaxCharsV1'] as num?)?.toInt();
+      if (maxChars != null) {
+        prefs.aiLibraryIndexChunkMaxChars = maxChars;
+      }
+
+      final minChars =
+          (libraryIndex['aiLibraryIndexChunkMinCharsV1'] as num?)?.toInt();
+      if (minChars != null) {
+        prefs.aiLibraryIndexChunkMinChars = minChars;
+      }
+
+      final overlap =
+          (libraryIndex['aiLibraryIndexChunkOverlapCharsV1'] as num?)?.toInt();
+      if (overlap != null) {
+        prefs.aiLibraryIndexChunkOverlapChars = overlap;
+      }
+
+      final maxChapter =
+          (libraryIndex['aiLibraryIndexMaxChapterCharsV1'] as num?)?.toInt();
+      if (maxChapter != null) {
+        prefs.aiLibraryIndexMaxChapterCharacters = maxChapter;
+      }
+
+      final batch =
+          (libraryIndex['aiLibraryIndexEmbeddingBatchSizeV1'] as num?)?.toInt();
+      if (batch != null) {
+        prefs.aiLibraryIndexEmbeddingBatchSize = batch;
+      }
+
+      final timeout =
+          (libraryIndex['aiLibraryIndexEmbeddingsTimeoutSecV1'] as num?)
+              ?.toInt();
+      if (timeout != null) {
+        prefs.aiLibraryIndexEmbeddingsTimeoutSeconds = timeout;
       }
     }
   } catch (e) {

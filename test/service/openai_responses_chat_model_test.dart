@@ -286,4 +286,85 @@ void main() {
     expect(input, hasLength(1));
     expect((input.first as Map)['type'], 'function_call_output');
   });
+
+  test('does not send previous_response_id when disabled (compat mode)',
+      () async {
+    final first = StringBuffer()
+      ..write(_sseEvent('response.output_item.done', {
+        'output_index': 0,
+        'item': {
+          'type': 'function_call',
+          'id': 'fc_1',
+          'call_id': 'call_1',
+          'name': 'get_weather',
+          'arguments': '{"location":"Paris"}'
+        }
+      }))
+      ..write(_sseEvent('response.completed', {
+        'response': {
+          'id': 'resp_1',
+          'reasoning': {'summary': null}
+        }
+      }));
+
+    final second = StringBuffer()
+      ..write(_sseEvent('response.output_text.delta', {'delta': 'OK'}))
+      ..write(_sseEvent('response.completed', {
+        'response': {
+          'id': 'resp_2',
+          'reasoning': {'summary': null}
+        }
+      }));
+
+    final client = _QueuedStreamClient([first.toString(), second.toString()]);
+
+    final model = ChatOpenAIResponses(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'k',
+      usePreviousResponseId: false,
+      defaultOptions: const ChatOpenAIOptions(model: 'gpt-test'),
+      client: client,
+    );
+
+    // First call: captures server response id.
+    await model
+        .stream(
+          PromptValue.chat([
+            ChatMessage.humanText('hello'),
+          ]),
+        )
+        .toList();
+
+    // Second call: should NOT submit previous_response_id.
+    final toolCall = AIChatMessageToolCall(
+      id: 'call_1',
+      name: 'get_weather',
+      argumentsRaw: '{"location":"Paris"}',
+      arguments: const {},
+    );
+
+    await model
+        .stream(
+          PromptValue.chat([
+            AIChatMessage(content: '', toolCalls: [toolCall]),
+            ChatMessage.tool(toolCallId: 'call_1', content: '{"temp":25}'),
+          ]),
+        )
+        .toList();
+
+    expect(client.sentJsonBodies, hasLength(2));
+    final secondBody = client.sentJsonBodies[1];
+
+    expect(secondBody.containsKey('previous_response_id'), isFalse);
+
+    final input = (secondBody['input'] as List).cast<dynamic>();
+    final types = input
+        .whereType<Map>()
+        .map((e) => e['type']?.toString())
+        .whereType<String>()
+        .toList(growable: false);
+
+    expect(types, contains('function_call'));
+    expect(types, contains('function_call_output'));
+  });
 }

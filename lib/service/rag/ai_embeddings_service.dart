@@ -21,11 +21,13 @@ class AiEmbeddingsService {
     String text, {
     String model = defaultEmbeddingModel,
     String? providerId,
+    int timeoutSeconds = 60,
   }) async {
     final list = await embedDocuments(
       [text],
       model: model,
       providerId: providerId,
+      timeoutSeconds: timeoutSeconds,
     );
     return list.first;
   }
@@ -34,6 +36,7 @@ class AiEmbeddingsService {
     List<String> texts, {
     String model = defaultEmbeddingModel,
     String? providerId,
+    int timeoutSeconds = 60,
   }) async {
     if (texts.isEmpty) return const [];
 
@@ -121,7 +124,8 @@ class AiEmbeddingsService {
 
     final candidates = eligibleEntries.isNotEmpty
         ? eligibleEntries
-        : (allEnabledEntries.toList(growable: true)..sort(
+        : (allEnabledEntries.toList(growable: true)
+          ..sort(
             (a, b) => (a.disabledUntil ?? 0).compareTo(b.disabledUntil ?? 0),
           ));
 
@@ -200,7 +204,7 @@ class AiEmbeddingsService {
               data: jsonEncode({'model': model, 'input': texts}),
               options: Options(headers: headers),
             )
-            .timeout(const Duration(seconds: 60));
+            .timeout(Duration(seconds: timeoutSeconds.clamp(5, 300)));
 
         final data = res.data;
         final decoded = data is String ? jsonDecode(data) : data;

@@ -1095,6 +1095,8 @@
   },
   "settingsAiProviderCenterIncludeThoughtsTitle": "包含思考摘要",
   "settingsAiProviderCenterIncludeThoughtsDesc": "开启后，Gemini 会返回可用于“思考”区域展示的思考摘要，可能会增加费用与首字延迟。",
+  "settingsAiProviderCenterUsePreviousResponseIdTitle": "使用 previous_response_id 续写（Responses）",
+  "settingsAiProviderCenterUsePreviousResponseIdDesc": "用于工具调用后的续写（conversation state）。部分第三方 Responses 网关不支持该参数时请关闭。",
   "aiThinkingTitle": "思考强度",
   "aiThinkingOff": "关闭",
   "aiThinkingAuto": "自动",
@@ -1158,6 +1160,46 @@
 
   "settingsAiLibraryIndexTitle": "AI 索引（书库）",
   "settingsAiLibraryIndexSubtitle": "批量为书库建立索引，用于全库检索与引用",
+  "aiLibraryIndexConfigTitle": "索引参数",
+  "aiLibraryIndexConfigDialogTitle": "AI 索引参数",
+  "aiLibraryIndexConfigFollowSelectedTitle": "跟随聊天供应商",
+  "aiLibraryIndexConfigFollowSelectedDesc": "索引/Embedding 使用当前聊天选择的供应商。",
+  "aiLibraryIndexConfigProviderLabel": "供应商",
+  "aiLibraryIndexConfigModelLabel": "Embedding 模型",
+  "aiLibraryIndexConfigChunkSectionTitle": "分块参数",
+  "aiLibraryIndexConfigAdvancedSectionTitle": "高级",
+  "aiLibraryIndexConfigBatchLabel": "Embedding 批大小",
+  "aiLibraryIndexConfigTimeoutLabel": "Embeddings 超时（秒）",
+  "aiLibraryIndexConfigChunkTargetLabel": "目标字符数",
+  "aiLibraryIndexConfigChunkMaxLabel": "最大字符数",
+  "aiLibraryIndexConfigChunkMinLabel": "最小字符数",
+  "aiLibraryIndexConfigChunkOverlapLabel": "重叠字符数",
+  "aiLibraryIndexConfigMaxChapterLabel": "章节最大字符数",
+  "aiLibraryIndexConfigChunkHint": "修改这些参数会导致现有索引标记为“已过期”，需要重建。",
+  "aiLibraryIndexConfigSummaryFollow": "供应商：{provider} · 模型：{model}（跟随聊天）",
+  "@aiLibraryIndexConfigSummaryFollow": {
+    "placeholders": {
+      "provider": {},
+      "model": {}
+    }
+  },
+  "aiLibraryIndexConfigSummaryExplicit": "供应商：{provider} · 模型：{model}（固定）",
+  "@aiLibraryIndexConfigSummaryExplicit": {
+    "placeholders": {
+      "provider": {},
+      "model": {}
+    }
+  },
+  "aiLibraryIndexConfigSummaryChunk": "分块：target {target} / max {max} / min {min} / overlap {overlap} · 章节 max {chapterMax}",
+  "@aiLibraryIndexConfigSummaryChunk": {
+    "placeholders": {
+      "target": {},
+      "max": {},
+      "min": {},
+      "overlap": {},
+      "chapterMax": {}
+    }
+  },
   "aiLibraryIndexFilterUnindexed": "未索引",
   "aiLibraryIndexFilterExpired": "已过期",
   "aiLibraryIndexFilterIndexed": "已索引",
