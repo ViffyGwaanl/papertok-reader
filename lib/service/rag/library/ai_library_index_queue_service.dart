@@ -5,6 +5,7 @@ import 'package:anx_reader/service/rag/ai_book_indexer.dart';
 import 'package:anx_reader/service/rag/ai_index_database.dart';
 import 'package:anx_reader/service/rag/library/ai_library_index_job.dart';
 import 'package:anx_reader/service/rag/library/ai_library_index_queue_repository.dart';
+import 'package:anx_reader/service/rag/library/ai_library_index_queue_runner.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -40,22 +41,38 @@ class AiLibraryIndexQueueState {
 
 class AiLibraryIndexQueueService
     extends StateNotifier<AiLibraryIndexQueueState> {
-  AiLibraryIndexQueueService(this.ref, {AiIndexDatabase? database})
-      : _repo = AiLibraryIndexQueueRepository(database: database),
+  AiLibraryIndexQueueService(
+    this.ref, {
+    AiIndexDatabase? database,
+    BooksRepository? booksRepository,
+  })  : _repo = AiLibraryIndexQueueRepository(database: database),
         _database = database ?? AiIndexDatabase.instance,
+        _booksRepository = booksRepository ?? const BooksRepository(),
         super(AiLibraryIndexQueueState.empty) {
-    unawaited(refresh());
-    // Best-effort: resume pending jobs after restart.
-    unawaited(_tick());
+    _runner = AiLibraryIndexQueueRunner(
+      repository: _repo,
+      executor: _executeJob,
+    );
+
+    unawaited(_init());
   }
 
   final Ref ref;
   final AiLibraryIndexQueueRepository _repo;
   final AiIndexDatabase _database;
+  final BooksRepository _booksRepository;
+
+  late final AiLibraryIndexQueueRunner _runner;
 
   bool _running = false;
   bool _paused = false;
   int? _activeJobId;
+
+  Future<void> _init() async {
+    await _runner.normalizeAfterRestart();
+    await refresh();
+    unawaited(_tick());
+  }
 
   Future<void> refresh() async {
     final jobs = await _repo.listJobs();
@@ -73,6 +90,16 @@ class AiLibraryIndexQueueService
     return job;
   }
 
+  Future<List<AiLibraryIndexJob>> enqueueBooks(Iterable<int> bookIds) async {
+    final out = <AiLibraryIndexJob>[];
+    for (final id in bookIds.where((e) => e > 0)) {
+      out.add(await _repo.enqueueBook(id, maxRetries: 1));
+    }
+    await refresh();
+    unawaited(_tick());
+    return out;
+  }
+
   Future<void> pause() async {
     _paused = true;
     state = state.copyWith(isPaused: true);
@@ -85,10 +112,7 @@ class AiLibraryIndexQueueService
   }
 
   Future<void> cancelJob(int jobId) async {
-    // If cancelling active job, mark cancelled and stop after current unit.
-    final job = await _repo.getJob(jobId);
-    if (job == null) return;
-    await _repo.updateJob(jobId, status: AiLibraryIndexJobStatus.cancelled);
+    await _runner.cancelJob(jobId);
     if (_activeJobId == jobId) {
       _activeJobId = null;
     }
@@ -112,9 +136,8 @@ class AiLibraryIndexQueueService
     _running = true;
     try {
       while (!_paused) {
-        final runnable = await _repo.listRunnableJobs();
-        // Pick first queued job.
-        final next = runnable.firstWhere(
+        final jobs = await _repo.listJobs();
+        final next = jobs.firstWhere(
           (j) => j.status == AiLibraryIndexJobStatus.queued,
           orElse: () => const AiLibraryIndexJob(
             id: -1,
@@ -130,10 +153,12 @@ class AiLibraryIndexQueueService
         _activeJobId = next.id;
         state = state.copyWith(activeJobId: _activeJobId);
 
-        await _runJob(next);
+        await _runner.runOnce();
 
         _activeJobId = null;
         state = state.copyWith(activeJobId: null);
+
+        await refresh();
       }
     } finally {
       _running = false;
@@ -141,53 +166,32 @@ class AiLibraryIndexQueueService
     }
   }
 
-  Future<void> _runJob(AiLibraryIndexJob job) async {
-    // Move to running.
-    await _repo.updateJob(job.id, status: AiLibraryIndexJobStatus.running);
-    await refresh();
+  Future<void> _executeJob(
+    int bookId, {
+    required AiIndexCancellationToken cancelToken,
+    required void Function(double progress, String? href, String? title)
+        onProgress,
+  }) async {
+    if (cancelToken.cancelled) return;
 
-    try {
-      final indexer = AiBookIndexer(ref, database: _database);
-
-      // TODO: resolve embeddingModel from user settings.
-      await indexer.buildBook(
-        book: (await BooksRepository().fetchByIds([job.bookId]))[job.bookId]!,
-        rebuild: true,
-        onProgress: (p) {
-          unawaited(
-            _repo.updateJob(
-              job.id,
-              progress: p.progress,
-              currentChapterHref: p.currentChapterHref,
-              currentChapterTitle: p.currentChapterTitle,
-            ),
-          );
-        },
-      );
-
-      await _repo.updateJob(job.id, status: AiLibraryIndexJobStatus.succeeded);
-    } catch (e, st) {
-      AnxLog.warn('AiLibraryIndexQueue: job failed: ${job.id} $e\n$st');
-      final fresh = await _repo.getJob(job.id);
-      final retryCount = fresh?.retryCount ?? job.retryCount;
-      final maxRetries = fresh?.maxRetries ?? job.maxRetries;
-      if (retryCount < maxRetries) {
-        await _repo.updateJob(
-          job.id,
-          status: AiLibraryIndexJobStatus.queued,
-          retryCount: retryCount + 1,
-          lastError: e.toString(),
-        );
-      } else {
-        await _repo.updateJob(
-          job.id,
-          status: AiLibraryIndexJobStatus.failed,
-          lastError: e.toString(),
-        );
-      }
-    } finally {
-      await refresh();
+    final books = await _booksRepository.fetchByIds([bookId]);
+    final book = books[bookId];
+    if (book == null) {
+      throw StateError('Book with id=$bookId not found');
     }
+
+    if (cancelToken.cancelled) return;
+
+    final indexer = AiBookIndexer(ref, database: _database);
+
+    await indexer.buildBook(
+      book: book,
+      rebuild: true,
+      onProgress: (p) {
+        if (cancelToken.cancelled) return;
+        onProgress(p.progress, p.currentChapterHref, p.currentChapterTitle);
+      },
+    );
   }
 }
 
