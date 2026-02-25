@@ -6,7 +6,7 @@
 - Adds:
   - v5 backup ZIP with `manifest.json`
   - optional: include **Memory** directory (`memory/`)
-  - optional: include AI index database (`databases/ai_index.db`, default OFF)
+  - optional: include AI index database (`databases/ai_index.db` + `-wal/-shm`, default OFF)
   - optional encrypted API keys
   - optional encrypted MCP secrets (headers/tokens; local-only by default)
   - import confirmation + rollback using `.bak.<timestamp>`
@@ -117,7 +117,7 @@ Notes:
 - API keys are only stored if the user explicitly enables the option.
 - `paper_reader_shared_prefs.json` never contains plain `api_key` / `api_keys` entries (older backups may use `anx_shared_prefs.json`).
 - `memory/` is only included if the user enables the option.
-- `databases/ai_index.db` is only included if the user enables the option (default OFF).
+- `databases/ai_index.db` is only included if the user enables the option (default OFF). When included, its SQLite sidecars (`ai_index.db-wal` / `ai_index.db-shm`) are included as well.
 - Encrypted payload stores per-provider keys:
   - `api_key` (active key)
   - `api_keys` (managed list; JSON)

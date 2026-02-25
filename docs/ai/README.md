@@ -82,6 +82,29 @@
 
 ---
 
+## In progress (feature branches)
+
+#### Phase 3 — Library RAG / **AI 索引（书库）**
+
+- Branch: `product/feat/rag-phase3-library-rag` (not merged into `main` yet)
+- Implemented so far (see Phase 3 doc for details):
+  - `ai_index.db` v2 migration (jobs queue + index metadata)
+  - headless reader bridge for extracting book content by `bookId`
+  - library indexing queue runner/service (pause/resume/cancel + restart normalization)
+  - Settings entry: **AI 索引（书库）** page
+  - reader jump links standardized to `paperreader://reader/open?...` (no `anx://...` generation)
+- Remaining for merge:
+  - `semantic_search_library` tool + hybrid retrieval (FTS/BM25 + vector + MMR)
+  - book list filters driven by DB truth (unindexed/expired/indexed)
+  - QA checklist + final integration into `product/main`
+
+Docs:
+- [RAG + Memory（Phase 1–5）总体计划与状态（中文）](./rag_memory_plan_zh.md)
+- [RAG + Memory（Phase 1–5）任务清单（中文）](./rag_memory_tasks_zh.md)
+- [Phase 3：全书库 RAG + 批量索引队列（中文）](./rag_phase3_library_rag_zh.md)
+
+---
+
 ## Other modules (product)
 
 - [PaperTok (papers feed) — UX + import behavior](../papertok/README.md)
@@ -110,13 +133,15 @@ To allow provider-owned agent streaming (reading tools), tool code paths now acc
 
 The product repository uses `main` as the integration branch for iPhone/iPad testing and TestFlight.
 
-All AI/translation/multimodal/image-analysis changes are already integrated into `main`.
+All AI/translation/multimodal/image-analysis changes are already integrated into `main`, **except** Phase 3 (Library RAG / AI 索引（书库）), which is still WIP on `product/feat/rag-phase3-library-rag`.
 
 ---
 
 ## Documents
 
 - [AI 改造：已完成 & 路线图（中文）](./ai_status_roadmap_zh.md)
+- [RAG + Memory（Phase 1–5）总体计划与状态（中文）](./rag_memory_plan_zh.md)
+- [RAG + Memory（Phase 1–5）任务清单（中文）](./rag_memory_tasks_zh.md)
 - [Phase 3：全书库 RAG + 批量索引队列（中文）](./rag_phase3_library_rag_zh.md)
 - [P1：OpenAI-compatible Thinking（仅展示供应商数据，无兜底）（中文）](./ai_thinking_openai_provider_only_zh.md)
 - [AI panel UX tech design](./ai_panel_ux_tech_design.md)
