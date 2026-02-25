@@ -231,6 +231,14 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
         }
 
         void captureReasoningItem(Map<String, dynamic> item) {
+          // Compatibility mode: some third-party Responses gateways reject
+          // `reasoning` items entirely. When we cannot rely on
+          // `previous_response_id`, avoid persisting/replaying provider reasoning
+          // items; we still surface reasoning deltas to the UI via metadata.
+          if (!usePreviousResponseId) {
+            return;
+          }
+
           final id = item['id']?.toString();
           if (id != null && id.isNotEmpty && !seenReasoningItemIds.add(id)) {
             return;
@@ -578,7 +586,9 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     // replay for tool-call loops. This may be required for some reasoning
     // models, but can be rejected by strict servers.
     var replayInserted = false;
-    if (hasToolOutputs && _replayReasoningItems.isNotEmpty) {
+    if (usePreviousResponseId &&
+        hasToolOutputs &&
+        _replayReasoningItems.isNotEmpty) {
       for (var i = 0; i < inputItems.length; i++) {
         if (inputItems[i]['type']?.toString() == 'function_call') {
           inputItems.insertAll(i, _replayReasoningItems);
@@ -640,6 +650,13 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
   Map<String, dynamic>? _buildReasoningBlock(
       ChatOpenAIReasoningEffort? effort) {
     if (effort == null) {
+      return null;
+    }
+
+    // Compatibility mode: some third-party "Responses-compatible" gateways
+    // reject the `reasoning` request parameter. Keep this opt-in to the strict
+    // OpenAI Responses behavior.
+    if (!usePreviousResponseId) {
       return null;
     }
 

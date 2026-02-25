@@ -290,6 +290,16 @@ void main() {
   test('does not send previous_response_id when disabled (compat mode)',
       () async {
     final first = StringBuffer()
+      ..write(_sseEvent('response.output_item.added', {
+        'output_index': 0,
+        'item': {
+          'type': 'reasoning',
+          'id': 'rs_1',
+          'summary': [
+            {'type': 'summary_text', 'text': 'thinking'}
+          ]
+        }
+      }))
       ..write(_sseEvent('response.output_item.done', {
         'output_index': 0,
         'item': {
