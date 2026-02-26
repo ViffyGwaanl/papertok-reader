@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/text/word_count.dart';
 import 'package:riverpod/riverpod.dart';
@@ -101,9 +102,8 @@ class CurrentBookFulltextTool
 
 final AiToolDefinition currentBookFulltextToolDefinition = AiToolDefinition(
   id: 'current_book_fulltext',
-  displayNameBuilder: (_) => 'Current book full text (short-book mode)',
-  descriptionBuilder: (_) =>
-      'Returns the full text only when the currently opened book is short enough. Useful as an automatic full-context mode.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolCurrentBookFulltextName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolCurrentBookFulltextDescription,
   build: (context) =>
       CurrentBookFulltextTool(context.ref, const ChapterContentRepository())
           .tool,

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/deeplink/paperreader_reader_intent.dart';
@@ -64,9 +65,8 @@ class ResolveCfiTool extends RepositoryTool<JsonMap, Map<String, dynamic>> {
 
 final AiToolDefinition resolveCfiToolDefinition = AiToolDefinition(
   id: 'resolve_cfi',
-  displayNameBuilder: (_) => 'Resolve CFI',
-  descriptionBuilder: (_) =>
-      'Resolve an EPUB CFI into chapter title/href (best-effort) and provide an internal jump link.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolResolveCfiName,
+  descriptionBuilder: (L10n l10n) => l10n.aiToolResolveCfiDescription,
   build: (context) =>
       ResolveCfiTool(context.ref, const ChapterContentRepository()).tool,
 );

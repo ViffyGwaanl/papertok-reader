@@ -951,7 +951,15 @@
   "aiToolCurrentChapterContentDescription": "Pull the plain-text content of the chapter the user is reading.",
   "aiToolChapterContentByHrefName": "Chapter Content By Href",
   "aiToolChapterContentByHrefDescription": "Retrieve the plain-text body of a chapter when you know its TOC href.",
-  "bookDetailEditHint": "Tap Edit to change cover, title, tags, and more",
+  "aiToolCurrentBookFulltextName": "Current Book Full Text (short-book mode)",
+  "aiToolCurrentBookFulltextDescription": "Get the full plain text only when the current book is short enough; otherwise use search + chapter tools.",
+  "aiToolResolveCfiName": "Resolve CFI",
+  "aiToolResolveCfiDescription": "Resolve an EPUB CFI into chapter title/href (best-effort) and provide an internal jump link.",
+  "aiToolSemanticSearchCurrentBookName": "Semantic Search (Current Book)",
+  "aiToolSemanticSearchCurrentBookDescription": "Vector semantic search within the currently opened book. Requires building a local semantic index.",
+  "aiToolSemanticSearchLibraryName": "Semantic Search (Library)",
+  "aiToolSemanticSearchLibraryDescription": "Hybrid semantic search across your library. Requires building AI indexes for books you want to search.",
+  "bookDetailEditHint": "Tap Edit to change cover, title, tags, and more", 
   "tagsSectionTitle": "Tags",
   "tagsEmptyHint": "No tags",
   "noTagFilter": "Untagged",
@@ -1166,7 +1174,24 @@
   "aiLibraryIndexConfigFollowSelectedDesc": "Use the current AI chat provider for indexing/embeddings.",
   "aiLibraryIndexConfigProviderLabel": "Provider",
   "aiLibraryIndexConfigModelLabel": "Embedding model",
-  "aiLibraryIndexConfigChunkSectionTitle": "Chunking",
+  "aiLibraryIndexConfigModelDefaultTitle": "Default embedding model",
+  "aiLibraryIndexConfigModelDefaultDesc": "Use the built-in default embedding model: {model}.",
+  "@aiLibraryIndexConfigModelDefaultDesc": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "aiLibraryIndexConfigModelDefaultHint": "Default: {model}",
+  "@aiLibraryIndexConfigModelDefaultHint": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "aiLibraryIndexConfigModelCustomTitle": "Custom embedding model",
+  "aiLibraryIndexConfigModelCustomDesc": "Manually set an embedding model id.",
+  "aiLibraryIndexConfigModelCustomHint": "e.g. text-embedding-3-large",
+  "aiLibraryIndexConfigModelEmpty": "No models cached. Tap Refresh.",
+  "aiLibraryIndexConfigChunkSectionTitle": "Chunking", 
   "aiLibraryIndexConfigAdvancedSectionTitle": "Advanced",
   "aiLibraryIndexConfigBatchLabel": "Embedding batch size",
   "aiLibraryIndexConfigTimeoutLabel": "Embeddings timeout (sec)",

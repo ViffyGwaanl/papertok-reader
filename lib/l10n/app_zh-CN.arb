@@ -951,6 +951,14 @@
   "aiToolCurrentChapterContentDescription": "获取用户正在阅读章节的纯文本。",
   "aiToolChapterContentByHrefName": "按 Href 获取章节",
   "aiToolChapterContentByHrefDescription": "在已知目录 Href 时获取章节内容。",
+  "aiToolCurrentBookFulltextName": "当前书籍全文（短书模式）",
+  "aiToolCurrentBookFulltextDescription": "当当前书籍足够短时返回完整纯文本；否则请使用检索 + 章节工具。",
+  "aiToolResolveCfiName": "解析 CFI",
+  "aiToolResolveCfiDescription": "将 EPUB CFI 解析为章节标题/href（尽力而为），并提供内部跳转链接。",
+  "aiToolSemanticSearchCurrentBookName": "语义检索（当前书）",
+  "aiToolSemanticSearchCurrentBookDescription": "在当前打开的书籍内做向量语义检索，需要先建立本地语义索引。",
+  "aiToolSemanticSearchLibraryName": "语义检索（书库）",
+  "aiToolSemanticSearchLibraryDescription": "跨书库的混合语义检索，需要为目标书籍建立 AI 索引。",
   "bookDetailEditHint": "点击编辑按钮可修改封面、标题、标签等信息",
   "tagsSectionTitle": "标签",
   "tagsEmptyHint": "暂无标签",
@@ -1166,6 +1174,23 @@
   "aiLibraryIndexConfigFollowSelectedDesc": "索引/Embedding 使用当前聊天选择的供应商。",
   "aiLibraryIndexConfigProviderLabel": "供应商",
   "aiLibraryIndexConfigModelLabel": "Embedding 模型",
+  "aiLibraryIndexConfigModelDefaultTitle": "默认 Embedding 模型",
+  "aiLibraryIndexConfigModelDefaultDesc": "使用内置默认 Embedding 模型：{model}。",
+  "@aiLibraryIndexConfigModelDefaultDesc": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "aiLibraryIndexConfigModelDefaultHint": "默认：{model}",
+  "@aiLibraryIndexConfigModelDefaultHint": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "aiLibraryIndexConfigModelCustomTitle": "自定义 Embedding 模型",
+  "aiLibraryIndexConfigModelCustomDesc": "手动输入 Embedding 模型 id。",
+  "aiLibraryIndexConfigModelCustomHint": "例如 text-embedding-3-large",
+  "aiLibraryIndexConfigModelEmpty": "未缓存模型列表，点“刷新”获取。",
   "aiLibraryIndexConfigChunkSectionTitle": "分块参数",
   "aiLibraryIndexConfigAdvancedSectionTitle": "高级",
   "aiLibraryIndexConfigBatchLabel": "Embedding 批大小",

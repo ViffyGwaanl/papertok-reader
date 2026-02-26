@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
+import 'package:anx_reader/service/ai/ai_models_service.dart';
 import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
+import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/service/rag/ai_book_indexer.dart';
 import 'package:anx_reader/service/rag/ai_embeddings_service.dart';
 import 'package:anx_reader/service/rag/ai_index_database.dart';
@@ -309,6 +311,183 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                 providerId = eligible.isEmpty ? '' : eligible.first;
               }
 
+              Future<void> pickEmbeddingModel() async {
+                final providerIdForModels = (follow
+                        ? Prefs().aiLibraryIndexProviderIdEffective
+                        : providerId)
+                    .trim();
+
+                final meta = Prefs().getAiProviderMeta(providerIdForModels);
+                if (meta == null) {
+                  AnxToast.show(l10n.aiServiceNotConfigured);
+                  return;
+                }
+
+                var models =
+                    Prefs().getAiModelsCacheV1(providerIdForModels)?.models ??
+                        const <String>[];
+                var loading = false;
+
+                List<String> filterEmbeddingModels(List<String> raw) {
+                  final embed = raw.where((e) {
+                    final s = e.toLowerCase();
+                    return s.contains('embed') || s.contains('embedding');
+                  }).toList(growable: false);
+                  return embed.isNotEmpty ? embed : raw;
+                }
+
+                await showModalBottomSheet<void>(
+                  context: ctx,
+                  builder: (context) {
+                    return StatefulBuilder(
+                      builder: (context, setModalState) {
+                        Future<void> refresh() async {
+                          if (loading) return;
+                          setModalState(() {
+                            loading = true;
+                          });
+
+                          try {
+                            final rawConfig =
+                                Prefs().getAiConfig(providerIdForModels);
+                            if (rawConfig.isEmpty) {
+                              AnxToast.show(l10n.aiServiceNotConfigured);
+                              return;
+                            }
+
+                            final fetched = await AiModelsService.fetchModels(
+                              provider: meta,
+                              rawConfig: rawConfig,
+                            );
+
+                            if (fetched.isNotEmpty) {
+                              Prefs().saveAiModelsCacheV1(
+                                  providerIdForModels, fetched);
+                            }
+
+                            models = fetched;
+                          } catch (_) {
+                            AnxToast.show(l10n.commonFailed);
+                          } finally {
+                            setModalState(() {
+                              loading = false;
+                            });
+                          }
+                        }
+
+                        final visibleModels = filterEmbeddingModels(models);
+
+                        return SafeArea(
+                          child: ListView(
+                            children: [
+                              ListTile(
+                                title: Text(
+                                    l10n.aiLibraryIndexConfigModelDefaultTitle),
+                                subtitle: Text(
+                                    l10n.aiLibraryIndexConfigModelDefaultDesc(
+                                  AiEmbeddingsService.defaultEmbeddingModel,
+                                )),
+                                trailing: modelController.text.trim().isEmpty
+                                    ? const Icon(Icons.check)
+                                    : null,
+                                onTap: () {
+                                  modelController.text = '';
+                                  Navigator.pop(context);
+                                  setState(() {});
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.edit_outlined),
+                                title: Text(
+                                    l10n.aiLibraryIndexConfigModelCustomTitle),
+                                subtitle: Text(
+                                    l10n.aiLibraryIndexConfigModelCustomDesc),
+                                onTap: () async {
+                                  final controller = TextEditingController(
+                                    text: modelController.text.trim(),
+                                  );
+
+                                  final ok = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: Text(l10n
+                                            .aiLibraryIndexConfigModelCustomTitle),
+                                        content: TextField(
+                                          controller: controller,
+                                          decoration: InputDecoration(
+                                            hintText: l10n
+                                                .aiLibraryIndexConfigModelCustomHint,
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: Text(l10n.commonCancel),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: Text(l10n.commonConfirm),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+
+                                  if (ok == true) {
+                                    modelController.text = controller.text;
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                    setState(() {});
+                                  }
+                                },
+                              ),
+                              ListTile(
+                                leading: loading
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      )
+                                    : const Icon(Icons.refresh),
+                                title: Text(l10n.commonRefresh),
+                                onTap: refresh,
+                              ),
+                              const Divider(height: 1),
+                              if (visibleModels.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Text(
+                                    l10n.aiLibraryIndexConfigModelEmpty,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
+                              for (final m in visibleModels)
+                                ListTile(
+                                  title: Text(m),
+                                  trailing: (modelController.text.trim() == m)
+                                      ? const Icon(Icons.check)
+                                      : null,
+                                  onTap: () {
+                                    modelController.text = m;
+                                    Navigator.pop(context);
+                                    setState(() {});
+                                  },
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              }
+
               return AlertDialog(
                 title: Text(l10n.aiLibraryIndexConfigDialogTitle),
                 content: SingleChildScrollView(
@@ -357,10 +536,15 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: modelController,
+                        readOnly: true,
+                        onTap: pickEmbeddingModel,
                         decoration: InputDecoration(
                           border: const OutlineInputBorder(),
                           labelText: l10n.aiLibraryIndexConfigModelLabel,
-                          hintText: 'text-embedding-3-large',
+                          hintText: l10n.aiLibraryIndexConfigModelDefaultHint(
+                            AiEmbeddingsService.defaultEmbeddingModel,
+                          ),
+                          suffixIcon: const Icon(Icons.arrow_drop_down),
                         ),
                       ),
                       const SizedBox(height: 12),

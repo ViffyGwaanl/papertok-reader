@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/rag/semantic_search_library.dart';
 
@@ -68,9 +69,9 @@ class SemanticSearchLibraryTool
 
 final AiToolDefinition semanticSearchLibraryToolDefinition = AiToolDefinition(
   id: 'semantic_search_library',
-  displayNameBuilder: (_) => 'Semantic search (library)',
-  descriptionBuilder: (_) =>
-      'Hybrid semantic search across your library. Requires building AI indexes for books you want to search.',
+  displayNameBuilder: (L10n l10n) => l10n.aiToolSemanticSearchLibraryName,
+  descriptionBuilder: (L10n l10n) =>
+      l10n.aiToolSemanticSearchLibraryDescription,
   build: (context) {
     final resolver = (Iterable<int> ids) async {
       final books = await context.booksRepository.fetchByIds(ids);
