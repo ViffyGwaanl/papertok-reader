@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:anx_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:meta/meta.dart';
 import 'package:anx_reader/service/rag/ai_embeddings_service.dart';
 import 'package:anx_reader/service/rag/ai_index_database.dart';
 import 'package:anx_reader/service/rag/vector_math.dart';
@@ -444,9 +445,32 @@ LIMIT ?
   String _buildFtsQuery(String query) {
     final tokens = _tokenize(query);
     if (tokens.isEmpty) return '';
+
     // Use AND semantics to improve precision.
-    return tokens.take(8).join(' ');
+    //
+    // Important: SQLite FTS5 query syntax treats certain characters as
+    // operators. For example, `GLM-5` can raise `no such column: 5`.
+    //
+    // To keep search robust across languages and model/version-like tokens
+    // (gpt-4o, glm-5, etc.), we quote any token that contains non-word
+    // characters.
+    return tokens.take(8).map(_escapeFtsToken).join(' ');
   }
+
+  static final RegExp _ftsSafeToken = RegExp(r'^[0-9A-Za-z_\u4e00-\u9fff]+$');
+
+  String _escapeFtsToken(String token) {
+    if (_ftsSafeToken.hasMatch(token)) {
+      return token;
+    }
+
+    // Escape embedded quotes for FTS phrase syntax.
+    final escaped = token.replaceAll('"', '""');
+    return '"$escaped"';
+  }
+
+  @visibleForTesting
+  String debugBuildFtsQuery(String query) => _buildFtsQuery(query);
 
   List<String> _tokenize(String query) {
     final cleaned = query
