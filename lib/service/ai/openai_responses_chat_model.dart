@@ -28,6 +28,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     required this.apiKey,
     this.headers,
     this.usePreviousResponseId = true,
+    this.requestReasoningSummary = true,
     required super.defaultOptions,
     http.Client? client,
   }) : _client = client;
@@ -42,6 +43,12 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
   /// Some third-party "Responses-compatible" gateways do not support this
   /// parameter.
   final bool usePreviousResponseId;
+
+  /// Whether to request provider reasoning summary output.
+  ///
+  /// This controls the request-side `reasoning` parameter (e.g. `summary:auto`).
+  /// Some third-party gateways may reject it.
+  final bool requestReasoningSummary;
 
   http.Client? _client;
   StreamSubscription<List<int>>? _activeSubscription;
@@ -653,10 +660,9 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       return null;
     }
 
-    // Compatibility mode: some third-party "Responses-compatible" gateways
-    // reject the `reasoning` request parameter. Keep this opt-in to the strict
-    // OpenAI Responses behavior.
-    if (!usePreviousResponseId) {
+    // Some third-party "Responses-compatible" gateways reject the `reasoning`
+    // request parameter. Keep this configurable.
+    if (!requestReasoningSummary) {
       return null;
     }
 

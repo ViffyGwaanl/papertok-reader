@@ -377,4 +377,76 @@ void main() {
     expect(types, contains('function_call'));
     expect(types, contains('function_call_output'));
   });
+
+  test('respects requestReasoningSummary flag', () async {
+    final sse = StringBuffer()
+      ..write(_sseEvent('response.output_text.delta', {'delta': 'OK'}))
+      ..write(_sseEvent('response.completed', {
+        'response': {
+          'id': 'resp_1',
+          'reasoning': {'summary': null}
+        }
+      }));
+
+    final client = _QueuedStreamClient([sse.toString()]);
+
+    final model = ChatOpenAIResponses(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'k',
+      requestReasoningSummary: false,
+      defaultOptions: const ChatOpenAIOptions(
+        model: 'gpt-test',
+        reasoningEffort: ChatOpenAIReasoningEffort.medium,
+      ),
+      client: client,
+    );
+
+    await model
+        .stream(
+          PromptValue.chat([
+            ChatMessage.humanText('hello'),
+          ]),
+        )
+        .toList();
+
+    expect(client.sentJsonBodies, hasLength(1));
+    expect(client.sentJsonBodies.first.containsKey('reasoning'), isFalse);
+  });
+
+  test('includes reasoning block when enabled and effort is set', () async {
+    final sse = StringBuffer()
+      ..write(_sseEvent('response.output_text.delta', {'delta': 'OK'}))
+      ..write(_sseEvent('response.completed', {
+        'response': {
+          'id': 'resp_1',
+          'reasoning': {'summary': null}
+        }
+      }));
+
+    final client = _QueuedStreamClient([sse.toString()]);
+
+    final model = ChatOpenAIResponses(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'k',
+      requestReasoningSummary: true,
+      defaultOptions: const ChatOpenAIOptions(
+        model: 'gpt-test',
+        reasoningEffort: ChatOpenAIReasoningEffort.low,
+      ),
+      client: client,
+    );
+
+    await model
+        .stream(
+          PromptValue.chat([
+            ChatMessage.humanText('hello'),
+          ]),
+        )
+        .toList();
+
+    expect(client.sentJsonBodies, hasLength(1));
+    final body = client.sentJsonBodies.first;
+    expect(body.containsKey('reasoning'), isTrue);
+    expect(body['reasoning'], isA<Map<String, dynamic>>());
+  });
 }

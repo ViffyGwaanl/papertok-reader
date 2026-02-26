@@ -20,6 +20,7 @@ class LangchainAiConfig {
     this.thinkingMode = AiThinkingMode.off,
     this.includeThoughts = false,
     this.responsesUsePreviousResponseId,
+    this.responsesRequestReasoningSummary,
     this.additional,
   }) : headers = Map.unmodifiable(headers ?? const {});
 
@@ -45,6 +46,12 @@ class LangchainAiConfig {
   /// Some third-party "Responses-compatible" gateways do not support this
   /// parameter; turn this off for compatibility.
   final bool? responsesUsePreviousResponseId;
+
+  /// Responses API: whether to request provider reasoning summary output.
+  ///
+  /// This controls the request-side `reasoning` parameter (e.g. `summary:auto`).
+  /// Some third-party gateways may reject it.
+  final bool? responsesRequestReasoningSummary;
 
   final Map<String, dynamic>? additional;
 
@@ -161,6 +168,14 @@ class LangchainAiConfig {
           !(prevRaw == 'false' || prevRaw == '0' || prevRaw == 'no');
     }
 
+    bool? responsesRequestReasoningSummary;
+    final reasoningValue = raw['responses_request_reasoning_summary'];
+    if (reasoningValue != null && reasoningValue.trim().isNotEmpty) {
+      final rawValue = reasoningValue.trim().toLowerCase();
+      responsesRequestReasoningSummary =
+          !(rawValue == 'false' || rawValue == '0' || rawValue == 'no');
+    }
+
     return LangchainAiConfig(
       identifier: identifier,
       apiKey: apiKey,
@@ -174,6 +189,7 @@ class LangchainAiConfig {
       thinkingMode: thinkingMode,
       includeThoughts: includeThoughts,
       responsesUsePreviousResponseId: responsesUsePreviousResponseId,
+      responsesRequestReasoningSummary: responsesRequestReasoningSummary,
       additional: additional,
     );
   }
@@ -190,6 +206,7 @@ class LangchainAiConfig {
     AiThinkingMode? thinkingMode,
     bool? includeThoughts,
     bool? responsesUsePreviousResponseId,
+    bool? responsesRequestReasoningSummary,
     Map<String, dynamic>? additional,
   }) {
     return LangchainAiConfig(
@@ -206,6 +223,8 @@ class LangchainAiConfig {
       includeThoughts: includeThoughts ?? this.includeThoughts,
       responsesUsePreviousResponseId:
           responsesUsePreviousResponseId ?? this.responsesUsePreviousResponseId,
+      responsesRequestReasoningSummary: responsesRequestReasoningSummary ??
+          this.responsesRequestReasoningSummary,
       additional: additional ?? this.additional,
     );
   }
@@ -305,6 +324,9 @@ LangchainAiConfig mergeConfigs(
     maxOutputTokens: override.maxOutputTokens ?? base.maxOutputTokens,
     responsesUsePreviousResponseId: override.responsesUsePreviousResponseId ??
         base.responsesUsePreviousResponseId,
+    responsesRequestReasoningSummary:
+        override.responsesRequestReasoningSummary ??
+            base.responsesRequestReasoningSummary,
     additional: mergeMaps(base.additional, override.additional),
   );
 }

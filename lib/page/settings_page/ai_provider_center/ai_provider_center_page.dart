@@ -17,6 +17,8 @@ class _AiProviderCenterPageState extends State<AiProviderCenterPage> {
   late final List<AiServiceOption> _builtInOptions;
   late final Future<void> _prefsReady;
 
+  bool _reorderMode = false;
+
   static const _uuid = Uuid();
 
   @override
@@ -170,6 +172,40 @@ class _AiProviderCenterPageState extends State<AiProviderCenterPage> {
     }
   }
 
+  void _writeProviders(List<AiProviderMeta> providers) {
+    Prefs().touchAiSettingsUpdatedAt();
+    Prefs().aiProvidersV1 = providers;
+  }
+
+  void _sortCustomProvidersByName({required bool ascending}) {
+    final all = Prefs().aiProvidersV1;
+    final builtIns = all.where((p) => p.isBuiltIn).toList(growable: false);
+    final customs = all.where((p) => !p.isBuiltIn).toList(growable: true);
+
+    customs.sort((a, b) {
+      final x = a.name.toLowerCase();
+      final y = b.name.toLowerCase();
+      return ascending ? x.compareTo(y) : y.compareTo(x);
+    });
+
+    _writeProviders([...builtIns, ...customs]);
+  }
+
+  void _reorderCustomProviders(int oldIndex, int newIndex) {
+    final all = Prefs().aiProvidersV1;
+    final builtIns = all.where((p) => p.isBuiltIn).toList(growable: false);
+    final customs = all.where((p) => !p.isBuiltIn).toList(growable: true);
+
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+
+    final item = customs.removeAt(oldIndex);
+    customs.insert(newIndex, item);
+
+    _writeProviders([...builtIns, ...customs]);
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<void>(
@@ -205,80 +241,199 @@ class _AiProviderCenterPageState extends State<AiProviderCenterPage> {
         return Scaffold(
           appBar: AppBar(
             title: Text(l10n.settingsAiProviderCenterTitle),
+            actions: [
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  switch (value) {
+                    case 'sort_az':
+                      _sortCustomProvidersByName(ascending: true);
+                      break;
+                    case 'sort_za':
+                      _sortCustomProvidersByName(ascending: false);
+                      break;
+                    case 'toggle_reorder':
+                      setState(() {
+                        _reorderMode = !_reorderMode;
+                      });
+                      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'sort_az',
+                    child: Text(l10n.settingsAiProviderCenterSortAz),
+                  ),
+                  PopupMenuItem(
+                    value: 'sort_za',
+                    child: Text(l10n.settingsAiProviderCenterSortZa),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'toggle_reorder',
+                    child: Text(
+                      _reorderMode
+                          ? l10n.settingsAiProviderCenterReorderDone
+                          : l10n.settingsAiProviderCenterReorder,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: _addProvider,
             tooltip: l10n.commonAdd,
             child: const Icon(Icons.add),
           ),
-          body: ListView.separated(
-            itemCount: providers.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final p = providers[index];
-              final isSelected = p.id == selectedId;
+          body: _reorderMode
+              ? _buildReorderList(context, providers, selectedId)
+              : ListView.separated(
+                  itemCount: providers.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final p = providers[index];
+                    final isSelected = p.id == selectedId;
 
-              return ListTile(
-                enabled: p.enabled,
-                leading: p.logoKey == null
-                    ? const Icon(Icons.hub_outlined)
-                    : Image.asset(
-                        p.logoKey!,
-                        width: 24,
-                        height: 24,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.hub_outlined),
-                      ),
-                title: Text(p.name),
-                subtitle: Text(_typeLabel(p.type, l10n)),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isSelected)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 8.0),
-                        child: Icon(Icons.check, size: 18),
-                      ),
-                    Switch(
-                      value: p.enabled,
-                      onChanged: (value) {
-                        setState(() {
-                          Prefs().upsertAiProviderMeta(
-                            p.copyWith(
-                              enabled: value,
-                              updatedAt: DateTime.now().millisecondsSinceEpoch,
-                            ),
-                          );
-
-                          if (!value && isSelected) {
-                            final next =
-                                _fallbackProviderId(Prefs().aiProvidersV1);
-                            Prefs().selectedAiService = next;
-                          }
-                        });
-                      },
-                    ),
-                  ],
+                    return _buildProviderTile(
+                      context,
+                      p,
+                      l10n,
+                      isSelected: isSelected,
+                      showDragHandle: false,
+                      reorderIndex: null,
+                    );
+                  },
                 ),
-                onTap: () => _openProvider(p),
-                onLongPress: () {
-                  if (!p.enabled) {
-                    return;
-                  }
-                  setState(() {
-                    Prefs().selectedAiService = p.id;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        l10n.settingsAiProviderCenterDefaultApplied(p.name),
-                      ),
-                      duration: const Duration(milliseconds: 800),
-                    ),
-                  );
-                },
+        );
+      },
+    );
+  }
+
+  Widget _buildReorderList(
+    BuildContext context,
+    List<AiProviderMeta> providers,
+    String selectedId,
+  ) {
+    final l10n = L10n.of(context);
+    final builtIns =
+        providers.where((p) => p.isBuiltIn).toList(growable: false);
+    final customs =
+        providers.where((p) => !p.isBuiltIn).toList(growable: false);
+
+    return CustomScrollView(
+      slivers: [
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final p = builtIns[index];
+              final isSelected = p.id == selectedId;
+              return _buildProviderTile(
+                context,
+                p,
+                l10n,
+                isSelected: isSelected,
+                showDragHandle: false,
+                reorderIndex: null,
               );
             },
+            childCount: builtIns.length,
+          ),
+        ),
+        if (customs.isNotEmpty)
+          const SliverToBoxAdapter(
+            child: Divider(height: 1),
+          ),
+        SliverReorderableList(
+          itemCount: customs.length,
+          onReorder: _reorderCustomProviders,
+          itemBuilder: (context, index) {
+            final p = customs[index];
+            final isSelected = p.id == selectedId;
+            return _buildProviderTile(
+              context,
+              p,
+              l10n,
+              isSelected: isSelected,
+              showDragHandle: true,
+              reorderIndex: index,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProviderTile(
+    BuildContext context,
+    AiProviderMeta p,
+    L10n l10n, {
+    required bool isSelected,
+    required bool showDragHandle,
+    required int? reorderIndex,
+  }) {
+    return ListTile(
+      key: ValueKey(p.id),
+      enabled: p.enabled,
+      leading: p.logoKey == null
+          ? const Icon(Icons.hub_outlined)
+          : Image.asset(
+              p.logoKey!,
+              width: 24,
+              height: 24,
+              errorBuilder: (_, __, ___) => const Icon(Icons.hub_outlined),
+            ),
+      title: Text(p.name),
+      subtitle: Text(_typeLabel(p.type, l10n)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isSelected)
+            const Padding(
+              padding: EdgeInsets.only(right: 8.0),
+              child: Icon(Icons.check, size: 18),
+            ),
+          if (showDragHandle && reorderIndex != null)
+            ReorderableDragStartListener(
+              index: reorderIndex,
+              child: const Padding(
+                padding: EdgeInsets.only(right: 8.0),
+                child: Icon(Icons.drag_handle),
+              ),
+            ),
+          Switch(
+            value: p.enabled,
+            onChanged: (value) {
+              setState(() {
+                Prefs().upsertAiProviderMeta(
+                  p.copyWith(
+                    enabled: value,
+                    updatedAt: DateTime.now().millisecondsSinceEpoch,
+                  ),
+                );
+
+                if (!value && isSelected) {
+                  final next = _fallbackProviderId(Prefs().aiProvidersV1);
+                  Prefs().selectedAiService = next;
+                }
+              });
+            },
+          ),
+        ],
+      ),
+      onTap: () => _openProvider(p),
+      onLongPress: () {
+        if (!p.enabled) {
+          return;
+        }
+        setState(() {
+          Prefs().selectedAiService = p.id;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.settingsAiProviderCenterDefaultApplied(p.name),
+            ),
+            duration: const Duration(milliseconds: 800),
           ),
         );
       },

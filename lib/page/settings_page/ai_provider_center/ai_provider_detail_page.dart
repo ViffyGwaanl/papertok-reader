@@ -46,6 +46,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
   bool _includeThoughts = true;
 
   bool _responsesUsePreviousResponseId = true;
+  bool _responsesRequestReasoningSummary = true;
 
   bool _isFetchingModels = false;
   List<String> _cachedModels = const [];
@@ -89,6 +90,20 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
           .toLowerCase();
       _responsesUsePreviousResponseId =
           raw != 'false' && raw != '0' && raw != 'no';
+
+      // Default: request reasoning summary only in strict mode.
+      // Third-party gateways may reject `reasoning`, so keep it opt-in when
+      // previous_response_id is disabled.
+      _responsesRequestReasoningSummary = _responsesUsePreviousResponseId;
+
+      final reasoningRaw = (stored['responses_request_reasoning_summary'] ?? '')
+          .trim()
+          .toLowerCase();
+      if (reasoningRaw.isNotEmpty) {
+        _responsesRequestReasoningSummary = reasoningRaw != 'false' &&
+            reasoningRaw != '0' &&
+            reasoningRaw != 'no';
+      }
     }
 
     int parseInt(String key, int fallback) {
@@ -259,6 +274,8 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     if (_provider.type == AiProviderType.openaiResponses) {
       map['responses_use_previous_response_id'] =
           _responsesUsePreviousResponseId ? 'true' : 'false';
+      map['responses_request_reasoning_summary'] =
+          _responsesRequestReasoningSummary ? 'true' : 'false';
     }
 
     // Multi-key policy (non-secret).
@@ -1176,6 +1193,29 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
               onChanged: (v) {
                 setState(() {
                   _responsesUsePreviousResponseId = v;
+                  // Keep default behavior consistent.
+                  if (v) {
+                    _responsesRequestReasoningSummary = true;
+                  }
+                });
+                _scheduleAutoSave();
+              },
+            ),
+          if (_provider.type == AiProviderType.openaiResponses)
+            const SizedBox(height: 12),
+          if (_provider.type == AiProviderType.openaiResponses)
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                l10n.settingsAiProviderCenterRequestReasoningSummaryTitle,
+              ),
+              subtitle: Text(
+                l10n.settingsAiProviderCenterRequestReasoningSummaryDesc,
+              ),
+              value: _responsesRequestReasoningSummary,
+              onChanged: (v) {
+                setState(() {
+                  _responsesRequestReasoningSummary = v;
                 });
                 _scheduleAutoSave();
               },
