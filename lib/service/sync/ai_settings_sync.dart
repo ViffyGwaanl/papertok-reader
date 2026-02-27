@@ -66,6 +66,12 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'memorySearchHybridTextWeightV1': prefs.memorySearchHybridTextWeight,
     'memorySearchHybridCandidateMultiplierV1':
         prefs.memorySearchHybridCandidateMultiplier,
+    'memorySearchHybridMmrEnabledV1': prefs.memorySearchHybridMmrEnabled,
+    'memorySearchHybridMmrLambdaV1': prefs.memorySearchHybridMmrLambda,
+    'memorySearchHybridTemporalDecayEnabledV1':
+        prefs.memorySearchTemporalDecayEnabled,
+    'memorySearchHybridTemporalHalfLifeDaysV1':
+        prefs.memorySearchTemporalDecayHalfLifeDays,
   };
 
   // Translation-only prefs (safe to sync; no secrets).
@@ -340,6 +346,38 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
           (ui['memorySearchHybridCandidateMultiplierV1'] as num?)?.toInt();
       if (mult != null) {
         prefs.memorySearchHybridCandidateMultiplier = mult;
+      }
+
+      final mmrEnabled = ui['memorySearchHybridMmrEnabledV1'];
+      if (mmrEnabled is bool) {
+        prefs.memorySearchHybridMmrEnabled = mmrEnabled;
+      } else if (mmrEnabled is String) {
+        final v = mmrEnabled.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.memorySearchHybridMmrEnabled = v == 'true';
+        }
+      }
+
+      final mmrLambda =
+          (ui['memorySearchHybridMmrLambdaV1'] as num?)?.toDouble();
+      if (mmrLambda != null) {
+        prefs.memorySearchHybridMmrLambda = mmrLambda;
+      }
+
+      final decayEnabled = ui['memorySearchHybridTemporalDecayEnabledV1'];
+      if (decayEnabled is bool) {
+        prefs.memorySearchTemporalDecayEnabled = decayEnabled;
+      } else if (decayEnabled is String) {
+        final v = decayEnabled.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.memorySearchTemporalDecayEnabled = v == 'true';
+        }
+      }
+
+      final halfLife =
+          (ui['memorySearchHybridTemporalHalfLifeDaysV1'] as num?)?.toInt();
+      if (halfLife != null) {
+        prefs.memorySearchTemporalDecayHalfLifeDays = halfLife;
       }
 
       final mode = ui['aiPadPanelMode']?.toString();

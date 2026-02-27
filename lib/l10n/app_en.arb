@@ -745,7 +745,19 @@
     }
   },
   "memorySearchCandidateMultiplierTitle": "Candidate pool size",
-  "memoryFilesTitle": "Memory files",
+  "memorySearchMmrEnabledTitle": "MMR diversity re-ranking",
+  "memorySearchMmrEnabledDesc": "Reduce near-duplicate results and improve coverage.",
+  "memorySearchMmrLambdaTitle": "MMR relevance vs diversity",
+  "memorySearchMmrLambdaValue": "Relevance {lambda}%",
+  "@memorySearchMmrLambdaValue": {
+    "placeholders": {
+      "lambda": {}
+    }
+  },
+  "memorySearchTemporalDecayEnabledTitle": "Temporal decay (daily notes)",
+  "memorySearchTemporalDecayEnabledDesc": "Prefer newer daily notes when relevance is similar. MEMORY.md is not decayed.",
+  "memorySearchTemporalHalfLifeTitle": "Half-life",
+  "memoryFilesTitle": "Memory files", 
   "memoryLongTermSubtitle": "Long-term memory (MEMORY.md)",
   "memoryTodaySubtitle": "Today\u2019s daily note",
   "memoryDailyTitle": "Daily notes",

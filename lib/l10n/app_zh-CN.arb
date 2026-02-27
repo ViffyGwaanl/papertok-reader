@@ -745,6 +745,18 @@
     }
   },
   "memorySearchCandidateMultiplierTitle": "候选池大小",
+  "memorySearchMmrEnabledTitle": "MMR 多样性重排",
+  "memorySearchMmrEnabledDesc": "减少近重复结果，提升覆盖面。",
+  "memorySearchMmrLambdaTitle": "相关性/多样性权衡",
+  "memorySearchMmrLambdaValue": "相关性 {lambda}%",
+  "@memorySearchMmrLambdaValue": {
+    "placeholders": {
+      "lambda": {}
+    }
+  },
+  "memorySearchTemporalDecayEnabledTitle": "时间衰减（daily）",
+  "memorySearchTemporalDecayEnabledDesc": "在相关性接近时优先近期日记；MEMORY.md 不参与衰减。",
+  "memorySearchTemporalHalfLifeTitle": "半衰期",
   "memoryFilesTitle": "记忆文件",
   "memoryLongTermSubtitle": "长期记忆（MEMORY.md）",
   "memoryTodaySubtitle": "今天的日记",

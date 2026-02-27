@@ -1282,6 +1282,58 @@ class Prefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get memorySearchHybridMmrEnabled {
+    return prefs.getBool(_memorySearchHybridMmrEnabledV1Key) ?? false;
+  }
+
+  set memorySearchHybridMmrEnabled(bool value) {
+    if (memorySearchHybridMmrEnabled != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_memorySearchHybridMmrEnabledV1Key, value);
+    notifyListeners();
+  }
+
+  double get memorySearchHybridMmrLambda {
+    final v = prefs.getDouble(_memorySearchHybridMmrLambdaV1Key) ?? 0.7;
+    return v.clamp(0.0, 1.0);
+  }
+
+  set memorySearchHybridMmrLambda(double value) {
+    final v = value.clamp(0.0, 1.0);
+    if (memorySearchHybridMmrLambda != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setDouble(_memorySearchHybridMmrLambdaV1Key, v);
+    notifyListeners();
+  }
+
+  bool get memorySearchTemporalDecayEnabled {
+    return prefs.getBool(_memorySearchHybridTemporalDecayEnabledV1Key) ?? false;
+  }
+
+  set memorySearchTemporalDecayEnabled(bool value) {
+    if (memorySearchTemporalDecayEnabled != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_memorySearchHybridTemporalDecayEnabledV1Key, value);
+    notifyListeners();
+  }
+
+  int get memorySearchTemporalDecayHalfLifeDays {
+    final v = prefs.getInt(_memorySearchHybridTemporalHalfLifeDaysV1Key) ?? 30;
+    return v.clamp(1, 365);
+  }
+
+  set memorySearchTemporalDecayHalfLifeDays(int value) {
+    final v = value.clamp(1, 365);
+    if (memorySearchTemporalDecayHalfLifeDays != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_memorySearchHybridTemporalHalfLifeDaysV1Key, v);
+    notifyListeners();
+  }
+
   // set convertChineseMode(ConvertChineseMode mode) {
   //   prefs.setString('convertChineseMode', mode.name);
   //   notifyListeners();

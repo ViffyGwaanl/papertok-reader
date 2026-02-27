@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_index_database.dart';
@@ -35,6 +36,10 @@ class MemorySearchService {
     this.vectorWeight = 0.7,
     this.textWeight = 0.3,
     this.candidateMultiplier = 4,
+    this.mmrEnabled = false,
+    this.mmrLambda = 0.7,
+    this.temporalDecayEnabled = false,
+    this.temporalDecayHalfLifeDays = 30,
     MemoryEmbedQueryFn? embedQuery,
     MemoryEmbedDocumentsFn? embedDocuments,
   })  : _store = store ?? MarkdownMemoryStore(),
@@ -64,6 +69,18 @@ class MemorySearchService {
 
   /// Candidate pool multiplier. Similar to OpenClaw's candidateMultiplier.
   final int candidateMultiplier;
+
+  /// Whether to apply MMR re-ranking for diversity.
+  final bool mmrEnabled;
+
+  /// MMR lambda (0..1), higher = more relevance, lower = more diversity.
+  final double mmrLambda;
+
+  /// Whether to apply temporal decay to daily notes.
+  final bool temporalDecayEnabled;
+
+  /// Half-life (days) for temporal decay.
+  final int temporalDecayHalfLifeDays;
 
   final MemoryEmbedQueryFn? _embedQuery;
   final MemoryEmbedDocumentsFn? _embedDocuments;
@@ -276,6 +293,8 @@ class MemorySearchService {
 SELECT
   c.id AS chunk_id,
   d.file_name,
+  d.is_long_term AS is_long_term,
+  d.date AS doc_date,
   c.start_line,
   c.end_line,
   c.text,
@@ -295,22 +314,7 @@ LIMIT ?
       );
 
       if (!useSemantic) {
-        return rows
-            .map((r) {
-              final file = (r['file_name'] ?? '').toString();
-              final start = (r['start_line'] as num?)?.toInt();
-              final end = (r['end_line'] as num?)?.toInt();
-              final snippet = (r['snippet'] ?? '').toString();
-              return {
-                'file': file,
-                'line': start,
-                if (end != null) 'endLine': end,
-                'text': snippet,
-              };
-            })
-            .where((h) => (h['file'] ?? '').toString().isNotEmpty)
-            .take(capped)
-            .toList(growable: false);
+        return _rankTextOnly(rows, limit: capped);
       }
 
       if (rows.isEmpty) {
@@ -483,6 +487,167 @@ SET provider_id = NULL,
     }
   }
 
+  double _bm25ToScore(double bm25) {
+    // FTS5 bm25() is lower-is-better and can be negative.
+    final v = bm25 < 0 ? 0.0 : bm25;
+    return 1.0 / (1.0 + v);
+  }
+
+  DateTime? _tryParseDocDate(Object? raw) {
+    final s = (raw ?? '').toString().trim();
+    if (s.isEmpty) return null;
+    final parts = s.split('-');
+    if (parts.length != 3) return null;
+    final y = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    final d = int.tryParse(parts[2]);
+    if (y == null || m == null || d == null) return null;
+    return DateTime(y, m, d);
+  }
+
+  double _applyTemporalDecay(
+    double score, {
+    required bool isLongTerm,
+    required DateTime? docDate,
+  }) {
+    if (!temporalDecayEnabled) return score;
+    if (isLongTerm) return score;
+    if (docDate == null) return score;
+
+    final ageDays = DateTime.now().difference(docDate).inDays;
+    if (ageDays <= 0) return score;
+
+    final halfLife =
+        temporalDecayHalfLifeDays <= 0 ? 30 : temporalDecayHalfLifeDays;
+
+    final factor = pow(0.5, ageDays / halfLife);
+    return score * factor;
+  }
+
+  Set<String> _tokenizeForMmr(String text) {
+    final cleaned = text
+        .toLowerCase()
+        .replaceAll(RegExp(r'''["'\[\]\(\)\{\}:;]+'''), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    if (cleaned.isEmpty) return const {};
+
+    final raw = cleaned.split(' ');
+    final out = <String>{};
+    for (final t in raw) {
+      final s = t.trim();
+      if (s.isEmpty) continue;
+      out.add(s.length > 40 ? s.substring(0, 40) : s);
+      if (out.length >= 80) break;
+    }
+    return out;
+  }
+
+  double _jaccard(Set<String> a, Set<String> b) {
+    if (a.isEmpty || b.isEmpty) return 0.0;
+    var inter = 0;
+    for (final t in a) {
+      if (b.contains(t)) inter++;
+    }
+    final union = a.length + b.length - inter;
+    return union <= 0 ? 0.0 : inter / union;
+  }
+
+  List<({Map<String, Object?> row, double score, Set<String> tokens})>
+      _selectWithMmr(
+    List<({Map<String, Object?> row, double score, Set<String> tokens})> scored,
+    int limit,
+  ) {
+    if (!mmrEnabled || scored.length <= limit) {
+      return scored.take(limit).toList(growable: false);
+    }
+
+    final lambda = mmrLambda.clamp(0.0, 1.0);
+    final selected =
+        <({Map<String, Object?> row, double score, Set<String> tokens})>[];
+    final remaining = List.of(scored);
+
+    // Start with the most relevant.
+    selected.add(remaining.removeAt(0));
+
+    while (selected.length < limit && remaining.isNotEmpty) {
+      var bestIdx = 0;
+      var bestScore = double.negativeInfinity;
+
+      for (var i = 0; i < remaining.length; i++) {
+        final cand = remaining[i];
+
+        var maxSim = 0.0;
+        for (final s in selected) {
+          final sim = _jaccard(cand.tokens, s.tokens);
+          if (sim > maxSim) maxSim = sim;
+          if (maxSim >= 1.0) break;
+        }
+
+        final mmrScore = lambda * cand.score - (1 - lambda) * maxSim;
+        if (mmrScore > bestScore) {
+          bestScore = mmrScore;
+          bestIdx = i;
+        }
+      }
+
+      selected.add(remaining.removeAt(bestIdx));
+    }
+
+    return selected;
+  }
+
+  List<Map<String, dynamic>> _rankTextOnly(
+    List<Map<String, Object?>> rows, {
+    required int limit,
+  }) {
+    final scored =
+        <({Map<String, Object?> row, double score, Set<String> tokens})>[];
+
+    for (final r in rows) {
+      final bm25Raw = (r['bm25'] as num?)?.toDouble();
+      final base = bm25Raw == null ? 0.0 : _bm25ToScore(bm25Raw);
+
+      final isLongTerm = ((r['is_long_term'] as num?)?.toInt() ?? 0) == 1;
+      final docDate = _tryParseDocDate(r['doc_date']);
+
+      final score = _applyTemporalDecay(
+        base,
+        isLongTerm: isLongTerm,
+        docDate: docDate,
+      );
+
+      final snippet = (r['snippet'] ?? '').toString();
+      final text = snippet.trim().isNotEmpty
+          ? snippet
+          : (r['text'] ?? '').toString().trim().split('\n').first;
+
+      scored.add((row: r, score: score, tokens: _tokenizeForMmr(text)));
+    }
+
+    scored.sort((a, b) => b.score.compareTo(a.score));
+    final selected = _selectWithMmr(scored, limit);
+
+    return selected.map((e) {
+      final r = e.row;
+      final file = (r['file_name'] ?? '').toString();
+      final start = (r['start_line'] as num?)?.toInt();
+      final end = (r['end_line'] as num?)?.toInt();
+      final snippet = (r['snippet'] ?? '').toString();
+      final text = snippet.trim().isNotEmpty
+          ? snippet
+          : (r['text'] ?? '').toString().trim().split('\n').first;
+
+      return {
+        'file': file,
+        'line': start,
+        if (end != null) 'endLine': end,
+        'text': text,
+      };
+    }).toList(growable: false);
+  }
+
   Future<List<Map<String, dynamic>>> _semanticRerank(
     Database db,
     String query,
@@ -505,7 +670,8 @@ SET provider_id = NULL,
     );
     final qNorm = VectorMath.l2Norm(qVec);
 
-    final scored = <({Map<String, Object?> row, double score})>[];
+    final scored =
+        <({Map<String, Object?> row, double score, Set<String> tokens})>[];
     for (final r in rows) {
       final v = _tryParseVector(r['embedding_json']);
       if (v == null) continue;
@@ -518,8 +684,7 @@ SET provider_id = NULL,
       );
 
       final bm25Raw = (r['bm25'] as num?)?.toDouble();
-      final textScore =
-          bm25Raw == null ? 0.0 : 1.0 / (1.0 + (bm25Raw < 0 ? 0.0 : bm25Raw));
+      final textScore = bm25Raw == null ? 0.0 : _bm25ToScore(bm25Raw);
 
       var score = vectorScore;
 
@@ -534,12 +699,31 @@ SET provider_id = NULL,
         score = vW * vectorScore + tW * textScore;
       }
 
-      scored.add((row: r, score: score));
+      final isLongTerm = ((r['is_long_term'] as num?)?.toInt() ?? 0) == 1;
+      final docDate = _tryParseDocDate(r['doc_date']);
+
+      final finalScore = _applyTemporalDecay(
+        score,
+        isLongTerm: isLongTerm,
+        docDate: docDate,
+      );
+
+      final snippet = (r['snippet'] ?? '').toString();
+      final mmrText =
+          snippet.trim().isNotEmpty ? snippet : (r['text'] ?? '').toString();
+
+      scored.add((
+        row: r,
+        score: finalScore,
+        tokens: _tokenizeForMmr(mmrText),
+      ));
     }
 
     scored.sort((a, b) => b.score.compareTo(a.score));
 
-    return scored.take(limit).map((e) {
+    final selected = _selectWithMmr(scored, limit);
+
+    return selected.map((e) {
       final r = e.row;
       final file = (r['file_name'] ?? '').toString();
       final start = (r['start_line'] as num?)?.toInt();
@@ -582,6 +766,8 @@ SET provider_id = NULL,
 SELECT
   c.id AS chunk_id,
   d.file_name,
+  d.is_long_term AS is_long_term,
+  d.date AS doc_date,
   c.start_line,
   c.end_line,
   c.text,

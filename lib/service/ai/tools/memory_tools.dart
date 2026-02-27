@@ -155,6 +155,10 @@ class MemorySearchTool
       vectorWeight: prefs.memorySearchHybridVectorWeight,
       textWeight: prefs.memorySearchHybridTextWeight,
       candidateMultiplier: prefs.memorySearchHybridCandidateMultiplier,
+      mmrEnabled: prefs.memorySearchHybridMmrEnabled,
+      mmrLambda: prefs.memorySearchHybridMmrLambda,
+      temporalDecayEnabled: prefs.memorySearchTemporalDecayEnabled,
+      temporalDecayHalfLifeDays: prefs.memorySearchTemporalDecayHalfLifeDays,
     );
 
     final hits = await service.search(

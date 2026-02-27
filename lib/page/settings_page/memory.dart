@@ -66,6 +66,10 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
         vectorWeight: prefs.memorySearchHybridVectorWeight,
         textWeight: prefs.memorySearchHybridTextWeight,
         candidateMultiplier: prefs.memorySearchHybridCandidateMultiplier,
+        mmrEnabled: prefs.memorySearchHybridMmrEnabled,
+        mmrLambda: prefs.memorySearchHybridMmrLambda,
+        temporalDecayEnabled: prefs.memorySearchTemporalDecayEnabled,
+        temporalDecayHalfLifeDays: prefs.memorySearchTemporalDecayHalfLifeDays,
       );
 
       final hits = await service.search(query, limit: 50);
@@ -251,6 +255,72 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
                 },
               ),
             ),
+            SwitchListTile.adaptive(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              title: Text(l10n.memorySearchMmrEnabledTitle),
+              subtitle: Text(l10n.memorySearchMmrEnabledDesc),
+              value: prefs.memorySearchHybridMmrEnabled,
+              onChanged: (v) {
+                setState(() {
+                  prefs.memorySearchHybridMmrEnabled = v;
+                });
+              },
+            ),
+            if (prefs.memorySearchHybridMmrEnabled) ...[
+              ListTile(
+                title: Text(l10n.memorySearchMmrLambdaTitle),
+                subtitle: Text(l10n.memorySearchMmrLambdaValue(
+                  (prefs.memorySearchHybridMmrLambda * 100).round(),
+                )),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Slider(
+                  value: prefs.memorySearchHybridMmrLambda,
+                  min: 0,
+                  max: 1,
+                  divisions: 20,
+                  label: prefs.memorySearchHybridMmrLambda.toStringAsFixed(2),
+                  onChanged: (v) {
+                    setState(() {
+                      prefs.memorySearchHybridMmrLambda = v;
+                    });
+                  },
+                ),
+              ),
+            ],
+            SwitchListTile.adaptive(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              title: Text(l10n.memorySearchTemporalDecayEnabledTitle),
+              subtitle: Text(l10n.memorySearchTemporalDecayEnabledDesc),
+              value: prefs.memorySearchTemporalDecayEnabled,
+              onChanged: (v) {
+                setState(() {
+                  prefs.memorySearchTemporalDecayEnabled = v;
+                });
+              },
+            ),
+            if (prefs.memorySearchTemporalDecayEnabled)
+              ListTile(
+                title: Text(l10n.memorySearchTemporalHalfLifeTitle),
+                trailing: DropdownButton<int>(
+                  value: prefs.memorySearchTemporalDecayHalfLifeDays,
+                  items: const [7, 14, 30, 60, 90, 180]
+                      .map(
+                        (v) => DropdownMenuItem(
+                          value: v,
+                          child: Text('${v}d'),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() {
+                      prefs.memorySearchTemporalDecayHalfLifeDays = v;
+                    });
+                  },
+                ),
+              ),
           ],
         ),
         if (_hits.isNotEmpty) ...[
