@@ -110,3 +110,33 @@
 
 - [ ] Non-standard MIME types are normalized (jpg/png)
 - [ ] Volcengine Ark (`volces.com/api/v3`) accepts image payload (raw base64 `image_url.url`)
+
+---
+
+## 7) OpenAI Responses compatibility (provider toggles)
+
+- [ ] Default: tool-calling works with `previous_response_id` continuation (no orphaned reasoning 400).
+- [ ] Toggle OFF `responses_use_previous_response_id`: requests omit `previous_response_id` and tool-calling still works.
+- [ ] Toggle OFF `responses_request_reasoning_summary`: requests omit `reasoning` block and streaming still works.
+
+---
+
+## 8) RAG Phase 3 — Library indexing + semantic_search_library
+
+- [ ] Settings → AI 索引（书库） loads and shows index state (unindexed/expired/indexed) from DB truth
+- [ ] Queue ops: pause/resume/cancel/clear finished; retry-once; restart normalization running→queued
+- [ ] `semantic_search_library` returns evidence with `paperreader://reader/open?...` jumpLink
+- [ ] Cross-book jumpLink opens the right book and navigates best-effort
+
+---
+
+## 9) Memory (Phase 4 + OpenClaw alignment A–D)
+
+- [ ] Markdown source-of-truth: edit `MEMORY.md` + create/edit daily `YYYY-MM-DD.md`
+- [ ] Text search works via derived index (FTS/BM25) and falls back safely when index is missing
+- [ ] Semantic Auto-on: effective enablement tracks embeddings provider/key; manual override works
+- [ ] Hybrid tuning (A): vector/text weights + candidateMultiplier adjust without crash
+- [ ] Optional post-processing (B): MMR + temporal decay (default off)
+- [ ] Freshness (C): dirty+debounce background rebuild; search remains non-blocking
+- [ ] Cache control (D): embedding cache enable + max chunks; LRU pruning best-effort
+

@@ -71,7 +71,36 @@ Android 不一定会使用 iOS Shortcuts，但协议路由应保持隔离：
 
 ---
 
-## 4. MCP Servers（外部工具）
+## 4. Memory（本地记忆 / 对齐 OpenClaw A–D）
+
+入口：Settings → Memory
+
+1) 基础文件与编辑
+- 打开/创建 `MEMORY.md`，写入一段内容并保存。
+- 创建/编辑一个 daily（任意日期），写入另一段包含相同关键词的内容。
+
+2) Memory 搜索（FTS/BM25 + fallback）
+- 在 Memory 页搜索关键词：预期命中 `MEMORY.md` 与 daily，返回 snippet/文件名/行号。
+- 删除/清空派生索引后再搜索：预期不 crash；本次可走 fallback；随后自动后台重建索引。
+
+3) 语义检索 Auto-on（M2）
+- 配置 embeddings provider/key 后：预期 Effective=ON；能召回相关但非字面匹配内容。
+- 移除 key 后：预期 Effective=OFF；仍能走文本检索。
+
+4) Hybrid tuning（A）
+- 调节 vector/text 权重与 candidateMultiplier：预期无 crash；排序变化可解释。
+
+5) 可选增强（B，默认 off）
+- 打开 MMR：结果应更分散。
+- 打开 temporal decay：新 daily 应优先于旧 daily。
+
+6) Embedding cache（D）
+- 开启缓存并把上限设小（如 5k）：多次搜索后不应出现明显卡顿/异常膨胀。
+- 关闭缓存：仍能搜索（但 embeddings 调用次数会增加）。
+
+---
+
+## 5. MCP Servers（外部工具）
 
 入口：Settings → MCP Servers
 
@@ -92,7 +121,7 @@ Android 不一定会使用 iOS Shortcuts，但协议路由应保持隔离：
 
 ---
 
-## 5. 备份/恢复（Files）
+## 6. 备份/恢复（Files）
 
 入口：Settings → Sync → Export/Import
 
@@ -108,7 +137,7 @@ Android 不一定会使用 iOS Shortcuts，但协议路由应保持隔离：
 
 ---
 
-## 6. AI 对话 / Provider Center
+## 7. AI 对话 / Provider Center
 
 入口：Settings → Provider Center
 
@@ -116,25 +145,28 @@ Android 不一定会使用 iOS Shortcuts，但协议路由应保持隔离：
 - 预期：禁用 provider 不应出现在 chat selector。
 
 2) OpenAI Responses
-- 工具调用链路：不应再出现 reasoning item 400（previous_response_id continuation 生效）。
+- 默认路径：工具调用链路不应再出现 reasoning item 400（优先使用 `previous_response_id` continuation）。
+- 兼容开关验证（Provider Detail）：
+  - 关闭 `responses_use_previous_response_id`：请求不应包含 `previous_response_id`（用于兼容第三方网关 400）。
+  - 关闭 `responses_request_reasoning_summary`：请求不应包含 `reasoning` block（用于兼容第三方网关）。
 
 ---
 
-## 7. EPUB Inline 全文翻译（阅读页）
+## 8. EPUB Inline 全文翻译（阅读页）
 
 1) 开启翻译并翻页
 - 预期：不取消上一页翻译；HUD 进度可见；失败段可重试。
 
 ---
 
-## 8. PaperTok（如果启用）
+## 9. PaperTok（如果启用）
 
 1) Papers feed 加载、导入 PDF/EPUB
 - 预期：导入后可打开阅读；无明显卡死。
 
 ---
 
-## 9. 记录与回归输出
+## 10. 记录与回归输出
 
 建议每次回归记录：
 - 测试设备/Android 版本

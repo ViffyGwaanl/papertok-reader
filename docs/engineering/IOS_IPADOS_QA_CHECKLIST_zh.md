@@ -43,6 +43,10 @@
    - 对某个 key 选择“**解除冷却**”：预期 cooldown 消失。
    - 对某个 key 选择“**重置统计**”：预期 success/fail/consecutive 清零。
 
+7) OpenAI Responses 兼容开关（如你使用 Responses 或第三方网关）：
+   - 关闭 `responses_use_previous_response_id`：请求不应包含 `previous_response_id`（兼容 400）。
+   - 关闭 `responses_request_reasoning_summary`：请求不应包含 `reasoning` block（兼容网关差异）。
+
 ## 3. Home AI 对话（不带书籍上下文）
 
 **目标**：可发消息、流式输出、失败时自动切 key。
@@ -86,7 +90,27 @@
    - 同书应在当前阅读器内跳转。
    - 跨书应打开对应书并定位（best-effort）。
 
-## 6. 阅读页 AI（带书籍上下文）
+## 6. Memory（本地记忆 / 对齐 OpenClaw A–D）
+
+**目标**：Memory source-of-truth 为 Markdown；索引为派生缓存（可重建）；搜索不阻塞索引刷新；语义检索 Auto-on；缓存上限可控。
+
+1) Settings → Memory：创建/打开 `MEMORY.md`，写入一行可检索内容并保存。
+2) 新建/编辑一个 daily（任意日期）：写入另一条包含相同关键词的内容。
+3) 在 Memory 页搜索：
+   - 预期：能命中 `MEMORY.md` 与 daily（snippet/文件名/行号合理）。
+4) 验证“非阻塞索引刷新”（C）：
+   - 保存后立刻搜索：预期 UI 不阻塞；若首次构建索引，本次可走 fallback；随后 1–2 秒内再次搜索应稳定命中。
+5) 语义检索 Auto-on（M2）：
+   - 配置 embeddings provider/key 后：预期 Effective=ON，能召回“非字面匹配”的相关内容。
+   - 移除 key 后：预期 Effective=OFF，仍能走文本检索。
+6) Hybrid tuning（A）：调节 vector/text 权重与 candidateMultiplier，确认不会 crash，排序变化可解释。
+7) 可选增强（B）：
+   - 打开 MMR：结果应更分散（不全来自同一 chunk）。
+   - 打开 temporal decay：同关键词的旧 daily vs 新 daily，新 daily 应更靠前。
+8) Embedding cache（D）：
+   - 打开缓存并把上限设小（如 5k），多次搜索后不应出现明显卡顿/异常膨胀；关闭缓存后仍能搜索（但会增加 embeddings 调用）。
+
+## 7. 阅读页 AI（带书籍上下文）
 
 **目标**：阅读页 AI 面板打开/最小化/继续流式，且不抢焦点/不乱滚动。
 
@@ -97,7 +121,7 @@
 3) 发送一条消息并最小化/切换界面：
    - 预期：流式继续（不应因为 UI 最小化而中断）。
 
-## 5. Inline 全文翻译（阅读页）
+## 8. Inline 全文翻译（阅读页）
 
 **目标**：翻译不会被页面切换取消；HUD 状态可见；失败可重试。
 
@@ -109,7 +133,7 @@
 4) 点击“重试翻译”：
    - 预期：能对失败段落强制重试；状态区显示最近一次重试信息。
 
-## 6. WebDAV 同步（不含密钥）
+## 9. WebDAV 同步（不含密钥）
 
 **目标**：配置可同步，密钥不出本机。
 
@@ -118,7 +142,7 @@
    - 预期：provider 列表、URL、model、prompt 等同步成功。
    - 预期：`api_key` / `api_keys` **不会被同步**（需要你本机重新导入或用加密备份）。
 
-## 7. iCloud Drive / Files 备份与恢复
+## 10. iCloud Drive / Files 备份与恢复
 
 **目标**：明文备份不含密钥；加密备份可携带密钥；导入可回滚。
 
@@ -126,7 +150,7 @@
 2) 导出 **加密备份**：选择包含密钥（如有该选项），然后导入验证：
    - 预期：导入后 keys 恢复；且导入过程中发生错误时应有 .bak 回滚（无半恢复状态）。
 
-## 8. iOS 系统工具（EventKit：提醒事项/日历）
+## 11. iOS 系统工具（EventKit：提醒事项/日历）
 
 **目标**：AI 工具能在 iOS 上稳定调用 EventKit 能力，并受到 Tool Safety 审批保护。
 
@@ -147,7 +171,7 @@
 
 > 备注：重复事件（recurrence + span=thisEvent/futureEvents）建议作为加分项验证。
 
-## 9. 结论记录（建议）
+## 12. 结论记录（建议）
 
 每次验收后记录：
 - 测试设备型号 + iOS/iPadOS 版本
