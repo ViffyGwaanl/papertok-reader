@@ -61,6 +61,9 @@ class AiSemanticSearchLibraryResult {
     this.message,
     this.usedFts,
     this.usedVectorFallback,
+    this.indexedBooks,
+    this.indexedChunks,
+    this.candidates,
   });
 
   final bool ok;
@@ -75,6 +78,15 @@ class AiSemanticSearchLibraryResult {
   /// returned no candidates.
   final bool? usedVectorFallback;
 
+  /// Diagnostics: number of indexed books included in the search scope.
+  final int? indexedBooks;
+
+  /// Diagnostics: total chunks (sum of chunk_count) across indexed books.
+  final int? indexedChunks;
+
+  /// Diagnostics: number of candidate rows used for vector/MMR ranking.
+  final int? candidates;
+
   Map<String, dynamic> toJson() => {
         'ok': ok,
         'query': query,
@@ -82,6 +94,9 @@ class AiSemanticSearchLibraryResult {
         if (usedFts != null) 'usedFts': usedFts,
         if (usedVectorFallback != null)
           'usedVectorFallback': usedVectorFallback,
+        if (indexedBooks != null) 'indexedBooks': indexedBooks,
+        if (indexedChunks != null) 'indexedChunks': indexedChunks,
+        if (candidates != null) 'candidates': candidates,
         'evidence': evidence.map((e) => e.toJson()).toList(growable: false),
       };
 }
@@ -125,6 +140,28 @@ class SemanticSearchLibrary {
     final indexedFilter = onlyIndexed
         ? "b.chunk_count > 0 AND COALESCE(b.index_status, 'succeeded') = 'succeeded'"
         : '1=1';
+
+    // Diagnostics: count indexed books/chunks in current scope.
+    int? indexedBooks;
+    int? indexedChunks;
+
+    try {
+      final stats = await db.rawQuery(
+        '''
+SELECT
+  COUNT(*) AS indexed_books,
+  COALESCE(SUM(chunk_count), 0) AS indexed_chunks
+FROM ai_book_index b
+WHERE ($indexedFilter)
+''',
+      );
+      if (stats.isNotEmpty) {
+        indexedBooks = (stats.first['indexed_books'] as num?)?.toInt();
+        indexedChunks = (stats.first['indexed_chunks'] as num?)?.toInt();
+      }
+    } catch (_) {
+      // Best-effort only.
+    }
 
     var usedFts = false;
     List<Map<String, Object?>> rows = const [];
@@ -177,6 +214,8 @@ LIMIT ?
           query: query,
           evidence: const [],
           usedFts: false,
+          indexedBooks: indexedBooks,
+          indexedChunks: indexedChunks,
           message: 'query is not searchable',
         );
       }
@@ -250,15 +289,23 @@ LIMIT ?
     }
 
     if (rows.isEmpty) {
+      final hasAnyIndexed = (indexedChunks ?? 0) > 0;
+      final defaultMessage = onlyIndexed
+          ? (hasAnyIndexed
+              ? 'Indexed content exists, but no candidates matched. Try fewer keywords or rebuild the index.'
+              : 'No indexed books found. Build AI indexes from Library → AI Index.')
+          : 'No content matched.';
+
       return AiSemanticSearchLibraryResult(
         ok: false,
         query: query,
         evidence: const [],
         usedFts: usedFts,
         usedVectorFallback: usedVectorFallback,
-        message: onlyIndexed
-            ? 'No indexed content matched. Build AI indexes from Library → AI Index.'
-            : 'No content matched.',
+        indexedBooks: indexedBooks,
+        indexedChunks: indexedChunks,
+        candidates: 0,
+        message: defaultMessage,
       );
     }
 
@@ -351,6 +398,10 @@ LIMIT ?
         query: query,
         evidence: const [],
         usedFts: usedFts,
+        usedVectorFallback: usedVectorFallback,
+        indexedBooks: indexedBooks,
+        indexedChunks: indexedChunks,
+        candidates: rows.length,
         message: 'No valid embedding vectors found. Please rebuild indexes.',
       );
     }
@@ -430,6 +481,9 @@ LIMIT ?
       evidence: evidence,
       usedFts: usedFts,
       usedVectorFallback: usedVectorFallback,
+      indexedBooks: indexedBooks,
+      indexedChunks: indexedChunks,
+      candidates: rows.length,
     );
   }
 
