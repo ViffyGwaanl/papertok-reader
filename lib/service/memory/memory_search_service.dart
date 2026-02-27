@@ -481,6 +481,8 @@ SET provider_id = NULL,
     final fn = _embedDocuments;
     final embed = fn ?? AiEmbeddingsService.embedDocuments;
 
+    var wroteCache = false;
+
     const batchSize = 16;
     for (var offset = 0; offset < missing.length; offset += batchSize) {
       final batch =
@@ -506,6 +508,7 @@ SET provider_id = NULL,
         if (chunkId == null) continue;
 
         if (embeddingCacheEnabled) {
+          wroteCache = true;
           await db.update(
             'memory_chunks',
             {
@@ -525,6 +528,46 @@ SET provider_id = NULL,
         r['embedding_json'] = jsonStr;
         r['embedding_norm'] = norm;
       }
+    }
+
+    if (wroteCache) {
+      await _pruneEmbeddingCache(db);
+    }
+  }
+
+  Future<void> _pruneEmbeddingCache(Database db) async {
+    if (!embeddingCacheEnabled) return;
+
+    // 0/negative means unlimited.
+    final max = embeddingCacheMaxChunks;
+    if (max <= 0) return;
+
+    try {
+      final rows = await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM memory_chunks WHERE embedding_json IS NOT NULL',
+      );
+      final count = (rows.first['c'] as num?)?.toInt() ?? 0;
+      final excess = count - max;
+      if (excess <= 0) return;
+
+      // Best-effort pruning. Clear the oldest embeddings by embedded_at.
+      await db.execute('''
+UPDATE memory_chunks
+SET provider_id = NULL,
+    embedding_model = NULL,
+    embedding_json = NULL,
+    embedding_dim = NULL,
+    embedding_norm = NULL,
+    embedded_at = NULL
+WHERE id IN (
+  SELECT id FROM memory_chunks
+  WHERE embedding_json IS NOT NULL
+  ORDER BY COALESCE(embedded_at, 0) ASC
+  LIMIT ?
+)
+''', [excess]);
+    } catch (_) {
+      // Best-effort only.
     }
   }
 
