@@ -60,6 +60,7 @@ class AiSemanticSearchLibraryResult {
     required this.evidence,
     this.message,
     this.usedFts,
+    this.usedVectorFallback,
   });
 
   final bool ok;
@@ -70,11 +71,17 @@ class AiSemanticSearchLibraryResult {
   /// Whether the DB-level query used SQLite FTS5.
   final bool? usedFts;
 
+  /// Whether we fell back to a small vector-only scan when text retrieval
+  /// returned no candidates.
+  final bool? usedVectorFallback;
+
   Map<String, dynamic> toJson() => {
         'ok': ok,
         'query': query,
         if (message != null) 'message': message,
         if (usedFts != null) 'usedFts': usedFts,
+        if (usedVectorFallback != null)
+          'usedVectorFallback': usedVectorFallback,
         'evidence': evidence.map((e) => e.toJson()).toList(growable: false),
       };
 }
@@ -197,12 +204,49 @@ SELECT
 FROM ai_chunks c
 JOIN ai_book_index b ON b.book_id = c.book_id
 WHERE ($indexedFilter)
-  AND (${whereParts.join(' AND ')})
+  AND (${whereParts.join(' OR ')})
 LIMIT ?
 ''',
         [...args, candidateLimit],
       );
       usedFts = false;
+    }
+
+    var usedVectorFallback = false;
+
+    if (rows.isEmpty && onlyIndexed) {
+      // Final fallback: small vector-only scan.
+      //
+      // This makes cross-lingual semantic search work even when text retrieval
+      // returns no matches (e.g. Chinese query over English chunks).
+      //
+      // Keep the scan small to avoid battery/memory issues on mobile.
+      final vectorLimit = (candidateLimit * 3).clamp(120, 360);
+
+      rows = await db.rawQuery(
+        '''
+SELECT
+  c.id AS chunk_id,
+  c.book_id,
+  c.chapter_href,
+  c.chapter_title,
+  c.text,
+  c.embedding_json,
+  c.embedding_norm,
+  b.embedding_model,
+  b.provider_id
+FROM ai_chunks c
+JOIN ai_book_index b ON b.book_id = c.book_id
+WHERE ($indexedFilter)
+ORDER BY COALESCE(b.updated_at, 0) DESC, c.id DESC
+LIMIT ?
+''',
+        [vectorLimit],
+      );
+
+      if (rows.isNotEmpty) {
+        usedVectorFallback = true;
+      }
     }
 
     if (rows.isEmpty) {
@@ -211,6 +255,7 @@ LIMIT ?
         query: query,
         evidence: const [],
         usedFts: usedFts,
+        usedVectorFallback: usedVectorFallback,
         message: onlyIndexed
             ? 'No indexed content matched. Build AI indexes from Library → AI Index.'
             : 'No content matched.',
@@ -384,6 +429,7 @@ LIMIT ?
       query: query,
       evidence: evidence,
       usedFts: usedFts,
+      usedVectorFallback: usedVectorFallback,
     );
   }
 
@@ -446,7 +492,13 @@ LIMIT ?
     final tokens = _tokenize(query);
     if (tokens.isEmpty) return '';
 
-    // Use AND semantics to improve precision.
+    // Use OR semantics to maximize recall.
+    //
+    // Rationale:
+    // - The final ranking uses vectors + (optional) BM25 + MMR.
+    // - Many queries contain mixed-language tokens (e.g. "GLM-5 论文 ...").
+    //   AND semantics would often return zero candidates, preventing the vector
+    //   stage from running at all.
     //
     // Important: SQLite FTS5 query syntax treats certain characters as
     // operators. For example, `GLM-5` can raise `no such column: 5`.
@@ -454,7 +506,7 @@ LIMIT ?
     // To keep search robust across languages and model/version-like tokens
     // (gpt-4o, glm-5, etc.), we quote any token that contains non-word
     // characters.
-    return tokens.take(8).map(_escapeFtsToken).join(' ');
+    return tokens.take(8).map(_escapeFtsToken).join(' OR ');
   }
 
   static final RegExp _ftsSafeToken = RegExp(r'^[0-9A-Za-z_\u4e00-\u9fff]+$');
