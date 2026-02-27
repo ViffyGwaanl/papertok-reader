@@ -12,7 +12,7 @@ void main() {
           text: 'snippet',
           href: 'Text/ch1.xhtml',
           anchor: 'Chapter 1',
-          jumpLink: 'anx://href?value=Text%2Fch1.xhtml',
+          jumpLink: 'paperreader://reader/open?bookId=1&href=Text%2Fch1.xhtml',
           score: 0.9,
         ),
       ],
