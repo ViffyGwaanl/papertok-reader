@@ -69,3 +69,32 @@ Phase 3 的“成品”定义为：用户能在 **Settings → AI → AI 索引�
 - Phase 3 设计/进度：`docs/ai/rag_phase3_library_rag_zh.md`
 - 任务清单（Phase 1–5）：`docs/ai/rag_memory_tasks_zh.md`
 - 手动备份/恢复（含 memory/ 与 ai_index.db 可选包含）：`docs/ai/backup_restore_icloud.md`
+
+---
+
+## 2026-02-27 状态更新（对齐 OpenClaw 最佳实践）
+
+本项目 Memory 已从“Markdown 文件 + substring 搜索”升级为可检索系统，核心目标对齐 OpenClaw `docs/concepts/memory.md` 的 IR pipeline。
+
+### 已完成
+
+- **M0（正确性）**：修复 daily 文件名/日期解析的正则错误，确保 `YYYY-MM-DD.md` 能被列出与按 date 参数读写。
+- **M1（本地全文检索）**：新增派生索引 `memory_index.db`，优先使用 FTS5 + BM25 + snippet；不支持 FTS5 时 best-effort 回退原始逐行搜索。
+- **M2（语义检索 Auto-on）**：对齐 OpenClaw 默认策略：当检测到可用 embeddings provider/key 时自动启用语义记忆检索；否则保持禁用。
+- **A（Hybrid 参数对齐）**：提供 `vectorWeight/textWeight/candidateMultiplier` tuning，默认值对齐 OpenClaw 推荐（0.7/0.3/4）。
+- **B（增强项，默认 off）**：提供可选的 MMR 多样性重排与 temporal decay（daily 生效，MEMORY.md evergreen 不衰减）。
+- **C（索引新鲜度）**：引入 dirty + debounce 异步索引刷新（不阻塞搜索），写入口触发后台重建。
+- **D（缓存控制）**：embedding 缓存可配置开关与上限，超过上限按 embedded_at LRU 清理。
+- **安全**：`memory_*` AI 工具执行日志脱敏（不记录正文），降低隐私泄露风险。
+
+### 关键配置入口
+
+- 设置页：Settings → Memory
+  - 语义记忆检索（Auto/手动覆盖）
+  - Advanced：Hybrid 权重、候选池倍率、MMR、Temporal decay、Embedding cache
+
+### 风险与边界
+
+- 语义检索依赖 embeddings provider：开启后会将记忆文本发送到所选 provider 进行 embedding（需用户理解风险）。
+- `memory_index.db` 为派生缓存：可删除后重建；首次使用可能触发后台构建。
+

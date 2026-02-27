@@ -75,3 +75,17 @@
 - [x] 导入具备回滚保护（`.bak.<timestamp>`）
 
 交付状态：✅ 已合入产品仓库 `product/main`
+
+---
+
+## 2026-02-27 已交付（Memory 对齐 OpenClaw）
+
+- [x] 修复 daily 文件名/日期解析正则（影响 daily 列表/按日期工具参数/全量检索）。
+- [x] 新增 `memory_index.db`（FTS5+BM25+snippet），并在 Memory UI 与 `memory_search` 工具启用。
+- [x] 语义记忆检索（Auto-on）：检测到 embeddings provider/key 自动启用；不可用则自动禁用。
+- [x] Hybrid 参数 tuning（vectorWeight/textWeight/candidateMultiplier），默认值对齐 OpenClaw。
+- [x] 可选增强：MMR 多样性重排、Temporal decay（默认 off）。
+- [x] 索引新鲜度：dirty + debounce 后台刷新（非阻塞搜索）。
+- [x] Embedding cache 开关与上限 + LRU 清理。
+- [x] `memory_*` 工具日志脱敏（不记录正文）。
+

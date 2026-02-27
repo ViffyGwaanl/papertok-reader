@@ -168,3 +168,12 @@ flutter pub get
 flutter gen-l10n
 dart run build_runner build --delete-conflicting-outputs
 ```
+
+---
+
+## Memory（长期记忆）
+
+- Memory 的设计与实现对齐 OpenClaw：Markdown 为 source-of-truth，索引为派生缓存，可重建。
+- 现已支持：本地 FTS/BM25 snippet 检索 + 语义检索（Auto-on）+ Hybrid tuning + 可选 MMR/Temporal decay + 后台索引刷新 + embedding cache 控制。
+- 详见：`docs/ai/memory_search_openclaw_alignment_zh.md`
+
