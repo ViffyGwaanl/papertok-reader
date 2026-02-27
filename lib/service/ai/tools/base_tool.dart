@@ -51,14 +51,54 @@ abstract class RepositoryTool<I extends Object, O> {
 
   bool shouldLogError(Object error) => true;
 
+  Object _sanitizeForLog(Object value) {
+    if (!name.startsWith('memory_')) return value;
+
+    if (value is Map) {
+      final out = <String, dynamic>{};
+      for (final e in value.entries) {
+        final k = e.key.toString();
+        final v = e.value;
+
+        if (k == 'text' || k == 'content') {
+          final s = v?.toString() ?? '';
+          out[k] = '<redacted:${s.length} chars>';
+          continue;
+        }
+
+        if (k == 'data' && v is Map) {
+          out[k] = _sanitizeForLog(v);
+          continue;
+        }
+
+        if (k == 'data' && v is List) {
+          out[k] = '<redacted:list>'; // conservative
+          continue;
+        }
+
+        out[k] = v;
+      }
+      return out;
+    }
+
+    if (value is List) {
+      return '<redacted:list>';
+    }
+
+    return value;
+  }
+
   Future<String> _execute(I input) async {
     try {
       AnxLog.info(
-          'AiTool: Executing tool $name with input: ${jsonEncode(input)}');
+        'AiTool: Executing tool $name with input: ${jsonEncode(_sanitizeForLog(input))}',
+      );
       final result = await _runWithTimeout(() => run(input));
       final serialized = serializeSuccess(result);
       final resultJson = jsonEncode(serialized);
-      AnxLog.info('AiTool: Tool $name completed with result: $resultJson');
+      AnxLog.info(
+        'AiTool: Tool $name completed with result: ${jsonEncode(_sanitizeForLog(serialized))}',
+      );
       return resultJson;
     } catch (error, stack) {
       if (shouldLogError(error)) {

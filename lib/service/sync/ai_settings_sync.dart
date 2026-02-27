@@ -56,6 +56,9 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'aiPanelHeight': prefs.aiPanelHeight,
     'aiSheetInitialSize': prefs.aiSheetInitialSize,
     'aiChatFontScale': prefs.aiChatFontScale,
+    if (prefs.memorySemanticSearchEnabledOverride != null)
+      'memorySemanticSearchEnabledV1':
+          prefs.memorySemanticSearchEnabledOverride,
   };
 
   // Translation-only prefs (safe to sync; no secrets).
@@ -296,6 +299,16 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
 
     final ui = json['ui'];
     if (ui is Map) {
+      final memSemantic = ui['memorySemanticSearchEnabledV1'];
+      if (memSemantic is bool) {
+        prefs.memorySemanticSearchEnabledOverride = memSemantic;
+      } else if (memSemantic is String) {
+        final v = memSemantic.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.memorySemanticSearchEnabledOverride = v == 'true';
+        }
+      }
+
       final mode = ui['aiPadPanelMode']?.toString();
       if (mode != null) {
         prefs.aiPadPanelMode = AiPadPanelModeEnum.fromCode(mode);

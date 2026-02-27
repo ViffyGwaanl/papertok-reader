@@ -1,3 +1,4 @@
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/providers/ai_draft_input.dart';
@@ -29,7 +30,6 @@ class _MemorySettingsBody extends ConsumerStatefulWidget {
 
 class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
   final _store = MarkdownMemoryStore();
-  late final _searchService = MemorySearchService(store: _store);
   final TextEditingController _searchController = TextEditingController();
 
   bool _searching = false;
@@ -55,7 +55,16 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
     });
 
     try {
-      final hits = await _searchService.search(query, limit: 50);
+      final prefs = Prefs();
+      final service = MemorySearchService(
+        store: _store,
+        semanticEnabled: prefs.memorySemanticSearchEnabledEffective,
+        embeddingProviderId: prefs.aiLibraryIndexProviderIdEffective,
+        embeddingModel: prefs.aiLibraryIndexEmbeddingModelEffective,
+        embeddingsTimeoutSeconds: prefs.aiLibraryIndexEmbeddingsTimeoutSeconds,
+      );
+
+      final hits = await service.search(query, limit: 50);
       if (!mounted) return;
       setState(() {
         _hits = hits;
@@ -107,6 +116,10 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
     final l10n = L10n.of(context);
     final todayLabel = _store.dailyFileName(DateTime.now());
 
+    final prefs = Prefs();
+    final semanticOverride = prefs.memorySemanticSearchEnabledOverride;
+    final semanticEffective = prefs.memorySemanticSearchEnabledEffective;
+
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 12),
       children: [
@@ -134,6 +147,39 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
           ),
         ),
         const SizedBox(height: 8),
+        SwitchListTile.adaptive(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Text(l10n.memorySemanticSearchTitle),
+          subtitle: Text(
+            semanticOverride == null
+                ? (semanticEffective
+                    ? l10n.memorySemanticSearchAutoOn
+                    : l10n.memorySemanticSearchAutoOff)
+                : l10n.memorySemanticSearchManual,
+          ),
+          value: semanticEffective,
+          onChanged: (v) {
+            setState(() {
+              prefs.memorySemanticSearchEnabledOverride = v;
+            });
+          },
+          secondary: const Icon(Icons.auto_awesome),
+        ),
+        if (semanticOverride != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    prefs.memorySemanticSearchEnabledOverride = null;
+                  });
+                },
+                child: Text(l10n.memorySemanticSearchResetAuto),
+              ),
+            ),
+          ),
         if (_hits.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

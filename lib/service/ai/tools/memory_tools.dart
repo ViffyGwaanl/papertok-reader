@@ -4,6 +4,7 @@ import 'package:anx_reader/enums/ai_tool_risk_level.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/ai/tools/base_tool.dart';
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_search_service.dart';
 
@@ -90,8 +91,7 @@ class MemoryReadTool
 class MemorySearchTool
     extends RepositoryTool<Map<String, dynamic>, Map<String, dynamic>> {
   MemorySearchTool(this._store)
-      : _searchService = MemorySearchService(store: _store),
-        super(
+      : super(
           name: 'memory_search',
           description:
               'Search through the user\'s local markdown memory files (MEMORY.md and daily notes). Returns matching snippets with file name and line number.',
@@ -122,7 +122,6 @@ class MemorySearchTool
         );
 
   final MarkdownMemoryStore _store;
-  final MemorySearchService _searchService;
 
   @override
   Map<String, dynamic> parseInput(Map<String, dynamic> json) => json;
@@ -140,7 +139,21 @@ class MemorySearchTool
     final includeLongTerm = (input['include_long_term'] as bool?) ?? true;
     final includeDaily = (input['include_daily'] as bool?) ?? true;
 
-    final hits = await _searchService.search(
+    final prefs = Prefs();
+
+    final semanticEnabled = prefs.memorySemanticSearchEnabledEffective;
+    final providerId = prefs.aiLibraryIndexProviderIdEffective;
+    final embeddingModel = prefs.aiLibraryIndexEmbeddingModelEffective;
+
+    final service = MemorySearchService(
+      store: _store,
+      semanticEnabled: semanticEnabled,
+      embeddingProviderId: providerId,
+      embeddingModel: embeddingModel,
+      embeddingsTimeoutSeconds: prefs.aiLibraryIndexEmbeddingsTimeoutSeconds,
+    );
+
+    final hits = await service.search(
       query,
       limit: limit,
       includeLongTerm: includeLongTerm,

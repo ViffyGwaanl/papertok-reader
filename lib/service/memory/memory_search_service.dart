@@ -1,18 +1,53 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_index_database.dart';
+import 'package:anx_reader/service/rag/ai_embeddings_service.dart';
+import 'package:anx_reader/service/rag/vector_math.dart';
+import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
+typedef MemoryEmbedQueryFn = Future<List<double>> Function(
+  String text, {
+  required String model,
+  String? providerId,
+  int timeoutSeconds,
+});
+
+typedef MemoryEmbedDocumentsFn = Future<List<List<double>>> Function(
+  List<String> texts, {
+  required String model,
+  String? providerId,
+  int timeoutSeconds,
+});
+
 class MemorySearchService {
-  MemorySearchService(
-      {MarkdownMemoryStore? store, MemoryIndexDatabase? indexDb})
-      : _store = store ?? MarkdownMemoryStore(),
-        _indexDb = indexDb ?? MemoryIndexDatabase();
+  MemorySearchService({
+    MarkdownMemoryStore? store,
+    MemoryIndexDatabase? indexDb,
+    this.semanticEnabled = false,
+    this.embeddingProviderId = '',
+    this.embeddingModel = AiEmbeddingsService.defaultEmbeddingModel,
+    this.embeddingsTimeoutSeconds = 60,
+    MemoryEmbedQueryFn? embedQuery,
+    MemoryEmbedDocumentsFn? embedDocuments,
+  })  : _store = store ?? MarkdownMemoryStore(),
+        _indexDb = indexDb ?? MemoryIndexDatabase(),
+        _embedQuery = embedQuery,
+        _embedDocuments = embedDocuments;
 
   final MarkdownMemoryStore _store;
   final MemoryIndexDatabase _indexDb;
+
+  final bool semanticEnabled;
+  final String embeddingProviderId;
+  final String embeddingModel;
+  final int embeddingsTimeoutSeconds;
+
+  final MemoryEmbedQueryFn? _embedQuery;
+  final MemoryEmbedDocumentsFn? _embedDocuments;
 
   static final RegExp _ftsSafeToken = RegExp(r'^[0-9A-Za-z_\u4e00-\u9fff]+$');
 
@@ -106,12 +141,14 @@ class MemorySearchService {
         final chunks = _chunkLines(lines);
         var idx = 0;
         for (final c in chunks) {
+          final hash = sha1.convert(utf8.encode(c.text)).toString();
           await txn.insert('memory_chunks', {
             'doc_id': docId,
             'chunk_index': idx++,
             'start_line': c.startLine,
             'end_line': c.endLine,
             'text': c.text,
+            'content_hash': hash,
           });
         }
 
@@ -159,17 +196,35 @@ class MemorySearchService {
 
     final capped = limit.clamp(1, 100);
 
-    // Try FTS first.
+    final useSemantic =
+        semanticEnabled && embeddingProviderId.trim().isNotEmpty;
+
     try {
       await _syncIndex();
 
       final db = await _indexDb.database;
 
+      if (useSemantic) {
+        await _ensureSemanticMeta(db);
+      }
+
       // Check FTS availability.
       final ftsTables = await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_chunks_fts'",
       );
-      if (ftsTables.isEmpty) {
+      final hasFts = ftsTables.isNotEmpty;
+
+      if (!hasFts) {
+        if (useSemantic) {
+          return _vectorOnlySearch(
+            db,
+            q,
+            limit: capped,
+            includeLongTerm: includeLongTerm,
+            includeDaily: includeDaily,
+          );
+        }
+
         // No FTS: fallback.
         return _store.search(
           q,
@@ -185,8 +240,6 @@ class MemorySearchService {
       }
 
       final typeFilter = <String>[];
-      final args = <Object?>[ftsQuery];
-
       if (!includeLongTerm) {
         typeFilter.add('d.is_long_term = 0');
       }
@@ -197,12 +250,18 @@ class MemorySearchService {
       final whereType =
           typeFilter.isEmpty ? '' : 'AND (${typeFilter.join(' AND ')})';
 
+      final candidateLimit = (capped * 25).clamp(60, 600);
+
       final rows = await db.rawQuery(
         '''
 SELECT
+  c.id AS chunk_id,
   d.file_name,
   c.start_line,
   c.end_line,
+  c.text,
+  c.embedding_json,
+  c.embedding_norm,
   bm25(memory_chunks_fts) AS bm25,
   snippet(memory_chunks_fts, 0, '', '', '…', 18) AS snippet
 FROM memory_chunks_fts
@@ -213,24 +272,44 @@ WHERE memory_chunks_fts MATCH ?
 ORDER BY bm25
 LIMIT ?
 ''',
-        [...args, capped],
+        [ftsQuery, candidateLimit],
       );
 
-      return rows
-          .map((r) {
-            final file = (r['file_name'] ?? '').toString();
-            final start = (r['start_line'] as num?)?.toInt();
-            final end = (r['end_line'] as num?)?.toInt();
-            final snippet = (r['snippet'] ?? '').toString();
-            return {
-              'file': file,
-              'line': start,
-              if (end != null) 'endLine': end,
-              'text': snippet,
-            };
-          })
-          .where((h) => (h['file'] ?? '').toString().isNotEmpty)
-          .toList(growable: false);
+      if (!useSemantic) {
+        return rows
+            .map((r) {
+              final file = (r['file_name'] ?? '').toString();
+              final start = (r['start_line'] as num?)?.toInt();
+              final end = (r['end_line'] as num?)?.toInt();
+              final snippet = (r['snippet'] ?? '').toString();
+              return {
+                'file': file,
+                'line': start,
+                if (end != null) 'endLine': end,
+                'text': snippet,
+              };
+            })
+            .where((h) => (h['file'] ?? '').toString().isNotEmpty)
+            .take(capped)
+            .toList(growable: false);
+      }
+
+      if (rows.isEmpty) {
+        return _vectorOnlySearch(
+          db,
+          q,
+          limit: capped,
+          includeLongTerm: includeLongTerm,
+          includeDaily: includeDaily,
+        );
+      }
+
+      return _semanticRerank(
+        db,
+        q,
+        rows,
+        limit: capped,
+      );
     } catch (_) {
       // Best-effort fallback.
       return _store.search(
@@ -240,6 +319,262 @@ LIMIT ?
         includeDaily: includeDaily,
       );
     }
+  }
+
+  Future<void> _ensureSemanticMeta(Database db) async {
+    final provider = embeddingProviderId.trim();
+    final model = embeddingModel.trim().isEmpty
+        ? AiEmbeddingsService.defaultEmbeddingModel
+        : embeddingModel.trim();
+
+    try {
+      final rows = await db.query(
+        'memory_index_meta',
+        columns: ['key', 'value'],
+        where: "key IN ('provider_id','embedding_model')",
+      );
+
+      final map = <String, String>{
+        for (final r in rows)
+          (r['key'] ?? '').toString(): (r['value'] ?? '').toString(),
+      };
+
+      final prevProvider = (map['provider_id'] ?? '').trim();
+      final prevModel = (map['embedding_model'] ?? '').trim();
+
+      if (prevProvider == provider && prevModel == model) {
+        return;
+      }
+
+      // Config changed: clear all semantic cache to avoid mixing vectors.
+      await db.execute('''
+UPDATE memory_chunks
+SET provider_id = NULL,
+    embedding_model = NULL,
+    embedding_json = NULL,
+    embedding_dim = NULL,
+    embedding_norm = NULL,
+    embedded_at = NULL
+''');
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.insert(
+        'memory_index_meta',
+        {
+          'key': 'provider_id',
+          'value': provider,
+          'updated_at': now,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      await db.insert(
+        'memory_index_meta',
+        {
+          'key': 'embedding_model',
+          'value': model,
+          'updated_at': now,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (_) {
+      // Best-effort only.
+    }
+  }
+
+  List<double>? _tryParseVector(Object? json) {
+    if (json == null) return null;
+    final s = json.toString().trim();
+    if (s.isEmpty) return null;
+
+    try {
+      final decoded = jsonDecode(s);
+      if (decoded is! List) return null;
+      return decoded.map((x) => (x as num).toDouble()).toList(growable: false);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _ensureEmbeddingsForRows(
+    Database db,
+    List<Map<String, Object?>> rows,
+  ) async {
+    final provider = embeddingProviderId.trim();
+    if (provider.isEmpty) return;
+
+    final model = embeddingModel.trim().isEmpty
+        ? AiEmbeddingsService.defaultEmbeddingModel
+        : embeddingModel.trim();
+
+    final missing = <Map<String, Object?>>[];
+    for (final r in rows) {
+      final existing = (r['embedding_json'] ?? '').toString().trim();
+      if (existing.isEmpty) {
+        missing.add(r);
+      }
+    }
+
+    if (missing.isEmpty) return;
+
+    final fn = _embedDocuments;
+    final embed = fn ?? AiEmbeddingsService.embedDocuments;
+
+    const batchSize = 16;
+    for (var offset = 0; offset < missing.length; offset += batchSize) {
+      final batch =
+          missing.skip(offset).take(batchSize).toList(growable: false);
+      final texts = batch
+          .map((r) => (r['text'] ?? '').toString())
+          .toList(growable: false);
+
+      final vectors = await embed(
+        texts,
+        model: model,
+        providerId: provider,
+        timeoutSeconds: embeddingsTimeoutSeconds,
+      );
+
+      for (var i = 0; i < batch.length; i++) {
+        final r = batch[i];
+        final v = vectors[i];
+        final norm = VectorMath.l2Norm(v);
+        final jsonStr = jsonEncode(v);
+
+        final chunkId = (r['chunk_id'] as num?)?.toInt();
+        if (chunkId == null) continue;
+
+        await db.update(
+          'memory_chunks',
+          {
+            'provider_id': provider,
+            'embedding_model': model,
+            'embedding_json': jsonStr,
+            'embedding_dim': v.length,
+            'embedding_norm': norm,
+            'embedded_at': DateTime.now().millisecondsSinceEpoch,
+          },
+          where: 'id = ?',
+          whereArgs: [chunkId],
+        );
+
+        // Update in-memory row to avoid re-query.
+        r['embedding_json'] = jsonStr;
+        r['embedding_norm'] = norm;
+      }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _semanticRerank(
+    Database db,
+    String query,
+    List<Map<String, Object?>> rows, {
+    required int limit,
+  }) async {
+    await _ensureEmbeddingsForRows(db, rows);
+
+    final provider = embeddingProviderId.trim();
+    final model = embeddingModel.trim().isEmpty
+        ? AiEmbeddingsService.defaultEmbeddingModel
+        : embeddingModel.trim();
+
+    final embedQ = _embedQuery ?? AiEmbeddingsService.embedQuery;
+    final qVec = await embedQ(
+      query,
+      model: model,
+      providerId: provider,
+      timeoutSeconds: embeddingsTimeoutSeconds,
+    );
+    final qNorm = VectorMath.l2Norm(qVec);
+
+    final scored = <({Map<String, Object?> row, double score})>[];
+    for (final r in rows) {
+      final v = _tryParseVector(r['embedding_json']);
+      if (v == null) continue;
+      final vNorm = (r['embedding_norm'] as num?)?.toDouble();
+      final vectorScore = VectorMath.cosineSimilarity(
+        qVec,
+        v,
+        aNorm: qNorm,
+        bNorm: vNorm,
+      );
+
+      final bm25Raw = (r['bm25'] as num?)?.toDouble();
+      final textScore =
+          bm25Raw == null ? 0.0 : 1.0 / (1.0 + (bm25Raw < 0 ? 0.0 : bm25Raw));
+
+      final hybrid = 0.65 * vectorScore + 0.35 * textScore;
+      scored.add((row: r, score: hybrid));
+    }
+
+    scored.sort((a, b) => b.score.compareTo(a.score));
+
+    return scored.take(limit).map((e) {
+      final r = e.row;
+      final file = (r['file_name'] ?? '').toString();
+      final start = (r['start_line'] as num?)?.toInt();
+      final end = (r['end_line'] as num?)?.toInt();
+      final snippet = (r['snippet'] ?? '').toString();
+      final text = snippet.trim().isNotEmpty
+          ? snippet
+          : (r['text'] ?? '').toString().trim().split('\n').first;
+
+      return {
+        'file': file,
+        'line': start,
+        if (end != null) 'endLine': end,
+        'text': text,
+      };
+    }).toList(growable: false);
+  }
+
+  Future<List<Map<String, dynamic>>> _vectorOnlySearch(
+    Database db,
+    String query, {
+    required int limit,
+    required bool includeLongTerm,
+    required bool includeDaily,
+  }) async {
+    final typeFilter = <String>[];
+    if (!includeLongTerm) {
+      typeFilter.add('d.is_long_term = 0');
+    }
+    if (!includeDaily) {
+      typeFilter.add('d.is_long_term = 1');
+    }
+    final whereType =
+        typeFilter.isEmpty ? '' : 'WHERE ${typeFilter.join(' AND ')}';
+
+    final candidateLimit = (limit * 25).clamp(80, 300);
+
+    final rows = await db.rawQuery(
+      '''
+SELECT
+  c.id AS chunk_id,
+  d.file_name,
+  c.start_line,
+  c.end_line,
+  c.text,
+  c.embedding_json,
+  c.embedding_norm,
+  NULL AS bm25,
+  '' AS snippet
+FROM memory_chunks c
+JOIN memory_docs d ON d.doc_id = c.doc_id
+$whereType
+ORDER BY d.updated_at DESC, c.id DESC
+LIMIT ?
+''',
+      [candidateLimit],
+    );
+
+    if (rows.isEmpty) return const [];
+
+    return _semanticRerank(
+      db,
+      query,
+      rows.cast<Map<String, Object?>>(),
+      limit: limit,
+    );
   }
 
   List<_Chunk> _chunkLines(List<String> lines) {

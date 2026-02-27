@@ -954,6 +954,9 @@ class Prefs extends ChangeNotifier {
   static const String _aiLibraryIndexEmbeddingsTimeoutSecKey =
       'aiLibraryIndexEmbeddingsTimeoutSecV1';
 
+  static const String _memorySemanticSearchEnabledV1Key =
+      'memorySemanticSearchEnabledV1';
+
   /// Whether indexing should follow the current chat provider.
   ///
   /// When true, [aiLibraryIndexProviderId] is ignored.
@@ -1146,6 +1149,64 @@ class Prefs extends ChangeNotifier {
     }
     prefs.setInt(_aiLibraryIndexEmbeddingsTimeoutSecKey, v);
     notifyListeners();
+  }
+
+  /// Whether semantic (embedding-based) memory search is enabled.
+  ///
+  /// - null: auto (OpenClaw-style). Enable only when an embeddings provider/key
+  ///   is available.
+  /// - true: force enable
+  /// - false: force disable
+  bool? get memorySemanticSearchEnabledOverride {
+    if (!prefs.containsKey(_memorySemanticSearchEnabledV1Key)) {
+      return null;
+    }
+    return prefs.getBool(_memorySemanticSearchEnabledV1Key);
+  }
+
+  set memorySemanticSearchEnabledOverride(bool? value) {
+    final before = memorySemanticSearchEnabledOverride;
+    if (before != value) {
+      touchAiSettingsUpdatedAt();
+    }
+
+    if (value == null) {
+      prefs.remove(_memorySemanticSearchEnabledV1Key);
+    } else {
+      prefs.setBool(_memorySemanticSearchEnabledV1Key, value);
+    }
+    notifyListeners();
+  }
+
+  bool _aiConfigHasApiKey(Map<String, String> raw) {
+    final k = (raw['api_key'] ?? '').trim();
+    if (k.isNotEmpty) return true;
+
+    final ks = (raw['api_keys'] ?? '').trim();
+    if (ks.isEmpty) return false;
+
+    // The project stores api_keys in various formats (JSON array, wrapper
+    // object, delimited string). We only need a cheap, best-effort check.
+    return ks != '[]' && ks != '{}' && ks != 'null';
+  }
+
+  bool get memorySemanticSearchEnabledEffective {
+    final override = memorySemanticSearchEnabledOverride;
+    if (override != null) return override;
+
+    final providerId = aiLibraryIndexProviderIdEffective.trim();
+    if (providerId.isEmpty) return false;
+
+    final meta = getAiProviderMeta(providerId);
+    if (meta == null || !meta.enabled) return false;
+
+    if (meta.type != AiProviderType.openaiCompatible &&
+        meta.type != AiProviderType.openaiResponses) {
+      return false;
+    }
+
+    final raw = getAiConfig(providerId);
+    return _aiConfigHasApiKey(raw);
   }
 
   // set convertChineseMode(ConvertChineseMode mode) {

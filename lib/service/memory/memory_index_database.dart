@@ -14,7 +14,7 @@ class MemoryIndexDatabase {
         _factory = factory;
 
   static const String fileName = 'memory_index.db';
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
 
   final String? _path;
   final DatabaseFactory? _factory;
@@ -47,9 +47,42 @@ class MemoryIndexDatabase {
           await _createSchema(db);
         },
         onUpgrade: (db, oldV, newV) async {
-          // Forward-only migrations. Currently only v1.
+          // Forward-only migrations.
           if (oldV < 1) {
             await _createSchema(db);
+            return;
+          }
+
+          if (oldV < 2) {
+            // Best-effort, ignore duplicate column errors.
+            Future<void> addColumn(String ddl) async {
+              try {
+                await db.execute(ddl);
+              } catch (_) {}
+            }
+
+            await addColumn(
+                'ALTER TABLE memory_chunks ADD COLUMN content_hash TEXT');
+            await addColumn(
+                'ALTER TABLE memory_chunks ADD COLUMN provider_id TEXT');
+            await addColumn(
+                'ALTER TABLE memory_chunks ADD COLUMN embedding_model TEXT');
+            await addColumn(
+                'ALTER TABLE memory_chunks ADD COLUMN embedding_json TEXT');
+            await addColumn(
+                'ALTER TABLE memory_chunks ADD COLUMN embedding_dim INTEGER');
+            await addColumn(
+                'ALTER TABLE memory_chunks ADD COLUMN embedding_norm REAL');
+            await addColumn(
+                'ALTER TABLE memory_chunks ADD COLUMN embedded_at INTEGER');
+
+            await db.execute('''
+CREATE TABLE IF NOT EXISTS memory_index_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  updated_at INTEGER NOT NULL
+)
+''');
           }
         },
       ),
@@ -87,7 +120,24 @@ CREATE TABLE IF NOT EXISTS memory_chunks (
   chunk_index INTEGER NOT NULL,
   start_line INTEGER,
   end_line INTEGER,
-  text TEXT NOT NULL
+  text TEXT NOT NULL,
+
+  -- Semantic index (derived cache)
+  content_hash TEXT,
+  provider_id TEXT,
+  embedding_model TEXT,
+  embedding_json TEXT,
+  embedding_dim INTEGER,
+  embedding_norm REAL,
+  embedded_at INTEGER
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS memory_index_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  updated_at INTEGER NOT NULL
 )
 ''');
 
