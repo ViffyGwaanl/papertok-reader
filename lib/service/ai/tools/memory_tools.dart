@@ -151,6 +151,10 @@ class MemorySearchTool
       embeddingProviderId: providerId,
       embeddingModel: embeddingModel,
       embeddingsTimeoutSeconds: prefs.aiLibraryIndexEmbeddingsTimeoutSeconds,
+      hybridEnabled: prefs.memorySearchHybridEnabled,
+      vectorWeight: prefs.memorySearchHybridVectorWeight,
+      textWeight: prefs.memorySearchHybridTextWeight,
+      candidateMultiplier: prefs.memorySearchHybridCandidateMultiplier,
     );
 
     final hits = await service.search(

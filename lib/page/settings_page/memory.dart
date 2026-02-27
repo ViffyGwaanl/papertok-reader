@@ -62,6 +62,10 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
         embeddingProviderId: prefs.aiLibraryIndexProviderIdEffective,
         embeddingModel: prefs.aiLibraryIndexEmbeddingModelEffective,
         embeddingsTimeoutSeconds: prefs.aiLibraryIndexEmbeddingsTimeoutSeconds,
+        hybridEnabled: prefs.memorySearchHybridEnabled,
+        vectorWeight: prefs.memorySearchHybridVectorWeight,
+        textWeight: prefs.memorySearchHybridTextWeight,
+        candidateMultiplier: prefs.memorySearchHybridCandidateMultiplier,
       );
 
       final hits = await service.search(query, limit: 50);
@@ -119,6 +123,13 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
     final prefs = Prefs();
     final semanticOverride = prefs.memorySemanticSearchEnabledOverride;
     final semanticEffective = prefs.memorySemanticSearchEnabledEffective;
+
+    const candidateChoices = <int>[2, 3, 4, 6, 8, 12];
+    final candidateMultiplier = candidateChoices.contains(
+      prefs.memorySearchHybridCandidateMultiplier,
+    )
+        ? prefs.memorySearchHybridCandidateMultiplier
+        : 4;
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -180,6 +191,68 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
               ),
             ),
           ),
+        ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Text(l10n.memorySearchAdvancedTitle),
+          children: [
+            SwitchListTile.adaptive(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              title: Text(l10n.memorySearchHybridEnabledTitle),
+              subtitle: Text(l10n.memorySearchHybridEnabledDesc),
+              value: prefs.memorySearchHybridEnabled,
+              onChanged: (v) {
+                setState(() {
+                  prefs.memorySearchHybridEnabled = v;
+                });
+              },
+            ),
+            ListTile(
+              title: Text(l10n.memorySearchVectorWeightTitle),
+              subtitle: Text(
+                l10n.memorySearchVectorWeightValue(
+                  (prefs.memorySearchHybridVectorWeight * 100).round(),
+                  (prefs.memorySearchHybridTextWeight * 100).round(),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Slider(
+                value: prefs.memorySearchHybridVectorWeight,
+                min: 0,
+                max: 1,
+                divisions: 20,
+                label: prefs.memorySearchHybridVectorWeight.toStringAsFixed(2),
+                onChanged: (v) {
+                  setState(() {
+                    prefs.memorySearchHybridVectorWeight = v;
+                    prefs.memorySearchHybridTextWeight = 1 - v;
+                  });
+                },
+              ),
+            ),
+            ListTile(
+              title: Text(l10n.memorySearchCandidateMultiplierTitle),
+              trailing: DropdownButton<int>(
+                value: candidateMultiplier,
+                items: candidateChoices
+                    .map(
+                      (v) => DropdownMenuItem(
+                        value: v,
+                        child: Text('x$v'),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() {
+                    prefs.memorySearchHybridCandidateMultiplier = v;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
         if (_hits.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

@@ -733,6 +733,18 @@
   "memorySemanticSearchAutoOff": "自动：已关闭（未配置 embeddings 供应商/密钥）",
   "memorySemanticSearchManual": "手动覆盖",
   "memorySemanticSearchResetAuto": "恢复自动",
+  "memorySearchAdvancedTitle": "检索参数",
+  "memorySearchHybridEnabledTitle": "混合排序（BM25 + 向量）",
+  "memorySearchHybridEnabledDesc": "开启后，会将关键词相关性（BM25）混入最终排序。",
+  "memorySearchVectorWeightTitle": "向量/文本权重",
+  "memorySearchVectorWeightValue": "向量 {vector}% / 文本 {text}%",
+  "@memorySearchVectorWeightValue": {
+    "placeholders": {
+      "vector": {},
+      "text": {}
+    }
+  },
+  "memorySearchCandidateMultiplierTitle": "候选池大小",
   "memoryFilesTitle": "记忆文件",
   "memoryLongTermSubtitle": "长期记忆（MEMORY.md）",
   "memoryTodaySubtitle": "今天的日记",

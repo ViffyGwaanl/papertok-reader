@@ -957,6 +957,25 @@ class Prefs extends ChangeNotifier {
   static const String _memorySemanticSearchEnabledV1Key =
       'memorySemanticSearchEnabledV1';
 
+  static const String _memorySearchHybridEnabledV1Key =
+      'memorySearchHybridEnabledV1';
+  static const String _memorySearchHybridVectorWeightV1Key =
+      'memorySearchHybridVectorWeightV1';
+  static const String _memorySearchHybridTextWeightV1Key =
+      'memorySearchHybridTextWeightV1';
+  static const String _memorySearchHybridCandidateMultiplierV1Key =
+      'memorySearchHybridCandidateMultiplierV1';
+
+  static const String _memorySearchHybridMmrEnabledV1Key =
+      'memorySearchHybridMmrEnabledV1';
+  static const String _memorySearchHybridMmrLambdaV1Key =
+      'memorySearchHybridMmrLambdaV1';
+
+  static const String _memorySearchHybridTemporalDecayEnabledV1Key =
+      'memorySearchHybridTemporalDecayEnabledV1';
+  static const String _memorySearchHybridTemporalHalfLifeDaysV1Key =
+      'memorySearchHybridTemporalHalfLifeDaysV1';
+
   /// Whether indexing should follow the current chat provider.
   ///
   /// When true, [aiLibraryIndexProviderId] is ignored.
@@ -1207,6 +1226,60 @@ class Prefs extends ChangeNotifier {
 
     final raw = getAiConfig(providerId);
     return _aiConfigHasApiKey(raw);
+  }
+
+  bool get memorySearchHybridEnabled {
+    return prefs.getBool(_memorySearchHybridEnabledV1Key) ?? true;
+  }
+
+  set memorySearchHybridEnabled(bool value) {
+    if (memorySearchHybridEnabled != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_memorySearchHybridEnabledV1Key, value);
+    notifyListeners();
+  }
+
+  double get memorySearchHybridVectorWeight {
+    final v = prefs.getDouble(_memorySearchHybridVectorWeightV1Key) ?? 0.7;
+    return v.clamp(0.0, 1.0);
+  }
+
+  set memorySearchHybridVectorWeight(double value) {
+    final v = value.clamp(0.0, 1.0);
+    if (memorySearchHybridVectorWeight != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setDouble(_memorySearchHybridVectorWeightV1Key, v);
+    notifyListeners();
+  }
+
+  double get memorySearchHybridTextWeight {
+    final v = prefs.getDouble(_memorySearchHybridTextWeightV1Key) ?? 0.3;
+    return v.clamp(0.0, 1.0);
+  }
+
+  set memorySearchHybridTextWeight(double value) {
+    final v = value.clamp(0.0, 1.0);
+    if (memorySearchHybridTextWeight != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setDouble(_memorySearchHybridTextWeightV1Key, v);
+    notifyListeners();
+  }
+
+  int get memorySearchHybridCandidateMultiplier {
+    final v = prefs.getInt(_memorySearchHybridCandidateMultiplierV1Key) ?? 4;
+    return v.clamp(1, 20);
+  }
+
+  set memorySearchHybridCandidateMultiplier(int value) {
+    final v = value.clamp(1, 20);
+    if (memorySearchHybridCandidateMultiplier != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_memorySearchHybridCandidateMultiplierV1Key, v);
+    notifyListeners();
   }
 
   // set convertChineseMode(ConvertChineseMode mode) {

@@ -733,6 +733,18 @@
   "memorySemanticSearchAutoOff": "Auto: disabled (no embeddings provider/key configured)",
   "memorySemanticSearchManual": "Manual override",
   "memorySemanticSearchResetAuto": "Reset to Auto",
+  "memorySearchAdvancedTitle": "Search tuning",
+  "memorySearchHybridEnabledTitle": "Hybrid ranking (BM25 + vectors)",
+  "memorySearchHybridEnabledDesc": "When enabled, keyword relevance (BM25) is mixed into the final ranking.",
+  "memorySearchVectorWeightTitle": "Vector vs text weight",
+  "memorySearchVectorWeightValue": "Vectors {vector}% / Text {text}%",
+  "@memorySearchVectorWeightValue": {
+    "placeholders": {
+      "vector": {},
+      "text": {}
+    }
+  },
+  "memorySearchCandidateMultiplierTitle": "Candidate pool size",
   "memoryFilesTitle": "Memory files",
   "memoryLongTermSubtitle": "Long-term memory (MEMORY.md)",
   "memoryTodaySubtitle": "Today\u2019s daily note",

@@ -59,6 +59,13 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     if (prefs.memorySemanticSearchEnabledOverride != null)
       'memorySemanticSearchEnabledV1':
           prefs.memorySemanticSearchEnabledOverride,
+
+    // Memory search tuning (safe to sync).
+    'memorySearchHybridEnabledV1': prefs.memorySearchHybridEnabled,
+    'memorySearchHybridVectorWeightV1': prefs.memorySearchHybridVectorWeight,
+    'memorySearchHybridTextWeightV1': prefs.memorySearchHybridTextWeight,
+    'memorySearchHybridCandidateMultiplierV1':
+        prefs.memorySearchHybridCandidateMultiplier,
   };
 
   // Translation-only prefs (safe to sync; no secrets).
@@ -307,6 +314,32 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
         if (v == 'true' || v == 'false') {
           prefs.memorySemanticSearchEnabledOverride = v == 'true';
         }
+      }
+
+      final hybridEnabled = ui['memorySearchHybridEnabledV1'];
+      if (hybridEnabled is bool) {
+        prefs.memorySearchHybridEnabled = hybridEnabled;
+      } else if (hybridEnabled is String) {
+        final v = hybridEnabled.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.memorySearchHybridEnabled = v == 'true';
+        }
+      }
+
+      final vW = (ui['memorySearchHybridVectorWeightV1'] as num?)?.toDouble();
+      if (vW != null) {
+        prefs.memorySearchHybridVectorWeight = vW;
+      }
+
+      final tW = (ui['memorySearchHybridTextWeightV1'] as num?)?.toDouble();
+      if (tW != null) {
+        prefs.memorySearchHybridTextWeight = tW;
+      }
+
+      final mult =
+          (ui['memorySearchHybridCandidateMultiplierV1'] as num?)?.toInt();
+      if (mult != null) {
+        prefs.memorySearchHybridCandidateMultiplier = mult;
       }
 
       final mode = ui['aiPadPanelMode']?.toString();

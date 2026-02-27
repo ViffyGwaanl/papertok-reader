@@ -31,6 +31,10 @@ class MemorySearchService {
     this.embeddingProviderId = '',
     this.embeddingModel = AiEmbeddingsService.defaultEmbeddingModel,
     this.embeddingsTimeoutSeconds = 60,
+    this.hybridEnabled = true,
+    this.vectorWeight = 0.7,
+    this.textWeight = 0.3,
+    this.candidateMultiplier = 4,
     MemoryEmbedQueryFn? embedQuery,
     MemoryEmbedDocumentsFn? embedDocuments,
   })  : _store = store ?? MarkdownMemoryStore(),
@@ -45,6 +49,21 @@ class MemorySearchService {
   final String embeddingProviderId;
   final String embeddingModel;
   final int embeddingsTimeoutSeconds;
+
+  /// Controls whether we mix BM25 keyword score into the final ranking.
+  ///
+  /// When disabled, we still use FTS (if available) to generate candidates,
+  /// but the final score is vector-only.
+  final bool hybridEnabled;
+
+  /// Weight for vector similarity in hybrid ranking (0..1).
+  final double vectorWeight;
+
+  /// Weight for BM25-derived text score in hybrid ranking (0..1).
+  final double textWeight;
+
+  /// Candidate pool multiplier. Similar to OpenClaw's candidateMultiplier.
+  final int candidateMultiplier;
 
   final MemoryEmbedQueryFn? _embedQuery;
   final MemoryEmbedDocumentsFn? _embedDocuments;
@@ -250,7 +269,7 @@ class MemorySearchService {
       final whereType =
           typeFilter.isEmpty ? '' : 'AND (${typeFilter.join(' AND ')})';
 
-      final candidateLimit = (capped * 25).clamp(60, 600);
+      final candidateLimit = (capped * candidateMultiplier).clamp(60, 600);
 
       final rows = await db.rawQuery(
         '''
@@ -502,8 +521,20 @@ SET provider_id = NULL,
       final textScore =
           bm25Raw == null ? 0.0 : 1.0 / (1.0 + (bm25Raw < 0 ? 0.0 : bm25Raw));
 
-      final hybrid = 0.65 * vectorScore + 0.35 * textScore;
-      scored.add((row: r, score: hybrid));
+      var score = vectorScore;
+
+      if (hybridEnabled) {
+        var vW = vectorWeight;
+        var tW = textWeight;
+        final sum = vW + tW;
+        if (sum > 0) {
+          vW = vW / sum;
+          tW = tW / sum;
+        }
+        score = vW * vectorScore + tW * textScore;
+      }
+
+      scored.add((row: r, score: score));
     }
 
     scored.sort((a, b) => b.score.compareTo(a.score));
@@ -544,7 +575,7 @@ SET provider_id = NULL,
     final whereType =
         typeFilter.isEmpty ? '' : 'WHERE ${typeFilter.join(' AND ')}';
 
-    final candidateLimit = (limit * 25).clamp(80, 300);
+    final candidateLimit = (limit * candidateMultiplier * 3).clamp(80, 300);
 
     final rows = await db.rawQuery(
       '''
