@@ -72,6 +72,8 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
         prefs.memorySearchTemporalDecayEnabled,
     'memorySearchHybridTemporalHalfLifeDaysV1':
         prefs.memorySearchTemporalDecayHalfLifeDays,
+    'memoryEmbeddingCacheEnabledV1': prefs.memoryEmbeddingCacheEnabled,
+    'memoryEmbeddingCacheMaxChunksV1': prefs.memoryEmbeddingCacheMaxChunks,
   };
 
   // Translation-only prefs (safe to sync; no secrets).
@@ -378,6 +380,21 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
           (ui['memorySearchHybridTemporalHalfLifeDaysV1'] as num?)?.toInt();
       if (halfLife != null) {
         prefs.memorySearchTemporalDecayHalfLifeDays = halfLife;
+      }
+
+      final cacheEnabled = ui['memoryEmbeddingCacheEnabledV1'];
+      if (cacheEnabled is bool) {
+        prefs.memoryEmbeddingCacheEnabled = cacheEnabled;
+      } else if (cacheEnabled is String) {
+        final v = cacheEnabled.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.memoryEmbeddingCacheEnabled = v == 'true';
+        }
+      }
+
+      final cacheMax = (ui['memoryEmbeddingCacheMaxChunksV1'] as num?)?.toInt();
+      if (cacheMax != null) {
+        prefs.memoryEmbeddingCacheMaxChunks = cacheMax;
       }
 
       final mode = ui['aiPadPanelMode']?.toString();

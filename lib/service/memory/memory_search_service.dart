@@ -41,6 +41,8 @@ class MemorySearchService {
     this.mmrLambda = 0.7,
     this.temporalDecayEnabled = false,
     this.temporalDecayHalfLifeDays = 30,
+    this.embeddingCacheEnabled = true,
+    this.embeddingCacheMaxChunks = 50000,
     MemoryEmbedQueryFn? embedQuery,
     MemoryEmbedDocumentsFn? embedDocuments,
   })  : _store = store ?? MarkdownMemoryStore(),
@@ -82,6 +84,12 @@ class MemorySearchService {
 
   /// Half-life (days) for temporal decay.
   final int temporalDecayHalfLifeDays;
+
+  /// Whether to cache chunk embeddings to the local DB.
+  final bool embeddingCacheEnabled;
+
+  /// Maximum number of cached chunk embeddings.
+  final int embeddingCacheMaxChunks;
 
   final MemoryEmbedQueryFn? _embedQuery;
   final MemoryEmbedDocumentsFn? _embedDocuments;
@@ -497,19 +505,21 @@ SET provider_id = NULL,
         final chunkId = (r['chunk_id'] as num?)?.toInt();
         if (chunkId == null) continue;
 
-        await db.update(
-          'memory_chunks',
-          {
-            'provider_id': provider,
-            'embedding_model': model,
-            'embedding_json': jsonStr,
-            'embedding_dim': v.length,
-            'embedding_norm': norm,
-            'embedded_at': DateTime.now().millisecondsSinceEpoch,
-          },
-          where: 'id = ?',
-          whereArgs: [chunkId],
-        );
+        if (embeddingCacheEnabled) {
+          await db.update(
+            'memory_chunks',
+            {
+              'provider_id': provider,
+              'embedding_model': model,
+              'embedding_json': jsonStr,
+              'embedding_dim': v.length,
+              'embedding_norm': norm,
+              'embedded_at': DateTime.now().millisecondsSinceEpoch,
+            },
+            where: 'id = ?',
+            whereArgs: [chunkId],
+          );
+        }
 
         // Update in-memory row to avoid re-query.
         r['embedding_json'] = jsonStr;

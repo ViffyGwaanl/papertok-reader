@@ -71,6 +71,8 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
         mmrLambda: prefs.memorySearchHybridMmrLambda,
         temporalDecayEnabled: prefs.memorySearchTemporalDecayEnabled,
         temporalDecayHalfLifeDays: prefs.memorySearchTemporalDecayHalfLifeDays,
+        embeddingCacheEnabled: prefs.memoryEmbeddingCacheEnabled,
+        embeddingCacheMaxChunks: prefs.memoryEmbeddingCacheMaxChunks,
       );
 
       final hits = await service.search(query, limit: 50);
@@ -135,6 +137,11 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
     )
         ? prefs.memorySearchHybridCandidateMultiplier
         : 4;
+
+    const cacheChoices = <int>[5000, 20000, 50000, 100000, 0];
+    final cacheMax = cacheChoices.contains(prefs.memoryEmbeddingCacheMaxChunks)
+        ? prefs.memoryEmbeddingCacheMaxChunks
+        : 50000;
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -256,6 +263,38 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
                 },
               ),
             ),
+            SwitchListTile.adaptive(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              title: Text(l10n.memoryEmbeddingCacheEnabledTitle),
+              subtitle: Text(l10n.memoryEmbeddingCacheEnabledDesc),
+              value: prefs.memoryEmbeddingCacheEnabled,
+              onChanged: (v) {
+                setState(() {
+                  prefs.memoryEmbeddingCacheEnabled = v;
+                });
+              },
+            ),
+            if (prefs.memoryEmbeddingCacheEnabled)
+              ListTile(
+                title: Text(l10n.memoryEmbeddingCacheMaxTitle),
+                trailing: DropdownButton<int>(
+                  value: cacheMax,
+                  items: cacheChoices
+                      .map(
+                        (v) => DropdownMenuItem(
+                          value: v,
+                          child: Text(v == 0 ? '∞' : '${v ~/ 1000}k'),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() {
+                      prefs.memoryEmbeddingCacheMaxChunks = v;
+                    });
+                  },
+                ),
+              ),
             SwitchListTile.adaptive(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               title: Text(l10n.memorySearchMmrEnabledTitle),

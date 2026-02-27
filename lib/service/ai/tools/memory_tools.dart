@@ -160,6 +160,8 @@ class MemorySearchTool
       mmrLambda: prefs.memorySearchHybridMmrLambda,
       temporalDecayEnabled: prefs.memorySearchTemporalDecayEnabled,
       temporalDecayHalfLifeDays: prefs.memorySearchTemporalDecayHalfLifeDays,
+      embeddingCacheEnabled: prefs.memoryEmbeddingCacheEnabled,
+      embeddingCacheMaxChunks: prefs.memoryEmbeddingCacheMaxChunks,
     );
 
     final hits = await service.search(

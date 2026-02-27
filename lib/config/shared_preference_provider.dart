@@ -976,6 +976,11 @@ class Prefs extends ChangeNotifier {
   static const String _memorySearchHybridTemporalHalfLifeDaysV1Key =
       'memorySearchHybridTemporalHalfLifeDaysV1';
 
+  static const String _memoryEmbeddingCacheEnabledV1Key =
+      'memoryEmbeddingCacheEnabledV1';
+  static const String _memoryEmbeddingCacheMaxChunksV1Key =
+      'memoryEmbeddingCacheMaxChunksV1';
+
   /// Whether indexing should follow the current chat provider.
   ///
   /// When true, [aiLibraryIndexProviderId] is ignored.
@@ -1331,6 +1336,35 @@ class Prefs extends ChangeNotifier {
       touchAiSettingsUpdatedAt();
     }
     prefs.setInt(_memorySearchHybridTemporalHalfLifeDaysV1Key, v);
+    notifyListeners();
+  }
+
+  bool get memoryEmbeddingCacheEnabled {
+    return prefs.getBool(_memoryEmbeddingCacheEnabledV1Key) ?? true;
+  }
+
+  set memoryEmbeddingCacheEnabled(bool value) {
+    if (memoryEmbeddingCacheEnabled != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_memoryEmbeddingCacheEnabledV1Key, value);
+    notifyListeners();
+  }
+
+  /// Maximum number of memory chunks to keep embeddings cached for.
+  ///
+  /// This is a derived cache and can be rebuilt.
+  int get memoryEmbeddingCacheMaxChunks {
+    final v = prefs.getInt(_memoryEmbeddingCacheMaxChunksV1Key) ?? 50000;
+    return v.clamp(0, 200000);
+  }
+
+  set memoryEmbeddingCacheMaxChunks(int value) {
+    final v = value.clamp(0, 200000);
+    if (memoryEmbeddingCacheMaxChunks != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_memoryEmbeddingCacheMaxChunksV1Key, v);
     notifyListeners();
   }
 
