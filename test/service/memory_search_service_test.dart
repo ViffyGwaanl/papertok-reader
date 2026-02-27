@@ -30,8 +30,11 @@ void main() {
           factory: databaseFactoryFfi,
         );
 
-        final service =
-            MemorySearchService(store: store, indexDb: indexDb);
+        final service = MemorySearchService(store: store, indexDb: indexDb);
+
+        // Ensure the derived index is built so this test exercises the FTS/BM25
+        // path (search() is non-blocking and may fallback on first run).
+        await service.syncIndex();
 
         final hits = await service.search('GLM-5 方法', limit: 10);
         expect(hits, isNotEmpty);
