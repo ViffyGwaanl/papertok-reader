@@ -51,11 +51,20 @@ We store **non-secret provider metadata** separately from **secret config**:
 - `Prefs().selectedAiService` stores the **provider id** (built-in id or custom uuid)
 - At runtime we map provider meta.type → stable LangChain registry id:
   - OpenAI-compatible → `openai`
+  - OpenAI Responses (`/v1/responses`) → `openai-responses`
   - Anthropic → `claude`
   - Gemini → `gemini`
 
 OpenAI-compatible quirks handled in client:
 - Some providers require different image encoding for `image_url` (e.g. Volcengine Ark expects raw base64 instead of a data URL). The client auto-detects `volces.com/api/v3` and adjusts request format.
+
+OpenAI Responses compatibility toggles (per-provider, non-secret; syncable):
+- `responses_use_previous_response_id`:
+  - When enabled, tool-call continuation uses server-side state via `previous_response_id`.
+  - Disable this for 3rd-party gateways that 400 on `previous_response_id`.
+- `responses_request_reasoning_summary`:
+  - Controls whether we include the request-side `reasoning` block (e.g. `summary:auto`).
+  - Disable this for gateways that reject the `reasoning` request parameter.
 
 ---
 

@@ -32,6 +32,9 @@ We want AI-related configuration to be **portable across devices**, but with str
 
 - Selected AI service id
 - Service configs **excluding** `api_key` / `api_keys` (keep `url`, `model`, optional headers)
+  - Includes non-secret per-provider flags, e.g. OpenAI Responses compat:
+    - `responses_use_previous_response_id`
+    - `responses_request_reasoning_summary`
 - Prompt templates (`ai_prompts` overrides)
 - User custom prompts
 - Input quick prompts
@@ -46,6 +49,9 @@ We want AI-related configuration to be **portable across devices**, but with str
 - AI translation prefs (safe, no secrets):
   - translation-dedicated provider id + model override
   - inline full-text translation concurrency
+- Memory prefs (safe, no secrets):
+  - semantic enablement override (tri-state) + hybrid tuning + optional MMR/temporal decay
+  - embedding cache enable + max chunks
 - AI panel UI prefs:
   - iPad panel mode, dock side
   - dock width/height

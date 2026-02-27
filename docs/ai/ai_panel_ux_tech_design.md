@@ -17,7 +17,7 @@
 
 ### Non-goals
 
-- 不做全书 embeddings/RAG（已确认现阶段不优先）。
+- 本文不覆盖全书库 RAG（已合入 main）；详见 `docs/ai/rag_phase3_library_rag_zh.md`。
 - 不通过 WebDAV 同步 API key（安全策略）。
 
 ## 2. Current Implementation Summary (product repo)
