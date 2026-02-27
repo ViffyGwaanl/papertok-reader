@@ -44,7 +44,7 @@
 - [x] `semantic_search_library`：全库检索工具 + 检索管线（Hybrid：FTS/BM25 + vector + MMR 去重）
 - [x] 引用/evidence 跨书跳转体验打磨：
   - [x] jumpLink 统一为 `paperreader://reader/open?...`（bookId + cfi/href）
-  - [ ] 对缺失定位信息的 fallback 行为可预期（例如章节开头）
+  - [x] 对缺失定位信息的 fallback 行为可预期：jumpLink 退化为仅打开书籍（不带 href/cfi）
 - [ ] QA checklist + 回归（建议至少包含）：
   - [ ] 队列暂停/恢复/取消/clear finished 在边界状态下行为正确
   - [ ] 崩溃/重启：running→queued 归一化与续跑正确
