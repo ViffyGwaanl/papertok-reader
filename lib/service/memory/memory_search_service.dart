@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -122,6 +123,10 @@ class MemorySearchService {
     return tokens.take(12).map(_escapeFtsToken).join(' OR ');
   }
 
+  Future<void> syncIndex() async {
+    await _syncIndex();
+  }
+
   Future<void> _syncIndex() async {
     await _store.ensureInitialized();
 
@@ -236,9 +241,35 @@ class MemorySearchService {
         semanticEnabled && embeddingProviderId.trim().isNotEmpty;
 
     try {
-      await _syncIndex();
-
+      await _store.ensureInitialized(ensureToday: false);
       final db = await _indexDb.database;
+
+      // Do not block search on index refresh. If the index is empty (first run
+      // or DB deleted), schedule a background rebuild and fallback to the raw
+      // file scan for this request.
+      try {
+        final stats =
+            await db.rawQuery('SELECT COUNT(*) AS c FROM memory_docs');
+        final c = (stats.first['c'] as num?)?.toInt() ?? 0;
+        if (c <= 0) {
+          unawaited(syncIndex());
+          return _store.search(
+            q,
+            limit: capped,
+            includeLongTerm: includeLongTerm,
+            includeDaily: includeDaily,
+          );
+        }
+      } catch (_) {
+        // If DB is not ready, fallback to raw search.
+        unawaited(syncIndex());
+        return _store.search(
+          q,
+          limit: capped,
+          includeLongTerm: includeLongTerm,
+          includeDaily: includeDaily,
+        );
+      }
 
       if (useSemantic) {
         await _ensureSemanticMeta(db);

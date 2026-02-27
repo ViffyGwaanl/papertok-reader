@@ -17,6 +17,7 @@ import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/sync_test_helper.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/service/memory/memory_index_coordinator.dart';
 import 'package:anx_reader/utils/webdav/test_webdav.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:anx_reader/widgets/settings/webdav_switch.dart';
@@ -432,12 +433,10 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
   }
 
   Future<
-    ({
-      Map<String, Map<String, String>>? apiKeys,
-      Map<String, McpServerSecret>? mcpSecrets,
-    })?
-  >
-  _loadEncryptedSecretsFromBackup(String extractPath) async {
+      ({
+        Map<String, Map<String, String>>? apiKeys,
+        Map<String, McpServerSecret>? mcpSecrets,
+      })?> _loadEncryptedSecretsFromBackup(String extractPath) async {
     final l10n = L10n.of(navigatorKey.currentContext!);
     final manifestFile = File('$extractPath/$_backupManifestFileName');
     if (!await manifestFile.exists()) {
@@ -632,61 +631,61 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
     final options =
         await SmartDialog.show<({bool restoreAiIndexDb, bool restoreMemory})?>(
-          builder: (ctx) => StatefulBuilder(
-            builder: (ctx, setState) => AlertDialog(
-              title: Text(l10n.backupImportConfirmTitle),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l10n.backupImportConfirmBody),
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.backupImportOptionsTitle,
-                      style: Theme.of(ctx).textTheme.titleSmall,
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l10n.backupImportRestoreMemory),
-                      value: restoreMemory,
-                      onChanged: (value) {
-                        setState(() {
-                          restoreMemory = value;
-                        });
-                      },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l10n.backupImportRestoreAiIndexDb),
-                      value: restoreAiIndexDb,
-                      onChanged: (value) {
-                        setState(() {
-                          restoreAiIndexDb = value;
-                        });
-                      },
-                    ),
-                  ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: Text(l10n.backupImportConfirmTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.backupImportConfirmBody),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.backupImportOptionsTitle,
+                  style: Theme.of(ctx).textTheme.titleSmall,
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => SmartDialog.dismiss(result: null),
-                  child: Text(l10n.commonCancel),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.backupImportRestoreMemory),
+                  value: restoreMemory,
+                  onChanged: (value) {
+                    setState(() {
+                      restoreMemory = value;
+                    });
+                  },
                 ),
-                TextButton(
-                  onPressed: () => SmartDialog.dismiss(
-                    result: (
-                      restoreAiIndexDb: restoreAiIndexDb,
-                      restoreMemory: restoreMemory,
-                    ),
-                  ),
-                  child: Text(l10n.commonConfirm),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.backupImportRestoreAiIndexDb),
+                  value: restoreAiIndexDb,
+                  onChanged: (value) {
+                    setState(() {
+                      restoreAiIndexDb = value;
+                    });
+                  },
                 ),
               ],
             ),
           ),
-        );
+          actions: [
+            TextButton(
+              onPressed: () => SmartDialog.dismiss(result: null),
+              child: Text(l10n.commonCancel),
+            ),
+            TextButton(
+              onPressed: () => SmartDialog.dismiss(
+                result: (
+                  restoreAiIndexDb: restoreAiIndexDb,
+                  restoreMemory: restoreMemory,
+                ),
+              ),
+              child: Text(l10n.commonConfirm),
+            ),
+          ],
+        ),
+      ),
+    );
 
     if (options == null) {
       return;
@@ -789,6 +788,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
         if (restoreMemory && srcMemoryDir.existsSync()) {
           memoryBak = _backupDirIfExists(memoryDir, bakSuffix);
           _copyDirectorySync(srcMemoryDir, memoryDir);
+          MemoryIndexCoordinator.instance.markDirty();
         }
 
         if (srcDbDir.existsSync()) {
@@ -910,8 +910,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     }
     destination.createSync(recursive: true);
     source.listSync(recursive: false).forEach((entity) {
-      final newPath =
-          destination.path +
+      final newPath = destination.path +
           Platform.pathSeparator +
           path.basename(entity.path);
       if (entity is File) {
@@ -949,9 +948,8 @@ Future<String> createZipFile(Map<String, dynamic> params) async {
   final bool includeMemory = params['includeMemory'] != false;
 
   final File prefsBackupFile = File(prefsBackupFilePath);
-  final File? manifestFile = manifestFilePath == null
-      ? null
-      : File(manifestFilePath);
+  final File? manifestFile =
+      manifestFilePath == null ? null : File(manifestFilePath);
 
   BackgroundIsolateBinaryMessenger.ensureInitialized(token);
 

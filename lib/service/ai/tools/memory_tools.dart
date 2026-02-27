@@ -6,6 +6,7 @@ import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/ai/tools/base_tool.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:anx_reader/service/memory/memory_index_coordinator.dart';
 import 'package:anx_reader/service/memory/memory_search_service.dart';
 
 DateTime? _parseLocalDate(String? yyyyMmDd) {
@@ -226,6 +227,7 @@ class MemoryAppendTool
     }
 
     await _store.append(longTerm: isLongTerm, date: date, text: text);
+    MemoryIndexCoordinator.instance.markDirty();
 
     return {
       'doc': isLongTerm ? 'memory' : 'daily',
@@ -281,6 +283,7 @@ class MemoryReplaceTool
     final text = (input['text'] as String?) ?? '';
 
     await _store.replace(longTerm: isLongTerm, date: date, text: text);
+    MemoryIndexCoordinator.instance.markDirty();
 
     return {
       'doc': isLongTerm ? 'memory' : 'daily',

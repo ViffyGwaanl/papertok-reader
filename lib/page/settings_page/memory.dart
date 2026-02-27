@@ -3,6 +3,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:anx_reader/service/memory/memory_index_coordinator.dart';
 import 'package:anx_reader/service/memory/memory_search_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
@@ -497,6 +498,7 @@ class _MemoryEditorPageState extends ConsumerState<MemoryEditorPage> {
       date: widget.date,
       text: _controller.text,
     );
+    MemoryIndexCoordinator.instance.markDirty();
 
     if (!mounted) return;
     setState(() {
