@@ -5,12 +5,13 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/ai/tools/base_tool.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:anx_reader/service/memory/memory_search_service.dart';
 
 DateTime? _parseLocalDate(String? yyyyMmDd) {
   if (yyyyMmDd == null) return null;
   final s = yyyyMmDd.trim();
   if (s.isEmpty) return null;
-  final m = RegExp(r'^(\\d{4})-(\\d{2})-(\\d{2})$').firstMatch(s);
+  final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(s);
   if (m == null) return null;
   final y = int.tryParse(m.group(1)!);
   final mo = int.tryParse(m.group(2)!);
@@ -89,16 +90,17 @@ class MemoryReadTool
 class MemorySearchTool
     extends RepositoryTool<Map<String, dynamic>, Map<String, dynamic>> {
   MemorySearchTool(this._store)
-      : super(
+      : _searchService = MemorySearchService(store: _store),
+        super(
           name: 'memory_search',
           description:
-              'Search through the user\'s local markdown memory files (MEMORY.md and daily notes). Returns matching lines with file name and line number.',
+              'Search through the user\'s local markdown memory files (MEMORY.md and daily notes). Returns matching snippets with file name and line number.',
           inputJsonSchema: const {
             'type': 'object',
             'properties': {
               'query': {
                 'type': 'string',
-                'description': 'Text to search for (case-insensitive).',
+                'description': 'Text to search for.',
               },
               'limit': {
                 'type': 'integer',
@@ -116,10 +118,11 @@ class MemorySearchTool
             },
             'required': ['query'],
           },
-          timeout: const Duration(seconds: 6),
+          timeout: const Duration(seconds: 8),
         );
 
   final MarkdownMemoryStore _store;
+  final MemorySearchService _searchService;
 
   @override
   Map<String, dynamic> parseInput(Map<String, dynamic> json) => json;
@@ -137,7 +140,7 @@ class MemorySearchTool
     final includeLongTerm = (input['include_long_term'] as bool?) ?? true;
     final includeDaily = (input['include_daily'] as bool?) ?? true;
 
-    final hits = await _store.search(
+    final hits = await _searchService.search(
       query,
       limit: limit,
       includeLongTerm: includeLongTerm,

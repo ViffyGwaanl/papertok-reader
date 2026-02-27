@@ -118,7 +118,7 @@ class MarkdownMemoryStore {
     final files =
         await rootDir.list().where((e) => e is File).cast<File>().where((f) {
       final name = p.basename(f.path);
-      return RegExp(r'^\\d{4}-\\d{2}-\\d{2}\\.md$').hasMatch(name);
+      return RegExp(r'^\d{4}-\d{2}-\d{2}\.md$').hasMatch(name);
     }).toList();
 
     files.sort((a, b) => p.basename(b.path).compareTo(p.basename(a.path)));

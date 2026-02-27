@@ -2,6 +2,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:anx_reader/service/memory/memory_search_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +29,7 @@ class _MemorySettingsBody extends ConsumerStatefulWidget {
 
 class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
   final _store = MarkdownMemoryStore();
+  late final _searchService = MemorySearchService(store: _store);
   final TextEditingController _searchController = TextEditingController();
 
   bool _searching = false;
@@ -53,7 +55,7 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
     });
 
     try {
-      final hits = await _store.search(query, limit: 50);
+      final hits = await _searchService.search(query, limit: 50);
       if (!mounted) return;
       setState(() {
         _hits = hits;
