@@ -50,7 +50,7 @@
   - [ ] 崩溃/重启：running→queued 归一化与续跑正确
   - [ ] 大书/多书索引时的前台卡顿、内存、耗电可接受
   - [ ] 网络失败/限流：重试与错误提示可理解
-- [ ] 合入 `product/main`（完成上述验收后）
+- [x] 已合入 `product/main`（剩余为 QA checklist 与真机回归）
 
 交付状态：✅ 已合入 `product/main`（建议按 QA checklist 做真机回归后再发 TestFlight）
 

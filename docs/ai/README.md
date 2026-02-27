@@ -65,9 +65,14 @@
 
 #### OpenAI Responses — tool calling stability notes
 
-- For tool-call continuations, we prefer `previous_response_id` (server-provided `response.id`) + `input: [function_call_output...]`.
+- Tool-call continuation (recommended): use `previous_response_id` (server-provided `response.id`) + `input: [function_call_output...]`.
   - Rationale: manually replaying `type: "reasoning"` items is brittle and can trigger 400 errors like:
     - `reasoning was provided without its required following item`
+- 3rd-party “Responses-compatible” gateways may reject `previous_response_id` with 400 (e.g. `Unsupported parameter: previous_response_id`).
+  - Provider Center provides explicit compatibility toggles on the OpenAI Responses provider:
+    - `responses_use_previous_response_id`: when OFF, requests omit `previous_response_id`.
+    - `responses_request_reasoning_summary`: when OFF, requests omit the `reasoning` block.
+  - In compat mode (`responses_use_previous_response_id = OFF`), the client also avoids capturing/replaying `reasoning` transcript items to reduce gateway validation failures.
 - The implementation lives in:
   - `lib/service/ai/openai_responses_chat_model.dart`
 
@@ -82,18 +87,20 @@
 
 ---
 
-## In progress (feature branches)
+## Implemented (main)
 
 #### Phase 3 — Library RAG / **AI 索引（书库）**
 
-- Branch: `product/feat/rag-phase3-library-rag` (not merged into `main` yet)
-- Implemented so far (see Phase 3 doc for details):
-  - `ai_index.db` v2 migration (jobs queue + index metadata)
-  - headless reader bridge for extracting book content by `bookId`
-  - library indexing queue runner/service (pause/resume/cancel + restart normalization)
-  - Settings entry: **AI 索引（书库）** page
-  - reader jump links standardized to `paperreader://reader/open?...` (no `anx://...` generation)
-- Status: merged into `product/main` (run QA on iOS/Android before TestFlight).
+已合入 `main`（产品仓库 `product/main` 同步）。核心能力包含：
+
+- `ai_index.db` v2+ 迁移（jobs queue + index metadata）
+- Headless reader bridge：可为任意 `bookId` 抽取 TOC/章节文本用于索引
+- Library indexing queue：pause/resume/cancel/clear finished、失败自动重试一次、重启归一化（running→queued）
+- Settings 顶层入口：**AI 索引（书库）**（手动多选入队 + 队列控制）
+- 全库检索工具：`semantic_search_library`（Hybrid：FTS/BM25 + vector + 可选 MMR/去重）
+- 跳转链接：统一 `paperreader://reader/open?...`（不再生成 `anx://...`）
+
+剩余工作以“真机 QA checklist + 发布回归”为主（不再存在合入阻塞）。
 
 Docs:
 - [RAG + Memory（Phase 1–5）总体计划与状态（中文）](./rag_memory_plan_zh.md)
@@ -131,7 +138,7 @@ To allow provider-owned agent streaming (reading tools), tool code paths now acc
 
 The product repository uses `main` as the integration branch for iPhone/iPad testing and TestFlight.
 
-All AI/translation/multimodal/image-analysis changes are already integrated into `main`, **except** Phase 3 (Library RAG / AI 索引（书库）), which is still WIP on `product/feat/rag-phase3-library-rag`.
+All AI/translation/multimodal/image-analysis changes are integrated into `main`.
 
 ---
 

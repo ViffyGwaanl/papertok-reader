@@ -20,13 +20,13 @@
 - Settings 顶层入口：**AI 索引（书库）** 页面（支持手动多选加入队列 + 队列控制）。
 - Reader jump links：已切换为 `paperreader://reader/open?...`（不再生成 `anx://...`）。
 
-### 仍待完成（Phase 3 收尾成品项）
+### 收尾工作（已合入 main，剩余为 QA/发布回归）
 
 - QA checklist（iOS/Android）：
   - 外部点击 `paperreader://reader/open?...` 拉起与定位（href/cfi）。
   - 队列 pause/resume/cancel/clear finished、失败自动重试一次、重启恢复。
   - 大书/多书索引下前台卡顿、内存、耗电。
-- 最终合入 `product/main`（并在 `main` 做真机回归）。
+- 发布回归：完成上述 checklist 后再发布 TestFlight/版本（不再存在合入阻塞）。
 
 ---
 
