@@ -167,9 +167,10 @@ Markdown 文件是纸卡片，是事实来源。
 把下面这段模板复制出来填一填就够。
 
 ```text
-【设备】iPhone 15 Pro / iPad / 其他
-【系统】iOS 18.x
-【App 版本】（TestFlight build / 或你能看到的版本号）
+【设备】iPhone 15 Pro / iPad / Pixel 8 / 其他
+【系统】iOS 18.x / Android 14
+【App 版本】（TestFlight build / APK build / 或你能看到的版本号）
+【安装方式】升级安装 / 全新安装
 【Commit】（可选，若你能在 Mac 上运行 `git rev-parse --short HEAD`）
 
 【复现步骤】
@@ -181,8 +182,9 @@ Markdown 文件是纸卡片，是事实来源。
 
 【实际结果】
 
+【复现频率】必现 / 偶现（例如 3/10）
 【截图/录屏】有 / 无
-【补充信息】例如：是否开了 embeddings，Responses 两个开关当前状态
+【补充信息】例如：embeddings 是否可用、Memory 语义检索 Effective 状态、Responses 两个开关当前状态
 ```
 
 ## 5. Android：带跑流程
@@ -198,6 +200,20 @@ Android 的整体跑法与 iOS 相同。差别在两点。
 把 `paperreader://reader/open?...` 粘贴到你常用的聊天工具或浏览器地址栏，点击。
 
 如果不容易点击，就用“复制到浏览器地址栏再回车”的方式。
+
+如果你电脑上有 adb，而且你想把复现过程变成一条可复制的命令，可以用这样的方式直接触发。
+
+```bash
+adb shell am start -W \
+  -a android.intent.action.VIEW \
+  -d "paperreader://reader/open?bookId=1&href=Text%2Fch1.xhtml"
+
+adb shell am start -W \
+  -a android.intent.action.VIEW \
+  -d "paperreader://reader/open?bookId=1&cfi=epubcfi(%2F6%2F2%5Bchapter1%5D!%2F4%2F2%2F2%5Bpara1%5D)"
+```
+
+注意这里的 `bookId/href/cfi` 只是示例，你最好从 RAG evidence 的 `jumpLink` 里复制真实链接。
 
 ### 5.2 观察索引队列在压力下的稳定性
 
