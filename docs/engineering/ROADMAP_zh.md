@@ -52,7 +52,7 @@
 ### 2.x Phase 3：全书库 RAG + 批量索引队列（已合入 main）
 - 已合入：`product/main`
 - 已具备：headless reader 索引任意书、索引队列（自动重试一次+重启恢复）、Settings 顶层 AI 索引（书库）、`semantic_search_library`（Hybrid+MMR）、`paperreader://reader/open` 跳转
-- 待办：真机 QA checklist（iOS/Android）+ TestFlight 回归
+- 待办：真机 QA checklist（iOS/Android）+ TestFlight 回归（推荐先读 `docs/engineering/QA_GUIDED_RUNBOOK_zh.md`）
 
 ### 2.1 iOS 体验收敛（TabBar / 键盘 / 底部遮挡）
 - iPhone 浮动 TabBar（cupertino_native，icon-only）参数收敛：高度、底部偏移、blur/背景一致性。
