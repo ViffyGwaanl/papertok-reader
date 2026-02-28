@@ -44,6 +44,7 @@
 
 ### 2.1 真机 QA checklist（P0）
 
+- 先读“带跑讲解稿”：`docs/engineering/QA_GUIDED_RUNBOOK_zh.md`（通俗版，帮助你按最短路径跑完整条链路）。
 - iOS/iPadOS：执行 `docs/engineering/IOS_IPADOS_QA_CHECKLIST_zh.md`。
 - Android：执行 `docs/engineering/ANDROID_QA_CHECKLIST_zh.md`。
 - 重点覆盖：
