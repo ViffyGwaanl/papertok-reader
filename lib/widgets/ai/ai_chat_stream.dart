@@ -16,6 +16,7 @@ import 'package:anx_reader/enums/ai_thinking_mode.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
+import 'package:anx_reader/widgets/ai/ai_collapsible_section.dart';
 import 'package:anx_reader/widgets/ai/tool_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
@@ -2106,21 +2107,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (thinking.isNotEmpty) {
       children.add(const SizedBox(height: 8));
       children.add(
-        Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            childrenPadding: const EdgeInsets.only(top: 6),
-            title: Text(
-              l10n.aiSectionThinking,
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            children: [
-              StyledMarkdown(
-                data: thinking,
-                selectable: true,
-              ),
-            ],
+        AiCollapsibleSection(
+          title: l10n.aiSectionThinking,
+          leading: const Icon(Icons.lightbulb_outline),
+          preview: thinking.split('\n').first.trim(),
+          copyText: thinking,
+          child: StyledMarkdown(
+            data: thinking,
+            selectable: true,
           ),
         ),
       );
@@ -2129,15 +2123,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (toolSteps.isNotEmpty) {
       children.add(const SizedBox(height: 8));
       children.add(
-        Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            childrenPadding: const EdgeInsets.only(top: 6),
-            title: Text(
-              l10n.aiSectionTools,
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
+        AiCollapsibleSection(
+          title: l10n.aiSectionTools,
+          subtitle: '${toolSteps.length}',
+          leading: const Icon(Icons.build_outlined),
+          child: Column(
             children: [
               for (var i = 0; i < toolSteps.length; i++) ...[
                 _buildToolTile(toolSteps[i]),
