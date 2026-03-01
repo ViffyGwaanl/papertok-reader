@@ -1,11 +1,11 @@
-import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/common/container/outlined_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// A lightweight, chat-friendly collapsible section.
+/// A chat-friendly collapsible section.
 ///
-/// We keep this separate from [ExpansionTile] to have full control over padding,
-/// density, and visual styling (Cherry-like readability, but our own style).
+/// Design goal: magazine-style appendix / margin note.
+/// Keep it calm and readable; avoid looking like a default ExpansionTile.
 class AiCollapsibleSection extends StatefulWidget {
   const AiCollapsibleSection({
     super.key,
@@ -19,7 +19,10 @@ class AiCollapsibleSection extends StatefulWidget {
   });
 
   final String title;
+
+  /// Short meta text shown next to the title (e.g. count).
   final String? subtitle;
+
   final Widget? leading;
 
   /// Optional one-line preview shown when collapsed.
@@ -35,8 +38,7 @@ class AiCollapsibleSection extends StatefulWidget {
   State<AiCollapsibleSection> createState() => _AiCollapsibleSectionState();
 }
 
-class _AiCollapsibleSectionState extends State<AiCollapsibleSection>
-    with SingleTickerProviderStateMixin {
+class _AiCollapsibleSectionState extends State<AiCollapsibleSection> {
   late bool _expanded;
 
   @override
@@ -51,96 +53,155 @@ class _AiCollapsibleSectionState extends State<AiCollapsibleSection>
     });
   }
 
+  Widget _buildTitleBadge(ThemeData theme) {
+    final bg = theme.colorScheme.surface;
+    final fg = theme.colorScheme.onSurfaceVariant;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.leading != null) ...[
+            IconTheme(
+              data: theme.iconTheme.copyWith(size: 14, color: fg),
+              child: widget.leading!,
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            widget.title,
+            style: theme.textTheme.labelLarge?.copyWith(
+              letterSpacing: 0.2,
+              color: fg,
+            ),
+          ),
+          if ((widget.subtitle ?? '').trim().isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Text(
+              widget.subtitle!.trim(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: fg,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final header = Row(
-      children: [
-        if (widget.leading != null) ...[
-          IconTheme(
-            data: theme.iconTheme.copyWith(size: 16),
-            child: widget.leading!,
-          ),
-          const SizedBox(width: 8),
-        ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(widget.title, style: theme.textTheme.labelLarge),
-              if ((widget.subtitle ?? '').trim().isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    widget.subtitle!,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              if (!_expanded && (widget.preview ?? '').trim().isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    widget.preview!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        if ((widget.copyText ?? '').isNotEmpty)
-          IconButton(
-            tooltip: 'Copy',
-            icon: const Icon(Icons.copy, size: 16),
-            onPressed: () => Clipboard.setData(
-              ClipboardData(text: widget.copyText!),
-            ),
-          ),
-        AnimatedRotation(
-          turns: _expanded ? 0.5 : 0,
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOut,
-          child: Icon(
-            Icons.expand_more,
-            size: 18,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
+    final paperBg = Color.alphaBlend(
+      theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.85),
+      theme.colorScheme.surface,
     );
 
-    return FilledContainer(
-      radius: 14,
+    final stripeColor = theme.colorScheme.tertiary.withValues(alpha: 0.55);
+
+    return OutlinedContainer(
+      radius: 16,
+      outlineColor: theme.colorScheme.outlineVariant,
+      color: paperBg,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: _toggle,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: header,
-              ),
+          // Margin-note stripe.
+          Container(
+            width: 3,
+            height: _expanded ? 42 : 28,
+            margin: const EdgeInsets.only(top: 2, right: 10),
+            decoration: BoxDecoration(
+              color: stripeColor,
+              borderRadius: BorderRadius.circular(999),
             ),
           ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            child: _expanded
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: widget.child,
-                  )
-                : const SizedBox.shrink(),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: _toggle,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          _buildTitleBadge(theme),
+                          const Spacer(),
+                          if ((widget.copyText ?? '').isNotEmpty)
+                            IconButton(
+                              tooltip: 'Copy',
+                              icon: Icon(
+                                Icons.copy,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              onPressed: () => Clipboard.setData(
+                                ClipboardData(text: widget.copyText!),
+                              ),
+                            ),
+                          AnimatedRotation(
+                            turns: _expanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 160),
+                            curve: Curves.easeOut,
+                            child: Icon(
+                              Icons.expand_more,
+                              size: 20,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                if (!_expanded && (widget.preview ?? '').trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      widget.preview!.trim(),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        height: 1.3,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  child: _expanded
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Divider(
+                                height: 18,
+                                color: theme.colorScheme.outlineVariant,
+                              ),
+                              widget.child,
+                            ],
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
           ),
         ],
       ),
