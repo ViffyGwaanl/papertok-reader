@@ -19,11 +19,11 @@ struct PapertokSendMessageIntent: AppIntent {
   @Parameter(title: "\u56fe\u7247")
   var images: [IntentFile]
 
-  @Parameter(title: "\u8fd0\u884c\u65f6\u6253\u5f00 Papertok", default: false)
-  var openApp: Bool
+  @Parameter(title: "\u8fd0\u884c\u65f6\u6253\u5f00 Papertok")
+  var openApp: Bool?
 
-  @Parameter(title: "\u4f7f\u7528\u5f39\u7a97\u5c55\u793a\u56de\u590d", default: true)
-  var showDialog: Bool
+  @Parameter(title: "\u4f7f\u7528\u5f39\u7a97\u5c55\u793a\u56de\u590d")
+  var showDialog: Bool?
 
   static var parameterSummary: some ParameterSummary {
     Summary("\u7ed9 Papertok \u53d1\u9001 \(\.$prompt) \u548c \(\.$images)") {
@@ -34,6 +34,13 @@ struct PapertokSendMessageIntent: AppIntent {
 
   func perform() async throws -> some IntentResult & ReturnsValue<String> {
     let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    let shouldOpenApp = openApp ?? PapertokIntentDefaults.openAppDefault()
+    let shouldShowDialog = showDialog ?? PapertokIntentDefaults.showDialogDefault()
+
+    if shouldOpenApp {
+      await PapertokIntentUI.openPapertokAppBestEffort()
+    }
 
     let jpegB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
       files: images,
@@ -47,11 +54,7 @@ struct PapertokSendMessageIntent: AppIntent {
       imagesBase64: jpegB64
     )
 
-    if openApp {
-      await PapertokIntentUI.openPapertokAppBestEffort()
-    }
-
-    if showDialog {
+    if shouldShowDialog {
       let dialogText = PapertokIntentUI.truncateForDialog(reply)
       return .result(value: reply, dialog: IntentDialog(stringLiteral: dialogText))
     }
@@ -75,6 +78,22 @@ struct PapertokAppShortcutsProvider: AppShortcutsProvider {
         systemImageName: "paperplane"
       )
     ]
+  }
+}
+
+@available(iOS 16.0, *)
+enum PapertokIntentDefaults {
+  // These keys are stored by Flutter SharedPreferences.
+  // Keep in sync with lib/config/shared_preference_provider.dart.
+  private static let openAppKey = "shortcutsSendMessageOpenAppDefaultV1"
+  private static let showDialogKey = "shortcutsSendMessageShowDialogDefaultV1"
+
+  static func openAppDefault() -> Bool {
+    return UserDefaults.standard.object(forKey: openAppKey) as? Bool ?? true
+  }
+
+  static func showDialogDefault() -> Bool {
+    return UserDefaults.standard.object(forKey: showDialogKey) as? Bool ?? true
   }
 }
 

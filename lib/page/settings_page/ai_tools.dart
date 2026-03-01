@@ -361,6 +361,35 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
         description: Text(l10n.settingsAiToolForceConfirmDestructiveDesc),
       ),
       if (AnxPlatform.isIOS) ...[
+        SettingsTile.switchTile(
+          initialValue: Prefs().shortcutsSendMessageOpenAppDefaultV1,
+          onToggle: (value) {
+            Prefs().shortcutsSendMessageOpenAppDefaultV1 = value;
+            setState(() {});
+          },
+          title: Text(l10n.settingsShortcutsSendMessageOpenAppDefault),
+          description:
+              Text(l10n.settingsShortcutsSendMessageOpenAppDefaultDesc),
+        ),
+        SettingsTile.switchTile(
+          initialValue: Prefs().shortcutsSendMessageShowDialogDefaultV1,
+          onToggle: (value) {
+            Prefs().shortcutsSendMessageShowDialogDefaultV1 = value;
+            setState(() {});
+          },
+          title: Text(l10n.settingsShortcutsSendMessageShowDialogDefault),
+          description:
+              Text(l10n.settingsShortcutsSendMessageShowDialogDefaultDesc),
+        ),
+        SettingsTile.switchTile(
+          initialValue: Prefs().shareSheetAskPapertokEnabledV1,
+          onToggle: (value) {
+            Prefs().shareSheetAskPapertokEnabledV1 = value;
+            setState(() {});
+          },
+          title: Text(l10n.settingsShareSheetAskPapertokEnabled),
+          description: Text(l10n.settingsShareSheetAskPapertokEnabledDesc),
+        ),
         SettingsTile.navigation(
           title: Text(l10n.settingsShortcutsCallbackMaxChars),
           description: Text(l10n.settingsShortcutsCallbackMaxCharsDesc),

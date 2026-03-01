@@ -81,6 +81,17 @@ class Prefs extends ChangeNotifier {
       'shortcutsCallbackWaitModeV1';
   static const String _shortcutsResultKnownNamesV1Key =
       'shortcutsResultKnownNamesV1';
+
+  // iOS AppIntents defaults for the Papertok Shortcuts action.
+  // NOTE: these keys are also read by Swift code in ios/Runner.
+  static const String _shortcutsSendMessageOpenAppDefaultV1Key =
+      'shortcutsSendMessageOpenAppDefaultV1';
+  static const String _shortcutsSendMessageShowDialogDefaultV1Key =
+      'shortcutsSendMessageShowDialogDefaultV1';
+
+  // iOS Share Sheet behavior (share_handler).
+  static const String _shareSheetAskPapertokEnabledV1Key =
+      'shareSheetAskPapertokEnabledV1';
   static const String _userPromptsKey = 'userPrompts';
 
   // Home tabs config (order + enable), backed by SharedPreferences.
@@ -2051,6 +2062,49 @@ class Prefs extends ChangeNotifier {
     if (prefs.containsKey(_shortcutsResultKnownNamesV1Key)) {
       touchAiSettingsUpdatedAt();
       prefs.remove(_shortcutsResultKnownNamesV1Key);
+      notifyListeners();
+    }
+  }
+
+  /// Default behavior for iOS Shortcuts action “Send image message to Papertok”.
+  ///
+  /// This is used by Swift AppIntents (ios/Runner) as a dynamic default.
+  bool get shortcutsSendMessageOpenAppDefaultV1 {
+    return prefs.getBool(_shortcutsSendMessageOpenAppDefaultV1Key) ?? true;
+  }
+
+  set shortcutsSendMessageOpenAppDefaultV1(bool value) {
+    final before = shortcutsSendMessageOpenAppDefaultV1;
+    if (before != value) {
+      touchAiSettingsUpdatedAt();
+      prefs.setBool(_shortcutsSendMessageOpenAppDefaultV1Key, value);
+      notifyListeners();
+    }
+  }
+
+  bool get shortcutsSendMessageShowDialogDefaultV1 {
+    return prefs.getBool(_shortcutsSendMessageShowDialogDefaultV1Key) ?? true;
+  }
+
+  set shortcutsSendMessageShowDialogDefaultV1(bool value) {
+    final before = shortcutsSendMessageShowDialogDefaultV1;
+    if (before != value) {
+      touchAiSettingsUpdatedAt();
+      prefs.setBool(_shortcutsSendMessageShowDialogDefaultV1Key, value);
+      notifyListeners();
+    }
+  }
+
+  /// When enabled, sharing images/text to the app triggers the Papertok AI flow
+  /// instead of importing as a book.
+  bool get shareSheetAskPapertokEnabledV1 {
+    return prefs.getBool(_shareSheetAskPapertokEnabledV1Key) ?? true;
+  }
+
+  set shareSheetAskPapertokEnabledV1(bool value) {
+    final before = shareSheetAskPapertokEnabledV1;
+    if (before != value) {
+      prefs.setBool(_shareSheetAskPapertokEnabledV1Key, value);
       notifyListeners();
     }
   }

@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:anx_reader/service/ai/index.dart';
+import 'package:anx_reader/service/shortcuts/papertok_quick_ask_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/services.dart';
-import 'package:langchain_core/chat_models.dart';
 
 /// iOS App Intents -> Flutter bridge.
 ///
@@ -55,52 +54,11 @@ class PapertokShortcutsChannel {
       }
     }
 
-    if (images.length > 4) {
-      throw PlatformException(
-        code: 'too_many_images',
-        message: 'At most 4 images are supported',
-      );
-    }
-
-    if (prompt.isEmpty && images.isEmpty) {
-      throw PlatformException(
-        code: 'empty_input',
-        message: 'Both prompt and images are empty',
-      );
-    }
-
-    // Build a single multimodal user message.
-    final parts = <ChatMessageContent>[];
-    if (prompt.isNotEmpty) {
-      parts.add(ChatMessageContent.text(prompt));
-    }
-    for (final b64 in images) {
-      parts.add(
-        ChatMessageContent.image(
-          data: b64,
-          mimeType: 'image/jpeg',
-        ),
-      );
-    }
-
-    final content =
-        parts.length == 1 ? parts.first : ChatMessageContent.multiModal(parts);
-
-    final messages = <ChatMessage>[ChatMessage.human(content)];
-
     try {
-      final stream = aiGenerateStream(
-        messages,
-        regenerate: false,
-        useAgent: false,
+      return await PapertokQuickAskService.send(
+        prompt: prompt,
+        imagesBase64Jpeg: images,
       );
-
-      // We only need the final aggregated payload.
-      final aggregated = await stream.last.timeout(
-        const Duration(minutes: 3),
-      );
-
-      return _stripThinkBlock(aggregated);
     } catch (e, st) {
       AnxLog.warning('shortcuts: sendMessage failed: $e', e, st);
       throw PlatformException(
@@ -108,10 +66,5 @@ class PapertokShortcutsChannel {
         message: e.toString(),
       );
     }
-  }
-
-  static String _stripThinkBlock(String s) {
-    final thinkRegex = RegExp(r'<think>([\s\S]*?)<\/think>\n?');
-    return s.replaceAll(thinkRegex, '').trim();
   }
 }
