@@ -17,6 +17,14 @@ import Flutter
       calendarEventKitChannel.register(with: controller)
     }
 
+    // Best-effort: prewarm a headless FlutterEngine for App Intents so the
+    // Shortcuts action starts faster (iOS will still decide background limits).
+    if #available(iOS 16.0, *) {
+      Task.detached {
+        await PapertokFlutterShortcuts.shared.prewarm()
+      }
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

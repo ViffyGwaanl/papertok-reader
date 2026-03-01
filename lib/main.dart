@@ -3,6 +3,8 @@ import 'dart:async';
 export 'package:anx_reader/app/app_globals.dart' show navigatorKey;
 
 import 'package:anx_reader/app/app_globals.dart';
+import 'package:anx_reader/service/shortcuts/papertok_shortcuts_entrypoint.dart'
+    as papertok_shortcuts;
 import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
@@ -39,6 +41,11 @@ final heroineController = HeroineController();
 /// Whether macOS data migration is needed (checked at startup)
 bool _needsMigration = false;
 MigrationCheckResult? _migrationCheckResult;
+
+@pragma('vm:entry-point')
+Future<void> shortcutsMain() async {
+  await papertok_shortcuts.papertokShortcutsMain();
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
