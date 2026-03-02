@@ -13,11 +13,11 @@ struct PapertokSendMessageIntent: AppIntent {
   // Run in background by default (user can still choose to open the app).
   static var openAppWhenRun: Bool = false
 
-  @Parameter(title: "文字", default: "")
-  var prompt: String
+  @Parameter(title: "文字")
+  var prompt: String?
 
   @Parameter(title: "图片")
-  var images: [IntentFile]
+  var images: [IntentFile]?
 
   @Parameter(title: "运行时打开 Papertok")
   var openApp: Bool?
@@ -33,7 +33,7 @@ struct PapertokSendMessageIntent: AppIntent {
   }
 
   func perform() async throws -> some IntentResult & ReturnsValue<String> {
-    let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmedPrompt = (prompt ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
 
     let shouldOpenApp = openApp ?? PapertokIntentDefaults.openAppDefault()
     let shouldShowDialog = showDialog ?? PapertokIntentDefaults.showDialogDefault()
@@ -42,8 +42,15 @@ struct PapertokSendMessageIntent: AppIntent {
       await PapertokIntentUI.openPapertokAppBestEffort()
     }
 
+    let selectedImages = images ?? []
+    if trimmedPrompt.isEmpty && selectedImages.isEmpty {
+      throw NSError(domain: "PapertokShortcuts", code: 4, userInfo: [
+        NSLocalizedDescriptionKey: "请输入文字或选择图片"
+      ])
+    }
+
     let jpegB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
-      files: images,
+      files: selectedImages,
       maxCount: 4,
       maxPixel: 2048,
       quality: 0.86
