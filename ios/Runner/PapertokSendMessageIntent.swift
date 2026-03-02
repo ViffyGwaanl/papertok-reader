@@ -4,29 +4,29 @@ import UIKit
 
 @available(iOS 16.0, *)
 struct PapertokSendMessageIntent: AppIntent {
-  static var title: LocalizedStringResource = "\u7ed9 Papertok \u53d1\u9001\u56fe\u7247\u6d88\u606f"
+  static var title: LocalizedStringResource = "给 Papertok 发送图片消息"
 
   static var description = IntentDescription(
-    "\u5411 Papertok Reader \u7684 AI \u53d1\u9001\u6587\u5b57\u4e0e\u56fe\u7247\uff08\u6700\u591a 4 \u5f20\uff09\uff0c\u5e76\u8fd4\u56de\u56de\u590d\u5185\u5bb9\u3002\n\n\u8fd9\u4e2a\u52a8\u4f5c\u4f1a\u590d\u7528 App \u5185\u73b0\u6709\u7684\u591a\u6a21\u6001 AI Chat \u901a\u9053\uff08Flutter + LangChain\uff09\uff0c\u4e0d\u4f1a\u91cd\u5199\u4e0a\u4f20\u6216\u8bf7\u6c42\u903b\u8f91\u3002"
+    "向 Papertok Reader 的 AI 发送文字与图片（最多 4 张），并返回回复内容。\n\n这个动作会复用 App 内现有的多模态 AI Chat 通道（Flutter + LangChain），不会重写上传或请求逻辑。"
   )
 
   // Run in background by default (user can still choose to open the app).
   static var openAppWhenRun: Bool = false
 
-  @Parameter(title: "\u6587\u5b57", default: "")
+  @Parameter(title: "文字", default: "")
   var prompt: String
 
-  @Parameter(title: "\u56fe\u7247")
+  @Parameter(title: "图片")
   var images: [IntentFile]
 
-  @Parameter(title: "\u8fd0\u884c\u65f6\u6253\u5f00 Papertok")
+  @Parameter(title: "运行时打开 Papertok")
   var openApp: Bool?
 
-  @Parameter(title: "\u4f7f\u7528\u5f39\u7a97\u5c55\u793a\u56de\u590d")
+  @Parameter(title: "使用弹窗展示回复")
   var showDialog: Bool?
 
   static var parameterSummary: some ParameterSummary {
-    Summary("\u7ed9 Papertok \u53d1\u9001 \(\.$prompt) \u548c \(\.$images)") {
+    Summary("给 Papertok 发送 \(\.$prompt) 和 \(\.$images)") {
       \.$openApp
       \.$showDialog
     }
@@ -70,11 +70,11 @@ struct PapertokAppShortcutsProvider: AppShortcutsProvider {
       AppShortcut(
         intent: PapertokSendMessageIntent(),
         phrases: [
-          "\u7ed9 Papertok \u53d1\u9001\u56fe\u7247\u6d88\u606f",
-          "\u7528 \(.applicationName) \u53d1\u9001\u56fe\u7247\u6d88\u606f",
-          "\u7528 \(.applicationName) \u5206\u6790\u8fd9\u4e9b\u56fe\u7247"
+          "给 Papertok 发送图片消息",
+          "用 \(.applicationName) 发送图片消息",
+          "用 \(.applicationName) 分析这些图片"
         ],
-        shortTitle: "\u53d1\u56fe\u95ee Papertok",
+        shortTitle: "发图问 Papertok",
         systemImageName: "paperplane"
       )
     ]
@@ -104,7 +104,7 @@ enum PapertokIntentUI {
     let maxChars = 900
     if s.count <= maxChars { return s }
     let idx = s.index(s.startIndex, offsetBy: maxChars)
-    return String(s[..<idx]) + "\n\n\u2026"
+    return String(s[..<idx]) + "\n\n…"
   }
 
   static func openPapertokAppBestEffort() async {
@@ -205,7 +205,7 @@ enum PapertokIntentImageCodec {
   ) async throws -> [String] {
     if files.count > maxCount {
       throw NSError(domain: "PapertokShortcuts", code: 10, userInfo: [
-        NSLocalizedDescriptionKey: "\u6700\u591a\u53ea\u652f\u6301 \(maxCount) \u5f20\u56fe\u7247"
+        NSLocalizedDescriptionKey: "最多只支持 \(maxCount) 张图片"
       ])
     }
 
