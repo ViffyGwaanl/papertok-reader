@@ -21,6 +21,39 @@ class StyledMarkdown extends StatelessWidget {
   final String data;
   final bool selectable;
 
+  String _normalizeUriText(String s) {
+    var out = s.trim();
+
+    // Common fullwidth punctuation when users/LLMs output links in Chinese.
+    out = out
+        .replaceAll('？', '?')
+        .replaceAll('＆', '&')
+        .replaceAll('＝', '=')
+        .replaceAll('＃', '#');
+
+    // Common typo: single slash after scheme.
+    if (out.startsWith('paperreader:/') && !out.startsWith('paperreader://')) {
+      out = out.replaceFirst('paperreader:/', 'paperreader://');
+    }
+
+    return out;
+  }
+
+  /// Make custom scheme links tappable even when the model outputs raw URLs
+  /// (not markdown links).
+  String _linkifyPaperreaderUris(String s) {
+    // Match a conservative URI charset to avoid swallowing trailing punctuation.
+    final re = RegExp(
+      r'(?<!\()(?<!\<)(paperreader:\/\/[A-Za-z0-9\-._~:/?#[\]@!$&()*+,;=%]+)',
+    );
+
+    return s.replaceAllMapped(re, (m) {
+      final raw = m.group(1) ?? '';
+      // Markdown link format is the most reliably recognized across parsers.
+      return '[$raw]($raw)';
+    });
+  }
+
   ({int bookId, String? cfi, String? href})? _extractReaderTargetFromPaperUri(
     Uri uri,
   ) {
@@ -34,7 +67,15 @@ class StyledMarkdown extends StatelessWidget {
       return null;
     }
 
-    final bookId = int.tryParse((uri.queryParameters['bookId'] ?? '').trim());
+    final bookIdRaw = (uri.queryParameters['bookId'] ??
+            uri.queryParameters['bookID'] ??
+            // Common OCR/typo: bookId -> bookld
+            uri.queryParameters['bookld'] ??
+            uri.queryParameters['bookLd'] ??
+            '')
+        .trim();
+
+    final bookId = int.tryParse(bookIdRaw);
     if (bookId == null || bookId <= 0) return null;
 
     final cfi = (uri.queryParameters['cfi'] ?? '').trim();
@@ -49,7 +90,7 @@ class StyledMarkdown extends StatelessWidget {
 
   Future<void> _handleLinkTap(BuildContext context, String href) async {
     // 1) Try internal reader navigation.
-    final trimmed = href.trim();
+    final trimmed = _normalizeUriText(href);
     if (trimmed.isEmpty) return;
 
     final player = epubPlayerKey.currentState;
@@ -113,10 +154,11 @@ class StyledMarkdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final normalized = _linkifyPaperreaderUris(data);
     return SelectableRegion(
       selectionControls: selectionControls(),
       child: GptMarkdown(
-        data,
+        normalized,
         followLinkColor: true,
         onLinkTap: (href, text) => _handleLinkTap(context, href),
         linkBuilder: (context, text, url, style) => Text.rich(
