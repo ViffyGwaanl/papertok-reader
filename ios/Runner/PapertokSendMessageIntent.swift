@@ -58,7 +58,8 @@ struct PapertokSendMessageIntent: AppIntent {
 
     let reply = try await PapertokFlutterShortcuts.shared.sendMessage(
       prompt: trimmedPrompt,
-      imagesBase64: jpegB64
+      imagesBase64: jpegB64,
+      timeoutSeconds: PapertokIntentDefaults.timeoutSeconds()
     )
 
     if shouldShowDialog {
@@ -94,6 +95,7 @@ enum PapertokIntentDefaults {
   // Keep in sync with lib/config/shared_preference_provider.dart.
   private static let openAppKey = "shortcutsSendMessageOpenAppDefaultV1"
   private static let showDialogKey = "shortcutsSendMessageShowDialogDefaultV1"
+  private static let timeoutSecKey = "shortcutsSendMessageTimeoutSecV1"
 
   static func openAppDefault() -> Bool {
     return UserDefaults.standard.object(forKey: openAppKey) as? Bool ?? true
@@ -101,6 +103,11 @@ enum PapertokIntentDefaults {
 
   static func showDialogDefault() -> Bool {
     return UserDefaults.standard.object(forKey: showDialogKey) as? Bool ?? true
+  }
+
+  static func timeoutSeconds() -> Int {
+    let v = UserDefaults.standard.object(forKey: timeoutSecKey) as? Int ?? 25
+    return max(5, min(180, v))
   }
 }
 
@@ -166,7 +173,11 @@ actor PapertokFlutterShortcuts {
     self.channel = channel
   }
 
-  func sendMessage(prompt: String, imagesBase64: [String]) async throws -> String {
+  func sendMessage(
+    prompt: String,
+    imagesBase64: [String],
+    timeoutSeconds: Int
+  ) async throws -> String {
     ensureEngine()
 
     guard let channel = channel else {
@@ -177,7 +188,8 @@ actor PapertokFlutterShortcuts {
 
     let args: [String: Any] = [
       "prompt": prompt,
-      "imagesBase64": imagesBase64
+      "imagesBase64": imagesBase64,
+      "timeoutSeconds": timeoutSeconds
     ]
 
     return try await withCheckedThrowingContinuation { cont in

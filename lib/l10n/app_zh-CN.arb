@@ -800,6 +800,8 @@
   "settingsShortcutsSendMessageShowDialogDefaultDesc": "动作结束后在快捷指令里弹出结果对话框。",
   "settingsShareSheetAskPapertokEnabled": "分享面板：分享图片直接问 Papertok",
   "settingsShareSheetAskPapertokEnabledDesc": "从任意 App 分享图片/文字到本 App 时，触发快速 AI 回复流程（最多 4 张图）。",
+  "settingsShortcutsSendMessageTimeout": "快捷指令：最长执行时间",
+  "settingsShortcutsSendMessageTimeoutDesc": "为避免被系统中断，在此时间内返回 best-effort 回复（可能不完整）。",
   "settingsShortcutsCallbackMaxChars": "快捷指令回传结果长度上限",
   "settingsShortcutsCallbackMaxCharsDesc": "限制 paperreader://shortcuts/result 回传数据的最大字符数（超过会截断）。",
   "settingsShortcutsCallbackTimeout": "快捷指令回传等待超时",

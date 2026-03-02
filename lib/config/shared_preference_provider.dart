@@ -88,6 +88,8 @@ class Prefs extends ChangeNotifier {
       'shortcutsSendMessageOpenAppDefaultV1';
   static const String _shortcutsSendMessageShowDialogDefaultV1Key =
       'shortcutsSendMessageShowDialogDefaultV1';
+  static const String _shortcutsSendMessageTimeoutSecV1Key =
+      'shortcutsSendMessageTimeoutSecV1';
 
   // iOS Share Sheet behavior (share_handler).
   static const String _shareSheetAskPapertokEnabledV1Key =
@@ -2091,6 +2093,21 @@ class Prefs extends ChangeNotifier {
     if (before != value) {
       touchAiSettingsUpdatedAt();
       prefs.setBool(_shortcutsSendMessageShowDialogDefaultV1Key, value);
+      notifyListeners();
+    }
+  }
+
+  int get shortcutsSendMessageTimeoutSecV1 {
+    final v = prefs.getInt(_shortcutsSendMessageTimeoutSecV1Key) ?? 25;
+    return v.clamp(5, 180);
+  }
+
+  set shortcutsSendMessageTimeoutSecV1(int value) {
+    final next = value.clamp(5, 180);
+    final before = shortcutsSendMessageTimeoutSecV1;
+    if (before != next) {
+      touchAiSettingsUpdatedAt();
+      prefs.setInt(_shortcutsSendMessageTimeoutSecV1Key, next);
       notifyListeners();
     }
   }

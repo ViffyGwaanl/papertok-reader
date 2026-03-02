@@ -249,6 +249,85 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     );
   }
 
+  Future<void> _editShortcutsSendMessageTimeoutSec() async {
+    if (!AnxPlatform.isIOS) return;
+
+    final l10n = L10n.of(context);
+    var value = Prefs().shortcutsSendMessageTimeoutSecV1.toDouble();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.settingsShortcutsSendMessageTimeout,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.settingsShortcutsSendMessageTimeoutDesc,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${value.toInt()} sec',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Slider(
+                      min: 5,
+                      max: 180,
+                      divisions: (180 - 5),
+                      value: value.clamp(5, 180),
+                      label: value.toInt().toString(),
+                      onChanged: (v) {
+                        final snapped = v.round().toDouble();
+                        setModalState(() => value = snapped);
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(l10n.commonCancel),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () {
+                            Prefs().shortcutsSendMessageTimeoutSecV1 =
+                                value.toInt();
+                            Navigator.pop(context);
+                            setState(() {});
+                          },
+                          child: Text(l10n.commonSave),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   String _shortcutsWaitModeLabel(L10n l10n, String code) {
     return switch (code) {
       'auto' => l10n.settingsShortcutsWaitModeAuto,
@@ -380,6 +459,12 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
           title: Text(l10n.settingsShortcutsSendMessageShowDialogDefault),
           description:
               Text(l10n.settingsShortcutsSendMessageShowDialogDefaultDesc),
+        ),
+        SettingsTile.navigation(
+          title: Text(l10n.settingsShortcutsSendMessageTimeout),
+          description: Text(l10n.settingsShortcutsSendMessageTimeoutDesc),
+          trailing: Text('${Prefs().shortcutsSendMessageTimeoutSecV1}s'),
+          onPressed: (_) => _editShortcutsSendMessageTimeoutSec(),
         ),
         SettingsTile.switchTile(
           initialValue: Prefs().shareSheetAskPapertokEnabledV1,

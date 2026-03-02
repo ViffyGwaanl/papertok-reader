@@ -45,6 +45,7 @@ class PapertokShortcutsChannel {
 
     final prompt = (rawArgs['prompt'] ?? '').toString().trim();
     final imagesRaw = rawArgs['imagesBase64'];
+    final timeoutSecRaw = rawArgs['timeoutSeconds'];
 
     final images = <String>[];
     if (imagesRaw is List) {
@@ -54,10 +55,15 @@ class PapertokShortcutsChannel {
       }
     }
 
+    final timeoutSeconds =
+        (timeoutSecRaw is num) ? timeoutSecRaw.toInt().clamp(5, 180) : 25;
+
     try {
       return await PapertokQuickAskService.send(
         prompt: prompt,
         imagesBase64Jpeg: images,
+        timeout: Duration(seconds: timeoutSeconds),
+        allowPartialOnTimeout: true,
       );
     } catch (e, st) {
       AnxLog.warning('shortcuts: sendMessage failed: $e', e, st);

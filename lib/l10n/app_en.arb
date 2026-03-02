@@ -800,6 +800,8 @@
   "settingsShortcutsSendMessageShowDialogDefaultDesc": "Show a Shortcuts result dialog when the action finishes.",
   "settingsShareSheetAskPapertokEnabled": "Share Sheet: Ask Papertok with images",
   "settingsShareSheetAskPapertokEnabledDesc": "When you share images/text to the app, open a quick AI reply flow (up to 4 images).",
+  "settingsShortcutsSendMessageTimeout": "Shortcuts: Max runtime",
+  "settingsShortcutsSendMessageTimeoutDesc": "To avoid Shortcuts being interrupted, return the best-effort reply within this time.",
   "settingsShortcutsCallbackMaxChars": "Shortcuts callback result limit",
   "settingsShortcutsCallbackMaxCharsDesc": "Max characters to keep from paperreader://shortcuts/result callback data (longer results will be truncated).",
   "settingsShortcutsCallbackTimeout": "Shortcuts callback timeout",
