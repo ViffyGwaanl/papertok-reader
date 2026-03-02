@@ -62,30 +62,36 @@ struct PapertokSendMessageIntent: AppIntent {
       timeoutSeconds: PapertokIntentDefaults.timeoutSeconds()
     )
 
+    // Swift requires a single concrete underlying return type for opaque returns.
+    // Return an IntentResultContainer<..., IntentDialog> and set dialog=nil when disabled
+    // to preserve the "no popup" semantics.
+    var out: IntentResultContainer<String, Never, Never, IntentDialog> =
+      .result(value: reply, dialog: IntentDialog(stringLiteral: ""))
+
     if shouldShowDialog {
       let dialogText = PapertokIntentUI.truncateForDialog(reply)
-      return .result(value: reply, dialog: IntentDialog(stringLiteral: dialogText))
+      out.dialog = IntentDialog(stringLiteral: dialogText)
+    } else {
+      out.dialog = nil
     }
 
-    return .result(value: reply)
+    return out
   }
 }
 
 @available(iOS 16.0, *)
 struct PapertokAppShortcutsProvider: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
-    [
-      AppShortcut(
-        intent: PapertokSendMessageIntent(),
-        phrases: [
-          "给 Papertok 发送图片消息",
-          "用 \(.applicationName) 发送图片消息",
-          "用 \(.applicationName) 分析这些图片"
-        ],
-        shortTitle: "发图问 Papertok",
-        systemImageName: "paperplane"
-      )
-    ]
+    AppShortcut(
+      intent: PapertokSendMessageIntent(),
+      phrases: [
+        "用 \(.applicationName) 给 Papertok 发送图片消息",
+        "用 \(.applicationName) 发送图片消息",
+        "用 \(.applicationName) 分析这些图片"
+      ],
+      shortTitle: "发图问 Papertok",
+      systemImageName: "paperplane"
+    )
   }
 }
 
