@@ -14,10 +14,10 @@ struct PapertokSendMessageIntent: AppIntent {
   static var openAppWhenRun: Bool = false
 
   @Parameter(title: "\u{6587}\u{5b57}")
-  var prompt: String
+  var prompt: String?
 
   @Parameter(title: "\u{56fe}\u{7247}")
-  var images: [IntentFile]
+  var images: [IntentFile]?
 
   @Parameter(title: "\u{8fd0}\u{884c}\u{65f6}\u{6253}\u{5f00} Papertok")
   var openApp: Bool?
@@ -33,7 +33,7 @@ struct PapertokSendMessageIntent: AppIntent {
   }
 
   func perform() async throws -> some IntentResult & ReturnsValue<String> {
-    let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmedPrompt = (prompt ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
 
     let shouldOpenApp = openApp ?? PapertokIntentDefaults.openAppDefault()
     let shouldShowDialog = showDialog ?? PapertokIntentDefaults.showDialogDefault()
@@ -42,8 +42,15 @@ struct PapertokSendMessageIntent: AppIntent {
       await PapertokIntentUI.openPapertokAppBestEffort()
     }
 
+    let selectedImages = images ?? []
+    if trimmedPrompt.isEmpty && selectedImages.isEmpty {
+      throw NSError(domain: "PapertokShortcuts", code: 4, userInfo: [
+        NSLocalizedDescriptionKey: "\u{8bf7}\u{8f93}\u{5165}\u{6587}\u{5b57}\u{6216}\u{9009}\u{62e9}\u{56fe}\u{7247}"
+      ])
+    }
+
     let jpegB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
-      files: images,
+      files: selectedImages,
       maxCount: 4,
       maxPixel: 2048,
       quality: 0.86
