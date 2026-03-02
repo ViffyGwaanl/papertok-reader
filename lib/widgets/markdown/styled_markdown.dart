@@ -1,6 +1,8 @@
+import 'package:anx_reader/service/deeplink/paperreader_deeplink_handler.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:anx_reader/widgets/markdown/selection_control.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
@@ -45,7 +47,7 @@ class StyledMarkdown extends StatelessWidget {
     );
   }
 
-  Future<void> _handleLinkTap(String href) async {
+  Future<void> _handleLinkTap(BuildContext context, String href) async {
     // 1) Try internal reader navigation.
     final trimmed = href.trim();
     if (trimmed.isEmpty) return;
@@ -86,8 +88,21 @@ class StyledMarkdown extends StatelessWidget {
         }
       }
 
-      // Cross-book navigation: open via OS-level deep link (handled by app_links).
-      await launchUrlString(trimmed, mode: LaunchMode.externalApplication);
+      // Cross-book navigation: prefer in-app deeplink handling.
+      //
+      // Using url_launcher for custom schemes can be flaky on iOS because it may
+      // rely on canOpenURL (LSApplicationQueriesSchemes). In-app routing is
+      // faster and more reliable.
+      try {
+        final container = ProviderScope.containerOf(context);
+        await PaperReaderDeepLinkHandler.handleIncomingUriWithContainer(
+          container,
+          uri!,
+        );
+      } catch (_) {
+        // Best-effort fallback.
+        await launchUrlString(trimmed, mode: LaunchMode.externalApplication);
+      }
       return;
     }
 
@@ -103,7 +118,7 @@ class StyledMarkdown extends StatelessWidget {
       child: GptMarkdown(
         data,
         followLinkColor: true,
-        onLinkTap: (href, text) => _handleLinkTap(href),
+        onLinkTap: (href, text) => _handleLinkTap(context, href),
         linkBuilder: (context, text, url, style) => Text.rich(
           text,
           style: style.copyWith(

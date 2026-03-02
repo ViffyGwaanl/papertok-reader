@@ -453,28 +453,47 @@ Future<void> pushToReadingPage(
   String? openHref,
   String? heroTag,
 }) async {
+  await pushToReadingPageWithContainer(
+    ProviderScope.containerOf(context),
+    context,
+    book,
+    cfi: cfi,
+    openHref: openHref,
+    heroTag: heroTag,
+  );
+}
+
+Future<void> pushToReadingPageWithContainer(
+  ProviderContainer container,
+  BuildContext context,
+  Book book, {
+  String? cfi,
+  String? openHref,
+  String? heroTag,
+}) async {
   if (book.isDeleted) {
     AnxToast.show(L10n.of(context).bookDeleted);
     return;
   }
 
   if (!File(book.fileFullPath).existsSync()) {
-    ref.read(syncProvider.notifier).downloadBook(book);
+    container.read(syncProvider.notifier).downloadBook(book);
     return;
   }
 
-  ref.read(aiChatProvider.notifier).clear();
+  container.read(aiChatProvider.notifier).clear();
   final initialThemes = await themeDao.selectThemes();
-  ref.read(currentReadingProvider.notifier).start(
+  container.read(currentReadingProvider.notifier).start(
         CurrentReadingState(
           book: book,
           cfi: cfi,
         ),
       );
 
-  final currentReading = ref.read(currentReadingProvider.notifier);
-  final chapterContentBridge = ref.read(chapterContentBridgeProvider.notifier);
-  final tocSearch = ref.read(tocSearchProvider.notifier);
+  final currentReading = container.read(currentReadingProvider.notifier);
+  final chapterContentBridge =
+      container.read(chapterContentBridgeProvider.notifier);
+  final tocSearch = container.read(tocSearchProvider.notifier);
 
   await Navigator.push(
     navigatorKey.currentContext!,
