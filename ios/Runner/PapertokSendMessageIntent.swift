@@ -14,10 +14,10 @@ struct PapertokSendMessageIntent: AppIntent {
   static var openAppWhenRun: Bool = false
 
   @Parameter(title: "\u{6587}\u{5b57}")
-  var prompt: String = ""
+  var prompt: String
 
   @Parameter(title: "\u{56fe}\u{7247}")
-  var images: [IntentFile] = []
+  var images: [IntentFile]
 
   @Parameter(title: "\u{8fd0}\u{884c}\u{65f6}\u{6253}\u{5f00} Papertok")
   var openApp: Bool?
