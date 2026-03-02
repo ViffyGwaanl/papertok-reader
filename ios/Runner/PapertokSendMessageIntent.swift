@@ -65,7 +65,7 @@ struct PapertokAppShortcutsProvider: AppShortcutsProvider {
     AppShortcut(
         intent: PapertokSendMessageIntent(),
         phrases: [
-          "\u{7ed9} Papertok \u{53d1}\u{9001}\u{56fe}\u{7247}\u{6d88}\u{606f}",
+          "\u{7528} \(.applicationName) \u{7ed9} Papertok \u{53d1}\u{9001}\u{56fe}\u{7247}\u{6d88}\u{606f}",
           "\u{7528} \(.applicationName) \u{53d1}\u{9001}\u{56fe}\u{7247}\u{6d88}\u{606f}",
           "\u{7528} \(.applicationName) \u{5206}\u{6790}\u{8fd9}\u{4e9b}\u{56fe}\u{7247}"
         ],
