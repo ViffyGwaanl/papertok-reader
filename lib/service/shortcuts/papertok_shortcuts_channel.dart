@@ -25,6 +25,8 @@ class PapertokShortcutsChannel {
 
   static Future<Object?> _handle(MethodCall call) async {
     switch (call.method) {
+      case 'ping':
+        return 'ok';
       case 'sendMessage':
         return _sendMessage(call.arguments);
       default:

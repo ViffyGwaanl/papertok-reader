@@ -153,7 +153,19 @@ actor PapertokFlutterShortcuts {
   /// Starts (or reuses) a headless FlutterEngine that exposes the shortcuts
   /// MethodChannel.
   private func ensureEngine() {
-    if engine != nil && channel != nil {
+    if channel != nil {
+      return
+    }
+
+    // Prefer the main Flutter engine when the app is already running.
+    // This avoids the cold-start cost of spinning up a separate headless engine.
+    if let delegate = UIApplication.shared.delegate as? AppDelegate,
+       let controller = delegate.window?.rootViewController as? FlutterViewController {
+      self.engine = nil
+      self.channel = FlutterMethodChannel(
+        name: "papertok_reader/shortcuts",
+        binaryMessenger: controller.binaryMessenger
+      )
       return
     }
 
@@ -170,13 +182,11 @@ actor PapertokFlutterShortcuts {
     // engine as well.
     GeneratedPluginRegistrant.register(with: engine)
 
-    let channel = FlutterMethodChannel(
+    self.engine = engine
+    self.channel = FlutterMethodChannel(
       name: "papertok_reader/shortcuts",
       binaryMessenger: engine.binaryMessenger
     )
-
-    self.engine = engine
-    self.channel = channel
   }
 
   func sendMessage(
@@ -191,6 +201,9 @@ actor PapertokFlutterShortcuts {
         NSLocalizedDescriptionKey: "Flutter channel not ready"
       ])
     }
+
+    // Wait briefly for the Dart isolate to register the channel handler.
+    try await waitForReady(channel: channel)
 
     let args: [String: Any] = [
       "prompt": prompt,
@@ -216,6 +229,37 @@ actor PapertokFlutterShortcuts {
           NSLocalizedDescriptionKey: "Unexpected result type"
         ]))
       }
+    }
+  }
+
+  private func waitForReady(channel: FlutterMethodChannel) async throws {
+    // Retry ping for ~1.5s.
+    for _ in 0..<6 {
+      do {
+        let ok: String = try await withCheckedThrowingContinuation { cont in
+          channel.invokeMethod("ping", arguments: nil) { result in
+            if let s = result as? String {
+              cont.resume(returning: s)
+              return
+            }
+            if let err = result as? FlutterError {
+              cont.resume(throwing: NSError(domain: "PapertokShortcuts", code: 20, userInfo: [
+                NSLocalizedDescriptionKey: err.message ?? "FlutterError"
+              ]))
+              return
+            }
+            cont.resume(throwing: NSError(domain: "PapertokShortcuts", code: 21, userInfo: [
+              NSLocalizedDescriptionKey: "Ping failed"
+            ]))
+          }
+        }
+
+        if ok == "ok" { return }
+      } catch {
+        // ignore
+      }
+
+      try await Task.sleep(nanoseconds: 250_000_000)
     }
   }
 }

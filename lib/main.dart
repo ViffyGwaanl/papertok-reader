@@ -3,6 +3,7 @@ import 'dart:async';
 export 'package:anx_reader/app/app_globals.dart' show navigatorKey;
 
 import 'package:anx_reader/app/app_globals.dart';
+import 'package:anx_reader/service/shortcuts/papertok_shortcuts_channel.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_entrypoint.dart'
     as papertok_shortcuts;
 import 'package:anx_reader/utils/platform_utils.dart';
@@ -50,6 +51,10 @@ Future<void> shortcutsMain() async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Prefs().initPrefs();
+
+  // Allow iOS App Intents to reuse the main Flutter engine when the app is
+  // foregrounded.
+  PapertokShortcutsChannel.register();
 
   // Initialize desktop window with validated position
   if (AnxPlatform.isWindows || AnxPlatform.isMacOS) {
