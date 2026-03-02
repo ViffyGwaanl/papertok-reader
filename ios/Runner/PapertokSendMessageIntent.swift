@@ -4,29 +4,29 @@ import UIKit
 
 @available(iOS 16.0, *)
 struct PapertokSendMessageIntent: AppIntent {
-  static var title: LocalizedStringResource = "\u7ed9 Papertok \u53d1\u9001\u56fe\u7247\u6d88\u606f"
+  static var title: LocalizedStringResource = "\u{7ed9} Papertok \u{53d1}\u{9001}\u{56fe}\u{7247}\u{6d88}\u{606f}"
 
   static var description = IntentDescription(
-    "\u5411 Papertok Reader \u7684 AI \u53d1\u9001\u6587\u5b57\u4e0e\u56fe\u7247\uff08\u6700\u591a 4 \u5f20\uff09\uff0c\u5e76\u8fd4\u56de\u56de\u590d\u5185\u5bb9\u3002\n\n\u8fd9\u4e2a\u52a8\u4f5c\u4f1a\u590d\u7528 App \u5185\u73b0\u6709\u7684\u591a\u6a21\u6001 AI Chat \u901a\u9053\uff08Flutter + LangChain\uff09\uff0c\u4e0d\u4f1a\u91cd\u5199\u4e0a\u4f20\u6216\u8bf7\u6c42\u903b\u8f91\u3002"
+    "\u{5411} Papertok Reader \u{7684} AI \u{53d1}\u{9001}\u{6587}\u{5b57}\u{4e0e}\u{56fe}\u{7247}\u{ff08}\u{6700}\u{591a} 4 \u{5f20}\u{ff09}\u{ff0c}\u{5e76}\u{8fd4}\u{56de}\u{56de}\u{590d}\u{5185}\u{5bb9}\u{3002}\n\n\u{8fd9}\u{4e2a}\u{52a8}\u{4f5c}\u{4f1a}\u{590d}\u{7528} App \u{5185}\u{73b0}\u{6709}\u{7684}\u{591a}\u{6a21}\u{6001} AI Chat \u{901a}\u{9053}\u{ff08}Flutter + LangChain\u{ff09}\u{ff0c}\u{4e0d}\u{4f1a}\u{91cd}\u{5199}\u{4e0a}\u{4f20}\u{6216}\u{8bf7}\u{6c42}\u{903b}\u{8f91}\u{3002}"
   )
 
   // Run in background by default (user can still choose to open the app).
   static var openAppWhenRun: Bool = false
 
-  @Parameter(title: "\u6587\u5b57", default: "")
-  var prompt: String
+  @Parameter(title: "\u{6587}\u{5b57}")
+  var prompt: String = ""
 
-  @Parameter(title: "\u56fe\u7247")
-  var images: [IntentFile]
+  @Parameter(title: "\u{56fe}\u{7247}")
+  var images: [IntentFile] = []
 
-  @Parameter(title: "\u8fd0\u884c\u65f6\u6253\u5f00 Papertok")
+  @Parameter(title: "\u{8fd0}\u{884c}\u{65f6}\u{6253}\u{5f00} Papertok")
   var openApp: Bool?
 
-  @Parameter(title: "\u4f7f\u7528\u5f39\u7a97\u5c55\u793a\u56de\u590d")
+  @Parameter(title: "\u{4f7f}\u{7528}\u{5f39}\u{7a97}\u{5c55}\u{793a}\u{56de}\u{590d}")
   var showDialog: Bool?
 
   static var parameterSummary: some ParameterSummary {
-    Summary("\u7ed9 Papertok \u53d1\u9001 \(\.$prompt) \u548c \(\.$images)") {
+    Summary("\u{7ed9} Papertok \u{53d1}\u{9001} \(\.$prompt) \u{548c} \(\.$images)") {
       \.$openApp
       \.$showDialog
     }
@@ -54,30 +54,24 @@ struct PapertokSendMessageIntent: AppIntent {
       imagesBase64: jpegB64
     )
 
-    if shouldShowDialog {
-      let dialogText = PapertokIntentUI.truncateForDialog(reply)
-      return .result(value: reply, dialog: IntentDialog(stringLiteral: dialogText))
-    }
-
-    return .result(value: reply)
+    let dialogText = shouldShowDialog ? PapertokIntentUI.truncateForDialog(reply) : ""
+    return .result(value: reply, dialog: IntentDialog(stringLiteral: dialogText))
   }
 }
 
 @available(iOS 16.0, *)
 struct PapertokAppShortcutsProvider: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
-    [
-      AppShortcut(
+    AppShortcut(
         intent: PapertokSendMessageIntent(),
         phrases: [
-          "\u7ed9 Papertok \u53d1\u9001\u56fe\u7247\u6d88\u606f",
-          "\u7528 \(.applicationName) \u53d1\u9001\u56fe\u7247\u6d88\u606f",
-          "\u7528 \(.applicationName) \u5206\u6790\u8fd9\u4e9b\u56fe\u7247"
+          "\u{7ed9} Papertok \u{53d1}\u{9001}\u{56fe}\u{7247}\u{6d88}\u{606f}",
+          "\u{7528} \(.applicationName) \u{53d1}\u{9001}\u{56fe}\u{7247}\u{6d88}\u{606f}",
+          "\u{7528} \(.applicationName) \u{5206}\u{6790}\u{8fd9}\u{4e9b}\u{56fe}\u{7247}"
         ],
-        shortTitle: "\u53d1\u56fe\u95ee Papertok",
+        shortTitle: "\u{53d1}\u{56fe}\u{95ee} Papertok",
         systemImageName: "paperplane"
       )
-    ]
   }
 }
 
@@ -104,7 +98,7 @@ enum PapertokIntentUI {
     let maxChars = 900
     if s.count <= maxChars { return s }
     let idx = s.index(s.startIndex, offsetBy: maxChars)
-    return String(s[..<idx]) + "\n\n\u2026"
+    return String(s[..<idx]) + "\n\n\u{2026}"
   }
 
   static func openPapertokAppBestEffort() async {
@@ -205,7 +199,7 @@ enum PapertokIntentImageCodec {
   ) async throws -> [String] {
     if files.count > maxCount {
       throw NSError(domain: "PapertokShortcuts", code: 10, userInfo: [
-        NSLocalizedDescriptionKey: "\u6700\u591a\u53ea\u652f\u6301 \(maxCount) \u5f20\u56fe\u7247"
+        NSLocalizedDescriptionKey: "\u{6700}\u{591a}\u{53ea}\u{652f}\u{6301} \(maxCount) \u{5f20}\u{56fe}\u{7247}"
       ])
     }
 
