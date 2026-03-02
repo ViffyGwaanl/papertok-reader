@@ -39,7 +39,8 @@ struct PapertokSendMessageIntent: AppIntent {
     let shouldShowDialog = showDialog ?? PapertokIntentDefaults.showDialogDefault()
 
     if shouldOpenApp {
-      await PapertokIntentUI.openPapertokAppBestEffort()
+      // Doubao-like behavior: open the app immediately to the AI chat UI.
+      await PapertokIntentUI.openPapertokAskUiBestEffort()
     }
 
     let selectedImages = images ?? []
@@ -49,6 +50,33 @@ struct PapertokSendMessageIntent: AppIntent {
       ])
     }
 
+    // Swift requires a single concrete underlying return type for opaque returns.
+    // Return an IntentResultContainer<..., IntentDialog> and set dialog=nil when disabled.
+    var out: IntentResultContainer<String, Never, Never, IntentDialog> =
+      .result(value: "", dialog: IntentDialog(stringLiteral: ""))
+
+    // If the user wants the app opened, don't block Shortcuts on the network call.
+    // Enqueue the task in-app and return immediately.
+    if shouldOpenApp {
+      let jpegB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
+        files: selectedImages,
+        maxCount: 4,
+        maxPixel: 2048,
+        quality: 0.86
+      )
+
+      _ = try await PapertokFlutterShortcuts.shared.enqueueAsk(
+        prompt: trimmedPrompt,
+        imagesBase64: jpegB64
+      )
+
+      let value = "已在 Papertok 中开始分析。"
+      out.value = value
+      out.dialog = shouldShowDialog ? IntentDialog(stringLiteral: value) : nil
+      return out
+    }
+
+    // Background best-effort mode.
     let jpegB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
       files: selectedImages,
       maxCount: 4,
@@ -62,18 +90,10 @@ struct PapertokSendMessageIntent: AppIntent {
       timeoutSeconds: PapertokIntentDefaults.timeoutSeconds()
     )
 
-    // Swift requires a single concrete underlying return type for opaque returns.
-    // Return an IntentResultContainer<..., IntentDialog> and set dialog=nil when disabled
-    // to preserve the "no popup" semantics.
-    var out: IntentResultContainer<String, Never, Never, IntentDialog> =
-      .result(value: reply, dialog: IntentDialog(stringLiteral: ""))
-
-    if shouldShowDialog {
-      let dialogText = PapertokIntentUI.truncateForDialog(reply)
-      out.dialog = IntentDialog(stringLiteral: dialogText)
-    } else {
-      out.dialog = nil
-    }
+    out.value = reply
+    out.dialog = shouldShowDialog
+      ? IntentDialog(stringLiteral: PapertokIntentUI.truncateForDialog(reply))
+      : nil
 
     return out
   }
@@ -127,13 +147,12 @@ enum PapertokIntentUI {
     return String(s[..<idx]) + "\n\n…"
   }
 
-  static func openPapertokAppBestEffort() async {
+  static func openPapertokAskUiBestEffort() async {
     // Best-effort: open the app via our URL scheme.
-    //
-    // We intentionally use a host/path that the Flutter deep link handler will
-    // ignore, so this acts as a simple "bring app to foreground" request.
+    // This should navigate to the chat UI.
     await MainActor.run {
-      guard let url = URL(string: "paperreader://app") else { return }
+      // `paperreader://shortcuts/ask` is handled in Flutter to open the AI chat.
+      guard let url = URL(string: "paperreader://shortcuts/ask") else { return }
       UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
   }
@@ -187,6 +206,46 @@ actor PapertokFlutterShortcuts {
       name: "papertok_reader/shortcuts",
       binaryMessenger: engine.binaryMessenger
     )
+  }
+
+  func enqueueAsk(
+    prompt: String,
+    imagesBase64: [String]
+  ) async throws -> String {
+    ensureEngine()
+
+    guard let channel = channel else {
+      throw NSError(domain: "PapertokShortcuts", code: 1, userInfo: [
+        NSLocalizedDescriptionKey: "Flutter channel not ready"
+      ])
+    }
+
+    try await waitForReady(channel: channel)
+
+    let args: [String: Any] = [
+      "prompt": prompt,
+      "imagesBase64": imagesBase64
+    ]
+
+    return try await withCheckedThrowingContinuation { cont in
+      channel.invokeMethod("enqueueAsk", arguments: args) { result in
+        if let err = result as? FlutterError {
+          cont.resume(throwing: NSError(domain: "PapertokShortcuts", code: 2, userInfo: [
+            NSLocalizedDescriptionKey: err.message ?? "FlutterError"
+          ]))
+          return
+        }
+
+        if let s = result as? String {
+          cont.resume(returning: s)
+          return
+        }
+
+        cont.resume(throwing: NSError(domain: "PapertokShortcuts", code: 3, userInfo: [
+          NSLocalizedDescriptionKey: "Unexpected result type"
+        ]))
+      }
+    }
   }
 
   func sendMessage(

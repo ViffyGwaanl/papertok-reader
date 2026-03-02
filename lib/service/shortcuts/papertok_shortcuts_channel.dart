@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:anx_reader/service/shortcuts/papertok_quick_ask_service.dart';
+import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/services.dart';
 
@@ -27,6 +28,8 @@ class PapertokShortcutsChannel {
     switch (call.method) {
       case 'ping':
         return 'ok';
+      case 'enqueueAsk':
+        return _enqueueAsk(call.arguments);
       case 'sendMessage':
         return _sendMessage(call.arguments);
       default:
@@ -35,6 +38,36 @@ class PapertokShortcutsChannel {
           message: 'Unknown method: ${call.method}',
         );
     }
+  }
+
+  static Future<String> _enqueueAsk(Object? rawArgs) async {
+    if (rawArgs is! Map) {
+      throw PlatformException(
+        code: 'bad_args',
+        message: 'Expected Map arguments',
+      );
+    }
+
+    final prompt = (rawArgs['prompt'] ?? '').toString().trim();
+    final imagesRaw = rawArgs['imagesBase64'];
+
+    final images = <String>[];
+    if (imagesRaw is List) {
+      for (final item in imagesRaw) {
+        final s = (item ?? '').toString().trim();
+        if (s.isNotEmpty) images.add(s);
+      }
+    }
+
+    // Fire-and-forget: the heavy work runs in-app, not inside Shortcuts.
+    unawaited(
+      PapertokShortcutsHandoffService.openChatAndSend(
+        prompt: prompt,
+        imagesBase64Jpeg: images,
+      ),
+    );
+
+    return 'queued';
   }
 
   static Future<String> _sendMessage(Object? rawArgs) async {

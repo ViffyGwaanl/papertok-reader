@@ -3,18 +3,36 @@ import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
 import 'package:anx_reader/service/book.dart'
     show pushToReadingPage, pushToReadingPageWithContainer;
 import 'package:anx_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:anx_reader/page/settings_page/subpage/ai_chat_page.dart';
 import 'package:anx_reader/service/shortcuts/shortcuts_callback_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PaperReaderDeepLinkHandler {
   const PaperReaderDeepLinkHandler._();
 
   static Future<void> handleIncomingUri(WidgetRef ref, Uri uri) async {
-    // Shortcuts callback deep links.
+    // Shortcuts deep links.
     if (uri.scheme.toLowerCase() == 'paperreader' && uri.host == 'shortcuts') {
-      ShortcutsCallbackService.instance.handleIncomingUri(uri);
+      if (uri.path == '/result') {
+        ShortcutsCallbackService.instance.handleIncomingUri(uri);
+        return;
+      }
+
+      // `paperreader://shortcuts/ask` is a best-effort navigation hint.
+      // The actual request is delivered via MethodChannel.
+      if (uri.path == '/ask') {
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AiChatPage()),
+          );
+        }
+        return;
+      }
+
       return;
     }
 
@@ -64,9 +82,12 @@ class PaperReaderDeepLinkHandler {
     ProviderContainer container,
     Uri uri,
   ) async {
-    // Shortcuts callback deep links.
+    // Shortcuts deep links.
     if (uri.scheme.toLowerCase() == 'paperreader' && uri.host == 'shortcuts') {
-      ShortcutsCallbackService.instance.handleIncomingUri(uri);
+      if (uri.path == '/result') {
+        ShortcutsCallbackService.instance.handleIncomingUri(uri);
+      }
+      // In container mode we intentionally do not navigate (needs BuildContext).
       return;
     }
 
