@@ -213,10 +213,26 @@ enum PapertokIntentImageCodec {
     out.reserveCapacity(files.count)
 
     for f in files {
-      // IntentFile can provide either a URL or data.
+      // IntentFile can provide either a URL or in-memory data.
+      //
+      // When the file comes from the share sheet, it is commonly a security-
+      // scoped URL. We must request access before reading it.
       let data: Data
       if let url = f.fileURL {
-        data = try Data(contentsOf: url)
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+          if accessed {
+            url.stopAccessingSecurityScopedResource()
+          }
+        }
+
+        do {
+          data = try Data(contentsOf: url)
+        } catch {
+          // Fallback: some inputs may provide in-memory data even when the URL
+          // is not accessible.
+          data = f.data
+        }
       } else {
         data = f.data
       }
