@@ -7,6 +7,7 @@ import 'package:anx_reader/app/app_route_observer.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_channel.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_entrypoint.dart'
     as papertok_shortcuts;
+import 'package:anx_reader/service/shortcuts/papertok_shortcuts_pending_queue.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
@@ -56,6 +57,11 @@ Future<void> main() async {
   // Allow iOS App Intents to reuse the main Flutter engine when the app is
   // foregrounded.
   PapertokShortcutsChannel.register();
+
+  // If a Shortcuts invocation arrived before the UI was ready, drain it now.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    PapertokShortcutsPendingQueue.tryDrain();
+  });
 
   // Initialize desktop window with validated position
   if (AnxPlatform.isWindows || AnxPlatform.isMacOS) {

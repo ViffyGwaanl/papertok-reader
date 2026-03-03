@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:anx_reader/service/shortcuts/papertok_quick_ask_service.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
+import 'package:anx_reader/service/shortcuts/papertok_shortcuts_pending_queue.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/services.dart';
 
@@ -60,12 +61,14 @@ class PapertokShortcutsChannel {
     }
 
     // Fire-and-forget: the heavy work runs in-app, not inside Shortcuts.
-    unawaited(
-      PapertokShortcutsHandoffService.sendToChat(
-        prompt: prompt,
-        imagesBase64Jpeg: images,
-      ),
+    // If the app UI isn't ready yet, persist a pending request so the app can
+    // drain it on launch.
+    PapertokShortcutsPendingQueue.enqueue(
+      prompt: prompt,
+      imagesBase64Jpeg: images,
     );
+
+    unawaited(PapertokShortcutsPendingQueue.tryDrain());
 
     return 'queued';
   }

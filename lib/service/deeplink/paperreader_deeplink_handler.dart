@@ -4,6 +4,7 @@ import 'package:anx_reader/service/book.dart'
     show pushToReadingPage, pushToReadingPageWithContainer;
 import 'package:anx_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
+import 'package:anx_reader/service/shortcuts/papertok_shortcuts_pending_queue.dart';
 import 'package:anx_reader/service/shortcuts/shortcuts_callback_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/cupertino.dart';
@@ -24,6 +25,8 @@ class PaperReaderDeepLinkHandler {
       // The actual request is delivered via MethodChannel.
       if (uri.path == '/ask') {
         await PapertokAiChatNavigator.show();
+        // Best-effort: if a pending ask was queued before UI was ready.
+        await PapertokShortcutsPendingQueue.tryDrain();
         return;
       }
 
