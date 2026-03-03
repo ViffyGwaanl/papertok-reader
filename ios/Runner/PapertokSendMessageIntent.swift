@@ -97,7 +97,7 @@ struct PapertokAppShortcutsProvider: AppShortcutsProvider {
     AppShortcut(
       intent: PapertokSendMessageIntent(),
       phrases: [
-        "给 Papertok 发送图片消息",
+        "用 \(.applicationName) 给 Papertok 发送图片消息",
         "用 \(.applicationName) 发送图片消息",
         "用 \(.applicationName) 分析这些图片"
       ],
