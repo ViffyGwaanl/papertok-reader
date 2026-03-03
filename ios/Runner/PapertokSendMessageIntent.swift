@@ -1,6 +1,7 @@
 import AppIntents
 import Flutter
 import UIKit
+import UniformTypeIdentifiers
 
 @available(iOS 16.0, *)
 struct PapertokSendMessageIntent: AppIntent {
@@ -10,8 +11,9 @@ struct PapertokSendMessageIntent: AppIntent {
     "向 Papertok Reader 的 AI 发送文字与图片（最多 4 张），并返回回复内容。\n\n这个动作会复用 App 内现有的多模态 AI Chat 通道（Flutter + LangChain），不会重写上传或请求逻辑。"
   )
 
-  // Run in background by default (user can still choose to open the app).
-  static var openAppWhenRun: Bool = false
+  // Open the app when invoked (Doubao-like UX). Background execution in
+  // Shortcuts has strict time limits on iOS.
+  static var openAppWhenRun: Bool = true
 
   @Parameter(title: "文字")
   var prompt: String?
@@ -55,24 +57,19 @@ struct PapertokSendMessageIntent: AppIntent {
     var out: IntentResultContainer<String, Never, Never, IntentDialog> =
       .result(value: "", dialog: IntentDialog(stringLiteral: ""))
 
-    // If the user wants the app opened, don't block Shortcuts on the network call.
-    // Enqueue the task in-app and return immediately.
+    // Doubao-like: when opening the app, hand off work to the app and return
+    // immediately. Do not run the AI network call inside Shortcuts.
     if shouldOpenApp {
-      let jpegB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
-        files: selectedImages,
-        maxCount: 4,
-        maxPixel: 2048,
-        quality: 0.86
-      )
-
-      _ = try await PapertokFlutterShortcuts.shared.enqueueAsk(
+      try await PapertokIntentPendingQueue.enqueue(
         prompt: trimmedPrompt,
-        imagesBase64: jpegB64
+        images: selectedImages
       )
 
       let value = "已在 Papertok 中开始分析。"
       out.value = value
-      out.dialog = shouldShowDialog ? IntentDialog(stringLiteral: value) : nil
+      // In open-app mode, the result is shown in-app; avoid showing a Shortcuts
+      // popup to reduce flakiness.
+      out.dialog = nil
       return out
     }
 
@@ -155,6 +152,62 @@ enum PapertokIntentUI {
       guard let url = URL(string: "paperreader://shortcuts/ask") else { return }
       UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
+  }
+}
+
+@available(iOS 16.0, *)
+enum PapertokIntentPendingQueue {
+  // Keep in sync with lib/service/shortcuts/papertok_shortcuts_pending_queue.dart.
+  private static let key = "shortcutsPendingAskV1"
+
+  static func enqueue(prompt: String, images: [IntentFile]) async throws {
+    var payload: [String: Any] = [
+      "prompt": prompt,
+      "createdAtMs": Int(Date().timeIntervalSince1970 * 1000)
+    ]
+
+    let paths = try persistImages(images)
+    payload["imagePaths"] = paths
+
+    let data = try JSONSerialization.data(withJSONObject: payload)
+    let json = String(data: data, encoding: .utf8) ?? "{}"
+    UserDefaults.standard.set(json, forKey: key)
+  }
+
+  private static func persistImages(_ images: [IntentFile]) throws -> [String] {
+    if images.isEmpty { return [] }
+
+    let dir = FileManager.default.temporaryDirectory
+      .appendingPathComponent("shortcuts_ask", isDirectory: true)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+    var out: [String] = []
+    out.reserveCapacity(images.count)
+
+    for f in images.prefix(4) {
+      let ext = "jpg"
+      let dst = dir.appendingPathComponent(UUID().uuidString + "." + ext)
+
+      if let url = f.fileURL {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+          if accessed { url.stopAccessingSecurityScopedResource() }
+        }
+
+        if let data = try? Data(contentsOf: url) {
+          try data.write(to: dst, options: [.atomic])
+          out.append(dst.path)
+          continue
+        }
+      }
+
+      // Fallback to in-memory data.
+      let data = f.data
+      try data.write(to: dst, options: [.atomic])
+      out.append(dst.path)
+    }
+
+    return out
   }
 }
 
