@@ -54,12 +54,18 @@ platform :ios do
     # We keep a local monotonic counter and take max(ASC_latest, local_latest)+1.
     require "fileutils"
 
-    asc_latest = latest_testflight_build_number(
-      api_key: api_key,
-      app_identifier: ENV["APP_BUNDLE_ID"],
-      # NOTE: do NOT pin `version:` here; build numbers must be monotonic across versions.
-      initial_build_number: 1
-    ).to_i
+    asc_latest = 0
+    begin
+      asc_latest = latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: ENV["APP_BUNDLE_ID"],
+        # NOTE: do NOT pin `version:` here; build numbers must be monotonic across versions.
+        initial_build_number: 1
+      ).to_i
+    rescue => e
+      UI.important("ASC latest_testflight_build_number failed (#{e.class}: #{e.message}). Falling back to local counter only.")
+      asc_latest = 0
+    end
 
     state_file = "/Users/gwaanl/.openclaw/workspace/state/papertok-reader/last_testflight_build_number.txt"
     FileUtils.mkdir_p(File.dirname(state_file))
@@ -99,6 +105,30 @@ platform :ios do
         keychain_name: is_ci ? "fastlane_tmp_keychain" : "login.keychain",
         keychain_password: is_ci ? "temp_password" : nil,
       )
+
+      # Force Manual signing + correct provisioning profiles per target.
+      # This prevents Xcode Automatic signing ("No Accounts") and avoids profile mix-ups.
+      update_code_signing_settings(
+        path: "Runner.xcodeproj",
+        use_automatic_signing: false,
+        team_id: ENV["APP_TEAM_ID"],
+        targets: ["Runner"],
+        build_configurations: ["Release", "Profile"],
+        code_sign_identity: "Apple Distribution",
+        bundle_identifier: "ai.papertok.paperreader",
+        profile_name: "match AppStore ai.papertok.paperreader"
+      )
+
+      update_code_signing_settings(
+        path: "Runner.xcodeproj",
+        use_automatic_signing: false,
+        team_id: ENV["APP_TEAM_ID"],
+        targets: ["shareExtension"],
+        build_configurations: ["Release", "Profile"],
+        code_sign_identity: "Apple Distribution",
+        bundle_identifier: "ai.papertok.paperreader.shareExtension",
+        profile_name: "match AppStore ai.papertok.paperreader.shareExtension"
+      )
     else
       UI.message("Skipping match; relying on local Xcode automatic signing on this machine")
     end
@@ -129,7 +159,7 @@ platform :ios do
     sanitized_env = Shellwords.shelljoin(sanitized_env_tokens)
 
     # Some environments (CN networks / corp TLS interception) can make `flutter pub get`
-    # unreliable. Allow an explicit opt-out and rely on existing .dart_tool + iOS symlinks.
+    # unreliable. Allow an explicit opt-out and rely on existing .dart_tool + generated iOS config.
     flutter_no_pub = ENV["FLUTTER_NO_PUB"].to_s.downcase == "true" || ENV["SKIP_PUB_GET"].to_s.downcase == "true"
 
     # Ensure Flutter iOS config exists before pod install (Generated.xcconfig)
@@ -182,7 +212,10 @@ platform :ios do
     upload_to_testflight(
       api_key: ctx[:api_key],
       ipa: ctx[:ipa_path],
-      skip_waiting_for_build_processing: false
+      # fastlane 2.228.0 + recent ASC API changes can break the processing wait step
+      # (Spaceship relationship 'buildDeliveries' errors). Upload first; we'll verify
+      # processing/distribution separately.
+      skip_waiting_for_build_processing: true
     )
   end
 end

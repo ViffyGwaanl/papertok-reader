@@ -13,6 +13,12 @@ end
 
 # Tasks to be reused on each platform flow
 lane :fetch_dependencies do
+  flutter_no_pub = ENV["FLUTTER_NO_PUB"].to_s.downcase == "true" || ENV["SKIP_PUB_GET"].to_s.downcase == "true"
+  if flutter_no_pub
+    UI.message("Skipping fetch_dependencies (FLUTTER_NO_PUB=true)")
+    next
+  end
+
   sh_on_root(command: "flutter clean")
   sh_on_root(command: "dart run build_runner build --delete-conflicting-outputs")
 end
