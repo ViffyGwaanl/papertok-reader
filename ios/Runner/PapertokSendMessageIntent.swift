@@ -93,7 +93,7 @@ struct PapertokSendMessageIntent: AppIntent {
 
 @available(iOS 16.0, *)
 struct PapertokAppShortcutsProvider: AppShortcutsProvider {
-  static var appShortcuts: AppShortcut {
+  static var appShortcuts: [AppShortcut] {
     AppShortcut(
       intent: PapertokSendMessageIntent(),
       phrases: [
