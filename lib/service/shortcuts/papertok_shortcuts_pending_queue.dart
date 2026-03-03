@@ -7,6 +7,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 
 class PapertokShortcutsPendingQueue {
@@ -82,12 +83,35 @@ class PapertokShortcutsPendingQueue {
     }
   }
 
+  static const MethodChannel _native = MethodChannel(
+    'papertok_reader/pending_ask',
+  );
+
+  static Future<String?> _consumeNativePending() async {
+    if (!Platform.isIOS) return null;
+    try {
+      final s = await _native.invokeMethod<String>('consume');
+      return (s == null || s.trim().isEmpty) ? null : s;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> tryDrain() async {
     if (_draining) return;
     _draining = true;
 
     try {
-      final raw = Prefs().prefs.getString(_key);
+      var raw = Prefs().prefs.getString(_key);
+      if (raw == null || raw.trim().isEmpty) {
+        // If the AppIntent ran out-of-process, it may have persisted payload
+        // to a native suite; consume it via MethodChannel.
+        raw = await _consumeNativePending();
+        if (raw != null && raw.trim().isNotEmpty) {
+          Prefs().prefs.setString(_key, raw);
+        }
+      }
+
       if (raw == null || raw.trim().isEmpty) return;
 
       final obj = jsonDecode(raw);

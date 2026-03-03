@@ -151,51 +151,41 @@ enum PapertokIntentPendingQueue {
   // Keep in sync with lib/service/shortcuts/papertok_shortcuts_pending_queue.dart.
   private static let key = "shortcutsPendingAskV1"
 
+  // AppIntents may run out-of-process; UserDefaults.standard isn't reliably shared
+  // with the host app. Persist to a dedicated suite and let the app consume it.
+  private static let suiteName = "papertok_reader.shortcuts_pending_v1"
+
+  private static func defaults() -> UserDefaults {
+    return UserDefaults(suiteName: suiteName) ?? UserDefaults.standard
+  }
+
   static func enqueue(prompt: String, images: [IntentFile]) async throws {
     var payload: [String: Any] = [
       "prompt": prompt,
       "createdAtMs": Int(Date().timeIntervalSince1970 * 1000)
     ]
 
-    let paths = try persistImages(images)
-    payload["imagePaths"] = paths
+    // Store images inline as base64 JPEG for cross-process handoff.
+    let imagesB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
+      files: images,
+      maxCount: 4,
+      maxPixel: 2048,
+      quality: 0.86
+    )
+    payload["imagesBase64Jpeg"] = imagesB64
 
     let data = try JSONSerialization.data(withJSONObject: payload)
     let json = String(data: data, encoding: .utf8) ?? "{}"
-    UserDefaults.standard.set(json, forKey: key)
+    defaults().set(json, forKey: key)
   }
 
-  private static func persistImages(_ images: [IntentFile]) throws -> [String] {
-    if images.isEmpty { return [] }
-
-    let dir = FileManager.default.temporaryDirectory
-      .appendingPathComponent("shortcuts_ask", isDirectory: true)
-    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-
-    var out: [String] = []
-    out.reserveCapacity(images.count)
-
-    for f in images.prefix(4) {
-      let dst = dir.appendingPathComponent(UUID().uuidString + ".bin")
-
-      if let url = f.fileURL {
-        let accessed = url.startAccessingSecurityScopedResource()
-        defer {
-          if accessed { url.stopAccessingSecurityScopedResource() }
-        }
-
-        if let data = try? Data(contentsOf: url) {
-          try data.write(to: dst, options: [.atomic])
-          out.append(dst.path)
-          continue
-        }
-      }
-
-      try f.data.write(to: dst, options: [.atomic])
-      out.append(dst.path)
+  static func consume() -> String? {
+    let ud = defaults()
+    guard let s = ud.string(forKey: key), !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      return nil
     }
-
-    return out
+    ud.removeObject(forKey: key)
+    return s
   }
 }
 

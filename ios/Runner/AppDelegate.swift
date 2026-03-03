@@ -15,6 +15,7 @@ import Flutter
     if let controller = window?.rootViewController as? FlutterViewController {
       remindersChannel.register(with: controller)
       calendarEventKitChannel.register(with: controller)
+      PapertokPendingAskBridge.register(with: controller)
     }
 
     // Best-effort: prewarm a headless FlutterEngine for App Intents so the
