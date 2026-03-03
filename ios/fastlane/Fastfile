@@ -128,8 +128,16 @@ platform :ios do
 
     sanitized_env = Shellwords.shelljoin(sanitized_env_tokens)
 
+    # Some environments (CN networks / corp TLS interception) can make `flutter pub get`
+    # unreliable. Allow an explicit opt-out and rely on existing .dart_tool + iOS symlinks.
+    flutter_no_pub = ENV["FLUTTER_NO_PUB"].to_s.downcase == "true" || ENV["SKIP_PUB_GET"].to_s.downcase == "true"
+
     # Ensure Flutter iOS config exists before pod install (Generated.xcconfig)
-    sh_on_root(command: "#{sanitized_env} flutter pub get")
+    if flutter_no_pub
+      UI.message("Skipping flutter pub get (FLUTTER_NO_PUB=true)")
+    else
+      sh_on_root(command: "#{sanitized_env} flutter pub get")
+    end
 
     # Ensure Pods are in a good state (fast fail with a useful error)
     sh_on_root(command: "cd ios && #{sanitized_env} pod install")
@@ -138,7 +146,7 @@ platform :ios do
 
     # Build IPA deterministically using Flutter.
     # Output will be under: build/ios/ipa/*.ipa
-    sh_on_root(command: [
+    build_tokens = [
       sanitized_env,
       "flutter build ipa",
       "--release",
@@ -146,7 +154,10 @@ platform :ios do
       "--build-name=#{version_number}",
       "--build-number=#{build_number}",
       "--export-options-plist=#{export_plist}",
-    ].join(" "))
+    ]
+    build_tokens << "--no-pub" if flutter_no_pub
+
+    sh_on_root(command: build_tokens.join(" "))
 
     ipa_path = sh("cd #{root_path} && ls -t build/ios/ipa/*.ipa | head -n 1").strip
     UI.user_error!("IPA not found under build/ios/ipa") if ipa_path.to_s.empty?
