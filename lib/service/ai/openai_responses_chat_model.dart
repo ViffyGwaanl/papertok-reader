@@ -678,6 +678,14 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     };
   }
 
+  String _dataUrlFromBase64(String base64, String mimeType) {
+    final b64 = base64.trim();
+    if (b64.isEmpty) return '';
+
+    final mime = mimeType.trim().isNotEmpty ? mimeType.trim() : 'image/jpeg';
+    return 'data:$mime;base64,$b64';
+  }
+
   dynamic _mapChatMessageToResponseInput(ChatMessage msg) {
     // Tool output.
     if (msg is ToolChatMessage) {
@@ -709,6 +717,53 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       CustomChatMessage() => (msg as CustomChatMessage).role,
       _ => 'user',
     };
+
+    // Multimodal support (OpenAI Responses API):
+    // https://developers.openai.com/api/docs/guides/images-vision/
+    if (msg is HumanChatMessage) {
+      final parts = msg.content is ChatMessageContentMultiModal
+          ? (msg.content as ChatMessageContentMultiModal).parts
+          : <ChatMessageContent>[msg.content];
+
+      final content = <Map<String, dynamic>>[];
+      for (final part in parts) {
+        if (part is ChatMessageContentText) {
+          final text = part.text;
+          if (text.trim().isNotEmpty) {
+            content.add({'type': 'input_text', 'text': text});
+          }
+          continue;
+        }
+
+        if (part is ChatMessageContentImage) {
+          final d = part.data.trim();
+          if (d.isEmpty) continue;
+
+          final resolvedUrl = d.startsWith('http://') ||
+                  d.startsWith('https://') ||
+                  d.startsWith('data:')
+              ? d
+              : _dataUrlFromBase64(d, part.mimeType ?? 'image/jpeg');
+
+          content.add({
+            'type': 'input_image',
+            'image_url': resolvedUrl,
+            'detail': part.detail.name,
+          });
+          continue;
+        }
+      }
+
+      if (content.isEmpty) {
+        return null;
+      }
+
+      return {
+        'type': 'message',
+        'role': role,
+        'content': content,
+      };
+    }
 
     final text = msg.contentAsString;
     if (text.trim().isEmpty) {
