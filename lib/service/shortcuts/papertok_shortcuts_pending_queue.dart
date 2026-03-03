@@ -14,6 +14,10 @@ class PapertokShortcutsPendingQueue {
 
   static const _key = 'shortcutsPendingAskV1';
 
+  // Protect against multiple concurrent drains (main post-frame + deeplink + channel).
+  static bool _draining = false;
+  static int? _lastProcessedCreatedAtMs;
+
   static Future<List<String>> _encodePathsToJpegBase64(
     List<String> paths,
   ) async {
@@ -79,14 +83,26 @@ class PapertokShortcutsPendingQueue {
   }
 
   static Future<void> tryDrain() async {
-    final raw = Prefs().prefs.getString(_key);
-    if (raw == null || raw.trim().isEmpty) return;
+    if (_draining) return;
+    _draining = true;
 
     try {
+      final raw = Prefs().prefs.getString(_key);
+      if (raw == null || raw.trim().isEmpty) return;
+
       final obj = jsonDecode(raw);
       if (obj is! Map) return;
 
       final prompt = (obj['prompt'] ?? '').toString();
+      final createdAtMsRaw = obj['createdAtMs'];
+      final createdAtMs =
+          (createdAtMsRaw is num) ? createdAtMsRaw.toInt() : null;
+
+      if (createdAtMs != null && _lastProcessedCreatedAtMs == createdAtMs) {
+        // Already processed in this process; avoid duplicate sends.
+        await Prefs().prefs.remove(_key);
+        return;
+      }
 
       // Prefer persisted file paths (Swift handoff) to avoid huge base64 in the
       // Shortcuts process. Fallback to base64 payloads if present.
@@ -116,8 +132,18 @@ class PapertokShortcutsPendingQueue {
 
       // Clear before running to avoid loops.
       await Prefs().prefs.remove(_key);
+      _lastProcessedCreatedAtMs = createdAtMs;
 
-      // Ensure the chat UI is visible before sending.
+      if (prompt.trim().isEmpty && images.isEmpty) {
+        AnxLog.warning('shortcuts: pending ask empty, dropped');
+        return;
+      }
+
+      AnxLog.info(
+        'shortcuts: draining pending ask (promptLen=${prompt.trim().length}, images=${images.length})',
+      );
+
+      // Ensure the AI tab is visible before sending.
       await PapertokAiChatNavigator.show();
 
       await PapertokShortcutsHandoffService.sendToChat(
@@ -126,6 +152,8 @@ class PapertokShortcutsPendingQueue {
       );
     } catch (e, st) {
       AnxLog.warning('shortcuts: drain pending failed: $e', e, st);
+    } finally {
+      _draining = false;
     }
   }
 }

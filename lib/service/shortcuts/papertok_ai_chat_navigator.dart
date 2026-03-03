@@ -19,21 +19,18 @@ class PapertokAiChatNavigator {
     final presentation = Prefs().shortcutsSendMessagePresentationV1;
     final openNew = forceNewWindow ?? (presentation == 'new');
 
-    final route = MaterialPageRoute(
-      settings: const RouteSettings(name: AiChatPage.routeName),
-      builder: (_) => const AiChatPage(),
-    );
-
     if (openNew) {
+      final route = MaterialPageRoute(
+        settings: const RouteSettings(name: AiChatPage.routeName),
+        builder: (_) => const AiChatPage(),
+      );
       nav.push(route);
       return;
     }
 
-    // Reuse: if the chat window is already on top, don't open another one.
-    if (AiChatPage.isTop) {
-      return;
-    }
-
-    nav.push(route);
+    // Reuse mode: do NOT push another chat page (users expect the Home AI tab).
+    // Pop to root and request HomePage to switch to the AI tab.
+    nav.popUntil((r) => r.isFirst);
+    homeTabRequest.value = Prefs.homeTabAI;
   }
 }

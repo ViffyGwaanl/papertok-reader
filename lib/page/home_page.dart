@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:cupertino_native/cupertino_native.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/dao/database.dart';
 import 'package:anx_reader/enums/sync_direction.dart';
 import 'package:anx_reader/enums/sync_trigger.dart';
@@ -52,10 +53,35 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   bool? _expanded;
 
+  void _handleHomeTabRequest() {
+    final requested = homeTabRequest.value;
+    if (requested == null || requested.trim().isEmpty) return;
+
+    // Consume the request first to avoid re-entrancy loops.
+    homeTabRequest.value = null;
+
+    if (_currentTab == requested) {
+      homeTabCurrent.value = _currentTab;
+      return;
+    }
+
+    setState(() {
+      _currentTab = requested;
+      homeTabCurrent.value = _currentTab;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    homeTabRequest.addListener(_handleHomeTabRequest);
     WidgetsBinding.instance.addPostFrameCallback((_) => initAnx());
+  }
+
+  @override
+  void dispose() {
+    homeTabRequest.removeListener(_handleHomeTabRequest);
+    super.dispose();
   }
 
   Future<void> _checkWindowsWebview() async {
@@ -134,6 +160,9 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep the global observable in sync (best-effort).
+    homeTabCurrent.value = _currentTab;
+
     final homeOrder = Prefs().homeTabsOrder;
     final homeEnabled = Prefs().homeTabsEnabled;
 
