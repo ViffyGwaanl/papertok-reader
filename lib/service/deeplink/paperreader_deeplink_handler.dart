@@ -3,11 +3,10 @@ import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
 import 'package:anx_reader/service/book.dart'
     show pushToReadingPage, pushToReadingPageWithContainer;
 import 'package:anx_reader/service/deeplink/paperreader_reader_intent.dart';
-import 'package:anx_reader/page/settings_page/subpage/ai_chat_page.dart';
+import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/service/shortcuts/shortcuts_callback_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PaperReaderDeepLinkHandler {
@@ -24,12 +23,7 @@ class PaperReaderDeepLinkHandler {
       // `paperreader://shortcuts/ask` is a best-effort navigation hint.
       // The actual request is delivered via MethodChannel.
       if (uri.path == '/ask') {
-        final context = navigatorKey.currentContext;
-        if (context != null) {
-          await Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const AiChatPage()),
-          );
-        }
+        await PapertokAiChatNavigator.show();
         return;
       }
 

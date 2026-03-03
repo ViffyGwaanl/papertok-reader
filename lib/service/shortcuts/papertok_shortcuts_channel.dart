@@ -61,7 +61,7 @@ class PapertokShortcutsChannel {
 
     // Fire-and-forget: the heavy work runs in-app, not inside Shortcuts.
     unawaited(
-      PapertokShortcutsHandoffService.openChatAndSend(
+      PapertokShortcutsHandoffService.sendToChat(
         prompt: prompt,
         imagesBase64Jpeg: images,
       ),

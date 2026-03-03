@@ -90,6 +90,8 @@ class Prefs extends ChangeNotifier {
       'shortcutsSendMessageShowDialogDefaultV1';
   static const String _shortcutsSendMessageTimeoutSecV1Key =
       'shortcutsSendMessageTimeoutSecV1';
+  static const String _shortcutsSendMessagePresentationV1Key =
+      'shortcutsSendMessagePresentationV1';
 
   // iOS Share Sheet behavior (share_handler).
   static const String _shareSheetAskPapertokEnabledV1Key =
@@ -2108,6 +2110,24 @@ class Prefs extends ChangeNotifier {
     if (before != next) {
       touchAiSettingsUpdatedAt();
       prefs.setInt(_shortcutsSendMessageTimeoutSecV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  /// How to show the AI chat UI when running the Shortcuts action.
+  ///
+  /// - `reuse`: reuse the existing chat window if possible.
+  /// - `new`: always open a new chat page route.
+  String get shortcutsSendMessagePresentationV1 {
+    return prefs.getString(_shortcutsSendMessagePresentationV1Key) ?? 'reuse';
+  }
+
+  set shortcutsSendMessagePresentationV1(String value) {
+    final next = (value == 'new') ? 'new' : 'reuse';
+    final before = shortcutsSendMessagePresentationV1;
+    if (before != next) {
+      touchAiSettingsUpdatedAt();
+      prefs.setString(_shortcutsSendMessagePresentationV1Key, next);
       notifyListeners();
     }
   }

@@ -2,18 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:anx_reader/page/settings_page/subpage/ai_chat_page.dart';
 import 'package:anx_reader/providers/ai_chat.dart';
 import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/utils/log/common.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PapertokShortcutsHandoffService {
   PapertokShortcutsHandoffService._();
 
-  static Future<void> openChatAndSend({
+  static Future<void> sendToChat({
     required String prompt,
     required List<String> imagesBase64Jpeg,
   }) async {
@@ -24,15 +22,6 @@ class PapertokShortcutsHandoffService {
     }
 
     final container = ProviderScope.containerOf(ctx);
-
-    // Ensure the chat page is visible (Doubao-like behavior).
-    // Do not await; we want to enqueue work immediately.
-    unawaited(
-      Navigator.of(ctx).push(
-        MaterialPageRoute(builder: (_) => const AiChatPage()),
-      ),
-    );
-
     final notifier = container.read(aiChatProvider.notifier);
 
     if (notifier.isStreaming) {

@@ -3,6 +3,7 @@ import 'dart:async';
 export 'package:anx_reader/app/app_globals.dart' show navigatorKey;
 
 import 'package:anx_reader/app/app_globals.dart';
+import 'package:anx_reader/app/app_route_observer.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_channel.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_entrypoint.dart'
     as papertok_shortcuts;
@@ -220,7 +221,8 @@ class _MyAppState extends ConsumerState<MyApp>
             ),
             navigatorObservers: [
               FlutterSmartDialog.observer,
-              heroineController
+              heroineController,
+              appRouteObserver,
             ],
             builder: FlutterSmartDialog.init(),
             navigatorKey: navigatorKey,

@@ -328,6 +328,58 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     );
   }
 
+  String _shortcutsPresentationLabel(L10n l10n, String code) {
+    return switch (code) {
+      'new' => l10n.settingsShortcutsSendMessagePresentationNew,
+      _ => l10n.settingsShortcutsSendMessagePresentationReuse,
+    };
+  }
+
+  Future<void> _pickShortcutsSendMessagePresentation() async {
+    if (!AnxPlatform.isIOS) return;
+
+    final l10n = L10n.of(context);
+    final current = Prefs().shortcutsSendMessagePresentationV1;
+
+    Widget item({required String code, required String title}) {
+      return ListTile(
+        title: Text(title),
+        trailing: current == code ? const Icon(Icons.check) : null,
+        onTap: () {
+          Prefs().shortcutsSendMessagePresentationV1 = code;
+          Navigator.pop(context);
+          setState(() {});
+        },
+      );
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            children: [
+              ListTile(
+                title: Text(l10n.settingsShortcutsSendMessagePresentation),
+                subtitle:
+                    Text(l10n.settingsShortcutsSendMessagePresentationDesc),
+              ),
+              const Divider(height: 1),
+              item(
+                code: 'reuse',
+                title: l10n.settingsShortcutsSendMessagePresentationReuse,
+              ),
+              item(
+                code: 'new',
+                title: l10n.settingsShortcutsSendMessagePresentationNew,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   String _shortcutsWaitModeLabel(L10n l10n, String code) {
     return switch (code) {
       'auto' => l10n.settingsShortcutsWaitModeAuto,
@@ -465,6 +517,17 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
           description: Text(l10n.settingsShortcutsSendMessageTimeoutDesc),
           trailing: Text('${Prefs().shortcutsSendMessageTimeoutSecV1}s'),
           onPressed: (_) => _editShortcutsSendMessageTimeoutSec(),
+        ),
+        SettingsTile.navigation(
+          title: Text(l10n.settingsShortcutsSendMessagePresentation),
+          description: Text(l10n.settingsShortcutsSendMessagePresentationDesc),
+          trailing: Text(
+            _shortcutsPresentationLabel(
+              l10n,
+              Prefs().shortcutsSendMessagePresentationV1,
+            ),
+          ),
+          onPressed: (_) => _pickShortcutsSendMessagePresentation(),
         ),
         SettingsTile.switchTile(
           initialValue: Prefs().shareSheetAskPapertokEnabledV1,
