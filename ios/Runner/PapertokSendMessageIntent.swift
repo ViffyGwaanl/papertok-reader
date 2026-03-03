@@ -11,8 +11,7 @@ struct PapertokSendMessageIntent: AppIntent {
     "向 Papertok Reader 的 AI 发送文字与图片（最多 4 张），并返回回复内容。\n\n这个动作会复用 App 内现有的多模态 AI Chat 通道（Flutter + LangChain），不会重写上传或请求逻辑。"
   )
 
-  // Open the app when invoked (Doubao-like UX). Background execution in
-  // Shortcuts has strict time limits on iOS.
+  // Doubao-like UX: foreground the app immediately.
   static var openAppWhenRun: Bool = true
 
   @Parameter(title: "文字")
@@ -36,30 +35,26 @@ struct PapertokSendMessageIntent: AppIntent {
 
   func perform() async throws -> some IntentResult & ReturnsValue<String> {
     let trimmedPrompt = (prompt ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-
-    let shouldOpenApp = openApp ?? PapertokIntentDefaults.openAppDefault()
-    let shouldShowDialog = showDialog ?? PapertokIntentDefaults.showDialogDefault()
-
-    if shouldOpenApp {
-      // Doubao-like behavior: open the app immediately to the AI chat UI.
-      await PapertokIntentUI.openPapertokAskUiBestEffort()
-    }
-
     let selectedImages = images ?? []
+
     if trimmedPrompt.isEmpty && selectedImages.isEmpty {
       throw NSError(domain: "PapertokShortcuts", code: 4, userInfo: [
         NSLocalizedDescriptionKey: "请输入文字或选择图片"
       ])
     }
 
+    let shouldOpenApp = openApp ?? PapertokIntentDefaults.openAppDefault()
+    let shouldShowDialog = showDialog ?? PapertokIntentDefaults.showDialogDefault()
+
     // Swift requires a single concrete underlying return type for opaque returns.
-    // Return an IntentResultContainer<..., IntentDialog> and set dialog=nil when disabled.
     var out: IntentResultContainer<String, Never, Never, IntentDialog> =
       .result(value: "", dialog: IntentDialog(stringLiteral: ""))
 
-    // Doubao-like: when opening the app, hand off work to the app and return
-    // immediately. Do not run the AI network call inside Shortcuts.
     if shouldOpenApp {
+      // Open the in-app AI chat UI immediately.
+      await PapertokIntentUI.openPapertokAskUiBestEffort()
+
+      // Persist request for the app to drain after launch.
       try await PapertokIntentPendingQueue.enqueue(
         prompt: trimmedPrompt,
         images: selectedImages
@@ -67,13 +62,14 @@ struct PapertokSendMessageIntent: AppIntent {
 
       let value = "已在 Papertok 中开始分析。"
       out.value = value
-      // In open-app mode, the result is shown in-app; avoid showing a Shortcuts
-      // popup to reduce flakiness.
+
+      // Showing Shortcuts popups while also foregrounding the app is flaky.
+      // The primary UX is in-app.
       out.dialog = nil
       return out
     }
 
-    // Background best-effort mode.
+    // Background best-effort mode: run the network call inside Shortcuts.
     let jpegB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
       files: selectedImages,
       maxCount: 4,
@@ -91,18 +87,17 @@ struct PapertokSendMessageIntent: AppIntent {
     out.dialog = shouldShowDialog
       ? IntentDialog(stringLiteral: PapertokIntentUI.truncateForDialog(reply))
       : nil
-
     return out
   }
 }
 
 @available(iOS 16.0, *)
 struct PapertokAppShortcutsProvider: AppShortcutsProvider {
-  static var appShortcuts: [AppShortcut] {
+  static var appShortcuts: AppShortcut {
     AppShortcut(
       intent: PapertokSendMessageIntent(),
       phrases: [
-        "用 \(.applicationName) 给 Papertok 发送图片消息",
+        "给 Papertok 发送图片消息",
         "用 \(.applicationName) 发送图片消息",
         "用 \(.applicationName) 分析这些图片"
       ],
@@ -137,7 +132,6 @@ enum PapertokIntentDefaults {
 @available(iOS 16.0, *)
 enum PapertokIntentUI {
   static func truncateForDialog(_ s: String) -> String {
-    // Keep the dialog readable. Shortcuts dialogs are not meant for huge text.
     let maxChars = 900
     if s.count <= maxChars { return s }
     let idx = s.index(s.startIndex, offsetBy: maxChars)
@@ -145,10 +139,7 @@ enum PapertokIntentUI {
   }
 
   static func openPapertokAskUiBestEffort() async {
-    // Best-effort: open the app via our URL scheme.
-    // This should navigate to the chat UI.
     await MainActor.run {
-      // `paperreader://shortcuts/ask` is handled in Flutter to open the AI chat.
       guard let url = URL(string: "paperreader://shortcuts/ask") else { return }
       UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
@@ -185,8 +176,7 @@ enum PapertokIntentPendingQueue {
     out.reserveCapacity(images.count)
 
     for f in images.prefix(4) {
-      let ext = "jpg"
-      let dst = dir.appendingPathComponent(UUID().uuidString + "." + ext)
+      let dst = dir.appendingPathComponent(UUID().uuidString + ".bin")
 
       if let url = f.fileURL {
         let accessed = url.startAccessingSecurityScopedResource()
@@ -201,9 +191,7 @@ enum PapertokIntentPendingQueue {
         }
       }
 
-      // Fallback to in-memory data.
-      let data = f.data
-      try data.write(to: dst, options: [.atomic])
+      try f.data.write(to: dst, options: [.atomic])
       out.append(dst.path)
     }
 
@@ -222,15 +210,12 @@ actor PapertokFlutterShortcuts {
     ensureEngine()
   }
 
-  /// Starts (or reuses) a headless FlutterEngine that exposes the shortcuts
-  /// MethodChannel.
   private func ensureEngine() {
     if channel != nil {
       return
     }
 
     // Prefer the main Flutter engine when the app is already running.
-    // This avoids the cold-start cost of spinning up a separate headless engine.
     if let delegate = UIApplication.shared.delegate as? AppDelegate,
        let controller = delegate.window?.rootViewController as? FlutterViewController {
       self.engine = nil
@@ -247,11 +232,7 @@ actor PapertokFlutterShortcuts {
       allowHeadlessExecution: true
     )
 
-    // The Dart entrypoint is defined in lib/main.dart as `shortcutsMain`.
     engine.run(withEntrypoint: "shortcutsMain")
-
-    // Make sure plugins (SharedPreferences, networking, etc.) work in this
-    // engine as well.
     GeneratedPluginRegistrant.register(with: engine)
 
     self.engine = engine
@@ -259,46 +240,6 @@ actor PapertokFlutterShortcuts {
       name: "papertok_reader/shortcuts",
       binaryMessenger: engine.binaryMessenger
     )
-  }
-
-  func enqueueAsk(
-    prompt: String,
-    imagesBase64: [String]
-  ) async throws -> String {
-    ensureEngine()
-
-    guard let channel = channel else {
-      throw NSError(domain: "PapertokShortcuts", code: 1, userInfo: [
-        NSLocalizedDescriptionKey: "Flutter channel not ready"
-      ])
-    }
-
-    try await waitForReady(channel: channel)
-
-    let args: [String: Any] = [
-      "prompt": prompt,
-      "imagesBase64": imagesBase64
-    ]
-
-    return try await withCheckedThrowingContinuation { cont in
-      channel.invokeMethod("enqueueAsk", arguments: args) { result in
-        if let err = result as? FlutterError {
-          cont.resume(throwing: NSError(domain: "PapertokShortcuts", code: 2, userInfo: [
-            NSLocalizedDescriptionKey: err.message ?? "FlutterError"
-          ]))
-          return
-        }
-
-        if let s = result as? String {
-          cont.resume(returning: s)
-          return
-        }
-
-        cont.resume(throwing: NSError(domain: "PapertokShortcuts", code: 3, userInfo: [
-          NSLocalizedDescriptionKey: "Unexpected result type"
-        ]))
-      }
-    }
   }
 
   func sendMessage(
@@ -314,7 +255,6 @@ actor PapertokFlutterShortcuts {
       ])
     }
 
-    // Wait briefly for the Dart isolate to register the channel handler.
     try await waitForReady(channel: channel)
 
     let args: [String: Any] = [
@@ -345,7 +285,6 @@ actor PapertokFlutterShortcuts {
   }
 
   private func waitForReady(channel: FlutterMethodChannel) async throws {
-    // Retry ping for ~1.5s.
     for _ in 0..<6 {
       do {
         let ok: String = try await withCheckedThrowingContinuation { cont in
@@ -394,10 +333,6 @@ enum PapertokIntentImageCodec {
     out.reserveCapacity(files.count)
 
     for f in files {
-      // IntentFile can provide either a URL or in-memory data.
-      //
-      // When the file comes from the share sheet, it is commonly a security-
-      // scoped URL. We must request access before reading it.
       let data: Data
       if let url = f.fileURL {
         let accessed = url.startAccessingSecurityScopedResource()
@@ -410,8 +345,6 @@ enum PapertokIntentImageCodec {
         do {
           data = try Data(contentsOf: url)
         } catch {
-          // Fallback: some inputs may provide in-memory data even when the URL
-          // is not accessible.
           data = f.data
         }
       } else {

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:image/image.dart' as img;
@@ -115,6 +116,9 @@ class PapertokShortcutsPendingQueue {
 
       // Clear before running to avoid loops.
       await Prefs().prefs.remove(_key);
+
+      // Ensure the chat UI is visible before sending.
+      await PapertokAiChatNavigator.show();
 
       await PapertokShortcutsHandoffService.sendToChat(
         prompt: prompt,
