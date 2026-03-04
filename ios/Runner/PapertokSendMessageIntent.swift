@@ -175,17 +175,43 @@ enum PapertokIntentPendingQueue {
 
     let data = try JSONSerialization.data(withJSONObject: payload)
     let json = String(data: data, encoding: .utf8) ?? "{}"
+
+    // Write to UserDefaults (best-effort) + a temp file (more reliable across cold-start).
     defaults().set(json, forKey: key)
+    try? writePendingFile(json)
+  }
+
+  private static func pendingFileUrl() -> URL {
+    let dir = FileManager.default.temporaryDirectory
+      .appendingPathComponent("shortcuts_ask", isDirectory: true)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    return dir.appendingPathComponent("pending.json")
+  }
+
+  private static func writePendingFile(_ json: String) throws {
+    let url = pendingFileUrl()
+    try json.data(using: .utf8)?.write(to: url, options: [.atomic])
+  }
+
+  private static func consumePendingFile() -> String? {
+    let url = pendingFileUrl()
+    guard let data = try? Data(contentsOf: url), !data.isEmpty else {
+      return nil
+    }
+    try? FileManager.default.removeItem(at: url)
+    return String(data: data, encoding: .utf8)
   }
 
   static func consume() -> String? {
     let ud = defaults()
-    guard let s = ud.string(forKey: key), !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      return nil
+    if let s = ud.string(forKey: key), !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      ud.removeObject(forKey: key)
+      return s
     }
-    ud.removeObject(forKey: key)
-    return s
+
+    return consumePendingFile()
   }
+
 }
 
 @available(iOS 16.0, *)

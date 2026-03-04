@@ -8,6 +8,7 @@ import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 
 class PapertokShortcutsPendingQueue {
@@ -95,6 +96,31 @@ class PapertokShortcutsPendingQueue {
     'papertok_reader/pending_ask',
   );
 
+  static Future<String?> _readPendingFileBestEffort() async {
+    if (!Platform.isIOS) return null;
+
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/shortcuts_ask/pending.json');
+      if (!await file.exists()) return null;
+
+      final raw = await file.readAsString();
+      final s = raw.trim();
+      if (s.isEmpty) return null;
+
+      // Remove after we successfully read it (best-effort cleanup).
+      try {
+        await file.delete();
+      } catch (_) {
+        // ignore
+      }
+
+      return s;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<String?> _consumeNativePending() async {
     if (!Platform.isIOS) return null;
     try {
@@ -113,8 +139,13 @@ class PapertokShortcutsPendingQueue {
       var raw = Prefs().prefs.getString(_key);
       if (raw == null || raw.trim().isEmpty) {
         // If the AppIntent ran out-of-process, it may have persisted payload
-        // to a native suite; consume it via MethodChannel.
-        raw = await _consumeNativePending();
+        // to a temp file. Prefer file-based handoff to avoid UserDefaults issues.
+        raw = await _readPendingFileBestEffort();
+        if (raw == null || raw.trim().isEmpty) {
+          // Last resort: try native consume.
+          raw = await _consumeNativePending();
+        }
+
         if (raw != null && raw.trim().isNotEmpty) {
           Prefs().prefs.setString(_key, raw);
         }
