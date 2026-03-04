@@ -51,14 +51,14 @@ struct PapertokSendMessageIntent: AppIntent {
       .result(value: "", dialog: IntentDialog(stringLiteral: ""))
 
     if shouldOpenApp {
-      // Open the in-app AI chat UI immediately.
-      await PapertokIntentUI.openPapertokAskUiBestEffort()
-
-      // Persist request for the app to drain after launch.
+      // Persist request first (avoid a race where the app drains before enqueue finishes).
       try await PapertokIntentPendingQueue.enqueue(
         prompt: trimmedPrompt,
         images: selectedImages
       )
+
+      // Then open the in-app AI chat UI.
+      await PapertokIntentUI.openPapertokAskUiBestEffort()
 
       let value = "已在 Papertok 中开始分析。"
       out.value = value
