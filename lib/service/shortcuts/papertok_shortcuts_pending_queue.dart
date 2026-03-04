@@ -17,7 +17,6 @@ class PapertokShortcutsPendingQueue {
 
   // Protect against multiple concurrent drains (main post-frame + deeplink + channel).
   static bool _draining = false;
-  static int? _lastProcessedCreatedAtMs;
 
   static Future<List<String>> _encodePathsToJpegBase64(
     List<String> paths,
@@ -127,15 +126,10 @@ class PapertokShortcutsPendingQueue {
       if (obj is! Map) return;
 
       final prompt = (obj['prompt'] ?? '').toString();
+      // createdAtMs is used for observability only.
       final createdAtMsRaw = obj['createdAtMs'];
       final createdAtMs =
           (createdAtMsRaw is num) ? createdAtMsRaw.toInt() : null;
-
-      if (createdAtMs != null && _lastProcessedCreatedAtMs == createdAtMs) {
-        // Already processed in this process; avoid duplicate sends.
-        await Prefs().prefs.remove(_key);
-        return;
-      }
 
       // Prefer persisted file paths (Swift handoff) to avoid huge base64 in the
       // Shortcuts process. Fallback to base64 payloads if present.
@@ -168,9 +162,6 @@ class PapertokShortcutsPendingQueue {
         await Prefs().prefs.remove(_key);
         return;
       }
-
-      // Mark as processed for this process to reduce duplicates if multiple drains race.
-      _lastProcessedCreatedAtMs = createdAtMs;
 
       AnxLog.info(
         'shortcuts: draining pending ask (promptLen=${prompt.trim().length}, images=${images.length})',
