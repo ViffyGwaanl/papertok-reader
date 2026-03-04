@@ -29,14 +29,9 @@ class PapertokAiChatNavigator {
       return;
     }
 
-    // Reuse mode: ensure we end up with a single AiChatPage on top.
-    // This is more reliable than Home tab switching for cold-start Shortcuts.
+    // Legacy behavior (more reliable for Shortcuts cold-start): push a chat page
+    // if it's not already on top.
     if (AiChatPage.isTop) {
-      return;
-    }
-
-    if (AiChatPage.isInStack) {
-      nav.popUntil((r) => r.settings.name == AiChatPage.routeName);
       return;
     }
 

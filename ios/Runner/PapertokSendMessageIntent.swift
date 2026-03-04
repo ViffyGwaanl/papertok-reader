@@ -152,7 +152,14 @@ enum PapertokIntentPendingQueue {
   private static let key = "shortcutsPendingAskV1"
 
   private static func appGroupId() -> String? {
-    return Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String
+    let raw = Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String
+    let s = raw?.trimmingCharacters(in: .whitespacesAndNewlines)
+    if let s, !s.isEmpty, !s.contains("$(") {
+      return s
+    }
+
+    // Fallback: keep in sync with CUSTOM_GROUP_ID default.
+    return "group.ai.papertok.paperreader"
   }
 
   private static func groupDefaults() -> UserDefaults? {

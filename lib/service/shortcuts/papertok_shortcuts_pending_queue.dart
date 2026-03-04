@@ -136,15 +136,15 @@ class PapertokShortcutsPendingQueue {
     _draining = true;
 
     try {
-      var raw = Prefs().prefs.getString(_key);
+      // iOS: always prefer native consume (App Group container).
+      var raw = await _consumeNativePending();
+
+      raw ??= Prefs().prefs.getString(_key);
+
       if (raw == null || raw.trim().isEmpty) {
         // If the AppIntent ran out-of-process, it may have persisted payload
         // to a temp file. Prefer file-based handoff to avoid UserDefaults issues.
         raw = await _readPendingFileBestEffort();
-        if (raw == null || raw.trim().isEmpty) {
-          // Last resort: try native consume.
-          raw = await _consumeNativePending();
-        }
 
         if (raw != null && raw.trim().isNotEmpty) {
           Prefs().prefs.setString(_key, raw);
