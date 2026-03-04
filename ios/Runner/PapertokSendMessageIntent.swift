@@ -163,14 +163,15 @@ enum PapertokIntentPendingQueue {
       "createdAtMs": Int(Date().timeIntervalSince1970 * 1000)
     ]
 
-    // Store images inline as base64 JPEG for cross-process handoff.
-    let imagesB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
+    // Prefer writing images as on-disk JPEGs and only store their paths.
+    // UserDefaults is not designed for multi-MB base64 payloads.
+    let paths = try await PapertokIntentImageCodec.persistAsJpegFiles(
       files: images,
       maxCount: 4,
       maxPixel: 2048,
       quality: 0.86
     )
-    payload["imagesBase64Jpeg"] = imagesB64
+    payload["imagePaths"] = paths
 
     let data = try JSONSerialization.data(withJSONObject: payload)
     let json = String(data: data, encoding: .utf8) ?? "{}"
@@ -305,7 +306,7 @@ actor PapertokFlutterShortcuts {
 
 @available(iOS 16.0, *)
 enum PapertokIntentImageCodec {
-  static func encodeToJpegBase64(
+  static func persistAsJpegFiles(
     files: [IntentFile],
     maxCount: Int,
     maxPixel: CGFloat,
@@ -317,28 +318,19 @@ enum PapertokIntentImageCodec {
       ])
     }
 
+    if files.isEmpty {
+      return []
+    }
+
+    let dir = FileManager.default.temporaryDirectory
+      .appendingPathComponent("shortcuts_ask", isDirectory: true)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
     var out: [String] = []
     out.reserveCapacity(files.count)
 
     for f in files {
-      let data: Data
-      if let url = f.fileURL {
-        let accessed = url.startAccessingSecurityScopedResource()
-        defer {
-          if accessed {
-            url.stopAccessingSecurityScopedResource()
-          }
-        }
-
-        do {
-          data = try Data(contentsOf: url)
-        } catch {
-          data = f.data
-        }
-      } else {
-        data = f.data
-      }
-
+      let data = readIntentFileBestEffort(f)
       guard let img = UIImage(data: data) else {
         continue
       }
@@ -348,10 +340,54 @@ enum PapertokIntentImageCodec {
         continue
       }
 
-      out.append(jpeg.base64EncodedString())
+      let dst = dir.appendingPathComponent(UUID().uuidString + ".jpg")
+      try jpeg.write(to: dst, options: [.atomic])
+      out.append(dst.path)
     }
 
     return out
+  }
+
+  static func encodeToJpegBase64(
+    files: [IntentFile],
+    maxCount: Int,
+    maxPixel: CGFloat,
+    quality: CGFloat
+  ) async throws -> [String] {
+    let paths = try await persistAsJpegFiles(
+      files: files,
+      maxCount: maxCount,
+      maxPixel: maxPixel,
+      quality: quality
+    )
+
+    var out: [String] = []
+    out.reserveCapacity(paths.count)
+
+    for p in paths {
+      if let data = try? Data(contentsOf: URL(fileURLWithPath: p)) {
+        out.append(data.base64EncodedString())
+      }
+    }
+
+    return out
+  }
+
+  private static func readIntentFileBestEffort(_ f: IntentFile) -> Data {
+    if let url = f.fileURL {
+      let accessed = url.startAccessingSecurityScopedResource()
+      defer {
+        if accessed {
+          url.stopAccessingSecurityScopedResource()
+        }
+      }
+
+      if let data = try? Data(contentsOf: url) {
+        return data
+      }
+    }
+
+    return f.data
   }
 
   private static func downsample(_ image: UIImage, maxPixel: CGFloat) -> UIImage {

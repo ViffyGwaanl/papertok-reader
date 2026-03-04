@@ -27,6 +27,15 @@ class PapertokShortcutsPendingQueue {
     for (final p in paths.take(4)) {
       try {
         final bytes = await File(p).readAsBytes();
+        if (bytes.isEmpty) continue;
+
+        // Swift handoff writes already-normalized JPEG files.
+        if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
+          out.add(base64Encode(bytes));
+          continue;
+        }
+
+        // Fallback for unexpected formats.
         final decoded = img.decodeImage(bytes);
         if (decoded == null) continue;
 
