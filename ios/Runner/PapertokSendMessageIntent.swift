@@ -426,6 +426,7 @@ enum PapertokIntentImageCodec {
   ) async throws -> [String] {
     let paths = try await persistAsJpegFiles(
       files: files,
+      dir: nil,
       maxCount: maxCount,
       maxPixel: maxPixel,
       quality: quality
