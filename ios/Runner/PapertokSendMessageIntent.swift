@@ -151,10 +151,34 @@ enum PapertokIntentPendingQueue {
   // Keep in sync with lib/service/shortcuts/papertok_shortcuts_pending_queue.dart.
   private static let key = "shortcutsPendingAskV1"
 
-  // AppIntents may run out-of-process. We keep the handoff in UserDefaults.standard
-  // because Flutter SharedPreferences reads from it, and this worked reliably in practice.
-  private static func defaults() -> UserDefaults {
-    return UserDefaults.standard
+  private static func appGroupId() -> String? {
+    return Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String
+  }
+
+  private static func groupDefaults() -> UserDefaults? {
+    guard let gid = appGroupId(), !gid.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      return nil
+    }
+    return UserDefaults(suiteName: gid)
+  }
+
+  private static func sharedBaseDir() -> URL? {
+    guard let gid = appGroupId() else { return nil }
+    return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: gid)
+  }
+
+  private static func sharedAskDir() -> URL? {
+    guard let base = sharedBaseDir() else { return nil }
+    let dir = base.appendingPathComponent("shortcuts_ask", isDirectory: true)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    return dir
+  }
+
+  private static func sharedImagesDir() -> URL? {
+    guard let askDir = sharedAskDir() else { return nil }
+    let dir = askDir.appendingPathComponent("images", isDirectory: true)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    return dir
   }
 
   static func enqueue(prompt: String, images: [IntentFile]) async throws {
@@ -163,10 +187,10 @@ enum PapertokIntentPendingQueue {
       "createdAtMs": Int(Date().timeIntervalSince1970 * 1000)
     ]
 
-    // Prefer writing images as on-disk JPEGs and only store their paths.
-    // UserDefaults is not designed for multi-MB base64 payloads.
+    // Persist images into the App Group container so the host app can read them.
     let paths = try await PapertokIntentImageCodec.persistAsJpegFiles(
       files: images,
+      dir: sharedImagesDir(),
       maxCount: 4,
       maxPixel: 2048,
       quality: 0.86
@@ -176,12 +200,19 @@ enum PapertokIntentPendingQueue {
     let data = try JSONSerialization.data(withJSONObject: payload)
     let json = String(data: data, encoding: .utf8) ?? "{}"
 
-    // Write to UserDefaults (best-effort) + a temp file (more reliable across cold-start).
-    defaults().set(json, forKey: key)
+    // Prefer App Group storage; also dual-write to standard defaults as a fallback.
+    groupDefaults()?.set(json, forKey: key)
+    UserDefaults.standard.set(json, forKey: key)
+
+    // Write to a shared file so the host app can consume atomically.
     try? writePendingFile(json)
   }
 
   private static func pendingFileUrl() -> URL {
+    if let askDir = sharedAskDir() {
+      return askDir.appendingPathComponent("pending.json")
+    }
+
     let dir = FileManager.default.temporaryDirectory
       .appendingPathComponent("shortcuts_ask", isDirectory: true)
     try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -203,9 +234,16 @@ enum PapertokIntentPendingQueue {
   }
 
   static func consume() -> String? {
-    let ud = defaults()
-    if let s = ud.string(forKey: key), !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+    if let ud = groupDefaults(),
+       let s = ud.string(forKey: key),
+       !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       ud.removeObject(forKey: key)
+      return s
+    }
+
+    if let s = UserDefaults.standard.string(forKey: key),
+       !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      UserDefaults.standard.removeObject(forKey: key)
       return s
     }
 
@@ -334,6 +372,7 @@ actor PapertokFlutterShortcuts {
 enum PapertokIntentImageCodec {
   static func persistAsJpegFiles(
     files: [IntentFile],
+    dir: URL?,
     maxCount: Int,
     maxPixel: CGFloat,
     quality: CGFloat
@@ -348,9 +387,14 @@ enum PapertokIntentImageCodec {
       return []
     }
 
-    let dir = FileManager.default.temporaryDirectory
-      .appendingPathComponent("shortcuts_ask", isDirectory: true)
-    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    let baseDir: URL
+    if let dir {
+      baseDir = dir
+    } else {
+      baseDir = FileManager.default.temporaryDirectory
+        .appendingPathComponent("shortcuts_ask", isDirectory: true)
+      try? FileManager.default.createDirectory(at: baseDir, withIntermediateDirectories: true)
+    }
 
     var out: [String] = []
     out.reserveCapacity(files.count)
@@ -366,7 +410,7 @@ enum PapertokIntentImageCodec {
         continue
       }
 
-      let dst = dir.appendingPathComponent(UUID().uuidString + ".jpg")
+      let dst = baseDir.appendingPathComponent(UUID().uuidString + ".jpg")
       try jpeg.write(to: dst, options: [.atomic])
       out.append(dst.path)
     }
