@@ -151,12 +151,10 @@ enum PapertokIntentPendingQueue {
   // Keep in sync with lib/service/shortcuts/papertok_shortcuts_pending_queue.dart.
   private static let key = "shortcutsPendingAskV1"
 
-  // AppIntents may run out-of-process; UserDefaults.standard isn't reliably shared
-  // with the host app. Persist to a dedicated suite and let the app consume it.
-  private static let suiteName = "papertok_reader.shortcuts_pending_v1"
-
+  // AppIntents may run out-of-process. We keep the handoff in UserDefaults.standard
+  // because Flutter SharedPreferences reads from it, and this worked reliably in practice.
   private static func defaults() -> UserDefaults {
-    return UserDefaults(suiteName: suiteName) ?? UserDefaults.standard
+    return UserDefaults.standard
   }
 
   static func enqueue(prompt: String, images: [IntentFile]) async throws {

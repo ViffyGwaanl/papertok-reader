@@ -154,14 +154,14 @@ class PapertokShortcutsPendingQueue {
         }
       }
 
-      // Clear before running to avoid loops.
-      await Prefs().prefs.remove(_key);
-      _lastProcessedCreatedAtMs = createdAtMs;
-
       if (prompt.trim().isEmpty && images.isEmpty) {
         AnxLog.warning('shortcuts: pending ask empty, dropped');
+        await Prefs().prefs.remove(_key);
         return;
       }
+
+      // Mark as processed for this process to reduce duplicates if multiple drains race.
+      _lastProcessedCreatedAtMs = createdAtMs;
 
       AnxLog.info(
         'shortcuts: draining pending ask (promptLen=${prompt.trim().length}, images=${images.length})',
@@ -170,10 +170,25 @@ class PapertokShortcutsPendingQueue {
       // Ensure the AI tab is visible before sending.
       await PapertokAiChatNavigator.show();
 
-      await PapertokShortcutsHandoffService.sendToChat(
+      // Best-effort: give navigation/tab switch a moment.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final ok = await PapertokShortcutsHandoffService.sendToChat(
         prompt: prompt,
         imagesBase64Jpeg: images,
       );
+
+      if (!ok) {
+        // Keep pending payload for the next drain attempt.
+        AnxLog.warning('shortcuts: handoff sendToChat failed; will retry');
+        Timer(const Duration(milliseconds: 250), () {
+          unawaited(tryDrain());
+        });
+        return;
+      }
+
+      // Clear only after we successfully started streaming.
+      await Prefs().prefs.remove(_key);
     } catch (e, st) {
       AnxLog.warning('shortcuts: drain pending failed: $e', e, st);
     } finally {

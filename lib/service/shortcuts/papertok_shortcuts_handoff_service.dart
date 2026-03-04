@@ -11,14 +11,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class PapertokShortcutsHandoffService {
   PapertokShortcutsHandoffService._();
 
-  static Future<void> sendToChat({
+  static Future<bool> sendToChat({
     required String prompt,
     required List<String> imagesBase64Jpeg,
   }) async {
     final ctx = navigatorKey.currentContext;
     if (ctx == null) {
       AnxLog.warning('shortcuts: navigator context not ready');
-      return;
+      return false;
     }
 
     final container = ProviderScope.containerOf(ctx);
@@ -42,5 +42,7 @@ class PapertokShortcutsHandoffService {
       false,
       attachments: attachments.isEmpty ? null : attachments,
     );
+
+    return true;
   }
 }
