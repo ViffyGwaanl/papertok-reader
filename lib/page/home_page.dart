@@ -75,6 +75,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   void initState() {
     super.initState();
     homeTabRequest.addListener(_handleHomeTabRequest);
+    // Consume any request set before HomePage mounted (e.g. cold-start Shortcuts).
+    _handleHomeTabRequest();
     WidgetsBinding.instance.addPostFrameCallback((_) => initAnx());
   }
 
