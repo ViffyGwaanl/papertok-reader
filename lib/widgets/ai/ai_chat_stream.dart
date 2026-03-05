@@ -30,6 +30,8 @@ import 'package:anx_reader/widgets/ai/attachment_picker_dialog.dart';
 import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/models/book_import_item.dart';
 import 'package:anx_reader/service/book.dart';
+import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
+import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -2485,6 +2487,65 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return out;
   }
 
+  Future<void> _showTextFileAttachmentActions(_TextFileAttachmentInfo f) async {
+    final l10n = L10n.of(context);
+
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(f.filename),
+          content: SingleChildScrollView(
+            child: Text(
+              f.text.length > 2000 ? '${f.text.substring(0, 2000)}…' : f.text,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('import'),
+              child: Text(l10n.exportAndImportImport),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(l10n.commonCancel),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (choice == 'import') {
+      await _importTextFileAttachmentToBookshelf(f);
+    }
+  }
+
+  Future<void> _importTextFileAttachmentToBookshelf(
+    _TextFileAttachmentInfo f,
+  ) async {
+    try {
+      final cacheDir = await getAnxCacheDir();
+      final dir = Directory(p.join(cacheDir.path, 'ai_text_import'));
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+
+      final safe = f.filename
+          .replaceAll(RegExp(r'[\\/\n\r\t]'), '_')
+          .replaceAll(':', '_');
+      final base = safe.replaceAll(RegExp(r'\.[^.]+$'), '');
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final outName = '${base.isEmpty ? 'text' : base}_$ts.txt';
+      final outFile = File(p.join(dir.path, outName));
+
+      await outFile.writeAsString(f.text, encoding: utf8);
+
+      importBookList([outFile], context, ref);
+      AnxToast.show(L10n.of(context).exportAndImportImport);
+    } catch (e) {
+      AnxToast.show(e.toString());
+    }
+  }
+
   Widget _buildHumanMessageBody(HumanChatMessage message) {
     final text = _extractUserTextFromHuman(message);
     final files = _extractTextFilesFromHuman(message);
@@ -2510,12 +2571,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 message: f.text.length > 400
                     ? '${f.text.substring(0, 400)}…'
                     : f.text,
-                child: Chip(
+                child: ActionChip(
                   avatar: const Icon(Icons.description, size: 18),
                   label: Text(
                     f.filename,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  onPressed: () => _showTextFileAttachmentActions(f),
                 ),
               ),
           ],
