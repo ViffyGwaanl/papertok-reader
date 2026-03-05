@@ -2,11 +2,14 @@ import 'dart:io';
 
 import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/service/receive_file/share_inbound_decider.dart';
 import 'package:anx_reader/service/receive_file/share_routing_models.dart';
 import 'package:anx_reader/service/receive_file/share_to_ai_service.dart';
+import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_handler/share_handler.dart';
 
@@ -69,16 +72,11 @@ void receiveShareIntent(WidgetRef ref) {
 
       switch (decision.destination) {
         case ShareDestination.askUser:
-          // Ask-mode UI lands later; for now fallback to auto.
-          final d = ShareInboundDecider.decide(
-            mode: SharePanelMode.auto,
-            payload: payload,
-          );
-          await _applyDecision(d, payload, ref);
+          await _showAskThenRoute(payload, ref);
           return;
 
         case ShareDestination.bookshelf:
-          final ctx = navigatorKey.currentContext;
+          final ctx = await _waitForNavigatorContext();
           if (ctx == null) {
             AnxLog.warning(
                 'share: navigator context not ready; dropping payload');
@@ -133,9 +131,21 @@ Future<void> _applyDecision(
   ShareInboundPayload payload,
   WidgetRef ref,
 ) async {
-  // For Commit 1, we only support text+images for AI chat. File cards are wired
-  // later when the chat UI exposes an entry point.
-  final ctx = navigatorKey.currentContext;
+  // Enqueue bookshelf files as UI-only cards (policy B).
+  _enqueueBookImportCards(decision.bookshelfFileCards);
+
+  final hasCards = decision.bookshelfFileCards.isNotEmpty;
+  final hasAiContent = payload.hasText || payload.hasImages || payload.hasUrls;
+
+  if (!hasAiContent) {
+    // No prompt/images to send; still open the AI tab if we have cards.
+    if (hasCards) {
+      await PapertokAiChatNavigator.show();
+    }
+    return;
+  }
+
+  final ctx = await _waitForNavigatorContext();
   if (ctx == null) {
     AnxLog.warning('share: navigator context not ready; dropping payload');
     return;
@@ -149,4 +159,120 @@ Future<void> _applyDecision(
     sharedText: payload.sharedText,
     imageFiles: imageFiles,
   );
+}
+
+void _enqueueBookImportCards(List<ShareInboundFile> cards) {
+  if (cards.isEmpty) return;
+
+  final paths = cards
+      .map((e) => e.path.trim())
+      .where((p) => p.isNotEmpty)
+      .toList(growable: false);
+
+  if (paths.isEmpty) return;
+
+  final existing = pendingShareBookImportPaths.value;
+  final seen = <String>{...existing};
+
+  final next = [...existing];
+  for (final p in paths) {
+    if (seen.add(p)) next.add(p);
+  }
+
+  pendingShareBookImportPaths.value = next;
+}
+
+Future<void> _showAskThenRoute(
+    ShareInboundPayload payload, WidgetRef ref) async {
+  final ctx = await _waitForNavigatorContext();
+  if (ctx == null) {
+    AnxLog.warning('share: navigator context not ready; dropping payload');
+    return;
+  }
+
+  // Ensure the app is painted before showing the modal (requirement).
+  await Future<void>.delayed(const Duration(milliseconds: 16));
+
+  final l10n = L10n.of(ctx);
+
+  final choice = await showDialog<ShareDestination>(
+    context: ctx,
+    builder: (dialogCtx) {
+      return SimpleDialog(
+        title: Text(l10n.settingsSharePanelModeTitle),
+        children: [
+          SimpleDialogOption(
+            onPressed: () =>
+                Navigator.of(dialogCtx).pop(ShareDestination.aiChat),
+            child: Row(
+              children: [
+                const Icon(Icons.chat_bubble_outline, size: 20),
+                const SizedBox(width: 10),
+                Text(l10n.settingsSharePanelModeAiChat),
+              ],
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () =>
+                Navigator.of(dialogCtx).pop(ShareDestination.bookshelf),
+            child: Row(
+              children: [
+                const Icon(Icons.menu_book_outlined, size: 20),
+                const SizedBox(width: 10),
+                Text(l10n.settingsSharePanelModeBookshelf),
+              ],
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: Row(
+              children: [
+                const Icon(Icons.close, size: 20),
+                const SizedBox(width: 10),
+                Text(l10n.commonCancel),
+              ],
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (choice == null) return;
+
+  switch (choice) {
+    case ShareDestination.aiChat:
+      final d = ShareInboundDecider.decide(
+        mode: SharePanelMode.aiChat,
+        payload: payload,
+      );
+      await _applyDecision(d, payload, ref);
+      return;
+
+    case ShareDestination.bookshelf:
+      final d = ShareInboundDecider.decide(
+        mode: SharePanelMode.bookshelf,
+        payload: payload,
+      );
+      if (d.bookshelfImportFiles.isEmpty) return;
+      importBookList(
+          d.bookshelfImportFiles.map((p) => File(p)).toList(), ctx, ref);
+      return;
+
+    case ShareDestination.askUser:
+      // Not reachable.
+      return;
+  }
+}
+
+Future<BuildContext?> _waitForNavigatorContext({
+  Duration timeout = const Duration(milliseconds: 900),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    final ctx = navigatorKey.currentContext;
+    if (ctx != null) return ctx;
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+  }
+  return navigatorKey.currentContext;
 }

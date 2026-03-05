@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
@@ -26,11 +28,14 @@ import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:anx_reader/widgets/ai/attachment_picker_dialog.dart';
 import 'package:anx_reader/models/attachment_item.dart';
+import 'package:anx_reader/models/book_import_item.dart';
+import 'package:anx_reader/service/book.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:langchain_core/chat_models.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
 
@@ -123,8 +128,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   // We keep a lightweight UI-only selection index per turn.
   final Map<int, int> _selectedVariantByUserIndex = {};
 
-  // Attachments for multimodal chat
+  // Attachments for multimodal chat (sent to the model)
   final List<AttachmentItem> _attachments = [];
+
+  // Book files queued for bookshelf import (UI-only; never sent to the model).
+  final List<BookImportItem> _pendingBookImports = [];
 
   // Cache decoded base64 images for chat bubbles to avoid flicker during
   // streaming rebuilds.
@@ -233,6 +241,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     ref.read(aiChatDraftInputProvider.notifier).set(initial);
     inputController.addListener(_onDraftInputChanged);
 
+    // Share Sheet may enqueue pending book imports before the chat UI builds.
+    pendingShareBookImportPaths.addListener(_drainPendingShareBookImports);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _drainPendingShareBookImports();
+    });
+
     _suggestedPrompts = const [];
     if (widget.sendImmediate) {
       _sendMessage();
@@ -277,6 +292,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   @override
   void dispose() {
+    try {
+      pendingShareBookImportPaths.removeListener(_drainPendingShareBookImports);
+    } catch (_) {}
     try {
       inputController.removeListener(_onDraftInputChanged);
     } catch (_) {}
@@ -1095,6 +1113,66 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     });
   }
 
+  void _drainPendingShareBookImports() {
+    final pending = pendingShareBookImportPaths.value;
+    if (pending.isEmpty) return;
+
+    // Clear first to avoid re-entrancy loops.
+    pendingShareBookImportPaths.value = <String>[];
+
+    final files = pending
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .map((p) => File(p))
+        .toList();
+
+    _addBookImportFiles(files);
+  }
+
+  void _addBookImportFiles(List<File> files) {
+    if (files.isEmpty) return;
+
+    final existing = _pendingBookImports.map((e) => e.file.path).toSet();
+    final next = <BookImportItem>[];
+
+    for (final f in files) {
+      final path = f.path.trim();
+      if (path.isEmpty) continue;
+      if (existing.contains(path)) continue;
+      next.add(BookImportItem(file: f, filename: p.basename(path)));
+    }
+
+    if (next.isEmpty) return;
+
+    setState(() {
+      _pendingBookImports.addAll(next);
+    });
+  }
+
+  void _removeBookImportAt(int index) {
+    setState(() {
+      if (index < 0 || index >= _pendingBookImports.length) return;
+      // Do NOT delete the underlying file here; Phase 5 will manage cleanup.
+      _pendingBookImports.removeAt(index);
+    });
+  }
+
+  void _importBookImportAt(int index) {
+    if (index < 0 || index >= _pendingBookImports.length) return;
+
+    final item = _pendingBookImports[index];
+    importBookList([item.file], context, ref);
+
+    setState(() {
+      if (index < _pendingBookImports.length &&
+          _pendingBookImports[index].file.path == item.file.path) {
+        _pendingBookImports.removeAt(index);
+      } else {
+        _pendingBookImports.removeWhere((e) => e.file.path == item.file.path);
+      }
+    });
+  }
+
   void _regenerateLastMessage() {
     if (_isStreaming) {
       return;
@@ -1259,6 +1337,82 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           padding: EdgeInsets.only(bottom: widget.bottomPadding),
           child: Column(
             children: [
+              // Book import strip (UI-only)
+              if (_pendingBookImports.isNotEmpty)
+                Container(
+                  height: 84,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _pendingBookImports.length,
+                    itemBuilder: (context, index) {
+                      final item = _pendingBookImports[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Container(
+                          width: 220,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .secondaryContainer,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.menu_book, size: 22),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      item.filename,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      item.extension.toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                tooltip: L10n.of(context).exportAndImportImport,
+                                onPressed: () => _importBookImportAt(index),
+                                icon: const Icon(Icons.download),
+                              ),
+                              IconButton(
+                                tooltip: L10n.of(context).commonRemove,
+                                onPressed: () => _removeBookImportAt(index),
+                                icon: const Icon(Icons.close),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
               // Attachments strip
               if (_attachments.isNotEmpty)
                 Container(

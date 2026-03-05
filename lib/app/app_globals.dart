@@ -14,3 +14,13 @@ final ValueNotifier<String?> homeTabRequest = ValueNotifier<String?>(null);
 
 /// Observability: what tab HomePage last reported being on.
 final ValueNotifier<String?> homeTabCurrent = ValueNotifier<String?>(null);
+
+/// Pending bookshelf-import file paths coming from inbound shares.
+///
+/// Policy B (mixed shares): we do NOT auto-import; instead we enqueue file
+/// paths here and let the AI chat UI render "Import" cards.
+///
+/// This queue is in-memory (not persisted). Phase 5 will add durable inbox +
+/// cleanup policies.
+final ValueNotifier<List<String>> pendingShareBookImportPaths =
+    ValueNotifier<List<String>>(<String>[]);
