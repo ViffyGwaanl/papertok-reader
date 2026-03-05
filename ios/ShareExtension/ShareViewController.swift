@@ -140,6 +140,20 @@ class PapertokShareHandlerViewController: UIViewController {
       return
     }
 
+    // Some share sources (Safari/Chrome) provide richer metadata here.
+    if let t = item.attributedTitle?.string {
+      let s = t.trimmingCharacters(in: .whitespacesAndNewlines)
+      if !s.isEmpty, !sharedText.contains(s) {
+        sharedText.append(s)
+      }
+    }
+    if let t = item.attributedContentText?.string {
+      let s = t.trimmingCharacters(in: .whitespacesAndNewlines)
+      if !s.isEmpty, !sharedText.contains(s) {
+        sharedText.append(s)
+      }
+    }
+
     let providers = item.attachments ?? []
     for (index, provider) in providers.enumerated() {
       do {
@@ -239,7 +253,11 @@ class PapertokShareHandlerViewController: UIViewController {
     }
 
     if copied {
-      sharedAttachments.append(SharedAttachment(path: newUrl.path, type: .image))
+      // IMPORTANT: share_handler_platform_interface will Uri.decodeFull() this string.
+      // Use a URL-encoded absoluteString to avoid "Illegal percent encoding" crashes.
+      sharedAttachments.append(
+        SharedAttachment(path: newUrl.absoluteString, type: .image)
+      )
     }
   }
 
@@ -250,7 +268,9 @@ class PapertokShareHandlerViewController: UIViewController {
       let newUrl = newFileUrl(fileName: fileName)
       let copied = copyFile(at: url, to: newUrl)
       if copied {
-        sharedAttachments.append(SharedAttachment(path: newUrl.path, type: .video))
+        sharedAttachments.append(
+          SharedAttachment(path: newUrl.absoluteString, type: .video)
+        )
       }
     }
   }
@@ -262,7 +282,9 @@ class PapertokShareHandlerViewController: UIViewController {
       let newUrl = newFileUrl(fileName: fileName)
       let copied = copyFile(at: url, to: newUrl)
       if copied {
-        sharedAttachments.append(SharedAttachment(path: newUrl.path, type: .file))
+        sharedAttachments.append(
+          SharedAttachment(path: newUrl.absoluteString, type: .file)
+        )
       }
     }
   }
@@ -274,7 +296,9 @@ class PapertokShareHandlerViewController: UIViewController {
       let newUrl = newFileUrl(fileName: fileName)
       let copied = copyFile(at: url, to: newUrl)
       if copied {
-        sharedAttachments.append(SharedAttachment(path: newUrl.path, type: .file))
+        sharedAttachments.append(
+          SharedAttachment(path: newUrl.absoluteString, type: .file)
+        )
       }
     }
   }
