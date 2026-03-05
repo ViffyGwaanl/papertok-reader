@@ -33,6 +33,7 @@ import 'package:anx_reader/models/read_theme.dart';
 import 'package:anx_reader/models/reading_info.dart';
 import 'package:anx_reader/models/reading_rules.dart';
 import 'package:anx_reader/models/user_prompt.dart';
+import 'package:anx_reader/models/share_prompt_preset.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_tool_meta.dart';
@@ -99,9 +100,17 @@ class Prefs extends ChangeNotifier {
 
   // Unified "Share & Shortcuts Panel" settings.
   static const String _sharePanelModeV1Key = 'sharePanelModeV1';
+
+  // Legacy single prompt (deprecated; kept for migration).
   static const String _sharePanelPromptV1Key = 'sharePanelPromptV1';
+
+  static const String _sharePromptPresetsStateV2Key =
+      'sharePromptPresetsStateV2';
+
   static const String _sharePanelCleanupAfterUseV1Key =
       'sharePanelCleanupAfterUseV1';
+
+  static const String _sharePanelTtlDaysV1Key = 'sharePanelTtlDaysV1';
 
   static const String _userPromptsKey = 'userPrompts';
 
@@ -2155,6 +2164,7 @@ class Prefs extends ChangeNotifier {
 
   // --- Share & Shortcuts Panel (iOS) ---
 
+  static const String sharePanelModeAuto = 'auto';
   static const String sharePanelModeAiChat = 'ai_chat';
   static const String sharePanelModeBookshelf = 'bookshelf';
   static const String sharePanelModeAsk = 'ask';
@@ -2165,22 +2175,22 @@ class Prefs extends ChangeNotifier {
     if (raw != null && raw.trim().isNotEmpty) return raw;
 
     if (shareSheetAskPapertokEnabledV1) {
-      return sharePanelModeAiChat;
+      return sharePanelModeAuto;
     }
     return sharePanelModeBookshelf;
   }
 
   set sharePanelModeV1(String value) {
     final before = sharePanelModeV1;
-    final next = value.trim().isEmpty ? sharePanelModeAiChat : value.trim();
+    final next = value.trim().isEmpty ? sharePanelModeAuto : value.trim();
     if (before != next) {
       prefs.setString(_sharePanelModeV1Key, next);
       notifyListeners();
     }
   }
 
+  /// Legacy single prompt (deprecated). Empty means "use app default".
   String get sharePanelPromptV1 {
-    // Empty means "use app default".
     return prefs.getString(_sharePanelPromptV1Key) ?? '';
   }
 
@@ -2202,6 +2212,81 @@ class Prefs extends ChangeNotifier {
       prefs.setBool(_sharePanelCleanupAfterUseV1Key, value);
       notifyListeners();
     }
+  }
+
+  /// Share inbox cleanup TTL in days.
+  /// - 0: never auto-cleanup
+  int get sharePanelTtlDaysV1 {
+    final v = prefs.getInt(_sharePanelTtlDaysV1Key);
+    if (v == null) return 7;
+    return v < 0 ? 7 : v;
+  }
+
+  set sharePanelTtlDaysV1(int value) {
+    final before = sharePanelTtlDaysV1;
+    final next = value;
+    if (before != next) {
+      prefs.setInt(_sharePanelTtlDaysV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  // --- Prompt presets (Share Sheet) ---
+
+  SharePromptPresetsState get sharePromptPresetsStateV2 {
+    final raw = prefs.getString(_sharePromptPresetsStateV2Key);
+    if (raw != null && raw.trim().isNotEmpty) {
+      return SharePromptPresetsState.fromJsonString(raw);
+    }
+
+    // Migration from legacy single prompt.
+    final legacy = sharePanelPromptV1.trim();
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    final presets = <SharePromptPreset>[
+      SharePromptPreset(
+        id: 'builtin_summary',
+        title: '总结要点',
+        prompt: legacy.isNotEmpty ? legacy : '请先总结分享内容的要点，再给出建议。',
+        enabled: true,
+        createdAtMs: now,
+        updatedAtMs: now,
+        isBuiltin: true,
+      ),
+      SharePromptPreset(
+        id: 'builtin_actions',
+        title: '行动清单',
+        prompt: '请提炼可执行的行动项（含优先级与下一步）。',
+        enabled: false,
+        createdAtMs: now,
+        updatedAtMs: now,
+        isBuiltin: true,
+      ),
+      SharePromptPreset(
+        id: 'builtin_structured',
+        title: '结构化笔记',
+        prompt: '请按：①摘要 ②关键点 ③术语/概念 ④建议 的结构输出。',
+        enabled: false,
+        createdAtMs: now,
+        updatedAtMs: now,
+        isBuiltin: true,
+      ),
+    ];
+
+    final state = SharePromptPresetsState(
+      schemaVersion: SharePromptPresetsState.currentSchemaVersion,
+      presets: presets,
+      lastSelectedPresetId: presets.first.id,
+    );
+
+    // Persist migration best-effort.
+    prefs.setString(_sharePromptPresetsStateV2Key, state.toJsonString());
+    return state;
+  }
+
+  set sharePromptPresetsStateV2(SharePromptPresetsState state) {
+    prefs.setString(_sharePromptPresetsStateV2Key, state.toJsonString());
+    notifyListeners();
   }
 
   List<String> get enabledAiToolIds {

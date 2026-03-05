@@ -806,12 +806,36 @@
   "settingsSharePanelSectionTitle": "Share Sheet",
   "settingsSharePanelModeTitle": "Default handling for shared content",
   "settingsSharePanelModeDesc": "Choose what happens when you share images/files/text into Papertok.",
+  "settingsSharePanelModeAuto": "Auto (recommended)",
   "settingsSharePanelModeAiChat": "Send to AI chat",
   "settingsSharePanelModeBookshelf": "Import to bookshelf",
   "settingsSharePanelModeAsk": "Ask me every time",
+
+  "settingsSharePromptPresetsTitle": "Prompt presets",
+  "settingsSharePromptPresetsDesc": "Manage the prompts used when sending shared content to AI chat.",
+  "settingsSharePromptPresetAdd": "Add preset",
+  "settingsSharePromptPresetEdit": "Edit preset",
+  "settingsSharePromptPresetTitle": "Title",
+  "settingsSharePromptPresetPrompt": "Prompt",
+  "settingsSharePromptPresetEnabled": "Enabled",
+  "settingsSharePromptPresetDeleteConfirm": "Delete this prompt preset?",
+
   "settingsSharePanelPromptTitle": "Default prompt",
   "settingsSharePanelPromptDesc": "When sending to AI chat, this prompt will be prepended to the shared content.",
   "settingsSharePanelPromptHint": "e.g. Summarize the content and provide action items.",
+
+  "settingsSharePanelTtlTitle": "Shared files retention",
+  "settingsSharePanelTtlDesc": "Used to cleanup temporary files created by Share Sheet and Shortcuts.",
+  "settingsSharePanelTtlNever": "Never cleanup automatically",
+  "settingsSharePanelTtlDays": "{days} days",
+  "@settingsSharePanelTtlDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+
   "settingsSharePanelCleanupAfterUse": "Cleanup shared files after handling",
   "settingsSharePanelCleanupAfterUseDesc": "Delete temporary shared files after processing to save disk space.",
   "settingsShortcutsSectionTitle": "Shortcuts",

@@ -1,6 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:anx_reader/page/settings_page/subpage/share_prompt_presets_page.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
@@ -18,12 +19,49 @@ class ShareAndShortcutsPanelPage extends StatefulWidget {
 
 class _ShareAndShortcutsPanelPageState
     extends State<ShareAndShortcutsPanelPage> {
+  String _ttlLabel(L10n l10n, int days) {
+    if (days == 0) return l10n.settingsSharePanelTtlNever;
+    return l10n.settingsSharePanelTtlDays(days);
+  }
+
+  Future<void> _pickTtlDays() async {
+    final l10n = L10n.of(context);
+    final current = Prefs().sharePanelTtlDaysV1;
+
+    final options = <int>[1, 3, 7, 30, 0];
+
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (ctx) {
+        return SimpleDialog(
+          title: Text(l10n.settingsSharePanelTtlTitle),
+          children: [
+            for (final d in options)
+              RadioListTile<int>(
+                value: d,
+                groupValue: current,
+                title: Text(_ttlLabel(l10n, d)),
+                onChanged: (val) => Navigator.of(ctx).pop(val),
+              ),
+          ],
+        );
+      },
+    );
+
+    if (picked != null) {
+      Prefs().sharePanelTtlDaysV1 = picked;
+      setState(() {});
+    }
+  }
+
   Future<void> _pickSharePanelMode() async {
     final l10n = L10n.of(context);
     final current = Prefs().sharePanelModeV1;
 
     String label(String v) {
       switch (v) {
+        case Prefs.sharePanelModeAuto:
+          return l10n.settingsSharePanelModeAuto;
         case Prefs.sharePanelModeAiChat:
           return l10n.settingsSharePanelModeAiChat;
         case Prefs.sharePanelModeBookshelf:
@@ -42,6 +80,7 @@ class _ShareAndShortcutsPanelPageState
           title: Text(l10n.settingsSharePanelModeTitle),
           children: [
             for (final v in const [
+              Prefs.sharePanelModeAuto,
               Prefs.sharePanelModeAiChat,
               Prefs.sharePanelModeBookshelf,
               Prefs.sharePanelModeAsk,
@@ -63,43 +102,6 @@ class _ShareAndShortcutsPanelPageState
     }
   }
 
-  Future<void> _editSharePanelPrompt() async {
-    final l10n = L10n.of(context);
-    final controller = TextEditingController(text: Prefs().sharePanelPromptV1);
-
-    final picked = await showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(l10n.settingsSharePanelPromptTitle),
-          content: TextField(
-            controller: controller,
-            maxLines: 8,
-            minLines: 3,
-            decoration: InputDecoration(
-              hintText: l10n.settingsSharePanelPromptHint,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(l10n.commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(controller.text),
-              child: Text(l10n.commonOk),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (picked != null) {
-      Prefs().sharePanelPromptV1 = picked;
-      setState(() {});
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
@@ -113,6 +115,8 @@ class _ShareAndShortcutsPanelPageState
 
     String shareModeLabel(String v) {
       switch (v) {
+        case Prefs.sharePanelModeAuto:
+          return l10n.settingsSharePanelModeAuto;
         case Prefs.sharePanelModeAiChat:
           return l10n.settingsSharePanelModeAiChat;
         case Prefs.sharePanelModeBookshelf:
@@ -138,9 +142,22 @@ class _ShareAndShortcutsPanelPageState
                 onPressed: (_) => _pickSharePanelMode(),
               ),
               SettingsTile.navigation(
-                title: Text(l10n.settingsSharePanelPromptTitle),
-                description: Text(l10n.settingsSharePanelPromptDesc),
-                onPressed: (_) => _editSharePanelPrompt(),
+                title: Text(l10n.settingsSharePromptPresetsTitle),
+                description: Text(l10n.settingsSharePromptPresetsDesc),
+                onPressed: (_) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SharePromptPresetsPage(),
+                    ),
+                  );
+                },
+              ),
+              SettingsTile.navigation(
+                title: Text(l10n.settingsSharePanelTtlTitle),
+                description: Text(l10n.settingsSharePanelTtlDesc),
+                trailing: Text(_ttlLabel(l10n, Prefs().sharePanelTtlDaysV1)),
+                onPressed: (_) => _pickTtlDays(),
               ),
               SettingsTile.switchTile(
                 initialValue: Prefs().sharePanelCleanupAfterUseV1,

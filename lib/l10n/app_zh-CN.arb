@@ -806,12 +806,36 @@
   "settingsSharePanelSectionTitle": "共享表单（分享面板）",
   "settingsSharePanelModeTitle": "分享内容的默认处理方式",
   "settingsSharePanelModeDesc": "决定从其他 App 分享图片/文件/文字到 Papertok 后的默认去向。",
+  "settingsSharePanelModeAuto": "自动（推荐）",
   "settingsSharePanelModeAiChat": "发送到 AI 对话框",
   "settingsSharePanelModeBookshelf": "导入到书架",
   "settingsSharePanelModeAsk": "每次都询问我",
+
+  "settingsSharePromptPresetsTitle": "提示词预设",
+  "settingsSharePromptPresetsDesc": "管理分享进入 AI 对话框时可选择的提示词。",
+  "settingsSharePromptPresetAdd": "新增提示词",
+  "settingsSharePromptPresetEdit": "编辑提示词",
+  "settingsSharePromptPresetTitle": "标题",
+  "settingsSharePromptPresetPrompt": "提示词",
+  "settingsSharePromptPresetEnabled": "启用",
+  "settingsSharePromptPresetDeleteConfirm": "确定删除该提示词预设？",
+
   "settingsSharePanelPromptTitle": "默认提问提示词",
   "settingsSharePanelPromptDesc": "发送到 AI 对话框时，会把此提示词和分享内容一起发送。",
   "settingsSharePanelPromptHint": "例如：请先总结分享内容的要点，再给出建议。",
+
+  "settingsSharePanelTtlTitle": "分享文件保留时长",
+  "settingsSharePanelTtlDesc": "用于清理共享表单（分享面板）与快捷指令产生的临时文件。",
+  "settingsSharePanelTtlNever": "永不自动清理",
+  "settingsSharePanelTtlDays": "{days} 天",
+  "@settingsSharePanelTtlDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+
   "settingsSharePanelCleanupAfterUse": "处理后清理分享文件",
   "settingsSharePanelCleanupAfterUseDesc": "将分享进来的临时文件在处理完成后删除，以节省空间。",
   "settingsShortcutsSectionTitle": "快捷指令",
