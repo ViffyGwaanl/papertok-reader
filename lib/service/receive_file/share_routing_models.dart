@@ -151,6 +151,6 @@ class ShareDecision {
   }
 
   factory ShareDecision.askUser() {
-    return const ShareDecision._(destination: ShareDestination.askUser);
+    return ShareDecision._(destination: ShareDestination.askUser);
   }
 }
