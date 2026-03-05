@@ -154,10 +154,15 @@ Future<void> _applyDecision(
   // Convert ShareInboundImage -> File for existing service.
   final imageFiles = payload.images.map((e) => File(e.path)).toList();
 
+  final textFiles = payload.textFiles.map((e) => File(e.path)).toList();
+  final docxFiles = payload.docxFiles.map((e) => File(e.path)).toList();
+
   await ShareToAiService.sendToAiChatFromShare(
     ctx,
     sharedText: payload.sharedText,
     imageFiles: imageFiles,
+    textFiles: textFiles,
+    docxFiles: docxFiles,
   );
 }
 

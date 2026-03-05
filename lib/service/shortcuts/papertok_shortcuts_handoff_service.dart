@@ -14,6 +14,7 @@ class PapertokShortcutsHandoffService {
   static Future<bool> sendToChat({
     required String prompt,
     required List<String> imagesBase64Jpeg,
+    List<AttachmentItem> textFileAttachments = const [],
   }) async {
     final ctx = navigatorKey.currentContext;
     if (ctx == null) {
@@ -29,6 +30,14 @@ class PapertokShortcutsHandoffService {
     }
 
     final attachments = <AttachmentItem>[];
+
+    for (final a in textFileAttachments) {
+      if (a.type != AttachmentType.textFile) continue;
+      final text = (a.text ?? '').trim();
+      if (text.isEmpty) continue;
+      attachments.add(a);
+    }
+
     for (final b64 in imagesBase64Jpeg.take(4)) {
       final s = b64.trim();
       if (s.isEmpty) continue;

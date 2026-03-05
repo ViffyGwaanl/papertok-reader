@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/models/share_prompt_preset.dart';
+import 'package:anx_reader/service/receive_file/docx_plain_text_extractor.dart';
 import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/service/shortcuts/papertok_quick_ask_service.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
@@ -87,6 +90,8 @@ class ShareToAiService {
     BuildContext context, {
     required String sharedText,
     required List<File> imageFiles,
+    List<File> textFiles = const [],
+    List<File> docxFiles = const [],
   }) async {
     final preset = await _pickPromptPresetIfNeeded(context);
 
@@ -94,16 +99,36 @@ class ShareToAiService {
     final prefix = (preset?.prompt ?? '').trim();
     final content = sharedText.trim();
 
-    final mergedPrompt =
+    var mergedPrompt =
         [prefix, content].where((e) => e.trim().isNotEmpty).join('\n\n').trim();
 
     final files = imageFiles.take(4).toList(growable: false);
 
-    if (files.isEmpty && mergedPrompt.isEmpty) return;
+    final mayHaveTextFiles = textFiles.isNotEmpty || docxFiles.isNotEmpty;
+
+    if (files.isEmpty && mergedPrompt.isEmpty && !mayHaveTextFiles) {
+      return;
+    }
 
     SmartDialog.showLoading();
 
     try {
+      final textAttachments = await _buildTextFileAttachments(
+        context,
+        textFiles: textFiles,
+        docxFiles: docxFiles,
+      );
+
+      if (files.isEmpty && mergedPrompt.isEmpty && textAttachments.isEmpty) {
+        SmartDialog.dismiss(status: SmartStatus.loading);
+        return;
+      }
+
+      if (mergedPrompt.isEmpty && textAttachments.isNotEmpty) {
+        // Provide a reasonable default instruction when user only shares files.
+        mergedPrompt = L10n.of(context).aiQuickPromptSummaryText;
+      }
+
       final imagesB64 = <String>[];
       for (final f in files) {
         final b64 = await _readAndNormalizeJpegBase64(f);
@@ -119,6 +144,7 @@ class ShareToAiService {
       final ok = await PapertokShortcutsHandoffService.sendToChat(
         prompt: mergedPrompt,
         imagesBase64Jpeg: imagesB64,
+        textFileAttachments: textAttachments,
       );
 
       if (!ok) {
@@ -145,6 +171,97 @@ class ShareToAiService {
         },
       );
     }
+  }
+
+  static const int _maxTextChars = 200000;
+  static const int _maxTextFileBytes = 900 * 1024;
+  static const int _maxTextFileAttachments = 3;
+
+  static Future<List<AttachmentItem>> _buildTextFileAttachments(
+    BuildContext context, {
+    required List<File> textFiles,
+    required List<File> docxFiles,
+  }) async {
+    final out = <AttachmentItem>[];
+
+    Future<void> addTextAttachment({
+      required String filename,
+      required String text,
+    }) async {
+      final trimmed = text.trim();
+      if (trimmed.isEmpty) return;
+
+      final limited = trimmed.length > _maxTextChars
+          ? trimmed.substring(0, _maxTextChars)
+          : trimmed;
+
+      out.add(
+        AttachmentItem.textFile(
+          filename: filename,
+          bytes: Uint8List.fromList(utf8.encode(limited)),
+          text: limited,
+        ),
+      );
+    }
+
+    for (final f in textFiles) {
+      if (out.length >= _maxTextFileAttachments) break;
+      final filename = f.path.split(Platform.pathSeparator).last;
+
+      try {
+        final bytes = await _readFileHeadBytes(f, _maxTextFileBytes);
+        if (bytes.isEmpty) continue;
+        final decoded = utf8.decode(bytes, allowMalformed: true);
+        await addTextAttachment(filename: filename, text: decoded);
+      } catch (e, st) {
+        AnxLog.warning('share: read text file failed: $e', e, st);
+      }
+    }
+
+    for (final f in docxFiles) {
+      if (out.length >= _maxTextFileAttachments) break;
+      final filename = f.path.split(Platform.pathSeparator).last;
+
+      try {
+        final len = await f.length();
+        if (len <= 0) continue;
+
+        // Coarse guardrail to avoid loading huge files.
+        const maxDocxBytes = 25 * 1024 * 1024;
+        if (len > maxDocxBytes) {
+          AnxLog.warning('share: docx too large: $len bytes');
+          continue;
+        }
+
+        final bytes = Uint8List.fromList(await f.readAsBytes());
+
+        final r = await Isolate.run(() {
+          return DocxPlainTextExtractor.extract(bytes, maxChars: _maxTextChars);
+        });
+
+        await addTextAttachment(filename: filename, text: r.text);
+      } catch (e, st) {
+        AnxLog.warning('share: docx extract exception: $e', e, st);
+      }
+    }
+
+    return out;
+  }
+
+  static Future<Uint8List> _readFileHeadBytes(File file, int maxBytes) async {
+    final out = <int>[];
+    try {
+      await for (final chunk in file.openRead(0, maxBytes)) {
+        out.addAll(chunk);
+        if (out.length >= maxBytes) break;
+      }
+    } catch (_) {
+      // Ignore.
+    }
+    if (out.length > maxBytes) {
+      return Uint8List.fromList(out.sublist(0, maxBytes));
+    }
+    return Uint8List.fromList(out);
   }
 
   /// Pure helper used by Share Sheet routing.

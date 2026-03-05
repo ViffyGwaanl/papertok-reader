@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/attachment_item.dart';
+import 'package:anx_reader/service/receive_file/docx_plain_text_extractor.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -212,31 +215,96 @@ class AttachmentPickerDialog extends StatelessWidget {
     return out;
   }
 
+  static const int _maxTextFileBytes = 900 * 1024;
+
   Future<List<AttachmentItem>> _pickTextFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['txt', 'md', 'log', 'json'],
-      withData: true,
+      allowedExtensions: const ['txt', 'md', 'log', 'json', 'csv', 'docx'],
+      withReadStream: true,
+      withData: false,
     );
 
     if (result == null || result.files.isEmpty) return const [];
 
-    final file = result.files.first;
-    final bytes = file.bytes;
-    if (bytes == null || bytes.isEmpty) return const [];
+    final pf = result.files.first;
+    final filename = pf.name;
+    final ext = _extLower(filename);
 
-    final decoded = utf8.decode(bytes, allowMalformed: true);
-    final text = decoded.length > _maxTextChars
-        ? decoded.substring(0, _maxTextChars)
-        : decoded;
+    final path = pf.path;
+    if (path == null || path.trim().isEmpty) {
+      return const [];
+    }
 
-    return [
-      AttachmentItem.textFile(
-        filename: file.name,
-        bytes: Uint8List.fromList(utf8.encode(text)),
-        text: text,
-      ),
-    ];
+    final file = File(path);
+
+    if (ext == 'docx') {
+      try {
+        final len = await file.length();
+        const maxDocxBytes = 25 * 1024 * 1024;
+        if (len <= 0 || len > maxDocxBytes) return const [];
+
+        final bytes = Uint8List.fromList(await file.readAsBytes());
+
+        final r = await Isolate.run(() {
+          return DocxPlainTextExtractor.extract(bytes, maxChars: _maxTextChars);
+        });
+
+        final text = r.text.length > _maxTextChars
+            ? r.text.substring(0, _maxTextChars)
+            : r.text;
+
+        return [
+          AttachmentItem.textFile(
+            filename: filename,
+            bytes: Uint8List.fromList(utf8.encode(text)),
+            text: text,
+          ),
+        ];
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    // Plain text path.
+    try {
+      final bytes = await _readFileHeadBytes(file, _maxTextFileBytes);
+      if (bytes.isEmpty) return const [];
+
+      final decoded = utf8.decode(bytes, allowMalformed: true);
+      final text = decoded.length > _maxTextChars
+          ? decoded.substring(0, _maxTextChars)
+          : decoded;
+
+      return [
+        AttachmentItem.textFile(
+          filename: filename,
+          bytes: Uint8List.fromList(utf8.encode(text)),
+          text: text,
+        ),
+      ];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static String _extLower(String filename) {
+    final s = filename.trim();
+    final idx = s.lastIndexOf('.');
+    if (idx < 0 || idx == s.length - 1) return '';
+    return s.substring(idx + 1).toLowerCase();
+  }
+
+  static Future<Uint8List> _readFileHeadBytes(File file, int maxBytes) async {
+    final out = <int>[];
+    await for (final chunk in file.openRead(0, maxBytes)) {
+      out.addAll(chunk);
+      if (out.length >= maxBytes) break;
+    }
+    if (out.length > maxBytes) {
+      return Uint8List.fromList(out.sublist(0, maxBytes));
+    }
+    return Uint8List.fromList(out);
   }
 
   @override
