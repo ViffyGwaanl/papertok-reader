@@ -1,6 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:anx_reader/page/settings_page/subpage/share_inbox_diagnostics_page.dart';
 import 'package:anx_reader/page/settings_page/subpage/share_prompt_presets_page.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
@@ -167,6 +168,18 @@ class _ShareAndShortcutsPanelPageState
                 },
                 title: Text(l10n.settingsSharePanelCleanupAfterUse),
                 description: Text(l10n.settingsSharePanelCleanupAfterUseDesc),
+              ),
+              SettingsTile.navigation(
+                title: Text(l10n.settingsShareInboxDiagnosticsTitle),
+                description: Text(l10n.settingsShareInboxDiagnosticsDesc),
+                onPressed: (_) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ShareInboxDiagnosticsPage(),
+                    ),
+                  );
+                },
               ),
             ],
           ),

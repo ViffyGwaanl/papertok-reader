@@ -30,6 +30,9 @@ import 'package:anx_reader/widgets/ai/attachment_picker_dialog.dart';
 import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/models/book_import_item.dart';
 import 'package:anx_reader/service/book.dart';
+import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart';
+import 'package:anx_reader/service/receive_file/share_inbox_paths.dart';
+import 'package:anx_reader/service/receive_file/share_safe_import.dart';
 import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
@@ -1151,28 +1154,59 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     });
   }
 
-  void _removeBookImportAt(int index) {
+  Future<void> _removeBookImportAt(int index) async {
+    if (index < 0 || index >= _pendingBookImports.length) return;
+    final item = _pendingBookImports[index];
+
     setState(() {
       if (index < 0 || index >= _pendingBookImports.length) return;
-      // Do NOT delete the underlying file here; Phase 5 will manage cleanup.
       _pendingBookImports.removeAt(index);
     });
+
+    // Cleanup-after-use: if the user dismisses the card, we can delete our
+    // managed inbox copy.
+    if (!Prefs().sharePanelCleanupAfterUseV1) return;
+
+    final info = ShareInboxPaths.tryParse(item.file.path);
+    if (info == null) return;
+
+    try {
+      final within = await ShareInboxPaths.isWithinInboxRoot(
+          item.file.path, info.inboxRoot);
+      if (!within) return;
+
+      if (await item.file.exists()) {
+        await item.file.delete();
+      }
+
+      await ShareInboxCleanupService.cleanupEventDirsIfSafe(
+        eventDirs: [info.eventDir],
+      );
+    } catch (_) {
+      // best-effort
+    }
   }
 
-  void _importBookImportAt(int index) {
+  Future<void> _importBookImportAt(int index) async {
     if (index < 0 || index >= _pendingBookImports.length) return;
 
     final item = _pendingBookImports[index];
-    importBookList([item.file], context, ref);
+    final files = await ShareSafeImport.prepareImportFiles([item.file.path]);
+    if (files.isEmpty) return;
+
+    importBookList(files, context, ref);
 
     setState(() {
-      if (index < _pendingBookImports.length &&
-          _pendingBookImports[index].file.path == item.file.path) {
-        _pendingBookImports.removeAt(index);
-      } else {
-        _pendingBookImports.removeWhere((e) => e.file.path == item.file.path);
-      }
+      _pendingBookImports.removeWhere((e) => e.file.path == item.file.path);
     });
+
+    if (Prefs().sharePanelCleanupAfterUseV1) {
+      Future<void>.delayed(const Duration(seconds: 2), () {
+        ShareInboxCleanupService.cleanupEventDirsIfSafe(
+          eventDirs: [item.file.path],
+        );
+      });
+    }
   }
 
   void _regenerateLastMessage() {

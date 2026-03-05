@@ -12,6 +12,7 @@ import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/deeplink/paperreader_deeplink_handler.dart';
+import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart';
 import 'package:anx_reader/service/shortcuts/shortcuts_callback_service.dart';
 import 'package:app_links/app_links.dart';
 import 'package:anx_reader/dao/database.dart';
@@ -61,6 +62,9 @@ Future<void> main() async {
   // If a Shortcuts invocation arrived before the UI was ready, drain it now.
   WidgetsBinding.instance.addPostFrameCallback((_) {
     PapertokShortcutsPendingQueue.tryDrain();
+
+    // Share inbox TTL cleanup (best-effort, throttled).
+    ShareInboxCleanupService.maybeCleanupOnStartup();
   });
 
   // Initialize desktop window with validated position
@@ -202,6 +206,8 @@ class _MyAppState extends ConsumerState<MyApp>
     } else if (state == AppLifecycleState.resumed) {
       if (AnxPlatform.isIOS) {
         Server().start();
+        // Best-effort TTL cleanup.
+        ShareInboxCleanupService.maybeCleanupOnStartup();
       }
     }
   }

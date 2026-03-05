@@ -838,6 +838,13 @@
 
   "settingsSharePanelCleanupAfterUse": "处理后清理分享文件",
   "settingsSharePanelCleanupAfterUseDesc": "将分享进来的临时文件在处理完成后删除，以节省空间。",
+  "settingsShareInboxDiagnosticsTitle": "分享收件箱诊断",
+  "settingsShareInboxDiagnosticsDesc": "查看最近的分享事件与清理状态。",
+  "settingsShareInboxCleanupNowTitle": "清理",
+  "settingsShareInboxCleanupNowCta": "立即清理",
+  "settingsShareInboxDiagnosticsEmpty": "暂无记录。",
+  "settingsCommonEnabled": "启用",
+  "settingsCommonDisabled": "禁用",
   "settingsShortcutsSectionTitle": "快捷指令",
 
   "settingsShortcutsSendMessageTimeout": "快捷指令：最长执行时间",

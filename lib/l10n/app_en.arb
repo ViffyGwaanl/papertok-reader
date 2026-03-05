@@ -838,6 +838,13 @@
 
   "settingsSharePanelCleanupAfterUse": "Cleanup shared files after handling",
   "settingsSharePanelCleanupAfterUseDesc": "Delete temporary shared files after processing to save disk space.",
+  "settingsShareInboxDiagnosticsTitle": "Share inbox diagnostics",
+  "settingsShareInboxDiagnosticsDesc": "View recent share events and run cleanup.",
+  "settingsShareInboxCleanupNowTitle": "Cleanup",
+  "settingsShareInboxCleanupNowCta": "Run now",
+  "settingsShareInboxDiagnosticsEmpty": "No events yet.",
+  "settingsCommonEnabled": "Enabled",
+  "settingsCommonDisabled": "Disabled",
   "settingsShortcutsSectionTitle": "Shortcuts",
 
   "settingsShortcutsSendMessageTimeout": "Shortcuts: Max runtime",

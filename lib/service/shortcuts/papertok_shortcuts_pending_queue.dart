@@ -8,6 +8,7 @@ import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 
@@ -63,15 +64,44 @@ class PapertokShortcutsPendingQueue {
   }
 
   static Future<void> _cleanupTempFiles(List<String> paths) async {
-    for (final p in paths) {
+    for (final raw in paths) {
       try {
-        // Only delete our own temp files.
-        if (!p.contains('shortcuts_ask')) continue;
-        final f = File(p);
-        if (await f.exists()) {
-          await f.delete();
-        }
-      } catch (_) {}
+        final file = File(raw);
+        if (!await file.exists()) continue;
+
+        final canon = await _canonicalize(raw);
+        final marker = '${p.separator}shortcuts_ask${p.separator}';
+
+        final idx = canon.indexOf(marker);
+        final idx2 = idx < 0 ? canon.indexOf('/shortcuts_ask/') : idx;
+        final cut = idx >= 0
+            ? idx + marker.length - 1
+            : (idx2 >= 0 ? idx2 + '/shortcuts_ask/'.length - 1 : -1);
+        if (cut < 0) continue;
+
+        final allowRoot = canon.substring(0, cut);
+        if (!_isWithin(allowRoot, canon)) continue;
+
+        await file.delete();
+      } catch (_) {
+        // ignore
+      }
+    }
+  }
+
+  static Future<String> _canonicalize(String path) async {
+    try {
+      return await File(path).resolveSymbolicLinks();
+    } catch (_) {
+      return p.normalize(path);
+    }
+  }
+
+  static bool _isWithin(String root, String path) {
+    try {
+      return p.isWithin(root, path) || root == path;
+    } catch (_) {
+      return false;
     }
   }
 

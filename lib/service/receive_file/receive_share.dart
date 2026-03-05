@@ -5,7 +5,11 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/service/receive_file/share_inbound_decider.dart';
+import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart';
+import 'package:anx_reader/service/receive_file/share_inbox_diagnostics.dart';
+import 'package:anx_reader/service/receive_file/share_inbox_paths.dart';
 import 'package:anx_reader/service/receive_file/share_routing_models.dart';
+import 'package:anx_reader/service/receive_file/share_safe_import.dart';
 import 'package:anx_reader/service/receive_file/share_to_ai_service.dart';
 import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/utils/log/common.dart';
@@ -67,8 +71,40 @@ void receiveShareIntent(WidgetRef ref) {
         return;
       }
 
-      final mode = _mapSharePanelMode(Prefs().sharePanelModeV1);
+      final allPaths = <String>[
+        ...payload.images.map((e) => e.path),
+        ...payload.files.map((e) => e.path),
+      ];
+
+      ShareInboxCleanupService.recordKnownRootsFromPaths(allPaths);
+
+      final modeRaw = Prefs().sharePanelModeV1;
+      final mode = _mapSharePanelMode(modeRaw);
       final decision = ShareInboundDecider.decide(mode: mode, payload: payload);
+
+      final eventIds = <String>[];
+      for (final p in allPaths) {
+        final info = ShareInboxPaths.tryParse(p);
+        if (info != null) eventIds.add(info.eventId);
+      }
+
+      ShareInboxDiagnosticsStore.append(
+        ShareInboundEvent(
+          atMs: DateTime.now().millisecondsSinceEpoch,
+          source: 'share',
+          mode: modeRaw,
+          destination: decision.destination.name,
+          textLen: payload.sharedText.length,
+          images: payload.images.length,
+          files: payload.files.length,
+          textFiles: payload.textFiles.length,
+          docxFiles: payload.docxFiles.length,
+          bookshelfFiles: payload.bookshelfFiles.length,
+          otherFiles: payload.otherFiles.length,
+          eventIds: eventIds,
+          cleanupStatus: 'pending',
+        ),
+      );
 
       switch (decision.destination) {
         case ShareDestination.askUser:
@@ -82,11 +118,23 @@ void receiveShareIntent(WidgetRef ref) {
                 'share: navigator context not ready; dropping payload');
             return;
           }
-          importBookList(
-            decision.bookshelfImportFiles.map((p) => File(p)).toList(),
-            ctx,
-            ref,
+          final importFiles = await ShareSafeImport.prepareImportFiles(
+            decision.bookshelfImportFiles,
           );
+
+          if (importFiles.isEmpty) return;
+
+          importBookList(importFiles, ctx, ref);
+
+          if (Prefs().sharePanelCleanupAfterUseV1) {
+            // Best-effort: cleanup empty event dirs after import (import deletes files).
+            Future<void>.delayed(const Duration(seconds: 2), () {
+              ShareInboxCleanupService.cleanupEventDirsIfSafe(
+                eventDirs: decision.bookshelfImportFiles,
+              );
+            });
+          }
+
           return;
 
         case ShareDestination.aiChat:
@@ -164,6 +212,17 @@ Future<void> _applyDecision(
     textFiles: textFiles,
     docxFiles: docxFiles,
   );
+
+  if (Prefs().sharePanelCleanupAfterUseV1 && !hasCards) {
+    // Safe to cleanup only when there are no pending bookshelf cards.
+    final allPaths = <String>[
+      ...payload.images.map((e) => e.path),
+      ...payload.files.map((e) => e.path),
+    ];
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      ShareInboxCleanupService.cleanupEventDirsIfSafe(eventDirs: allPaths);
+    });
+  }
 }
 
 void _enqueueBookImportCards(List<ShareInboundFile> cards) {
@@ -259,9 +318,21 @@ Future<void> _showAskThenRoute(
         mode: SharePanelMode.bookshelf,
         payload: payload,
       );
-      if (d.bookshelfImportFiles.isEmpty) return;
-      importBookList(
-          d.bookshelfImportFiles.map((p) => File(p)).toList(), ctx, ref);
+      final importFiles = await ShareSafeImport.prepareImportFiles(
+        d.bookshelfImportFiles,
+      );
+      if (importFiles.isEmpty) return;
+
+      importBookList(importFiles, ctx, ref);
+
+      if (Prefs().sharePanelCleanupAfterUseV1) {
+        Future<void>.delayed(const Duration(seconds: 2), () {
+          ShareInboxCleanupService.cleanupEventDirsIfSafe(
+            eventDirs: d.bookshelfImportFiles,
+          );
+        });
+      }
+
       return;
 
     case ShareDestination.askUser:
