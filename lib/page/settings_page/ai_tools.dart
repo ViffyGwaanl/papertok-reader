@@ -5,6 +5,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/page/settings_page/mcp_servers.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:anx_reader/page/settings_page/subpage/share_and_shortcuts_panel_page.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
@@ -491,77 +492,19 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
         title: Text(l10n.settingsAiToolForceConfirmDestructive),
         description: Text(l10n.settingsAiToolForceConfirmDestructiveDesc),
       ),
-      if (AnxPlatform.isIOS) ...[
-        SettingsTile.switchTile(
-          initialValue: Prefs().shortcutsSendMessageOpenAppDefaultV1,
-          onToggle: (value) {
-            Prefs().shortcutsSendMessageOpenAppDefaultV1 = value;
-            setState(() {});
+      if (AnxPlatform.isIOS)
+        SettingsTile.navigation(
+          title: Text(l10n.settingsShareAndShortcutsPanel),
+          description: Text(l10n.settingsShareAndShortcutsPanelDesc),
+          onPressed: (_) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ShareAndShortcutsPanelPage(),
+              ),
+            );
           },
-          title: Text(l10n.settingsShortcutsSendMessageOpenAppDefault),
-          description:
-              Text(l10n.settingsShortcutsSendMessageOpenAppDefaultDesc),
         ),
-        SettingsTile.switchTile(
-          initialValue: Prefs().shortcutsSendMessageShowDialogDefaultV1,
-          onToggle: (value) {
-            Prefs().shortcutsSendMessageShowDialogDefaultV1 = value;
-            setState(() {});
-          },
-          title: Text(l10n.settingsShortcutsSendMessageShowDialogDefault),
-          description:
-              Text(l10n.settingsShortcutsSendMessageShowDialogDefaultDesc),
-        ),
-        SettingsTile.navigation(
-          title: Text(l10n.settingsShortcutsSendMessageTimeout),
-          description: Text(l10n.settingsShortcutsSendMessageTimeoutDesc),
-          trailing: Text('${Prefs().shortcutsSendMessageTimeoutSecV1}s'),
-          onPressed: (_) => _editShortcutsSendMessageTimeoutSec(),
-        ),
-        SettingsTile.navigation(
-          title: Text(l10n.settingsShortcutsSendMessagePresentation),
-          description: Text(l10n.settingsShortcutsSendMessagePresentationDesc),
-          trailing: Text(
-            _shortcutsPresentationLabel(
-              l10n,
-              Prefs().shortcutsSendMessagePresentationV1,
-            ),
-          ),
-          onPressed: (_) => _pickShortcutsSendMessagePresentation(),
-        ),
-        SettingsTile.switchTile(
-          initialValue: Prefs().shareSheetAskPapertokEnabledV1,
-          onToggle: (value) {
-            Prefs().shareSheetAskPapertokEnabledV1 = value;
-            setState(() {});
-          },
-          title: Text(l10n.settingsShareSheetAskPapertokEnabled),
-          description: Text(l10n.settingsShareSheetAskPapertokEnabledDesc),
-        ),
-        SettingsTile.navigation(
-          title: Text(l10n.settingsShortcutsCallbackMaxChars),
-          description: Text(l10n.settingsShortcutsCallbackMaxCharsDesc),
-          trailing: Text('${Prefs().shortcutsCallbackMaxCharsV1}'),
-          onPressed: (_) => _editShortcutsCallbackMaxChars(),
-        ),
-        SettingsTile.navigation(
-          title: Text(l10n.settingsShortcutsCallbackTimeout),
-          description: Text(l10n.settingsShortcutsCallbackTimeoutDesc),
-          trailing: Text('${Prefs().shortcutsCallbackTimeoutSecV1}s'),
-          onPressed: (_) => _editShortcutsCallbackTimeoutSec(),
-        ),
-        SettingsTile.navigation(
-          title: Text(l10n.settingsShortcutsCallbackWaitMode),
-          description: Text(l10n.settingsShortcutsCallbackWaitModeDesc),
-          trailing: Text(
-            _shortcutsWaitModeLabel(
-              l10n,
-              Prefs().shortcutsCallbackWaitModeV1,
-            ),
-          ),
-          onPressed: (_) => _pickShortcutsWaitMode(),
-        ),
-      ],
       SettingsTile.navigation(
         title: Text(l10n.settingsMcpServers),
         description: Text(l10n.settingsMcpServersDesc),

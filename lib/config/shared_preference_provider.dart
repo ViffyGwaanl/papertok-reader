@@ -96,6 +96,13 @@ class Prefs extends ChangeNotifier {
   // iOS Share Sheet behavior (share_handler).
   static const String _shareSheetAskPapertokEnabledV1Key =
       'shareSheetAskPapertokEnabledV1';
+
+  // Unified "Share & Shortcuts Panel" settings.
+  static const String _sharePanelModeV1Key = 'sharePanelModeV1';
+  static const String _sharePanelPromptV1Key = 'sharePanelPromptV1';
+  static const String _sharePanelCleanupAfterUseV1Key =
+      'sharePanelCleanupAfterUseV1';
+
   static const String _userPromptsKey = 'userPrompts';
 
   // Home tabs config (order + enable), backed by SharedPreferences.
@@ -2142,6 +2149,57 @@ class Prefs extends ChangeNotifier {
     final before = shareSheetAskPapertokEnabledV1;
     if (before != value) {
       prefs.setBool(_shareSheetAskPapertokEnabledV1Key, value);
+      notifyListeners();
+    }
+  }
+
+  // --- Share & Shortcuts Panel (iOS) ---
+
+  static const String sharePanelModeAiChat = 'ai_chat';
+  static const String sharePanelModeBookshelf = 'bookshelf';
+  static const String sharePanelModeAsk = 'ask';
+
+  String get sharePanelModeV1 {
+    // Migration: if the legacy toggle is off, default to bookshelf import.
+    final raw = prefs.getString(_sharePanelModeV1Key);
+    if (raw != null && raw.trim().isNotEmpty) return raw;
+
+    if (shareSheetAskPapertokEnabledV1) {
+      return sharePanelModeAiChat;
+    }
+    return sharePanelModeBookshelf;
+  }
+
+  set sharePanelModeV1(String value) {
+    final before = sharePanelModeV1;
+    final next = value.trim().isEmpty ? sharePanelModeAiChat : value.trim();
+    if (before != next) {
+      prefs.setString(_sharePanelModeV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  String get sharePanelPromptV1 {
+    // Empty means "use app default".
+    return prefs.getString(_sharePanelPromptV1Key) ?? '';
+  }
+
+  set sharePanelPromptV1(String value) {
+    final before = sharePanelPromptV1;
+    if (before != value) {
+      prefs.setString(_sharePanelPromptV1Key, value);
+      notifyListeners();
+    }
+  }
+
+  bool get sharePanelCleanupAfterUseV1 {
+    return prefs.getBool(_sharePanelCleanupAfterUseV1Key) ?? true;
+  }
+
+  set sharePanelCleanupAfterUseV1(bool value) {
+    final before = sharePanelCleanupAfterUseV1;
+    if (before != value) {
+      prefs.setBool(_sharePanelCleanupAfterUseV1Key, value);
       notifyListeners();
     }
   }
