@@ -94,10 +94,8 @@ class ShareToAiService {
     final prefix = (preset?.prompt ?? '').trim();
     final content = sharedText.trim();
 
-    final mergedPrompt = [prefix, content]
-        .where((e) => e.trim().isNotEmpty)
-        .join('\n\n')
-        .trim();
+    final mergedPrompt =
+        [prefix, content].where((e) => e.trim().isNotEmpty).join('\n\n').trim();
 
     final files = imageFiles.take(4).toList(growable: false);
 
@@ -207,6 +205,8 @@ class ShareToAiService {
                     value: p.id,
                     groupValue: group,
                     title: Text(p.title),
+                    subtitle: _buildPresetPreview(p.prompt),
+                    isThreeLine: true,
                     onChanged: (val) => setLocal(() => group = val ?? group),
                   ),
                 Padding(
@@ -255,6 +255,25 @@ class ShareToAiService {
     } catch (e, st) {
       AnxLog.warning('share: persist last preset failed: $e', e, st);
     }
+  }
+
+  static Widget _buildPresetPreview(String prompt) {
+    final trimmed = prompt.trim();
+    if (trimmed.isEmpty) return const SizedBox();
+
+    final lines = trimmed
+        .split(RegExp(r'\r?\n'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    final preview = lines.isEmpty ? trimmed : lines.first;
+
+    return Text(
+      preview,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
   }
 
   static Future<String?> _readAndNormalizeJpegBase64(File file) async {
