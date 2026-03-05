@@ -149,14 +149,14 @@ void receiveShareIntent(WidgetRef ref) {
 
   handler.sharedMediaStream.listen((SharedMedia media) {
     handleShare(media);
-  }, onError: (err) {
-    AnxLog.severe('share: Receive share intent');
+  }, onError: (err, st) {
+    AnxLog.severe('share: Receive share intent stream error: $err', err, st);
   });
 
   handler.getInitialSharedMedia().then((media) {
     handleShare(media);
-  }, onError: (err) {
-    AnxLog.severe('share: Receive share intent');
+  }, onError: (err, st) {
+    AnxLog.severe('share: Receive share intent initial error: $err', err, st);
   });
 }
 
@@ -183,7 +183,11 @@ Future<void> _applyDecision(
   _enqueueBookImportCards(decision.bookshelfFileCards);
 
   final hasCards = decision.bookshelfFileCards.isNotEmpty;
-  final hasAiContent = payload.hasText || payload.hasImages || payload.hasUrls;
+  final hasAiContent = payload.hasText ||
+      payload.hasImages ||
+      payload.hasUrls ||
+      payload.textFiles.isNotEmpty ||
+      payload.docxFiles.isNotEmpty;
 
   if (!hasAiContent) {
     // No prompt/images to send; still open the AI tab if we have cards.

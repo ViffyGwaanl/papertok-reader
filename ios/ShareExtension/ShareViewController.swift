@@ -145,15 +145,26 @@ class PapertokShareHandlerViewController: UIViewController {
       do {
         if provider.hasItemConformingToTypeIdentifier(imageContentType) {
           try await handleImages(attachment: provider, index: index)
-        } else if provider.hasItemConformingToTypeIdentifier(movieContentType) {
+          continue
+        }
+        if provider.hasItemConformingToTypeIdentifier(movieContentType) {
           try await handleVideos(attachment: provider, index: index)
-        } else if provider.hasItemConformingToTypeIdentifier(fileURLType) {
+          continue
+        }
+        if provider.hasItemConformingToTypeIdentifier(fileURLType) {
           try await handleFiles(attachment: provider, index: index)
-        } else if provider.hasItemConformingToTypeIdentifier(urlContentType) {
-          try await handleUrl(attachment: provider, index: index)
-        } else if provider.hasItemConformingToTypeIdentifier(textContentType) {
+          continue
+        }
+
+        // Web shares (Safari/Chrome) may expose multiple representations on the
+        // SAME provider (e.g. url + text). Capture both.
+        if provider.hasItemConformingToTypeIdentifier(textContentType) {
           try await handleText(attachment: provider, index: index)
-        } else if provider.hasItemConformingToTypeIdentifier(dataContentType) {
+        }
+        if provider.hasItemConformingToTypeIdentifier(urlContentType) {
+          try await handleUrl(attachment: provider, index: index)
+        }
+        if provider.hasItemConformingToTypeIdentifier(dataContentType) {
           try await handleData(attachment: provider, index: index)
         }
       } catch {
@@ -190,7 +201,10 @@ class PapertokShareHandlerViewController: UIViewController {
     let data = try await attachment.loadItem(forTypeIdentifier: urlContentType, options: nil)
 
     if let url = data as? URL {
-      sharedText.append(url.absoluteString)
+      let s = url.absoluteString
+      if !s.isEmpty, !sharedText.contains(s) {
+        sharedText.append(s)
+      }
     }
   }
 
