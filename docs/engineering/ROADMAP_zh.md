@@ -1,4 +1,4 @@
-# papertok-reader 路线图（工程视角）
+# PaperTok Reader 路线图（工程视角）
 
 本文档以工程交付为中心，记录已完成内容与下一阶段计划。
 
@@ -49,20 +49,37 @@
 
 ## 2. 进行中
 
-### 2.x Phase 3：全书库 RAG + 批量索引队列（已合入 main）
-- 已合入：`product/main`
-- 已具备：headless reader 索引任意书、索引队列（自动重试一次+重启恢复）、Settings 顶层 AI 索引（书库）、`semantic_search_library`（Hybrid+MMR）、`paperreader://reader/open` 跳转
-- 待办：真机 QA checklist（iOS/Android）+ TestFlight 回归（推荐先读 `docs/engineering/QA_GUIDED_RUNBOOK_zh.md`）
+### 2.1 Memory 工作流补齐
+- 现状：检索层已对齐 OpenClaw；工作流层尚未补齐。
+- 下一阶段：
+  - `daily memory`
+  - `long-term memory`
+  - `review inbox`
+  - 候选记忆 / 审核 / 提升流程
+- 策略：
+  - `daily` 半自动 / 可选自动
+  - `long-term` 确认后写入
+  - 不默认开启完全静默长期写入
+- 详见：`docs/ai/memory_workflow_openclaw_alignment_zh.md`
 
-### 2.1 iOS 体验收敛（TabBar / 键盘 / 底部遮挡）
-- iPhone 浮动 TabBar（cupertino_native，icon-only）参数收敛：高度、底部偏移、blur/背景一致性。
-- 目标：不遮挡输入框/列表内容，键盘弹出/收起无跳动。
+### 2.2 命名收口
+- 现状：产品口径已偏向 `PaperTok Reader`，但内部工程真值源仍大量残留 `anx-reader` / `anx_reader`。
+- 下一阶段：
+  - 先统一文档与对外口径
+  - 再评估工作区 / 产物名收口
+  - package rename 单独立项，不与当前收口混做
+- 详见：`docs/engineering/NAMING_CLEANUP_PLAN_zh.md`
 
-### 2.2 TestFlight 发布链路稳定化
-- 版本号策略：`pubspec.yaml` 的 `version: x.y.z+BUILD`，每次 TestFlight 递增 BUILD。
-- 修复/规避：Xcode 缺少 iOS Platform 组件导致的构建失败（见 troubleshooting）。
+### 2.3 Share diagnostics 增强
+- 现状：diagnostics 页已具备基础列表与 cleanup 状态
+- 下一阶段：
+  - 搜索
+  - 状态筛选
+  - destination 筛选
+  - 文件类型筛选
+- 目标：把 diagnostics 从“可查看”升级成“可高效排障”
 
-### 2.3 文档体系更新（持续）
+### 2.4 文档体系更新（持续）
 - README + docs（engineering/ai/papertok）与当前实现保持一致。
 - 将“上游贡献”相关内容降级为可选项（不阻塞产品交付）。
 

@@ -2,12 +2,25 @@
 
 > 口径：以 `product/main`（同产品仓库 main）为准；以可审计（commit+测试）为标准。
 
-## 0. 当前结论（2026-02-27）
+## 0. 当前结论（2026-03-06）
 
 - RAG + Memory Phase 1–5 已完整交付并合入 `product/main`。
-- Memory 已完成对齐 OpenClaw 的 A→B→C→D（Hybrid 主干 + 可选增强 + 非阻塞索引新鲜度 + embedding cache 上限/清理）。
-- OpenAI Responses 工具调用稳定性与第三方兼容已工程化（显式 Provider 开关）。
-- 目前剩余工作重心是 **真机 QA checklist 执行** 与 **发布回归**（不是“合入阻塞”）。
+- Memory 的**检索层**已完成对齐 OpenClaw 的 A→B→C→D（Hybrid 主干 + 可选增强 + 非阻塞索引新鲜度 + embedding cache 上限/清理）。
+- Share / Shortcuts 主线已完成产品化收口，并在 `1.68.1 (6339)` 上完成真机验证：
+  - `.md`
+  - `.docx`
+  - 网页分享（URL-only 可接受）
+- 统一设置页 `Share & Shortcuts Panel` 已支持：
+  - share 路由
+  - prompt presets
+  - cleanup / TTL
+  - diagnostics
+  - 会话目标（复用当前会话 / 新建会话）
+  - 图片 / 文本附件上限配置
+- 当前剩余工作重心已从“阻断性 bug 修复”转为：
+  - Memory 工作流方案定稿
+  - 命名收口计划
+  - diagnostics 搜索 / 筛选增强
 
 ## 1. 已完成交付（Done）
 
@@ -42,23 +55,42 @@
 
 ## 2. 未完成任务（Remaining）
 
-### 2.1 真机 QA checklist（P0）
+### 2.1 Memory 工作流（P0）
 
-- 先读“带跑讲解稿”：`docs/engineering/QA_GUIDED_RUNBOOK_zh.md`（通俗版，帮助你按最短路径跑完整条链路）。
-- iOS/iPadOS：执行 `docs/engineering/IOS_IPADOS_QA_CHECKLIST_zh.md`。
-- Android：执行 `docs/engineering/ANDROID_QA_CHECKLIST_zh.md`。
-- 重点覆盖：
-  - Phase 3 队列生命周期（pause/resume/cancel/clear finished / retry-once / restart normalization）
-  - deep link 外部拉起与定位（href/cfi）
-  - Memory A–D（Auto-on、hybrid、MMR/decay、debounce freshness、cache limit）
-  - OpenAI Responses 两个兼容开关的“严格/兼容”模式验证
+- 检索层已基本对齐 OpenClaw；未完成的是“写入工作流层”。
+- 需要补齐：
+  - `daily memory`
+  - `long-term memory`
+  - `review inbox`
+  - 写入触发器
+  - 候选审核流程
+  - 自动化边界（尤其是 optional silent auto-write）
+- 详见：`docs/ai/memory_workflow_openclaw_alignment_zh.md`
 
-### 2.2 构建/发布环境（P0/P1）
+### 2.2 命名收口（P0/P1）
 
-- iOS：本机 Xcode 缺少 iOS 平台组件（例如 iOS 26.2），需要在 Xcode → Settings → Components 安装后才能 `flutter build ios`。
+- 需要把产品名、仓库名、上游名、技术包名之间的边界正式收口。
+- 当前最推荐先做：
+  - 文档 / 文案统一成 `PaperTok Reader`
+  - 把 `Anx Reader` 收敛为上游来源说明
+- 高风险 package rename（`anx_reader -> papertok_reader`）暂不与当前收口混做。
+- 详见：`docs/engineering/NAMING_CLEANUP_PLAN_zh.md`
+
+### 2.3 diagnostics 搜索 / 筛选（P1）
+
+- 当前 diagnostics 页已经存在，但仍缺：
+  - 搜索
+  - 状态筛选
+  - destination 筛选
+  - 文件类型筛选
+- 这属于排障效率增强，而非阻断项。
+
+### 2.4 构建/发布环境（P1）
+
 - 发布：执行 `docs/engineering/RELEASE_IOS_TESTFLIGHT_zh.md` / `docs/engineering/RELEASE_ANDROID_zh.md`。
+- 继续保持 TF build 验证记录与文档同步。
 
-### 2.3 文档维护（P1）
+### 2.5 文档维护（持续）
 
 - 保持“实现状态变化 = 同步更新 docs”的纪律；尽量把状态集中在少数文档（避免多处漂移）。
 

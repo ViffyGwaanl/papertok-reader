@@ -1,6 +1,6 @@
-# Docs Index (Paper Reader / papertok-reader)
+# Docs Index (PaperTok Reader / papertok-reader)
 
-本目录包含 **papertok-reader**（阅读器发行版 + PaperTok 集成）的功能说明与工程文档。
+本目录包含 **PaperTok Reader**（阅读器发行版 + PaperTok 集成）的功能说明与工程文档。
 
 ## 多端状态（重要）
 
@@ -17,6 +17,7 @@
 ### AI 对话与翻译
 - [AI 对话/翻译（设计与实现总览）](./ai/README.md) - AI 面板 UX、Provider Center、对话树、全文翻译、多模态与图片解析
 - [AI 改造状态与路线图（中文）](./ai/ai_status_roadmap_zh.md)
+- [Memory 工作流对齐 OpenClaw（中文）](./ai/memory_workflow_openclaw_alignment_zh.md)
 - [AI 面板 UX 技术设计](./ai/ai_panel_ux_tech_design.md)
 - [AI Provider 配置 UX](./ai/ai_provider_config_ux.md)
 - [AI 设置 WebDAV 同步](./ai/ai_settings_sync_webdav.md)
@@ -32,6 +33,7 @@
 - [Identifiers 总表（真值源）](./engineering/IDENTIFIERS_zh.md) - Display Name / Bundle ID / applicationId / App Group
 - [上游贡献指南（Anx Reader）](./engineering/UPSTREAM_CONTRIB_zh.md) - 如何向上游提交 PR
 - [路线图（工程视角）](./engineering/ROADMAP_zh.md) - 已完成功能与下一阶段计划
+- [命名收口计划（中文）](./engineering/NAMING_CLEANUP_PLAN_zh.md)
 
 ### 发布清单
 - [iOS 部署/安装测试教程](./engineering/IOS_DEPLOY_zh.md) - 从拉代码到真机安装、再到 TestFlight

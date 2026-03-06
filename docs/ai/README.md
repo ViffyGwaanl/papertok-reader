@@ -1,6 +1,6 @@
 # AI Panel UX / Config / Sync — Design & Implementation Notes
 
-> Maintainer note: 本目录记录 **Paper Reader（papertok-reader）** 中 AI/翻译相关的 UX、配置、同步与实现细节。
+> Maintainer note: 本目录记录 **PaperTok Reader（papertok-reader）** 中 AI/翻译相关的 UX、配置、同步与实现细节。
 > 
 > 上游贡献（Anx Reader）目前不是产品交付的必需项；如未来需要上游化，会单独整理成“干净的 contrib track”（不混入 PaperTok/产品专属 UX）。
 
@@ -38,7 +38,8 @@
 
 - Multimodal chat attachments (v1):
   - images + plain text files
-  - max **4** images per send
+  - image/text attachment limits are now **configurable** in Settings → Share & Shortcuts Panel
+  - defaults remain conservative (`4` images, `3` text-like files) as product guardrails rather than iOS platform limits
   - attachments are **not synced** and **not included in backup**
 - EPUB image analysis:
   - tap an image in EPUB → open viewer → analyze with a multimodal model
@@ -75,6 +76,21 @@
   - In compat mode (`responses_use_previous_response_id = OFF`), the client also avoids capturing/replaying `reasoning` transcript items to reduce gateway validation failures.
 - The implementation lives in:
   - `lib/service/ai/openai_responses_chat_model.dart`
+
+#### iOS Share / Shortcuts panel (implemented)
+
+- Share Sheet -> AI / Bookshelf unified settings page exists at:
+  - Settings → AI Tools → Share & Shortcuts Panel
+- Implemented controls include:
+  - default share routing (`auto` / `ai_chat` / `bookshelf` / `ask`)
+  - prompt presets (`title + preview`)
+  - cleanup-after-use + TTL
+  - diagnostics page
+  - **conversation target**: reuse current conversation vs start a new conversation
+  - **attachment limits**: configurable image/text attachment counts
+- Product decision:
+  - normal web share is treated as **URL-first**
+  - richer webpage text / full article should use the existing Shortcuts flow rather than ordinary Share Sheet
 
 #### Deep links (Paper Reader)
 
@@ -155,6 +171,7 @@ All AI/translation/multimodal/image-analysis changes are integrated into `main`.
 - [Backup/restore (Files/iCloud) tech design](./backup_restore_icloud.md)
 - [iOS EventKit 系统工具（Reminders/Calendar）说明（中文）](./eventkit_tools_zh.md)
 - [iOS Shortcuts 工具：回到 App + 回传结果（中文）](./shortcuts_callback_zh.md)
+- [Memory 工作流对齐 OpenClaw（中文）](./memory_workflow_openclaw_alignment_zh.md)
 - [PDF AI chaptering & OCR (MinerU) design](./pdf_ai_chaptering_and_ocr.md)
 - [AI translation design notes](./ai_translation_design.md)
 - [iOS TestFlight build notes](./ios_testflight_build.md)
@@ -180,7 +197,10 @@ dart run build_runner build --delete-conflicting-outputs
 
 ## Memory（长期记忆）
 
-- Memory 的设计与实现对齐 OpenClaw：Markdown 为 source-of-truth，索引为派生缓存，可重建。
+- Memory 的检索层与 OpenClaw 对齐：Markdown 为 source-of-truth，索引为派生缓存，可重建。
 - 现已支持：本地 FTS/BM25 snippet 检索 + 语义检索（Auto-on）+ Hybrid tuning + 可选 MMR/Temporal decay + 后台索引刷新 + embedding cache 控制。
-- 详见：`docs/ai/memory_search_openclaw_alignment_zh.md`
+- 当前尚未完全对齐的是“工作流层”：daily / long-term / review inbox / 写入触发器 / 自动化边界。
+- 详见：
+  - `docs/ai/memory_search_openclaw_alignment_zh.md`
+  - `docs/ai/memory_workflow_openclaw_alignment_zh.md`
 
