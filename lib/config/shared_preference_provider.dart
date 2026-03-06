@@ -111,6 +111,10 @@ class Prefs extends ChangeNotifier {
       'sharePanelCleanupAfterUseV1';
 
   static const String _sharePanelTtlDaysV1Key = 'sharePanelTtlDaysV1';
+  static const String _aiChatImageAttachmentMaxCountV1Key =
+      'aiChatImageAttachmentMaxCountV1';
+  static const String _aiChatTextAttachmentMaxCountV1Key =
+      'aiChatTextAttachmentMaxCountV1';
 
   static const String _userPromptsKey = 'userPrompts';
 
@@ -2227,6 +2231,38 @@ class Prefs extends ChangeNotifier {
     final next = value;
     if (before != next) {
       prefs.setInt(_sharePanelTtlDaysV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  /// Max image attachments sent to AI in a single request.
+  int get aiChatImageAttachmentMaxCountV1 {
+    final v = prefs.getInt(_aiChatImageAttachmentMaxCountV1Key);
+    if (v == null) return 4;
+    return v.clamp(1, 8);
+  }
+
+  set aiChatImageAttachmentMaxCountV1(int value) {
+    final before = aiChatImageAttachmentMaxCountV1;
+    final next = value.clamp(1, 8);
+    if (before != next) {
+      prefs.setInt(_aiChatImageAttachmentMaxCountV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  /// Max text-like file attachments sent to AI in a single request.
+  int get aiChatTextAttachmentMaxCountV1 {
+    final v = prefs.getInt(_aiChatTextAttachmentMaxCountV1Key);
+    if (v == null) return 3;
+    return v.clamp(1, 10);
+  }
+
+  set aiChatTextAttachmentMaxCountV1(int value) {
+    final before = aiChatTextAttachmentMaxCountV1;
+    final next = value.clamp(1, 10);
+    if (before != next) {
+      prefs.setInt(_aiChatTextAttachmentMaxCountV1Key, next);
       notifyListeners();
     }
   }

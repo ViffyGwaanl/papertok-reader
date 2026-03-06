@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:anx_reader/providers/ai_chat.dart';
 import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/app/app_globals.dart';
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,7 +39,8 @@ class PapertokShortcutsHandoffService {
       attachments.add(a);
     }
 
-    for (final b64 in imagesBase64Jpeg.take(4)) {
+    for (final b64
+        in imagesBase64Jpeg.take(Prefs().aiChatImageAttachmentMaxCountV1)) {
       final s = b64.trim();
       if (s.isEmpty) continue;
       final bytes = Uint8List.fromList(base64Decode(s));

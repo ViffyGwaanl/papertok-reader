@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/service/receive_file/docx_plain_text_extractor.dart';
@@ -160,9 +161,11 @@ class AttachmentPickerDialog extends StatelessWidget {
       final images = await picker.pickMultiImage();
       if (images.isEmpty) return const [];
 
-      final isMulti = images.length > 1;
+      final capped =
+          images.take(Prefs().aiChatImageAttachmentMaxCountV1).toList();
+      final isMulti = capped.length > 1;
       final out = <AttachmentItem>[];
-      for (final image in images) {
+      for (final image in capped) {
         final bytes = await image.readAsBytes();
         final item = _bytesToImageAttachment(
           bytes,
@@ -197,10 +200,12 @@ class AttachmentPickerDialog extends StatelessWidget {
 
     if (result == null || result.files.isEmpty) return const [];
 
-    final isMulti = result.files.length > 1;
+    final cappedFiles =
+        result.files.take(Prefs().aiChatImageAttachmentMaxCountV1).toList();
+    final isMulti = cappedFiles.length > 1;
 
     final out = <AttachmentItem>[];
-    for (final file in result.files) {
+    for (final file in cappedFiles) {
       final bytes = file.bytes;
       if (bytes == null || bytes.isEmpty) continue;
       final item = _bytesToImageAttachment(
@@ -221,71 +226,79 @@ class AttachmentPickerDialog extends StatelessWidget {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['txt', 'md', 'log', 'json', 'csv', 'docx'],
+      allowMultiple: true,
       withReadStream: true,
       withData: false,
     );
 
     if (result == null || result.files.isEmpty) return const [];
 
-    final pf = result.files.first;
-    final filename = pf.name;
-    final ext = _extLower(filename);
+    final maxCount = Prefs().aiChatTextAttachmentMaxCountV1;
+    final pickedFiles = result.files.take(maxCount).toList(growable: false);
+    final out = <AttachmentItem>[];
 
-    final path = pf.path;
-    if (path == null || path.trim().isEmpty) {
-      return const [];
-    }
+    for (final pf in pickedFiles) {
+      final filename = pf.name;
+      final ext = _extLower(filename);
+      final path = pf.path;
+      if (path == null || path.trim().isEmpty) {
+        continue;
+      }
 
-    final file = File(path);
+      final file = File(path);
 
-    if (ext == 'docx') {
+      if (ext == 'docx') {
+        try {
+          final len = await file.length();
+          const maxDocxBytes = 25 * 1024 * 1024;
+          if (len <= 0 || len > maxDocxBytes) continue;
+
+          final bytes = Uint8List.fromList(await file.readAsBytes());
+
+          final r = await Isolate.run(() {
+            return DocxPlainTextExtractor.extract(bytes,
+                maxChars: _maxTextChars);
+          });
+
+          final text = r.text.length > _maxTextChars
+              ? r.text.substring(0, _maxTextChars)
+              : r.text;
+
+          out.add(
+            AttachmentItem.textFile(
+              filename: filename,
+              bytes: Uint8List.fromList(utf8.encode(text)),
+              text: text,
+            ),
+          );
+        } catch (_) {
+          continue;
+        }
+        continue;
+      }
+
       try {
-        final len = await file.length();
-        const maxDocxBytes = 25 * 1024 * 1024;
-        if (len <= 0 || len > maxDocxBytes) return const [];
+        final bytes = await _readFileHeadBytes(file, _maxTextFileBytes);
+        if (bytes.isEmpty) continue;
 
-        final bytes = Uint8List.fromList(await file.readAsBytes());
+        final decoded = utf8.decode(bytes, allowMalformed: true);
+        final text = decoded.length > _maxTextChars
+            ? decoded.substring(0, _maxTextChars)
+            : decoded;
 
-        final r = await Isolate.run(() {
-          return DocxPlainTextExtractor.extract(bytes, maxChars: _maxTextChars);
-        });
-
-        final text = r.text.length > _maxTextChars
-            ? r.text.substring(0, _maxTextChars)
-            : r.text;
-
-        return [
+        out.add(
           AttachmentItem.textFile(
             filename: filename,
             bytes: Uint8List.fromList(utf8.encode(text)),
             text: text,
           ),
-        ];
+        );
       } catch (_) {
-        return const [];
+        continue;
       }
     }
 
-    // Plain text path.
-    try {
-      final bytes = await _readFileHeadBytes(file, _maxTextFileBytes);
-      if (bytes.isEmpty) return const [];
-
-      final decoded = utf8.decode(bytes, allowMalformed: true);
-      final text = decoded.length > _maxTextChars
-          ? decoded.substring(0, _maxTextChars)
-          : decoded;
-
-      return [
-        AttachmentItem.textFile(
-          filename: filename,
-          bytes: Uint8List.fromList(utf8.encode(text)),
-          text: text,
-        ),
-      ];
-    } catch (_) {
-      return const [];
-    }
+    return out;
   }
 
   static String _extLower(String filename) {

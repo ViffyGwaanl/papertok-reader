@@ -27,7 +27,9 @@ class ShareToAiService {
   }) async {
     final l10n = L10n.of(context);
 
-    final files = imageFiles.take(4).toList(growable: false);
+    final files = imageFiles
+        .take(Prefs().aiChatImageAttachmentMaxCountV1)
+        .toList(growable: false);
     if (files.isEmpty && prompt.trim().isEmpty) return;
 
     SmartDialog.showLoading();
@@ -102,7 +104,9 @@ class ShareToAiService {
     var mergedPrompt =
         [prefix, content].where((e) => e.trim().isNotEmpty).join('\n\n').trim();
 
-    final files = imageFiles.take(4).toList(growable: false);
+    final files = imageFiles
+        .take(Prefs().aiChatImageAttachmentMaxCountV1)
+        .toList(growable: false);
 
     final mayHaveTextFiles = textFiles.isNotEmpty || docxFiles.isNotEmpty;
 
@@ -175,7 +179,6 @@ class ShareToAiService {
 
   static const int _maxTextChars = 200000;
   static const int _maxTextFileBytes = 900 * 1024;
-  static const int _maxTextFileAttachments = 3;
 
   static Future<List<AttachmentItem>> _buildTextFileAttachments(
     BuildContext context, {
@@ -183,6 +186,7 @@ class ShareToAiService {
     required List<File> docxFiles,
   }) async {
     final out = <AttachmentItem>[];
+    final maxTextFileAttachments = Prefs().aiChatTextAttachmentMaxCountV1;
 
     Future<void> addTextAttachment({
       required String filename,
@@ -205,7 +209,7 @@ class ShareToAiService {
     }
 
     for (final f in textFiles) {
-      if (out.length >= _maxTextFileAttachments) break;
+      if (out.length >= maxTextFileAttachments) break;
       final filename = f.path.split(Platform.pathSeparator).last;
 
       try {
@@ -219,7 +223,7 @@ class ShareToAiService {
     }
 
     for (final f in docxFiles) {
-      if (out.length >= _maxTextFileAttachments) break;
+      if (out.length >= maxTextFileAttachments) break;
       final filename = f.path.split(Platform.pathSeparator).last;
 
       try {

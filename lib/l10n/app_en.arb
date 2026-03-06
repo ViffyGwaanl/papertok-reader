@@ -838,6 +838,22 @@
 
   "settingsSharePanelCleanupAfterUse": "Cleanup shared files after handling",
   "settingsSharePanelCleanupAfterUseDesc": "Delete temporary shared files after processing to save disk space.",
+  "settingsShareConversationModeTitle": "Send to AI: Conversation target",
+  "settingsShareConversationModeDesc": "Choose whether shared content reuses the current conversation or starts a new one.",
+  "settingsShareConversationModeReuse": "Reuse current conversation",
+  "settingsShareConversationModeNew": "Start new conversation",
+  "settingsAiChatImageAttachmentMaxCountTitle": "AI chat image attachment limit",
+  "settingsAiChatImageAttachmentMaxCountDesc": "Upper limit for images attached in one send. This is a product guardrail, not an iOS system limit.",
+  "settingsAiChatTextAttachmentMaxCountTitle": "AI chat text attachment limit",
+  "settingsAiChatTextAttachmentMaxCountDesc": "Upper limit for text-like files (txt/md/docx/json/csv) attached in one send.",
+  "settingsAiChatAttachmentCount": "{count} items",
+  "@settingsAiChatAttachmentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settingsShareInboxDiagnosticsTitle": "Share inbox diagnostics",
   "settingsShareInboxDiagnosticsDesc": "View recent share events and run cleanup.",
   "settingsShareInboxCleanupNowTitle": "Cleanup",

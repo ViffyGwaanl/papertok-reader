@@ -838,6 +838,22 @@
 
   "settingsSharePanelCleanupAfterUse": "处理后清理分享文件",
   "settingsSharePanelCleanupAfterUseDesc": "将分享进来的临时文件在处理完成后删除，以节省空间。",
+  "settingsShareConversationModeTitle": "发送到 AI：会话目标",
+  "settingsShareConversationModeDesc": "选择分享内容是复用当前会话，还是新建会话发送。",
+  "settingsShareConversationModeReuse": "复用当前会话",
+  "settingsShareConversationModeNew": "新建会话",
+  "settingsAiChatImageAttachmentMaxCountTitle": "AI 对话图片附件上限",
+  "settingsAiChatImageAttachmentMaxCountDesc": "单次发送附带图片的上限。这是产品侧的保护限制，不是 iOS 系统限制。",
+  "settingsAiChatTextAttachmentMaxCountTitle": "AI 对话文本附件上限",
+  "settingsAiChatTextAttachmentMaxCountDesc": "单次发送附带文本类文件（txt/md/docx/json/csv）的上限。",
+  "settingsAiChatAttachmentCount": "{count} 份",
+  "@settingsAiChatAttachmentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settingsShareInboxDiagnosticsTitle": "分享收件箱诊断",
   "settingsShareInboxDiagnosticsDesc": "查看最近的分享事件与清理状态。",
   "settingsShareInboxCleanupNowTitle": "清理",
