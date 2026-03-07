@@ -17,6 +17,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:image/image.dart' as img;
 
+enum ShareToAiSendStatus {
+  success,
+  skipped,
+  failed,
+}
+
 class ShareToAiService {
   ShareToAiService._();
 
@@ -88,7 +94,7 @@ class ShareToAiService {
     }
   }
 
-  static Future<void> sendToAiChatFromShare(
+  static Future<ShareToAiSendStatus> sendToAiChatFromShare(
     BuildContext context, {
     required String sharedText,
     required List<File> imageFiles,
@@ -111,7 +117,7 @@ class ShareToAiService {
     final mayHaveTextFiles = textFiles.isNotEmpty || docxFiles.isNotEmpty;
 
     if (files.isEmpty && mergedPrompt.isEmpty && !mayHaveTextFiles) {
-      return;
+      return ShareToAiSendStatus.skipped;
     }
 
     SmartDialog.showLoading();
@@ -125,7 +131,7 @@ class ShareToAiService {
 
       if (files.isEmpty && mergedPrompt.isEmpty && textAttachments.isEmpty) {
         SmartDialog.dismiss(status: SmartStatus.loading);
-        return;
+        return ShareToAiSendStatus.skipped;
       }
 
       if (mergedPrompt.isEmpty && textAttachments.isNotEmpty) {
@@ -153,7 +159,9 @@ class ShareToAiService {
 
       if (!ok) {
         AnxLog.warning('share->ai_chat handoff failed');
+        return ShareToAiSendStatus.failed;
       }
+      return ShareToAiSendStatus.success;
     } catch (e, st) {
       SmartDialog.dismiss(status: SmartStatus.loading);
       AnxLog.warning('share->ai_chat failed: $e', e, st);
@@ -174,6 +182,7 @@ class ShareToAiService {
           );
         },
       );
+      return ShareToAiSendStatus.failed;
     }
   }
 

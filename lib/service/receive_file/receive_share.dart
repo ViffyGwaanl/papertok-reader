@@ -56,17 +56,56 @@ void receiveShareIntent(WidgetRef ref) {
         }
       }
 
+      final sharedText = (media.content ?? '').trim();
+      final urls = _extractUrls(sharedText);
+
       final payload = ShareInboundPayload(
-        sharedText: (media.content ?? '').trim(),
-        urls: const [],
+        sharedText: sharedText,
+        urls: urls,
         images: images,
         files: files,
       );
+
+      final diagnosticId = ShareInboxDiagnosticsStore.newId();
+      final providerTypes = <String>{
+        for (final a in attachments)
+          if (a != null) a.type.name,
+        if (sharedText.isNotEmpty) 'text',
+        if (urls.isNotEmpty) 'url',
+      }.toList(growable: false)
+        ..sort();
 
       if (!payload.hasText &&
           !payload.hasUrls &&
           !payload.hasImages &&
           payload.files.isEmpty) {
+        ShareInboxDiagnosticsStore.append(
+          ShareInboundEvent(
+            id: diagnosticId,
+            atMs: DateTime.now().millisecondsSinceEpoch,
+            source: 'share',
+            sourceType: 'empty',
+            mode: Prefs().sharePanelModeV1,
+            destination: 'none',
+            textLen: 0,
+            images: 0,
+            files: 0,
+            textFiles: 0,
+            docxFiles: 0,
+            bookshelfFiles: 0,
+            otherFiles: 0,
+            urlCount: 0,
+            urlHosts: const [],
+            titlePresent: false,
+            providerTypes: providerTypes,
+            eventIds: const [],
+            receiveStatus: 'ignored_empty',
+            routingStatus: 'skipped',
+            handoffStatus: 'skipped',
+            cleanupStatus: 'skipped',
+            failureReason: '',
+          ),
+        );
         AnxLog.info('share: Receive share intent: empty payload');
         return;
       }
@@ -88,10 +127,15 @@ void receiveShareIntent(WidgetRef ref) {
         if (info != null) eventIds.add(info.eventId);
       }
 
+      final titlePresent = _titlePresent(payload.sharedText, payload.urls);
+      final cleanupEnabled = Prefs().sharePanelCleanupAfterUseV1;
+
       ShareInboxDiagnosticsStore.append(
         ShareInboundEvent(
+          id: diagnosticId,
           atMs: DateTime.now().millisecondsSinceEpoch,
           source: 'share',
+          sourceType: _sourceTypeForPayload(payload),
           mode: modeRaw,
           destination: decision.destination.name,
           textLen: payload.sharedText.length,
@@ -101,19 +145,52 @@ void receiveShareIntent(WidgetRef ref) {
           docxFiles: payload.docxFiles.length,
           bookshelfFiles: payload.bookshelfFiles.length,
           otherFiles: payload.otherFiles.length,
+          urlCount: payload.urls.length,
+          urlHosts: _urlHosts(payload.urls),
+          titlePresent: titlePresent,
+          providerTypes: providerTypes,
           eventIds: eventIds,
-          cleanupStatus: 'pending',
+          receiveStatus: 'received',
+          routingStatus: 'pending',
+          handoffStatus: 'pending',
+          cleanupStatus: _initialCleanupStatus(
+            cleanupEnabled: cleanupEnabled,
+            eventIds: eventIds,
+          ),
+          failureReason: '',
         ),
       );
 
       switch (decision.destination) {
         case ShareDestination.askUser:
-          await _showAskThenRoute(payload, ref);
+          ShareInboxDiagnosticsStore.updateById(
+            diagnosticId,
+            (e) => e.copyWith(routingStatus: 'ask'),
+          );
+          await _showAskThenRoute(
+            payload,
+            ref,
+            diagnosticId: diagnosticId,
+            cleanupEnabled: cleanupEnabled,
+            eventIds: eventIds,
+          );
           return;
 
         case ShareDestination.bookshelf:
+          ShareInboxDiagnosticsStore.updateById(
+            diagnosticId,
+            (e) => e.copyWith(routingStatus: 'bookshelf'),
+          );
           final ctx = await _waitForNavigatorContext();
           if (ctx == null) {
+            ShareInboxDiagnosticsStore.updateById(
+              diagnosticId,
+              (e) => e.copyWith(
+                handoffStatus: 'error',
+                cleanupStatus: 'skipped',
+                failureReason: 'navigator_context_not_ready',
+              ),
+            );
             AnxLog.warning(
                 'share: navigator context not ready; dropping payload');
             return;
@@ -122,11 +199,29 @@ void receiveShareIntent(WidgetRef ref) {
             decision.bookshelfImportFiles,
           );
 
-          if (importFiles.isEmpty) return;
+          if (importFiles.isEmpty) {
+            ShareInboxDiagnosticsStore.updateById(
+              diagnosticId,
+              (e) => e.copyWith(
+                handoffStatus: 'skipped',
+                cleanupStatus: 'skipped',
+                failureReason: 'empty_import_files',
+              ),
+            );
+            return;
+          }
 
           importBookList(importFiles, ctx, ref);
+          final shouldCleanupNow = cleanupEnabled && eventIds.isNotEmpty;
+          ShareInboxDiagnosticsStore.updateById(
+            diagnosticId,
+            (e) => e.copyWith(
+              handoffStatus: 'success',
+              cleanupStatus: shouldCleanupNow ? e.cleanupStatus : 'skipped',
+            ),
+          );
 
-          if (Prefs().sharePanelCleanupAfterUseV1) {
+          if (shouldCleanupNow) {
             // Best-effort: cleanup empty event dirs after import (import deletes files).
             Future<void>.delayed(const Duration(seconds: 2), () {
               ShareInboxCleanupService.cleanupEventDirsIfSafe(
@@ -138,7 +233,18 @@ void receiveShareIntent(WidgetRef ref) {
           return;
 
         case ShareDestination.aiChat:
-          await _applyDecision(decision, payload, ref);
+          ShareInboxDiagnosticsStore.updateById(
+            diagnosticId,
+            (e) => e.copyWith(routingStatus: 'ai_chat'),
+          );
+          await _applyDecision(
+            decision,
+            payload,
+            ref,
+            diagnosticId: diagnosticId,
+            cleanupEnabled: cleanupEnabled,
+            eventIds: eventIds,
+          );
           return;
       }
     } finally {
@@ -150,12 +256,66 @@ void receiveShareIntent(WidgetRef ref) {
   handler.sharedMediaStream.listen((SharedMedia media) {
     handleShare(media);
   }, onError: (err, st) {
+    ShareInboxDiagnosticsStore.append(
+      ShareInboundEvent(
+        id: ShareInboxDiagnosticsStore.newId(),
+        atMs: DateTime.now().millisecondsSinceEpoch,
+        source: 'share',
+        sourceType: 'stream_error',
+        mode: Prefs().sharePanelModeV1,
+        destination: 'unknown',
+        textLen: 0,
+        images: 0,
+        files: 0,
+        textFiles: 0,
+        docxFiles: 0,
+        bookshelfFiles: 0,
+        otherFiles: 0,
+        urlCount: 0,
+        urlHosts: const [],
+        titlePresent: false,
+        providerTypes: const [],
+        eventIds: const [],
+        receiveStatus: 'error',
+        routingStatus: 'error',
+        handoffStatus: 'error',
+        cleanupStatus: 'skipped',
+        failureReason: err.toString(),
+      ),
+    );
     AnxLog.severe('share: Receive share intent stream error: $err', err, st);
   });
 
   handler.getInitialSharedMedia().then((media) {
     handleShare(media);
   }, onError: (err, st) {
+    ShareInboxDiagnosticsStore.append(
+      ShareInboundEvent(
+        id: ShareInboxDiagnosticsStore.newId(),
+        atMs: DateTime.now().millisecondsSinceEpoch,
+        source: 'share',
+        sourceType: 'initial_error',
+        mode: Prefs().sharePanelModeV1,
+        destination: 'unknown',
+        textLen: 0,
+        images: 0,
+        files: 0,
+        textFiles: 0,
+        docxFiles: 0,
+        bookshelfFiles: 0,
+        otherFiles: 0,
+        urlCount: 0,
+        urlHosts: const [],
+        titlePresent: false,
+        providerTypes: const [],
+        eventIds: const [],
+        receiveStatus: 'error',
+        routingStatus: 'error',
+        handoffStatus: 'error',
+        cleanupStatus: 'skipped',
+        failureReason: err.toString(),
+      ),
+    );
     AnxLog.severe('share: Receive share intent initial error: $err', err, st);
   });
 }
@@ -177,8 +337,11 @@ SharePanelMode _mapSharePanelMode(String raw) {
 Future<void> _applyDecision(
   ShareDecision decision,
   ShareInboundPayload payload,
-  WidgetRef ref,
-) async {
+  WidgetRef ref, {
+  required String diagnosticId,
+  required bool cleanupEnabled,
+  required List<String> eventIds,
+}) async {
   // Enqueue bookshelf files as UI-only cards (policy B).
   _enqueueBookImportCards(decision.bookshelfFileCards);
 
@@ -193,12 +356,35 @@ Future<void> _applyDecision(
     // No prompt/images to send; still open the AI tab if we have cards.
     if (hasCards) {
       await PapertokAiChatNavigator.show();
+      ShareInboxDiagnosticsStore.updateById(
+        diagnosticId,
+        (e) => e.copyWith(
+          handoffStatus: 'cards_only',
+          cleanupStatus: 'skipped',
+        ),
+      );
+    } else {
+      ShareInboxDiagnosticsStore.updateById(
+        diagnosticId,
+        (e) => e.copyWith(
+          handoffStatus: 'skipped',
+          cleanupStatus: 'skipped',
+        ),
+      );
     }
     return;
   }
 
   final ctx = await _waitForNavigatorContext();
   if (ctx == null) {
+    ShareInboxDiagnosticsStore.updateById(
+      diagnosticId,
+      (e) => e.copyWith(
+        handoffStatus: 'error',
+        cleanupStatus: 'skipped',
+        failureReason: 'navigator_context_not_ready',
+      ),
+    );
     AnxLog.warning('share: navigator context not ready; dropping payload');
     return;
   }
@@ -209,7 +395,7 @@ Future<void> _applyDecision(
   final textFiles = payload.textFiles.map((e) => File(e.path)).toList();
   final docxFiles = payload.docxFiles.map((e) => File(e.path)).toList();
 
-  await ShareToAiService.sendToAiChatFromShare(
+  final sendStatus = await ShareToAiService.sendToAiChatFromShare(
     ctx,
     sharedText: payload.sharedText,
     imageFiles: imageFiles,
@@ -217,7 +403,27 @@ Future<void> _applyDecision(
     docxFiles: docxFiles,
   );
 
-  if (Prefs().sharePanelCleanupAfterUseV1 && !hasCards) {
+  final shouldCleanupNow = cleanupEnabled &&
+      eventIds.isNotEmpty &&
+      !hasCards &&
+      sendStatus == ShareToAiSendStatus.success;
+
+  ShareInboxDiagnosticsStore.updateById(
+    diagnosticId,
+    (e) => e.copyWith(
+      handoffStatus: switch (sendStatus) {
+        ShareToAiSendStatus.success => 'success',
+        ShareToAiSendStatus.skipped => 'skipped',
+        ShareToAiSendStatus.failed => 'error',
+      },
+      cleanupStatus: shouldCleanupNow ? e.cleanupStatus : 'skipped',
+      failureReason: sendStatus == ShareToAiSendStatus.failed
+          ? 'share_to_ai_failed'
+          : e.failureReason,
+    ),
+  );
+
+  if (shouldCleanupNow) {
     // Safe to cleanup only when there are no pending bookshelf cards.
     final allPaths = <String>[
       ...payload.images.map((e) => e.path),
@@ -251,9 +457,22 @@ void _enqueueBookImportCards(List<ShareInboundFile> cards) {
 }
 
 Future<void> _showAskThenRoute(
-    ShareInboundPayload payload, WidgetRef ref) async {
+  ShareInboundPayload payload,
+  WidgetRef ref, {
+  required String diagnosticId,
+  required bool cleanupEnabled,
+  required List<String> eventIds,
+}) async {
   final ctx = await _waitForNavigatorContext();
   if (ctx == null) {
+    ShareInboxDiagnosticsStore.updateById(
+      diagnosticId,
+      (e) => e.copyWith(
+        handoffStatus: 'error',
+        cleanupStatus: 'skipped',
+        failureReason: 'navigator_context_not_ready',
+      ),
+    );
     AnxLog.warning('share: navigator context not ready; dropping payload');
     return;
   }
@@ -306,18 +525,43 @@ Future<void> _showAskThenRoute(
     },
   );
 
-  if (choice == null) return;
+  if (choice == null) {
+    ShareInboxDiagnosticsStore.updateById(
+      diagnosticId,
+      (e) => e.copyWith(
+        routingStatus: 'cancelled',
+        handoffStatus: 'cancelled',
+        cleanupStatus: 'skipped',
+      ),
+    );
+    return;
+  }
 
   switch (choice) {
     case ShareDestination.aiChat:
+      ShareInboxDiagnosticsStore.updateById(
+        diagnosticId,
+        (e) => e.copyWith(routingStatus: 'ai_chat'),
+      );
       final d = ShareInboundDecider.decide(
         mode: SharePanelMode.aiChat,
         payload: payload,
       );
-      await _applyDecision(d, payload, ref);
+      await _applyDecision(
+        d,
+        payload,
+        ref,
+        diagnosticId: diagnosticId,
+        cleanupEnabled: cleanupEnabled,
+        eventIds: eventIds,
+      );
       return;
 
     case ShareDestination.bookshelf:
+      ShareInboxDiagnosticsStore.updateById(
+        diagnosticId,
+        (e) => e.copyWith(routingStatus: 'bookshelf'),
+      );
       final d = ShareInboundDecider.decide(
         mode: SharePanelMode.bookshelf,
         payload: payload,
@@ -325,11 +569,29 @@ Future<void> _showAskThenRoute(
       final importFiles = await ShareSafeImport.prepareImportFiles(
         d.bookshelfImportFiles,
       );
-      if (importFiles.isEmpty) return;
+      if (importFiles.isEmpty) {
+        ShareInboxDiagnosticsStore.updateById(
+          diagnosticId,
+          (e) => e.copyWith(
+            handoffStatus: 'skipped',
+            cleanupStatus: 'skipped',
+            failureReason: 'empty_import_files',
+          ),
+        );
+        return;
+      }
 
       importBookList(importFiles, ctx, ref);
+      final shouldCleanupNow = cleanupEnabled && eventIds.isNotEmpty;
+      ShareInboxDiagnosticsStore.updateById(
+        diagnosticId,
+        (e) => e.copyWith(
+          handoffStatus: 'success',
+          cleanupStatus: shouldCleanupNow ? e.cleanupStatus : 'skipped',
+        ),
+      );
 
-      if (Prefs().sharePanelCleanupAfterUseV1) {
+      if (shouldCleanupNow) {
         Future<void>.delayed(const Duration(seconds: 2), () {
           ShareInboxCleanupService.cleanupEventDirsIfSafe(
             eventDirs: d.bookshelfImportFiles,
@@ -343,6 +605,75 @@ Future<void> _showAskThenRoute(
       // Not reachable.
       return;
   }
+}
+
+List<Uri> _extractUrls(String text) {
+  final out = <Uri>[];
+  final matches = RegExp(r'https?://\S+', caseSensitive: false)
+      .allMatches(text)
+      .map((m) => m.group(0) ?? '');
+  for (final raw in matches) {
+    final cleaned = raw.replaceAll(RegExp(r'[),.;]+$'), '');
+    final uri = Uri.tryParse(cleaned);
+    if (uri == null) continue;
+    if (!uri.hasScheme || uri.host.trim().isEmpty) continue;
+    if (!out.any((e) => e.toString() == uri.toString())) {
+      out.add(uri);
+    }
+  }
+  return out;
+}
+
+bool _titlePresent(String text, List<Uri> urls) {
+  var remaining = text;
+  for (final url in urls) {
+    remaining = remaining.replaceAll(url.toString(), ' ');
+  }
+  final lines = remaining
+      .split(RegExp(r'\r?\n'))
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList(growable: false);
+  return lines.isNotEmpty;
+}
+
+String _sourceTypeForPayload(ShareInboundPayload payload) {
+  final titleOnlyText = !_titlePresent(payload.sharedText, payload.urls);
+  if (payload.urls.isNotEmpty &&
+      !payload.hasImages &&
+      payload.files.isEmpty &&
+      titleOnlyText) {
+    return 'web_url_only';
+  }
+  if (payload.urls.isNotEmpty) return 'web_or_link';
+  if (payload.docxFiles.isNotEmpty) return 'docx';
+  if (payload.textFiles.isNotEmpty) return 'text';
+  if (payload.bookshelfFiles.isNotEmpty && !payload.hasAiContent) {
+    return 'bookshelf';
+  }
+  if (payload.images.isNotEmpty && payload.files.isEmpty) return 'images';
+  if (payload.files.isNotEmpty) return 'files';
+  if (payload.hasText) return 'text_only';
+  return 'unknown';
+}
+
+String _initialCleanupStatus({
+  required bool cleanupEnabled,
+  required List<String> eventIds,
+}) {
+  if (!cleanupEnabled || eventIds.isEmpty) {
+    return 'skipped';
+  }
+  return 'pending';
+}
+
+List<String> _urlHosts(List<Uri> urls) {
+  final hosts = <String>{};
+  for (final url in urls) {
+    final host = url.host.trim().toLowerCase();
+    if (host.isNotEmpty) hosts.add(host);
+  }
+  return hosts.toList(growable: false)..sort();
 }
 
 Future<BuildContext?> _waitForNavigatorContext({
