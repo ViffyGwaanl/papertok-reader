@@ -15,6 +15,7 @@ import 'package:anx_reader/service/ai/ai_history.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/enums/ai_thinking_mode.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
+import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/memory/memory_workflow_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
@@ -1058,10 +1059,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       return;
     }
 
-    ref.read(aiChatProvider.notifier).clear();
-    setState(() {
-      _suggestedPrompts = _pickSuggestedPrompts();
-    });
+    unawaited(_endCurrentSession());
   }
 
   Future<void> _showAttachmentPicker() async {
@@ -1238,6 +1236,124 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return _buildCopyableText(parsed, content).trim();
   }
 
+  Future<bool> _confirmLongTermWrite(String previewText) async {
+    final prefs = Prefs();
+    if (!prefs.memoryLongTermConfirmEnabled) {
+      return true;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final l10n = L10n.of(context);
+        return AlertDialog(
+          title: Text(l10n.memoryLongTermConfirmDialogTitle),
+          content: Text(
+            l10n.memoryLongTermConfirmDialogBody(
+              previewText.trim().replaceAll(RegExp(r'\s+'), ' '),
+            ),
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.commonConfirm),
+            ),
+          ],
+        );
+      },
+    );
+
+    return confirmed == true;
+  }
+
+  Future<void> _endCurrentSession() async {
+    if (_isStreaming) {
+      return;
+    }
+
+    final messages =
+        ref.read(aiChatProvider).asData?.value ?? const <ChatMessage>[];
+    if (messages.isEmpty) {
+      _clearCurrentConversationState();
+      return;
+    }
+
+    final prefs = Prefs();
+    final l10n = L10n.of(context);
+    final dailyStrategy = prefs.memoryWorkflowDailyStrategy;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final body = !prefs.memorySessionDigestEnabled
+            ? l10n.aiChatEndSessionBodyNoDigest
+            : dailyStrategy == MemoryWorkflowDailyStrategy.autoDaily
+                ? l10n.aiChatEndSessionBodyAutoDaily
+                : l10n.aiChatEndSessionBodyReviewInbox;
+        return AlertDialog(
+          title: Text(l10n.aiChatEndSessionTitle),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.aiChatEndSessionAction),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    ref.read(aiChatProvider.notifier).persistCurrentConversation(ref);
+
+    if (prefs.memorySessionDigestEnabled) {
+      try {
+        final result = await _memoryWorkflow.captureSessionDigest(
+          messages: messages,
+          dailyStrategy: dailyStrategy,
+          conversationId: ref.read(aiChatProvider.notifier).currentSessionId,
+        );
+        if (!mounted) return;
+        if (result.candidates.isEmpty) {
+          AnxToast.show(l10n.memorySessionDigestNoCandidates);
+        } else if (result.writesDailyDirectly) {
+          AnxToast.show(
+            l10n.memorySessionDigestSavedToDaily(result.candidates.length),
+          );
+        } else {
+          AnxToast.show(
+            l10n.memorySessionDigestAddedToInbox(result.candidates.length),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        AnxToast.show('${l10n.memoryWorkflowActionFailed}: $e');
+        return;
+      }
+    }
+
+    _clearCurrentConversationState();
+  }
+
+  void _clearCurrentConversationState() {
+    ref.read(aiChatProvider.notifier).clear();
+    setState(() {
+      _suggestedPrompts = _pickSuggestedPrompts();
+    });
+  }
+
   Future<void> _handleMessageMemoryAction(
     _MessageMemoryAction action, {
     required String text,
@@ -1266,6 +1382,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           AnxToast.show(l10n.memorySavedToDaily);
           break;
         case _MessageMemoryAction.saveToLongTerm:
+          final confirmed = await _confirmLongTermWrite(normalized);
+          if (!confirmed) {
+            return;
+          }
           await _memoryWorkflow.saveToLongTerm(
             text: normalized,
             sourceType: sourceType,
@@ -1892,6 +2012,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
           IconButton(
             icon: const Icon(Icons.edit_document),
+            tooltip: L10n.of(context).aiChatEndSessionAction,
             onPressed: _clearMessage,
           ),
           if (widget.trailing != null) ...widget.trailing!,

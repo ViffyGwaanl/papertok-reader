@@ -79,15 +79,25 @@
   - provider / host / eventId / failureReason
 - 修复成功事件被误显示为 `pending` 的状态语义问题。
 
-### 1.7 Memory M1（manual-first，2026-03-07）
+### 1.7 Memory M1 / M1.5 / M2（2026-03-07）
 
 - workflow state 与 memory index cache 分离。
-- 显式入口已交付：
+- 聊天显式入口已交付：
   - 保存到今日日记
   - 保存到长期记忆
   - 加入 Review Inbox
-- Memory 设置页最小 Review Inbox UI 已交付。
+- 会话结束入口已交付：
+  - 结束当前会话时生成 0-3 条 session digest candidate
+  - 默认进入 Review Inbox，可切换为自动写入今日日记
+- Memory 设置页已支持：
+  - 最小 Review Inbox UI
+  - session digest 开关
+  - automated daily 路由切换
+  - 长期记忆二次确认开关
 - Markdown memory 写入已统一经过协调器，减少并发写路径踩踏风险。
+- 仍保持产品边界：
+  - long-term 默认确认后写入
+  - 不支持 silent auto-write 到 long-term
 
 ### 1.8 低风险命名收口（2026-03-07）
 
@@ -105,12 +115,12 @@
 
 ### 2.1 Memory 工作流后续阶段（P1）
 
-M1 已完成；下一阶段仍待补齐：
+M1.5 / M2 的稳定子集已完成；当前剩余增强项主要是：
 
-- session-end candidate digest
-- optional auto-daily
-- 更细的自动化边界与策略开关
 - Review Inbox 的来源跳转 / 更完整审阅体验
+- daily -> long-term 的周期性整理入口
+- 更激进但仍可解释的 auto-daily 规则（如仅高置信度 / 更丰富触发器）
+- 端到端真机回归与体验微调
 
 详见：`docs/ai/memory_workflow_openclaw_alignment_zh.md`
 
@@ -143,11 +153,11 @@ M1 已完成；下一阶段仍待补齐：
 - 如需新测试包，继续使用离线 TestFlight 流程：
   - `FLUTTER_NO_PUB=true FORCE_MANUAL_SIGNING=1 ./scripts/tf_from_commit.sh HEAD`
 
-### Step 2（Memory M1.5 / M2）
+### Step 2（Memory 后续增强）
 
-- session-end candidate digest
-- auto-daily 开关与行为细化
-- Review Inbox 体验增强
+- Review Inbox 体验增强（来源跳转 / 更多上下文）
+- daily -> long-term 整理入口
+- auto-daily 规则细化与真机体验回归
 
 ### Step 3（命名第二阶段）
 

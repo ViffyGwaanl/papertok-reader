@@ -681,6 +681,39 @@
   "memoryAddedToReviewInbox": "已加入待审核队列",
   "memoryWorkflowActionFailed": "记忆操作失败",
   "memoryWorkflowNothingToSave": "没有可保存的内容",
+  "memoryWorkflowSettingsTitle": "工作流",
+  "memorySessionDigestEnabledTitle": "结束会话时生成记忆候选",
+  "memorySessionDigestEnabledDesc": "结束当前 AI 会话时，从本轮对话里整理最多 3 条记忆候选。",
+  "memoryDailyWorkflowStrategyTitle": "自动 daily 路由",
+  "memoryDailyWorkflowStrategyDesc": "控制系统生成 / 会话整理得到的 daily 候选去向；显式点击“保存到今日日记”仍会直接写入。",
+  "memoryDailyWorkflowStrategyReviewInbox": "进入待审队列",
+  "memoryDailyWorkflowStrategyAutoDaily": "自动写入今天",
+  "memoryLongTermConfirmTitle": "写入长期记忆前二次确认",
+  "memoryLongTermConfirmDesc": "默认对长期记忆保守一些：写入前再确认一次。",
+  "memoryLongTermConfirmDialogTitle": "写入长期记忆？",
+  "memoryLongTermConfirmDialogBody": "这会写入 MEMORY.md。预览：{preview}",
+  "@memoryLongTermConfirmDialogBody": {
+    "placeholders": {
+      "preview": {}
+    }
+  },
+  "memorySessionDigestNoCandidates": "这轮会话里没有整理出合适的记忆候选。",
+  "memorySessionDigestAddedToInbox": "{count, plural, =1{已把 1 条会话候选加入待审队列} other{已把 {count} 条会话候选加入待审队列}}",
+  "@memorySessionDigestAddedToInbox": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memorySessionDigestSavedToDaily": "{count, plural, =1{已把 1 条会话候选写入今日日记} other{已把 {count} 条会话候选写入今日日记}}",
+  "@memorySessionDigestSavedToDaily": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "memoryMessageActionsTooltip": "记忆操作",
   "memorySelectTextToInsert": "请选择要插入到 AI 输入框的文本",
   "memoryInsertedToAiInput": "已插入到 AI 输入框",
@@ -841,5 +874,10 @@
   "papersEpubEditionZh": "中文",
   "papersEpubEditionBilingual": "双语",
   "papersTabExplain": "讲解",
-  "papersTabOriginal": "原文"
+  "papersTabOriginal": "原文",
+  "aiChatEndSessionTitle": "结束当前会话？",
+  "aiChatEndSessionBodyNoDigest": "当前会话会保留在历史记录里，然后开始一个全新的会话。",
+  "aiChatEndSessionBodyReviewInbox": "当前会话会保留在历史记录里，然后从本轮对话整理最多 3 条记忆候选，加入待审队列。",
+  "aiChatEndSessionBodyAutoDaily": "当前会话会保留在历史记录里，然后从本轮对话整理最多 3 条记忆候选，并自动写入今日日记。",
+  "aiChatEndSessionAction": "结束会话"
 }

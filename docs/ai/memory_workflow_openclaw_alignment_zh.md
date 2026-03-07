@@ -2,7 +2,7 @@
 
 > 目标：在**不推翻现有 Memory 检索层**的前提下，把 PaperTok Reader 的 Memory 从“可检索的 Markdown 记忆库”补齐为“**daily + long-term + review inbox**”的完整工作流。
 >
-> 2026-03-07 更新：M1（manual-first）已落地，包含候选 workflow store 与索引 cache 分离、聊天显式保存到 daily / long-term、加入 review inbox、Memory 设置页最小 Review Inbox UI，以及统一的 Markdown memory 写协调器。silent auto-write / session-end candidate digest 仍未实现。
+> 2026-03-07 更新：M1（manual-first）已落地，包含候选 workflow store 与索引 cache 分离、聊天显式保存到 daily / long-term、加入 review inbox、Memory 设置页最小 Review Inbox UI，以及统一的 Markdown memory 写协调器。M1.5 / M2 现已补齐一版产品可用收口：结束会话时可生成 session digest；自动化候选可在“进入 Review Inbox / 自动写入今日日记”之间切换；长期记忆默认保持二次确认；仍不支持 silent auto-write 到 long-term。
 
 ## 1. 当前状态（As-Is）
 
@@ -239,25 +239,30 @@ Markdown 继续作为最终记忆内容的 source-of-truth；
 
 ## 6.1 设置页
 
-新增 3 个设置项：
+当前已落地 3 个设置项：
 
-- 自动保存到今日日记
+- 结束会话时生成记忆候选
+- 自动 daily 路由：`进入 Review Inbox` / `自动写入今天`
 - 长期记忆写入前需要确认
+
+本轮未落地、继续保留为后续增强：
+
 - 周期性整理 daily 为长期候选
-
-可选高级设置：
-
-- 自动静默保存到 daily（默认关闭）
+- 更细粒度的自动静默 daily 规则（例如仅高置信度）
 - 语义记忆检索（embedding provider disclosure）
 - 备份时默认是否包含 memory/
 
 ## 6.2 对话页入口
 
-在 AI 聊天页的 user / assistant message 上增加轻量操作：
+在 AI 聊天页当前已提供两类入口：
 
-- 保存到今日日记
-- 保存为长期记忆
-- 加入待审队列
+- user / assistant message 轻量操作：
+  - 保存到今日日记
+  - 保存为长期记忆
+  - 加入待审队列
+- 会话结束入口：
+  - 结束当前会话时，按设置生成 0–3 条 session digest 候选
+  - 默认进入 Review Inbox；可切换为自动写入今日日记
 
 ## 6.3 Memory 页结构
 
@@ -350,15 +355,19 @@ Markdown 继续作为最终记忆内容的 source-of-truth；
 - Review Inbox 支持提升到 `MEMORY.md`
 - long-term 仍然是显式触发，不做 silent auto-write
 
-### P3 — Session-end candidate digest
+### P3 — Session-end candidate digest（已完成 / M1.5）
 
-- 会话结束后生成 0–3 条 candidate
-- 先进 Inbox，不直接写入 long-term
+- 结束当前聊天会话时，可生成 0–3 条 session candidate
+- 默认进入 Review Inbox，不直接写入 long-term
+- 当前采用产品安全优先的本地整理策略，不依赖 silent long-term write
 
-### P4 — 可选自动 daily
+### P4 — 可选自动 daily（已完成 / M2 的稳定子集）
 
-- 开启后，某些高置信度 candidate 自动写 daily
+- 设置页可切换 automated/session candidate 的 daily 路由：
+  - `Review Inbox`
+  - `Auto-save to today`
 - long-term 仍然要求确认
+- 本轮未做“后台静默自动抓取任意候选并自动写 daily”的激进模式
 
 ## 10. 结论
 

@@ -786,6 +786,39 @@
   "memoryAddedToReviewInbox": "Added to review inbox",
   "memoryWorkflowActionFailed": "Memory action failed",
   "memoryWorkflowNothingToSave": "Nothing to save to memory",
+  "memoryWorkflowSettingsTitle": "Workflow",
+  "memorySessionDigestEnabledTitle": "Generate session candidates when ending chat",
+  "memorySessionDigestEnabledDesc": "When you end the current AI chat, create up to 3 memory candidates from the session.",
+  "memoryDailyWorkflowStrategyTitle": "Automated daily route",
+  "memoryDailyWorkflowStrategyDesc": "Controls where automated/session-generated daily candidates go. Explicit \"Save to daily\" still writes directly.",
+  "memoryDailyWorkflowStrategyReviewInbox": "Review inbox",
+  "memoryDailyWorkflowStrategyAutoDaily": "Auto-save to today",
+  "memoryLongTermConfirmTitle": "Confirm before writing long-term memory",
+  "memoryLongTermConfirmDesc": "By default, long-term memory still requires one extra confirmation before writing.",
+  "memoryLongTermConfirmDialogTitle": "Write to long-term memory?",
+  "memoryLongTermConfirmDialogBody": "This will write to MEMORY.md. Preview: {preview}",
+  "@memoryLongTermConfirmDialogBody": {
+    "placeholders": {
+      "preview": {}
+    }
+  },
+  "memorySessionDigestNoCandidates": "No suitable memory candidates were found in this session.",
+  "memorySessionDigestAddedToInbox": "{count, plural, one{Added 1 session candidate to review inbox} other{Added {count} session candidates to review inbox}}",
+  "@memorySessionDigestAddedToInbox": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memorySessionDigestSavedToDaily": "{count, plural, one{Saved 1 session candidate to today's daily note} other{Saved {count} session candidates to today's daily note}}",
+  "@memorySessionDigestSavedToDaily": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "memoryMessageActionsTooltip": "Memory actions",
   "memorySelectTextToInsert": "Select text to insert into AI input",
   "memoryInsertedToAiInput": "Inserted into AI input",
@@ -1266,6 +1299,11 @@
   "aiChatRegenerateFromHereConfirmTitle": "Create a branch from here?",
   "aiChatRegenerateFromHereConfirmBody": "This will create a new conversation branch from this message. The old version and its subsequent conversation will be kept, and you can switch back via the left/right variant switcher. Continue?",
   "aiChatEditUserMessageTitle": "Edit message",
+  "aiChatEndSessionTitle": "End current chat?",
+  "aiChatEndSessionBodyNoDigest": "This will keep the current chat in history and start a fresh session.",
+  "aiChatEndSessionBodyReviewInbox": "This will keep the current chat in history, then generate up to 3 session memory candidates and send them to Review Inbox.",
+  "aiChatEndSessionBodyAutoDaily": "This will keep the current chat in history, then generate up to 3 session memory candidates and auto-save them to today's daily note.",
+  "aiChatEndSessionAction": "End session",
   "navBarPapers": "PaperTok",
   "settingsHomeNavigation": "Home navigation",
   "settingsHomeNavigationSubtitle": "Reorder home tabs and toggle visibility",

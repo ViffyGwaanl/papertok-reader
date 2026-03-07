@@ -4,9 +4,10 @@ import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.
 import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
+import 'package:anx_reader/service/memory/memory_search_service.dart';
+import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/memory/memory_workflow_service.dart';
 import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
-import 'package:anx_reader/service/memory/memory_search_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,6 +74,42 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
         });
       }
     }
+  }
+
+  Future<bool> _confirmLongTermWrite(String previewText) async {
+    final prefs = Prefs();
+    if (!prefs.memoryLongTermConfirmEnabled) {
+      return true;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final l10n = L10n.of(context);
+        return AlertDialog(
+          title: Text(l10n.memoryLongTermConfirmDialogTitle),
+          content: Text(
+            l10n.memoryLongTermConfirmDialogBody(
+              previewText.trim().replaceAll(RegExp(r'\s+'), ' '),
+            ),
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.commonConfirm),
+            ),
+          ],
+        );
+      },
+    );
+
+    return confirmed == true;
   }
 
   String _formatCandidateMeta(MemoryCandidate candidate) {
@@ -153,6 +190,9 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
                   onPressed: busy
                       ? null
                       : () => _runCandidateAction(candidate.id, () async {
+                            final confirmed =
+                                await _confirmLongTermWrite(candidate.summary);
+                            if (!confirmed) return;
                             await _workflow.applyCandidate(
                               candidate.id,
                               targetDoc: MemoryDocTarget.longTerm,
@@ -177,6 +217,74 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildWorkflowSettingsSection() {
+    final l10n = L10n.of(context);
+    final prefs = Prefs();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              l10n.memoryWorkflowSettingsTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+        ),
+        SwitchListTile.adaptive(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Text(l10n.memorySessionDigestEnabledTitle),
+          subtitle: Text(l10n.memorySessionDigestEnabledDesc),
+          value: prefs.memorySessionDigestEnabled,
+          onChanged: (v) {
+            setState(() {
+              prefs.memorySessionDigestEnabled = v;
+            });
+          },
+          secondary: const Icon(Icons.summarize_outlined),
+        ),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Text(l10n.memoryDailyWorkflowStrategyTitle),
+          subtitle: Text(l10n.memoryDailyWorkflowStrategyDesc),
+          trailing: DropdownButton<MemoryWorkflowDailyStrategy>(
+            value: prefs.memoryWorkflowDailyStrategy,
+            items: [
+              DropdownMenuItem(
+                value: MemoryWorkflowDailyStrategy.reviewInbox,
+                child: Text(l10n.memoryDailyWorkflowStrategyReviewInbox),
+              ),
+              DropdownMenuItem(
+                value: MemoryWorkflowDailyStrategy.autoDaily,
+                child: Text(l10n.memoryDailyWorkflowStrategyAutoDaily),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                prefs.memoryWorkflowDailyStrategy = value;
+              });
+            },
+          ),
+        ),
+        SwitchListTile.adaptive(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Text(l10n.memoryLongTermConfirmTitle),
+          subtitle: Text(l10n.memoryLongTermConfirmDesc),
+          value: prefs.memoryLongTermConfirmEnabled,
+          onChanged: (v) {
+            setState(() {
+              prefs.memoryLongTermConfirmEnabled = v;
+            });
+          },
+          secondary: const Icon(Icons.lock_outline),
+        ),
+      ],
     );
   }
 
@@ -598,6 +706,7 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
           }),
           const Divider(),
         ],
+        _buildWorkflowSettingsSection(),
         _buildReviewInboxSection(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
