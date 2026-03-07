@@ -10,6 +10,29 @@
   - 1 个 WebDAV 账号/目录
   - 1 个 iCloud Drive / Files 可写目录
 
+### 0.1 本轮 1.68.2 重点验收项
+
+这版建议优先关注 `1.68.1` 之后新加的 5 条主线：
+
+1. Share diagnostics 增强
+   - 搜索
+   - 状态 / destination / kind 筛选
+   - success / error / cleanup 状态是否符合实际
+2. Memory M1
+   - 聊天显式保存到 daily / long-term / Review Inbox
+   - Memory 页 Review Inbox 是否可用
+3. Memory M1.5 / M2 稳定子集
+   - 结束会话时是否能生成 session candidate
+   - daily 路由是否能在 Review Inbox / Auto-save 之间切换
+   - long-term 是否仍默认确认
+4. 高级日志页增强
+   - 搜索
+   - only errors
+   - level filter
+   - source filter
+5. 命名收口
+   - App 可见名称是否统一为 `PaperTok Reader`
+
 ## 1. Home TabBar（苹果风格浮动 Tab 栏）
 
 **目标**：不遮挡、不乱跳、键盘出现时行为一致。

@@ -8,6 +8,51 @@
 > - 本仓库：`ViffyGwaanl/papertok-reader`（private）
 > - App 显示名：**PaperTok Reader**
 
+## 当前发布候选（2026-03-07）
+
+- 目标版本：`1.68.2`
+- 本轮目标：发一版新的 TestFlight，把 `1.68.1` 之后的主线更新一起带进去。
+
+### 1.68.1 -> 1.68.2 更新摘要
+
+本轮建议在 TestFlight / App Store Connect 的版本说明中整理为：
+
+- Share diagnostics 增强：
+  - 搜索
+  - 状态筛选
+  - destination 筛选
+  - kind 筛选
+  - 结构化 receive / routing / handoff / cleanup 状态链路
+- Memory M1：
+  - 显式保存到今日日记
+  - 保存到长期记忆
+  - 加入 Review Inbox
+  - Memory 页最小 Review Inbox
+  - 统一 Markdown memory 写协调器
+- Memory M1.5 / M2 稳定子集：
+  - 结束会话时生成记忆候选
+  - session-end candidate digest
+  - auto-daily 路由策略
+  - 长期记忆写入前确认开关
+- 高级日志页增强：
+  - 搜索
+  - 仅错误
+  - 级别筛选
+  - 来源筛选
+- 低风险命名收口：
+  - 对外产品名统一为 `PaperTok Reader`
+  - App 内文案 / l10n / iOS / Android 显示名统一
+
+### 本轮推荐 TestFlight 更新说明（中文）
+
+```text
+1. 分享诊断页支持搜索、状态筛选、目的地筛选和类型筛选，更容易定位分享问题。
+2. Memory 新增显式保存到今日日记、长期记忆和 Review Inbox，并补齐最小记忆工作流。
+3. 结束会话时可生成记忆候选，支持 Review Inbox 或自动写入今日日记。
+4. 高级日志页新增搜索、错误筛选、级别筛选和来源筛选，排障更方便。
+5. 产品对外名称统一为 PaperTok Reader。
+```
+
 ---
 
 ## 0. 当前默认标识（Source of Truth）
