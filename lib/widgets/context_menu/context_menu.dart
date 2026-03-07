@@ -144,6 +144,7 @@ Future<void> showContextMenu(
 
   playerKey.contextMenuEntry = OverlayEntry(builder: (context) {
     return _ContextMenuOverlay(
+      hostContext: context,
       axis: axis,
       selectionRect: selectionRect,
       viewportRect: viewportRect,
@@ -246,6 +247,7 @@ _MenuPlacement _resolveMenuPlacement({
 
 class _ContextMenuOverlay extends StatefulWidget {
   const _ContextMenuOverlay({
+    required this.hostContext,
     required this.axis,
     required this.selectionRect,
     required this.viewportRect,
@@ -265,6 +267,7 @@ class _ContextMenuOverlay extends StatefulWidget {
     required this.initialBottomInset,
   });
 
+  final BuildContext hostContext;
   final Axis axis;
   final Rect selectionRect;
   final Rect viewportRect;
@@ -295,7 +298,6 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
 
   late Offset _position;
   late bool _reverse;
-  late bool _showTranslationMenu;
   bool _showReaderNoteMenu = false;
   bool _waitingForFirstMeasurement = true;
   late BoxConstraints _menuConstraints;
@@ -308,11 +310,16 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
     WidgetsBinding.instance.addObserver(this);
     _position = widget.initialPlacement.offset;
     _reverse = widget.initialPlacement.shouldReverse;
-    _showTranslationMenu = widget.showTranslationDefault;
     _noteId = widget.annoId;
     _bottomInset = widget.initialBottomInset;
     _menuConstraints = _buildConstraints(widget.initialBottomInset);
     _scheduleRecalculate();
+    if (widget.showTranslationDefault) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _openTranslationSheet();
+      });
+    }
   }
 
   @override
@@ -425,11 +432,16 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
     }
   }
 
-  void _toggleTranslationMenu() {
-    setState(() {
-      _showTranslationMenu = !_showTranslationMenu;
-    });
-    _scheduleRecalculate();
+  Future<void> _openTranslationSheet() async {
+    final hostContext = widget.hostContext;
+    widget.onClose();
+    await Future<void>.delayed(Duration.zero);
+    if (!hostContext.mounted) return;
+    await showSelectionTranslationSheet(
+      hostContext,
+      content: widget.annoContent,
+      contextText: widget.contextText,
+    );
   }
 
   void _toggleReaderNoteMenu({bool? show}) {
@@ -517,7 +529,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
                                   onClose: widget.onClose,
                                   footnote: widget.footnote,
                                   decoration: widget.decoration,
-                                  toggleTranslationMenu: _toggleTranslationMenu,
+                                  onTranslate: _openTranslationSheet,
                                   toggleReaderNoteMenu: _toggleReaderNoteMenu,
                                   openReaderNoteMenu: _openReaderNoteMenu,
                                   onNoteCreated: _handleNoteCreated,
@@ -541,22 +553,6 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
                                 onVisibilityChange:
                                     _handleReaderNoteVisibilityChange,
                                 onSizeChanged: _handleReaderNoteSizeChanged,
-                              ),
-                            ],
-                          ),
-                        ],
-                        if (_showTranslationMenu) ...[
-                          const SizedBox.square(dimension: 10),
-                          AxisFlex(
-                            axis: widget.axis,
-                            children: [
-                              TranslationMenu(
-                                content: widget.annoContent,
-                                decoration: widget.decoration,
-                                axis: widget.axis,
-                                contextText: widget.contextText,
-                                preferredWidth:
-                                    widget.axis == Axis.vertical ? 360 : 380,
                               ),
                             ],
                           ),

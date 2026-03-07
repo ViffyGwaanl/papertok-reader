@@ -1,261 +1,311 @@
-import 'dart:async';
-import 'dart:math' as math;
-
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/lang_list.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/translate/index.dart';
-import 'package:anx_reader/widgets/common/axis_flex.dart';
 import 'package:flutter/material.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
 
-class TranslationMenu extends StatefulWidget {
-  const TranslationMenu({
-    super.key,
+Future<void> showSelectionTranslationSheet(
+  BuildContext context, {
+  required String content,
+  String? contextText,
+}) async {
+  final size = MediaQuery.of(context).size;
+  final bool wide = size.width >= 700;
+
+  await showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      final sheet = _SelectionTranslationSheet(
+        content: content,
+        contextText: contextText,
+      );
+
+      if (wide) {
+        return SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 680,
+                maxHeight: 760,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: sheet,
+              ),
+            ),
+          ),
+        );
+      }
+
+      return FractionallySizedBox(
+        heightFactor: 0.92,
+        child: sheet,
+      );
+    },
+  );
+}
+
+class _SelectionTranslationSheet extends StatefulWidget {
+  const _SelectionTranslationSheet({
     required this.content,
-    required this.decoration,
-    required this.axis,
     this.contextText,
-    this.preferredWidth,
   });
 
   final String content;
-  final BoxDecoration decoration;
-  final Axis axis;
   final String? contextText;
-  final double? preferredWidth;
 
   @override
-  State<TranslationMenu> createState() => _TranslationMenuState();
+  State<_SelectionTranslationSheet> createState() =>
+      _SelectionTranslationSheetState();
 }
 
-class _TranslationMenuState extends State<TranslationMenu> {
+class _SelectionTranslationSheetState
+    extends State<_SelectionTranslationSheet> {
   Widget? _translationWidget;
-  Timer? _debounceTimer;
-  bool _translationInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeTranslation();
+    _refreshTranslation();
   }
 
-  void _initializeTranslation() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _translationInitialized) return;
-
-      _debounceTimer?.cancel();
-      _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-        if (!mounted || _translationInitialized) return;
-
-        setState(() {
-          final effectiveContextText =
-              (widget.contextText?.trim().isEmpty ?? true)
-                  ? null
-                  : widget.contextText;
-          _translationWidget = translateText(
-            widget.content,
-            contextText: effectiveContextText,
-          );
-          _translationInitialized = true;
-        });
-      });
+  void _refreshTranslation() {
+    final effectiveContextText = (widget.contextText?.trim().isEmpty ?? true)
+        ? null
+        : widget.contextText;
+    setState(() {
+      _translationWidget = translateText(
+        widget.content,
+        contextText: effectiveContextText,
+      );
     });
   }
 
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    super.dispose();
-  }
-
-  Widget _langPicker(bool isFrom) {
-    final MenuController menuController = MenuController();
-
-    return PointerInterceptor(
-      child: MenuAnchor(
-        style: MenuStyle(
-          backgroundColor: WidgetStateProperty.all(
-            Theme.of(context).colorScheme.secondaryContainer,
-          ),
-          maximumSize: WidgetStateProperty.all(const Size(300, 300)),
-        ),
-        controller: menuController,
-        menuChildren: [
-          for (var lang in LangListEnum.values)
-            PointerInterceptor(
-              child: MenuItemButton(
-                onPressed: () {
-                  if (isFrom) {
-                    Prefs().translateFrom = lang;
-                  } else {
-                    Prefs().translateTo = lang;
-                  }
-                },
-                child: Text(lang.getNative(context)),
+  Future<void> _pickLang(bool isFrom) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) {
+        return ListView.builder(
+          itemCount: LangListEnum.values.length,
+          itemBuilder: (ctx, index) {
+            final lang = LangListEnum.values[index];
+            return ListTile(
+              title: Text(lang.getNative(ctx)),
+              subtitle: Text(
+                lang.name[0].toUpperCase() + lang.name.substring(1),
               ),
-            ),
-        ],
-        builder: (context, controller, child) {
-          final label = isFrom
-              ? Prefs().translateFrom.getNative(context)
-              : Prefs().translateTo.getNative(context);
-          final foreground = Prefs().eInkMode
-              ? Theme.of(context).colorScheme.onSecondaryContainer
-              : Colors.white.withOpacity(0.92);
-          return InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () {
-              if (controller.isOpen) {
-                controller.close();
-              } else {
-                controller.open();
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      label,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: foreground),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.expand_more, size: 16, color: foreground),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+              trailing:
+                  ((isFrom ? Prefs().translateFrom : Prefs().translateTo) ==
+                          lang)
+                      ? const Icon(Icons.check)
+                      : null,
+              onTap: () {
+                if (isFrom) {
+                  Prefs().translateFrom = lang;
+                } else {
+                  Prefs().translateTo = lang;
+                }
+                Navigator.of(ctx).pop();
+              },
+            );
+          },
+        );
+      },
     );
-  }
-
-  BoxConstraints _cardConstraints(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final targetWidth =
-        widget.preferredWidth ?? (widget.axis == Axis.vertical ? 360.0 : 380.0);
-    final width = math.min(targetWidth, size.width - 24);
-    final maxHeight = math.min(size.height * 0.58, 440.0);
-    final minHeight = math.min(maxHeight, 220.0);
-
-    return BoxConstraints.tightFor(
-      width: width,
-      height: null,
-    ).enforce(
-      BoxConstraints(
-        minHeight: minHeight,
-        maxHeight: maxHeight,
-      ),
-    );
+    if (!mounted) return;
+    _refreshTranslation();
   }
 
   @override
   Widget build(BuildContext context) {
-    final constraints = _cardConstraints(context);
+    final colors = Theme.of(context).colorScheme;
+    final isDark = !Prefs().eInkMode;
+    final background = isDark ? const Color(0xFF24262B) : colors.surface;
+    final foreground = isDark ? Colors.white : colors.onSurface;
 
-    return ConstrainedBox(
-      constraints: constraints,
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOutCubic,
-        child: Container(
-          decoration: widget.decoration,
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.content,
-                        maxLines: 6,
-                        overflow: TextOverflow.ellipsis,
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withOpacity(0.08)
+                : colors.outlineVariant.withOpacity(0.24),
+          ),
+          boxShadow: [
+            if (isDark)
+              BoxShadow(
+                color: Colors.black.withOpacity(0.28),
+                blurRadius: 32,
+                spreadRadius: -10,
+                offset: const Offset(0, 16),
+              ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: foreground.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        L10n.of(context).contextMenuTranslate,
                         style: TextStyle(
-                          fontSize: 14,
-                          height: 1.35,
-                          color: Prefs().eInkMode
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .onSecondaryContainer
-                                  .withOpacity(0.86)
-                              : Colors.white.withOpacity(0.72),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: foreground,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Prefs().eInkMode
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .surface
-                                  .withOpacity(0.58)
-                              : Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Prefs().eInkMode
-                                ? Colors.transparent
-                                : Colors.white.withOpacity(0.06),
-                          ),
+                    ),
+                    IconButton(
+                      onPressed: _refreshTranslation,
+                      icon: const Icon(Icons.refresh_rounded),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.05)
+                        : colors.surfaceContainerHighest.withOpacity(0.58),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.06)
+                          : colors.outlineVariant.withOpacity(0.16),
+                    ),
+                  ),
+                  child: Text(
+                    widget.content,
+                    maxLines: 8,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      height: 1.4,
+                      color: foreground.withOpacity(0.78),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.black.withOpacity(0.16)
+                        : colors.surfaceContainerHigh.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      _LangButton(
+                        label: Prefs().translateFrom.getNative(context),
+                        onTap: () => _pickLang(true),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 18,
+                          color: foreground.withOpacity(0.68),
                         ),
-                        child: _translationWidget ??
-                            const SizedBox(
-                              height: 44,
-                              child: Center(child: Text('...')),
-                            ),
+                      ),
+                      _LangButton(
+                        label: Prefs().translateTo.getNative(context),
+                        onTap: () => _pickLang(false),
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Prefs().eInkMode
-                      ? Theme.of(context).colorScheme.surface.withOpacity(0.42)
-                      : Colors.black.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Prefs().eInkMode
-                        ? Colors.transparent
-                        : Colors.white.withOpacity(0.05),
-                  ),
-                ),
-                child: AxisFlex(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  axis: widget.axis == Axis.vertical
-                      ? Axis.horizontal
-                      : widget.axis,
-                  children: [
-                    Flexible(child: _langPicker(true)),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 18,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSecondaryContainer
-                            .withOpacity(0.68),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : colors.surfaceContainerHighest.withOpacity(0.58),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.06)
+                            : colors.outlineVariant.withOpacity(0.16),
                       ),
                     ),
-                    Flexible(child: _langPicker(false)),
-                  ],
+                    child: SingleChildScrollView(
+                      child: _translationWidget ??
+                          const SizedBox(
+                            height: 120,
+                            child: Center(child: Text('...')),
+                          ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LangButton extends StatelessWidget {
+  const _LangButton({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const Icon(Icons.expand_more, size: 16),
             ],
           ),
         ),
