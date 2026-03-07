@@ -15,12 +15,14 @@ class TranslationMenu extends StatefulWidget {
     required this.decoration,
     required this.axis,
     this.contextText,
+    this.preferredWidth,
   });
 
   final String content;
   final BoxDecoration decoration;
   final Axis axis;
   final String? contextText;
+  final double? preferredWidth;
 
   @override
   State<TranslationMenu> createState() => _TranslationMenuState();
@@ -134,17 +136,20 @@ class _TranslationMenuState extends State<TranslationMenu> {
 
   BoxConstraints _cardConstraints(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final maxWidth = math.min(size.width * 0.82, 360.0);
-    final minWidth =
-        math.min(maxWidth, widget.axis == Axis.vertical ? 260.0 : 280.0);
-    final maxHeight = math.min(size.height * 0.42, 320.0);
-    final minHeight = math.min(maxHeight, 180.0);
+    final targetWidth =
+        widget.preferredWidth ?? (widget.axis == Axis.vertical ? 360.0 : 380.0);
+    final width = math.min(targetWidth, size.width - 24);
+    final maxHeight = math.min(size.height * 0.58, 440.0);
+    final minHeight = math.min(maxHeight, 220.0);
 
-    return BoxConstraints(
-      minWidth: minWidth,
-      maxWidth: maxWidth,
-      minHeight: minHeight,
-      maxHeight: maxHeight,
+    return BoxConstraints.tightFor(
+      width: width,
+      height: null,
+    ).enforce(
+      BoxConstraints(
+        minHeight: minHeight,
+        maxHeight: maxHeight,
+      ),
     );
   }
 
@@ -172,7 +177,7 @@ class _TranslationMenuState extends State<TranslationMenu> {
                     children: [
                       Text(
                         widget.content,
-                        maxLines: 4,
+                        maxLines: 6,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 14,

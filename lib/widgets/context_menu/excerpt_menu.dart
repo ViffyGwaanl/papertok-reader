@@ -446,11 +446,10 @@ class ExcerptMenuState extends State<ExcerptMenu> {
       borderRadius: BorderRadius.circular(14),
     );
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        minWidth: widget.axis == Axis.vertical ? 260 : 280,
-        maxWidth: widget.axis == Axis.vertical ? 360 : 380,
-      ),
+    final panelWidth = widget.axis == Axis.vertical ? 360.0 : 380.0;
+
+    return SizedBox(
+      width: panelWidth,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

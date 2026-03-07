@@ -555,6 +555,8 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
                                 decoration: widget.decoration,
                                 axis: widget.axis,
                                 contextText: widget.contextText,
+                                preferredWidth:
+                                    widget.axis == Axis.vertical ? 360 : 380,
                               ),
                             ],
                           ),
