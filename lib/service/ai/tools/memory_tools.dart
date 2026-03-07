@@ -6,7 +6,7 @@ import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/ai/tools/base_tool.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/service/memory/memory_index_coordinator.dart';
+import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
 import 'package:anx_reader/service/memory/memory_search_service.dart';
 
 DateTime? _parseLocalDate(String? yyyyMmDd) {
@@ -185,7 +185,8 @@ class MemorySearchTool
 class MemoryAppendTool
     extends RepositoryTool<Map<String, dynamic>, Map<String, dynamic>> {
   MemoryAppendTool(this._store)
-      : super(
+      : _writer = MemoryWriteCoordinator(store: _store),
+        super(
           name: 'memory_append',
           description:
               'Append markdown text to the user\'s local memory files. This is a write operation and requires user approval.',
@@ -213,6 +214,7 @@ class MemoryAppendTool
         );
 
   final MarkdownMemoryStore _store;
+  final MemoryWriteCoordinator _writer;
 
   @override
   Map<String, dynamic> parseInput(Map<String, dynamic> json) => json;
@@ -228,8 +230,7 @@ class MemoryAppendTool
       throw ArgumentError('text is required');
     }
 
-    await _store.append(longTerm: isLongTerm, date: date, text: text);
-    MemoryIndexCoordinator.instance.markDirty();
+    await _writer.append(longTerm: isLongTerm, date: date, text: text);
 
     return {
       'doc': isLongTerm ? 'memory' : 'daily',
@@ -245,7 +246,8 @@ class MemoryAppendTool
 class MemoryReplaceTool
     extends RepositoryTool<Map<String, dynamic>, Map<String, dynamic>> {
   MemoryReplaceTool(this._store)
-      : super(
+      : _writer = MemoryWriteCoordinator(store: _store),
+        super(
           name: 'memory_replace',
           description:
               'Replace the entire content of a local memory markdown file. This is a write operation and requires user approval.',
@@ -273,6 +275,7 @@ class MemoryReplaceTool
         );
 
   final MarkdownMemoryStore _store;
+  final MemoryWriteCoordinator _writer;
 
   @override
   Map<String, dynamic> parseInput(Map<String, dynamic> json) => json;
@@ -284,8 +287,7 @@ class MemoryReplaceTool
     final date = _parseLocalDate(input['date'] as String?);
     final text = (input['text'] as String?) ?? '';
 
-    await _store.replace(longTerm: isLongTerm, date: date, text: text);
-    MemoryIndexCoordinator.instance.markDirty();
+    await _writer.replace(longTerm: isLongTerm, date: date, text: text);
 
     return {
       'doc': isLongTerm ? 'memory' : 'daily',
