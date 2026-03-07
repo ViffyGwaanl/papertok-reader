@@ -770,12 +770,14 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       return null;
     }
 
+    final textType = role == 'assistant' ? 'output_text' : 'input_text';
+
     return {
       'type': 'message',
       'role': role,
       'content': [
         {
-          'type': 'input_text',
+          'type': textType,
           'text': text,
         }
       ],

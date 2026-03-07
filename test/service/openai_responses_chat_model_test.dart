@@ -413,6 +413,54 @@ void main() {
     expect(client.sentJsonBodies.first.containsKey('reasoning'), isFalse);
   });
 
+  test('maps assistant history text to output_text for responses replay',
+      () async {
+    final sse = StringBuffer()
+      ..write(_sseEvent('response.output_text.delta', {'delta': 'OK'}))
+      ..write(_sseEvent('response.completed', {
+        'response': {
+          'id': 'resp_1',
+          'reasoning': {'summary': null}
+        }
+      }));
+
+    final client = _QueuedStreamClient([sse.toString()]);
+
+    final model = ChatOpenAIResponses(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'k',
+      defaultOptions: const ChatOpenAIOptions(model: 'gpt-test'),
+      client: client,
+    );
+
+    await model
+        .stream(
+          PromptValue.chat([
+            ChatMessage.human(
+              ChatMessageContent.multiModal([
+                ChatMessageContent.text('look at this image'),
+                ChatMessageContent.image(
+                  data: 'https://example.com/test.jpg',
+                  mimeType: 'image/jpeg',
+                ),
+              ]),
+            ),
+            ChatMessage.ai('This is the first answer.'),
+            ChatMessage.humanText('continue'),
+          ]),
+        )
+        .toList();
+
+    expect(client.sentJsonBodies, hasLength(1));
+    final body = client.sentJsonBodies.first;
+    final input = (body['input'] as List).cast<dynamic>();
+    final assistantItem = input.firstWhere(
+      (e) => e is Map && e['role'] == 'assistant',
+    ) as Map;
+    final content = (assistantItem['content'] as List).cast<dynamic>();
+    expect((content.first as Map)['type'], 'output_text');
+  });
+
   test('includes reasoning block when enabled and effort is set', () async {
     final sse = StringBuffer()
       ..write(_sseEvent('response.output_text.delta', {'delta': 'OK'}))
