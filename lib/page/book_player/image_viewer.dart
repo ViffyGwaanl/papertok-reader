@@ -89,6 +89,19 @@ class _ImageViewerState extends State<ImageViewer> {
     _controller.scale = newScale;
   }
 
+  String _applyImagePromptTemplate(String template) {
+    final alt = (widget.alt ?? '').trim();
+    final title = (widget.title ?? '').trim();
+    final contextText = (widget.contextText ?? '').trim();
+    return template
+        .replaceAll('{{alt}}', alt.isEmpty ? '(empty)' : alt)
+        .replaceAll('{{title}}', title.isEmpty ? '(empty)' : title)
+        .replaceAll(
+          '{{contextText}}',
+          contextText.isEmpty ? '(empty)' : contextText,
+        );
+  }
+
   Future<void> _openAiChatWithImage({
     required Uint8List imageBytes,
     required String mimeType,
@@ -101,13 +114,16 @@ class _ImageViewerState extends State<ImageViewer> {
     }
 
     final attachment = AttachmentItem.image(bytes: jpegBytes, base64: base64);
-    final prompt = L10n.of(context).imageAnalyzeAskAiPrefill;
+    final prompt = _applyImagePromptTemplate(
+      Prefs().aiImageAnalysisPromptEffective,
+    );
+    final failedText = L10n.of(context).commonFailed;
 
     Navigator.of(context).pop();
     await Future<void>.delayed(Duration.zero);
     final reading = readingPageKey.currentState;
     if (reading == null) {
-      AnxToast.show(L10n.of(context).commonFailed);
+      AnxToast.show(failedText);
       return;
     }
     await reading.openAiChatDraft(
@@ -121,6 +137,7 @@ class _ImageViewerState extends State<ImageViewer> {
     final prompt = '''${L10n.of(context).imageAnalyzeContinueAskPrefill}
 
 $displayText''';
+    final failedText = L10n.of(context).commonFailed;
     final navigator = Navigator.of(context);
     navigator.pop();
     await Future<void>.delayed(Duration.zero);
@@ -128,7 +145,7 @@ $displayText''';
     await Future<void>.delayed(Duration.zero);
     final reading = readingPageKey.currentState;
     if (reading == null) {
-      AnxToast.show(L10n.of(context).commonFailed);
+      AnxToast.show(failedText);
       return;
     }
     await reading.openAiChatDraft(content: prompt);
@@ -146,19 +163,9 @@ $displayText''';
 
     final model = Prefs().aiImageAnalysisModel.trim();
 
-    final alt = (widget.alt ?? '').trim();
-    final title = (widget.title ?? '').trim();
-    final contextText = (widget.contextText ?? '').trim();
-
-    String applyTemplate(String template) {
-      return template
-          .replaceAll('{{alt}}', alt.isEmpty ? '(empty)' : alt)
-          .replaceAll('{{title}}', title.isEmpty ? '(empty)' : title)
-          .replaceAll(
-              '{{contextText}}', contextText.isEmpty ? '(empty)' : contextText);
-    }
-
-    final prompt = applyTemplate(Prefs().aiImageAnalysisPromptEffective);
+    final prompt = _applyImagePromptTemplate(
+      Prefs().aiImageAnalysisPromptEffective,
+    );
 
     final messages = <ChatMessage>[
       ChatMessage.human(

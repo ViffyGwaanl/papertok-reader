@@ -3,6 +3,7 @@ import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/translate/index.dart';
+import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
 
 Future<void> showSelectionTranslationSheet(
@@ -75,13 +76,24 @@ class _SelectionTranslationSheet extends StatefulWidget {
 
 class _SelectionTranslationSheetState
     extends State<_SelectionTranslationSheet> {
-  Widget? _translationWidget;
+  String? _translationText;
+  String? _translationError;
+  bool _loading = false;
 
   Future<void> _continueAskAi() async {
+    final translation = _translationText?.trim() ?? '';
+    if (translation.isEmpty) {
+      AnxToast.show(L10n.of(context).commonFailed);
+      return;
+    }
+
     final prompt = '''${L10n.of(context).translationContinueAskPrefill}
 
 ${L10n.of(context).translationOriginalLabel}
 ${widget.content}
+
+${L10n.of(context).translationResultLabel}
+$translation
 
 ${L10n.of(context).translationLanguageLabel}
 ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(context)}''';
@@ -98,16 +110,31 @@ ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(
     _refreshTranslation();
   }
 
-  void _refreshTranslation() {
+  Future<void> _refreshTranslation() async {
     final effectiveContextText = (widget.contextText?.trim().isEmpty ?? true)
         ? null
         : widget.contextText;
     setState(() {
-      _translationWidget = translateText(
+      _loading = true;
+      _translationError = null;
+    });
+    try {
+      final translated = await translateTextOnly(
         widget.content,
         contextText: effectiveContextText,
       );
-    });
+      if (!mounted) return;
+      setState(() {
+        _translationText = translated;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _translationError = e.toString();
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _pickLang(bool isFrom) async {
@@ -301,11 +328,16 @@ ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(
                                 : colors.outlineVariant.withOpacity(0.16),
                           ),
                         ),
-                        child: _translationWidget ??
-                            const SizedBox(
-                              height: 120,
-                              child: Center(child: Text('...')),
-                            ),
+                        child: _loading
+                            ? const SizedBox(
+                                height: 120,
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            : _translationError != null
+                                ? Text(_translationError!)
+                                : SelectableText(_translationText ?? ''),
                       ),
                       const SizedBox(height: 12),
                     ],
