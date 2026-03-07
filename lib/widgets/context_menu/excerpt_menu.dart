@@ -49,6 +49,7 @@ class ExcerptMenu extends StatefulWidget {
 
 class ExcerptMenuState extends State<ExcerptMenu> {
   bool deleteConfirm = false;
+  bool _showAnnotationPanel = false;
   int? noteId;
   BookNote? _currentNote;
   late String annoType;
@@ -147,6 +148,12 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     }
 
     return bookNote;
+  }
+
+  void _toggleAnnotationPanel() {
+    setState(() {
+      _showAnnotationPanel = !_showAnnotationPanel;
+    });
   }
 
   Icon deleteIcon() {
@@ -377,6 +384,13 @@ class ExcerptMenuState extends State<ExcerptMenu> {
       if (!widget.footnote)
         _actionButton(
           context: context,
+          icon: Icons.format_color_text_rounded,
+          label: L10n.of(context).contextMenuHighlight,
+          onTap: _toggleAnnotationPanel,
+        ),
+      if (!widget.footnote)
+        _actionButton(
+          context: context,
           icon: EvaIcons.edit_2_outline,
           label: L10n.of(context).contextMenuWriteIdea,
           onTap: () async {
@@ -449,7 +463,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
               child: Row(children: actionButtons),
             ),
           ),
-          if (!widget.footnote) ...[
+          if (!widget.footnote && _showAnnotationPanel) ...[
             const SizedBox(height: 8),
             Container(
               decoration: secondaryDecoration,
