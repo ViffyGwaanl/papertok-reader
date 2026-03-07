@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
 import 'package:anx_reader/widgets/context_menu/excerpt_menu.dart';
 import 'package:anx_reader/widgets/context_menu/reader_note_menu.dart';
@@ -83,7 +82,7 @@ Future<void> showContextMenu(
   const double gap = 12;
 
   final double maxMenuWidth =
-      math.min(350, math.max(120, screenWidth - horizontalMargin * 2));
+      math.min(420, math.max(220, screenWidth - horizontalMargin * 2));
   final double effectiveHeight = math.max(0, screenHeight - keyboardInset);
   final double maxHeightCandidate = effectiveHeight - verticalMargin * 2;
   final double rawMaxHeight = math.min(
@@ -118,18 +117,24 @@ Future<void> showContextMenu(
     playerKey.removeOverlay();
   }
 
+  final colors = Theme.of(context).colorScheme;
   final decoration = BoxDecoration(
     color: Prefs().eInkMode
         ? Colors.white
-        : Theme.of(context).colorScheme.secondaryContainer,
-    borderRadius: BorderRadius.circular(10),
+        : colors.secondaryContainer.withOpacity(0.96),
+    borderRadius: BorderRadius.circular(22),
+    border: Border.all(
+      color: Prefs().eInkMode
+          ? Colors.black.withOpacity(0.18)
+          : colors.outlineVariant.withOpacity(0.28),
+    ),
     boxShadow: [
       if (!Prefs().eInkMode)
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          spreadRadius: 5,
-          blurRadius: 7,
-          offset: const Offset(0, 3),
+          color: Colors.black.withOpacity(0.12),
+          blurRadius: 28,
+          spreadRadius: -6,
+          offset: const Offset(0, 10),
         ),
       if (Prefs().eInkMode)
         const BoxShadow(

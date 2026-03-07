@@ -4,12 +4,10 @@ import 'package:anx_reader/dao/book_note.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book_note.dart';
 import 'package:anx_reader/page/reading_page.dart';
+import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/book_share/excerpt_share_service.dart';
-import 'package:anx_reader/widgets/common/axis_flex.dart';
-import 'package:anx_reader/widgets/icon_and_text.dart';
-import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -157,7 +155,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
             EvaIcons.close_circle,
             color: Colors.red,
           )
-        : const Icon(Icons.delete);
+        : const Icon(Icons.delete_outline_rounded);
   }
 
   void deleteHandler() {
@@ -203,185 +201,317 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     epubPlayerKey.currentState!.addAnnotation(bookNote);
   }
 
-  Widget iconButton({required Icon icon, required Function() onPressed}) {
-    return IconButton(
-      padding: const EdgeInsets.all(2),
-      constraints: const BoxConstraints(),
-      style: const ButtonStyle(
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  Widget _actionButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: colors.surface.withOpacity(0.52),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: colors.outlineVariant.withOpacity(0.35),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: colors.onSecondaryContainer),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.1,
+                  color: colors.onSecondaryContainer.withOpacity(0.92),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      icon: icon,
-      onPressed: onPressed,
     );
   }
 
-  Widget colorButton(String color) {
-    return iconButton(
-      icon: Icon(
-        Icons.circle,
-        color: Color(int.parse('0x88$color')),
+  Widget _annotationTypeButton(
+      BuildContext context, String type, IconData icon) {
+    final active = annoType == type;
+    final colors = Theme.of(context).colorScheme;
+    final highlight = Color(int.parse('0xff$annoColor'));
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => onTypeSelected(type),
+        child: Ink(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: active
+                ? highlight.withOpacity(0.16)
+                : colors.surface.withOpacity(0.44),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: active
+                  ? highlight.withOpacity(0.55)
+                  : colors.outlineVariant.withOpacity(0.35),
+            ),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: active ? highlight : colors.onSecondaryContainer,
+          ),
+        ),
       ),
-      onPressed: () {
-        onColorSelected(color);
-      },
     );
   }
 
-  Widget typeButton(String type, IconData icon) {
-    return iconButton(
-      icon: Icon(icon,
-          color: annoType == type ? Color(int.parse('0xff$annoColor')) : null),
-      onPressed: () {
-        onTypeSelected(type);
-      },
+  Widget _colorButton(BuildContext context, String color) {
+    final active = annoColor == color;
+    final swatch = Color(int.parse('0xff$color'));
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => onColorSelected(color),
+        child: Ink(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: swatch.withOpacity(0.86),
+            border: Border.all(
+              color: active
+                  ? colors.onSecondaryContainer
+                  : swatch.withOpacity(0.18),
+              width: active ? 2.2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: swatch.withOpacity(0.22),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _smallRoundButton({
+    required BuildContext context,
+    required Icon icon,
+    required VoidCallback onPressed,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onPressed,
+        child: Ink(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: colors.surface.withOpacity(0.52),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: colors.outlineVariant.withOpacity(0.35),
+            ),
+          ),
+          child: Center(child: icon),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionCard({required BuildContext context, required Widget child}) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colors.surface.withOpacity(0.26),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.outlineVariant.withOpacity(0.24)),
+      ),
+      child: child,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    Widget annotationMenu = Container(
-      padding: const EdgeInsets.all(6),
-      decoration: widget.decoration,
-      child: AxisFlex(
-        axis: widget.axis,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          iconButton(
-            onPressed: deleteHandler,
-            icon: deleteIcon(),
-          ),
-          for (final type in notesType) typeButton(type.type, type.icon),
-          for (String color in notesColors) colorButton(color),
-        ],
+    final colors = Theme.of(context).colorScheme;
+    final actionButtons = <Widget>[
+      _actionButton(
+        context: context,
+        icon: EvaIcons.copy,
+        label: L10n.of(context).contextMenuCopy,
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: widget.annoContent));
+          AnxToast.show(L10n.of(context).notesPageCopied);
+          widget.onClose();
+        },
       ),
-    );
-
-    Widget operatorMenu = Container(
-      // width: 48,
-      decoration: widget.decoration,
-      child: AxisFlex(
-        axis: widget.axis,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // copy
-          InkWell(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: widget.annoContent));
-              AnxToast.show(L10n.of(context).notesPageCopied);
-              widget.onClose();
-            },
-            child: IconAndText(
-              icon: const Icon(EvaIcons.copy),
-              text: L10n.of(context).contextMenuCopy,
-            ),
-          ),
-          // Web search
-          InkWell(
-            onTap: () {
-              widget.onClose();
-              launchUrl(
-                Uri.parse(
-                    'https://www.bing.com/search?q=${widget.annoContent}'),
-                mode: LaunchMode.externalApplication,
+      _actionButton(
+        context: context,
+        icon: EvaIcons.globe,
+        label: L10n.of(context).contextMenuSearch,
+        onTap: () {
+          widget.onClose();
+          launchUrl(
+            Uri.parse('https://www.bing.com/search?q=${widget.annoContent}'),
+            mode: LaunchMode.externalApplication,
+          );
+        },
+      ),
+      _actionButton(
+        context: context,
+        icon: Icons.translate_rounded,
+        label: L10n.of(context).contextMenuTranslate,
+        onTap: widget.toggleTranslationMenu,
+      ),
+      if (!widget.footnote)
+        _actionButton(
+          context: context,
+          icon: EvaIcons.edit_2_outline,
+          label: L10n.of(context).contextMenuWriteIdea,
+          onTap: () async {
+            epubPlayerKey.currentState?.setSelectionClearLocked(true);
+            await onColorSelected(annoColor, close: false);
+            final targetId = noteId ?? widget.id;
+            if (targetId != null) {
+              await widget.openReaderNoteMenu(targetId);
+            } else {
+              widget.toggleReaderNoteMenu(show: true);
+            }
+          },
+        ),
+      if (EnvVar.enableAIFeature)
+        _actionButton(
+          context: context,
+          icon: EvaIcons.message_circle_outline,
+          label: L10n.of(context).navBarAI,
+          onTap: () {
+            widget.onClose();
+            final key = readingPageKey.currentState;
+            if (key != null) {
+              key.showAiChat(
+                content: widget.annoContent,
+                sendImmediate: false,
               );
-            },
-            child: IconAndText(
-              icon: const Icon(EvaIcons.globe),
-              text: L10n.of(context).contextMenuSearch,
-            ),
-          ),
-          // toggle translation menu
-          InkWell(
-            onTap: widget.toggleTranslationMenu,
-            child: IconAndText(
-              icon: const Icon(Icons.translate),
-              text: L10n.of(context).contextMenuTranslate,
-            ),
-          ),
-          // edit note
-          if (!widget.footnote)
-            InkWell(
-              onTap: () async {
-                epubPlayerKey.currentState?.setSelectionClearLocked(true);
-                await onColorSelected(annoColor, close: false);
-                final targetId = noteId ?? widget.id;
-                if (targetId != null) {
-                  await widget.openReaderNoteMenu(targetId);
-                } else {
-                  widget.toggleReaderNoteMenu(show: true);
-                }
-              },
-              child: IconAndText(
-                icon: const Icon(EvaIcons.edit_2_outline),
-                text: L10n.of(context).contextMenuWriteIdea,
+              key.aiChatKey.currentState?.inputController.text =
+                  widget.annoContent;
+            }
+          },
+        ),
+      _actionButton(
+        context: context,
+        icon: EvaIcons.share_outline,
+        label: L10n.of(context).contextMenuShare,
+        onTap: () {
+          widget.onClose();
+          ExcerptShareService.showShareExcerpt(
+            context: context,
+            bookTitle: epubPlayerKey.currentState!.book.title,
+            author: epubPlayerKey.currentState!.book.author,
+            excerpt: widget.annoContent,
+            chapter: epubPlayerKey.currentState!.chapterTitle,
+          );
+        },
+      ),
+    ];
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: widget.axis == Axis.vertical ? 260 : 280,
+        maxWidth: widget.axis == Axis.vertical ? 320 : 340,
+      ),
+      child: Container(
+        decoration: widget.decoration,
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionCard(
+              context: context,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: actionButtons,
               ),
             ),
-          // AI chat
-          if (EnvVar.enableAIFeature)
-            InkWell(
-              onTap: () {
-                widget.onClose();
-                final key = readingPageKey.currentState;
-                if (key != null) {
-                  key.showAiChat(
-                    content: widget.annoContent,
-                    sendImmediate: false,
-                  );
-                  key.aiChatKey.currentState?.inputController.text =
-                      widget.annoContent;
-                }
-              },
-              child: IconAndText(
-                icon: const Icon(EvaIcons.message_circle_outline),
-                text: L10n.of(context).navBarAI,
-              ),
-            ),
-          // share
-          InkWell(
-            onTap: () {
-              widget.onClose();
-              ExcerptShareService.showShareExcerpt(
+            if (!widget.footnote) ...[
+              const SizedBox(height: 10),
+              _sectionCard(
                 context: context,
-                bookTitle: epubPlayerKey.currentState!.book.title,
-                author: epubPlayerKey.currentState!.book.author,
-                excerpt: widget.annoContent,
-                chapter: epubPlayerKey.currentState!.chapterTitle,
-              );
-            },
-            child: IconAndText(
-              icon: const Icon(EvaIcons.share_outline),
-              text: L10n.of(context).contextMenuShare,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    return Expanded(
-      child: AxisFlex(
-        reverse: widget.reverse,
-        axis: flipAxis(widget.axis),
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AxisFlex(
-            axis: flipAxis(widget.axis),
-            reverse: widget.reverse,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SingleChildScrollView(
-                  scrollDirection: widget.axis, child: operatorMenu),
-              const SizedBox.square(dimension: 10),
-              if (!widget.footnote)
-                SingleChildScrollView(
-                  scrollDirection: widget.axis,
-                  child: annotationMenu,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          L10n.of(context).contextMenuHighlight,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color:
+                                colors.onSecondaryContainer.withOpacity(0.72),
+                          ),
+                        ),
+                        const Spacer(),
+                        _smallRoundButton(
+                          context: context,
+                          icon: deleteIcon(),
+                          onPressed: deleteHandler,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final type in notesType)
+                          _annotationTypeButton(
+                            context,
+                            type.type,
+                            type.icon,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final color in notesColors)
+                          _colorButton(context, color),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
             ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

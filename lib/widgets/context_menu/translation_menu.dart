@@ -1,10 +1,12 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
-import 'dart:async';
 
 class TranslationMenu extends StatefulWidget {
   const TranslationMenu({
@@ -14,6 +16,7 @@ class TranslationMenu extends StatefulWidget {
     required this.axis,
     this.contextText,
   });
+
   final String content;
   final BoxDecoration decoration;
   final Axis axis;
@@ -35,11 +38,9 @@ class _TranslationMenuState extends State<TranslationMenu> {
   }
 
   void _initializeTranslation() {
-    // Use addPostFrameCallback to ensure the UI is rendered first
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _translationInitialized) return;
 
-      // Debounce: Delay the translation call to ensure context has stopped updating
       _debounceTimer?.cancel();
       _debounceTimer = Timer(const Duration(milliseconds: 300), () {
         if (!mounted || _translationInitialized) return;
@@ -93,7 +94,11 @@ class _TranslationMenuState extends State<TranslationMenu> {
             ),
         ],
         builder: (context, controller, child) {
-          return GestureDetector(
+          final label = isFrom
+              ? Prefs().translateFrom.getNative(context)
+              : Prefs().translateTo.getNative(context);
+          return InkWell(
+            borderRadius: BorderRadius.circular(10),
             onTap: () {
               if (controller.isOpen) {
                 controller.close();
@@ -101,10 +106,16 @@ class _TranslationMenuState extends State<TranslationMenu> {
                 controller.open();
               }
             },
-            child: Text(
-              isFrom
-                  ? Prefs().translateFrom.getNative(context)
-                  : Prefs().translateTo.getNative(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.expand_more, size: 16),
+                ],
+              ),
             ),
           );
         },
@@ -112,59 +123,111 @@ class _TranslationMenuState extends State<TranslationMenu> {
     );
   }
 
+  BoxConstraints _cardConstraints(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final maxWidth = math.min(size.width * 0.82, 360.0);
+    final minWidth =
+        math.min(maxWidth, widget.axis == Axis.vertical ? 260.0 : 280.0);
+    final maxHeight = math.min(size.height * 0.42, 320.0);
+    final minHeight = math.min(maxHeight, 180.0);
+
+    return BoxConstraints(
+      minWidth: minWidth,
+      maxWidth: maxWidth,
+      minHeight: minHeight,
+      maxHeight: maxHeight,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // print('Building TranslationMenu');
-    return Expanded(
+    final constraints = _cardConstraints(context);
+
+    return ConstrainedBox(
+      constraints: constraints,
       child: AnimatedSize(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
         child: Container(
-          height: widget.axis == Axis.vertical ? double.infinity : 150,
-          width: widget.axis == Axis.vertical ? 100 : double.infinity,
           decoration: widget.decoration,
-          padding: const EdgeInsets.all(8),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.content,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    overflow: TextOverflow.ellipsis,
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.content,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.35,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSecondaryContainer
+                              .withOpacity(0.86),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withOpacity(0.58),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: _translationWidget ??
+                            const SizedBox(
+                              height: 44,
+                              child: Center(child: Text('...')),
+                            ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                Column(
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color:
+                      Theme.of(context).colorScheme.surface.withOpacity(0.42),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: AxisFlex(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  axis: widget.axis == Axis.vertical
+                      ? Axis.horizontal
+                      : widget.axis,
                   children: [
-                    // Show translation widget if initialized, otherwise show loading placeholder
-                    _translationWidget ??
-                        const SizedBox(
-                          height: 20,
-                          child: Center(child: Text('...')),
-                        ),
-                    const Divider(),
-                    AxisFlex(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      axis: widget.axis,
-                      children: [
-                        _langPicker(true),
-                        Transform.rotate(
-                            angle: widget.axis == Axis.horizontal ? 0 : 1.57,
-                            child: Icon(Icons.arrow_forward_ios, size: 16)),
-                        _langPicker(false),
-                        if (widget.axis == Axis.horizontal) const Spacer(),
-                      ],
+                    Flexible(child: _langPicker(true)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 18,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSecondaryContainer
+                            .withOpacity(0.68),
+                      ),
                     ),
+                    Flexible(child: _langPicker(false)),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
