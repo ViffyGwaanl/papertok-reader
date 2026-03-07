@@ -112,14 +112,6 @@ class _SubMoreSettingsState extends State<SubMoreSettings> {
                   L10n.of(context).settingsNarrateVoiceModel,
                 ],
               },
-              {
-                "title": L10n.of(context).settingsTranslate,
-                "icon": Icons.translate_outlined,
-                "sections": const TranslateSetting(),
-                "subtitles": [
-                  L10n.of(context).settingsTranslate,
-                ],
-              },
               if (EnvVar.enableAIFeature) ...[
                 {
                   "title": L10n.of(context).settingsAi,
@@ -136,6 +128,14 @@ class _SubMoreSettingsState extends State<SubMoreSettings> {
                   "sections": const AiProviderCenterPage(),
                   "subtitles": [
                     L10n.of(context).settingsAiProviderCenterDesc,
+                  ],
+                },
+                {
+                  "title": L10n.of(context).settingsTranslate,
+                  "icon": Icons.translate_outlined,
+                  "sections": const TranslateSetting(),
+                  "subtitles": [
+                    L10n.of(context).settingsTranslate,
                   ],
                 },
                 {

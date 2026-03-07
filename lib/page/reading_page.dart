@@ -13,9 +13,9 @@ import 'package:anx_reader/enums/translation_mode.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
+import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/models/read_theme.dart';
-import 'package:anx_reader/page/book_detail.dart';
 import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:anx_reader/providers/sync.dart';
@@ -839,6 +839,20 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         );
       });
     }
+  }
+
+  Future<void> openAiChatDraft({
+    String? content,
+    List<AttachmentItem>? attachments,
+    bool replaceAttachments = false,
+  }) async {
+    showAiChat(content: content, sendImmediate: false);
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+    aiChatKey.currentState?.prefillDraft(
+      message: content,
+      attachments: attachments,
+      replaceAttachments: replaceAttachments,
+    );
   }
 
   void updateState() {

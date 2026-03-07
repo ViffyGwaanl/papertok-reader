@@ -1077,6 +1077,33 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
+  void prefillDraft({
+    String? message,
+    List<AttachmentItem>? attachments,
+    bool replaceAttachments = false,
+  }) {
+    if (message != null) {
+      _suppressDraftSync = true;
+      inputController.text = message;
+      inputController.selection = TextSelection.fromPosition(
+        TextPosition(offset: inputController.text.length),
+      );
+      _suppressDraftSync = false;
+      try {
+        ref.read(aiChatDraftInputProvider.notifier).set(inputController.text);
+      } catch (_) {}
+    }
+
+    if (attachments != null && attachments.isNotEmpty) {
+      if (replaceAttachments) {
+        setState(() {
+          _attachments.clear();
+        });
+      }
+      _addAttachments(attachments);
+    }
+  }
+
   void _addAttachments(List<AttachmentItem> items) {
     if (items.isEmpty) return;
 

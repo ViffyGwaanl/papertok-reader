@@ -138,24 +138,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             ),
                             const Divider(height: 1),
                             ListTile(
-                              leading: const Icon(Icons.translate_outlined),
-                              title: Text(L10n.of(context).settingsTranslate),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        SettingsSubpageScaffold(
-                                      title: L10n.of(context).settingsTranslate,
-                                      child: const TranslateSetting(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
                               leading: const Icon(Icons.headphones),
                               title: Text(L10n.of(context).settingsNarrate),
                               trailing: const Icon(Icons.chevron_right),
@@ -205,6 +187,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                     CupertinoPageRoute(
                                       builder: (context) =>
                                           const AiProviderCenterPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const Divider(height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.translate_outlined),
+                                title: Text(L10n.of(context).settingsTranslate),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    CupertinoPageRoute(
+                                      builder: (context) =>
+                                          SettingsSubpageScaffold(
+                                        title:
+                                            L10n.of(context).settingsTranslate,
+                                        child: const TranslateSetting(),
+                                      ),
                                     ),
                                   );
                                 },

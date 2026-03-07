@@ -1,14 +1,14 @@
 import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/models/attachment_item.dart';
+import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
-import 'package:anx_reader/utils/save_img.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
-import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/save_image_to_path.dart';
+import 'package:anx_reader/utils/save_img.dart';
+import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/share_file.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
@@ -83,11 +83,55 @@ class _ImageViewerState extends State<ImageViewer> {
     final scrollDelta = event.scrollDelta.dy;
     final currentScale = _controller.scale ?? 1.0;
 
-    // Adjust sensitivity: negative delta = zoom in, positive = zoom out
     final scaleFactor = scrollDelta > 0 ? 0.95 : 1.05;
     final newScale = currentScale * scaleFactor;
 
     _controller.scale = newScale;
+  }
+
+  Future<void> _openAiChatWithImage({
+    required Uint8List imageBytes,
+    required String mimeType,
+  }) async {
+    final jpegBytes = _compressToJpeg(imageBytes) ?? imageBytes;
+    final base64 = base64Encode(jpegBytes);
+    if (base64.isEmpty) {
+      AnxToast.show(L10n.of(context).commonFailed);
+      return;
+    }
+
+    final attachment = AttachmentItem.image(bytes: jpegBytes, base64: base64);
+    final prompt = L10n.of(context).imageAnalyzeAskAiPrefill;
+
+    Navigator.of(context).pop();
+    await Future<void>.delayed(Duration.zero);
+    final reading = readingPageKey.currentState;
+    if (reading == null) {
+      AnxToast.show(L10n.of(context).commonFailed);
+      return;
+    }
+    await reading.openAiChatDraft(
+      content: prompt,
+      attachments: [attachment],
+      replaceAttachments: true,
+    );
+  }
+
+  Future<void> _continueAskAiWithAnalysis(String displayText) async {
+    final prompt = '''${L10n.of(context).imageAnalyzeContinueAskPrefill}
+
+$displayText''';
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    await Future<void>.delayed(Duration.zero);
+    navigator.pop();
+    await Future<void>.delayed(Duration.zero);
+    final reading = readingPageKey.currentState;
+    if (reading == null) {
+      AnxToast.show(L10n.of(context).commonFailed);
+      return;
+    }
+    await reading.openAiChatDraft(content: prompt);
   }
 
   Future<void> _showAnalyzeSheet({
@@ -145,7 +189,10 @@ class _ImageViewerState extends State<ImageViewer> {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: _AiImageAnalysisSheet(stream: stream),
+            child: _AiImageAnalysisSheet(
+              stream: stream,
+              onContinueAsk: _continueAskAiWithAnalysis,
+            ),
           ),
         );
       },
@@ -164,7 +211,6 @@ class _ImageViewerState extends State<ImageViewer> {
       imageBytes = base64Decode(base64);
 
       final header = parts.first;
-      // data:image/png;base64
       final match = RegExp(r'^data:([^;]+);base64$').firstMatch(header);
       mimeType = match?.group(1);
     } catch (e) {
@@ -172,7 +218,7 @@ class _ImageViewerState extends State<ImageViewer> {
       return const Center(child: Text('Error'));
     }
 
-    if (imageBytes == null || imageBytes.isEmpty) {
+    if (imageBytes.isEmpty) {
       return const Center(child: Text('Error'));
     }
 
@@ -215,7 +261,6 @@ class _ImageViewerState extends State<ImageViewer> {
                       children: [
                         IconButton(
                           onPressed: () {
-                            // Keep filename prefix stable for product.
                             SaveImg.downloadImg(
                               imageBytes!,
                               (mimeType ?? 'image/jpeg').split('/').last,
@@ -237,11 +282,20 @@ class _ImageViewerState extends State<ImageViewer> {
                           icon: const Icon(Icons.share, color: Colors.white),
                         ),
                         IconButton(
+                          onPressed: () => _openAiChatWithImage(
+                            imageBytes: imageBytes!,
+                            mimeType: mimeType ?? 'image/jpeg',
+                          ),
+                          tooltip: L10n.of(context).imageAnalyzeAskAi,
+                          icon: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                        IconButton(
                           onPressed: () {
                             final jpegBytes = _compressToJpeg(imageBytes!);
                             if (jpegBytes == null || jpegBytes.isEmpty) {
-                              // Most likely a vector image (e.g. SVG) or an
-                              // unsupported bitmap format.
                               AnxToast.show(
                                 '当前图片格式暂不支持解析（仅支持常见位图图片）。',
                               );
@@ -279,9 +333,13 @@ class _ImageViewerState extends State<ImageViewer> {
 }
 
 class _AiImageAnalysisSheet extends StatefulWidget {
-  const _AiImageAnalysisSheet({required this.stream});
+  const _AiImageAnalysisSheet({
+    required this.stream,
+    required this.onContinueAsk,
+  });
 
   final Stream<String> stream;
+  final Future<void> Function(String displayText) onContinueAsk;
 
   @override
   State<_AiImageAnalysisSheet> createState() => _AiImageAnalysisSheetState();
@@ -340,6 +398,10 @@ class _AiImageAnalysisSheetState extends State<_AiImageAnalysisSheet> {
                     AnxToast.show(L10n.of(context).notesPageCopied);
                   },
                   child: Text(L10n.of(context).commonCopy),
+                ),
+                TextButton(
+                  onPressed: () => widget.onContinueAsk(displayText),
+                  child: Text(L10n.of(context).imageAnalyzeContinueAskAi),
                 ),
               ],
             ),

@@ -527,7 +527,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "de": [
@@ -1058,7 +1067,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "es": [
@@ -1589,7 +1607,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "fr": [
@@ -2120,7 +2147,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "it": [
@@ -2651,7 +2687,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "ja": [
@@ -3182,7 +3227,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "ko": [
@@ -3713,7 +3767,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "pt": [
@@ -4244,7 +4307,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "ro": [
@@ -4775,7 +4847,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "ru": [
@@ -5306,7 +5387,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "tr": [
@@ -5837,7 +5927,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "zh": [
@@ -6159,7 +6258,6 @@
     "settingsAiQuickPromptsHint",
     "settingsAiQuickPromptsEmpty",
     "settingsAiQuickPromptsResetConfirm",
-    "settingsAiProviderCenterTitle",
     "settingsAiProviderCenterDesc",
     "settingsAiProviderCenterSortAz",
     "settingsAiProviderCenterSortZa",
@@ -6212,8 +6310,6 @@
     "attachmentMaxImages",
     "attachmentRemove",
     "attachmentClearAll",
-    "imageAnalyze",
-    "settingsAiImageAnalysisTitle",
     "settingsAiImageAnalysisDesc",
     "settingsAiImageAnalysisProvider",
     "settingsAiImageAnalysisProviderDesc",
@@ -6814,7 +6910,16 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ],
 
   "zh_TW": [
@@ -7345,6 +7450,15 @@
     "settingsAiImageAnalysisPromptDesc",
     "settingsAiImageAnalysisPromptHint",
     "settingsAiImageAnalysisPromptVariablesHelp",
-    "settingsAiImageAnalysisPromptReset"
+    "settingsAiImageAnalysisPromptReset",
+    "imageAnalyzeAskAi",
+    "imageAnalyzeAskAiPrefill",
+    "imageAnalyzeContinueAskAi",
+    "imageAnalyzeContinueAskPrefill",
+    "translationContinueAskAi",
+    "translationContinueAskPrefill",
+    "translationOriginalLabel",
+    "translationResultLabel",
+    "translationLanguageLabel"
   ]
 }

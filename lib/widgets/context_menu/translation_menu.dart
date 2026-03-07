@@ -1,6 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:flutter/material.dart';
 
@@ -75,6 +76,21 @@ class _SelectionTranslationSheet extends StatefulWidget {
 class _SelectionTranslationSheetState
     extends State<_SelectionTranslationSheet> {
   Widget? _translationWidget;
+
+  Future<void> _continueAskAi() async {
+    final prompt = '''${L10n.of(context).translationContinueAskPrefill}
+
+${L10n.of(context).translationOriginalLabel}
+${widget.content}
+
+${L10n.of(context).translationLanguageLabel}
+${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(context)}''';
+    Navigator.of(context).pop();
+    await Future<void>.delayed(Duration.zero);
+    final reading = readingPageKey.currentState;
+    if (reading == null) return;
+    await reading.openAiChatDraft(content: prompt);
+  }
 
   @override
   void initState() {
@@ -190,6 +206,10 @@ class _SelectionTranslationSheetState
                     IconButton(
                       onPressed: _refreshTranslation,
                       icon: const Icon(Icons.refresh_rounded),
+                    ),
+                    TextButton(
+                      onPressed: _continueAskAi,
+                      child: Text(L10n.of(context).translationContinueAskAi),
                     ),
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
