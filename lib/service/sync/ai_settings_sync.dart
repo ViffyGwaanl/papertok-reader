@@ -10,6 +10,7 @@ import 'package:anx_reader/models/ai_input_quick_prompt.dart';
 import 'package:anx_reader/models/user_prompt.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
+import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/utils/log/common.dart';
 
 const int aiSettingsSchemaVersion = 1;
@@ -74,6 +75,9 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
         prefs.memorySearchTemporalDecayHalfLifeDays,
     'memoryEmbeddingCacheEnabledV1': prefs.memoryEmbeddingCacheEnabled,
     'memoryEmbeddingCacheMaxChunksV1': prefs.memoryEmbeddingCacheMaxChunks,
+    'memorySessionDigestEnabledV1': prefs.memorySessionDigestEnabled,
+    'memoryWorkflowDailyStrategyV1': prefs.memoryWorkflowDailyStrategy.wire,
+    'memoryLongTermConfirmEnabledV1': prefs.memoryLongTermConfirmEnabled,
   };
 
   // Translation-only prefs (safe to sync; no secrets).
@@ -395,6 +399,32 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
       final cacheMax = (ui['memoryEmbeddingCacheMaxChunksV1'] as num?)?.toInt();
       if (cacheMax != null) {
         prefs.memoryEmbeddingCacheMaxChunks = cacheMax;
+      }
+
+      final sessionDigest = ui['memorySessionDigestEnabledV1'];
+      if (sessionDigest is bool) {
+        prefs.memorySessionDigestEnabled = sessionDigest;
+      } else if (sessionDigest is String) {
+        final v = sessionDigest.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.memorySessionDigestEnabled = v == 'true';
+        }
+      }
+
+      final dailyStrategy = ui['memoryWorkflowDailyStrategyV1']?.toString();
+      if (dailyStrategy != null && dailyStrategy.trim().isNotEmpty) {
+        prefs.memoryWorkflowDailyStrategy =
+            MemoryWorkflowDailyStrategy.fromWire(dailyStrategy);
+      }
+
+      final longTermConfirm = ui['memoryLongTermConfirmEnabledV1'];
+      if (longTermConfirm is bool) {
+        prefs.memoryLongTermConfirmEnabled = longTermConfirm;
+      } else if (longTermConfirm is String) {
+        final v = longTermConfirm.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.memoryLongTermConfirmEnabled = v == 'true';
+        }
       }
 
       final mode = ui['aiPadPanelMode']?.toString();

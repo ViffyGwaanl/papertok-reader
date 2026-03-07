@@ -1,23 +1,30 @@
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
 import 'package:anx_reader/service/memory/memory_candidate_store.dart';
+import 'package:anx_reader/service/memory/memory_session_digest_service.dart';
+import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
 import 'package:uuid/uuid.dart';
+import 'package:langchain_core/chat_models.dart';
 
 class MemoryWorkflowService {
   MemoryWorkflowService({
     MarkdownMemoryStore? store,
     MemoryCandidateStore? candidateStore,
     MemoryWriteCoordinator? writeCoordinator,
+    MemorySessionDigestService? sessionDigestService,
   })  : _candidateStore =
             candidateStore ?? MemoryCandidateStore(rootDir: store?.rootDir),
         _writeCoordinator =
-            writeCoordinator ?? MemoryWriteCoordinator(store: store);
+            writeCoordinator ?? MemoryWriteCoordinator(store: store),
+        _sessionDigestService =
+            sessionDigestService ?? const MemorySessionDigestService();
 
   static const Uuid _uuid = Uuid();
 
   final MemoryCandidateStore _candidateStore;
   final MemoryWriteCoordinator _writeCoordinator;
+  final MemorySessionDigestService _sessionDigestService;
 
   Future<List<MemoryCandidate>> listPendingCandidates() {
     return _candidateStore.list(status: MemoryCandidateStatus.pending);
@@ -95,6 +102,44 @@ class MemoryWorkflowService {
     );
   }
 
+  Future<MemorySessionDigestResult> captureSessionDigest({
+    required List<ChatMessage> messages,
+    MemoryWorkflowDailyStrategy dailyStrategy =
+        MemoryWorkflowDailyStrategy.reviewInbox,
+    String sourceType = 'session_digest',
+    String? conversationId,
+    int maxCandidates = MemorySessionDigestService.defaultMaxCandidates,
+  }) async {
+    final drafts = _sessionDigestService.buildCandidates(
+      messages,
+      maxCandidates: maxCandidates,
+    );
+
+    final created = <MemoryCandidate>[];
+    for (final draft in drafts) {
+      final candidate = dailyStrategy.writesDailyDirectly
+          ? await saveToDaily(
+              text: draft.text,
+              sourceType: sourceType,
+              conversationId: conversationId,
+              confidence: draft.confidence,
+            )
+          : await addToReviewInbox(
+              text: draft.text,
+              targetDoc: MemoryDocTarget.daily,
+              sourceType: sourceType,
+              conversationId: conversationId,
+              confidence: draft.confidence,
+            );
+      created.add(candidate);
+    }
+
+    return MemorySessionDigestResult(
+      candidates: created,
+      dailyStrategy: dailyStrategy,
+    );
+  }
+
   Future<MemoryCandidate> applyCandidate(
     String candidateId, {
     required MemoryDocTarget targetDoc,
@@ -106,7 +151,10 @@ class MemoryWorkflowService {
     }
 
     await _appendToTarget(
-        targetDoc: targetDoc, date: date, text: candidate.text);
+      targetDoc: targetDoc,
+      date: date,
+      text: candidate.text,
+    );
     return _candidateStore.markApplied(candidateId, targetDoc: targetDoc);
   }
 
@@ -181,4 +229,16 @@ class MemoryWorkflowService {
     }
     return '${collapsed.substring(0, 77)}...';
   }
+}
+
+class MemorySessionDigestResult {
+  const MemorySessionDigestResult({
+    required this.candidates,
+    required this.dailyStrategy,
+  });
+
+  final List<MemoryCandidate> candidates;
+  final MemoryWorkflowDailyStrategy dailyStrategy;
+
+  bool get writesDailyDirectly => dailyStrategy.writesDailyDirectly;
 }

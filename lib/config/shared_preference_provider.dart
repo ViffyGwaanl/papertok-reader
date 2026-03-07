@@ -40,6 +40,7 @@ import 'package:anx_reader/models/mcp_tool_meta.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:anx_reader/models/window_info.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/translate/index.dart';
 import 'package:anx_reader/utils/get_current_language_code.dart';
 import 'package:anx_reader/utils/log/common.dart';
@@ -1015,6 +1016,12 @@ class Prefs extends ChangeNotifier {
       'memoryEmbeddingCacheEnabledV1';
   static const String _memoryEmbeddingCacheMaxChunksV1Key =
       'memoryEmbeddingCacheMaxChunksV1';
+  static const String _memorySessionDigestEnabledV1Key =
+      'memorySessionDigestEnabledV1';
+  static const String _memoryWorkflowDailyStrategyV1Key =
+      'memoryWorkflowDailyStrategyV1';
+  static const String _memoryLongTermConfirmEnabledV1Key =
+      'memoryLongTermConfirmEnabledV1';
 
   /// Whether indexing should follow the current chat provider.
   ///
@@ -1400,6 +1407,44 @@ class Prefs extends ChangeNotifier {
       touchAiSettingsUpdatedAt();
     }
     prefs.setInt(_memoryEmbeddingCacheMaxChunksV1Key, v);
+    notifyListeners();
+  }
+
+  bool get memorySessionDigestEnabled {
+    return prefs.getBool(_memorySessionDigestEnabledV1Key) ?? true;
+  }
+
+  set memorySessionDigestEnabled(bool value) {
+    if (memorySessionDigestEnabled != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_memorySessionDigestEnabledV1Key, value);
+    notifyListeners();
+  }
+
+  MemoryWorkflowDailyStrategy get memoryWorkflowDailyStrategy {
+    return MemoryWorkflowDailyStrategy.fromWire(
+      prefs.getString(_memoryWorkflowDailyStrategyV1Key),
+    );
+  }
+
+  set memoryWorkflowDailyStrategy(MemoryWorkflowDailyStrategy value) {
+    if (memoryWorkflowDailyStrategy != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_memoryWorkflowDailyStrategyV1Key, value.wire);
+    notifyListeners();
+  }
+
+  bool get memoryLongTermConfirmEnabled {
+    return prefs.getBool(_memoryLongTermConfirmEnabledV1Key) ?? true;
+  }
+
+  set memoryLongTermConfirmEnabled(bool value) {
+    if (memoryLongTermConfirmEnabled != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_memoryLongTermConfirmEnabledV1Key, value);
     notifyListeners();
   }
 
