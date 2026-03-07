@@ -1,4 +1,4 @@
-# 平台测试状态（Paper Reader / papertok-reader）
+# 平台测试状态（PaperTok Reader / papertok-reader）
 
 本文档记录本仓库的“实际验证过的平台范围”，用于对外说明与内部 QA 规划。
 

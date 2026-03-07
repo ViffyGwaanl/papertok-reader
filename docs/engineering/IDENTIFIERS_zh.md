@@ -1,4 +1,4 @@
-# Identifiers 总表（Paper Reader / papertok-reader）
+# Identifiers 总表（PaperTok Reader / papertok-reader）
 
 本文件是 **papertok-reader 产品发行版** 的“标识真值源（Single Source of Truth）”。
 
@@ -14,7 +14,7 @@
 ## 0. 当前默认值（Source of Truth）
 
 ### 0.1 Display Name（用户看到的名字）
-- **Paper Reader**
+- **PaperTok Reader**
 
 > Display Name ≠ Bundle ID / applicationId。
 > Display Name 用于系统桌面/启动器展示；Bundle ID / applicationId 用于签名、发布、系统唯一识别。
@@ -48,7 +48,7 @@
 - Flutter：`lib/service/iap/play_store_iap_service.dart`
 
 ### 1.4 App label（显示名）
-- `@string/title = "Paper Reader"`
+- `@string/title = "PaperTok Reader"`
 
 位置：
 - `android/app/src/main/res/values/strings.xml`
@@ -75,7 +75,7 @@
 - `ios/ShareExtension/Info.plist`（同上）
 
 ### 2.3 Display Name
-- `CFBundleDisplayName = "Paper Reader"`
+- `CFBundleDisplayName = "PaperTok Reader"`
 
 位置：
 - `ios/Runner/Info.plist`
@@ -93,7 +93,7 @@
 - `macos/Runner.xcodeproj/project.pbxproj`
 
 ### 3.2 Display Name / Product Name
-- `Paper Reader`
+- `PaperTok Reader`
 
 位置：
 - `macos/Runner/Configs/AppInfo.xcconfig`（`PRODUCT_NAME`）

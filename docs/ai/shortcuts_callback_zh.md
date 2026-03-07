@@ -1,12 +1,12 @@
 # 快捷指令（Shortcuts）AI 工具：回到 App + 回传结果（x-callback-url）
 
-> 适用项目：Paper Reader（papertok-reader）
+> 适用项目：PaperTok Reader（papertok-reader）
 >
 > 对应工具：`shortcuts_run`
 >
 > 目标：
-> 1) 运行某个快捷指令后 **自动回到 Paper Reader**
-> 2) （可选）快捷指令把一个 **小结果** 回传给 Paper Reader，让 AI 继续推理
+> 1) 运行某个快捷指令后 **自动回到 PaperTok Reader**
+> 2) （可选）快捷指令把一个 **小结果** 回传给 PaperTok Reader，让 AI 继续推理
 
 ---
 

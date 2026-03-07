@@ -1,4 +1,4 @@
-# iOS TestFlight 发布清单（Paper Reader / papertok-reader）
+# iOS TestFlight 发布清单（PaperTok Reader / papertok-reader）
 
 本文档记录 **papertok-reader（产品发行版）** 的 iOS TestFlight 发布流程、产品化（branding + identifiers）改造要点与常见问题。
 
@@ -6,7 +6,7 @@
 
 > 适用范围
 > - 本仓库：`ViffyGwaanl/papertok-reader`（private）
-> - App 显示名：**Paper Reader**
+> - App 显示名：**PaperTok Reader**
 
 ---
 
@@ -34,7 +34,7 @@
 
 ### 1.1 Display Name（显示名）
 
-当前显示名为：**Paper Reader**。
+当前显示名为：**PaperTok Reader**。
 
 检查：
 - `ios/Runner/Info.plist`：`CFBundleDisplayName`
@@ -93,7 +93,7 @@ Share Extension 与主 App 通过 App Group 共享数据。当前默认：
 |---|---|---|
 | `ios/Runner.xcodeproj/project.pbxproj` | `PRODUCT_BUNDLE_IDENTIFIER`（Runner/Tests/ShareExtension） | Bundle ID 真值源 |
 | `ios/Runner.xcodeproj/project.pbxproj` | `CUSTOM_GROUP_ID` | App Group 真值源 |
-| `ios/Runner/Info.plist` | `CFBundleDisplayName` | 显示名（Paper Reader） |
+| `ios/Runner/Info.plist` | `CFBundleDisplayName` | 显示名（PaperTok Reader） |
 | `ios/fastlane/Matchfile` | `app_identifier(...)` | match/签名脚本使用 |
 | `ios/fastlane/Fastfile` | identifiers mapping | match/上传流程 |
 

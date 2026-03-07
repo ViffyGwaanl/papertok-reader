@@ -2,9 +2,9 @@
 
 <br>
 
-# Paper Reader（papertok-reader）
+# PaperTok Reader（papertok-reader）
 
-**Paper Reader** 是一个以 iOS/iPadOS 为主做验证的“产品发行版”，基于上游 **[Anx Reader](https://github.com/Anxcye/anx-reader)**（MIT）进行定制与增强。
+**PaperTok Reader** 是一个以 iOS/iPadOS 为主做验证的“产品发行版”，基于上游 **[Anx Reader](https://github.com/Anxcye/anx-reader)**（MIT）进行定制与增强。
 
 本仓库主要聚焦：**PaperTok 集成 + AI/翻译体验增强 + 产品默认值 + iOS 侧 QA/发布工作流**。
 

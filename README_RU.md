@@ -1,6 +1,6 @@
 [English](README.md) | [简体中文](README_zh.md) | [Türkçe](README_tr.md) | **Русский**
 
-# Paper Reader (papertok-reader)
+# PaperTok Reader (papertok-reader)
 
 Этот репозиторий — кастомный дистрибутив на базе **[Anx Reader](https://github.com/Anxcye/anx-reader)** с интеграцией **PaperTok** и улучшениями **AI/перевода**.
 

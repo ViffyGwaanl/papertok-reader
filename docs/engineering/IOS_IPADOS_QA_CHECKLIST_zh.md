@@ -1,4 +1,4 @@
-# iOS / iPadOS 真机验收 Checklist（Paper Reader / papertok-reader）
+# iOS / iPadOS 真机验收 Checklist（PaperTok Reader / papertok-reader）
 
 > 目标：用最短路径验证 **Home TabBar / AI 对话 / AI 翻译 / Provider Center 多 Key 轮询与冷却 / 备份恢复 / WebDAV 同步** 在真机上可用、稳定。
 

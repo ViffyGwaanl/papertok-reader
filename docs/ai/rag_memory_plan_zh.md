@@ -1,6 +1,6 @@
 # RAG + Memory（Phase 1–5）总体计划与当前状态（工程口径）
 
-> 适用仓库：**Paper Reader（papertok-reader）产品仓库**。
+> 适用仓库：**PaperTok Reader（papertok-reader）产品仓库**。
 > 
 > 本文用于对齐“RAG（检索增强）+ Memory（本地记忆）”这条线的 **分阶段交付边界、依赖关系与验收口径**。
 >

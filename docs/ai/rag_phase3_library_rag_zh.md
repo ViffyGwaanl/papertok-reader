@@ -1,6 +1,6 @@
 # Phase 3：全书库 RAG + 批量索引队列（设计方案，贴合 papertok-reader / anx-reader 代码结构）
 
-> 目标：在现有 **Riverpod + services** 架构上，为 Paper Reader（papertok-reader）引入“全书库可检索知识库（RAG）”，并提供**可恢复、可并发、可取消**的批量索引队列。
+> 目标：在现有 **Riverpod + services** 架构上，为 PaperTok Reader（papertok-reader）引入“全书库可检索知识库（RAG）”，并提供**可恢复、可并发、可取消**的批量索引队列。
 >
 > 本文聚焦“可落地的工程设计”，默认代码库为：`anx-reader`（Flutter），AI 面板与 Agent streaming 已存在（`lib/providers/ai_chat.dart`、`lib/service/ai/index.dart`）。
 

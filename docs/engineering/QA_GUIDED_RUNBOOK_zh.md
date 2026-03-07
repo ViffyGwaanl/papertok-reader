@@ -1,4 +1,4 @@
-# 带你跑 QA：Paper Reader（papertok-reader）真机验收讲解稿
+# 带你跑 QA：PaperTok Reader（papertok-reader）真机验收讲解稿
 
 你可以把 QA 想成一次“飞机起飞前的绕机检查”。它不追求把所有零件拆开测一遍，而是用最短的路径证明两件事。
 

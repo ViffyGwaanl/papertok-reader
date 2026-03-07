@@ -1,4 +1,4 @@
-# Android 发布清单（Paper Reader / papertok-reader）
+# Android 发布清单（PaperTok Reader / papertok-reader）
 
 本文档记录 **papertok-reader（产品发行版）** 的 Android 发布流程、产品化（branding + identifiers）改造要点与常见问题。
 
@@ -9,7 +9,7 @@
 
 > 适用范围
 > - 本仓库：`ViffyGwaanl/papertok-reader`（private）
-> - App 显示名：**Paper Reader**
+> - App 显示名：**PaperTok Reader**
 
 ---
 
@@ -63,7 +63,7 @@ android {
 Android 的显示名来自：
 - `android/app/src/main/res/values/strings.xml`：`@string/title`
 
-当前值：`Paper Reader`
+当前值：`PaperTok Reader`
 
 ---
 

@@ -2,9 +2,9 @@
 
 <br>
 
-# Paper Reader (papertok-reader)
+# PaperTok Reader (papertok-reader)
 
-**Paper Reader** is an iOS/iPadOS-first *product distribution* built on top of **[Anx Reader](https://github.com/Anxcye/anx-reader)** (MIT).
+**PaperTok Reader** is an iOS/iPadOS-first *product distribution* built on top of **[Anx Reader](https://github.com/Anxcye/anx-reader)** (MIT).
 
 This repo focuses on **PaperTok integration + AI/translation UX improvements + product defaults + iOS QA/release workflow**.
 

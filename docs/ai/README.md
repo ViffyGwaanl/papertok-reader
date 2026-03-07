@@ -92,9 +92,9 @@
   - normal web share is treated as **URL-first**
   - richer webpage text / full article should use the existing Shortcuts flow rather than ordinary Share Sheet
 
-#### Deep links (Paper Reader)
+#### Deep links (PaperTok Reader)
 
-- Reader navigation deep links use the **Paper Reader** URL scheme (system-level):
+- Reader navigation deep links use the **PaperTok Reader** URL scheme (system-level):
   - `paperreader://reader/open?bookId=<id>&cfi=<epubcfi(...)>`
   - `paperreader://reader/open?bookId=<id>&href=<chapterHrefOrAnchor>`
 - Shortcuts callback deep links keep using:

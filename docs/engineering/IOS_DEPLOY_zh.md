@@ -1,4 +1,4 @@
-# iOS 部署/安装测试教程（Paper Reader / papertok-reader）
+# iOS 部署/安装测试教程（PaperTok Reader / papertok-reader）
 
 本文档面向 **papertok-reader（产品发行版）**，提供从“拉代码 → 真机安装 → TestFlight 分发”的完整 iOS 部署/安装测试流程。
 
@@ -60,7 +60,7 @@ iOS 安装测试通常分两条路线：
 - `docs/engineering/IDENTIFIERS_zh.md`
 
 你会看到当前默认：
-- Display Name：**Paper Reader**
+- Display Name：**PaperTok Reader**
 - iOS Bundle ID（主 App / Share Extension / Tests）
 - App Group（用于 share extension 共享）
 
@@ -130,10 +130,10 @@ open ios/Runner.xcworkspace
 - 点击 ▶︎ Run
 
 ### 4.5 验收点（最小安装测试）
-- [ ] 桌面显示名：Paper Reader
+- [ ] 桌面显示名：PaperTok Reader
 - [ ] App 能启动进入首页
 - [ ] 设置页可打开
-- [ ] （可选）Share 导入：从 Files/其他 App 分享 PDF/EPUB 到 Paper Reader，能唤起并完成导入
+- [ ] （可选）Share 导入：从 Files/其他 App 分享 PDF/EPUB 到 PaperTok Reader，能唤起并完成导入
 
 ---
 

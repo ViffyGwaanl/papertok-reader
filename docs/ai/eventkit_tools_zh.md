@@ -1,6 +1,6 @@
 # iOS EventKit（MethodChannel）系统工具：Reminders / Calendar
 
-> 适用项目：Paper Reader（papertok-reader）
+> 适用项目：PaperTok Reader（papertok-reader）
 >
 > 目标：为 AI Tools 提供一套 **可稳定调用、风险可控（Human-in-the-loop）** 的 iOS 原生系统能力。
 >

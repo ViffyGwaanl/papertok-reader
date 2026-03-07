@@ -1,6 +1,6 @@
-# MCP Servers（外部工具）— 产品说明与实现要点（Paper Reader）
+# MCP Servers（外部工具）— 产品说明与实现要点（PaperTok Reader）
 
-> 本文描述 Paper Reader（papertok-reader）中 **External MCP Servers** 的产品行为、配置策略、同步/备份规则与关键实现点。
+> 本文描述 PaperTok Reader（papertok-reader）中 **External MCP Servers** 的产品行为、配置策略、同步/备份规则与关键实现点。
 >
 > 目标：让用户能够把第三方 MCP Server 的 tools 注入到 AI Agent 工具箱中，并在移动端稳定可用（连接测试、缓存、超时、取消、输出裁剪、安全审批）。
 
@@ -61,7 +61,7 @@
 
 ## 3. 传输协议支持（Transport）
 
-Paper Reader 支持 MCP 两类 transport，并提供 Auto 探测：
+PaperTok Reader 支持 MCP 两类 transport，并提供 Auto 探测：
 
 ### 3.1 Streamable HTTP（优先）
 - initialize：POST
@@ -87,7 +87,7 @@ OpenAI（尤其 Responses）对 `tools[].name` 有硬约束：
 
 因此 MCP tools **不能使用包含点号的命名空间**（例如 `mcp.server.tool` 会导致 400）。
 
-Paper Reader 已采用：
+PaperTok Reader 已采用：
 - `mcp_<serverKey>_<toolKey>`
 
 （并对 server/tool 名做清洗与长度预算，以避免超长 name 被后端拒绝。）

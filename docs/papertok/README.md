@@ -36,7 +36,7 @@ The UI shows an **edition picker** (BottomSheet) listing only available editions
 
 ## Home navigation configuration
 
-Paper Reader replaces scattered bottom-nav switches with a unified config:
+PaperTok Reader replaces scattered bottom-nav switches with a unified config:
 
 - **Order**: `homeTabsOrder` (List<String>)
 - **Enable**: `homeTabsEnabled` (Map<String,bool>)

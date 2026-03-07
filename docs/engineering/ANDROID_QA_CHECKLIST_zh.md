@@ -1,6 +1,6 @@
-# Android QA Checklist (Paper Reader)
+# Android QA Checklist (PaperTok Reader)
 
-本清单用于 **Paper Reader（papertok-reader）Android 真机回归**。
+本清单用于 **PaperTok Reader（papertok-reader）Android 真机回归**。
 
 目标：确保核心链路（AI/翻译/PaperTok/MCP/RAG+Memory/备份/深链）在 Android 上可用、稳定、可解释。
 
