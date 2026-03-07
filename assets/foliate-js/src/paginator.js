@@ -293,19 +293,24 @@ class View {
     this.expand()
   }
   setImageSize() {
-    const { width, height, margin } = this.#layout
+    const { width, height, margin, columnWidth } = this.#layout
     const vertical = this.#vertical
     const doc = this.document
     for (const el of doc.body.querySelectorAll('img, svg, video')) {
       // preserve max size if they are already set
       const { maxHeight, maxWidth } = doc.defaultView.getComputedStyle(el)
+      // Cap max-width to the column width to prevent images from overflowing
+      // into the next page when the EPUB embeds a large inline max-width value.
+      const effectiveMaxWidth = vertical
+        ? `${width - margin * 2}px`
+        : columnWidth
+          ? `${columnWidth}px`
+          : (maxWidth !== 'none' && maxWidth !== '0px' ? maxWidth : '100%')
       setStylesImportant(el, {
         'max-height': vertical
           ? (maxHeight !== 'none' && maxHeight !== '0px' ? maxHeight : '100%')
           : `${height - margin * 2}px`,
-        'max-width': vertical
-          ? `${width - margin * 2}px`
-          : (maxWidth !== 'none' && maxWidth !== '0px' ? maxWidth : '100%'),
+        'max-width': effectiveMaxWidth,
         'object-fit': 'contain',
         'page-break-inside': 'avoid',
         'break-inside': 'avoid',
