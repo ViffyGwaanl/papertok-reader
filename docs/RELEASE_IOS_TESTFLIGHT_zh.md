@@ -10,10 +10,10 @@
 
 ## 当前发布候选（2026-03-07）
 
-- 目标版本：`1.68.2`
-- 本轮目标：发一版新的 TestFlight，把 `1.68.1` 之后的主线更新一起带进去。
+- 目标版本：`1.68.3`
+- 本轮目标：发一版新的 TestFlight，把 `1.68.1` 之后到当前的主线更新一起带进去，并额外包含最新的 selection UI / shortcuts preset 改进。
 
-### 1.68.1 -> 1.68.2 更新摘要
+### 1.68.1 -> 1.68.3 更新摘要
 
 本轮建议在 TestFlight / App Store Connect 的版本说明中整理为：
 
@@ -39,6 +39,12 @@
   - 仅错误
   - 级别筛选
   - 来源筛选
+- 阅读页 selection UI 收口：
+  - 划线功能条视觉重设计，更接近苹果式悬浮菜单
+  - 划线翻译卡片改为自适应布局，不再过小
+- Shortcuts prompt preset 策略：
+  - 可选接入 preset（off / when_empty / prepend）
+  - 可选默认 preset
 - 低风险命名收口：
   - 对外产品名统一为 `PaperTok Reader`
   - App 内文案 / l10n / iOS / Android 显示名统一
@@ -50,7 +56,9 @@
 2. Memory 新增显式保存到今日日记、长期记忆和 Review Inbox，并补齐最小记忆工作流。
 3. 结束会话时可生成记忆候选，支持 Review Inbox 或自动写入今日日记。
 4. 高级日志页新增搜索、错误筛选、级别筛选和来源筛选，排障更方便。
-5. 产品对外名称统一为 PaperTok Reader。
+5. 阅读页划线功能条视觉重设计，划线翻译卡片改为自适应布局。
+6. Shortcuts 新增可选 prompt preset 策略与默认 preset 设置。
+7. 产品对外名称统一为 PaperTok Reader。
 ```
 
 ---

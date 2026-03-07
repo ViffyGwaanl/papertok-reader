@@ -10,9 +10,9 @@
   - 1 个 WebDAV 账号/目录
   - 1 个 iCloud Drive / Files 可写目录
 
-### 0.1 本轮 1.68.2 重点验收项
+### 0.1 本轮 1.68.3 重点验收项
 
-这版建议优先关注 `1.68.1` 之后新加的 5 条主线：
+这版建议优先关注 `1.68.1` 之后新加的 7 条主线：
 
 1. Share diagnostics 增强
    - 搜索
@@ -30,7 +30,13 @@
    - only errors
    - level filter
    - source filter
-5. 命名收口
+5. 阅读页 selection UI 收口
+   - 划线功能条视觉是否更统一、更像系统悬浮菜单
+   - 划线翻译卡片是否不再过小，长文本是否仍可读
+6. Shortcuts prompt preset 策略
+   - off / when_empty / prepend 三种模式是否按预期工作
+   - 默认 preset 选择是否生效
+7. 命名收口
    - App 可见名称是否统一为 `PaperTok Reader`
 
 ## 1. Home TabBar（苹果风格浮动 Tab 栏）
