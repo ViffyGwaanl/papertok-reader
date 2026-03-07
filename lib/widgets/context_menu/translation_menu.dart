@@ -19,11 +19,6 @@ Future<void> showSelectionTranslationSheet(
     useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) {
-      final sheet = _SelectionTranslationSheet(
-        content: content,
-        contextText: contextText,
-      );
-
       if (wide) {
         return SafeArea(
           child: Center(
@@ -34,16 +29,28 @@ Future<void> showSelectionTranslationSheet(
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: sheet,
+                child: _SelectionTranslationSheet(
+                  content: content,
+                  contextText: contextText,
+                ),
               ),
             ),
           ),
         );
       }
 
-      return FractionallySizedBox(
-        heightFactor: 0.92,
-        child: sheet,
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.9,
+        minChildSize: 0.7,
+        maxChildSize: 0.98,
+        builder: (ctx, scrollController) {
+          return _SelectionTranslationSheet(
+            content: content,
+            contextText: contextText,
+            scrollController: scrollController,
+          );
+        },
       );
     },
   );
@@ -53,10 +60,12 @@ class _SelectionTranslationSheet extends StatefulWidget {
   const _SelectionTranslationSheet({
     required this.content,
     this.contextText,
+    this.scrollController,
   });
 
   final String content;
   final String? contextText;
+  final ScrollController? scrollController;
 
   @override
   State<_SelectionTranslationSheet> createState() =>
@@ -189,86 +198,97 @@ class _SelectionTranslationSheetState
                   ],
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : colors.surfaceContainerHighest.withOpacity(0.58),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.06)
-                          : colors.outlineVariant.withOpacity(0.16),
-                    ),
-                  ),
-                  child: Text(
-                    widget.content,
-                    maxLines: 8,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.4,
-                      color: foreground.withOpacity(0.78),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.black.withOpacity(0.16)
-                        : colors.surfaceContainerHigh.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
+                Expanded(
+                  child: ListView(
+                    controller: widget.scrollController,
+                    padding: EdgeInsets.zero,
                     children: [
-                      _LangButton(
-                        label: Prefs().translateFrom.getNative(context),
-                        onTap: () => _pickLang(true),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 18,
-                          color: foreground.withOpacity(0.68),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.05)
+                              : colors.surfaceContainerHighest
+                                  .withOpacity(0.58),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.06)
+                                : colors.outlineVariant.withOpacity(0.16),
+                          ),
+                        ),
+                        child: Text(
+                          widget.content,
+                          maxLines: 8,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.4,
+                            color: foreground.withOpacity(0.78),
+                          ),
                         ),
                       ),
-                      _LangButton(
-                        label: Prefs().translateTo.getNative(context),
-                        onTap: () => _pickLang(false),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.black.withOpacity(0.16)
+                              : colors.surfaceContainerHigh.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            _LangButton(
+                              label: Prefs().translateFrom.getNative(context),
+                              onTap: () => _pickLang(true),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 6),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 18,
+                                color: foreground.withOpacity(0.68),
+                              ),
+                            ),
+                            _LangButton(
+                              label: Prefs().translateTo.getNative(context),
+                              onTap: () => _pickLang(false),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.05)
-                          : colors.surfaceContainerHighest.withOpacity(0.58),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.06)
-                            : colors.outlineVariant.withOpacity(0.16),
-                      ),
-                    ),
-                    child: SingleChildScrollView(
-                      child: _translationWidget ??
-                          const SizedBox(
-                            height: 120,
-                            child: Center(child: Text('...')),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        constraints: const BoxConstraints(minHeight: 220),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.05)
+                              : colors.surfaceContainerHighest
+                                  .withOpacity(0.58),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.06)
+                                : colors.outlineVariant.withOpacity(0.16),
                           ),
-                    ),
+                        ),
+                        child: _translationWidget ??
+                            const SizedBox(
+                              height: 120,
+                              child: Center(child: Text('...')),
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                   ),
                 ),
               ],
