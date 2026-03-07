@@ -97,6 +97,9 @@ class _TranslationMenuState extends State<TranslationMenu> {
           final label = isFrom
               ? Prefs().translateFrom.getNative(context)
               : Prefs().translateTo.getNative(context);
+          final foreground = Prefs().eInkMode
+              ? Theme.of(context).colorScheme.onSecondaryContainer
+              : Colors.white.withOpacity(0.92);
           return InkWell(
             borderRadius: BorderRadius.circular(10),
             onTap: () {
@@ -111,9 +114,15 @@ class _TranslationMenuState extends State<TranslationMenu> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: foreground),
+                    ),
+                  ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.expand_more, size: 16),
+                  Icon(Icons.expand_more, size: 16, color: foreground),
                 ],
               ),
             ),
@@ -166,12 +175,14 @@ class _TranslationMenuState extends State<TranslationMenu> {
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 14,
                           height: 1.35,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSecondaryContainer
-                              .withOpacity(0.86),
+                          color: Prefs().eInkMode
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .onSecondaryContainer
+                                  .withOpacity(0.86)
+                              : Colors.white.withOpacity(0.72),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -179,11 +190,18 @@ class _TranslationMenuState extends State<TranslationMenu> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface
-                              .withOpacity(0.58),
-                          borderRadius: BorderRadius.circular(14),
+                          color: Prefs().eInkMode
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .surface
+                                  .withOpacity(0.58)
+                              : Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Prefs().eInkMode
+                                ? Colors.transparent
+                                : Colors.white.withOpacity(0.06),
+                          ),
                         ),
                         child: _translationWidget ??
                             const SizedBox(
@@ -200,9 +218,15 @@ class _TranslationMenuState extends State<TranslationMenu> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color:
-                      Theme.of(context).colorScheme.surface.withOpacity(0.42),
-                  borderRadius: BorderRadius.circular(14),
+                  color: Prefs().eInkMode
+                      ? Theme.of(context).colorScheme.surface.withOpacity(0.42)
+                      : Colors.black.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Prefs().eInkMode
+                        ? Colors.transparent
+                        : Colors.white.withOpacity(0.05),
+                  ),
                 ),
                 child: AxisFlex(
                   mainAxisSize: MainAxisSize.min,

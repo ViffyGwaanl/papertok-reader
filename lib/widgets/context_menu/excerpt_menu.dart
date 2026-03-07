@@ -207,38 +207,38 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     required String label,
     required VoidCallback onTap,
   }) {
-    final colors = Theme.of(context).colorScheme;
+    final isDark = !Prefs().eInkMode;
+    final foreground = isDark
+        ? Colors.white
+        : Theme.of(context).colorScheme.onSecondaryContainer;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: colors.surface.withOpacity(0.52),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: colors.outlineVariant.withOpacity(0.35),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: colors.onSecondaryContainer),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  height: 1.1,
-                  color: colors.onSecondaryContainer.withOpacity(0.92),
-                  fontWeight: FontWeight.w500,
+        child: SizedBox(
+          width: 52,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon,
+                    size: 18, color: foreground.withOpacity(isDark ? 0.96 : 1)),
+                const SizedBox(height: 5),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    height: 1.05,
+                    color: foreground.withOpacity(isDark ? 0.88 : 0.92),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -342,13 +342,19 @@ class ExcerptMenuState extends State<ExcerptMenu> {
   }
 
   Widget _sectionCard({required BuildContext context, required Widget child}) {
-    final colors = Theme.of(context).colorScheme;
+    final isDark = !Prefs().eInkMode;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: colors.surface.withOpacity(0.26),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.outlineVariant.withOpacity(0.24)),
+        color: isDark
+            ? Colors.white.withOpacity(0.04)
+            : Theme.of(context).colorScheme.surface.withOpacity(0.26),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.06)
+              : Theme.of(context).colorScheme.outlineVariant.withOpacity(0.24),
+        ),
       ),
       child: child,
     );
@@ -357,6 +363,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final isDark = !Prefs().eInkMode;
     final actionButtons = <Widget>[
       _actionButton(
         context: context,
@@ -444,21 +451,32 @@ class ExcerptMenuState extends State<ExcerptMenu> {
       ),
       child: Container(
         decoration: widget.decoration,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionCard(
-              context: context,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.black.withOpacity(0.16)
+                    : colors.surface.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : colors.outlineVariant.withOpacity(0.16),
+                ),
+              ),
               child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 2,
+                runSpacing: 2,
                 children: actionButtons,
               ),
             ),
             if (!widget.footnote) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               _sectionCard(
                 context: context,
                 child: Column(

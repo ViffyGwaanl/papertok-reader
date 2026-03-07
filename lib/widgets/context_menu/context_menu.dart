@@ -117,24 +117,21 @@ Future<void> showContextMenu(
     playerKey.removeOverlay();
   }
 
-  final colors = Theme.of(context).colorScheme;
   final decoration = BoxDecoration(
-    color: Prefs().eInkMode
-        ? Colors.white
-        : colors.secondaryContainer.withOpacity(0.96),
-    borderRadius: BorderRadius.circular(22),
+    color: Prefs().eInkMode ? Colors.white : const Color(0xFF24262B),
+    borderRadius: BorderRadius.circular(18),
     border: Border.all(
       color: Prefs().eInkMode
           ? Colors.black.withOpacity(0.18)
-          : colors.outlineVariant.withOpacity(0.28),
+          : Colors.white.withOpacity(0.08),
     ),
     boxShadow: [
       if (!Prefs().eInkMode)
         BoxShadow(
-          color: Colors.black.withOpacity(0.12),
-          blurRadius: 28,
-          spreadRadius: -6,
-          offset: const Offset(0, 10),
+          color: Colors.black.withOpacity(0.22),
+          blurRadius: 26,
+          spreadRadius: -8,
+          offset: const Offset(0, 12),
         ),
       if (Prefs().eInkMode)
         const BoxShadow(
