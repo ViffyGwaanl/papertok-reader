@@ -1,6 +1,8 @@
 # PaperTok Reader Memory 工作流对齐 OpenClaw（产品方案 v1）
 
 > 目标：在**不推翻现有 Memory 检索层**的前提下，把 PaperTok Reader 的 Memory 从“可检索的 Markdown 记忆库”补齐为“**daily + long-term + review inbox**”的完整工作流。
+>
+> 2026-03-07 更新：M1（manual-first）已落地，包含候选 workflow store 与索引 cache 分离、聊天显式保存到 daily / long-term、加入 review inbox、Memory 设置页最小 Review Inbox UI，以及统一的 Markdown memory 写协调器。silent auto-write / session-end candidate digest 仍未实现。
 
 ## 1. 当前状态（As-Is）
 
@@ -329,17 +331,20 @@ Markdown 继续作为最终记忆内容的 source-of-truth；
 - 新增 workflow 数据模型 / store / prefs
 - 不改默认行为
 
-### P1 — 显式保存入口
+### P1 — 显式保存入口（已完成 / M1）
 
 - 聊天页支持：
   - 保存到今日日记
+  - 保存到长期记忆
   - 加入待审队列
-- Memory 页新增 Review Inbox
+- Memory 页新增最小 Review Inbox
+- 候选 workflow state 与索引 cache 分离存储
+- Markdown 写入统一走串行协调器
 
-### P2 — Promote to Long-term
+### P2 — Promote to Long-term（已完成 / M1）
 
 - Review Inbox 支持提升到 `MEMORY.md`
-- long-term 默认确认后写入
+- long-term 仍然是显式触发，不做 silent auto-write
 
 ### P3 — Session-end candidate digest
 

@@ -7,7 +7,6 @@ import 'dart:typed_data';
 import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/main.dart';
 import 'package:anx_reader/providers/ai_chat.dart';
 import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/providers/ai_history.dart';
@@ -15,7 +14,8 @@ import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/service/ai/ai_history.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/enums/ai_thinking_mode.dart';
-import 'package:anx_reader/service/ai/index.dart';
+import 'package:anx_reader/service/memory/memory_candidate.dart';
+import 'package:anx_reader/service/memory/memory_workflow_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/widgets/ai/ai_collapsible_section.dart';
@@ -34,7 +34,6 @@ import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart
 import 'package:anx_reader/service/receive_file/share_inbox_paths.dart';
 import 'package:anx_reader/service/receive_file/share_safe_import.dart';
 import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
-import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -101,9 +100,16 @@ class AiChatStream extends ConsumerStatefulWidget {
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
 }
 
+enum _MessageMemoryAction {
+  saveToDaily,
+  saveToLongTerm,
+  addToReviewInbox,
+}
+
 class AiChatStreamState extends ConsumerState<AiChatStream> {
   final TextEditingController inputController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final MemoryWorkflowService _memoryWorkflow = MemoryWorkflowService();
 
   bool _suppressDraftSync = false;
 
@@ -1227,6 +1233,108 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
+  String _assistantMemoryText(String content) {
+    final parsed = parseReasoningContent(content);
+    return _buildCopyableText(parsed, content).trim();
+  }
+
+  Future<void> _handleMessageMemoryAction(
+    _MessageMemoryAction action, {
+    required String text,
+    required String sourceType,
+    String? messageNodeId,
+  }) async {
+    final normalized = text.trim();
+    if (normalized.isEmpty) {
+      AnxToast.show(L10n.of(context).memoryWorkflowNothingToSave);
+      return;
+    }
+
+    final l10n = L10n.of(context);
+    final conversationId = ref.read(aiChatProvider.notifier).currentSessionId;
+
+    try {
+      switch (action) {
+        case _MessageMemoryAction.saveToDaily:
+          await _memoryWorkflow.saveToDaily(
+            text: normalized,
+            sourceType: sourceType,
+            conversationId: conversationId,
+            messageNodeId: messageNodeId,
+          );
+          if (!mounted) return;
+          AnxToast.show(l10n.memorySavedToDaily);
+          break;
+        case _MessageMemoryAction.saveToLongTerm:
+          await _memoryWorkflow.saveToLongTerm(
+            text: normalized,
+            sourceType: sourceType,
+            conversationId: conversationId,
+            messageNodeId: messageNodeId,
+          );
+          if (!mounted) return;
+          AnxToast.show(l10n.memorySavedToLongTerm);
+          break;
+        case _MessageMemoryAction.addToReviewInbox:
+          await _memoryWorkflow.addToReviewInbox(
+            text: normalized,
+            targetDoc: MemoryDocTarget.daily,
+            sourceType: sourceType,
+            conversationId: conversationId,
+            messageNodeId: messageNodeId,
+          );
+          if (!mounted) return;
+          AnxToast.show(l10n.memoryAddedToReviewInbox);
+          break;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      AnxToast.show('${l10n.memoryWorkflowActionFailed}: $e');
+    }
+  }
+
+  Widget _buildMessageMemoryMenu({
+    required String text,
+    required String sourceType,
+    String? messageNodeId,
+  }) {
+    final l10n = L10n.of(context);
+    final enabled = text.trim().isNotEmpty;
+
+    return PopupMenuButton<_MessageMemoryAction>(
+      enabled: enabled,
+      tooltip: l10n.memoryMessageActionsTooltip,
+      onSelected: (action) => _handleMessageMemoryAction(
+        action,
+        text: text,
+        sourceType: sourceType,
+        messageNodeId: messageNodeId,
+      ),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: _MessageMemoryAction.saveToDaily,
+          child: Text(l10n.memorySaveToDailyAction),
+        ),
+        PopupMenuItem(
+          value: _MessageMemoryAction.saveToLongTerm,
+          child: Text(l10n.memorySaveToLongTermAction),
+        ),
+        PopupMenuItem(
+          value: _MessageMemoryAction.addToReviewInbox,
+          child: Text(l10n.memoryAddToReviewInboxAction),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Icon(
+          Icons.bookmark_add_outlined,
+          size: 20,
+          color: enabled ? null : Theme.of(context).disabledColor,
+        ),
+      ),
+    );
+  }
+
   void _copyMessageContent(String content) {
     final parsed = parseReasoningContent(content);
     final clipboardText = _buildCopyableText(parsed, content);
@@ -2023,6 +2131,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           onPressed: () => _copyPlainText(content),
                           child: Text(L10n.of(context).commonCopy),
                         ),
+                        _buildMessageMemoryMenu(
+                          text: content,
+                          sourceType: 'chat',
+                          messageNodeId: 'user:$index',
+                        ),
                       ] else ...[
                         if (prevHumanIndex != null)
                           TextButton(
@@ -2035,6 +2148,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         TextButton(
                           onPressed: () => _copyMessageContent(content),
                           child: Text(L10n.of(context).commonCopy),
+                        ),
+                        _buildMessageMemoryMenu(
+                          text: _assistantMemoryText(content),
+                          sourceType: 'chat',
+                          messageNodeId: 'assistant:$index',
                         ),
                       ],
                     ],
@@ -2089,6 +2207,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       TextButton(
                         onPressed: () => _copyPlainText(content),
                         child: Text(L10n.of(context).commonCopy),
+                      ),
+                      _buildMessageMemoryMenu(
+                        text: content,
+                        sourceType: 'chat',
+                        messageNodeId: 'user:${item.index}',
                       ),
                     ],
                   ),
@@ -2189,6 +2312,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       TextButton(
                         onPressed: () => _copyMessageContent(content),
                         child: Text(L10n.of(context).commonCopy),
+                      ),
+                      _buildMessageMemoryMenu(
+                        text: _assistantMemoryText(content),
+                        sourceType: 'chat',
+                        messageNodeId:
+                            'assistant-group:${item.groupKey}:$selected',
                       ),
                     ],
                   ),

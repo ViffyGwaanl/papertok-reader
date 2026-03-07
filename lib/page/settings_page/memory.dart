@@ -3,7 +3,9 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/service/memory/memory_index_coordinator.dart';
+import 'package:anx_reader/service/memory/memory_candidate.dart';
+import 'package:anx_reader/service/memory/memory_workflow_service.dart';
+import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
 import 'package:anx_reader/service/memory/memory_search_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
@@ -31,10 +33,216 @@ class _MemorySettingsBody extends ConsumerStatefulWidget {
 
 class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
   final _store = MarkdownMemoryStore();
+  late final MemoryWorkflowService _workflow =
+      MemoryWorkflowService(store: _store);
   final TextEditingController _searchController = TextEditingController();
 
   bool _searching = false;
   List<Map<String, dynamic>> _hits = const [];
+  late Future<List<MemoryCandidate>> _pendingCandidatesFuture =
+      _workflow.listPendingCandidates();
+  final Set<String> _busyCandidateIds = <String>{};
+
+  Future<void> _refreshPendingCandidates() async {
+    final next = _workflow.listPendingCandidates();
+    setState(() {
+      _pendingCandidatesFuture = next;
+    });
+    await next;
+  }
+
+  Future<void> _runCandidateAction(
+    String candidateId,
+    Future<void> Function() action,
+  ) async {
+    setState(() {
+      _busyCandidateIds.add(candidateId);
+    });
+
+    try {
+      await action();
+      if (!mounted) return;
+      await _refreshPendingCandidates();
+    } catch (e) {
+      if (!mounted) return;
+      AnxToast.show('${L10n.of(context).memoryWorkflowActionFailed}: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busyCandidateIds.remove(candidateId);
+        });
+      }
+    }
+  }
+
+  String _formatCandidateMeta(MemoryCandidate candidate) {
+    final l10n = L10n.of(context);
+    final target = candidate.targetDoc == MemoryDocTarget.longTerm
+        ? l10n.memoryReviewInboxTargetLongTerm
+        : l10n.memoryReviewInboxTargetDaily;
+    final created = DateTime.fromMillisecondsSinceEpoch(
+      candidate.createdAtMs,
+    ).toLocal();
+    final mm = created.month.toString().padLeft(2, '0');
+    final dd = created.day.toString().padLeft(2, '0');
+    final hh = created.hour.toString().padLeft(2, '0');
+    final mi = created.minute.toString().padLeft(2, '0');
+    return '$target · ${candidate.sourceType} · $mm-$dd $hh:$mi';
+  }
+
+  Widget _buildPendingCandidateCard(MemoryCandidate candidate) {
+    final l10n = L10n.of(context);
+    final busy = _busyCandidateIds.contains(candidate.id);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              candidate.summary,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              candidate.text,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _formatCandidateMeta(candidate),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).hintColor,
+                        ),
+                  ),
+                ),
+                if (busy)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            OverflowBar(
+              alignment: MainAxisAlignment.end,
+              spacing: 8,
+              overflowSpacing: 8,
+              children: [
+                TextButton(
+                  onPressed: busy
+                      ? null
+                      : () => _runCandidateAction(candidate.id, () async {
+                            await _workflow.applyCandidate(
+                              candidate.id,
+                              targetDoc: MemoryDocTarget.daily,
+                            );
+                            if (!mounted) return;
+                            AnxToast.show(l10n.memorySavedToDaily);
+                          }),
+                  child: Text(l10n.memorySaveToDailyAction),
+                ),
+                TextButton(
+                  onPressed: busy
+                      ? null
+                      : () => _runCandidateAction(candidate.id, () async {
+                            await _workflow.applyCandidate(
+                              candidate.id,
+                              targetDoc: MemoryDocTarget.longTerm,
+                            );
+                            if (!mounted) return;
+                            AnxToast.show(l10n.memorySavedToLongTerm);
+                          }),
+                  child: Text(l10n.memorySaveToLongTermAction),
+                ),
+                TextButton(
+                  onPressed: busy
+                      ? null
+                      : () => _runCandidateAction(candidate.id, () async {
+                            await _workflow.dismissCandidate(candidate.id);
+                            if (!mounted) return;
+                            AnxToast.show(l10n.memoryReviewInboxDismissed);
+                          }),
+                  child: Text(l10n.commonDelete),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewInboxSection() {
+    final l10n = L10n.of(context);
+
+    return FutureBuilder<List<MemoryCandidate>>(
+      future: _pendingCandidatesFuture,
+      builder: (context, snapshot) {
+        final candidates = snapshot.data ?? const <MemoryCandidate>[];
+
+        final children = <Widget>[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Text(
+                  l10n.memoryReviewInboxTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                Text(
+                  l10n.memoryReviewInboxCount(candidates.length),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Theme.of(context).hintColor),
+                ),
+              ],
+            ),
+          ),
+        ];
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            candidates.isEmpty) {
+          children.add(const ListTile(title: LinearProgressIndicator()));
+          return Column(children: children);
+        }
+
+        if (snapshot.hasError) {
+          children.add(
+            ListTile(
+              leading: const Icon(Icons.error_outline),
+              title: Text(l10n.memoryWorkflowActionFailed),
+              subtitle: Text('${snapshot.error}'),
+            ),
+          );
+          return Column(children: children);
+        }
+
+        if (candidates.isEmpty) {
+          children.add(
+            ListTile(
+              leading: const Icon(Icons.inbox_outlined),
+              title: Text(l10n.memoryReviewInboxEmptyTitle),
+              subtitle: Text(l10n.memoryReviewInboxEmptyBody),
+            ),
+          );
+          return Column(children: children);
+        }
+
+        children.addAll(candidates.map(_buildPendingCandidateCard));
+        return Column(children: children);
+      },
+    );
+  }
 
   @override
   void dispose() {
@@ -84,10 +292,11 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
       if (!mounted) return;
       AnxToast.show('${L10n.of(context).memorySearchFailed}: $e');
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _searching = false;
-      });
+      if (mounted) {
+        setState(() {
+          _searching = false;
+        });
+      }
     }
   }
 
@@ -389,6 +598,7 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
           }),
           const Divider(),
         ],
+        _buildReviewInboxSection(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
@@ -483,6 +693,8 @@ class MemoryEditorPage extends ConsumerStatefulWidget {
 
 class _MemoryEditorPageState extends ConsumerState<MemoryEditorPage> {
   late final TextEditingController _controller = TextEditingController();
+  late final MemoryWriteCoordinator _writeCoordinator =
+      MemoryWriteCoordinator(store: widget.store);
   bool _loading = true;
   bool _dirty = false;
 
@@ -532,12 +744,11 @@ class _MemoryEditorPageState extends ConsumerState<MemoryEditorPage> {
   }
 
   Future<void> _save() async {
-    await widget.store.replace(
+    await _writeCoordinator.replace(
       longTerm: widget.longTerm,
       date: widget.date,
       text: _controller.text,
     );
-    MemoryIndexCoordinator.instance.markDirty();
 
     if (!mounted) return;
     setState(() {

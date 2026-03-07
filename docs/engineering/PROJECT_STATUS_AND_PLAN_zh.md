@@ -18,9 +18,14 @@
   - 会话目标（复用当前会话 / 新建会话）
   - 图片 / 文本附件上限配置
 - 当前剩余工作重心已从“阻断性 bug 修复”转为：
-  - Memory 工作流方案定稿
+  - Memory 工作流后续阶段（digest / 可选自动化边界）
   - 命名收口计划
   - diagnostics 搜索 / 筛选增强
+- 2026-03-07：Memory M1（manual-first）已交付：
+  - 候选 workflow store 与 memory index cache 分离
+  - 聊天显式保存到 daily / long-term / review inbox
+  - Memory 设置页最小 Review Inbox
+  - 统一 Markdown memory 写协调器
 
 ## 1. 已完成交付（Done）
 
@@ -55,16 +60,18 @@
 
 ## 2. 未完成任务（Remaining）
 
-### 2.1 Memory 工作流（P0）
+### 2.1 Memory 工作流后续阶段（P1）
 
-- 检索层已基本对齐 OpenClaw；未完成的是“写入工作流层”。
-- 需要补齐：
+- M1（manual-first）已完成：
   - `daily memory`
   - `long-term memory`
   - `review inbox`
-  - 写入触发器
-  - 候选审核流程
-  - 自动化边界（尤其是 optional silent auto-write）
+  - 候选审核的最小闭环
+  - 串行写入协调器
+- 剩余待补齐：
+  - session-end candidate digest
+  - optional auto-daily
+  - 更细的自动化边界与策略开关
 - 详见：`docs/ai/memory_workflow_openclaw_alignment_zh.md`
 
 ### 2.2 命名收口（P0/P1）

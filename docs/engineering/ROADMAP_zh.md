@@ -50,12 +50,16 @@
 ## 2. 进行中
 
 ### 2.1 Memory 工作流补齐
-- 现状：检索层已对齐 OpenClaw；工作流层尚未补齐。
-- 下一阶段：
+- 现状：M1（manual-first）已落地，检索层 + 最小写入工作流都已打通。
+- 已完成：
   - `daily memory`
   - `long-term memory`
   - `review inbox`
-  - 候选记忆 / 审核 / 提升流程
+  - 候选记忆 / 审核 / 提升最小闭环
+- 下一阶段：
+  - session-end candidate digest
+  - 可选 auto-daily
+  - 更细的策略开关
 - 策略：
   - `daily` 半自动 / 可选自动
   - `long-term` 确认后写入
