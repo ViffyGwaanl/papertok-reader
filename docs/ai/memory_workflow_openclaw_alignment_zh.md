@@ -21,18 +21,22 @@ PaperTok Reader 当前已经基本对齐 OpenClaw 的“检索层”设计：
 - 自动索引（index freshness）
 - 自动召回（memory_search / snippet retrieval）
 
-### 1.2 还没对齐 OpenClaw 的部分
+### 1.2 还没完全对齐 OpenClaw 的部分
 
-当前缺的不是“怎么搜”，而是“**怎么记**”：
+当前缺的已经不是“基础 workflow 是否存在”，而是“**workflow 后续阶段做多深**”：
 
-- 没有明确区分：
+- M1（manual-first）已补齐：
   - `daily memory`
   - `long-term memory`
-- Memory 和 Chat History 仍是两套系统
-  - AI 对话历史主要落在 `ai_history.json`
-  - 不会自动进入 `memory/`
-- 没有“候选记忆 -> 审核 -> 应用”的工作流
-- 没有明确的写入触发器、确认策略和安全边界
+  - `review inbox`
+  - 候选记忆 -> 审核 -> 应用 的最小闭环
+- Memory 和 Chat History 仍是两套系统，但现在已经有了显式桥接入口：
+  - AI 对话历史仍主要落在 `ai_history.json`
+  - 用户可以从聊天显式保存到 `memory/`
+- 当前仍待补齐的是：
+  - session-end candidate digest
+  - optional auto-daily
+  - 更细的写入触发器、确认策略和自动化边界
 
 ## 2. 设计原则（Why）
 

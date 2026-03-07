@@ -18,7 +18,7 @@
 - iPhone 浮动 TabBar（iOS Liquid Glass / cupertino_native），键盘弹出隐藏
 - Reading page AI：dock / bottom sheet（iPad/iPhone）
 - AI Provider Center：选择、启用/禁用、模型切换、思考档位
-- 多模态对话附件：图片 + 文本文件（max 4 图）
+- 多模态对话附件：图片 + 文本文件（附件上限可配置；默认 4 张图、3 个文本类附件）
 - EPUB 图片解析：点击图片 → 解析；独立 provider/model 配置
 - 全文翻译：HUD、缓存、失败重试
 - WebDAV 同步：不包含 api_key

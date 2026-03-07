@@ -2,12 +2,18 @@
 
 本目录包含 **PaperTok Reader**（阅读器发行版 + PaperTok 集成）的功能说明与工程文档。
 
+## 当前状态（先看这里）
+
+- [项目状态与完整计划（中文）](./engineering/PROJECT_STATUS_AND_PLAN_zh.md) - 当前真实交付状态、剩余事项与下一阶段计划
+- [路线图（工程视角）](./engineering/ROADMAP_zh.md) - 已完成能力与后续优先级
+- [平台测试状态](./engineering/PLATFORM_TEST_STATUS_zh.md) - 已验证平台范围与回归建议
+
 ## 多端状态（重要）
 
 - ✅ **已测试：** iOS（iPhone）+ iPadOS（iPad）
-- ⚠️ **暂未测试：** Android / 桌面端（macOS/Windows/Linux）
+- ⚠️ **暂未系统性回归：** Android / 桌面端（macOS / Windows / Linux）
 
-如果你需要稳定的多端体验，建议使用上游项目 **Anx Reader**；本仓库以 iOS 优先做产品验证，后续会补 Android/桌面端回归。
+如果你需要稳定的多端体验，建议使用上游项目 **Anx Reader**；本仓库以 iOS 优先做产品验证，后续会补 Android / 桌面端回归。
 
 ## 产品功能文档
 
@@ -15,13 +21,13 @@
 - [PaperTok（论文流）集成说明](./papertok/README.md) - 论文流 UX、导入行为、Home 导航配置
 
 ### AI 对话与翻译
-- [AI 对话/翻译（设计与实现总览）](./ai/README.md) - AI 面板 UX、Provider Center、对话树、全文翻译、多模态与图片解析
+- [AI 对话 / 翻译（设计与实现总览）](./ai/README.md) - AI 面板 UX、Provider Center、对话树、全文翻译、多模态、Share / Shortcuts、Memory
 - [AI 改造状态与路线图（中文）](./ai/ai_status_roadmap_zh.md)
 - [Memory 工作流对齐 OpenClaw（中文）](./ai/memory_workflow_openclaw_alignment_zh.md)
 - [AI 面板 UX 技术设计](./ai/ai_panel_ux_tech_design.md)
 - [AI Provider 配置 UX](./ai/ai_provider_config_ux.md)
 - [AI 设置 WebDAV 同步](./ai/ai_settings_sync_webdav.md)
-- [备份/恢复（Files/iCloud）](./ai/backup_restore_icloud.md)
+- [备份 / 恢复（Files / iCloud）](./ai/backup_restore_icloud.md)
 - [AI 翻译设计说明](./ai/ai_translation_design.md)
 - [PDF AI 分章与 OCR](./ai/pdf_ai_chaptering_and_ocr.md)
 
@@ -29,17 +35,15 @@
 
 ### 开发工作流
 - [工程工作流：Product + Upstream](./engineering/WORKFLOW_zh.md) - 仓库职责、分支策略、同步方式
-- [平台测试状态](./engineering/PLATFORM_TEST_STATUS_zh.md) - 当前已验证平台范围与回归建议
 - [Identifiers 总表（真值源）](./engineering/IDENTIFIERS_zh.md) - Display Name / Bundle ID / applicationId / App Group
+- [命名收口计划（中文）](./engineering/NAMING_CLEANUP_PLAN_zh.md) - 已完成边界与下一阶段命名计划
 - [上游贡献指南（Anx Reader）](./engineering/UPSTREAM_CONTRIB_zh.md) - 如何向上游提交 PR
-- [路线图（工程视角）](./engineering/ROADMAP_zh.md) - 已完成功能与下一阶段计划
-- [命名收口计划（中文）](./engineering/NAMING_CLEANUP_PLAN_zh.md)
 
 ### 发布清单
-- [iOS 部署/安装测试教程](./engineering/IOS_DEPLOY_zh.md) - 从拉代码到真机安装、再到 TestFlight
-- [iOS TestFlight 发布清单](./engineering/RELEASE_IOS_TESTFLIGHT_zh.md) - Bundle ID / App Group / 签名 / 版本号（默认值见 Identifiers 总表）
-- [Android 发布清单](./engineering/RELEASE_ANDROID_zh.md) - applicationId / namespace / 签名 / 构建与发布（默认值见 Identifiers 总表）
+- [iOS 部署 / 安装测试教程](./engineering/IOS_DEPLOY_zh.md) - 从拉代码到真机安装、再到 TestFlight
+- [iOS TestFlight 发布清单](./engineering/RELEASE_IOS_TESTFLIGHT_zh.md) - Bundle ID / App Group / 签名 / 版本号
+- [Android 发布清单](./engineering/RELEASE_ANDROID_zh.md) - applicationId / namespace / 签名 / 构建与发布
 
 ## Troubleshooting
 
-- [故障排除（多语言）](./troubleshooting.md) - 导入失败、编译问题、日志导出、PaperTok/AI 相关问题
+- [故障排除（多语言）](./troubleshooting.md) - 导入失败、编译问题、日志导出、PaperTok / AI 相关问题

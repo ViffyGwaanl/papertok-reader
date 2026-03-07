@@ -28,7 +28,7 @@ If you need stable multi-platform usage right now, use upstream **Anx Reader**.
 - “Thinking level” (档位) selection and collapsible thinking content display.
 - Editable chat history + regenerate from any user turn.
 - Conversation tree v2 with variants (rollback/branching without losing subsequent turns).
-- Multimodal attachments (currently: **images + plain text**; max **4** images per send).
+- Multimodal attachments (currently: **images + plain text**; attachment limits are configurable, defaulting to **4** images and **3** text-like attachments).
 - EPUB image analysis: tap image → analyze with a multimodal model.
 
 ### In-reader translation (EPUB)
