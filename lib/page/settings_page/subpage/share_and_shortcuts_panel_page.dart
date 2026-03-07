@@ -110,6 +110,24 @@ class _ShareAndShortcutsPanelPageState
     };
   }
 
+  String _shortcutsPresetModeLabel(L10n l10n, String code) {
+    return switch (code) {
+      'when_empty' => l10n.settingsShortcutsPromptPresetModeWhenEmpty,
+      'prepend' => l10n.settingsShortcutsPromptPresetModePrepend,
+      _ => l10n.settingsShortcutsPromptPresetModeOff,
+    };
+  }
+
+  String _shortcutsPresetLabel(L10n l10n) {
+    final id = Prefs().shortcutsPromptPresetIdV1.trim();
+    if (id.isEmpty) return l10n.commonNone;
+    for (final preset in Prefs().sharePromptPresetsStateV2.enabledPresets) {
+      if (preset.id == id)
+        return preset.title.trim().isEmpty ? id : preset.title;
+    }
+    return l10n.commonNone;
+  }
+
   Future<void> _pickSessionMode() async {
     final l10n = L10n.of(context);
     final current = Prefs().shortcutsSendMessagePresentationV1;
@@ -199,6 +217,79 @@ class _ShareAndShortcutsPanelPageState
 
     if (picked != null) {
       Prefs().aiChatTextAttachmentMaxCountV1 = picked;
+      setState(() {});
+    }
+  }
+
+  Future<void> _pickShortcutsPresetMode() async {
+    final l10n = L10n.of(context);
+    final current = Prefs().shortcutsPromptPresetModeV1;
+    const options = <String>['off', 'when_empty', 'prepend'];
+
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return SimpleDialog(
+          title: Text(l10n.settingsShortcutsPromptPresetModeTitle),
+          children: [
+            for (final v in options)
+              RadioListTile<String>(
+                value: v,
+                groupValue: current,
+                title: Text(_shortcutsPresetModeLabel(l10n, v)),
+                onChanged: (val) => Navigator.of(ctx).pop(val),
+              ),
+          ],
+        );
+      },
+    );
+
+    if (picked != null) {
+      Prefs().shortcutsPromptPresetModeV1 = picked;
+      setState(() {});
+    }
+  }
+
+  Future<void> _pickShortcutsPreset() async {
+    final l10n = L10n.of(context);
+    final current = Prefs().shortcutsPromptPresetIdV1.trim();
+    final presets = Prefs().sharePromptPresetsStateV2.enabledPresets;
+
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return SimpleDialog(
+          title: Text(l10n.settingsShortcutsPromptPresetTitle),
+          children: [
+            RadioListTile<String>(
+              value: '',
+              groupValue: current,
+              title: Text(l10n.commonNone),
+              onChanged: (val) => Navigator.of(ctx).pop(val),
+            ),
+            for (final preset in presets)
+              RadioListTile<String>(
+                value: preset.id,
+                groupValue: current,
+                title: Text(
+                  preset.title.trim().isEmpty ? preset.id : preset.title,
+                ),
+                subtitle: preset.prompt.trim().isEmpty
+                    ? null
+                    : Text(
+                        preset.prompt.trim(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                onChanged: (val) => Navigator.of(ctx).pop(val),
+              ),
+          ],
+        );
+      },
+    );
+
+    if (picked != null) {
+      Prefs().shortcutsPromptPresetIdV1 = picked;
       setState(() {});
     }
   }
@@ -330,6 +421,23 @@ class _ShareAndShortcutsPanelPageState
                 title: Text(l10n.settingsShortcutsSendMessageShowDialogDefault),
                 description: Text(
                     l10n.settingsShortcutsSendMessageShowDialogDefaultDesc),
+              ),
+              SettingsTile.navigation(
+                title: Text(l10n.settingsShortcutsPromptPresetModeTitle),
+                description: Text(l10n.settingsShortcutsPromptPresetModeDesc),
+                trailing: Text(
+                  _shortcutsPresetModeLabel(
+                    l10n,
+                    Prefs().shortcutsPromptPresetModeV1,
+                  ),
+                ),
+                onPressed: (_) => _pickShortcutsPresetMode(),
+              ),
+              SettingsTile.navigation(
+                title: Text(l10n.settingsShortcutsPromptPresetTitle),
+                description: Text(l10n.settingsShortcutsPromptPresetDesc),
+                trailing: Text(_shortcutsPresetLabel(l10n)),
+                onPressed: (_) => _pickShortcutsPreset(),
               ),
             ],
           ),

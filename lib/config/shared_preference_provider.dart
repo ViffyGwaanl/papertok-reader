@@ -94,6 +94,10 @@ class Prefs extends ChangeNotifier {
       'shortcutsSendMessageTimeoutSecV1';
   static const String _shortcutsSendMessagePresentationV1Key =
       'shortcutsSendMessagePresentationV1';
+  static const String _shortcutsPromptPresetModeV1Key =
+      'shortcutsPromptPresetModeV1';
+  static const String _shortcutsPromptPresetIdV1Key =
+      'shortcutsPromptPresetIdV1';
 
   // iOS Share Sheet behavior (share_handler).
   static const String _shareSheetAskPapertokEnabledV1Key =
@@ -2193,6 +2197,52 @@ class Prefs extends ChangeNotifier {
     if (before != next) {
       touchAiSettingsUpdatedAt();
       prefs.setString(_shortcutsSendMessagePresentationV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  /// How Shortcuts requests optionally reuse a share prompt preset.
+  ///
+  /// - `off`: do not apply any preset.
+  /// - `when_empty`: only use the selected preset when the incoming prompt is empty.
+  /// - `prepend`: prepend the selected preset to the incoming prompt.
+  String get shortcutsPromptPresetModeV1 {
+    final raw = prefs.getString(_shortcutsPromptPresetModeV1Key) ?? 'off';
+    return switch (raw) {
+      'when_empty' => 'when_empty',
+      'prepend' => 'prepend',
+      _ => 'off',
+    };
+  }
+
+  set shortcutsPromptPresetModeV1(String value) {
+    final next = switch (value) {
+      'when_empty' => 'when_empty',
+      'prepend' => 'prepend',
+      _ => 'off',
+    };
+    final before = shortcutsPromptPresetModeV1;
+    if (before != next) {
+      touchAiSettingsUpdatedAt();
+      prefs.setString(_shortcutsPromptPresetModeV1Key, next);
+      notifyListeners();
+    }
+  }
+
+  String get shortcutsPromptPresetIdV1 {
+    return prefs.getString(_shortcutsPromptPresetIdV1Key) ?? '';
+  }
+
+  set shortcutsPromptPresetIdV1(String value) {
+    final next = value.trim();
+    final before = shortcutsPromptPresetIdV1;
+    if (before != next) {
+      touchAiSettingsUpdatedAt();
+      if (next.isEmpty) {
+        prefs.remove(_shortcutsPromptPresetIdV1Key);
+      } else {
+        prefs.setString(_shortcutsPromptPresetIdV1Key, next);
+      }
       notifyListeners();
     }
   }

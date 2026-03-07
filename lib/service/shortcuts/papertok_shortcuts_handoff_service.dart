@@ -6,6 +6,7 @@ import 'package:anx_reader/providers/ai_chat.dart';
 import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/service/shortcuts/papertok_shortcuts_prompt_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -47,9 +48,11 @@ class PapertokShortcutsHandoffService {
       attachments.add(AttachmentItem.image(bytes: bytes, base64: s));
     }
 
+    final resolved = PapertokShortcutsPromptService.resolve(prompt);
+
     // Start streaming; the provider persists session history.
     notifier.startStreaming(
-      prompt.trim(),
+      resolved.prompt,
       false,
       attachments: attachments.isEmpty ? null : attachments,
     );

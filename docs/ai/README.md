@@ -81,6 +81,7 @@
 - Share Sheet -> AI / Bookshelf unified settings page:
   - default share routing (`auto` / `ai_chat` / `bookshelf` / `ask`)
   - prompt presets (`title + preview`)
+  - Shortcuts can optionally reuse a selected prompt preset (`off` / `when prompt is empty` / `prepend selected preset`)
   - cleanup-after-use + TTL
   - diagnostics page
   - conversation target: reuse current conversation vs start a new conversation
