@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Paper Reader</string>
+	<string>PaperTok Reader</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -61,11 +61,11 @@
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Paper Reader needs full calendar access to view and create events.</string>
+	<string>PaperTok Reader needs full calendar access to view and create events.</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>Paper Reader needs calendar access to view and create events.</string>
+	<string>PaperTok Reader needs calendar access to view and create events.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
-	<string>Paper Reader needs write-only calendar access to add events.</string>
+	<string>PaperTok Reader needs write-only calendar access to add events.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Need camera access to capture images for analysis.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -73,7 +73,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your photo library to save images.</string>
 	<key>NSRemindersUsageDescription</key>
-	<string>Paper Reader needs reminders access to create reminders.</string>
+	<string>PaperTok Reader needs reminders access to create reminders.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

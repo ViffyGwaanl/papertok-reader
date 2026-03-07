@@ -5,10 +5,10 @@ import UniformTypeIdentifiers
 
 @available(iOS 16.0, *)
 struct PapertokSendMessageIntent: AppIntent {
-  static var title: LocalizedStringResource = "给 Papertok 发送图片消息"
+  static var title: LocalizedStringResource = "给 PaperTok Reader 发送图片消息"
 
   static var description = IntentDescription(
-    "向 Papertok Reader 的 AI 发送文字与图片（最多 4 张），并返回回复内容。\n\n这个动作会复用 App 内现有的多模态 AI Chat 通道（Flutter + LangChain），不会重写上传或请求逻辑。"
+    "向 PaperTok Reader 的 AI 发送文字与图片（最多 4 张），并返回回复内容。\n\n这个动作会复用 App 内现有的多模态 AI Chat 通道（Flutter + LangChain），不会重写上传或请求逻辑。"
   )
 
   // Doubao-like UX: foreground the app immediately.
@@ -20,14 +20,14 @@ struct PapertokSendMessageIntent: AppIntent {
   @Parameter(title: "图片")
   var images: [IntentFile]?
 
-  @Parameter(title: "运行时打开 Papertok")
+  @Parameter(title: "运行时打开 PaperTok Reader")
   var openApp: Bool?
 
   @Parameter(title: "使用弹窗展示回复")
   var showDialog: Bool?
 
   static var parameterSummary: some ParameterSummary {
-    Summary("给 Papertok 发送 \(\.$prompt) 和 \(\.$images)") {
+    Summary("给 PaperTok Reader 发送 \(\.$prompt) 和 \(\.$images)") {
       \.$openApp
       \.$showDialog
     }
@@ -60,7 +60,7 @@ struct PapertokSendMessageIntent: AppIntent {
       // Then open the in-app AI chat UI.
       await PapertokIntentUI.openPapertokAskUiBestEffort()
 
-      let value = "已在 Papertok 中开始分析。"
+      let value = "已在 PaperTok Reader 中开始分析。"
       out.value = value
 
       // Showing Shortcuts popups while also foregrounding the app is flaky.
@@ -97,11 +97,11 @@ struct PapertokAppShortcutsProvider: AppShortcutsProvider {
     AppShortcut(
       intent: PapertokSendMessageIntent(),
       phrases: [
-        "用 \(.applicationName) 给 Papertok 发送图片消息",
+        "用 \(.applicationName) 给 PaperTok Reader 发送图片消息",
         "用 \(.applicationName) 发送图片消息",
         "用 \(.applicationName) 分析这些图片"
       ],
-      shortTitle: "发图问 Papertok",
+      shortTitle: "发图问 PaperTok Reader",
       systemImageName: "paperplane"
     )
   }

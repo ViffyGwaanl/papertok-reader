@@ -112,7 +112,7 @@ Future<void> openAboutDialog() async {
                   padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
                   child: Center(
                     child: Text(
-                      'Paper Reader',
+                      L10n.of(context).appName,
                       style: TextStyle(
                         fontSize: 50,
                         fontWeight: FontWeight.bold,
@@ -136,7 +136,7 @@ Future<void> openAboutDialog() async {
                   onTap: () {
                     showLicensePage(
                       context: context,
-                      applicationName: 'Paper Reader',
+                      applicationName: L10n.of(context).appName,
                       applicationVersion: version,
                     );
                   },

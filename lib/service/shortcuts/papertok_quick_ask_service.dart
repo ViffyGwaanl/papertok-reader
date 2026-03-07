@@ -86,7 +86,7 @@ class PapertokQuickAskService {
     final out = _stripThinkBlock(aggregated);
     if (out.isNotEmpty) return out;
 
-    return '请求未在设定时间内完成。建议打开 Papertok Reader 查看或重试。';
+    return '请求未在设定时间内完成。建议打开 PaperTok Reader 查看或重试。';
   }
 
   static String _stripThinkBlock(String s) {
