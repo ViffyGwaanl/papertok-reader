@@ -119,6 +119,8 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'shortcutsCallbackTimeoutSecV1': prefs.shortcutsCallbackTimeoutSecV1,
     'shortcutsCallbackWaitModeV1': prefs.shortcutsCallbackWaitModeV1,
     'shortcutsResultKnownNamesV1': prefs.shortcutsResultKnownNamesV1,
+    'shortcutsPromptPresetModeV1': prefs.shortcutsPromptPresetModeV1,
+    'shortcutsPromptPresetIdV1': prefs.shortcutsPromptPresetIdV1,
   };
 
   final mcp = <String, dynamic>{
@@ -287,6 +289,16 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
       if (known is List) {
         prefs.shortcutsResultKnownNamesV1 =
             known.map((e) => e.toString()).toList(growable: false);
+      }
+
+      final presetMode = tools['shortcutsPromptPresetModeV1'];
+      if (presetMode is String) {
+        prefs.shortcutsPromptPresetModeV1 = presetMode;
+      }
+
+      final presetId = tools['shortcutsPromptPresetIdV1'];
+      if (presetId is String) {
+        prefs.shortcutsPromptPresetIdV1 = presetId;
       }
     }
 
