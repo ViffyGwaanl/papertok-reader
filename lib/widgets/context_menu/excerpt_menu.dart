@@ -341,25 +341,6 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     );
   }
 
-  Widget _sectionCard({required BuildContext context, required Widget child}) {
-    final isDark = !Prefs().eInkMode;
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withOpacity(0.04)
-            : Theme.of(context).colorScheme.surface.withOpacity(0.26),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withOpacity(0.06)
-              : Theme.of(context).colorScheme.outlineVariant.withOpacity(0.24),
-        ),
-      ),
-      child: child,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -444,92 +425,86 @@ class ExcerptMenuState extends State<ExcerptMenu> {
       ),
     ];
 
+    final toolbarDecoration = widget.decoration.copyWith(
+      borderRadius: BorderRadius.circular(14),
+    );
+    final secondaryDecoration = widget.decoration.copyWith(
+      borderRadius: BorderRadius.circular(14),
+    );
+
     return ConstrainedBox(
       constraints: BoxConstraints(
         minWidth: widget.axis == Axis.vertical ? 260 : 280,
-        maxWidth: widget.axis == Axis.vertical ? 320 : 340,
+        maxWidth: widget.axis == Axis.vertical ? 360 : 380,
       ),
-      child: Container(
-        decoration: widget.decoration,
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            decoration: toolbarDecoration,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: actionButtons),
+            ),
+          ),
+          if (!widget.footnote) ...[
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.black.withOpacity(0.16)
-                    : colors.surface.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : colors.outlineVariant.withOpacity(0.16),
-                ),
-              ),
-              child: Wrap(
-                spacing: 2,
-                runSpacing: 2,
-                children: actionButtons,
+              decoration: secondaryDecoration,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        L10n.of(context).contextMenuHighlight,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? Colors.white.withOpacity(0.72)
+                              : colors.onSecondaryContainer.withOpacity(0.72),
+                        ),
+                      ),
+                      const Spacer(),
+                      _smallRoundButton(
+                        context: context,
+                        icon: deleteIcon(),
+                        onPressed: deleteHandler,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final type in notesType)
+                        _annotationTypeButton(
+                          context,
+                          type.type,
+                          type.icon,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final color in notesColors)
+                        _colorButton(context, color),
+                    ],
+                  ),
+                ],
               ),
             ),
-            if (!widget.footnote) ...[
-              const SizedBox(height: 8),
-              _sectionCard(
-                context: context,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          L10n.of(context).contextMenuHighlight,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color:
-                                colors.onSecondaryContainer.withOpacity(0.72),
-                          ),
-                        ),
-                        const Spacer(),
-                        _smallRoundButton(
-                          context: context,
-                          icon: deleteIcon(),
-                          onPressed: deleteHandler,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final type in notesType)
-                          _annotationTypeButton(
-                            context,
-                            type.type,
-                            type.icon,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final color in notesColors)
-                          _colorButton(context, color),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
