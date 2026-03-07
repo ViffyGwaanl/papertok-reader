@@ -122,8 +122,9 @@ class _ShareAndShortcutsPanelPageState
     final id = Prefs().shortcutsPromptPresetIdV1.trim();
     if (id.isEmpty) return l10n.commonNone;
     for (final preset in Prefs().sharePromptPresetsStateV2.enabledPresets) {
-      if (preset.id == id)
+      if (preset.id == id) {
         return preset.title.trim().isEmpty ? id : preset.title;
+      }
     }
     return l10n.commonNone;
   }
@@ -322,7 +323,8 @@ class _ShareAndShortcutsPanelPageState
 
     return SettingsSubpageScaffold(
       title: l10n.settingsShareAndShortcutsPanel,
-      child: Column(
+      child: ListView(
+        padding: EdgeInsets.zero,
         children: [
           SettingsSection(
             title: Text(l10n.settingsSharePanelSectionTitle),
