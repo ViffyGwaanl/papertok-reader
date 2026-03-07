@@ -160,6 +160,15 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     }
   }
 
+  void setImageOpenMode(String mode) {
+    final next = mode == 'tap' ? 'tap' : 'long_press';
+    webViewController.evaluateJavascript(source: '''
+      if (typeof window.setImageOpenMode === 'function') {
+        window.setImageOpenMode('$next');
+      }
+    ''');
+  }
+
   Future<void> goToPercentage(double value) async {
     await webViewController.evaluateJavascript(source: '''
       goToPercent($value); 
@@ -1115,6 +1124,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     // Initialize translation mode based on book-specific settings
     Future.delayed(const Duration(milliseconds: 300), () {
       setTranslationMode(Prefs().getBookTranslationMode(widget.book.id));
+      setImageOpenMode(Prefs().aiImageOpenModeV1);
     });
   }
 

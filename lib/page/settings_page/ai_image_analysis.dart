@@ -77,6 +77,38 @@ class _AiImageAnalysisSettingsPageState
     );
   }
 
+  Future<void> _pickImageOpenMode() async {
+    final current = Prefs().aiImageOpenModeV1;
+    const options = <String>['long_press', 'tap'];
+
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return SimpleDialog(
+          title: Text(L10n.of(context).settingsAiImageOpenModeTitle),
+          children: [
+            for (final v in options)
+              RadioListTile<String>(
+                value: v,
+                groupValue: current,
+                title: Text(
+                  v == 'tap'
+                      ? L10n.of(context).settingsAiImageOpenModeTap
+                      : L10n.of(context).settingsAiImageOpenModeLongPress,
+                ),
+                onChanged: (val) => Navigator.of(ctx).pop(val),
+              ),
+          ],
+        );
+      },
+    );
+
+    if (picked != null) {
+      Prefs().aiImageOpenModeV1 = picked;
+      setState(() {});
+    }
+  }
+
   Future<void> _editPrompt() async {
     final controller = TextEditingController(
       text: Prefs().aiImageAnalysisPrompt.trim().isEmpty
@@ -324,6 +356,10 @@ class _AiImageAnalysisSettingsPageState
     final promptLabel = promptCustom.isEmpty
         ? L10n.of(context).settingsAiImageAnalysisPromptDefaultShort
         : L10n.of(context).settingsAiImageAnalysisPromptCustomShort;
+    final imageOpenMode = Prefs().aiImageOpenModeV1;
+    final imageOpenModeLabel = imageOpenMode == 'tap'
+        ? L10n.of(context).settingsAiImageOpenModeTap
+        : L10n.of(context).settingsAiImageOpenModeLongPress;
     return settingsSections(
       sections: [
         SettingsSection(
@@ -346,6 +382,13 @@ class _AiImageAnalysisSettingsPageState
               description:
                   Text(L10n.of(context).settingsAiImageAnalysisModelDesc),
               onPressed: (_) => _pickModel(),
+            ),
+            SettingsTile.navigation(
+              leading: const Icon(Icons.touch_app_outlined),
+              title: Text(L10n.of(context).settingsAiImageOpenModeTitle),
+              value: Text(imageOpenModeLabel),
+              description: Text(L10n.of(context).settingsAiImageOpenModeDesc),
+              onPressed: (_) => _pickImageOpenMode(),
             ),
             SettingsTile.navigation(
               leading: const Icon(Icons.edit_note_outlined),

@@ -92,6 +92,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'aiImageAnalysisProviderIdV1': prefs.aiImageAnalysisProviderId,
     'aiImageAnalysisModelV1': prefs.aiImageAnalysisModel,
     'aiImageAnalysisPromptV1': prefs.aiImageAnalysisPrompt,
+    'aiImageOpenModeV1': prefs.aiImageOpenModeV1,
   };
 
   // AI Indexing (library + current book) (non-secret, syncable)
@@ -497,6 +498,11 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
       final prompt = imageAnalysis['aiImageAnalysisPromptV1']?.toString();
       if (prompt != null) {
         prefs.aiImageAnalysisPrompt = prompt;
+      }
+
+      final openMode = imageAnalysis['aiImageOpenModeV1']?.toString();
+      if (openMode != null) {
+        prefs.aiImageOpenModeV1 = openMode;
       }
     }
 

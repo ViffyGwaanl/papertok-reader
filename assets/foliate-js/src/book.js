@@ -1,6 +1,11 @@
 console.log('book.js')
 console.log('AnxUA', navigator.userAgent)
 
+window.__ANX_IMAGE_OPEN_MODE = window.__ANX_IMAGE_OPEN_MODE || 'long_press'
+window.setImageOpenMode = mode => {
+  window.__ANX_IMAGE_OPEN_MODE = mode === 'tap' ? 'tap' : 'long_press'
+}
+
 import './view.js'
 import { FootnoteHandler } from './footnotes.js'
 import { Overlayer } from './overlayer.js'

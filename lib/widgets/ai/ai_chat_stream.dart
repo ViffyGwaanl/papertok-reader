@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';

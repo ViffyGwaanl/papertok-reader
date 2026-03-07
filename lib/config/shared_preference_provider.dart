@@ -873,6 +873,7 @@ class Prefs extends ChangeNotifier {
       'aiImageAnalysisProviderIdV1';
   static const String _aiImageAnalysisModelKey = 'aiImageAnalysisModelV1';
   static const String _aiImageAnalysisPromptKey = 'aiImageAnalysisPromptV1';
+  static const String _aiImageOpenModeV1Key = 'aiImageOpenModeV1';
 
   /// AI provider id used for EPUB image analysis.
   ///
@@ -966,6 +967,20 @@ class Prefs extends ChangeNotifier {
 
 上下文（可能截断）：
 {{contextText}}''';
+  }
+
+  String get aiImageOpenModeV1 {
+    final raw = prefs.getString(_aiImageOpenModeV1Key) ?? 'long_press';
+    return raw == 'tap' ? 'tap' : 'long_press';
+  }
+
+  set aiImageOpenModeV1(String value) {
+    final next = value == 'tap' ? 'tap' : 'long_press';
+    if (aiImageOpenModeV1 != next) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiImageOpenModeV1Key, next);
+    notifyListeners();
   }
 
   // --- AI Indexing (library + current book) (provider/model/chunk params) ---
@@ -1079,7 +1094,7 @@ class Prefs extends ChangeNotifier {
           meta.type == AiProviderType.openaiResponses;
     }
 
-    if (candidate != null && candidate.isNotEmpty && isOpenAiLike(candidate)) {
+    if (candidate.isNotEmpty && isOpenAiLike(candidate)) {
       return candidate;
     }
 
@@ -1096,7 +1111,7 @@ class Prefs extends ChangeNotifier {
       }
     }
 
-    return selected.isNotEmpty ? selected : (candidate ?? '');
+    return selected.isNotEmpty ? selected : candidate;
   }
 
   /// Embedding model id used for indexing/search.

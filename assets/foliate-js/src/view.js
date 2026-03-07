@@ -258,12 +258,13 @@ export class View extends HTMLElement {
       const isTouchDevice = 'ontouchstart' in window;
  
       if (isTouchDevice) {
-        // For touch devices, implement longpress
         let longPressTimer;
         let longPressTriggered = false;
-        const longPressDelay = 500; // 500ms for longpress
+        const longPressDelay = 500;
+        const getOpenMode = () => window.__ANX_IMAGE_OPEN_MODE === 'tap' ? 'tap' : 'long_press';
       
         img.addEventListener('touchstart', e => {
+          if (getOpenMode() === 'tap') return;
           longPressTriggered = false;
           longPressTimer = setTimeout(() => {
             longPressTriggered = true;
@@ -273,16 +274,19 @@ export class View extends HTMLElement {
       
         img.addEventListener('touchend', e => {
           clearTimeout(longPressTimer);
-          // do not prevent here so a short tap will produce a normal click that can bubble
         });
       
         img.addEventListener('touchmove', e => {
           clearTimeout(longPressTimer);
         });
       
-        // intercept the synthetic click after a longpress and suppress it;
-        // allow normal clicks (short taps) to bubble
         img.addEventListener('click', e => {
+          if (getOpenMode() === 'tap') {
+            e.preventDefault();
+            e.stopPropagation();
+            this.#emit('click-image', { img });
+            return;
+          }
           if (longPressTriggered) {
             e.preventDefault();
             e.stopPropagation();
