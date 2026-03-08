@@ -2017,8 +2017,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       );
     }
 
-    final fontScale = Prefs().aiChatFontScale.clamp(0.8, 1.4).toDouble();
-
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.transparent,
@@ -2047,31 +2045,43 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       drawer: Drawer(
         child: _buildHistoryDrawer(context),
       ),
-      body: MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: TextScaler.linear(fontScale),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ref.watch(aiChatProvider).when(
-                    data: (messages) {
-                      if (messages.isEmpty) {
-                        return buildEmptyState();
-                      }
+      body: Column(
+        children: [
+          Expanded(
+            child: ref.watch(aiChatProvider).when(
+                  data: (messages) {
+                    if (messages.isEmpty) {
+                      return buildEmptyState();
+                    }
 
-                      return _buildMessageList(messages);
-                    },
-                    loading: () => Skeletonizer.zone(child: Bone.multiText()),
-                    error: (error, stack) =>
-                        Center(child: Text('error: $error')),
-                  ),
-            ),
-            inputBox,
-          ],
-        ),
+                    return _buildMessageList(messages);
+                  },
+                  loading: () => Skeletonizer.zone(child: Bone.multiText()),
+                  error: (error, stack) => Center(child: Text('error: $error')),
+                ),
+          ),
+          inputBox,
+        ],
       ),
     );
+  }
+
+  double get _messageTextScale =>
+      Prefs().aiChatFontScale.clamp(0.8, 1.4).toDouble();
+
+  Widget _buildScaledMessageContent(Widget child) {
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(_messageTextScale),
+      ),
+      child: child,
+    );
+  }
+
+  TextStyle _messageBodyTextStyle(BuildContext context) {
+    return (Theme.of(context).textTheme.bodyMedium ??
+            const TextStyle(fontSize: 14))
+        .copyWith(height: 1.55);
   }
 
   Widget _buildMessageList(List<ChatMessage> messages) {
@@ -2219,10 +2229,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     required int? lastHumanIndex,
   }) {
     final isUser = message is HumanChatMessage;
-    final content = isUser
-        ? _extractUserTextFromHuman(message as HumanChatMessage)
-        : message.contentAsString;
-    final isLongMessage = content.length > 300;
+    final content =
+        isUser ? _extractUserTextFromHuman(message) : message.contentAsString;
 
     final prevHumanIndex =
         isUser ? index : _findPrevHumanIndex(allMessages, index);
@@ -2258,9 +2266,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  isUser
-                      ? _buildHumanMessageBody(message as HumanChatMessage)
-                      : _buildAssistantSections(content, isStreaming),
+                  _buildScaledMessageContent(
+                    isUser
+                        ? _buildHumanMessageBody(message)
+                        : _buildAssistantSections(content, isStreaming),
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -2316,7 +2326,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   Widget _buildUserMessageItem(_UserChatItem item) {
     final content = _extractUserTextFromHuman(item.message);
-    final isLongMessage = content.length > 300;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
@@ -2340,7 +2349,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHumanMessageBody(item.message),
+                  _buildScaledMessageContent(
+                      _buildHumanMessageBody(item.message)),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -2413,7 +2423,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildAssistantSections(content, isStreaming),
+                  _buildScaledMessageContent(
+                    _buildAssistantSections(content, isStreaming),
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -2933,13 +2945,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   Widget _buildCollapsibleText(String text, bool isLongMessage) {
+    final style = _messageBodyTextStyle(context);
     if (!isLongMessage) {
       return SelectableText(
         text,
+        style: style,
         selectionControls: MaterialTextSelectionControls(),
       );
     }
-    return _CollapsibleText(text: text);
+    return _CollapsibleText(text: text, style: style);
   }
 }
 
@@ -2989,9 +3003,10 @@ class _AssistantGroupChatItem extends _ChatItem {
 }
 
 class _CollapsibleText extends StatefulWidget {
-  const _CollapsibleText({required this.text});
+  const _CollapsibleText({required this.text, this.style});
 
   final String text;
+  final TextStyle? style;
 
   @override
   State<_CollapsibleText> createState() => _CollapsibleTextState();
@@ -3008,6 +3023,7 @@ class _CollapsibleTextState extends State<_CollapsibleText> {
         if (_isExpanded)
           SelectableText(
             widget.text,
+            style: widget.style,
             selectionControls: MaterialTextSelectionControls(),
           )
         else
@@ -3015,6 +3031,7 @@ class _CollapsibleTextState extends State<_CollapsibleText> {
             children: [
               SelectableText(
                 widget.text.substring(0, 300),
+                style: widget.style,
                 selectionControls: MaterialTextSelectionControls(),
               ),
               Positioned(

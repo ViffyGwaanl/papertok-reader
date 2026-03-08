@@ -69,7 +69,8 @@
 ### 2.5 Font Scale
 
 - Prefs：`aiChatFontScale`（默认 1.0）
-- 应用：`MediaQuery.copyWith(textScaler: TextScaler.linear(scale))`
+- 应用：仅作用于消息内容 subtree（assistant/user 内容、Thinking/Tools 区块、tool tiles）；输入框与顶部 chrome 不跟随缩放
+- Markdown：使用统一 prose baseline，并压平 heading scale，避免回复里标题层级过大
 
 ### 2.6 Input quick prompts
 

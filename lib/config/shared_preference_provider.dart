@@ -3306,7 +3306,7 @@ class Prefs extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Font scale for AI chat UI (markdown + input). 1.0 = system default.
+  /// Font scale for AI chat message content. 1.0 = system default.
   double get aiChatFontScale {
     return prefs.getDouble('aiChatFontScale') ?? 1.0;
   }
