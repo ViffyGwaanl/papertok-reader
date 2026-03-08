@@ -6,13 +6,10 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/ai_cache_count.dart';
 import 'package:anx_reader/providers/user_prompts.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
-import 'package:anx_reader/service/ai/index.dart';
-import 'package:anx_reader/service/ai/prompt_generate.dart';
 import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
 import 'package:anx_reader/page/settings_page/ai_title_generation.dart';
 import 'package:anx_reader/page/settings_page/ai_tools.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
-import 'package:anx_reader/widgets/ai/ai_stream.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/page/settings_page/ai_quick_prompts_editor.dart';
@@ -24,7 +21,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:anx_reader/utils/toast/common.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class AISettings extends ConsumerStatefulWidget {
   const AISettings({super.key});
@@ -37,7 +33,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
   bool showSettings = false;
   int currentIndex = 0;
   late List<Map<String, dynamic>> initialServicesConfig;
-  bool _obscureApiKey = true;
 
   // User prompts state
   String? _expandedUserPromptId;
@@ -137,141 +132,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
         "variables": [],
       }
     ];
-
-    Widget aiConfig() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Text(
-              services[currentIndex]["title"],
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ),
-          CustomSettingsTile(
-            child: SettingsTile.navigation(
-              title: Text(l10n.settingsAiProviderCenterTitle),
-              description: Text(l10n.settingsAiProviderCenterDesc),
-              onPressed: (context) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const AiProviderCenterPage(),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 10),
-          for (var key in services[currentIndex]["config"].keys)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: TextField(
-                obscureText: key == "api_key" && _obscureApiKey,
-                controller: TextEditingController(
-                    text: services[currentIndex]["config"][key] ??
-                        initialServicesConfig[currentIndex]["config"][key]),
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  labelText: key,
-                  hintText: services[currentIndex]["config"][key],
-                  suffixIcon: key == "api_key"
-                      ? IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _obscureApiKey = !_obscureApiKey;
-                            });
-                          },
-                          icon: _obscureApiKey
-                              ? const Icon(Icons.visibility_off)
-                              : const Icon(Icons.visibility),
-                        )
-                      : null,
-                ),
-                onChanged: (value) {
-                  services[currentIndex]["config"][key] = value;
-                },
-              ),
-            ),
-          CustomSettingsTile(
-            child: GestureDetector(
-              onTap: () async {
-                if (!await launchUrl(
-                    Uri.parse('https://anx.anxcye.com/docs/ai/'),
-                    mode: LaunchMode.externalApplication)) {
-                  AnxToast.show(L10n.of(context).commonFailed);
-                }
-              },
-              child: Text(
-                L10n.of(context).settingsNarrateClickForHelp,
-                style: TextStyle(
-                  color: Theme.of(context).primaryColor,
-                  decoration: TextDecoration.underline,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                  onPressed: () {
-                    Prefs().deleteAiConfig(
-                      services[currentIndex]["identifier"],
-                    );
-                    services[currentIndex]["config"] = Map<String, String>.from(
-                        initialServicesConfig[currentIndex]["config"]);
-                    setState(() {});
-                  },
-                  child: Text(L10n.of(context).commonReset)),
-              TextButton(
-                  onPressed: () {
-                    SmartDialog.show(
-                      onDismiss: () {
-                        cancelActiveAiRequest();
-                      },
-                      builder: (context) => AlertDialog(
-                          title: Text(L10n.of(context).commonTest),
-                          content: AiStream(
-                              prompt: generatePromptTest(),
-                              identifier: services[currentIndex]["identifier"],
-                              config: services[currentIndex]["config"],
-                              regenerate: true)),
-                    );
-                  },
-                  child: Text(L10n.of(context).commonTest)),
-              TextButton(
-                  onPressed: () {
-                    Prefs().saveAiConfig(
-                      services[currentIndex]["identifier"],
-                      services[currentIndex]["config"],
-                    );
-
-                    setState(() {
-                      showSettings = false;
-                    });
-                  },
-                  child: Text(L10n.of(context).commonSave)),
-              TextButton(
-                  onPressed: () {
-                    Prefs().selectedAiService =
-                        services[currentIndex]["identifier"];
-                    Prefs().saveAiConfig(
-                      services[currentIndex]["identifier"],
-                      services[currentIndex]["config"],
-                    );
-
-                    setState(() {
-                      showSettings = false;
-                    });
-                  },
-                  child: Text(L10n.of(context).commonApply)),
-            ],
-          )
-        ],
-      );
-    }
 
     final servicesTile = CustomSettingsTile(
       child: SettingsTile.navigation(
@@ -382,9 +242,9 @@ class _AISettingsState extends ConsumerState<AISettings> {
         tiles: [
           servicesTile,
           SettingsTile.navigation(
-            title: const Text('Title generation'),
+            title: const Text('Conversation titles'),
             description: const Text(
-              'Choose a separate provider/model for automatic chat titles.',
+              'Configure automatic naming with its own provider and model.',
             ),
             onPressed: (context) {
               Navigator.of(context).push(
