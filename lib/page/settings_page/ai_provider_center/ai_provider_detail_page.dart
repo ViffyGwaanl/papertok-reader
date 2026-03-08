@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/models/ai_model_capability.dart';
 import 'package:anx_reader/models/ai_api_key_entry.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/ai_models_service.dart';
@@ -34,6 +35,10 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
   late final TextEditingController _nameController;
   late final TextEditingController _urlController;
   late final TextEditingController _modelController;
+  late final TextEditingController _temperatureController;
+  late final TextEditingController _topPController;
+  late final TextEditingController _maxTokensController;
+  late final TextEditingController _maxOutputTokensController;
 
   // Managed API keys list (local-only secrets).
   late List<AiApiKeyEntry> _apiKeys;
@@ -50,6 +55,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
   bool _isFetchingModels = false;
   List<String> _cachedModels = const [];
+  List<AiModelCapability> _cachedCapabilities = const [];
 
   // API key failover/cooldown policy (per provider).
   int _apiKeyFailureThreshold = 3;
@@ -72,6 +78,18 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     _modelController = TextEditingController(
       text:
           (stored['model'] ?? widget.builtInOption?.defaultModel ?? '').trim(),
+    );
+    _temperatureController = TextEditingController(
+      text: (stored['temperature'] ?? '').trim(),
+    );
+    _topPController = TextEditingController(
+      text: (stored['top_p'] ?? '').trim(),
+    );
+    _maxTokensController = TextEditingController(
+      text: (stored['max_tokens'] ?? '').trim(),
+    );
+    _maxOutputTokensController = TextEditingController(
+      text: (stored['max_output_tokens'] ?? '').trim(),
     );
     _apiKeys = _decodeApiKeysFromStored(stored);
     _lastApiKeysRaw = (stored['api_keys'] ?? '').trim();
@@ -123,10 +141,16 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
     final modelsCache = Prefs().getAiModelsCacheV1(_provider.id);
     _cachedModels = modelsCache?.models ?? const [];
+    final capabilityCache = Prefs().getAiModelCapabilitiesCacheV1(_provider.id);
+    _cachedCapabilities = capabilityCache?.models ?? const [];
 
     // Auto-save for text fields.
     _urlController.addListener(_scheduleAutoSave);
     _modelController.addListener(_scheduleAutoSave);
+    _temperatureController.addListener(_scheduleAutoSave);
+    _topPController.addListener(_scheduleAutoSave);
+    _maxTokensController.addListener(_scheduleAutoSave);
+    _maxOutputTokensController.addListener(_scheduleAutoSave);
     if (!_provider.isBuiltIn) {
       _nameController.addListener(_scheduleAutoSave);
     }
@@ -156,6 +180,10 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     _nameController.dispose();
     _urlController.dispose();
     _modelController.dispose();
+    _temperatureController.dispose();
+    _topPController.dispose();
+    _maxTokensController.dispose();
+    _maxOutputTokensController.dispose();
     super.dispose();
   }
 
@@ -255,6 +283,18 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       'url': _urlController.text.trim(),
       'model': _modelController.text.trim(),
     };
+
+    void addIfNotEmpty(String key, String value) {
+      final next = value.trim();
+      if (next.isNotEmpty) {
+        map[key] = next;
+      }
+    }
+
+    addIfNotEmpty('temperature', _temperatureController.text);
+    addIfNotEmpty('top_p', _topPController.text);
+    addIfNotEmpty('max_tokens', _maxTokensController.text);
+    addIfNotEmpty('max_output_tokens', _maxOutputTokensController.text);
 
     // Keys are local-only secrets.
     if (_apiKeys.isNotEmpty) {
@@ -367,10 +407,11 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     });
 
     try {
-      final models = await AiModelsService.fetchModels(
+      final capabilities = await AiModelsService.fetchModelCapabilities(
         provider: _provider,
         rawConfig: _buildConfigMap(),
       );
+      final models = capabilities.map((e) => e.id).toList(growable: false);
 
       if (!mounted) return;
 
@@ -381,7 +422,9 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
         );
       } else {
         Prefs().saveAiModelsCacheV1(_provider.id, models);
+        Prefs().saveAiModelCapabilitiesCacheV1(_provider.id, capabilities);
         _cachedModels = models;
+        _cachedCapabilities = capabilities;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(l10n
@@ -1165,6 +1208,82 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                   )
                 : const Icon(Icons.download),
             label: Text(l10n.settingsAiProviderCenterFetchModels),
+          ),
+          if (_cachedCapabilities.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Builder(
+              builder: (context) {
+                final currentCapability = _cachedCapabilities.where(
+                  (model) => model.id == _modelController.text.trim(),
+                );
+                final capability =
+                    currentCapability.isEmpty ? null : currentCapability.first;
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Model capability',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                          'Context window: ${capability?.contextWindow ?? '-'}'),
+                      Text(
+                          'Max output tokens: ${capability?.maxOutputTokens ?? '-'}'),
+                      Text(
+                          'Supports thinking: ${capability?.supportsThinking ?? false}'),
+                      Text(
+                          'Supports tools: ${capability?.supportsTools ?? false}'),
+                      Text(
+                          'Supports images: ${capability?.supportsImages ?? false}'),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+          const SizedBox(height: 12),
+          TextField(
+            controller: _temperatureController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'temperature',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _topPController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'top_p',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _maxTokensController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'max_tokens',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _maxOutputTokensController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'max_output_tokens',
+            ),
           ),
           const SizedBox(height: 12),
           if (_provider.type == AiProviderType.gemini)

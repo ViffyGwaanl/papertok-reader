@@ -78,7 +78,8 @@ void main() {
       expect(longTerm, contains('Promote this later'));
       expect(await workflow.listPendingCandidates(), isEmpty);
       expect(allCandidates.single.status, MemoryCandidateStatus.applied);
-      expect(allCandidates.single.targetDoc, MemoryDocTarget.longTerm);
+      expect(allCandidates.single.targetDoc, MemoryDocTarget.daily);
+      expect(allCandidates.single.appliedTargetDoc, MemoryDocTarget.longTerm);
     });
 
     test('dismissCandidate removes item from pending inbox', () async {

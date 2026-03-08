@@ -95,7 +95,6 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   DateTime? _sessionStart;
   Timer? _awakeTimer;
   bool bottomBarOffstage = true;
-  late String heroTag;
   Widget? _aiChat;
   final aiChatKey = GlobalKey<AiChatStreamState>();
   static const double _aiChatMinWidth = 240;
@@ -132,7 +131,6 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     setAwakeTimer(Prefs().awakeTime);
 
     _book = widget.book;
-    heroTag = widget.heroTag ?? 'preventHeroWhenStart';
     // _volumeKeyBoard = VolumeKeyBoard.instance;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -140,16 +138,6 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         // _attachVolumeKeyListener();
       }
     });
-    // delay 1000ms to prevent hero animation
-    if (widget.heroTag == null) {
-      Future.delayed(const Duration(milliseconds: 2000), () {
-        if (mounted) {
-          setState(() {
-            heroTag = _book.coverFullPath;
-          });
-        }
-      });
-    }
     super.initState();
   }
 
@@ -1028,43 +1016,39 @@ class ReadingPageState extends ConsumerState<ReadingPage>
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Hero(
-        tag: widget.heroTag ??
-            (Prefs().openBookAnimation ? _book.coverFullPath : heroTag),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height,
-            width: MediaQuery.of(context).size.width,
-            child: Scaffold(
-              key: _scaffoldKey,
-              resizeToAvoidBottomInset: false,
-              // Disable edge-swipe to open drawer when AI is docked on the left
-              // to avoid gesture conflicts.
-              drawerEnableOpenDragGesture: !_isAiDockedLeft(),
-              drawer: PointerInterceptor(
-                child: Drawer(
-                  width: math.min(
-                    MediaQuery.of(context).size.width * 0.8,
-                    420,
-                  ),
-                  child: SafeArea(
-                    child: TocWidget(
-                      epubPlayerKey: epubPlayerKey,
-                      hideAppBarAndBottomBar: showOrHideAppBarAndBottomBar,
-                      closeDrawer: () {
-                        _scaffoldKey.currentState?.closeDrawer();
-                      },
-                    ),
+      body: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height,
+          width: MediaQuery.of(context).size.width,
+          child: Scaffold(
+            key: _scaffoldKey,
+            resizeToAvoidBottomInset: false,
+            // Disable edge-swipe to open drawer when AI is docked on the left
+            // to avoid gesture conflicts.
+            drawerEnableOpenDragGesture: !_isAiDockedLeft(),
+            drawer: PointerInterceptor(
+              child: Drawer(
+                width: math.min(
+                  MediaQuery.of(context).size.width * 0.8,
+                  420,
+                ),
+                child: SafeArea(
+                  child: TocWidget(
+                    epubPlayerKey: epubPlayerKey,
+                    hideAppBarAndBottomBar: showOrHideAppBarAndBottomBar,
+                    closeDrawer: () {
+                      _scaffoldKey.currentState?.closeDrawer();
+                    },
                   ),
                 ),
               ),
-              body: Stack(
-                children: [
-                  _buildMainLayout(context),
-                  controller,
-                ],
-              ),
+            ),
+            body: Stack(
+              children: [
+                _buildMainLayout(context),
+                controller,
+              ],
             ),
           ),
         ),

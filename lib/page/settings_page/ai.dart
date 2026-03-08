@@ -9,6 +9,7 @@ import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/service/ai/index.dart';
 import 'package:anx_reader/service/ai/prompt_generate.dart';
 import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
+import 'package:anx_reader/page/settings_page/ai_title_generation.dart';
 import 'package:anx_reader/page/settings_page/ai_tools.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/widgets/ai/ai_stream.dart';
@@ -380,6 +381,19 @@ class _AISettingsState extends ConsumerState<AISettings> {
         title: Text(L10n.of(context).settingsAiServices),
         tiles: [
           servicesTile,
+          SettingsTile.navigation(
+            title: const Text('Title generation'),
+            description: const Text(
+              'Choose a separate provider/model for automatic chat titles.',
+            ),
+            onPressed: (context) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AiTitleGenerationSettingsPage(),
+                ),
+              );
+            },
+          ),
           // SettingsTile.navigation(
           //   leading: const Icon(Icons.chat),
           //   title: Text(L10n.of(context).aiChat),

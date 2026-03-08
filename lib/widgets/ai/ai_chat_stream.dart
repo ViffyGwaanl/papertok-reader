@@ -417,14 +417,41 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return builtIn?.defaultModel ?? '';
   }
 
-  void _onProviderSelected(String providerId) {
+  Future<void> _onProviderSelected(String providerId) async {
     if (_isStreaming || providerId == _selectedProviderId) return;
     if (!_isProviderSelectable(providerId)) return;
+
+    await _flushMemoryBeforeContextSwitch();
 
     Prefs().selectedAiService = providerId;
     setState(() {
       _selectedProviderId = providerId;
     });
+  }
+
+  Future<void> _flushMemoryBeforeContextSwitch() async {
+    final prefs = Prefs();
+    if (!prefs.memorySessionDigestEnabled) {
+      return;
+    }
+
+    final messages =
+        ref.read(aiChatProvider).asData?.value ?? const <ChatMessage>[];
+    if (messages.length < 2) {
+      return;
+    }
+
+    try {
+      ref.read(aiChatProvider.notifier).persistCurrentConversation(ref);
+      await _memoryWorkflow.captureSessionDigest(
+        messages: messages,
+        dailyStrategy: prefs.memoryWorkflowDailyStrategy,
+        conversationId: ref.read(aiChatProvider.notifier).currentSessionId,
+        triggerKind: 'provider_switch',
+      );
+    } catch (_) {
+      // Best effort only. Provider switching should not hard-fail on digest.
+    }
   }
 
   AiThinkingMode _thinkingModeForProvider(String providerId) {
@@ -771,30 +798,32 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
             Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
-                    Text(
-                      _formatTimestamp(entry.updatedAt),
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                      Text(
+                        _formatTimestamp(entry.updatedAt),
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ),
                 ),
-                Spacer(),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.circle, size: 10, color: statusColor),
-                    DeleteConfirm(
-                        delete: () => _confirmDeleteHistory(context, entry)),
-                  ],
+                const SizedBox(width: 8),
+                Icon(Icons.circle, size: 10, color: statusColor),
+                IconButton(
+                  tooltip: 'Rename',
+                  onPressed: () => _renameHistoryEntry(context, entry),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                ),
+                DeleteConfirm(
+                  delete: () => _confirmDeleteHistory(context, entry),
                 ),
               ],
             ),
@@ -820,6 +849,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   String _deriveTitle(AiChatHistoryEntry entry) {
+    final stored = (entry.title ?? '').trim();
+    if (stored.isNotEmpty) {
+      return stored;
+    }
     for (final message in entry.messages) {
       if (message is HumanChatMessage) {
         final content = _extractUserTextFromHuman(message).trim();
@@ -853,10 +886,62 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
 
     ref.read(aiChatProvider.notifier).loadHistoryEntry(entry);
+    if (mounted) {
+      setState(() {
+        _selectedProviderId = entry.serviceId;
+      });
+    }
 
     Navigator.of(context).pop();
     _pinnedToBottom = true;
     _scrollToBottom(force: true);
+  }
+
+  Future<void> _renameHistoryEntry(
+    BuildContext context,
+    AiChatHistoryEntry entry,
+  ) async {
+    final controller = TextEditingController(text: _deriveTitle(entry));
+    final renamed = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Rename conversation'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Title',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(L10n.of(context).commonCancel),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(controller.text.trim()),
+              child: Text(L10n.of(context).commonSave),
+            ),
+          ],
+        );
+      },
+    );
+
+    final nextTitle = (renamed ?? '').trim();
+    if (nextTitle.isEmpty) {
+      return;
+    }
+
+    final updated = entry.copyWith(
+      title: nextTitle,
+      titleSource: 'manual',
+      updatedAt: DateTime.now().millisecondsSinceEpoch,
+    );
+    await ref.read(aiHistoryProvider.notifier).upsert(updated);
   }
 
   Future<void> _confirmDeleteHistory(
@@ -1403,6 +1488,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             sourceType: sourceType,
             conversationId: conversationId,
             messageNodeId: messageNodeId,
+            displayText: normalized,
+            sourcePointer: conversationId == null
+                ? messageNodeId
+                : messageNodeId == null
+                    ? conversationId
+                    : '$conversationId#$messageNodeId',
+            rawContextRef:
+                conversationId == null ? null : 'conversation:$conversationId',
+            triggerKind: 'manual_save',
           );
           if (!mounted) return;
           AnxToast.show(l10n.memorySavedToDaily);
@@ -1417,6 +1511,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             sourceType: sourceType,
             conversationId: conversationId,
             messageNodeId: messageNodeId,
+            displayText: normalized,
+            sourcePointer: conversationId == null
+                ? messageNodeId
+                : messageNodeId == null
+                    ? conversationId
+                    : '$conversationId#$messageNodeId',
+            rawContextRef:
+                conversationId == null ? null : 'conversation:$conversationId',
+            triggerKind: 'manual_save',
           );
           if (!mounted) return;
           AnxToast.show(l10n.memorySavedToLongTerm);
@@ -1428,6 +1531,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             sourceType: sourceType,
             conversationId: conversationId,
             messageNodeId: messageNodeId,
+            displayText: normalized,
+            sourcePointer: conversationId == null
+                ? messageNodeId
+                : messageNodeId == null
+                    ? conversationId
+                    : '$conversationId#$messageNodeId',
+            rawContextRef:
+                conversationId == null ? null : 'conversation:$conversationId',
+            triggerKind: 'manual_save',
           );
           if (!mounted) return;
           AnxToast.show(l10n.memoryAddedToReviewInbox);
@@ -1544,6 +1656,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     final quickPrompts = _getQuickPrompts(context);
     final chatIsStreaming = ref.watch(aiChatStreamingProvider);
+    final contextNotice = ref.watch(aiChatContextNoticeProvider);
 
     // Refresh providers in case user toggled enable/disable in Provider Center.
     _providers = Prefs().aiProvidersV1;
@@ -1627,6 +1740,20 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           padding: EdgeInsets.only(bottom: widget.bottomPadding),
           child: Column(
             children: [
+              if ((contextNotice ?? '').trim().isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    contextNotice!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
               // Book import strip (UI-only)
               if (_pendingBookImports.isNotEmpty)
                 Container(

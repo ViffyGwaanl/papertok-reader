@@ -40,12 +40,13 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
 
   bool _searching = false;
   List<Map<String, dynamic>> _hits = const [];
+  MemoryCandidateStatus _candidateStatusFilter = MemoryCandidateStatus.pending;
   late Future<List<MemoryCandidate>> _pendingCandidatesFuture =
-      _workflow.listPendingCandidates();
+      _workflow.listCandidates(status: _candidateStatusFilter);
   final Set<String> _busyCandidateIds = <String>{};
 
   Future<void> _refreshPendingCandidates() async {
-    final next = _workflow.listPendingCandidates();
+    final next = _workflow.listCandidates(status: _candidateStatusFilter);
     setState(() {
       _pendingCandidatesFuture = next;
     });
@@ -112,11 +113,24 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
     return confirmed == true;
   }
 
-  String _formatCandidateMeta(MemoryCandidate candidate) {
+  void _setCandidateStatusFilter(MemoryCandidateStatus status) {
+    if (_candidateStatusFilter == status) {
+      return;
+    }
+    setState(() {
+      _candidateStatusFilter = status;
+      _pendingCandidatesFuture = _workflow.listCandidates(status: status);
+    });
+  }
+
+  String _docLabel(MemoryDocTarget target) {
     final l10n = L10n.of(context);
-    final target = candidate.targetDoc == MemoryDocTarget.longTerm
+    return target == MemoryDocTarget.longTerm
         ? l10n.memoryReviewInboxTargetLongTerm
         : l10n.memoryReviewInboxTargetDaily;
+  }
+
+  String _formatCandidateMeta(MemoryCandidate candidate) {
     final created = DateTime.fromMillisecondsSinceEpoch(
       candidate.createdAtMs,
     ).toLocal();
@@ -124,7 +138,13 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
     final dd = created.day.toString().padLeft(2, '0');
     final hh = created.hour.toString().padLeft(2, '0');
     final mi = created.minute.toString().padLeft(2, '0');
-    return '$target · ${candidate.sourceType} · $mm-$dd $hh:$mi';
+    final proposed = _docLabel(candidate.targetDoc);
+    final applied = candidate.appliedTargetDoc == null
+        ? ''
+        : ' -> ${_docLabel(candidate.appliedTargetDoc!)}';
+    final trigger = (candidate.triggerKind ?? '').trim();
+    final triggerText = trigger.isEmpty ? '' : ' · $trigger';
+    return '$proposed$applied · ${candidate.sourceType}$triggerText · $mm-$dd $hh:$mi';
   }
 
   Widget _buildPendingCandidateCard(MemoryCandidate candidate) {
@@ -144,10 +164,28 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
             ),
             const SizedBox(height: 4),
             Text(
-              candidate.text,
+              candidate.effectiveDisplayText,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
             ),
+            const SizedBox(height: 8),
+            if ((candidate.effectiveSourcePointer).isNotEmpty)
+              Text(
+                'Source: ${candidate.effectiveSourcePointer}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).hintColor,
+                    ),
+              ),
+            if ((candidate.rawContextRef ?? '').trim().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  'Trace: ${candidate.rawContextRef}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).hintColor,
+                      ),
+                ),
+              ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -168,52 +206,66 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
               ],
             ),
             const SizedBox(height: 8),
-            OverflowBar(
-              alignment: MainAxisAlignment.end,
-              spacing: 8,
-              overflowSpacing: 8,
-              children: [
-                TextButton(
-                  onPressed: busy
-                      ? null
-                      : () => _runCandidateAction(candidate.id, () async {
-                            await _workflow.applyCandidate(
-                              candidate.id,
-                              targetDoc: MemoryDocTarget.daily,
-                            );
-                            if (!mounted) return;
-                            AnxToast.show(l10n.memorySavedToDaily);
-                          }),
-                  child: Text(l10n.memorySaveToDailyAction),
+            if (candidate.status == MemoryCandidateStatus.pending)
+              OverflowBar(
+                alignment: MainAxisAlignment.end,
+                spacing: 8,
+                overflowSpacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: busy
+                        ? null
+                        : () => _runCandidateAction(candidate.id, () async {
+                              await _workflow.applyCandidate(
+                                candidate.id,
+                                targetDoc: MemoryDocTarget.daily,
+                              );
+                              if (!mounted) return;
+                              AnxToast.show(l10n.memorySavedToDaily);
+                            }),
+                    child: Text(l10n.memorySaveToDailyAction),
+                  ),
+                  TextButton(
+                    onPressed: busy
+                        ? null
+                        : () => _runCandidateAction(candidate.id, () async {
+                              final confirmed = await _confirmLongTermWrite(
+                                candidate.summary,
+                              );
+                              if (!confirmed) return;
+                              await _workflow.applyCandidate(
+                                candidate.id,
+                                targetDoc: MemoryDocTarget.longTerm,
+                              );
+                              if (!mounted) return;
+                              AnxToast.show(l10n.memorySavedToLongTerm);
+                            }),
+                    child: Text(l10n.memorySaveToLongTermAction),
+                  ),
+                  TextButton(
+                    onPressed: busy
+                        ? null
+                        : () => _runCandidateAction(candidate.id, () async {
+                              await _workflow.dismissCandidate(candidate.id);
+                              if (!mounted) return;
+                              AnxToast.show(l10n.memoryReviewInboxDismissed);
+                            }),
+                    child: Text(l10n.commonDelete),
+                  ),
+                ],
+              )
+            else
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  candidate.status == MemoryCandidateStatus.applied
+                      ? 'Applied'
+                      : 'Dismissed',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).hintColor,
+                      ),
                 ),
-                TextButton(
-                  onPressed: busy
-                      ? null
-                      : () => _runCandidateAction(candidate.id, () async {
-                            final confirmed =
-                                await _confirmLongTermWrite(candidate.summary);
-                            if (!confirmed) return;
-                            await _workflow.applyCandidate(
-                              candidate.id,
-                              targetDoc: MemoryDocTarget.longTerm,
-                            );
-                            if (!mounted) return;
-                            AnxToast.show(l10n.memorySavedToLongTerm);
-                          }),
-                  child: Text(l10n.memorySaveToLongTermAction),
-                ),
-                TextButton(
-                  onPressed: busy
-                      ? null
-                      : () => _runCandidateAction(candidate.id, () async {
-                            await _workflow.dismissCandidate(candidate.id);
-                            if (!mounted) return;
-                            AnxToast.show(l10n.memoryReviewInboxDismissed);
-                          }),
-                  child: Text(l10n.commonDelete),
-                ),
-              ],
-            ),
+              ),
           ],
         ),
       ),
@@ -299,19 +351,53 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
         final children = <Widget>[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.memoryReviewInboxTitle,
-                  style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  children: [
+                    Text(
+                      l10n.memoryReviewInboxTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const Spacer(),
+                    Text(
+                      l10n.memoryReviewInboxCount(candidates.length),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: Theme.of(context).hintColor),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                Text(
-                  l10n.memoryReviewInboxCount(candidates.length),
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Theme.of(context).hintColor),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Pending'),
+                      selected: _candidateStatusFilter ==
+                          MemoryCandidateStatus.pending,
+                      onSelected: (_) => _setCandidateStatusFilter(
+                          MemoryCandidateStatus.pending),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Applied'),
+                      selected: _candidateStatusFilter ==
+                          MemoryCandidateStatus.applied,
+                      onSelected: (_) => _setCandidateStatusFilter(
+                          MemoryCandidateStatus.applied),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Dismissed'),
+                      selected: _candidateStatusFilter ==
+                          MemoryCandidateStatus.dismissed,
+                      onSelected: (_) => _setCandidateStatusFilter(
+                        MemoryCandidateStatus.dismissed,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -14,6 +14,8 @@ class AiChatHistoryEntry {
     required this.updatedAt,
     required this.messages,
     required this.completed,
+    this.title,
+    this.titleSource,
     this.conversationV2,
   });
 
@@ -22,6 +24,8 @@ class AiChatHistoryEntry {
   final String model;
   final int createdAt;
   final int updatedAt;
+  final String? title;
+  final String? titleSource;
 
   /// The active linear view (for backward compatibility and UI convenience).
   final List<ChatMessage> messages;
@@ -33,18 +37,23 @@ class AiChatHistoryEntry {
   final Map<String, dynamic>? conversationV2;
 
   AiChatHistoryEntry copyWith({
+    String? serviceId,
     List<ChatMessage>? messages,
     int? updatedAt,
     bool? completed,
     String? model,
+    String? title,
+    String? titleSource,
     Map<String, dynamic>? conversationV2,
   }) {
     return AiChatHistoryEntry(
       id: id,
-      serviceId: serviceId,
+      serviceId: serviceId ?? this.serviceId,
       model: model ?? this.model,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      title: title ?? this.title,
+      titleSource: titleSource ?? this.titleSource,
       messages: messages ?? this.messages,
       completed: completed ?? this.completed,
       conversationV2: conversationV2 ?? this.conversationV2,
@@ -58,6 +67,8 @@ class AiChatHistoryEntry {
       'model': model,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'title': title,
+      'titleSource': titleSource,
       'completed': completed,
       'messages': messages.map((m) => m.toMap()).toList(growable: false),
       if (conversationV2 != null) 'conversationV2': conversationV2,
@@ -98,6 +109,8 @@ class AiChatHistoryEntry {
       updatedAt: json['updatedAt'] is int
           ? json['updatedAt'] as int
           : DateTime.now().millisecondsSinceEpoch,
+      title: json['title']?.toString(),
+      titleSource: json['titleSource']?.toString(),
       completed: json['completed'] == true,
       messages: messages,
       conversationV2: conversationV2,

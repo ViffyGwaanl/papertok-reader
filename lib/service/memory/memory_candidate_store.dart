@@ -68,17 +68,26 @@ class MemoryCandidateStore {
     int? appliedAtMs,
   }) {
     return _updateExisting(id, (candidate) {
+      final now = appliedAtMs ?? DateTime.now().millisecondsSinceEpoch;
       return candidate.copyWith(
-        targetDoc: targetDoc,
+        appliedTargetDoc: targetDoc,
         status: MemoryCandidateStatus.applied,
-        appliedAtMs: appliedAtMs ?? DateTime.now().millisecondsSinceEpoch,
+        appliedAtMs: now,
+        reviewedAtMs: now,
+        decisionSource: 'user_apply',
       );
     });
   }
 
   Future<MemoryCandidate> dismiss(String id) {
     return _updateExisting(id, (candidate) {
-      return candidate.copyWith(status: MemoryCandidateStatus.dismissed);
+      final now = DateTime.now().millisecondsSinceEpoch;
+      return candidate.copyWith(
+        status: MemoryCandidateStatus.dismissed,
+        reviewedAtMs: now,
+        dismissedAtMs: now,
+        decisionSource: 'user_dismiss',
+      );
     });
   }
 

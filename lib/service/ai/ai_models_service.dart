@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:anx_reader/models/ai_model_capability.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/langchain_ai_config.dart';
 import 'package:dio/dio.dart';
@@ -20,10 +21,12 @@ class AiModelsService {
     }
   }
 
-  /// Fetch model ids for the provider.
+  /// Fetch structured model capabilities for the provider.
   ///
-  /// Note: This is best-effort. Some gateways may not support listing models.
-  static Future<List<String>> fetchModels({
+  /// Note: OpenAI-compatible gateways often expose only model ids. In that
+  /// case we still return capabilities with id-only metadata so the UI and
+  /// caches remain consistent.
+  static Future<List<AiModelCapability>> fetchModelCapabilities({
     required AiProviderMeta provider,
     required Map<String, String> rawConfig,
   }) async {
@@ -41,8 +44,21 @@ class AiModelsService {
     }
   }
 
-  static Future<List<String>> _fetchOpenAICompatible(
-      LangchainAiConfig config) async {
+  /// Backward-compatible helper for places that only need model ids.
+  static Future<List<String>> fetchModels({
+    required AiProviderMeta provider,
+    required Map<String, String> rawConfig,
+  }) async {
+    final models = await fetchModelCapabilities(
+      provider: provider,
+      rawConfig: rawConfig,
+    );
+    return models.map((e) => e.id).toList(growable: false);
+  }
+
+  static Future<List<AiModelCapability>> _fetchOpenAICompatible(
+    LangchainAiConfig config,
+  ) async {
     final baseUrl = config.baseUrl ?? 'https://api.openai.com/v1';
     final url = _join(baseUrl, 'models');
 
@@ -60,25 +76,29 @@ class AiModelsService {
     final decoded = data is String ? jsonDecode(data) : data;
     if (decoded is Map && decoded['data'] is List) {
       final list = decoded['data'] as List;
-      return list
-          .map((e) => e is Map ? e['id']?.toString() : null)
-          .whereType<String>()
-          .where((id) => id.trim().isNotEmpty)
-          .toSet()
-          .toList(growable: false)
-        ..sort();
+      final models = <String, AiModelCapability>{};
+      for (final item in list) {
+        if (item is! Map) continue;
+        final id = (item['id'] ?? '').toString().trim();
+        if (id.isEmpty) continue;
+        models[id] = AiModelCapability(id: id);
+      }
+      final result = models.values.toList(growable: false)
+        ..sort((a, b) => a.id.compareTo(b.id));
+      return result;
     }
 
     return const [];
   }
 
-  static Future<List<String>> _fetchAnthropic(LangchainAiConfig config) async {
+  static Future<List<AiModelCapability>> _fetchAnthropic(
+    LangchainAiConfig config,
+  ) async {
     final baseUrl = config.baseUrl ?? 'https://api.anthropic.com/v1';
     final url = _join(baseUrl, 'models');
 
     final headers = <String, String>{}..addAll(config.headers);
 
-    // Anthropic requires x-api-key and anthropic-version.
     if (config.apiKey.isNotEmpty && !headers.containsKey('x-api-key')) {
       headers['x-api-key'] = config.apiKey;
     }
@@ -93,25 +113,34 @@ class AiModelsService {
     final decoded = data is String ? jsonDecode(data) : data;
     if (decoded is Map && decoded['data'] is List) {
       final list = decoded['data'] as List;
-      return list
-          .map((e) => e is Map ? e['id']?.toString() : null)
-          .whereType<String>()
-          .where((id) => id.trim().isNotEmpty)
-          .toSet()
-          .toList(growable: false)
-        ..sort();
+      final models = <String, AiModelCapability>{};
+      for (final item in list) {
+        if (item is! Map) continue;
+        final id = (item['id'] ?? '').toString().trim();
+        if (id.isEmpty) continue;
+        final displayName = (item['display_name'] ?? '').toString().trim();
+        final supportsThinking = displayName.contains('3.7') ||
+            id.contains('3-7') ||
+            id.contains('thinking');
+        models[id] = AiModelCapability(
+          id: id,
+          supportsThinking: supportsThinking,
+        );
+      }
+      final result = models.values.toList(growable: false)
+        ..sort((a, b) => a.id.compareTo(b.id));
+      return result;
     }
 
     return const [];
   }
 
-  static Future<List<String>> _fetchGemini(LangchainAiConfig config) async {
+  static Future<List<AiModelCapability>> _fetchGemini(
+    LangchainAiConfig config,
+  ) async {
     final rawBase =
         config.baseUrl ?? 'https://generativelanguage.googleapis.com';
 
-    // Gemini model listing endpoint:
-    // GET https://generativelanguage.googleapis.com/v1beta/models
-    // Auth via query param key=... or header x-goog-api-key.
     final baseUri = Uri.tryParse(rawBase);
     final hasV1Beta =
         baseUri != null && baseUri.pathSegments.contains('v1beta');
@@ -140,21 +169,34 @@ class AiModelsService {
 
     if (decoded is Map && decoded['models'] is List) {
       final list = decoded['models'] as List;
-      final ids = <String>{};
+      final models = <String, AiModelCapability>{};
       for (final item in list) {
-        if (item is Map) {
-          final name = item['name']?.toString() ?? '';
-          if (name.isEmpty) continue;
-          // Normalize 'models/gemini-1.5-pro' -> 'gemini-1.5-pro'
-          final normalized = name.startsWith('models/')
-              ? name.substring('models/'.length)
-              : name;
-          if (normalized.trim().isNotEmpty) {
-            ids.add(normalized.trim());
-          }
-        }
+        if (item is! Map) continue;
+        final name = (item['name'] ?? '').toString().trim();
+        if (name.isEmpty) continue;
+        final id = name.startsWith('models/')
+            ? name.substring('models/'.length)
+            : name;
+        if (id.isEmpty) continue;
+        final methods = (item['supportedGenerationMethods'] as List?)
+                ?.map((e) => e.toString())
+                .toList(growable: false) ??
+            const <String>[];
+        final supportsTools = methods.any(
+          (m) => m.contains('generateContent') || m.contains('streamGenerate'),
+        );
+        final supportsThinking = id.contains('2.5') || id.contains('thinking');
+        models[id] = AiModelCapability(
+          id: id,
+          contextWindow: (item['inputTokenLimit'] as num?)?.toInt(),
+          maxOutputTokens: (item['outputTokenLimit'] as num?)?.toInt(),
+          supportsTools: supportsTools,
+          supportsImages: true,
+          supportsThinking: supportsThinking,
+        );
       }
-      final result = ids.toList(growable: false)..sort();
+      final result = models.values.toList(growable: false)
+        ..sort((a, b) => a.id.compareTo(b.id));
       return result;
     }
 

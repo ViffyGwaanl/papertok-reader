@@ -34,6 +34,7 @@ import 'package:anx_reader/models/reading_info.dart';
 import 'package:anx_reader/models/reading_rules.dart';
 import 'package:anx_reader/models/user_prompt.dart';
 import 'package:anx_reader/models/share_prompt_preset.dart';
+import 'package:anx_reader/models/ai_model_capability.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_tool_meta.dart';
@@ -864,6 +865,86 @@ class Prefs extends ChangeNotifier {
       touchAiSettingsUpdatedAt();
     }
     prefs.setString(_aiTranslateModelKey, v);
+    notifyListeners();
+  }
+
+  // --- AI Chat Title Generation (provider/model override) ---
+
+  static const String _aiTitleGenerationEnabledKey =
+      'aiTitleGenerationEnabledV1';
+  static const String _aiTitleProviderIdKey = 'aiTitleProviderIdV1';
+  static const String _aiTitleModelKey = 'aiTitleModelV1';
+  static const String _aiTitleMaxCharsKey = 'aiTitleMaxCharsV1';
+
+  bool get aiTitleGenerationEnabled {
+    return prefs.getBool(_aiTitleGenerationEnabledKey) ?? true;
+  }
+
+  set aiTitleGenerationEnabled(bool value) {
+    if (aiTitleGenerationEnabled != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_aiTitleGenerationEnabledKey, value);
+    notifyListeners();
+  }
+
+  String get aiTitleProviderId {
+    return prefs.getString(_aiTitleProviderIdKey) ?? '';
+  }
+
+  set aiTitleProviderId(String id) {
+    final v = id.trim();
+    if (aiTitleProviderId.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiTitleProviderIdKey, v);
+    notifyListeners();
+  }
+
+  String get aiTitleProviderIdEffective {
+    final preferred = aiTitleProviderId.trim();
+    if (preferred.isNotEmpty) {
+      final meta = getAiProviderMeta(preferred);
+      if (meta != null && meta.enabled) return preferred;
+    }
+
+    final fallback = selectedAiService.trim();
+    final fallbackMeta = getAiProviderMeta(fallback);
+    if (fallback.isNotEmpty && fallbackMeta != null && fallbackMeta.enabled) {
+      return fallback;
+    }
+
+    for (final p in aiProvidersV1) {
+      if (p.enabled) return p.id;
+    }
+
+    return fallback.isNotEmpty ? fallback : preferred;
+  }
+
+  String get aiTitleModel {
+    return prefs.getString(_aiTitleModelKey) ?? '';
+  }
+
+  set aiTitleModel(String model) {
+    final v = model.trim();
+    if (aiTitleModel.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiTitleModelKey, v);
+    notifyListeners();
+  }
+
+  int get aiTitleMaxChars {
+    final value = prefs.getInt(_aiTitleMaxCharsKey) ?? 24;
+    return value.clamp(8, 48);
+  }
+
+  set aiTitleMaxChars(int value) {
+    final next = value.clamp(8, 48);
+    if (aiTitleMaxChars != next) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiTitleMaxCharsKey, next);
     notifyListeners();
   }
 
@@ -1802,12 +1883,15 @@ class Prefs extends ChangeNotifier {
     prefs.remove('aiConfig_$identifier');
     // Also clear caches bound to this provider.
     prefs.remove(_aiModelsCacheKey(identifier));
+    prefs.remove(_aiModelCapabilitiesCacheKey(identifier));
     notifyListeners();
   }
 
   // --- Provider models cache (per-provider, local-only) ---
 
   static const String _aiModelsCacheV1Prefix = 'aiModelsCacheV1_';
+  static const String _aiModelCapabilitiesCacheV1Prefix =
+      'aiModelCapabilitiesCacheV1_';
 
   // --- MCP (external tools) ---
 
@@ -1818,6 +1902,10 @@ class Prefs extends ChangeNotifier {
 
   static String _aiModelsCacheKey(String providerId) {
     return '$_aiModelsCacheV1Prefix$providerId';
+  }
+
+  static String _aiModelCapabilitiesCacheKey(String providerId) {
+    return '$_aiModelCapabilitiesCacheV1Prefix$providerId';
   }
 
   ({int updatedAt, List<String> models})? getAiModelsCacheV1(
@@ -1868,6 +1956,60 @@ class Prefs extends ChangeNotifier {
 
   void clearAiModelsCacheV1(String providerId) {
     prefs.remove(_aiModelsCacheKey(providerId));
+    notifyListeners();
+  }
+
+  ({int updatedAt, List<AiModelCapability> models})?
+      getAiModelCapabilitiesCacheV1(String providerId) {
+    final raw = prefs.getString(_aiModelCapabilitiesCacheKey(providerId));
+    if (raw == null || raw.trim().isEmpty) return null;
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      final updatedAt = decoded['updatedAt'] is int
+          ? decoded['updatedAt'] as int
+          : DateTime.now().millisecondsSinceEpoch;
+      final modelsRaw = decoded['models'];
+      if (modelsRaw is! List) return null;
+      final models = modelsRaw
+          .whereType<Map>()
+          .map(
+            (e) => AiModelCapability.fromJson(
+              e.map((key, value) => MapEntry(key.toString(), value)),
+            ),
+          )
+          .where((e) => e.id.isNotEmpty)
+          .toList(growable: false);
+      return (updatedAt: updatedAt, models: models);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void saveAiModelCapabilitiesCacheV1(
+    String providerId,
+    List<AiModelCapability> models,
+  ) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final sanitized = <String, AiModelCapability>{
+      for (final model in models)
+        if (model.id.trim().isNotEmpty) model.id.trim(): model,
+    }.values.toList(growable: false)
+      ..sort((a, b) => a.id.compareTo(b.id));
+
+    prefs.setString(
+      _aiModelCapabilitiesCacheKey(providerId),
+      jsonEncode({
+        'updatedAt': now,
+        'models': sanitized.map((e) => e.toJson()).toList(growable: false),
+      }),
+    );
+    notifyListeners();
+  }
+
+  void clearAiModelCapabilitiesCacheV1(String providerId) {
+    prefs.remove(_aiModelCapabilitiesCacheKey(providerId));
     notifyListeners();
   }
 

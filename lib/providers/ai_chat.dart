@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/providers/ai_history.dart';
 import 'package:anx_reader/service/ai/ai_history.dart';
+import 'package:anx_reader/service/ai/conversation_title_service.dart';
 import 'package:anx_reader/service/ai/index.dart';
+import 'package:anx_reader/service/ai/prompt_budgeting_service.dart';
 import 'package:anx_reader/service/mcp/mcp_client_service.dart';
 import 'package:anx_reader/models/ai_conversation_tree.dart';
 import 'package:anx_reader/models/attachment_item.dart';
@@ -23,12 +25,19 @@ class AiChatStreaming extends _$AiChatStreaming {
   }
 }
 
+final aiChatContextNoticeProvider = StateProvider<String?>((ref) => null);
+
 @Riverpod(keepAlive: true)
 class AiChat extends _$AiChat {
   String? _currentSessionId;
 
   AiConversationTree _tree = AiConversationTree.empty();
   List<String> _activeNodeIds = const [];
+
+  final ConversationTitleService _titleService =
+      const ConversationTitleService();
+  final PromptBudgetingService _promptBudgetingService =
+      const PromptBudgetingService();
 
   StreamSubscription<String>? _generationSub;
   AiChatHistoryEntry? _draftEntry;
@@ -225,6 +234,7 @@ class AiChat extends _$AiChat {
     _rebuildFromTree();
     final updatedMessages = state.value ?? const <ChatMessage>[];
 
+    final fallbackTitle = _titleService.deriveFallbackTitle(updatedMessages);
     _draftEntry = (entry ??
             AiChatHistoryEntry(
               id: sessionId,
@@ -232,14 +242,23 @@ class AiChat extends _$AiChat {
               model: model,
               createdAt: entry?.createdAt ?? now,
               updatedAt: now,
+              title: fallbackTitle,
+              titleSource: 'heuristic',
               messages: List<ChatMessage>.from(updatedMessages),
               completed: false,
             ))
         .copyWith(
+      serviceId: serviceId,
       messages: List<ChatMessage>.from(updatedMessages),
       updatedAt: now,
       completed: false,
       model: model,
+      title: (entry?.title?.trim().isNotEmpty ?? false)
+          ? entry!.title
+          : fallbackTitle,
+      titleSource: (entry?.titleSource?.trim().isNotEmpty ?? false)
+          ? entry!.titleSource
+          : 'heuristic',
       conversationV2: _tree.toJson(),
     );
 
@@ -247,11 +266,24 @@ class AiChat extends _$AiChat {
 
     // 4) Start generation.
     final promptMessages = _buildPromptMessagesForAssistantParent(parentId);
+    final budgetResult = _promptBudgetingService.trimMessages(
+      providerId: serviceId,
+      config: config,
+      messages: promptMessages,
+    );
+    if (budgetResult.trimmed && budgetResult.contextWindow != null) {
+      ref.read(aiChatContextNoticeProvider.notifier).state =
+          'Context trimmed for ${model.isEmpty ? serviceId : model} '
+          '(${budgetResult.estimatedTokens}/${budgetResult.contextWindow}, '
+          'reserve ${budgetResult.reservedOutputTokens})';
+    } else {
+      ref.read(aiChatContextNoticeProvider.notifier).state = null;
+    }
 
     ref.read(aiChatStreamingProvider.notifier).setStreaming(true);
 
     final stream = aiGenerateStream(
-      promptMessages,
+      budgetResult.messages,
       regenerate: isRegenerate,
       useAgent: true,
       conversationId: sessionId,
@@ -318,11 +350,41 @@ class AiChat extends _$AiChat {
         conversationV2: _tree.toJson(),
       );
       historyNotifier.upsert(finalEntry).catchError((_) {});
+      unawaited(_refreshGeneratedTitle(finalEntry, historyNotifier));
     }
 
     _draftEntry = null;
     _draftAssistantNodeId = null;
     _draftHumanNodeId = null;
+  }
+
+  Future<void> _refreshGeneratedTitle(
+    AiChatHistoryEntry entry,
+    AiHistoryNotifier historyNotifier,
+  ) async {
+    if (entry.titleSource == 'manual') {
+      return;
+    }
+
+    final messages = entry.messages;
+    final hasHuman = messages.any((message) => message is HumanChatMessage);
+    final hasAssistant = messages.any((message) => message is AIChatMessage);
+    if (!hasHuman || !hasAssistant) {
+      return;
+    }
+
+    final generated = await _titleService.generateTitle(messages);
+    final normalized = generated.trim();
+    if (normalized.isEmpty || normalized == entry.title) {
+      return;
+    }
+
+    final updated = entry.copyWith(
+      title: normalized,
+      titleSource: Prefs().aiTitleGenerationEnabled ? 'model' : 'heuristic',
+      updatedAt: DateTime.now().millisecondsSinceEpoch,
+    );
+    await historyNotifier.upsert(updated);
   }
 
   void clear() {
@@ -339,6 +401,7 @@ class AiChat extends _$AiChat {
     _draftEntry = null;
     _draftAssistantNodeId = null;
     _draftHumanNodeId = null;
+    ref.read(aiChatContextNoticeProvider.notifier).state = null;
   }
 
   void loadHistoryEntry(AiChatHistoryEntry entry) {
@@ -346,6 +409,17 @@ class AiChat extends _$AiChat {
     _generationSub?.cancel();
     _generationSub = null;
     ref.read(aiChatStreamingProvider.notifier).setStreaming(false);
+    ref.read(aiChatContextNoticeProvider.notifier).state = null;
+
+    final providerMeta = Prefs().getAiProviderMeta(entry.serviceId);
+    if (providerMeta != null && providerMeta.enabled) {
+      Prefs().selectedAiService = entry.serviceId;
+      final config = <String, String>{...Prefs().getAiConfig(entry.serviceId)};
+      if (entry.model.trim().isNotEmpty) {
+        config['model'] = entry.model.trim();
+        Prefs().saveAiConfig(entry.serviceId, config);
+      }
+    }
 
     _currentSessionId = entry.id;
 
@@ -523,6 +597,8 @@ class AiChat extends _$AiChat {
     final existing = historyNotifier.findById(sessionId);
     final now = DateTime.now().millisecondsSinceEpoch;
 
+    final currentMessages = List<ChatMessage>.from(state.value ?? const []);
+    final fallbackTitle = _titleService.deriveFallbackTitle(currentMessages);
     final entry = (existing ??
             AiChatHistoryEntry(
               id: sessionId,
@@ -530,14 +606,23 @@ class AiChat extends _$AiChat {
               model: model,
               createdAt: now,
               updatedAt: now,
-              messages: List<ChatMessage>.from(state.value ?? const []),
+              title: fallbackTitle,
+              titleSource: 'heuristic',
+              messages: currentMessages,
               completed: true,
             ))
         .copyWith(
-      messages: List<ChatMessage>.from(state.value ?? const []),
+      serviceId: serviceId,
+      messages: currentMessages,
       updatedAt: now,
       completed: true,
       model: model,
+      title: (existing?.title?.trim().isNotEmpty ?? false)
+          ? existing!.title
+          : fallbackTitle,
+      titleSource: (existing?.titleSource?.trim().isNotEmpty ?? false)
+          ? existing!.titleSource
+          : 'heuristic',
       conversationV2: _tree.toJson(),
     );
 

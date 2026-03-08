@@ -26,8 +26,14 @@ class MemoryWorkflowService {
   final MemoryWriteCoordinator _writeCoordinator;
   final MemorySessionDigestService _sessionDigestService;
 
+  Future<List<MemoryCandidate>> listCandidates({
+    MemoryCandidateStatus? status,
+  }) {
+    return _candidateStore.list(status: status);
+  }
+
   Future<List<MemoryCandidate>> listPendingCandidates() {
-    return _candidateStore.list(status: MemoryCandidateStatus.pending);
+    return listCandidates(status: MemoryCandidateStatus.pending);
   }
 
   Future<MemoryCandidate> addToReviewInbox({
@@ -39,6 +45,10 @@ class MemoryWorkflowService {
     String? summary,
     String sensitivity = 'normal',
     double? confidence,
+    String? displayText,
+    String? sourcePointer,
+    String? rawContextRef,
+    String? triggerKind,
   }) async {
     final normalized = _normalizeText(text);
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -54,6 +64,11 @@ class MemoryWorkflowService {
       confidence: confidence,
       status: MemoryCandidateStatus.pending,
       createdAtMs: now,
+      displayText: (displayText ?? normalized).trim(),
+      sourcePointer:
+          sourcePointer ?? _buildSourcePointer(conversationId, messageNodeId),
+      rawContextRef: rawContextRef,
+      triggerKind: triggerKind,
     );
     return _candidateStore.upsert(candidate);
   }
@@ -67,6 +82,10 @@ class MemoryWorkflowService {
     String? summary,
     String sensitivity = 'normal',
     double? confidence,
+    String? displayText,
+    String? sourcePointer,
+    String? rawContextRef,
+    String? triggerKind,
   }) {
     return _saveDirect(
       text: text,
@@ -78,6 +97,10 @@ class MemoryWorkflowService {
       summary: summary,
       sensitivity: sensitivity,
       confidence: confidence,
+      displayText: displayText,
+      sourcePointer: sourcePointer,
+      rawContextRef: rawContextRef,
+      triggerKind: triggerKind,
     );
   }
 
@@ -89,6 +112,10 @@ class MemoryWorkflowService {
     String? summary,
     String sensitivity = 'normal',
     double? confidence,
+    String? displayText,
+    String? sourcePointer,
+    String? rawContextRef,
+    String? triggerKind,
   }) {
     return _saveDirect(
       text: text,
@@ -99,6 +126,10 @@ class MemoryWorkflowService {
       summary: summary,
       sensitivity: sensitivity,
       confidence: confidence,
+      displayText: displayText,
+      sourcePointer: sourcePointer,
+      rawContextRef: rawContextRef,
+      triggerKind: triggerKind,
     );
   }
 
@@ -107,6 +138,7 @@ class MemoryWorkflowService {
     MemoryWorkflowDailyStrategy dailyStrategy =
         MemoryWorkflowDailyStrategy.reviewInbox,
     String sourceType = 'session_digest',
+    String triggerKind = 'session_digest',
     String? conversationId,
     int maxCandidates = MemorySessionDigestService.defaultMaxCandidates,
   }) async {
@@ -123,6 +155,12 @@ class MemoryWorkflowService {
               sourceType: sourceType,
               conversationId: conversationId,
               confidence: draft.confidence,
+              displayText: draft.text,
+              sourcePointer: _buildSourcePointer(conversationId, null),
+              rawContextRef: conversationId == null
+                  ? null
+                  : 'conversation:$conversationId',
+              triggerKind: triggerKind,
             )
           : await addToReviewInbox(
               text: draft.text,
@@ -130,6 +168,12 @@ class MemoryWorkflowService {
               sourceType: sourceType,
               conversationId: conversationId,
               confidence: draft.confidence,
+              displayText: draft.text,
+              sourcePointer: _buildSourcePointer(conversationId, null),
+              rawContextRef: conversationId == null
+                  ? null
+                  : 'conversation:$conversationId',
+              triggerKind: triggerKind,
             );
       created.add(candidate);
     }
@@ -172,6 +216,10 @@ class MemoryWorkflowService {
     String? summary,
     required String sensitivity,
     double? confidence,
+    String? displayText,
+    String? sourcePointer,
+    String? rawContextRef,
+    String? triggerKind,
   }) async {
     final normalized = _normalizeText(text);
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -191,6 +239,14 @@ class MemoryWorkflowService {
       status: MemoryCandidateStatus.applied,
       createdAtMs: now,
       appliedAtMs: now,
+      reviewedAtMs: now,
+      appliedTargetDoc: targetDoc,
+      decisionSource: 'direct_save',
+      displayText: (displayText ?? normalized).trim(),
+      sourcePointer:
+          sourcePointer ?? _buildSourcePointer(conversationId, messageNodeId),
+      rawContextRef: rawContextRef,
+      triggerKind: triggerKind,
     );
     return _candidateStore.upsert(candidate);
   }
@@ -214,6 +270,18 @@ class MemoryWorkflowService {
       throw ArgumentError('text is required');
     }
     return normalized;
+  }
+
+  String _buildSourcePointer(String? conversationId, String? messageNodeId) {
+    final conversation = (conversationId ?? '').trim();
+    final message = (messageNodeId ?? '').trim();
+    if (conversation.isEmpty && message.isEmpty) {
+      return '';
+    }
+    if (conversation.isNotEmpty && message.isNotEmpty) {
+      return '$conversation#$message';
+    }
+    return conversation.isNotEmpty ? conversation : message;
   }
 
   String _defaultSummary(String text) {
