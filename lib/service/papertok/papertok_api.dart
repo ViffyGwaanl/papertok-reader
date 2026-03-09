@@ -32,12 +32,14 @@ class PaperTokApi {
   Future<List<PaperTokCard>> fetchRandomPapers({
     int limit = 20,
     String lang = 'zh',
+    String? day,
   }) async {
     final resp = await _dio.get(
       '/api/papers/random',
       queryParameters: {
         'limit': limit,
         'lang': lang,
+        if ((day ?? '').trim().isNotEmpty) 'day': day,
       },
     );
 

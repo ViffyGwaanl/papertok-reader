@@ -2334,6 +2334,34 @@ Requirements:
     }
   }
 
+  static const String _paperTokLikedPaperIdsKey = 'paperTokLikedPaperIdsV1';
+
+  List<int> get paperTokLikedPaperIds {
+    final stored = prefs.getStringList(_paperTokLikedPaperIdsKey) ?? const [];
+    return stored
+        .map((e) => int.tryParse(e.trim()))
+        .whereType<int>()
+        .toList(growable: false);
+  }
+
+  bool isPaperTokLiked(int paperId) {
+    return paperTokLikedPaperIds.contains(paperId);
+  }
+
+  void setPaperTokLiked(int paperId, bool liked) {
+    final next = paperTokLikedPaperIds.toSet();
+    if (liked) {
+      next.add(paperId);
+    } else {
+      next.remove(paperId);
+    }
+    prefs.setStringList(
+      _paperTokLikedPaperIdsKey,
+      next.map((e) => '$e').toList(growable: false)..sort(),
+    );
+    notifyListeners();
+  }
+
   /// Default behavior for iOS Shortcuts action “Send image message to Papertok”.
   ///
   /// This is used by Swift AppIntents (ios/Runner) as a dynamic default.
