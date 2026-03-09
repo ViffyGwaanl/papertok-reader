@@ -88,6 +88,14 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
         prefs.inlineFullTextTranslateConcurrency,
   };
 
+  final titleGeneration = <String, dynamic>{
+    'aiTitleGenerationEnabledV1': prefs.aiTitleGenerationEnabled,
+    'aiTitleProviderIdV1': prefs.aiTitleProviderId,
+    'aiTitleModelV1': prefs.aiTitleModel,
+    'aiTitleMaxCharsV1': prefs.aiTitleMaxChars,
+    'aiTitlePromptV1': prefs.aiTitlePrompt,
+  };
+
   final imageAnalysis = <String, dynamic>{
     'aiImageAnalysisProviderIdV1': prefs.aiImageAnalysisProviderId,
     'aiImageAnalysisModelV1': prefs.aiImageAnalysisModel,
@@ -143,6 +151,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     'mcp': mcp,
     'ui': ui,
     'translate': translate,
+    'titleGeneration': titleGeneration,
     'imageAnalysis': imageAnalysis,
     'libraryIndex': libraryIndex,
   };
@@ -479,6 +488,34 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
           (translate['inlineFullTextTranslateConcurrency'] as num?)?.toInt();
       if (concurrency != null) {
         prefs.inlineFullTextTranslateConcurrency = concurrency;
+      }
+    }
+
+    final titleGeneration = json['titleGeneration'];
+    if (titleGeneration is Map) {
+      final enabled = titleGeneration['aiTitleGenerationEnabledV1'];
+      if (enabled is bool) {
+        prefs.aiTitleGenerationEnabled = enabled;
+      }
+
+      final providerId = titleGeneration['aiTitleProviderIdV1']?.toString();
+      if (providerId != null) {
+        prefs.aiTitleProviderId = providerId;
+      }
+
+      final model = titleGeneration['aiTitleModelV1']?.toString();
+      if (model != null) {
+        prefs.aiTitleModel = model;
+      }
+
+      final maxChars = (titleGeneration['aiTitleMaxCharsV1'] as num?)?.toInt();
+      if (maxChars != null) {
+        prefs.aiTitleMaxChars = maxChars;
+      }
+
+      final prompt = titleGeneration['aiTitlePromptV1']?.toString();
+      if (prompt != null) {
+        prefs.aiTitlePrompt = prompt;
       }
     }
 

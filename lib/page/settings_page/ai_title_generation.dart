@@ -17,6 +17,76 @@ class AiTitleGenerationSettingsPage extends StatefulWidget {
 
 class _AiTitleGenerationSettingsPageState
     extends State<AiTitleGenerationSettingsPage> {
+  Future<void> _editPrompt() async {
+    final controller = TextEditingController(
+      text: Prefs().aiTitlePrompt.trim().isEmpty
+          ? Prefs().aiTitlePromptEffective
+          : Prefs().aiTitlePrompt,
+    );
+
+    final result = await showDialog<_PromptEditResult>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Title prompt'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Customize how automatic conversation titles are generated. '
+                'You can use {{preferredLanguage}} and {{maxChars}} as variables.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter title generation prompt',
+                ),
+                maxLines: 10,
+                minLines: 6,
+                maxLength: 8000,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, _PromptEditResult.cancel),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, _PromptEditResult.reset),
+              child: const Text('Reset'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, _PromptEditResult.save),
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || result == null || result == _PromptEditResult.cancel) {
+      controller.dispose();
+      return;
+    }
+
+    if (result == _PromptEditResult.reset) {
+      Prefs().aiTitlePrompt = '';
+      setState(() {});
+      controller.dispose();
+      return;
+    }
+
+    final value = controller.text.trim();
+    final defaultValue = Prefs().aiTitlePromptEffective.trim();
+    Prefs().aiTitlePrompt = value == defaultValue ? '' : value;
+    setState(() {});
+    controller.dispose();
+  }
+
   String _providerTypeLabel(BuildContext context, AiProviderType type) {
     switch (type) {
       case AiProviderType.openaiCompatible:
@@ -308,6 +378,9 @@ class _AiTitleGenerationSettingsPageState
 
     final model = Prefs().aiTitleModel.trim();
     final modelLabel = model.isEmpty ? 'Follow provider default' : model;
+    final promptCustom = Prefs().aiTitlePrompt.trim();
+    final promptLabel =
+        promptCustom.isEmpty ? 'Default prompt' : 'Custom prompt';
 
     return settingsSections(
       sections: [
@@ -355,9 +428,24 @@ class _AiTitleGenerationSettingsPageState
               ),
               onPressed: (_) => _editMaxTitleLength(),
             ),
+            SettingsTile.navigation(
+              leading: const Icon(Icons.edit_note_outlined),
+              title: const Text('Title prompt'),
+              value: Text(promptLabel),
+              description: const Text(
+                'Customize the prompt and let it adapt to the current language, such as Chinese.',
+              ),
+              onPressed: (_) => _editPrompt(),
+            ),
           ],
         ),
       ],
     );
   }
+}
+
+enum _PromptEditResult {
+  cancel,
+  reset,
+  save,
 }

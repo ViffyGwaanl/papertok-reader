@@ -4,6 +4,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/service/ai/index.dart';
+import 'package:flutter/widgets.dart';
 import 'package:langchain_core/chat_models.dart';
 
 class ConversationTitleService {
@@ -38,7 +39,10 @@ class ConversationTitleService {
       }
     }
 
-    final prompt = _titlePrompt(prefs.aiTitleMaxChars);
+    final prompt = _titlePrompt(
+      template: prefs.aiTitlePromptEffective,
+      maxChars: prefs.aiTitleMaxChars,
+    );
     try {
       final stream = aiGenerateStream(
         [
@@ -125,9 +129,14 @@ class ConversationTitleService {
     return content.toString();
   }
 
-  String _titlePrompt(int maxChars) {
-    return 'Generate a concise conversation title in the same language as the conversation. '
-        'Return only the title text, no quotes, no punctuation at the end, and keep it under $maxChars characters.';
+  String _titlePrompt({
+    required String template,
+    required int maxChars,
+  }) {
+    final language = _preferredLanguageLabel();
+    return template
+        .replaceAll('{{maxChars}}', '$maxChars')
+        .replaceAll('{{preferredLanguage}}', language);
   }
 
   String _sanitizeTitle(String raw, int maxChars) {
@@ -153,6 +162,22 @@ class ConversationTitleService {
   String _truncate(String text, int maxChars) {
     if (text.length <= maxChars) return text;
     return text.substring(0, maxChars).trim();
+  }
+
+  String _preferredLanguageLabel() {
+    final activeLocale =
+        Prefs().locale ?? WidgetsBinding.instance.platformDispatcher.locale;
+    final code = activeLocale.languageCode.toLowerCase();
+    if (code.startsWith('zh')) {
+      return '中文';
+    }
+    if (code.startsWith('ja')) {
+      return 'Japanese';
+    }
+    if (code.startsWith('ko')) {
+      return 'Korean';
+    }
+    return 'English';
   }
 
   String _defaultModelForProvider(AiProviderMeta provider) {

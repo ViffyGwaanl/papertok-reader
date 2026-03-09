@@ -875,6 +875,7 @@ class Prefs extends ChangeNotifier {
   static const String _aiTitleProviderIdKey = 'aiTitleProviderIdV1';
   static const String _aiTitleModelKey = 'aiTitleModelV1';
   static const String _aiTitleMaxCharsKey = 'aiTitleMaxCharsV1';
+  static const String _aiTitlePromptKey = 'aiTitlePromptV1';
 
   bool get aiTitleGenerationEnabled {
     return prefs.getBool(_aiTitleGenerationEnabledKey) ?? true;
@@ -946,6 +947,43 @@ class Prefs extends ChangeNotifier {
     }
     prefs.setInt(_aiTitleMaxCharsKey, next);
     notifyListeners();
+  }
+
+  String get aiTitlePrompt {
+    return prefs.getString(_aiTitlePromptKey) ?? '';
+  }
+
+  set aiTitlePrompt(String prompt) {
+    final v = prompt.trim();
+    if (aiTitlePrompt.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiTitlePromptKey, v);
+    notifyListeners();
+  }
+
+  String get aiTitlePromptEffective {
+    final custom = aiTitlePrompt.trim();
+    if (custom.isNotEmpty) return custom;
+
+    final activeLocale =
+        locale ?? WidgetsBinding.instance.platformDispatcher.locale;
+    final lang = activeLocale.languageCode.toLowerCase();
+    if (lang.startsWith('zh')) {
+      return '''你是阅读器里的 AI 助手。请根据这段对话生成一个简短自然的标题。
+要求：
+1) 标题使用{{preferredLanguage}}。
+2) 标题不超过 {{maxChars}} 个字符。
+3) 不要加引号，不要句号，不要写“标题：”。
+4) 只输出标题本身。''';
+    }
+
+    return '''You are an AI assistant inside a reading app. Generate a concise title for this conversation.
+Requirements:
+1) Write the title in {{preferredLanguage}}.
+2) Keep it within {{maxChars}} characters.
+3) Do not use quotes, do not add a trailing period, and do not prefix it with "Title:".
+4) Return only the title text.''';
   }
 
   // --- AI Image Analysis (provider/model override) ---
