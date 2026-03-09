@@ -138,9 +138,11 @@ class _PapersPageState extends State<PapersPage> {
               ),
               ListTile(
                 title: const Text('Pick a date'),
-                subtitle: Text(_dayFilter == 'latest' || _dayFilter == 'all'
-                    ? 'Choose a specific day'
-                    : _dayFilter),
+                subtitle: Text(
+                  _dayFilter == 'latest' || _dayFilter == 'all'
+                      ? 'Choose a specific day'
+                      : _dayFilter,
+                ),
                 onTap: () async {
                   Navigator.pop(context);
                   final now = DateTime.now();
@@ -266,93 +268,89 @@ class _PapersPageState extends State<PapersPage> {
 
   Widget _buildGlassActionButton({
     required IconData icon,
-    required String label,
     required VoidCallback onTap,
     bool active = false,
     Color? activeColor,
   }) {
     final highlight = activeColor ?? const Color(0xFFFF5470);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Material(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Material(
+          color: active
+              ? highlight.withOpacity(0.26)
+              : Colors.white.withOpacity(0.13),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(
               color: active
-                  ? highlight.withOpacity(0.26)
-                  : Colors.white.withOpacity(0.14),
-              shape: RoundedRectangleBorder(
+                  ? highlight.withOpacity(0.56)
+                  : Colors.white.withOpacity(0.16),
+            ),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(28),
+            onTap: onTap,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
-                side: BorderSide(
-                  color: active
-                      ? highlight.withOpacity(0.55)
-                      : Colors.white.withOpacity(0.18),
-                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x26000000),
+                    blurRadius: 14,
+                    offset: Offset(0, 7),
+                  ),
+                ],
               ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(28),
-                onTap: onTap,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 16,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    icon,
-                    color: active ? highlight : Colors.white,
-                    size: 28,
-                  ),
-                ),
+              child: Icon(
+                icon,
+                color: active ? highlight : Colors.white,
+                size: 27,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildImageDots(int total, int current) {
+  Widget _buildImageProgressBar(int total, int current) {
     if (total <= 1) {
       return const SizedBox.shrink();
     }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(total, (index) {
-        final active = index == current;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          width: active ? 18 : 6,
-          height: 6,
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: active ? Colors.white : Colors.white.withOpacity(0.42),
+            color: Colors.white.withOpacity(0.12),
             borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withOpacity(0.16)),
           ),
-        );
-      }),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(total, (index) {
+              final active = index == current;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                width: active ? 24 : 10,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: active ? Colors.white : Colors.white.withOpacity(0.28),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              );
+            }),
+          ),
+        ),
+      ),
     );
   }
 
@@ -488,16 +486,18 @@ class _PapersPageState extends State<PapersPage> {
             fit: StackFit.expand,
             children: [
               _buildImageCarousel(card),
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0x66000000),
-                      Color(0x00000000),
-                      Color(0xCC000000),
-                    ],
+              IgnorePointer(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0x66000000),
+                        Color(0x00000000),
+                        Color(0xCC000000),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -513,204 +513,137 @@ class _PapersPageState extends State<PapersPage> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.translucent,
-                          onTap: () => _openDetail(card),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    L10n.of(context).navBarPapers,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(color: Colors.white),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  if (_searchQuery.trim().isNotEmpty)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.16),
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                        border: Border.all(
-                                          color: Colors.white.withOpacity(0.18),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        'Search: $_searchQuery',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const Spacer(),
-                              if (images.length > 1) ...[
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(999),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                      sigmaX: 14,
-                                      sigmaY: 14,
-                                    ),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.12),
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                        border: Border.all(
-                                          color: Colors.white.withOpacity(0.18),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          _buildImageDots(
-                                              images.length, imageIndex),
-                                          const SizedBox(width: 10),
-                                          Text(
-                                            '${imageIndex + 1}/${images.length}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  L10n.of(context).navBarPapers,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(color: Colors.white),
                                 ),
-                                const SizedBox(height: 12),
-                              ],
-                              Text(
-                                card.bestTitle,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      height: 1.05,
-                                    ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                card.extract,
-                                maxLines: 5,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: Colors.white.withOpacity(0.94),
-                                      height: 1.45,
-                                    ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Day: ${card.day ?? '-'}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: Colors.white70),
-                              ),
-                              const SizedBox(height: 10),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(999),
-                                child: BackdropFilter(
-                                  filter:
-                                      ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                                  child: Container(
+                                const SizedBox(width: 12),
+                                if (_searchQuery.trim().isNotEmpty)
+                                  Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
+                                      horizontal: 10,
+                                      vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.14),
+                                      color: Colors.white.withOpacity(0.16),
                                       borderRadius: BorderRadius.circular(999),
                                       border: Border.all(
-                                        color: Colors.white.withOpacity(0.20),
+                                        color: Colors.white.withOpacity(0.18),
                                       ),
                                     ),
-                                    child: const Text(
-                                      'Tap text area to open detail',
-                                      style: TextStyle(
+                                    child: Text(
+                                      'Search: $_searchQuery',
+                                      style: const TextStyle(
                                         color: Colors.white,
-                                        fontWeight: FontWeight.w600,
                                         fontSize: 12,
                                       ),
                                     ),
                                   ),
+                              ],
+                            ),
+                            const Spacer(),
+                            if (images.length > 1) ...[
+                              _buildImageProgressBar(images.length, imageIndex),
+                              const SizedBox(height: 14),
+                            ],
+                            GestureDetector(
+                              onTap: () => _openDetail(card),
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 420),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      card.bestTitle,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.05,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      card.extract,
+                                      maxLines: 5,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color:
+                                                Colors.white.withOpacity(0.94),
+                                            height: 1.45,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'Day: ${card.day ?? '-'}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: Colors.white70),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              if (_loading && index >= visibleCards.length - 2)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 12),
-                                  child: LinearProgressIndicator(),
-                                ),
-                            ],
-                          ),
+                            ),
+                            if (_loading && index >= visibleCards.length - 2)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 12),
+                                child: LinearProgressIndicator(),
+                              ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          _buildGlassActionButton(
-                            icon: liked
-                                ? CupertinoIcons.heart_fill
-                                : CupertinoIcons.heart,
-                            label: liked ? 'Liked' : 'Like',
-                            active: liked,
-                            activeColor: const Color(0xFFFF5978),
-                            onTap: () => _toggleLike(card),
-                          ),
-                          const SizedBox(height: 22),
-                          _buildGlassActionButton(
-                            icon: CupertinoIcons.calendar,
-                            label: _dayFilterLabel(),
-                            active: _dayFilter != 'latest',
-                            activeColor: const Color(0xFF7ED6FF),
-                            onTap: _pickDateFilter,
-                          ),
-                          const SizedBox(height: 22),
-                          _buildGlassActionButton(
-                            icon: CupertinoIcons.search,
-                            label: _searchQuery.trim().isEmpty
-                                ? 'Search'
-                                : 'Search on',
-                            active: _searchQuery.trim().isNotEmpty,
-                            activeColor: const Color(0xFFB9A7FF),
-                            onTap: _editSearch,
-                          ),
-                          const SizedBox(height: 22),
-                          _buildGlassActionButton(
-                            icon: CupertinoIcons.doc_text_search,
-                            label: 'Detail',
-                            onTap: () => _openDetail(card),
-                          ),
-                          const SizedBox(height: 22),
-                          _buildGlassActionButton(
-                            icon: CupertinoIcons.refresh,
-                            label: 'Refresh',
-                            onTap: () => _loadMore(reset: true),
-                          ),
-                        ],
+                      const SizedBox(width: 18),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            _buildGlassActionButton(
+                              icon: liked
+                                  ? CupertinoIcons.heart_fill
+                                  : CupertinoIcons.heart,
+                              active: liked,
+                              activeColor: const Color(0xFFFF5978),
+                              onTap: () => _toggleLike(card),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildGlassActionButton(
+                              icon: CupertinoIcons.calendar,
+                              active: _dayFilter != 'latest',
+                              activeColor: const Color(0xFF7ED6FF),
+                              onTap: _pickDateFilter,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildGlassActionButton(
+                              icon: CupertinoIcons.search,
+                              active: _searchQuery.trim().isNotEmpty,
+                              activeColor: const Color(0xFFB9A7FF),
+                              onTap: _editSearch,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildGlassActionButton(
+                              icon: CupertinoIcons.refresh,
+                              onTap: () => _loadMore(reset: true),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
