@@ -70,11 +70,26 @@ class _PapersPageState extends State<PapersPage> {
     });
 
     try {
-      final next = await PaperTokApi.instance.fetchRandomPapers(
+      var effectiveDay = _dayFilter;
+      var next = await PaperTokApi.instance.fetchRandomPapers(
         limit: 20,
         lang: _lang,
-        day: _dayFilter,
+        day: effectiveDay,
       );
+
+      if (reset && next.isEmpty && effectiveDay == 'latest') {
+        effectiveDay = 'all';
+        next = await PaperTokApi.instance.fetchRandomPapers(
+          limit: 20,
+          lang: _lang,
+          day: effectiveDay,
+        );
+      }
+
+      if (next.isNotEmpty && effectiveDay != _dayFilter) {
+        _dayFilter = effectiveDay;
+      }
+
       final existing = _cards.map((e) => e.id).toSet();
       for (final c in next) {
         if (!existing.contains(c.id)) {
@@ -246,17 +261,6 @@ class _PapersPageState extends State<PapersPage> {
     return '${value.year}-$month-$day';
   }
 
-  String _dayFilterLabel() {
-    switch (_dayFilter) {
-      case 'latest':
-        return 'Latest';
-      case 'all':
-        return 'All';
-      default:
-        return _dayFilter;
-    }
-  }
-
   void _openDetail(PaperTokCard card) {
     Navigator.push(
       context,
@@ -279,14 +283,14 @@ class _PapersPageState extends State<PapersPage> {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Material(
           color: active
-              ? highlight.withOpacity(0.26)
-              : Colors.white.withOpacity(0.13),
+              ? highlight.withValues(alpha: 0.26)
+              : Colors.white.withValues(alpha: 0.13),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
             side: BorderSide(
               color: active
-                  ? highlight.withOpacity(0.56)
-                  : Colors.white.withOpacity(0.16),
+                  ? highlight.withValues(alpha: 0.56)
+                  : Colors.white.withValues(alpha: 0.16),
             ),
           ),
           child: InkWell(
@@ -329,9 +333,9 @@ class _PapersPageState extends State<PapersPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
+            color: Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Colors.white.withOpacity(0.16)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -343,7 +347,9 @@ class _PapersPageState extends State<PapersPage> {
                 width: active ? 24 : 10,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: active ? Colors.white : Colors.white.withOpacity(0.28),
+                  color: active
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.28),
                   borderRadius: BorderRadius.circular(999),
                 ),
               );
@@ -412,6 +418,7 @@ class _PapersPageState extends State<PapersPage> {
   @override
   Widget build(BuildContext context) {
     final visibleCards = _visibleCards;
+    final hasSearchQuery = _searchQuery.trim().isNotEmpty;
 
     if (_cards.isEmpty && _loading) {
       return const Scaffold(
@@ -438,7 +445,62 @@ class _PapersPageState extends State<PapersPage> {
       );
     }
 
-    if (visibleCards.isEmpty) {
+    if (_cards.isEmpty) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.auto_awesome_motion_outlined, size: 40),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No PaperTok cards available right now',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _dayFilter == 'latest'
+                        ? 'Latest feed came back empty, retrying or switching to all days should recover it.'
+                        : 'Try reloading the feed or switching the day filter.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () => _loadMore(reset: true),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reload feed'),
+                      ),
+                      if (_dayFilter != 'all')
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            setState(() {
+                              _dayFilter = 'all';
+                            });
+                            await _loadMore(reset: true);
+                          },
+                          icon: const Icon(Icons.calendar_view_day_outlined),
+                          label: const Text('Try all days'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (visibleCards.isEmpty && hasSearchQuery) {
       return Scaffold(
         body: SafeArea(
           child: Center(
@@ -533,10 +595,12 @@ class _PapersPageState extends State<PapersPage> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.16),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.16),
                                       borderRadius: BorderRadius.circular(999),
                                       border: Border.all(
-                                        color: Colors.white.withOpacity(0.18),
+                                        color: Colors.white
+                                            .withValues(alpha: 0.18),
                                       ),
                                     ),
                                     child: Text(
@@ -584,8 +648,8 @@ class _PapersPageState extends State<PapersPage> {
                                           .textTheme
                                           .bodyMedium
                                           ?.copyWith(
-                                            color:
-                                                Colors.white.withOpacity(0.94),
+                                            color: Colors.white
+                                                .withValues(alpha: 0.94),
                                             height: 1.45,
                                           ),
                                     ),
