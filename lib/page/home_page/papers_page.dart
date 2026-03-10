@@ -24,7 +24,7 @@ class _PapersPageState extends State<PapersPage> {
   bool _loading = false;
   bool _lockVerticalPaging = false;
   String? _error;
-  String _dayFilter = 'latest';
+  String _dayFilter = 'all';
   String _searchQuery = '';
   Set<int> _likedIds = <int>{};
 
