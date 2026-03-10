@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -105,6 +105,15 @@ class PapertokShortcutsPendingQueue {
     }
   }
 
+  @visibleForTesting
+  static void stageRawPayloadForRetry(String raw) {
+    final normalized = raw.trim();
+    if (normalized.isEmpty) return;
+    if (Prefs().prefs.getString(_key) != normalized) {
+      Prefs().prefs.setString(_key, normalized);
+    }
+  }
+
   static void enqueue({
     required String prompt,
     required List<String> imagesBase64Jpeg,
@@ -116,7 +125,7 @@ class PapertokShortcutsPendingQueue {
         'createdAtMs': DateTime.now().millisecondsSinceEpoch,
       };
 
-      Prefs().prefs.setString(_key, jsonEncode(payload));
+      stageRawPayloadForRetry(jsonEncode(payload));
     } catch (e, st) {
       AnxLog.warning('shortcuts: enqueue pending failed: $e', e, st);
     }
@@ -175,22 +184,20 @@ class PapertokShortcutsPendingQueue {
         // If the AppIntent ran out-of-process, it may have persisted payload
         // to a temp file. Prefer file-based handoff to avoid UserDefaults issues.
         raw = await _readPendingFileBestEffort();
-
-        if (raw != null && raw.trim().isNotEmpty) {
-          Prefs().prefs.setString(_key, raw);
-        }
       }
 
       if (raw == null || raw.trim().isEmpty) return;
+
+      // Stage the raw payload into SharedPreferences before any routing/handoff.
+      // This prevents cold-start/native-consume payloads from being lost if the
+      // Flutter side is not ready yet or sendToChat fails and needs a retry.
+      stageRawPayloadForRetry(raw);
 
       final obj = jsonDecode(raw);
       if (obj is! Map) return;
 
       final prompt = (obj['prompt'] ?? '').toString();
-      // createdAtMs is used for observability only.
-      final createdAtMsRaw = obj['createdAtMs'];
-      final createdAtMs =
-          (createdAtMsRaw is num) ? createdAtMsRaw.toInt() : null;
+      // createdAtMs is kept in payload for observability/debugging only.
 
       // Prefer persisted file paths (Swift handoff) to avoid huge base64 in the
       // Shortcuts process. Fallback to base64 payloads if present.

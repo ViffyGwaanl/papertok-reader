@@ -2462,10 +2462,10 @@ Requirements:
     }
   }
 
-  /// How to show the AI chat UI when running the Shortcuts action.
+  /// How shared/Shortcuts content should target AI chat sessions.
   ///
-  /// - `reuse`: reuse the existing chat window if possible.
-  /// - `new`: always open a new chat page route.
+  /// - `reuse`: reuse the current AI conversation if possible.
+  /// - `new`: begin a fresh AI conversation before sending content.
   String get shortcutsSendMessagePresentationV1 {
     return prefs.getString(_shortcutsSendMessagePresentationV1Key) ?? 'reuse';
   }
