@@ -190,6 +190,7 @@ enum PapertokIntentPendingQueue {
 
   static func enqueue(prompt: String, images: [IntentFile]) async throws {
     var payload: [String: Any] = [
+      "requestId": UUID().uuidString,
       "prompt": prompt,
       "createdAtMs": Int(Date().timeIntervalSince1970 * 1000)
     ]
@@ -231,30 +232,42 @@ enum PapertokIntentPendingQueue {
     try json.data(using: .utf8)?.write(to: url, options: [.atomic])
   }
 
-  private static func consumePendingFile() -> String? {
+  private static func readPendingFile() -> String? {
     let url = pendingFileUrl()
     guard let data = try? Data(contentsOf: url), !data.isEmpty else {
       return nil
     }
-    try? FileManager.default.removeItem(at: url)
     return String(data: data, encoding: .utf8)
   }
 
+  private static func clearPendingFile() {
+    try? FileManager.default.removeItem(at: pendingFileUrl())
+  }
+
+  private static func clearAllMirrors() {
+    groupDefaults()?.removeObject(forKey: key)
+    UserDefaults.standard.removeObject(forKey: key)
+    clearPendingFile()
+  }
+
+  private static func normalized(_ raw: String?) -> String? {
+    guard let raw else { return nil }
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
+  }
+
   static func consume() -> String? {
-    if let ud = groupDefaults(),
-       let s = ud.string(forKey: key),
-       !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      ud.removeObject(forKey: key)
-      return s
+    let groupRaw = groupDefaults()?.string(forKey: key)
+    let standardRaw = UserDefaults.standard.string(forKey: key)
+    let fileRaw = readPendingFile()
+
+    let chosen = normalized(groupRaw) ?? normalized(standardRaw) ?? normalized(fileRaw)
+
+    if groupRaw != nil || standardRaw != nil || fileRaw != nil {
+      clearAllMirrors()
     }
 
-    if let s = UserDefaults.standard.string(forKey: key),
-       !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      UserDefaults.standard.removeObject(forKey: key)
-      return s
-    }
-
-    return consumePendingFile()
+    return chosen
   }
 
 }

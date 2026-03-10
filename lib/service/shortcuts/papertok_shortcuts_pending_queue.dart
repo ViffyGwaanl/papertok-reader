@@ -16,6 +16,7 @@ class PapertokShortcutsPendingQueue {
   PapertokShortcutsPendingQueue._();
 
   static const _key = 'shortcutsPendingAskV1';
+  static const _lastHandledRequestIdKey = 'shortcutsLastHandledRequestIdV1';
 
   // Protect against multiple concurrent drains (main post-frame + deeplink + channel).
   static bool _draining = false;
@@ -114,12 +115,26 @@ class PapertokShortcutsPendingQueue {
     }
   }
 
+  @visibleForTesting
+  static bool isRequestIdHandled(String requestId) {
+    return requestId.trim().isNotEmpty &&
+        Prefs().prefs.getString(_lastHandledRequestIdKey) == requestId.trim();
+  }
+
+  @visibleForTesting
+  static void markRequestIdHandled(String requestId) {
+    final normalized = requestId.trim();
+    if (normalized.isEmpty) return;
+    Prefs().prefs.setString(_lastHandledRequestIdKey, normalized);
+  }
+
   static void enqueue({
     required String prompt,
     required List<String> imagesBase64Jpeg,
   }) {
     try {
       final payload = <String, dynamic>{
+        'requestId': DateTime.now().microsecondsSinceEpoch.toString(),
         'prompt': prompt,
         'imagesBase64Jpeg': imagesBase64Jpeg,
         'createdAtMs': DateTime.now().millisecondsSinceEpoch,
@@ -196,6 +211,7 @@ class PapertokShortcutsPendingQueue {
       final obj = jsonDecode(raw);
       if (obj is! Map) return;
 
+      final requestId = (obj['requestId'] ?? '').toString().trim();
       final prompt = (obj['prompt'] ?? '').toString();
       // createdAtMs is kept in payload for observability/debugging only.
 
@@ -203,6 +219,20 @@ class PapertokShortcutsPendingQueue {
       // Shortcuts process. Fallback to base64 payloads if present.
       final imagePathsRaw = obj['imagePaths'];
       final imagesRaw = obj['imagesBase64Jpeg'];
+
+      if (isRequestIdHandled(requestId)) {
+        AnxLog.info(
+            'shortcuts: skip duplicate pending ask requestId=$requestId');
+        await Prefs().prefs.remove(_key);
+        if (imagePathsRaw is List) {
+          final paths = imagePathsRaw
+              .map((e) => (e ?? '').toString().trim())
+              .where((e) => e.isNotEmpty)
+              .toList(growable: false);
+          unawaited(_cleanupTempFiles(paths));
+        }
+        return;
+      }
 
       final images = <String>[];
 
@@ -256,6 +286,7 @@ class PapertokShortcutsPendingQueue {
       }
 
       // Clear only after we successfully started streaming.
+      markRequestIdHandled(requestId);
       await Prefs().prefs.remove(_key);
     } catch (e, st) {
       AnxLog.warning('shortcuts: drain pending failed: $e', e, st);

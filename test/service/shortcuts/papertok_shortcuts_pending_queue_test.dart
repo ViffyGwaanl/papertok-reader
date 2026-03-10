@@ -15,6 +15,7 @@ void main() {
 
   test('stageRawPayloadForRetry persists payload for later drain attempts', () {
     final payload = jsonEncode({
+      'requestId': 'req-1',
       'prompt': 'hello from native pending',
       'imagesBase64Jpeg': <String>[],
       'createdAtMs': 123,
@@ -23,5 +24,17 @@ void main() {
     PapertokShortcutsPendingQueue.stageRawPayloadForRetry(payload);
 
     expect(Prefs().prefs.getString('shortcutsPendingAskV1'), payload);
+  });
+
+  test('handled request ids are persisted for dedupe', () {
+    expect(PapertokShortcutsPendingQueue.isRequestIdHandled('req-1'), isFalse);
+
+    PapertokShortcutsPendingQueue.markRequestIdHandled('req-1');
+
+    expect(PapertokShortcutsPendingQueue.isRequestIdHandled('req-1'), isTrue);
+    expect(
+      Prefs().prefs.getString('shortcutsLastHandledRequestIdV1'),
+      'req-1',
+    );
   });
 }
