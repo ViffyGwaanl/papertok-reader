@@ -27,6 +27,7 @@ class _PapersPageState extends State<PapersPage> {
   String _dayFilter = 'all';
   String _searchQuery = '';
   Set<int> _likedIds = <int>{};
+  bool _likedOnly = false;
 
   @override
   void initState() {
@@ -42,13 +43,24 @@ class _PapersPageState extends State<PapersPage> {
     return code.startsWith('en') ? 'en' : 'zh';
   }
 
+  List<PaperTokCard> get _sourceCards {
+    if (_likedOnly) {
+      return Prefs()
+          .paperTokLikedSnapshots
+          .map((item) => item.toCard())
+          .toList(growable: false);
+    }
+    return _cards;
+  }
+
   List<PaperTokCard> get _visibleCards {
+    final sourceCards = _sourceCards;
     final query = _searchQuery.trim().toLowerCase();
     if (query.isEmpty) {
-      return _cards;
+      return sourceCards;
     }
 
-    return _cards.where((card) {
+    return sourceCards.where((card) {
       final haystack = [
         card.bestTitle,
         card.extract,
@@ -92,6 +104,10 @@ class _PapersPageState extends State<PapersPage> {
 
       final existing = _cards.map((e) => e.id).toSet();
       for (final c in next) {
+        if (_likedIds.contains(c.id) &&
+            Prefs().getPaperTokLikedSnapshot(c.id) == null) {
+          Prefs().savePaperTokLikedSnapshot(c);
+        }
         if (!existing.contains(c.id)) {
           _cards.add(c);
           existing.add(c.id);
@@ -239,7 +255,7 @@ class _PapersPageState extends State<PapersPage> {
         _likedIds.remove(card.id);
       }
     });
-    Prefs().setPaperTokLiked(card.id, liked);
+    Prefs().setPaperTokLiked(card.id, liked, card: liked ? card : null);
   }
 
   DateTime? _parseDay(String value) {
@@ -445,7 +461,7 @@ class _PapersPageState extends State<PapersPage> {
       );
     }
 
-    if (_cards.isEmpty) {
+    if (_cards.isEmpty && !_likedOnly) {
       return Scaffold(
         body: SafeArea(
           child: Center(
@@ -500,6 +516,45 @@ class _PapersPageState extends State<PapersPage> {
       );
     }
 
+    if (visibleCards.isEmpty && _likedOnly && !hasSearchQuery) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(CupertinoIcons.heart_slash, size: 40),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No liked papers yet',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap the heart on papers you want to keep, then come back with the liked filter.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _likedOnly = false;
+                      });
+                    },
+                    icon: const Icon(Icons.auto_awesome_motion_outlined),
+                    label: const Text('Browse all papers'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (visibleCards.isEmpty && hasSearchQuery) {
       return Scaffold(
         body: SafeArea(
@@ -509,7 +564,11 @@ class _PapersPageState extends State<PapersPage> {
               children: [
                 const Icon(Icons.search_off_outlined, size: 40),
                 const SizedBox(height: 12),
-                const Text('No papers match the current search'),
+                Text(
+                  _likedOnly
+                      ? 'No liked papers match the current search'
+                      : 'No papers match the current search',
+                ),
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: () {
@@ -534,7 +593,9 @@ class _PapersPageState extends State<PapersPage> {
         scrollDirection: Axis.vertical,
         itemCount: visibleCards.length,
         onPageChanged: (index) {
-          if (index >= visibleCards.length - 3 && _searchQuery.trim().isEmpty) {
+          if (!_likedOnly &&
+              index >= visibleCards.length - 3 &&
+              _searchQuery.trim().isEmpty) {
             _loadMore();
           }
         },
@@ -588,6 +649,31 @@ class _PapersPageState extends State<PapersPage> {
                                       ?.copyWith(color: Colors.white),
                                 ),
                                 const SizedBox(width: 12),
+                                if (_likedOnly) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.16),
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.18),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Liked only',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
                                 if (_searchQuery.trim().isNotEmpty)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -689,8 +775,21 @@ class _PapersPageState extends State<PapersPage> {
                             ),
                             const SizedBox(height: 16),
                             _buildGlassActionButton(
+                              icon: _likedOnly
+                                  ? CupertinoIcons.heart_circle_fill
+                                  : CupertinoIcons.heart_circle,
+                              active: _likedOnly,
+                              activeColor: const Color(0xFFFFA347),
+                              onTap: () {
+                                setState(() {
+                                  _likedOnly = !_likedOnly;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            _buildGlassActionButton(
                               icon: CupertinoIcons.calendar,
-                              active: _dayFilter != 'latest',
+                              active: _dayFilter != 'all',
                               activeColor: const Color(0xFF7ED6FF),
                               onTap: _pickDateFilter,
                             ),

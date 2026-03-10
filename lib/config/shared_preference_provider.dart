@@ -38,6 +38,7 @@ import 'package:anx_reader/models/ai_model_capability.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_tool_meta.dart';
+import 'package:anx_reader/service/papertok/models.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:anx_reader/models/window_info.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
@@ -2335,6 +2336,7 @@ Requirements:
   }
 
   static const String _paperTokLikedPaperIdsKey = 'paperTokLikedPaperIdsV1';
+  static const String _paperTokLikedSnapshotsKey = 'paperTokLikedSnapshotsV1';
 
   List<int> get paperTokLikedPaperIds {
     final stored = prefs.getStringList(_paperTokLikedPaperIdsKey) ?? const [];
@@ -2344,16 +2346,70 @@ Requirements:
         .toList(growable: false);
   }
 
+  List<PaperTokLikedCardSnapshot> get paperTokLikedSnapshots {
+    final raw = prefs.getString(_paperTokLikedSnapshotsKey);
+    if (raw == null || raw.trim().isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      final out = <PaperTokLikedCardSnapshot>[];
+      for (final item in decoded) {
+        if (item is Map) {
+          out.add(PaperTokLikedCardSnapshot.fromJson(
+            item.map((k, v) => MapEntry(k.toString(), v)),
+          ));
+        }
+      }
+      out.sort((a, b) => b.likedAtMs.compareTo(a.likedAtMs));
+      return out;
+    } catch (_) {
+      return const [];
+    }
+  }
+
   bool isPaperTokLiked(int paperId) {
     return paperTokLikedPaperIds.contains(paperId);
   }
 
-  void setPaperTokLiked(int paperId, bool liked) {
+  PaperTokLikedCardSnapshot? getPaperTokLikedSnapshot(int paperId) {
+    for (final item in paperTokLikedSnapshots) {
+      if (item.id == paperId) return item;
+    }
+    return null;
+  }
+
+  void savePaperTokLikedSnapshot(PaperTokCard card, {int? likedAtMs}) {
+    final next = paperTokLikedSnapshots.toList(growable: true);
+    next.removeWhere((item) => item.id == card.id);
+    next.add(PaperTokLikedCardSnapshot.fromCard(card, likedAtMs: likedAtMs));
+    next.sort((a, b) => b.likedAtMs.compareTo(a.likedAtMs));
+    prefs.setString(
+      _paperTokLikedSnapshotsKey,
+      jsonEncode(next.map((e) => e.toJson()).toList(growable: false)),
+    );
+    notifyListeners();
+  }
+
+  void removePaperTokLikedSnapshot(int paperId) {
+    final next = paperTokLikedSnapshots.toList(growable: true)
+      ..removeWhere((item) => item.id == paperId);
+    prefs.setString(
+      _paperTokLikedSnapshotsKey,
+      jsonEncode(next.map((e) => e.toJson()).toList(growable: false)),
+    );
+    notifyListeners();
+  }
+
+  void setPaperTokLiked(int paperId, bool liked, {PaperTokCard? card}) {
     final next = paperTokLikedPaperIds.toSet();
     if (liked) {
       next.add(paperId);
+      if (card != null) {
+        savePaperTokLikedSnapshot(card);
+      }
     } else {
       next.remove(paperId);
+      removePaperTokLikedSnapshot(paperId);
     }
     prefs.setStringList(
       _paperTokLikedPaperIdsKey,

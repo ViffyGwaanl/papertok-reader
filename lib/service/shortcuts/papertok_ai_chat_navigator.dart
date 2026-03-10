@@ -18,15 +18,8 @@ class PapertokAiChatNavigator {
       return;
     }
 
-    final presentation = Prefs().shortcutsSendMessagePresentationV1;
-    final openNew = forceNewWindow ?? (presentation == 'new');
-
-    if (openNew) {
-      _pushAiChatPage(nav);
-      return;
-    }
-
-    // Default: land on Home AI tab (best UX), but keep a reliable fallback.
+    // Both modes prefer the Home AI tab. The difference between
+    // `reuse` and `new` is now handled by session state, not window type.
     final ok = await _tryShowHomeAiTab(nav);
     if (ok) return;
 

@@ -42,7 +42,6 @@ class AiChat extends _$AiChat {
   StreamSubscription<String>? _generationSub;
   AiChatHistoryEntry? _draftEntry;
   String? _draftAssistantNodeId;
-  String? _draftHumanNodeId;
 
   @override
   FutureOr<List<ChatMessage>> build() async {
@@ -54,7 +53,6 @@ class AiChat extends _$AiChat {
     _generationSub = null;
     _draftEntry = null;
     _draftAssistantNodeId = null;
-    _draftHumanNodeId = null;
 
     return List<ChatMessage>.empty();
   }
@@ -124,7 +122,7 @@ class AiChat extends _$AiChat {
 
     // Build multimodal content if attachments provided
     ChatMessageContent messageContent;
-    if (attachments != null && attachments!.isNotEmpty) {
+    if (attachments != null && attachments.isNotEmpty) {
       final parts = <ChatMessageContent>[];
 
       // Add user input text if provided
@@ -134,7 +132,7 @@ class AiChat extends _$AiChat {
 
       // Add text file content (as separate parts with filename header)
       final textAttachments =
-          attachments!.where((a) => a.type == AttachmentType.textFile);
+          attachments.where((a) => a.type == AttachmentType.textFile);
       for (final attachment in textAttachments) {
         final filename = (attachment.filename ?? 'text').trim();
         final text = (attachment.text ?? '').trim();
@@ -144,7 +142,7 @@ class AiChat extends _$AiChat {
 
       // Add images
       final imageAttachments =
-          attachments!.where((a) => a.type == AttachmentType.image);
+          attachments.where((a) => a.type == AttachmentType.image);
       for (final image in imageAttachments) {
         if (image.base64 != null) {
           parts.add(ChatMessageContent.image(
@@ -220,8 +218,6 @@ class AiChat extends _$AiChat {
         }
       }
     }
-
-    _draftHumanNodeId = parentId;
 
     // 2) Assistant placeholder.
     _tree = _tree.appendChild(
@@ -355,7 +351,6 @@ class AiChat extends _$AiChat {
 
     _draftEntry = null;
     _draftAssistantNodeId = null;
-    _draftHumanNodeId = null;
   }
 
   Future<void> _refreshGeneratedTitle(
@@ -400,7 +395,6 @@ class AiChat extends _$AiChat {
 
     _draftEntry = null;
     _draftAssistantNodeId = null;
-    _draftHumanNodeId = null;
     ref.read(aiChatContextNoticeProvider.notifier).state = null;
   }
 
@@ -586,6 +580,26 @@ class AiChat extends _$AiChat {
   }
 
   void persistCurrentConversation(WidgetRef ref) {
+    _persistCurrentConversationWithReader(ref.read);
+  }
+
+  void persistCurrentConversationWithContainer(ProviderContainer container) {
+    _persistCurrentConversationWithReader(container.read);
+  }
+
+  void beginFreshConversation(
+    ProviderContainer container, {
+    bool persistCurrent = true,
+  }) {
+    if (persistCurrent) {
+      persistCurrentConversationWithContainer(container);
+    }
+    clear();
+  }
+
+  void _persistCurrentConversationWithReader(
+    T Function<T>(ProviderListenable<T>) read,
+  ) {
     final sessionId = _currentSessionId;
     if (sessionId == null) return;
 
@@ -593,7 +607,7 @@ class AiChat extends _$AiChat {
     final config = Prefs().getAiConfig(serviceId);
     final model = (config['model'])?.trim() ?? '';
 
-    final historyNotifier = ref.read(aiHistoryProvider.notifier);
+    final historyNotifier = read(aiHistoryProvider.notifier);
     final existing = historyNotifier.findById(sessionId);
     final now = DateTime.now().millisecondsSinceEpoch;
 

@@ -53,6 +53,98 @@ class PaperTokCard {
   }
 }
 
+class PaperTokLikedCardSnapshot {
+  final int id;
+  final String title;
+  final String? displayTitle;
+  final String extract;
+  final String? day;
+  final String? thumbnail;
+  final List<String> thumbnails;
+  final String? url;
+  final int likedAtMs;
+
+  const PaperTokLikedCardSnapshot({
+    required this.id,
+    required this.title,
+    required this.extract,
+    required this.likedAtMs,
+    this.displayTitle,
+    this.day,
+    this.thumbnail,
+    this.thumbnails = const [],
+    this.url,
+  });
+
+  factory PaperTokLikedCardSnapshot.fromCard(
+    PaperTokCard card, {
+    int? likedAtMs,
+  }) {
+    return PaperTokLikedCardSnapshot(
+      id: card.id,
+      title: card.title,
+      displayTitle: card.displayTitle,
+      extract: card.extract,
+      day: card.day,
+      thumbnail: card.thumbnail,
+      thumbnails: List<String>.from(card.thumbnails),
+      url: card.url,
+      likedAtMs: likedAtMs ?? DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  factory PaperTokLikedCardSnapshot.fromJson(Map<String, dynamic> json) {
+    final rawThumbs = json['thumbnails'];
+    final thumbs = <String>[];
+    if (rawThumbs is List) {
+      for (final item in rawThumbs) {
+        if (item is String && item.trim().isNotEmpty) {
+          thumbs.add(item);
+        }
+      }
+    }
+
+    return PaperTokLikedCardSnapshot(
+      id: (json['id'] as num).toInt(),
+      title: (json['title'] as String?) ?? '',
+      displayTitle: json['displayTitle'] as String?,
+      extract: (json['extract'] as String?) ?? '',
+      day: json['day'] as String?,
+      thumbnail: json['thumbnail'] as String?,
+      thumbnails: thumbs,
+      url: json['url'] as String?,
+      likedAtMs: (json['likedAtMs'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'displayTitle': displayTitle,
+      'extract': extract,
+      'day': day,
+      'thumbnail': thumbnail,
+      'thumbnails': thumbnails,
+      'url': url,
+      'likedAtMs': likedAtMs,
+    };
+  }
+
+  PaperTokCard toCard() {
+    return PaperTokCard(
+      id: id,
+      title: title,
+      displayTitle: displayTitle,
+      extract: extract,
+      day: day,
+      thumbnail: thumbnail,
+      thumbnails: thumbnails,
+      url: url,
+    );
+  }
+}
+
 class PaperTokGeneratedImage {
   final String url;
   final String? provider;

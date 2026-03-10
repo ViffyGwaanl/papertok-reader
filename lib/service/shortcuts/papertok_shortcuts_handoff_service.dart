@@ -17,6 +17,7 @@ class PapertokShortcutsHandoffService {
     required String prompt,
     required List<String> imagesBase64Jpeg,
     List<AttachmentItem> textFileAttachments = const [],
+    bool? startNewConversation,
   }) async {
     final ctx = navigatorKey.currentContext;
     if (ctx == null) {
@@ -29,6 +30,12 @@ class PapertokShortcutsHandoffService {
 
     if (notifier.isStreaming) {
       await notifier.cancelStreaming();
+    }
+
+    final shouldStartNewConversation = startNewConversation ??
+        (Prefs().shortcutsSendMessagePresentationV1 == 'new');
+    if (shouldStartNewConversation) {
+      notifier.beginFreshConversation(container);
     }
 
     final attachments = <AttachmentItem>[];
