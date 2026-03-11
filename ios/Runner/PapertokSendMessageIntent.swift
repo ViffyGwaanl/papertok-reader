@@ -8,7 +8,7 @@ struct PapertokSendMessageIntent: AppIntent {
   static var title: LocalizedStringResource = "给 PaperTok Reader 发送图片消息"
 
   static var description = IntentDescription(
-    "向 PaperTok Reader 的 AI 发送文字与图片（最多 4 张），并返回回复内容。\n\n这个动作会复用 App 内现有的多模态 AI Chat 通道（Flutter + LangChain），不会重写上传或请求逻辑。"
+    "向 PaperTok Reader 的 AI 发送文字与图片（超出上限会自动截取到前 50 张），并返回回复内容。\n\n这个动作会复用 App 内现有的多模态 AI Chat 通道（Flutter + LangChain），不会重写上传或请求逻辑。"
   )
 
   // Doubao-like UX: foreground the app immediately.
@@ -72,7 +72,7 @@ struct PapertokSendMessageIntent: AppIntent {
     // Background best-effort mode: run the network call inside Shortcuts.
     let jpegB64 = try await PapertokIntentImageCodec.encodeToJpegBase64(
       files: selectedImages,
-      maxCount: 4,
+      maxCount: 50,
       maxPixel: 2048,
       quality: 0.86
     )
@@ -199,7 +199,7 @@ enum PapertokIntentPendingQueue {
     let paths = try await PapertokIntentImageCodec.persistAsJpegFiles(
       files: images,
       dir: sharedImagesDir(),
-      maxCount: 4,
+      maxCount: 50,
       maxPixel: 2048,
       quality: 0.86
     )
@@ -397,15 +397,11 @@ enum PapertokIntentImageCodec {
     maxPixel: CGFloat,
     quality: CGFloat
   ) async throws -> [String] {
-    if files.count > maxCount {
-      throw NSError(domain: "PapertokShortcuts", code: 10, userInfo: [
-        NSLocalizedDescriptionKey: "最多只支持 \(maxCount) 张图片"
-      ])
-    }
-
     if files.isEmpty {
       return []
     }
+
+    let cappedFiles = Array(files.prefix(maxCount))
 
     let baseDir: URL
     if let dir {
@@ -417,9 +413,9 @@ enum PapertokIntentImageCodec {
     }
 
     var out: [String] = []
-    out.reserveCapacity(files.count)
+    out.reserveCapacity(cappedFiles.count)
 
-    for f in files {
+    for f in cappedFiles {
       let data = readIntentFileBestEffort(f)
       guard let img = UIImage(data: data) else {
         continue

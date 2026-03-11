@@ -1191,6 +1191,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   void _addAttachments(List<AttachmentItem> items) {
     if (items.isEmpty) return;
 
+    final maxImages = Prefs().aiChatImageAttachmentMaxCountV1;
     var imageCount =
         _attachments.where((a) => a.type == AttachmentType.image).length;
 
@@ -1199,7 +1200,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     for (final attachment in items) {
       if (attachment.type == AttachmentType.image) {
-        if (imageCount >= 4) {
+        if (imageCount >= maxImages) {
           exceeded = true;
           continue;
         }

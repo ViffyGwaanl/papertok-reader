@@ -2613,12 +2613,12 @@ Requirements:
   int get aiChatImageAttachmentMaxCountV1 {
     final v = prefs.getInt(_aiChatImageAttachmentMaxCountV1Key);
     if (v == null) return 4;
-    return v.clamp(1, 20);
+    return v.clamp(1, 50);
   }
 
   set aiChatImageAttachmentMaxCountV1(int value) {
     final before = aiChatImageAttachmentMaxCountV1;
-    final next = value.clamp(1, 20);
+    final next = value.clamp(1, 50);
     if (before != next) {
       prefs.setInt(_aiChatImageAttachmentMaxCountV1Key, next);
       notifyListeners();
@@ -2629,12 +2629,12 @@ Requirements:
   int get aiChatTextAttachmentMaxCountV1 {
     final v = prefs.getInt(_aiChatTextAttachmentMaxCountV1Key);
     if (v == null) return 3;
-    return v.clamp(1, 20);
+    return v.clamp(1, 50);
   }
 
   set aiChatTextAttachmentMaxCountV1(int value) {
     final before = aiChatTextAttachmentMaxCountV1;
-    final next = value.clamp(1, 20);
+    final next = value.clamp(1, 50);
     if (before != next) {
       prefs.setInt(_aiChatTextAttachmentMaxCountV1Key, next);
       notifyListeners();

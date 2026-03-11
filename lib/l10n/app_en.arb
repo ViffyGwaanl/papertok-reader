@@ -863,7 +863,7 @@
   "settingsShortcutsSendMessageShowDialogDefault": "Shortcuts: Show reply dialog by default",
   "settingsShortcutsSendMessageShowDialogDefaultDesc": "Show a Shortcuts result dialog when the action finishes.",
   "settingsShareSheetAskPapertokEnabled": "Share Sheet: Ask PaperTok Reader with images",
-  "settingsShareSheetAskPapertokEnabledDesc": "When you share images/text to the app, open a quick AI reply flow (up to 4 images).",
+  "settingsShareSheetAskPapertokEnabledDesc": "When you share images/text to the app, open a quick AI reply flow (extra images will be truncated to the first 50).",
 
   "settingsShareAndShortcutsPanel": "Share & Shortcuts Panel",
   "settingsShareAndShortcutsPanelDesc": "Configure the Share Sheet and Shortcuts behaviors in one place.",
@@ -1355,7 +1355,7 @@
   "attachmentPhotos": "Photos",
   "attachmentImages": "Images",
   "attachmentTextFile": "Text File",
-  "attachmentMaxImages": "Maximum 4 images allowed",
+  "attachmentMaxImages": "Image attachment limit reached. Extra images will be ignored.",
   "attachmentRemove": "Remove",
   "attachmentClearAll": "Clear all",
   "imageAnalyze": "AI Image Analysis",

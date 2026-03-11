@@ -309,8 +309,8 @@ class _ShareAndShortcutsPanelPageState
                                   .aiChatImageAttachmentMaxCountV1
                                   .toDouble(),
                               min: 1,
-                              max: 20,
-                              divisions: 19,
+                              max: 50,
+                              divisions: 49,
                               label: l10n.settingsAiChatAttachmentCount(
                                 Prefs().aiChatImageAttachmentMaxCountV1,
                               ),
@@ -350,8 +350,8 @@ class _ShareAndShortcutsPanelPageState
                                   .aiChatTextAttachmentMaxCountV1
                                   .toDouble(),
                               min: 1,
-                              max: 20,
-                              divisions: 19,
+                              max: 50,
+                              divisions: 49,
                               label: l10n.settingsAiChatAttachmentCount(
                                 Prefs().aiChatTextAttachmentMaxCountV1,
                               ),

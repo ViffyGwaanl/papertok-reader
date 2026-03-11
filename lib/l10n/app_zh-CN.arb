@@ -863,7 +863,7 @@
   "settingsShortcutsSendMessageShowDialogDefault": "快捷指令：默认弹窗展示回复",
   "settingsShortcutsSendMessageShowDialogDefaultDesc": "动作结束后在快捷指令里弹出结果对话框。",
   "settingsShareSheetAskPapertokEnabled": "分享面板：分享图片直接问 PaperTok Reader",
-  "settingsShareSheetAskPapertokEnabledDesc": "从任意 App 分享图片/文字到本 App 时，触发快速 AI 回复流程（最多 4 张图）。",
+  "settingsShareSheetAskPapertokEnabledDesc": "从任意 App 分享图片/文字到本 App 时，触发快速 AI 回复流程（超出上限会自动截取到前 50 张图）。",
 
   "settingsShareAndShortcutsPanel": "分享与快捷面板",
   "settingsShareAndShortcutsPanelDesc": "统一配置共享表单（分享面板）与快捷指令的行为。",
@@ -1355,7 +1355,7 @@
   "attachmentPhotos": "相册",
   "attachmentImages": "图片",
   "attachmentTextFile": "文本文件",
-  "attachmentMaxImages": "最多添加 4 张图片",
+  "attachmentMaxImages": "已达到图片附件上限，超出的图片会自动忽略",
   "attachmentRemove": "移除",
   "attachmentClearAll": "清空全部",
   "imageAnalyze": "AI图片解析",
