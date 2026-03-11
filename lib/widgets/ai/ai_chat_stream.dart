@@ -1195,7 +1195,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     var imageCount =
         _attachments.where((a) => a.type == AttachmentType.image).length;
 
+    final selectedImages =
+        items.where((a) => a.type == AttachmentType.image).length;
     final accepted = <AttachmentItem>[];
+    var acceptedImages = 0;
     var exceeded = false;
 
     for (final attachment in items) {
@@ -1205,12 +1208,17 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           continue;
         }
         imageCount += 1;
+        acceptedImages += 1;
       }
       accepted.add(attachment);
     }
 
     if (exceeded) {
-      AnxToast.show(L10n.of(context).attachmentMaxImages);
+      final code = Localizations.localeOf(context).languageCode.toLowerCase();
+      final message = code.startsWith('zh')
+          ? '本次选了 $selectedImages 张图片，已按上限保留前 $acceptedImages 张。'
+          : 'Selected $selectedImages images, kept the first $acceptedImages within the limit.';
+      AnxToast.show(message);
     }
 
     if (accepted.isEmpty) return;

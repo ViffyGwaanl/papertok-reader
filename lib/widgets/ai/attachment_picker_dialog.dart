@@ -7,6 +7,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/service/receive_file/docx_plain_text_extractor.dart';
+import 'package:anx_reader/utils/toast/common.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -27,6 +28,19 @@ class AttachmentPickerDialog extends StatelessWidget {
 
   final void Function(List<AttachmentItem> items) onPicked;
 
+  void _showImageTruncationToast(
+    BuildContext context, {
+    required int selected,
+    required int kept,
+  }) {
+    if (selected <= kept) return;
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    final message = code.startsWith('zh')
+        ? '本次选了 $selected 张图片，已按上限保留前 $kept 张。'
+        : 'Selected $selected images, kept the first $kept within the limit.';
+    AnxToast.show(message);
+  }
+
   static const int _maxTextChars = 200000;
 
   // NOTE:
@@ -45,10 +59,10 @@ class AttachmentPickerDialog extends StatelessWidget {
 
   Future<void> _handlePick(
     BuildContext context,
-    Future<List<AttachmentItem>> Function() picker,
+    Future<List<AttachmentItem>> Function(BuildContext context) picker,
   ) async {
     try {
-      final items = await picker();
+      final items = await picker(context);
       if (items.isNotEmpty) {
         onPicked(items);
       }
@@ -140,7 +154,7 @@ class AttachmentPickerDialog extends StatelessWidget {
     return AttachmentItem.image(bytes: jpegBytes, base64: base64);
   }
 
-  Future<List<AttachmentItem>> _pickFromCamera() async {
+  Future<List<AttachmentItem>> _pickFromCamera(BuildContext context) async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.camera);
     if (image == null) return const [];
@@ -155,7 +169,7 @@ class AttachmentPickerDialog extends StatelessWidget {
     return item == null ? const [] : [item];
   }
 
-  Future<List<AttachmentItem>> _pickFromPhotos() async {
+  Future<List<AttachmentItem>> _pickFromPhotos(BuildContext context) async {
     final picker = ImagePicker();
     try {
       final images = await picker.pickMultiImage();
@@ -163,6 +177,11 @@ class AttachmentPickerDialog extends StatelessWidget {
 
       final capped =
           images.take(Prefs().aiChatImageAttachmentMaxCountV1).toList();
+      _showImageTruncationToast(
+        context,
+        selected: images.length,
+        kept: capped.length,
+      );
       final isMulti = capped.length > 1;
       final out = <AttachmentItem>[];
       for (final image in capped) {
@@ -191,7 +210,7 @@ class AttachmentPickerDialog extends StatelessWidget {
     }
   }
 
-  Future<List<AttachmentItem>> _pickImageFiles() async {
+  Future<List<AttachmentItem>> _pickImageFiles(BuildContext context) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       allowMultiple: true,
@@ -202,6 +221,11 @@ class AttachmentPickerDialog extends StatelessWidget {
 
     final cappedFiles =
         result.files.take(Prefs().aiChatImageAttachmentMaxCountV1).toList();
+    _showImageTruncationToast(
+      context,
+      selected: result.files.length,
+      kept: cappedFiles.length,
+    );
     final isMulti = cappedFiles.length > 1;
 
     final out = <AttachmentItem>[];
@@ -222,7 +246,7 @@ class AttachmentPickerDialog extends StatelessWidget {
 
   static const int _maxTextFileBytes = 900 * 1024;
 
-  Future<List<AttachmentItem>> _pickTextFile() async {
+  Future<List<AttachmentItem>> _pickTextFile(BuildContext context) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['txt', 'md', 'log', 'json', 'csv', 'docx'],
