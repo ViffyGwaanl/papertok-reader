@@ -164,64 +164,6 @@ class _ShareAndShortcutsPanelPageState
 
   String _countLabel(int count) => '$count';
 
-  Future<void> _pickImageAttachmentMax() async {
-    final l10n = L10n.of(context);
-    final current = Prefs().aiChatImageAttachmentMaxCountV1;
-    const options = <int>[1, 2, 4, 6, 8];
-
-    final picked = await showDialog<int>(
-      context: context,
-      builder: (ctx) {
-        return SimpleDialog(
-          title: Text(l10n.settingsAiChatImageAttachmentMaxCountTitle),
-          children: [
-            for (final v in options)
-              RadioListTile<int>(
-                value: v,
-                groupValue: current,
-                title: Text(l10n.settingsAiChatAttachmentCount(v)),
-                onChanged: (val) => Navigator.of(ctx).pop(val),
-              ),
-          ],
-        );
-      },
-    );
-
-    if (picked != null) {
-      Prefs().aiChatImageAttachmentMaxCountV1 = picked;
-      setState(() {});
-    }
-  }
-
-  Future<void> _pickTextAttachmentMax() async {
-    final l10n = L10n.of(context);
-    final current = Prefs().aiChatTextAttachmentMaxCountV1;
-    const options = <int>[1, 3, 5, 8, 10];
-
-    final picked = await showDialog<int>(
-      context: context,
-      builder: (ctx) {
-        return SimpleDialog(
-          title: Text(l10n.settingsAiChatTextAttachmentMaxCountTitle),
-          children: [
-            for (final v in options)
-              RadioListTile<int>(
-                value: v,
-                groupValue: current,
-                title: Text(l10n.settingsAiChatAttachmentCount(v)),
-                onChanged: (val) => Navigator.of(ctx).pop(val),
-              ),
-          ],
-        );
-      },
-    );
-
-    if (picked != null) {
-      Prefs().aiChatTextAttachmentMaxCountV1 = picked;
-      setState(() {});
-    }
-  }
-
   Future<void> _pickShortcutsPresetMode() async {
     final l10n = L10n.of(context);
     final current = Prefs().shortcutsPromptPresetModeV1;
@@ -344,21 +286,87 @@ class _ShareAndShortcutsPanelPageState
                 )),
                 onPressed: (_) => _pickSessionMode(),
               ),
-              SettingsTile.navigation(
-                title: Text(l10n.settingsAiChatImageAttachmentMaxCountTitle),
-                description:
-                    Text(l10n.settingsAiChatImageAttachmentMaxCountDesc),
-                trailing:
-                    Text(_countLabel(Prefs().aiChatImageAttachmentMaxCountV1)),
-                onPressed: (_) => _pickImageAttachmentMax(),
+              CustomSettingsTile(
+                child: ListTile(
+                  title: Text(l10n.settingsAiChatImageAttachmentMaxCountTitle),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.settingsAiChatImageAttachmentMaxCountDesc),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 36,
+                            child: Text(
+                              _countLabel(
+                                Prefs().aiChatImageAttachmentMaxCountV1,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Slider(
+                              value: Prefs()
+                                  .aiChatImageAttachmentMaxCountV1
+                                  .toDouble(),
+                              min: 1,
+                              max: 20,
+                              divisions: 19,
+                              label: l10n.settingsAiChatAttachmentCount(
+                                Prefs().aiChatImageAttachmentMaxCountV1,
+                              ),
+                              onChanged: (value) {
+                                Prefs().aiChatImageAttachmentMaxCountV1 =
+                                    value.round();
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              SettingsTile.navigation(
-                title: Text(l10n.settingsAiChatTextAttachmentMaxCountTitle),
-                description:
-                    Text(l10n.settingsAiChatTextAttachmentMaxCountDesc),
-                trailing:
-                    Text(_countLabel(Prefs().aiChatTextAttachmentMaxCountV1)),
-                onPressed: (_) => _pickTextAttachmentMax(),
+              CustomSettingsTile(
+                child: ListTile(
+                  title: Text(l10n.settingsAiChatTextAttachmentMaxCountTitle),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.settingsAiChatTextAttachmentMaxCountDesc),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 36,
+                            child: Text(
+                              _countLabel(
+                                Prefs().aiChatTextAttachmentMaxCountV1,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Slider(
+                              value: Prefs()
+                                  .aiChatTextAttachmentMaxCountV1
+                                  .toDouble(),
+                              min: 1,
+                              max: 20,
+                              divisions: 19,
+                              label: l10n.settingsAiChatAttachmentCount(
+                                Prefs().aiChatTextAttachmentMaxCountV1,
+                              ),
+                              onChanged: (value) {
+                                Prefs().aiChatTextAttachmentMaxCountV1 =
+                                    value.round();
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
               SettingsTile.navigation(
                 title: Text(l10n.settingsSharePromptPresetsTitle),
