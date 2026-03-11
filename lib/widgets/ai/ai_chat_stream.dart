@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:anx_reader/app/app_globals.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
@@ -40,6 +41,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:path/path.dart' as p;
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 
 import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
 
@@ -1005,7 +1008,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     _scrollToBottom(force: true);
   }
 
-  void _editUserMessageAndRegenerate(int userIndex, String newText) {
+  void _editUserMessageAndRegenerate(
+    int userIndex,
+    String newText, {
+    List<AttachmentItem>? attachments,
+  }) {
     if (_isStreaming) {
       return;
     }
@@ -1016,6 +1023,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           true,
           regenerateFromUserIndex: userIndex,
           replaceUserMessage: true,
+          attachments: attachments,
         );
     _scrollToBottom(force: true);
   }
@@ -1063,38 +1071,116 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   Future<void> _showEditUserMessageDialog(
     int userIndex,
-    String currentText,
+    HumanChatMessage message,
   ) async {
     if (_isStreaming) {
       return;
     }
 
-    final controller = TextEditingController(text: currentText);
+    final controller = TextEditingController(
+      text: _extractUserTextFromHuman(message),
+    );
+    final editableAttachments =
+        _extractAttachmentItemsFromHuman(message).toList(growable: true);
     try {
-      final edited = await showDialog<String>(
+      final edited = await showDialog<_EditUserMessageResult>(
         context: context,
         builder: (context) {
-          return AlertDialog(
-            title: Text(L10n.of(context).aiChatEditUserMessageTitle),
-            content: TextField(
-              controller: controller,
-              maxLength: 20000,
-              maxLines: 6,
-              minLines: 1,
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(L10n.of(context).commonCancel),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(controller.text.trim());
-                },
-                child: Text(L10n.of(context).commonSave),
-              ),
-            ],
+          return StatefulBuilder(
+            builder: (context, setStateDialog) {
+              return AlertDialog(
+                title: Text(L10n.of(context).aiChatEditUserMessageTitle),
+                content: SizedBox(
+                  width: 520,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: controller,
+                          maxLength: 20000,
+                          maxLines: 6,
+                          minLines: 1,
+                          autofocus: true,
+                        ),
+                        if (editableAttachments.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            '附件 ${editableAttachments.length}',
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (var i = 0;
+                                  i < editableAttachments.length;
+                                  i++)
+                                _buildEditableAttachmentChip(
+                                  editableAttachments[i],
+                                  onRemove: () {
+                                    setStateDialog(() {
+                                      editableAttachments.removeAt(i);
+                                    });
+                                  },
+                                  onPreview: editableAttachments[i].type ==
+                                          AttachmentType.image
+                                      ? () {
+                                          final imageIndexes = <int>[];
+                                          for (var j = 0;
+                                              j < editableAttachments.length;
+                                              j++) {
+                                            if (editableAttachments[j].type ==
+                                                AttachmentType.image) {
+                                              imageIndexes.add(j);
+                                            }
+                                          }
+                                          final initialImageIndex =
+                                              imageIndexes.indexOf(i);
+                                          final images = editableAttachments
+                                              .where((a) =>
+                                                  a.type ==
+                                                  AttachmentType.image)
+                                              .map((a) => a.bytes)
+                                              .toList(growable: false);
+                                          _showImageGallery(
+                                            images,
+                                            initialIndex: initialImageIndex < 0
+                                                ? 0
+                                                : initialImageIndex,
+                                          );
+                                        }
+                                      : null,
+                                ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(L10n.of(context).commonCancel),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(
+                        _EditUserMessageResult(
+                          text: controller.text.trim(),
+                          attachments:
+                              List<AttachmentItem>.from(editableAttachments),
+                        ),
+                      );
+                    },
+                    child: Text(L10n.of(context).commonSave),
+                  ),
+                ],
+              );
+            },
           );
         },
       );
@@ -1127,7 +1213,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         return;
       }
 
-      _editUserMessageAndRegenerate(userIndex, edited);
+      _editUserMessageAndRegenerate(
+        userIndex,
+        edited.text,
+        attachments: edited.attachments,
+      );
     } finally {
       controller.dispose();
     }
@@ -2416,7 +2506,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         TextButton(
                           onPressed: () => _showEditUserMessageDialog(
                             index,
-                            content,
+                            message,
                           ),
                           child: Text(L10n.of(context).commonEdit),
                         ),
@@ -2493,7 +2583,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       TextButton(
                         onPressed: () => _showEditUserMessageDialog(
                           item.index,
-                          content,
+                          item.message,
                         ),
                         child: Text(L10n.of(context).commonEdit),
                       ),
@@ -2908,6 +2998,40 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return out;
   }
 
+  List<AttachmentItem> _extractAttachmentItemsFromHuman(
+      HumanChatMessage message) {
+    final items = <AttachmentItem>[];
+    final files = _extractTextFilesFromHuman(message);
+    for (final f in files) {
+      items.add(
+        AttachmentItem.textFile(
+          filename: f.filename,
+          bytes: Uint8List.fromList(utf8.encode(f.text)),
+          text: f.text,
+        ),
+      );
+    }
+
+    final content = message.content;
+    final images = <ChatMessageContentImage>[];
+    if (content is ChatMessageContentImage) {
+      images.add(content);
+    } else if (content is ChatMessageContentMultiModal) {
+      images.addAll(content.parts.whereType<ChatMessageContentImage>());
+    }
+
+    for (final imgPart in images) {
+      try {
+        final decoded = base64Decode(imgPart.data);
+        items.add(AttachmentItem.image(bytes: decoded, base64: imgPart.data));
+      } catch (_) {
+        // ignore malformed image payloads
+      }
+    }
+
+    return items;
+  }
+
   List<Uint8List> _extractImagesFromHuman(HumanChatMessage message) {
     final content = message.content;
     final images = <ChatMessageContentImage>[];
@@ -3004,6 +3128,72 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
+  void _showImageGallery(
+    List<Uint8List> images, {
+    int initialIndex = 0,
+  }) {
+    if (images.isEmpty) return;
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.92),
+      builder: (_) => _AiImageGalleryDialog(
+        images: images,
+        initialIndex: initialIndex,
+      ),
+    );
+  }
+
+  Widget _buildEditableAttachmentChip(
+    AttachmentItem attachment, {
+    required VoidCallback onRemove,
+    VoidCallback? onPreview,
+  }) {
+    if (attachment.type == AttachmentType.image) {
+      return Stack(
+        children: [
+          GestureDetector(
+            onTap: onPreview,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(
+                attachment.bytes,
+                width: 72,
+                height: 72,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 2,
+            right: 2,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return InputChip(
+      avatar: const Icon(Icons.description, size: 18),
+      label: Text(
+        attachment.filename ?? 'text',
+        overflow: TextOverflow.ellipsis,
+      ),
+      onDeleted: onRemove,
+    );
+  }
+
   Widget _buildHumanMessageBody(HumanChatMessage message) {
     final text = _extractUserTextFromHuman(message);
     final files = _extractTextFilesFromHuman(message);
@@ -3046,20 +3236,46 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (images.isNotEmpty) {
       children.add(const SizedBox(height: 8));
       children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(
+            '图片 ${images.length} 张',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+        ),
+      );
+      children.add(
         SizedBox(
           height: 64,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemBuilder: (context, index) {
               final bytes = images[index];
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Image.memory(
-                  bytes,
-                  width: 64,
-                  height: 64,
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
+              return GestureDetector(
+                onTap: () => _showImageGallery(images, initialIndex: index),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Stack(
+                    children: [
+                      Image.memory(
+                        bytes,
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                      ),
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.16),
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -3093,6 +3309,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 }
 
+class _EditUserMessageResult {
+  const _EditUserMessageResult({
+    required this.text,
+    required this.attachments,
+  });
+
+  final String text;
+  final List<AttachmentItem> attachments;
+}
+
 class _TextFileAttachmentInfo {
   const _TextFileAttachmentInfo({
     required this.filename,
@@ -3101,6 +3327,98 @@ class _TextFileAttachmentInfo {
 
   final String filename;
   final String text;
+}
+
+class _AiImageGalleryDialog extends StatefulWidget {
+  const _AiImageGalleryDialog({
+    required this.images,
+    this.initialIndex = 0,
+  });
+
+  final List<Uint8List> images;
+  final int initialIndex;
+
+  @override
+  State<_AiImageGalleryDialog> createState() => _AiImageGalleryDialogState();
+}
+
+class _AiImageGalleryDialogState extends State<_AiImageGalleryDialog> {
+  late final PageController _controller;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex.clamp(0, widget.images.length - 1);
+    _controller = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: Stack(
+        children: [
+          PhotoViewGallery.builder(
+            pageController: _controller,
+            itemCount: widget.images.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            builder: (context, index) {
+              return PhotoViewGalleryPageOptions(
+                imageProvider: MemoryImage(widget.images[index]),
+                minScale: PhotoViewComputedScale.contained,
+                maxScale: PhotoViewComputedScale.covered * 3,
+                heroAttributes:
+                    PhotoViewHeroAttributes(tag: 'ai-chat-image-$index'),
+              );
+            },
+            backgroundDecoration: const BoxDecoration(color: Colors.black),
+            loadingBuilder: (context, _) => const Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${_currentIndex + 1}/${widget.images.length}',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 sealed class _ChatItem {

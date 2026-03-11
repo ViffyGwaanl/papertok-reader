@@ -175,42 +175,50 @@ class AiChat extends _$AiChat {
           final parentOfUser = userNode.parentId ?? _tree.rootId;
 
           if (replaceUserMessage) {
-            // Replace only the text parts for multimodal messages
-            final existingMessage = userNode.toChatMessage();
-            if (existingMessage is HumanChatMessage &&
-                existingMessage.content is ChatMessageContentMultiModal) {
-              final multiModal =
-                  existingMessage.content as ChatMessageContentMultiModal;
-              // Replace the primary user text part, but preserve attachments.
-              final preserved = <ChatMessageContent>[];
-              for (final part in multiModal.parts) {
-                if (part is ChatMessageContentImage) {
-                  preserved.add(part);
-                } else if (part is ChatMessageContentText &&
-                    part.text.startsWith('[[file:')) {
-                  preserved.add(part);
-                }
-              }
-
-              final newParts = <ChatMessageContent>[
-                ChatMessageContent.text(message),
-                ...preserved,
-              ];
-
+            if (attachments != null) {
               _tree = _tree.appendChild(
                 parentId: parentOfUser,
-                message: ChatMessage.human(
-                  ChatMessageContent.multiModal(newParts),
-                ),
+                message: ChatMessage.human(messageContent),
               );
               parentId = _tree.nodes[parentOfUser]!.activeChildId!;
             } else {
-              // Simple text message, replace directly
-              _tree = _tree.appendChild(
-                parentId: parentOfUser,
-                message: ChatMessage.humanText(message),
-              );
-              parentId = _tree.nodes[parentOfUser]!.activeChildId!;
+              // Replace only the text parts for multimodal messages
+              final existingMessage = userNode.toChatMessage();
+              if (existingMessage is HumanChatMessage &&
+                  existingMessage.content is ChatMessageContentMultiModal) {
+                final multiModal =
+                    existingMessage.content as ChatMessageContentMultiModal;
+                // Replace the primary user text part, but preserve attachments.
+                final preserved = <ChatMessageContent>[];
+                for (final part in multiModal.parts) {
+                  if (part is ChatMessageContentImage) {
+                    preserved.add(part);
+                  } else if (part is ChatMessageContentText &&
+                      part.text.startsWith('[[file:')) {
+                    preserved.add(part);
+                  }
+                }
+
+                final newParts = <ChatMessageContent>[
+                  ChatMessageContent.text(message),
+                  ...preserved,
+                ];
+
+                _tree = _tree.appendChild(
+                  parentId: parentOfUser,
+                  message: ChatMessage.human(
+                    ChatMessageContent.multiModal(newParts),
+                  ),
+                );
+                parentId = _tree.nodes[parentOfUser]!.activeChildId!;
+              } else {
+                // Simple text message, replace directly
+                _tree = _tree.appendChild(
+                  parentId: parentOfUser,
+                  message: ChatMessage.humanText(message),
+                );
+                parentId = _tree.nodes[parentOfUser]!.activeChildId!;
+              }
             }
           } else {
             parentId = userNodeId;
