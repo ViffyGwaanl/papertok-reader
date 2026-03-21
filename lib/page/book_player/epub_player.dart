@@ -227,6 +227,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         backgroundImage: '$bgimgUrl',
         bgimgBlur: ${Prefs().bgimg.blur},
         bgimgOpacity: ${Prefs().bgimg.opacity},
+        bgimgFit: '${Prefs().bgimgFit.code}',
         customCSS: `${Prefs().customCSS.replaceAll('`', '\\`')}`,
         customCSSEnabled: ${Prefs().customCSSEnabled},
         useBookStyles: ${Prefs().useBookStyles},
@@ -249,6 +250,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         backgroundImage: '$bgimgUrl',
         bgimgBlur: ${bgimg.blur},
         bgimgOpacity: ${bgimg.opacity},
+        bgimgFit: '${Prefs().bgimgFit.code}',
       })
     ''');
   }
