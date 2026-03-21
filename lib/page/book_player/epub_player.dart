@@ -225,6 +225,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         writingMode: '${Prefs().writingMode.code}',
         textAlign: '${Prefs().textAlignment.code}',
         backgroundImage: '$bgimgUrl',
+        bgimgBlur: ${Prefs().bgimg.blur},
+        bgimgOpacity: ${Prefs().bgimg.opacity},
         customCSS: `${Prefs().customCSS.replaceAll('`', '\\`')}`,
         customCSSEnabled: ${Prefs().customCSSEnabled},
         useBookStyles: ${Prefs().useBookStyles},
@@ -233,6 +235,22 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       })
       ''');
     });
+  }
+
+  void changeBgimgEffect() {
+    if (!mounted) return;
+    final bgimg = Prefs().bgimg;
+    final bgimgUrl = bgimg.getEffectiveUrl(
+      isDarkMode: isDarkMode,
+      autoAdjust: Prefs().autoAdjustReadingTheme,
+    );
+    webViewController.evaluateJavascript(source: '''
+      changeStyle({
+        backgroundImage: '$bgimgUrl',
+        bgimgBlur: ${bgimg.blur},
+        bgimgOpacity: ${bgimg.opacity},
+      })
+    ''');
   }
 
   void changeReadingRules(ReadingRules readingRules) {
