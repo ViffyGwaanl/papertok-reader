@@ -6,7 +6,6 @@ import 'package:anx_reader/enums/translation_mode.dart';
 import 'package:anx_reader/enums/writing_mode.dart';
 import 'package:anx_reader/enums/code_highlight_theme.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/page/settings_page/subpage/fonts.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
 import 'package:anx_reader/utils/toast/common.dart';
