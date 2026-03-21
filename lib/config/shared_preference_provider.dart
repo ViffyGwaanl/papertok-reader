@@ -5,6 +5,7 @@ import 'package:anx_reader/enums/ai_prompts.dart';
 import 'package:anx_reader/enums/bgimg_alignment.dart';
 import 'package:anx_reader/enums/bgimg_type.dart';
 import 'package:anx_reader/enums/bgimg_fit.dart';
+import 'package:anx_reader/enums/reading_info.dart';
 import 'package:anx_reader/enums/bookshelf_folder_style.dart';
 import 'package:anx_reader/enums/convert_chinese_mode.dart';
 import 'package:anx_reader/enums/excerpt_share_template.dart';

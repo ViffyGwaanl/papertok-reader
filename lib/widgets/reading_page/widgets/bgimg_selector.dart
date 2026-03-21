@@ -6,7 +6,6 @@ import 'package:anx_reader/enums/bgimg_theme_mode.dart';
 import 'package:anx_reader/enums/bgimg_type.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/bgimg.dart';
-import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/providers/bgimg.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';

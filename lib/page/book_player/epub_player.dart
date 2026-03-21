@@ -9,6 +9,7 @@ import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
 import 'package:anx_reader/enums/page_turn_mode.dart';
 import 'package:anx_reader/enums/reading_info.dart';
 import 'package:anx_reader/enums/translation_mode.dart';
+import 'package:anx_reader/models/reading_info.dart';
 import 'package:anx_reader/enums/writing_mode.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';

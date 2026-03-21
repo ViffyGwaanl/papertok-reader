@@ -144,6 +144,49 @@ PromptTemplatePayload generatePromptTranslateFulltext(
   );
 }
 
+/// Generate prompt payload for *batch inline full-text translation*.
+///
+/// Input: a JSON string representing a list of blocks:
+/// `[ {"id": "...", "text": "..."}, ... ]`
+///
+/// Output requirement (model): return a JSON array of translated blocks:
+/// `[ {"id": "...", "text": "..."}, ... ]`
+PromptTemplatePayload generatePromptTranslateFulltextBlocksJson(
+  String blocksJson,
+  String toLocale,
+  String fromLocale,
+) {
+  // Reuse the same full-text translation prompt as a baseline, but we pass
+  // a JSON array as input and expect a JSON array as output.
+  // This keeps provider/model selection consistent.
+  final base = Prefs().getAiPrompt(AiPrompts.translateFulltext);
+
+  final normalized = _normalizePrompt('''
+$base
+
+IMPORTANT:
+- Input TEXT is a JSON array of blocks: {text}
+- Return ONLY a JSON array: [{"id":"...","text":"..."}, ...]
+- Keep ids unchanged.
+- Do NOT wrap in markdown/code fences.
+''');
+
+  final template = ChatPromptTemplate.fromPromptMessages([
+    HumanChatMessagePromptTemplate.fromTemplate(normalized),
+  ]);
+
+  return PromptTemplatePayload(
+    template: template,
+    variables: {
+      'text': blocksJson.trim(),
+      'to_locale': toLocale,
+      'from_locale': fromLocale,
+      'contextText': '',
+    },
+    identifier: AiPrompts.translateFulltext,
+  );
+}
+
 String _normalizePrompt(String template) {
   return template.replaceAll('{{', '{').replaceAll('}}', '}');
 }

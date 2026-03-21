@@ -36,7 +36,6 @@ import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:anx_reader/widgets/reading_page/toc_widget.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/more_settings.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // import 'package:flutter/foundation.dart'
