@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/enums/bgimg_fit.dart';
 import 'package:anx_reader/enums/bgimg_theme_mode.dart';
 import 'package:anx_reader/enums/bgimg_type.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
@@ -9,6 +10,7 @@ import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/providers/bgimg.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
+import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -438,37 +440,83 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.5,
-        child: ListView.builder(
-          itemCount: bgimgList.length + 1,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return buildImportBgimgItem();
-            }
+      child: Column(
+        children: [
+          _buildBgimgFitSelector(context),
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: ListView.builder(
+              itemCount: bgimgList.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return buildImportBgimgItem();
+                }
 
-            final model = bgimgList[index - 1];
-            final isSelected = model.type != BgimgType.none &&
-                currentBgimg.type != BgimgType.none &&
-                currentBgimg.path == model.path;
+                final model = bgimgList[index - 1];
+                final isSelected = model.type != BgimgType.none &&
+                    currentBgimg.type != BgimgType.none &&
+                    currentBgimg.path == model.path;
 
-            final item = switch (model.type) {
-              BgimgType.none => buildNoneBgimgItem(model),
-              BgimgType.assets => buildAssetBgimgItem(model),
-              BgimgType.localFile => buildLocalFileBgimgItem(model),
-            };
+                final item = switch (model.type) {
+                  BgimgType.none => buildNoneBgimgItem(model),
+                  BgimgType.assets => buildAssetBgimgItem(model),
+                  BgimgType.localFile => buildLocalFileBgimgItem(model),
+                };
 
-            if (!isSelected) return item;
+                if (!isSelected) return item;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                item,
-                _buildBlurOpacityControls(context),
-              ],
-            );
-          },
-        ),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    item,
+                    _buildBlurOpacityControls(context),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBgimgFitSelector(BuildContext context) {
+    final l10n = L10n.of(context);
+    final items = [
+      SegmentButtonItem<BgimgFitEnum>(
+        value: BgimgFitEnum.cover,
+        label: l10n.readingPageStyleBgimgFitCover,
+      ),
+      SegmentButtonItem<BgimgFitEnum>(
+        value: BgimgFitEnum.stretch,
+        label: l10n.readingPageStyleBgimgFitStretch,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 12.0),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 64,
+            child: Text(
+              l10n.readingPageStyleBgimgFit,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: AnxSegmentedButton<BgimgFitEnum>(
+              segments: items,
+              selected: {Prefs().bgimgFit},
+              showSelectedIcon: false,
+              onSelectionChanged: (value) {
+                final fit = value.first;
+                Prefs().bgimgFit = fit;
+                epubPlayerKey.currentState?.changeBgimgEffect();
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

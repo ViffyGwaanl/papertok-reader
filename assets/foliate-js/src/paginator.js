@@ -139,11 +139,12 @@ const getBackground = (bgimgUrl) => {
   return bg
 }
 
-const applyBackground = (el, bgimgUrl, blur, opacity) => {
+const applyBackground = (el, bgimgUrl, blur, opacity, fit) => {
   el.style.background = getBackground(bgimgUrl)
   el.style.backgroundPosition = 'center center'
   el.style.backgroundRepeat = 'no-repeat'
   el.style.backgroundAttachment = 'scroll'
+  el.style.backgroundSize = fit === 'stretch' ? '100% 100%' : 'cover'
   el.style.filter = (blur && blur > 0) ? `blur(${blur}px)` : ''
   el.style.opacity = (opacity != null) ? opacity : 1
   // Expand the background element beyond its grid cell when blur is active so
@@ -155,12 +156,10 @@ const applyBackground = (el, bgimgUrl, blur, opacity) => {
     el.style.height = `calc(100% + ${expand} * 2)`
     // Keep the visual fill identical to the unblurred state; only the
     // element bounds expand so blurred edges can bleed outside the viewport.
-    el.style.backgroundSize = 'cover'
   } else {
     el.style.margin = ''
     el.style.width = ''
     el.style.height = ''
-    el.style.backgroundSize = 'cover'
   }
 }
 
@@ -413,7 +412,7 @@ export class Paginator extends HTMLElement {
   static observedAttributes = [
     'flow', 'gap', 'top-margin', 'bottom-margin', 'background-color',
     'max-inline-size', 'max-block-size', 'max-column-count', 'column-threshold', 'bgimg-url',
-    'bgimg-blur', 'bgimg-opacity',
+    'bgimg-blur', 'bgimg-opacity', 'bgimg-fit',
   ]
   #root = this.attachShadow({ mode: 'open' })
   #observer = new ResizeObserver(() => this.render())
@@ -608,6 +607,7 @@ export class Paginator extends HTMLElement {
       case 'bgimg-url':
       case 'bgimg-blur':
       case 'bgimg-opacity':
+      case 'bgimg-fit':
         if (this.#background) this.#applyBackground()
         break
     }
@@ -620,7 +620,8 @@ export class Paginator extends HTMLElement {
     const url = this.getAttribute('bgimg-url') ?? 'none'
     const blur = parseFloat(this.getAttribute('bgimg-blur') ?? '0')
     const opacity = parseFloat(this.getAttribute('bgimg-opacity') ?? '1')
-    applyBackground(this.#background, url, blur, opacity)
+    const fit = this.getAttribute('bgimg-fit') ?? 'cover'
+    applyBackground(this.#background, url, blur, opacity, fit)
   }
   #createView() {
     if (this.#view) {

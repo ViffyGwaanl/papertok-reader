@@ -1700,6 +1700,7 @@ const setStyle = (oldStyle) => {
   reader.view.renderer.setAttribute('bgimg-url', style.backgroundImage)
   reader.view.renderer.setAttribute('bgimg-blur', style.bgimgBlur ?? 0)
   reader.view.renderer.setAttribute('bgimg-opacity', style.bgimgOpacity ?? 1)
+  reader.view.renderer.setAttribute('bgimg-fit', style.bgimgFit ?? 'cover')
 
   turn.animated ? reader.view.renderer.setAttribute('animated', 'true')
     : reader.view.renderer.removeAttribute('animated')

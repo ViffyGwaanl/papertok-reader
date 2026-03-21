@@ -89,6 +89,7 @@ String generateUrl(
     'backgroundImage': bgimgUrl,
     'bgimgBlur': Prefs().bgimg.blur,
     'bgimgOpacity': Prefs().bgimg.opacity,
+    'bgimgFit': Prefs().bgimgFit.code,
     'allowScript': Prefs().enableJsForEpub,
     'customCSS': Prefs().customCSS,
     'customCSSEnabled': Prefs().customCSSEnabled,
