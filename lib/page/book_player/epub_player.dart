@@ -1322,126 +1322,148 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       return const SizedBox();
     }
 
-    TextStyle textStyle = TextStyle(
+    final readingInfo = Prefs().readingInfo;
+
+    TextStyle baseStyle = TextStyle(
       color: Color(int.parse('0x$textColor')).withAlpha(150),
       fontSize: 10,
     );
 
-    Widget chapterTitleWidget = Text(
-      (chapterCurrentPage == 1 ? widget.book.title : chapterTitle),
-      style: textStyle,
-    );
+    TextStyle styleFor(ReadingInfoSectionModel section) {
+      return baseStyle.copyWith(fontSize: section.fontSize);
+    }
 
-    Widget chapterProgressWidget = Text(
-      '$chapterCurrentPage/$chapterTotalPages',
-      style: textStyle,
-    );
+    Widget chapterTitleWidget(TextStyle textStyle) => Text(
+          (chapterCurrentPage == 1 ? widget.book.title : chapterTitle),
+          style: textStyle,
+        );
 
-    if (widget.onRequestAiChat != null) {
-      chapterProgressWidget = GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onRequestAiChat,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          child: chapterProgressWidget,
-        ),
+    Widget chapterProgressWidget(TextStyle textStyle) {
+      Widget w = Text(
+        '$chapterCurrentPage/$chapterTotalPages',
+        style: textStyle,
+      );
+      if (widget.onRequestAiChat != null) {
+        w = GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onRequestAiChat,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            child: w,
+          ),
+        );
+      }
+      return w;
+    }
+
+    Widget bookProgressWidget(TextStyle textStyle) => Text(
+          '${(percentage * 100).toStringAsFixed(2)}%',
+          style: textStyle,
+        );
+
+    Widget timeWidget(TextStyle textStyle) => MinuteClock(textStyle: textStyle);
+
+    Widget batteryWidget(TextStyle textStyle) {
+      final scale = (textStyle.fontSize ?? 10) / 10;
+      return FutureBuilder(
+        future: Battery().batteryLevel,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const SizedBox();
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0.8, 2, 0),
+                child: Text(
+                  '${snapshot.data}',
+                  style: TextStyle(
+                    color: Color(int.parse('0x$textColor')),
+                    fontSize: 9 * scale,
+                  ),
+                ),
+              ),
+              Icon(
+                HeroIcons.battery_0,
+                size: 27 * scale,
+                color: Color(int.parse('0x$textColor')),
+              ),
+            ],
+          );
+        },
       );
     }
 
-    Widget bookProgressWidget =
-        Text('${(percentage * 100).toStringAsFixed(2)}%', style: textStyle);
-
-    Widget timeWidget = MinuteClock(textStyle: textStyle);
-
-    Widget batteryWidget = FutureBuilder(
-        future: Battery().batteryLevel,
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0.8, 2, 0),
-                  child: Text('${snapshot.data}',
-                      style: TextStyle(
-                        color: Color(int.parse('0x$textColor')),
-                        fontSize: 9,
-                      )),
-                ),
-                Icon(
-                  HeroIcons.battery_0,
-                  size: 27,
-                  color: Color(int.parse('0x$textColor')),
-                ),
-              ],
-            );
-          } else {
-            return const SizedBox();
-          }
-        });
-
-    Widget batteryAndTimeWidget() => Row(
+    Widget batteryAndTimeWidget(TextStyle textStyle) => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            batteryWidget,
+            batteryWidget(textStyle),
             const SizedBox(width: 5),
-            timeWidget,
+            timeWidget(textStyle),
           ],
         );
 
-    Widget getWidget(ReadingInfoEnum readingInfoEnum) {
+    Widget getWidget(ReadingInfoEnum readingInfoEnum, TextStyle textStyle) {
       switch (readingInfoEnum) {
         case ReadingInfoEnum.chapterTitle:
-          return chapterTitleWidget;
+          return chapterTitleWidget(textStyle);
         case ReadingInfoEnum.chapterProgress:
-          return chapterProgressWidget;
+          return chapterProgressWidget(textStyle);
         case ReadingInfoEnum.bookProgress:
-          return bookProgressWidget;
+          return bookProgressWidget(textStyle);
         case ReadingInfoEnum.battery:
-          return batteryWidget;
+          return batteryWidget(textStyle);
         case ReadingInfoEnum.time:
-          return timeWidget;
+          return timeWidget(textStyle);
         case ReadingInfoEnum.batteryAndTime:
-          return batteryAndTimeWidget();
+          return batteryAndTimeWidget(textStyle);
         case ReadingInfoEnum.none:
-          return const SizedBox(width: 30);
+          final scale = (textStyle.fontSize ?? 10) / 10;
+          return SizedBox(width: 30 * scale);
       }
     }
 
-    List<Widget> headerWidgets = [
-      getWidget(Prefs().readingInfo.headerLeft),
-      getWidget(Prefs().readingInfo.headerCenter),
-      getWidget(Prefs().readingInfo.headerRight),
+    final headerStyle = styleFor(readingInfo.header);
+    final footerStyle = styleFor(readingInfo.footer);
+
+    final headerWidgets = [
+      getWidget(readingInfo.header.left, headerStyle),
+      getWidget(readingInfo.header.center, headerStyle),
+      getWidget(readingInfo.header.right, headerStyle),
     ];
 
-    List<Widget> footerWidgets = [
-      getWidget(Prefs().readingInfo.footerLeft),
-      getWidget(Prefs().readingInfo.footerCenter),
-      getWidget(Prefs().readingInfo.footerRight),
+    final footerWidgets = [
+      getWidget(readingInfo.footer.left, footerStyle),
+      getWidget(readingInfo.footer.center, footerStyle),
+      getWidget(readingInfo.footer.right, footerStyle),
     ];
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(top: Prefs().pageHeaderMargin),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: headerWidgets,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(
+            top: readingInfo.header.verticalMargin,
+            left: readingInfo.header.leftMargin,
+            right: readingInfo.header.rightMargin,
           ),
-          const Spacer(),
-          Padding(
-            padding: EdgeInsets.only(bottom: Prefs().pageFooterMargin),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: footerWidgets,
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: headerWidgets,
           ),
-        ],
-      ),
+        ),
+        const Spacer(),
+        Padding(
+          padding: EdgeInsets.only(
+            bottom: readingInfo.footer.verticalMargin,
+            left: readingInfo.footer.leftMargin,
+            right: readingInfo.footer.rightMargin,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: footerWidgets,
+          ),
+        ),
+      ],
     );
   }
 
