@@ -3181,11 +3181,69 @@ Requirements:
   }
 
   ReadingInfoModel get readingInfo {
-    String? readingInfoJson = prefs.getString('readingInfo');
-    if (readingInfoJson == null) {
-      return ReadingInfoModel();
+    final readingInfoJson = prefs.getString('readingInfo');
+    if (readingInfoJson == null) return const ReadingInfoModel();
+
+    try {
+      final decoded = jsonDecode(readingInfoJson);
+      if (decoded is Map<String, dynamic>) {
+        // New format (section-based)
+        if (decoded.containsKey('header') || decoded.containsKey('footer')) {
+          return ReadingInfoModel.fromJson(decoded);
+        }
+
+        // Legacy format migration (flat headerLeft/headerCenter/... fields).
+        final header = ReadingInfoSectionModel(
+          left: _decodeReadingInfoEnum(
+            decoded['headerLeft'],
+            fallback: ReadingInfoEnum.chapterTitle,
+          ),
+          center: _decodeReadingInfoEnum(
+            decoded['headerCenter'],
+            fallback: ReadingInfoEnum.none,
+          ),
+          right: _decodeReadingInfoEnum(
+            decoded['headerRight'],
+            fallback: ReadingInfoEnum.none,
+          ),
+          verticalMargin: prefs.getDouble('pageHeaderMargin') ?? 0,
+        );
+
+        final footer = ReadingInfoSectionModel(
+          left: _decodeReadingInfoEnum(
+            decoded['footerLeft'],
+            fallback: ReadingInfoEnum.batteryAndTime,
+          ),
+          center: _decodeReadingInfoEnum(
+            decoded['footerCenter'],
+            fallback: ReadingInfoEnum.chapterProgress,
+          ),
+          right: _decodeReadingInfoEnum(
+            decoded['footerRight'],
+            fallback: ReadingInfoEnum.bookProgress,
+          ),
+          verticalMargin: prefs.getDouble('pageFooterMargin') ?? 0,
+        );
+
+        return ReadingInfoModel(header: header, footer: footer);
+      }
+    } catch (_) {
+      // ignore
     }
-    return ReadingInfoModel.fromJson(jsonDecode(readingInfoJson));
+
+    return const ReadingInfoModel();
+  }
+
+  ReadingInfoEnum _decodeReadingInfoEnum(
+    dynamic raw, {
+    required ReadingInfoEnum fallback,
+  }) {
+    if (raw == null) return fallback;
+    final name = raw.toString();
+    return ReadingInfoEnum.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => fallback,
+    );
   }
 
   set isSystemTts(bool status) {
