@@ -1,14 +1,15 @@
 import 'dart:io';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/enums/bgimg_fit.dart';
 import 'package:anx_reader/enums/bgimg_theme_mode.dart';
 import 'package:anx_reader/enums/bgimg_type.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/bgimg.dart';
-import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/providers/bgimg.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
+import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -25,10 +26,30 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
   // Diagonal offset: controls the diagonal angle, smaller value implies larger angle (closer to vertical)
   static const double _diagonalOffset = 32.0; // pixel value
 
+  @override
+  void initState() {
+    super.initState();
+    Prefs().addListener(_onPrefsChanged);
+  }
+
+  @override
+  void dispose() {
+    Prefs().removeListener(_onPrefsChanged);
+    super.dispose();
+  }
+
+  void _onPrefsChanged() {
+    if (mounted) setState(() {});
+  }
+
   void applyBgimg(BgimgModel bgimgModel, {bool useNight = false}) {
-    // Save user's selected mode
+    // Save user's selected mode, preserve existing blur and opacity.
+    final current = Prefs().bgimg;
     final updatedBgimg = bgimgModel.copyWith(
       selectedMode: useNight ? BgimgThemeMode.night : BgimgThemeMode.day,
+      blur: (current.path == bgimgModel.path) ? current.blur : bgimgModel.blur,
+      opacity:
+          (current.path == bgimgModel.path) ? current.opacity : bgimgModel.opacity,
     );
     Prefs().bgimg = updatedBgimg;
     epubPlayerKey.currentState?.changeStyle(null);
@@ -414,24 +435,163 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
   @override
   Widget build(BuildContext context) {
     final bgimgList = ref.watch(bgimgProvider);
+    final currentBgimg = Prefs().bgimg;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.5,
-        child: ListView.builder(
-          itemCount: bgimgList.length + 1,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return buildImportBgimgItem();
-            }
-            return switch (bgimgList[index - 1].type) {
-              BgimgType.none => buildNoneBgimgItem(bgimgList[index - 1]),
-              BgimgType.assets => buildAssetBgimgItem(bgimgList[index - 1]),
-              BgimgType.localFile =>
-                buildLocalFileBgimgItem(bgimgList[index - 1]),
-            };
-          },
-        ),
+      child: Column(
+        children: [
+          _buildBgimgFitSelector(context),
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: ListView.builder(
+              itemCount: bgimgList.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return buildImportBgimgItem();
+                }
+
+                final model = bgimgList[index - 1];
+                final isSelected = model.type != BgimgType.none &&
+                    currentBgimg.type != BgimgType.none &&
+                    currentBgimg.path == model.path;
+
+                final item = switch (model.type) {
+                  BgimgType.none => buildNoneBgimgItem(model),
+                  BgimgType.assets => buildAssetBgimgItem(model),
+                  BgimgType.localFile => buildLocalFileBgimgItem(model),
+                };
+
+                if (!isSelected) return item;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    item,
+                    _buildBlurOpacityControls(context),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBgimgFitSelector(BuildContext context) {
+    final l10n = L10n.of(context);
+    final items = [
+      SegmentButtonItem<BgimgFitEnum>(
+        value: BgimgFitEnum.cover,
+        label: l10n.readingPageStyleBgimgFitCover,
+      ),
+      SegmentButtonItem<BgimgFitEnum>(
+        value: BgimgFitEnum.stretch,
+        label: l10n.readingPageStyleBgimgFitStretch,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 12.0),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 64,
+            child: Text(
+              l10n.readingPageStyleBgimgFit,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: AnxSegmentedButton<BgimgFitEnum>(
+              segments: items,
+              selected: {Prefs().bgimgFit},
+              showSelectedIcon: false,
+              onSelectionChanged: (value) {
+                final fit = value.first;
+                Prefs().bgimgFit = fit;
+                epubPlayerKey.currentState?.changeBgimgEffect();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlurOpacityControls(BuildContext context) {
+    final bgimg = Prefs().bgimg;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 8.0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 64,
+                child: Text(
+                  L10n.of(context).readingPageStyleBgimgBlur,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+              Expanded(
+                child: Slider(
+                  value: bgimg.blur,
+                  min: 0.0,
+                  max: 20.0,
+                  divisions: 40,
+                  label: bgimg.blur.toStringAsFixed(1),
+                  onChanged: (value) {
+                    Prefs().bgimg = Prefs().bgimg.copyWith(blur: value);
+                    epubPlayerKey.currentState?.changeBgimgEffect();
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 36,
+                child: Text(
+                  bgimg.blur.toStringAsFixed(1),
+                  style: const TextStyle(fontSize: 12),
+                  textAlign: TextAlign.end,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              SizedBox(
+                width: 64,
+                child: Text(
+                  L10n.of(context).readingPageStyleBgimgOpacity,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+              Expanded(
+                child: Slider(
+                  value: bgimg.opacity,
+                  min: 0.0,
+                  max: 1.0,
+                  divisions: 20,
+                  label: bgimg.opacity.toStringAsFixed(2),
+                  onChanged: (value) {
+                    Prefs().bgimg = Prefs().bgimg.copyWith(opacity: value);
+                    epubPlayerKey.currentState?.changeBgimgEffect();
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 36,
+                child: Text(
+                  bgimg.opacity.toStringAsFixed(2),
+                  style: const TextStyle(fontSize: 12),
+                  textAlign: TextAlign.end,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

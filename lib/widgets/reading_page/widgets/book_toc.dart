@@ -446,9 +446,7 @@ Widget searchResultWidget({
             },
             child: Row(
               children: [
-                Flexible(
-                    child: Text(searchResult.label,
-                        overflow: TextOverflow.ellipsis)),
+                Flexible(child: Text(searchResult.label)),
                 isExpanded
                     ? const Icon(Icons.expand_less)
                     : const Icon(Icons.expand_more),
@@ -533,8 +531,8 @@ class TocItemWidget extends StatelessWidget {
 
     return Column(
       children: [
-        SizedBox(
-          height: showProgress ? 60 : 40,
+        ConstrainedBox(
+          constraints: BoxConstraints(minHeight: showProgress ? 60 : 40),
           child: Padding(
             padding: EdgeInsets.only(left: depth == 0 ? 0 : depth * 40.0),
             child: Row(
@@ -567,7 +565,6 @@ class TocItemWidget extends StatelessWidget {
                             children: [
                               Text(
                                 tocItem.label.trim(),
-                                overflow: TextOverflow.ellipsis,
                                 style: labelStyle,
                               ),
                               if (showProgress)

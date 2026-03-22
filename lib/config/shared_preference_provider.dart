@@ -4,6 +4,8 @@ import 'dart:core';
 import 'package:anx_reader/enums/ai_prompts.dart';
 import 'package:anx_reader/enums/bgimg_alignment.dart';
 import 'package:anx_reader/enums/bgimg_type.dart';
+import 'package:anx_reader/enums/bgimg_fit.dart';
+import 'package:anx_reader/enums/reading_info.dart';
 import 'package:anx_reader/enums/bookshelf_folder_style.dart';
 import 'package:anx_reader/enums/convert_chinese_mode.dart';
 import 'package:anx_reader/enums/excerpt_share_template.dart';
@@ -3180,11 +3182,69 @@ Requirements:
   }
 
   ReadingInfoModel get readingInfo {
-    String? readingInfoJson = prefs.getString('readingInfo');
-    if (readingInfoJson == null) {
-      return ReadingInfoModel();
+    final readingInfoJson = prefs.getString('readingInfo');
+    if (readingInfoJson == null) return const ReadingInfoModel();
+
+    try {
+      final decoded = jsonDecode(readingInfoJson);
+      if (decoded is Map<String, dynamic>) {
+        // New format (section-based)
+        if (decoded.containsKey('header') || decoded.containsKey('footer')) {
+          return ReadingInfoModel.fromJson(decoded);
+        }
+
+        // Legacy format migration (flat headerLeft/headerCenter/... fields).
+        final header = ReadingInfoSectionModel(
+          left: _decodeReadingInfoEnum(
+            decoded['headerLeft'],
+            fallback: ReadingInfoEnum.chapterTitle,
+          ),
+          center: _decodeReadingInfoEnum(
+            decoded['headerCenter'],
+            fallback: ReadingInfoEnum.none,
+          ),
+          right: _decodeReadingInfoEnum(
+            decoded['headerRight'],
+            fallback: ReadingInfoEnum.none,
+          ),
+          verticalMargin: prefs.getDouble('pageHeaderMargin') ?? 0,
+        );
+
+        final footer = ReadingInfoSectionModel(
+          left: _decodeReadingInfoEnum(
+            decoded['footerLeft'],
+            fallback: ReadingInfoEnum.batteryAndTime,
+          ),
+          center: _decodeReadingInfoEnum(
+            decoded['footerCenter'],
+            fallback: ReadingInfoEnum.chapterProgress,
+          ),
+          right: _decodeReadingInfoEnum(
+            decoded['footerRight'],
+            fallback: ReadingInfoEnum.bookProgress,
+          ),
+          verticalMargin: prefs.getDouble('pageFooterMargin') ?? 0,
+        );
+
+        return ReadingInfoModel(header: header, footer: footer);
+      }
+    } catch (_) {
+      // ignore
     }
-    return ReadingInfoModel.fromJson(jsonDecode(readingInfoJson));
+
+    return const ReadingInfoModel();
+  }
+
+  ReadingInfoEnum _decodeReadingInfoEnum(
+    dynamic raw, {
+    required ReadingInfoEnum fallback,
+  }) {
+    if (raw == null) return fallback;
+    final name = raw.toString();
+    return ReadingInfoEnum.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => fallback,
+    );
   }
 
   set isSystemTts(bool status) {
@@ -3390,6 +3450,15 @@ Requirements:
 
   set translationMode(TranslationModeEnum mode) {
     prefs.setString('translationMode', mode.code);
+    notifyListeners();
+  }
+
+  BgimgFitEnum get bgimgFit {
+    return BgimgFitEnum.fromCode(prefs.getString('bgimgFit') ?? 'cover');
+  }
+
+  set bgimgFit(BgimgFitEnum fit) {
+    prefs.setString('bgimgFit', fit.code);
     notifyListeners();
   }
 

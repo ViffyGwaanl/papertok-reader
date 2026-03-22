@@ -134,9 +134,33 @@ const getBackground = (bgimgUrl) => {
   if (bgimgUrl === 'none') {
     bg = `none`
   } else {
-    bg = `url(${bgimgUrl}) repeat scroll 50% 50% / 100% 100%`
+    bg = `url(${bgimgUrl})`
   }
   return bg
+}
+
+const applyBackground = (el, bgimgUrl, blur, opacity, fit) => {
+  el.style.background = getBackground(bgimgUrl)
+  el.style.backgroundPosition = 'center center'
+  el.style.backgroundRepeat = 'no-repeat'
+  el.style.backgroundAttachment = 'scroll'
+  el.style.backgroundSize = fit === 'stretch' ? '100% 100%' : 'cover'
+  el.style.filter = (blur && blur > 0) ? `blur(${blur}px)` : ''
+  el.style.opacity = (opacity != null) ? opacity : 1
+  // Expand the background element beyond its grid cell when blur is active so
+  // the blurred edges are not clipped by the parent overflow:hidden boundary.
+  if (blur && blur > 0) {
+    const expand = `${blur * 2}px`
+    el.style.margin = `-${expand}`
+    el.style.width = `calc(100% + ${expand} * 2)`
+    el.style.height = `calc(100% + ${expand} * 2)`
+    // Keep the visual fill identical to the unblurred state; only the
+    // element bounds expand so blurred edges can bleed outside the viewport.
+  } else {
+    el.style.margin = ''
+    el.style.width = ''
+    el.style.height = ''
+  }
 }
 
 const makeMarginals = (length, part) => Array.from({ length }, () => {
@@ -293,19 +317,24 @@ class View {
     this.expand()
   }
   setImageSize() {
-    const { width, height, margin } = this.#layout
+    const { width, height, margin, columnWidth } = this.#layout
     const vertical = this.#vertical
     const doc = this.document
     for (const el of doc.body.querySelectorAll('img, svg, video')) {
       // preserve max size if they are already set
       const { maxHeight, maxWidth } = doc.defaultView.getComputedStyle(el)
+      // Cap max-width to the column width to prevent images from overflowing
+      // into the next page when the EPUB embeds a large inline max-width value.
+      const effectiveMaxWidth = vertical
+        ? `${width - margin * 2}px`
+        : columnWidth
+          ? `${columnWidth}px`
+          : (maxWidth !== 'none' && maxWidth !== '0px' ? maxWidth : '100%')
       setStylesImportant(el, {
         'max-height': vertical
           ? (maxHeight !== 'none' && maxHeight !== '0px' ? maxHeight : '100%')
           : `${height - margin * 2}px`,
-        'max-width': vertical
-          ? `${width - margin * 2}px`
-          : (maxWidth !== 'none' && maxWidth !== '0px' ? maxWidth : '100%'),
+        'max-width': effectiveMaxWidth,
         'object-fit': 'contain',
         'page-break-inside': 'avoid',
         'break-inside': 'avoid',
@@ -383,6 +412,7 @@ export class Paginator extends HTMLElement {
   static observedAttributes = [
     'flow', 'gap', 'top-margin', 'bottom-margin', 'background-color',
     'max-inline-size', 'max-block-size', 'max-column-count', 'column-threshold', 'bgimg-url',
+    'bgimg-blur', 'bgimg-opacity', 'bgimg-fit',
   ]
   #root = this.attachShadow({ mode: 'open' })
   #observer = new ResizeObserver(() => this.render())
@@ -551,7 +581,7 @@ export class Paginator extends HTMLElement {
 
     this.#mediaQueryListener = () => {
       if (!this.#view) return
-      this.#background.style.background = getBackground(this.getAttribute('bgimg-url'))
+      this.#applyBackground()
     }
     this.#mediaQuery.addEventListener('change', this.#mediaQueryListener)
   }
@@ -574,11 +604,24 @@ export class Paginator extends HTMLElement {
         this.#top.style.setProperty('--_' + name, value)
         this.render()
         break
+      case 'bgimg-url':
+      case 'bgimg-blur':
+      case 'bgimg-opacity':
+      case 'bgimg-fit':
+        if (this.#background) this.#applyBackground()
+        break
     }
   }
   open(book) {
     this.bookDir = book.dir
     this.sections = book.sections
+  }
+  #applyBackground() {
+    const url = this.getAttribute('bgimg-url') ?? 'none'
+    const blur = parseFloat(this.getAttribute('bgimg-blur') ?? '0')
+    const opacity = parseFloat(this.getAttribute('bgimg-opacity') ?? '1')
+    const fit = this.getAttribute('bgimg-fit') ?? 'cover'
+    applyBackground(this.#background, url, blur, opacity, fit)
   }
   #createView() {
     if (this.#view) {
@@ -599,7 +642,7 @@ export class Paginator extends HTMLElement {
 
     // set background to `doc` background
     // this is needed because the iframe does not fill the whole element
-    this.#background.style.background = getBackground(this.getAttribute('bgimg-url'))
+    this.#applyBackground()
 
     const { width, height } = this.#container.getBoundingClientRect()
     const size = vertical ? height : width
@@ -1295,7 +1338,7 @@ export class Paginator extends HTMLElement {
       $style.textContent = style
     } else $style.textContent = styles
 
-    this.#background.style.background = getBackground(this.getAttribute('bgimg-url'))
+    this.#applyBackground()
 
     // needed because the resize observer doesn't work in Firefox
     this.#view?.document?.fonts?.ready?.then(() => this.#view.expand())

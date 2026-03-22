@@ -31,11 +31,11 @@ import 'package:anx_reader/widgets/reading_page/notes_widget.dart';
 import 'package:anx_reader/models/reading_time.dart';
 import 'package:anx_reader/widgets/reading_page/progress_widget.dart';
 import 'package:anx_reader/widgets/reading_page/tts_widget.dart';
+import 'package:anx_reader/widgets/reading_page/tts_fab.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:anx_reader/widgets/reading_page/toc_widget.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/more_settings.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // import 'package:flutter/foundation.dart'
@@ -1047,6 +1047,12 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             body: Stack(
               children: [
                 _buildMainLayout(context),
+                if (bottomBarOffstage)
+                  const Positioned(
+                    right: 16,
+                    bottom: 24,
+                    child: TtsFab(),
+                  ),
                 controller,
               ],
             ),
