@@ -76,6 +76,23 @@
 - iOS / Android 显示名已统一为 `PaperTok Reader`
 - 仍保留技术底座历史真值：`anx_reader` / bundle id / URL scheme
 
+### 1.7 阅读器质量提升（吸收上游 v1.14 Phase A + B）
+
+> 目标：不动已深改的 AI/chat 主干，优先吸收低耦合的阅读器稳定性修复与可回滚增强。
+
+- Phase A（低风险稳定性）
+  - RangeError（read theme 颜色为空/非法）修复
+  - TOC 长标题换行（wrap）
+  - EPUB 图片溢出修复
+  - i18n locale 不支持 fallback 英文
+  - Android 10+ 保存图片移除不必要权限
+- Phase B（中风险增强，模块拆分）
+  - 背景图：Blur / Opacity + Fit（Cover/Stretch）
+  - Header/Footer：section 模型（margin/fontSize）+ Prefs 迁移 + 设置项 UI
+  - TTS：SystemTts crash 修复 + 阅读页播放快捷 FAB
+
+证据：PR `https://github.com/ViffyGwaanl/papertok-reader/pull/7`；TestFlight `1.68.5 (6376)`
+
 ---
 
 ## 2. 下一阶段
@@ -106,6 +123,7 @@
 
 - iOS / iPadOS checklist 按版本执行
 - 如需新测试包，继续走离线 TestFlight 流程
+- 当前回归包：`1.68.5 (6376)`（对应 PR #7：上游 v1.14 Phase A+B 吸收）
 - Android checklist / 桌面 smoke 回归补齐
 
 ### 2.4 文档体系维护（持续）

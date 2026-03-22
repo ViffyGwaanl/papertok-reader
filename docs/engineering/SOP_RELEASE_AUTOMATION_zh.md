@@ -134,7 +134,7 @@ cd /Users/gwaanl/.openclaw/workspace/repos/papertok-reader
 ### 5.2 验证（强制执行）
 **上传验证**（任一满足即可）：
 - fastlane 输出包含：`Successfully uploaded the new binary...`
-- 或 `pilot builds` 能看到新 build number
+- 或在 ASC TestFlight 构建列表中能看到新 build number（注意：`pilot builds` 在部分 fastlane 版本上可能因 ASC API 关系字段变更报错，不作为硬依赖）
 
 **processing 验证**：
 - 在 ASC TestFlight 构建列表中状态为可用（非 processing）
@@ -152,6 +152,23 @@ cd /Users/gwaanl/.openclaw/workspace/repos/papertok-reader
 #### (3) altool 上传卡死
 - 判定：上传进程长时间无收尾
 - 处理：中断 → 用已生成 IPA `pilot upload --ipa <path>` 重传（不重建）。
+
+#### (4) `dart run build_runner build` / `flutter pub get` 卡住（依赖解析 / 网络抖动）
+- 判定：pub.dev/网络抖动导致依赖解析重试很久（常见表现：`flutter pub get` 长时间停在 Resolving dependencies）。
+- 处理：
+  - 优先：如果本机已有缓存，先执行 `flutter pub get --offline`（可显著降低不确定性）。
+  - 或：fastlane 流程启用 `FLUTTER_NO_PUB=true`，并在构建前确保 `.dart_tool/package_config.json` 已生成。
+  - 必要时：临时配置镜像 `PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL`，减少公网抖动。
+
+#### (5) Xcode：`accessing build database ... build.db: disk I/O error`
+- 判定：Xcode DerivedData/Intermediates 位于外置卷或磁盘 I/O 抖动，导致 build database 读写失败。
+- 处理：将 Xcode build 临时目录强制落到本地路径后重试：
+
+  ```bash
+  export OBJROOT="$PWD/build/xcode/obj"
+  export SYMROOT="$PWD/build/xcode/sym"
+  export SHARED_PRECOMPS_DIR="$PWD/build/xcode/precomps"
+  ```
 
 ---
 
@@ -181,6 +198,33 @@ cd /Users/gwaanl/.openclaw/workspace/repos/papertok-reader
 ### 7.2 推荐命令（pilot distribute）
 在 `ios/` 下使用 API key：
 
+- 推荐把 ASC API key 落成一个临时文件（例如 `/tmp/asc_api_key_papertok.json`）。
+- 若只有 `ios/fastlane/.env`（`ASC_KEY_ID/ASC_ISSUER_ID/ASC_KEY_P8_BASE64`）没有 json 文件，可在本机用脚本生成后再跑 `pilot distribute`：
+
+```bash
+python3 - <<'PY'
+import base64, json
+from pathlib import Path
+env = Path('fastlane/.env').read_text(encoding='utf-8').splitlines()
+kv = {}
+for line in env:
+    line = line.strip()
+    if not line or line.startswith('#') or '=' not in line:
+        continue
+    k, v = line.split('=', 1)
+    kv[k.strip()] = v.strip()
+key_p8 = base64.b64decode(kv['ASC_KEY_P8_BASE64']).decode('utf-8')
+obj = {
+  'key_id': kv['ASC_KEY_ID'],
+  'issuer_id': kv['ASC_ISSUER_ID'],
+  'key': key_p8,
+  'in_house': False,
+}
+Path('/tmp/asc_api_key_papertok.json').write_text(json.dumps(obj), encoding='utf-8')
+print('wrote /tmp/asc_api_key_papertok.json')
+PY
+```
+
 ```bash
 bundle exec fastlane pilot distribute \
   --api_key_path /tmp/asc_api_key_papertok.json \
@@ -195,7 +239,28 @@ bundle exec fastlane pilot distribute \
   --reject_build_waiting_for_review true
 ```
 
-> 注意：这一步会因为网络/SSL 抖动失败，建议做 3~5 次重试。
+> 注意：
+> - 刚上传的新 build 可能仍在 ASC processing，`pilot distribute` 会报 `No build to distribute!`，属正常现象；建议每 60-120 秒重试，最长等待 30-60 分钟。
+> - 这一步会因为网络/SSL 抖动失败，建议做 3~5 次重试（或写重试脚本）。
+>
+> 重试脚本示例：
+>
+> ```bash
+> for i in $(seq 1 40); do
+>   bundle exec fastlane pilot distribute \
+>     --api_key_path /tmp/asc_api_key_papertok.json \
+>     --apple_id 6759330889 \
+>     --app_identifier ai.papertok.paperreader \
+>     --app_platform ios \
+>     --groups "EX External" \
+>     --build_number <BUILD> \
+>     --app_version 1.68.5 \
+>     --distribute_external true \
+>     --submit_beta_review true \
+>     --reject_build_waiting_for_review true || true
+>   sleep 90
+> done
+> ```
 
 ---
 

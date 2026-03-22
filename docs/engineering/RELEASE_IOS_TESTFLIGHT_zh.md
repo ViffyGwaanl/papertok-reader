@@ -8,57 +8,35 @@
 > - 本仓库：`ViffyGwaanl/papertok-reader`（private）
 > - App 显示名：**PaperTok Reader**
 
-## 当前发布候选（2026-03-07）
+## 当前发布候选（2026-03-22）
 
-- 目标版本：`1.68.3`
-- 本轮目标：发一版新的 TestFlight，把 `1.68.1` 之后到当前的主线更新一起带进去，并额外包含最新的 selection UI / shortcuts preset 改进。
+- 目标版本：`1.68.5`
+- 本轮目标：吸收上游 `Anxcye/anx-reader` `v1.12.0..v1.14.0` 范围内的 **Phase A + Phase B**（阅读器稳定性 + 背景图增强 + header/footer + TTS 修复），发一版 TestFlight 供 iPhone/iPad 回归，并用于外部测试组 `EX External`。
 
-### 1.68.1 -> 1.68.3 更新摘要
+### 本轮包含的关键改动（摘要）
 
-本轮建议在 TestFlight / App Store Connect 的版本说明中整理为：
+- 阅读器稳定性：
+  - 修复 read theme 颜色为空/非法导致的 RangeError
+  - TOC 长章节名换行显示（wrap）
+  - EPUB 图片溢出修复
+  - i18n：系统 locale 不支持时 fallback 英文
+- 背景图增强：Blur / Opacity + Fit mode（Cover / Stretch）
+- Header/Footer：section 模型（margin/fontSize）+ Prefs 向后兼容迁移 + 设置项 UI
+- TTS：修复 SystemTts 首句为空 crash + 阅读页播放快捷悬浮 FAB
+- Android（如需）：Android 10+ 保存图片移除不必要存储权限
 
-- Share diagnostics 增强：
-  - 搜索
-  - 状态筛选
-  - destination 筛选
-  - kind 筛选
-  - 结构化 receive / routing / handoff / cleanup 状态链路
-- Memory M1：
-  - 显式保存到今日日记
-  - 保存到长期记忆
-  - 加入 Review Inbox
-  - Memory 页最小 Review Inbox
-  - 统一 Markdown memory 写协调器
-- Memory M1.5 / M2 稳定子集：
-  - 结束会话时生成记忆候选
-  - session-end candidate digest
-  - auto-daily 路由策略
-  - 长期记忆写入前确认开关
-- 高级日志页增强：
-  - 搜索
-  - 仅错误
-  - 级别筛选
-  - 来源筛选
-- 阅读页 selection UI 收口：
-  - 划线功能条视觉重设计，更接近苹果式悬浮菜单
-  - 划线翻译卡片改为自适应布局，不再过小
-- Shortcuts prompt preset 策略：
-  - 可选接入 preset（off / when_empty / prepend）
-  - 可选默认 preset
-- 低风险命名收口：
-  - 对外产品名统一为 `PaperTok Reader`
-  - App 内文案 / l10n / iOS / Android 显示名统一
+### 本轮 TestFlight 产出
+
+- 已上传：`1.68.5 (6376)`
+- 对应 PR：`https://github.com/ViffyGwaanl/papertok-reader/pull/7`
 
 ### 本轮推荐 TestFlight 更新说明（中文）
 
 ```text
-1. 分享诊断页支持搜索、状态筛选、目的地筛选和类型筛选，更容易定位分享问题。
-2. Memory 新增显式保存到今日日记、长期记忆和 Review Inbox，并补齐最小记忆工作流。
-3. 结束会话时可生成记忆候选，支持 Review Inbox 或自动写入今日日记。
-4. 高级日志页新增搜索、错误筛选、级别筛选和来源筛选，排障更方便。
-5. 阅读页划线功能条视觉重设计，划线翻译卡片改为自适应布局。
-6. Shortcuts 新增可选 prompt preset 策略与默认 preset 设置。
-7. 产品对外名称统一为 PaperTok Reader。
+1. 阅读器稳定性改进：修复部分主题颜色导致的崩溃，目录长标题支持换行，修复部分 EPUB 图片溢出。
+2. 阅读背景图增强：支持背景模糊、透明度和适配模式（裁剪填充/拉伸）。
+3. 页眉/页脚显示增强：支持分别调整边距和字体大小，并兼容旧设置迁移。
+4. TTS 稳定性与操作体验改进：修复系统朗读可能的崩溃，增加播放快捷悬浮按钮。
 ```
 
 ---

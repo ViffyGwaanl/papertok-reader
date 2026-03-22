@@ -2,7 +2,7 @@
 
 > 口径：以 `product/main` 为准；以可审计（commit + 测试）为标准。
 >
-> 更新时间：2026-03-07
+> 更新时间：2026-03-22
 
 ## 0. 当前结论
 
@@ -23,6 +23,8 @@
   - Memory M1（manual-first）
   - `PaperTok Reader` 低风险命名收口
 - 当前主线已从“补核心缺口”转入“后续增强 / 发布回归 / 下一阶段规划”。
+- 上游吸收（`Anxcye/anx-reader` `v1.12.0..v1.14.0` 范围内）**Phase A + Phase B** 已完成落地与可回滚拆分，并已产出 TestFlight 包用于回归：`1.68.5 (6376)`。
+  - PR：`https://github.com/ViffyGwaanl/papertok-reader/pull/7`
 
 ## 1. 已完成交付（Done）
 
@@ -111,6 +113,25 @@
   - bundle id / applicationId
   - URL scheme / App Group 等技术标识
 
+### 1.9 上游吸收：阅读器质量改进（v1.14 Phase A + B）（2026-03-22）
+
+> 原则：不动 fork 已深改的 AI/chat 主干；优先吸收低耦合、稳定性收益明确的改动；中风险项按模块拆分，确保可回滚。
+
+- Phase A（低风险，高收益）
+  - 修复 read theme 颜色为空/非法导致的 RangeError
+  - TOC 长章节名换行显示（wrap）
+  - EPUB 图片溢出修复
+  - i18n：系统 locale 不支持时 fallback 英文
+  - Android 10+ 保存图片：移除不必要存储权限
+- Phase B（中风险，挑点吸收）
+  - 阅读背景图：Blur / Opacity + Fit mode（Cover / Stretch）
+  - Header/Footer：section 模型（含 margin/fontSize）+ Prefs 向后兼容迁移 + 设置项 UI
+  - TTS：修复 SystemTts 首句为空 crash + 阅读页播放快捷 FAB
+
+交付与证据：
+- PR：`https://github.com/ViffyGwaanl/papertok-reader/pull/7`
+- TestFlight：`1.68.5 (6376)`
+
 ## 2. 当前未完成任务（Remaining）
 
 ### 2.1 Memory 工作流后续阶段（P1）
@@ -140,7 +161,14 @@ M1.5 / M2 的稳定子集已完成；当前剩余增强项主要是：
 - Android：按 `docs/engineering/RELEASE_ANDROID_zh.md` 做回归与发布准备。
 - 平台回归：补齐 Android / 桌面端系统性验证。
 
-### 2.4 文档维护（持续）
+### 2.4 上游吸收后续（P1）
+
+- 合并 PR #7 后，补齐一次 iPhone + iPad 的回归记录（按 checklist 留证据）。
+- 评估背景图旧语义（alignment/repeat）是否需要保留：
+  - 如要保留，建议另起小 PR 增加 `bgimg-alignment` attribute 并在 paginator 背景层应用。
+- TTS 增强（fromCfi 选区朗读 / 点击高亮暂停继续 / OnlineTts pitch/rate 修复 / 键盘翻页）保持为独立小 PR，不与 A+B 混做。
+
+### 2.5 文档维护（持续）
 
 - 保持“实现状态变化 = 同步更新 docs”的纪律。
 - 继续把状态集中在少数真值文档，避免多处漂移。
