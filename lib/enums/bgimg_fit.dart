@@ -7,6 +7,9 @@ enum BgimgFitEnum {
   final String code;
 
   static BgimgFitEnum fromCode(String code) {
-    return BgimgFitEnum.values.firstWhere((e) => e.code == code);
+    return BgimgFitEnum.values.firstWhere(
+      (e) => e.code == code,
+      orElse: () => BgimgFitEnum.cover,
+    );
   }
 }

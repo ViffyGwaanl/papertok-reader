@@ -8,7 +8,9 @@ This note documents the recommended “stable path” to produce TestFlight buil
 > - Identifiers source-of-truth: `docs/engineering/IDENTIFIERS_zh.md`
 
 
-> TL;DR: use **Xcode Archive → Upload**. Keep build numbers in `pubspec.yaml` and make sure Flutter regenerates `ios/Flutter/Generated.xcconfig`.
+> TL;DR: this note is now mainly historical. In `papertok-reader`, the preferred release path is the engineering docs + fastlane script (`docs/engineering/RELEASE_IOS_TESTFLIGHT_zh.md`, `scripts/tf_from_commit.sh`).
+>
+> For current releases, **TestFlight build number truth is the fastlane/state-file flow**, not the stale `pubspec.yaml` build suffix.
 
 ---
 

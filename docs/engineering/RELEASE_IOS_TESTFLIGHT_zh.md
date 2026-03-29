@@ -266,7 +266,8 @@ flutter build ios --release --no-codesign
 - [ ] Bundle ID：`ai.papertok.paperreader`（Runner）
 - [ ] Share Extension：`ai.papertok.paperreader.shareExtension`
 - [ ] App Group：`group.ai.papertok.paperreader`
-- [ ] `pubspec.yaml` Build Number 已递增
+- [ ] 若走 fastlane / `tf_from_commit.sh`：确认 `state/papertok-reader/last_testflight_build_number.txt` 将作为 TestFlight build number 真值
+- [ ] 若走手动 Xcode Archive：再单独确认 `pubspec.yaml` Build Number 已递增
 - [ ] 已执行：`flutter clean && flutter pub get && flutter gen-l10n`
 - [ ] 已执行：`dart run build_runner build --delete-conflicting-outputs`（如适用）
 - [ ] `flutter test -j 1` 通过
