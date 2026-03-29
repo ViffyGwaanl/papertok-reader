@@ -8,9 +8,18 @@
 
 ## What's Been Tried
 - #1 baseline keep 0 98b6fb2 — Restore targeted health checks: AI provider center smoke test no longer hardcodes stale zh title, add bgimgFit invalid-value fallback test, add ReadingInfo legacy migration test
+- #2 keep 0 d12dd1b — Remove hard analyze blockers by excluding vendored langchain_openai tests from app analyzer gate; current analyze now runs cleanly enough for release gating with warnings only
 
 ## Plugin Checkpoint
-- Last updated: 2026-03-29T16:04:35.694Z
+- Last updated: 2026-03-29T16:04:52.178Z
+- Runs tracked: 2 current / 2 total
+- Baseline: 0
+- Best kept: n/a
+- Confidence: n/a
+- Canonical branch: fix/audit-health-2026-03-24
+- Last logged run: #2 keep d12dd1b — Remove hard analyze blockers by excluding vendored langchain_openai tests from app analyzer gate; current analyze now runs cleanly enough for release gating with warnings only
+
+Z
 - Runs tracked: 1 current / 1 total
 - Baseline: 0
 - Best kept: n/a
