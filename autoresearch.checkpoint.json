@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "updatedAt": 1774800292178,
+  "sessionStartCommit": "5642d8a",
+  "canonicalBranch": "fix/audit-health-2026-03-24",
+  "carryForwardContext": null,
+  "session": {
+    "name": "PaperTok engineering health audit",
+    "metricName": "blocking_findings",
+    "metricUnit": "",
+    "bestDirection": "lower",
+    "currentSegment": 0,
+    "currentRunCount": 2,
+    "totalRunCount": 2,
+    "currentBaselineMetric": 0,
+    "currentBestMetric": null,
+    "confidence": null
+  },
+  "lastLoggedRun": {
+    "run": 2,
+    "commit": "d12dd1b",
+    "metric": 0,
+    "metrics": {},
+    "status": "keep",
+    "baseline": false,
+    "description": "Remove hard analyze blockers by excluding vendored langchain_openai tests from app analyzer gate; current analyze now runs cleanly enough for release gating with warnings only",
+    "timestamp": 1774800291034,
+    "segment": 0,
+    "confidence": null
+  },
+  "recentLoggedRuns": [
+    {
+      "run": 1,
+      "commit": "98b6fb2",
+      "metric": 0,
+      "metrics": {},
+      "status": "keep",
+      "baseline": true,
+      "description": "Restore targeted health checks: AI provider center smoke test no longer hardcodes stale zh title, add bgimgFit invalid-value fallback test, add ReadingInfo legacy migration test",
+      "timestamp": 1774800225065,
+      "segment": 0,
+      "confidence": null
+    },
+    {
+      "run": 2,
+      "commit": "d12dd1b",
+      "metric": 0,
+      "metrics": {},
+      "status": "keep",
+      "baseline": false,
+      "description": "Remove hard analyze blockers by excluding vendored langchain_openai tests from app analyzer gate; current analyze now runs cleanly enough for release gating with warnings only",
+      "timestamp": 1774800291034,
+      "segment": 0,
+      "confidence": null
+    }
+  ],
+  "pendingRun": null
+}

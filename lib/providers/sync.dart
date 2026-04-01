@@ -9,6 +9,7 @@ import 'package:anx_reader/models/remote_file.dart';
 import 'package:anx_reader/models/sync_state_model.dart';
 import 'package:anx_reader/providers/book_list.dart';
 import 'package:anx_reader/providers/sync_status.dart';
+import 'package:anx_reader/providers/statictics_summary_value.dart';
 import 'package:anx_reader/providers/tb_groups.dart';
 import 'package:anx_reader/service/sync/sync_client_factory.dart';
 import 'package:anx_reader/service/sync/sync_client_base.dart';
@@ -382,6 +383,8 @@ class Sync extends _$Sync {
       try {
         ref?.read(bookListProvider.notifier).refresh();
         ref?.read(groupDaoProvider.notifier).refresh();
+        // DB may change during sync/restore; invalidate stats so tiles refresh.
+        ref?.invalidate(staticticsSummaryValueProvider);
       } catch (e) {
         AnxLog.info('Failed to refresh book list: $e');
       }
@@ -970,6 +973,8 @@ class Sync extends _$Sync {
       try {
         ref.read(bookListProvider.notifier).refresh();
         ref.read(groupDaoProvider.notifier).refresh();
+        // DB was replaced; invalidate stats so tiles refresh without tab switching.
+        ref.invalidate(staticticsSummaryValueProvider);
       } catch (e) {
         AnxLog.info('Failed to refresh providers after restore: $e');
       }

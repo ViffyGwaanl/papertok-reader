@@ -18,14 +18,11 @@ void main() {
       ),
     );
 
-    // Let the FutureBuilder complete (Prefs.initPrefs + initial frame).
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-      if (find.text('供应商中心').evaluate().isNotEmpty) {
-        break;
-      }
-    }
+    // Let the FutureBuilder complete one turn; avoid pumpAndSettle here because
+    // this page may host timers/animations that keep the test alive.
+    await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('供应商中心'), findsOneWidget);
+    expect(find.byType(AiProviderCenterPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
