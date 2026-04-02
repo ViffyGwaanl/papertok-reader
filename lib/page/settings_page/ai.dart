@@ -6,6 +6,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/ai_cache_count.dart';
 import 'package:anx_reader/providers/user_prompts.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
+import 'package:anx_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
 import 'package:anx_reader/page/settings_page/ai_title_generation.dart';
 import 'package:anx_reader/page/settings_page/ai_tools.dart';
@@ -354,6 +355,55 @@ class _AISettingsState extends ConsumerState<AISettings> {
         ],
       ),
       SettingsSection(
+        title: const Text('AI Features'),
+        tiles: [
+          SettingsTile.navigation(
+            leading: const Icon(Icons.auto_awesome),
+            title: const Text('KAIROS Reading Assistant'),
+            description: Text(
+              Prefs().kairosLevel == 0
+                  ? 'Off'
+                  : ['', 'Light (30s)', 'Medium (20s)', 'Eager (10s)'][Prefs().kairosLevel],
+            ),
+            onPressed: (context) {
+              _showKairosLevelPicker(context);
+            },
+          ),
+          SettingsTile.navigation(
+            leading: const Icon(Icons.auto_fix_high),
+            title: const Text('Active Skill'),
+            description: Text(
+              AiSkillRegistry.byId(Prefs().activeAiSkillId)?.name ?? 'None',
+            ),
+            onPressed: (context) {
+              _showSkillPicker(context);
+            },
+          ),
+          SettingsTile.navigation(
+            leading: const Icon(Icons.search),
+            title: const Text('Web Search API Key'),
+            description: Text(
+              _hasWebSearchApiKey() ? 'Serper.dev configured' : 'Using DuckDuckGo (no key needed)',
+            ),
+            onPressed: (context) {
+              _showWebSearchApiKeyDialog(context);
+            },
+          ),
+          SettingsTile.navigation(
+            leading: const Icon(Icons.memory),
+            title: const Text('Local Embedding'),
+            description: Text(
+              (Prefs().localEmbeddingEndpoint ?? '').isNotEmpty
+                  ? '${Prefs().localEmbeddingEndpoint} (${Prefs().localEmbeddingModel})'
+                  : 'Not configured (using remote API)',
+            ),
+            onPressed: (context) {
+              _showLocalEmbeddingDialog(context);
+            },
+          ),
+        ],
+      ),
+      SettingsSection(
         title: Text(L10n.of(context).settingsAiCache),
         tiles: [
           CustomSettingsTile(
@@ -444,6 +494,261 @@ class _AISettingsState extends ConsumerState<AISettings> {
         ],
       ),
     ]);
+  }
+
+  void _showKairosLevelPicker(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.all(12),
+            children: [
+              const ListTile(
+                title: Text('KAIROS Reading Assistant'),
+                subtitle: Text(
+                  'Proactively offers AI help when you linger on a passage.',
+                ),
+              ),
+              const Divider(),
+              _kairosOption(context, 0, 'Off', 'No proactive suggestions'),
+              _kairosOption(context, 1, 'Light', 'Suggest after 30 seconds'),
+              _kairosOption(context, 2, 'Medium', 'Suggest after 20 seconds'),
+              _kairosOption(context, 3, 'Eager', 'Suggest after 10 seconds'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _kairosOption(
+      BuildContext context, int level, String title, String subtitle) {
+    final isSelected = Prefs().kairosLevel == level;
+    return ListTile(
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: isSelected
+          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+          : null,
+      onTap: () {
+        setState(() {
+          Prefs().kairosLevel = level;
+        });
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  void _showSkillPicker(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final skills = AiSkillRegistry.allSkills();
+        final activeId = Prefs().activeAiSkillId;
+
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.all(12),
+            children: [
+              const ListTile(
+                title: Text('AI Skill'),
+                subtitle: Text(
+                  'Activate a skill to shape the AI\'s behavior and expertise.',
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                title: const Text('None'),
+                subtitle: const Text('Default assistant mode'),
+                trailing: activeId == null
+                    ? Icon(Icons.check,
+                        color: Theme.of(context).colorScheme.primary)
+                    : null,
+                onTap: () {
+                  setState(() {
+                    Prefs().activeAiSkillId = null;
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              ...skills.map((skill) {
+                final isSelected = skill.id == activeId;
+                return ListTile(
+                  leading: Icon(
+                    IconData(skill.iconCodePoint ?? 0xe14c,
+                        fontFamily: 'MaterialIcons'),
+                    size: 20,
+                  ),
+                  title: Text(skill.name),
+                  subtitle: Text(skill.description, maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  trailing: isSelected
+                      ? Icon(Icons.check,
+                          color: Theme.of(context).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    setState(() {
+                      Prefs().activeAiSkillId = skill.id;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  bool _hasWebSearchApiKey() {
+    try {
+      final config = Prefs().getAiConfig(Prefs().selectedAiService);
+      final key = config['webSearchApiKey']?.trim() ?? '';
+      return key.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _showWebSearchApiKeyDialog(BuildContext context) {
+    final config = Prefs().getAiConfig(Prefs().selectedAiService);
+    final controller = TextEditingController(
+      text: config['webSearchApiKey'] ?? '',
+    );
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Web Search API Key'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Optional. Enter a Serper.dev API key for higher-quality '
+                'Google search results. Without a key, DuckDuckGo is used '
+                'as a free fallback.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Serper API Key',
+                  hintText: 'Leave empty to use DuckDuckGo',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(L10n.of(context).commonCancel),
+            ),
+            TextButton(
+              onPressed: () {
+                final updated = Map<String, String>.from(config);
+                final key = controller.text.trim();
+                if (key.isEmpty) {
+                  updated.remove('webSearchApiKey');
+                } else {
+                  updated['webSearchApiKey'] = key;
+                }
+                Prefs().saveAiConfig(Prefs().selectedAiService, updated);
+                setState(() {});
+                Navigator.pop(context);
+              },
+              child: Text(L10n.of(context).commonSave),
+            ),
+          ],
+        );
+      },
+    ).then((_) => controller.dispose());
+  }
+
+  void _showLocalEmbeddingDialog(BuildContext context) {
+    final endpointController = TextEditingController(
+      text: Prefs().localEmbeddingEndpoint ?? '',
+    );
+    final modelController = TextEditingController(
+      text: Prefs().localEmbeddingModel,
+    );
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Local Embedding'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Configure a local embedding server (Ollama, llama.cpp, etc.) '
+                'for offline semantic search. Leave empty to use remote API.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: endpointController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Endpoint URL',
+                  hintText: 'http://localhost:11434',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: modelController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Model name',
+                  hintText: 'nomic-embed-text',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(L10n.of(context).commonCancel),
+            ),
+            if ((Prefs().localEmbeddingEndpoint ?? '').isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  Prefs().localEmbeddingEndpoint = null;
+                  Prefs().localEmbeddingModel = 'nomic-embed-text';
+                  setState(() {});
+                  Navigator.pop(context);
+                },
+                child: Text(L10n.of(context).commonReset),
+              ),
+            TextButton(
+              onPressed: () {
+                Prefs().localEmbeddingEndpoint = endpointController.text;
+                Prefs().localEmbeddingModel = modelController.text.isEmpty
+                    ? 'nomic-embed-text'
+                    : modelController.text;
+                setState(() {});
+                Navigator.pop(context);
+              },
+              child: Text(L10n.of(context).commonSave),
+            ),
+          ],
+        );
+      },
+    ).then((_) {
+      endpointController.dispose();
+      modelController.dispose();
+    });
   }
 
   // User prompts management methods

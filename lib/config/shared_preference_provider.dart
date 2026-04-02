@@ -3756,7 +3756,7 @@ Requirements:
 
   /// KAIROS proactive reading assistant level.
   /// 0 = off, 1 = light (30s), 2 = medium (20s), 3 = eager (10s).
-  int get kairosLevel => prefs.getInt('kairosLevel') ?? 0;
+  int get kairosLevel => (prefs.getInt('kairosLevel') ?? 0).clamp(0, 3);
 
   set kairosLevel(int level) {
     prefs.setInt('kairosLevel', level.clamp(0, 3));
