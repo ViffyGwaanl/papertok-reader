@@ -243,10 +243,8 @@ class _AISettingsState extends ConsumerState<AISettings> {
         tiles: [
           servicesTile,
           SettingsTile.navigation(
-            title: const Text('Conversation titles'),
-            description: const Text(
-              'Configure automatic naming with its own provider and model.',
-            ),
+            title: Text(l10n.settingsAiConversationTitles),
+            description: Text(l10n.settingsAiConversationTitlesDesc),
             onPressed: (context) {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -355,15 +353,15 @@ class _AISettingsState extends ConsumerState<AISettings> {
         ],
       ),
       SettingsSection(
-        title: const Text('AI Features'),
+        title: Text(l10n.settingsAiFeatures),
         tiles: [
           SettingsTile.navigation(
             leading: const Icon(Icons.auto_awesome),
-            title: const Text('KAIROS Reading Assistant'),
+            title: Text(l10n.settingsAiKairos),
             description: Text(
               Prefs().kairosLevel == 0
-                  ? 'Off'
-                  : ['', 'Light (30s)', 'Medium (20s)', 'Eager (10s)'][Prefs().kairosLevel],
+                  ? l10n.settingsAiKairosOff
+                  : ['', l10n.settingsAiKairosLevelLight, l10n.settingsAiKairosLevelMedium, l10n.settingsAiKairosLevelEager][Prefs().kairosLevel],
             ),
             onPressed: (context) {
               _showKairosLevelPicker(context);
@@ -371,9 +369,9 @@ class _AISettingsState extends ConsumerState<AISettings> {
           ),
           SettingsTile.navigation(
             leading: const Icon(Icons.auto_fix_high),
-            title: const Text('Active Skill'),
+            title: Text(l10n.settingsAiActiveSkill),
             description: Text(
-              AiSkillRegistry.byId(Prefs().activeAiSkillId)?.name ?? 'None',
+              _localizedSkillName(context, Prefs().activeAiSkillId) ?? l10n.settingsAiSkillNone,
             ),
             onPressed: (context) {
               _showSkillPicker(context);
@@ -381,9 +379,9 @@ class _AISettingsState extends ConsumerState<AISettings> {
           ),
           SettingsTile.navigation(
             leading: const Icon(Icons.search),
-            title: const Text('Web Search API Key'),
+            title: Text(l10n.settingsAiWebSearch),
             description: Text(
-              _hasWebSearchApiKey() ? 'Serper.dev configured' : 'Using DuckDuckGo (no key needed)',
+              _hasWebSearchApiKey() ? l10n.settingsAiWebSearchConfigured : l10n.settingsAiWebSearchDefault,
             ),
             onPressed: (context) {
               _showWebSearchApiKeyDialog(context);
@@ -391,11 +389,11 @@ class _AISettingsState extends ConsumerState<AISettings> {
           ),
           SettingsTile.navigation(
             leading: const Icon(Icons.memory),
-            title: const Text('Local Embedding'),
+            title: Text(l10n.settingsAiLocalEmbedding),
             description: Text(
               (Prefs().localEmbeddingEndpoint ?? '').isNotEmpty
                   ? '${Prefs().localEmbeddingEndpoint} (${Prefs().localEmbeddingModel})'
-                  : 'Not configured (using remote API)',
+                  : l10n.settingsAiLocalEmbeddingNotConfigured,
             ),
             onPressed: (context) {
               _showLocalEmbeddingDialog(context);
@@ -501,22 +499,21 @@ class _AISettingsState extends ConsumerState<AISettings> {
       context: context,
       showDragHandle: true,
       builder: (context) {
+        final l = L10n.of(context);
         return SafeArea(
           child: ListView(
             shrinkWrap: true,
             padding: const EdgeInsets.all(12),
             children: [
-              const ListTile(
-                title: Text('KAIROS Reading Assistant'),
-                subtitle: Text(
-                  'Proactively offers AI help when you linger on a passage.',
-                ),
+              ListTile(
+                title: Text(l.settingsAiKairosPickerTitle),
+                subtitle: Text(l.settingsAiKairosPickerDesc),
               ),
               const Divider(),
-              _kairosOption(context, 0, 'Off', 'No proactive suggestions'),
-              _kairosOption(context, 1, 'Light', 'Suggest after 30 seconds'),
-              _kairosOption(context, 2, 'Medium', 'Suggest after 20 seconds'),
-              _kairosOption(context, 3, 'Eager', 'Suggest after 10 seconds'),
+              _kairosOption(context, 0, l.settingsAiKairosPickerOffTitle, l.settingsAiKairosPickerOffDesc),
+              _kairosOption(context, 1, l.settingsAiKairosPickerLightTitle, l.settingsAiKairosPickerLightDesc),
+              _kairosOption(context, 2, l.settingsAiKairosPickerMediumTitle, l.settingsAiKairosPickerMediumDesc),
+              _kairosOption(context, 3, l.settingsAiKairosPickerEagerTitle, l.settingsAiKairosPickerEagerDesc),
             ],
           ),
         );
@@ -547,6 +544,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
       context: context,
       showDragHandle: true,
       builder: (context) {
+        final l = L10n.of(context);
         final skills = AiSkillRegistry.allSkills();
         final activeId = Prefs().activeAiSkillId;
 
@@ -555,16 +553,14 @@ class _AISettingsState extends ConsumerState<AISettings> {
             shrinkWrap: true,
             padding: const EdgeInsets.all(12),
             children: [
-              const ListTile(
-                title: Text('AI Skill'),
-                subtitle: Text(
-                  'Activate a skill to shape the AI\'s behavior and expertise.',
-                ),
+              ListTile(
+                title: Text(l.settingsAiSkillPickerTitle),
+                subtitle: Text(l.settingsAiSkillPickerDesc),
               ),
               const Divider(),
               ListTile(
-                title: const Text('None'),
-                subtitle: const Text('Default assistant mode'),
+                title: Text(l.settingsAiSkillPickerNoneTitle),
+                subtitle: Text(l.settingsAiSkillPickerNoneDesc),
                 trailing: activeId == null
                     ? Icon(Icons.check,
                         color: Theme.of(context).colorScheme.primary)
@@ -583,9 +579,12 @@ class _AISettingsState extends ConsumerState<AISettings> {
                     Icons.auto_fix_high,
                     size: 20,
                   ),
-                  title: Text(skill.name),
-                  subtitle: Text(skill.description, maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  title: Text(_localizedSkillName(context, skill.id) ?? skill.name),
+                  subtitle: Text(
+                    _localizedSkillDesc(context, skill.id) ?? skill.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: isSelected
                       ? Icon(Icons.check,
                           color: Theme.of(context).colorScheme.primary)
@@ -603,6 +602,34 @@ class _AISettingsState extends ConsumerState<AISettings> {
         );
       },
     );
+  }
+
+  String? _localizedSkillName(BuildContext context, String? id) {
+    if (id == null) return null;
+    final l = L10n.of(context);
+    switch (id) {
+      case 'paper_analyzer': return l.aiSkillPaperAnalyzerName;
+      case 'flashcard_generator': return l.aiSkillFlashcardGeneratorName;
+      case 'debate_partner': return l.aiSkillDebatePartnerName;
+      case 'vocab_extractor': return l.aiSkillVocabExtractorName;
+      case 'reading_companion': return l.aiSkillReadingCompanionName;
+      case 'seminar_mode': return l.aiSkillSeminarModeName;
+      default: return null;
+    }
+  }
+
+  String? _localizedSkillDesc(BuildContext context, String? id) {
+    if (id == null) return null;
+    final l = L10n.of(context);
+    switch (id) {
+      case 'paper_analyzer': return l.aiSkillPaperAnalyzerDesc;
+      case 'flashcard_generator': return l.aiSkillFlashcardGeneratorDesc;
+      case 'debate_partner': return l.aiSkillDebatePartnerDesc;
+      case 'vocab_extractor': return l.aiSkillVocabExtractorDesc;
+      case 'reading_companion': return l.aiSkillReadingCompanionDesc;
+      case 'seminar_mode': return l.aiSkillSeminarModeDesc;
+      default: return null;
+    }
   }
 
   bool _hasWebSearchApiKey() {
@@ -624,25 +651,24 @@ class _AISettingsState extends ConsumerState<AISettings> {
     showDialog<void>(
       context: context,
       builder: (context) {
+        final l = L10n.of(context);
         return AlertDialog(
-          title: const Text('Web Search API Key'),
+          title: Text(l.settingsAiWebSearch),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Optional. Enter a Serper.dev API key for higher-quality '
-                'Google search results. Without a key, DuckDuckGo is used '
-                'as a free fallback.',
+                l.settingsAiWebSearchDialogDesc,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Serper API Key',
-                  hintText: 'Leave empty to use DuckDuckGo',
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: l.settingsAiWebSearchKeyLabel,
+                  hintText: l.settingsAiWebSearchKeyHint,
                 ),
               ),
             ],
@@ -684,33 +710,33 @@ class _AISettingsState extends ConsumerState<AISettings> {
     showDialog<void>(
       context: context,
       builder: (context) {
+        final l = L10n.of(context);
         return AlertDialog(
-          title: const Text('Local Embedding'),
+          title: Text(l.settingsAiLocalEmbedding),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Configure a local embedding server (Ollama, llama.cpp, etc.) '
-                'for offline semantic search. Leave empty to use remote API.',
+                l.settingsAiLocalEmbeddingDialogDesc,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: endpointController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Endpoint URL',
-                  hintText: 'http://localhost:11434',
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: l.settingsAiLocalEmbeddingEndpointLabel,
+                  hintText: l.settingsAiLocalEmbeddingEndpointHint,
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: modelController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Model name',
-                  hintText: 'nomic-embed-text',
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: l.settingsAiLocalEmbeddingModelLabel,
+                  hintText: l.settingsAiLocalEmbeddingModelHint,
                 ),
               ),
             ],

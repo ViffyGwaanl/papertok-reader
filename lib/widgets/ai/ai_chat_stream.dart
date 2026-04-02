@@ -559,6 +559,32 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
+  String _localizedSkillName(BuildContext context, AiSkill skill) {
+    final l = L10n.of(context);
+    switch (skill.id) {
+      case 'paper_analyzer': return l.aiSkillPaperAnalyzerName;
+      case 'flashcard_generator': return l.aiSkillFlashcardGeneratorName;
+      case 'debate_partner': return l.aiSkillDebatePartnerName;
+      case 'vocab_extractor': return l.aiSkillVocabExtractorName;
+      case 'reading_companion': return l.aiSkillReadingCompanionName;
+      case 'seminar_mode': return l.aiSkillSeminarModeName;
+      default: return skill.name;
+    }
+  }
+
+  String _localizedSkillDesc(BuildContext context, AiSkill skill) {
+    final l = L10n.of(context);
+    switch (skill.id) {
+      case 'paper_analyzer': return l.aiSkillPaperAnalyzerDesc;
+      case 'flashcard_generator': return l.aiSkillFlashcardGeneratorDesc;
+      case 'debate_partner': return l.aiSkillDebatePartnerDesc;
+      case 'vocab_extractor': return l.aiSkillVocabExtractorDesc;
+      case 'reading_companion': return l.aiSkillReadingCompanionDesc;
+      case 'seminar_mode': return l.aiSkillSeminarModeDesc;
+      default: return skill.description;
+    }
+  }
+
   Widget _buildSkillButton(BuildContext context) {
     final activeId = Prefs().activeAiSkillId;
     final active = AiSkillRegistry.byId(activeId);
@@ -572,7 +598,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ? Theme.of(context).colorScheme.primary
             : null,
       ),
-      tooltip: 'Skills',
+      tooltip: L10n.of(context).aiSkillsTooltip,
       onSelected: (id) {
         setState(() {
           Prefs().activeAiSkillId = id;
@@ -590,7 +616,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         ? Theme.of(context).colorScheme.primary
                         : null),
                 const SizedBox(width: 8),
-                const Text('No Skill'),
+                Text(L10n.of(context).aiSkillNone),
                 if (!isActive) ...[
                   const Spacer(),
                   Icon(Icons.check, size: 16,
@@ -619,13 +645,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(skill.name,
+                        Text(_localizedSkillName(context, skill),
                             style: TextStyle(
                               fontWeight: selected
                                   ? FontWeight.bold
                                   : FontWeight.normal,
                             )),
-                        Text(skill.description,
+                        Text(_localizedSkillDesc(context, skill),
                             style: Theme.of(context).textTheme.bodySmall,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
