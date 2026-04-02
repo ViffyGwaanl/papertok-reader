@@ -5,6 +5,7 @@ import 'package:anx_reader/enums/ai_thinking_mode.dart';
 import 'package:anx_reader/enums/ai_tool_scene.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/ai/annotation_ledger.dart';
+import 'package:anx_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/mcp/mcp_tool_registry.dart';
 import 'package:riverpod/riverpod.dart';
@@ -147,11 +148,16 @@ class LangchainAiRegistry {
 
       final enabledDefs =
           AiToolRegistry.definitionsForScene(enabledIds, scene);
+      // Apply active skill (if any) to system prompt.
+      final activeSkillId = Prefs().activeAiSkillId;
+      final activeSkill = AiSkillRegistry.byId(activeSkillId);
+
       systemMessage = _buildAgentSystemMessage(
         isReading: isReading,
         enabledTools: enabledDefs,
         mcpTools: mcp.descriptors,
         annotationLedger: toolContext.annotationLedger,
+        activeSkill: activeSkill,
       );
     }
 
@@ -167,6 +173,7 @@ class LangchainAiRegistry {
     required List<AiToolDefinition> enabledTools,
     required List<McpToolDescriptor> mcpTools,
     AnnotationLedger? annotationLedger,
+    AiSkill? activeSkill,
   }) {
     final currentLanguageCode =
         Prefs().locale?.languageCode ?? Platform.localeName;
@@ -274,7 +281,7 @@ You can also use LaTeX for mathematical expressions. Here's an example:
 
 ## Remember
 You are not just a tool executor, but the user's reading companion. Your mission is to make every reading session more insightful and enjoyable.
-${annotationLedger?.toSystemPromptSection() ?? ''}''';
+${activeSkill?.systemPromptAppend ?? ''}${annotationLedger?.toSystemPromptSection() ?? ''}''';
 
     return ChatMessage.system(guidance);
   }

@@ -28,6 +28,8 @@ import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:anx_reader/widgets/ai/attachment_picker_dialog.dart';
+import 'package:anx_reader/service/ai/skills/ai_skill.dart';
+import 'package:anx_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:anx_reader/models/attachment_item.dart';
 import 'package:anx_reader/models/book_import_item.dart';
 import 'package:anx_reader/service/book.dart';
@@ -555,6 +557,92 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       case AiThinkingMode.high:
         return Icons.lightbulb;
     }
+  }
+
+  Widget _buildSkillButton(BuildContext context) {
+    final activeId = Prefs().activeAiSkillId;
+    final active = AiSkillRegistry.byId(activeId);
+    final isActive = active != null;
+
+    return PopupMenuButton<String?>(
+      icon: Icon(
+        isActive ? Icons.auto_fix_high : Icons.auto_fix_high_outlined,
+        size: 18,
+        color: isActive
+            ? Theme.of(context).colorScheme.primary
+            : null,
+      ),
+      tooltip: 'Skills',
+      onSelected: (id) {
+        setState(() {
+          Prefs().activeAiSkillId = id;
+        });
+      },
+      itemBuilder: (context) {
+        final skills = AiSkillRegistry.allSkills();
+        return [
+          PopupMenuItem<String?>(
+            value: null,
+            child: Row(
+              children: [
+                Icon(Icons.block, size: 16,
+                    color: !isActive
+                        ? Theme.of(context).colorScheme.primary
+                        : null),
+                const SizedBox(width: 8),
+                const Text('No Skill'),
+                if (!isActive) ...[
+                  const Spacer(),
+                  Icon(Icons.check, size: 16,
+                      color: Theme.of(context).colorScheme.primary),
+                ],
+              ],
+            ),
+          ),
+          const PopupMenuDivider(),
+          ...skills.map((skill) {
+            final selected = skill.id == activeId;
+            return PopupMenuItem<String?>(
+              value: skill.id,
+              child: Row(
+                children: [
+                  Icon(
+                    IconData(skill.iconCodePoint ?? 0xe14c,
+                        fontFamily: 'MaterialIcons'),
+                    size: 16,
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(skill.name,
+                            style: TextStyle(
+                              fontWeight: selected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            )),
+                        Text(skill.description,
+                            style: Theme.of(context).textTheme.bodySmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                  if (selected)
+                    Icon(Icons.check, size: 16,
+                        color: Theme.of(context).colorScheme.primary),
+                ],
+              ),
+            );
+          }),
+        ];
+      },
+    );
   }
 
   Future<void> _editThinkingMode() async {
@@ -1756,6 +1844,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final quickPrompts = _getQuickPrompts(context);
     final chatIsStreaming = ref.watch(aiChatStreamingProvider);
     final contextNotice = ref.watch(aiChatContextNoticeProvider);
+    final usageSummary = ref.watch(aiChatUsageSummaryProvider);
 
     // Refresh providers in case user toggled enable/disable in Provider Center.
     _providers = Prefs().aiProvidersV1;
@@ -1839,18 +1928,42 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           padding: EdgeInsets.only(bottom: widget.bottomPadding),
           child: Column(
             children: [
-              if ((contextNotice ?? '').trim().isNotEmpty)
+              if ((contextNotice ?? '').trim().isNotEmpty ||
+                  (usageSummary ?? '').trim().isNotEmpty)
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(
-                    contextNotice!,
-                    style: Theme.of(context).textTheme.bodySmall,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          (contextNotice ?? '').trim().isNotEmpty
+                              ? contextNotice!
+                              : '',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      if ((usageSummary ?? '').trim().isNotEmpty) ...[
+                        if ((contextNotice ?? '').trim().isNotEmpty)
+                          const SizedBox(width: 8),
+                        Icon(Icons.token_outlined,
+                            size: 12,
+                            color: Theme.of(context).colorScheme.outline),
+                        const SizedBox(width: 3),
+                        Text(
+                          usageSummary!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               // Book import strip (UI-only)
@@ -2059,6 +2172,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           tooltip: L10n.of(context).aiChatEditModelTitle,
                           onPressed: _editCurrentModel,
                         ),
+                        _buildSkillButton(context),
                       ],
                     ),
                   ),

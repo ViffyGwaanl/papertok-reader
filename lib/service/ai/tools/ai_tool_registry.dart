@@ -44,7 +44,9 @@ import 'package:anx_reader/service/ai/tools/reminders_uncomplete_tool.dart';
 import 'package:anx_reader/service/ai/tools/reminders_update_tool.dart';
 import 'package:anx_reader/service/ai/tools/shortcuts_run_tool.dart';
 import 'package:anx_reader/service/ai/tools/reading_history_tool.dart';
+import 'package:anx_reader/service/ai/tools/spawn_sub_agent_tool.dart';
 import 'package:anx_reader/service/ai/tools/tags_list_tool.dart';
+import 'package:anx_reader/service/ai/tools/web_search_tool.dart';
 import 'package:anx_reader/service/ai/tools/repository/book_content_search_repository.dart';
 import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
 import 'package:anx_reader/service/ai/tools/repository/groups_repository.dart';
@@ -173,6 +175,8 @@ class AiToolRegistry {
     calculatorToolDefinition,
     currentTimeToolDefinition,
     fetchUrlToolDefinition,
+    createWebSearchToolDefinition(),
+    createSpawnSubAgentToolDefinition(),
 
     // ── System tools (calendar, reminders, shortcuts) ──
     calendarListCalendarsToolDefinition,
@@ -293,6 +297,7 @@ class AiToolRegistry {
     'reminders_rename_list',
     'reminders_delete_list',
     'shortcuts_run',
+    'spawn_sub_agent',
   };
 
   /// Returns the effective scenes for a tool, considering overrides.

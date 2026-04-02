@@ -27,6 +27,9 @@ class AiChatStreaming extends _$AiChatStreaming {
 
 final aiChatContextNoticeProvider = StateProvider<String?>((ref) => null);
 
+/// Token usage summary displayed after streaming completes.
+final aiChatUsageSummaryProvider = StateProvider<String?>((ref) => null);
+
 @Riverpod(keepAlive: true)
 class AiChat extends _$AiChat {
   String? _currentSessionId;
@@ -344,6 +347,13 @@ class AiChat extends _$AiChat {
 
     ref.read(aiChatStreamingProvider.notifier).setStreaming(false);
 
+    // Update token usage summary for UI display.
+    final tracker = getUsageTracker(_currentSessionId);
+    if (tracker != null && tracker.totalTokens > 0) {
+      ref.read(aiChatUsageSummaryProvider.notifier).state =
+          tracker.toShortSummary();
+    }
+
     final historyNotifier = ref.read(aiHistoryProvider.notifier);
     final draftEntry = _draftEntry;
     if (draftEntry != null) {
@@ -404,6 +414,7 @@ class AiChat extends _$AiChat {
     _draftEntry = null;
     _draftAssistantNodeId = null;
     ref.read(aiChatContextNoticeProvider.notifier).state = null;
+    ref.read(aiChatUsageSummaryProvider.notifier).state = null;
   }
 
   void loadHistoryEntry(AiChatHistoryEntry entry) {
@@ -412,6 +423,7 @@ class AiChat extends _$AiChat {
     _generationSub = null;
     ref.read(aiChatStreamingProvider.notifier).setStreaming(false);
     ref.read(aiChatContextNoticeProvider.notifier).state = null;
+    ref.read(aiChatUsageSummaryProvider.notifier).state = null;
 
     final providerMeta = Prefs().getAiProviderMeta(entry.serviceId);
     if (providerMeta != null && providerMeta.enabled) {

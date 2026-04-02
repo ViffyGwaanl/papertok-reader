@@ -20,7 +20,10 @@ import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/service/ai/index.dart';
+import 'package:anx_reader/service/ai/kairos/kairos_service.dart';
 import 'package:anx_reader/service/ai/prompt_generate.dart';
+import 'package:anx_reader/providers/current_reading.dart';
+import 'package:anx_reader/providers/kairos_provider.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ui/status_bar.dart';
@@ -94,6 +97,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   final Stopwatch _readTimeWatch = Stopwatch();
   DateTime? _sessionStart;
   Timer? _awakeTimer;
+  late final KairosService _kairos;
   bool bottomBarOffstage = true;
   Widget? _aiChat;
   final aiChatKey = GlobalKey<AiChatStreamState>();
@@ -129,6 +133,14 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     _readTimeWatch.start();
     _sessionStart = DateTime.now();
     setAwakeTimer(Prefs().awakeTime);
+    _kairos = KairosService(
+      onHint: (hint) {
+        if (mounted) {
+          ref.read(kairosHintProvider.notifier).state = hint;
+        }
+      },
+    );
+    _kairos.start();
 
     _book = widget.book;
     // _volumeKeyBoard = VolumeKeyBoard.instance;
@@ -145,6 +157,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   void dispose() {
     Sync().syncData(SyncDirection.upload, ref, trigger: SyncTrigger.auto);
     _readTimeWatch.stop();
+    _kairos.stop();
     _awakeTimer?.cancel();
     WakelockPlus.disable();
     showStatusBar();
@@ -529,6 +542,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   }
 
   Widget _buildMainLayout(BuildContext context) {
+    final kairosHint = ref.watch(kairosHintProvider);
     final axis = Prefs().aiPanelPosition == AiPanelPositionEnum.right
         ? Axis.horizontal
         : Axis.vertical;
@@ -601,6 +615,69 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                 SizedBox.expand(
                   child: Container(
                     color: Theme.of(context).colorScheme.surface.withAlpha(1),
+                  ),
+                ),
+              // KAIROS proactive reading hint.
+              if (kairosHint != null)
+                Positioned(
+                  bottom: 80,
+                  left: 16,
+                  right: 16,
+                  child: Center(
+                    child: Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(24),
+                      color: Theme.of(context).colorScheme.secondaryContainer,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () {
+                          ref.read(kairosHintProvider.notifier).state = null;
+                          showAiChat(
+                            content: kairosHint.suggestedPrompt,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.auto_awesome, size: 16,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSecondaryContainer),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  kairosHint.message,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSecondaryContainer,
+                                      ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
+                                  ref.read(kairosHintProvider.notifier).state =
+                                      null;
+                                },
+                                child: Icon(Icons.close, size: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSecondaryContainer),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -853,6 +930,14 @@ class ReadingPageState extends ConsumerState<ReadingPage>
 
   @override
   Widget build(BuildContext context) {
+    // Feed KAIROS with reading position updates.
+    final readingState = ref.watch(currentReadingProvider);
+    _kairos.onPositionUpdate(
+      cfi: readingState.cfi,
+      chapterTitle: readingState.chapterTitle,
+      percentage: readingState.percentage,
+    );
+
     var aiButton = IconButton(
       tooltip: L10n.of(context).aiChat,
       icon: const Icon(Icons.auto_awesome),

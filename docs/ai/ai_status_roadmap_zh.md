@@ -153,24 +153,33 @@
 
 新增文件 14 个，修改核心文件 4 个。
 
+## 5. 已完成：Phase 4 差异化功能（2026-04-01）
+
+> 详细设计见 `docs/ai/agent_system_architecture_zh.md` 第 7 节
+
+新增 7 项差异化功能：
+
+- **Token/成本 UI 显示**：流式结束后自动展示 token 用量和费用估算。
+- **Web Search Tool**：双策略搜索（Serper API + DuckDuckGo Lite 免 Key fallback）。
+- **Sub-Agent 系统**：主 Agent 可派出独立子 Agent（research/summarize/verify），各自受限工具集，禁止递归。
+- **Skills 系统**：6 个内置技能模板，通过 UI 按钮切换激活。
+- **KAIROS 主动阅读助手**：监听阅读位置变化，停留超阈值弹出浮动提示。
+- **本地/离线 Embedding**：支持 Ollama 本地端点 + FTS5 降级。
+
+新增文件 8 个，修改核心文件 8 个。
+
 ---
 
-## 5. 未来计划（按优先级拆解）
+## 6. 未来计划（按优先级拆解）
 
 ### P0：稳定性与可观测性
 
 - 为 streaming session 增加更明确的可观测 UI（例如 minimized bar 上的 generating 状态、可停止入口、错误提示）。
 - 增加 1 个关键 widget test：验证 edit+regen 生成分支后切回旧 variant 会恢复旧子树。
 
-### P1：Agent 系统集成（优化模块接入主流程）
+### P1：Agent 系统集成 ✅ 已完成
 
-已完成的 Agent 优化模块需要逐步接入主流程：
-
-- **ToolOrchestrator → streamAgent**：替换现有顺序执行逻辑，启用并发工具调度。
-- **ConversationCompressor → PromptBudgetingService**：token 超阈值时自动压缩。
-- **BookContentCache → chapter content tools**：同一章节重复读取时跳过内容传输。
-- **AiUsageTracker → AI 面板 UI**：在面板底部显示 token 和成本。
-- **AnnotationLedger → system prompt**：在 create_highlight/create_note 后更新 ledger 并注入 prompt。
+所有 Phase 3+4 集成任务已在 2026-04-01 完成。
 
 ### P1：Thinking 内容策略（当前结论：不做提示词兜底）
 

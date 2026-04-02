@@ -3737,4 +3737,53 @@ Requirements:
     prefs.setString('codeHighlightTheme', theme.code);
     notifyListeners();
   }
+
+  // --- Skills ---
+
+  /// Currently active AI skill ID, or null if no skill is active.
+  String? get activeAiSkillId => prefs.getString('activeAiSkillId');
+
+  set activeAiSkillId(String? id) {
+    if (id == null || id.isEmpty) {
+      prefs.remove('activeAiSkillId');
+    } else {
+      prefs.setString('activeAiSkillId', id);
+    }
+    notifyListeners();
+  }
+
+  // --- KAIROS proactive level ---
+
+  /// KAIROS proactive reading assistant level.
+  /// 0 = off, 1 = light (30s), 2 = medium (20s), 3 = eager (10s).
+  int get kairosLevel => prefs.getInt('kairosLevel') ?? 0;
+
+  set kairosLevel(int level) {
+    prefs.setInt('kairosLevel', level.clamp(0, 3));
+    notifyListeners();
+  }
+
+  // --- Local embedding ---
+
+  /// Custom local embedding API endpoint (e.g. http://localhost:11434).
+  String? get localEmbeddingEndpoint =>
+      prefs.getString('localEmbeddingEndpoint');
+
+  set localEmbeddingEndpoint(String? url) {
+    if (url == null || url.trim().isEmpty) {
+      prefs.remove('localEmbeddingEndpoint');
+    } else {
+      prefs.setString('localEmbeddingEndpoint', url.trim());
+    }
+    notifyListeners();
+  }
+
+  /// Model name for local embedding API (default: nomic-embed-text).
+  String get localEmbeddingModel =>
+      prefs.getString('localEmbeddingModel') ?? 'nomic-embed-text';
+
+  set localEmbeddingModel(String model) {
+    prefs.setString('localEmbeddingModel', model.trim());
+    notifyListeners();
+  }
 }

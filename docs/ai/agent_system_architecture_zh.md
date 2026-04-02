@@ -1,7 +1,7 @@
 # PaperTok Reader — AI Agent 系统架构与优化记录
 
 > 更新时间：2026-04-01
-> 状态：Phase 0-3 已完成（全部集成），Phase 4 计划中
+> 状态：Phase 0-4 已完成，Phase 5 计划中
 
 ---
 
@@ -21,19 +21,25 @@ AiChat (Riverpod, keepAlive)
   │
   ▼
 CancelableLangchainRunner.streamAgent()
-  │── ToolApprovalDelegate (回调, 不依赖 Flutter UI) ← refactored
-  │── SSE 心跳 (15s, 防移动端代理断连) ← new
-  │── ToolOrchestrator (并发/串行分区执行) ← new
-  │── AiUsageTracker (token/成本追踪) ← new
+  │── ToolApprovalDelegate (回调, 不依赖 Flutter UI)
+  │── SSE 心跳 (15s, 防移动端代理断连)
+  │── ToolOrchestrator (并发/串行分区执行)
+  │── AiUsageTracker (token/成本追踪) → UI 显示
+  │── SubAgentRunner (子 Agent 独立上下文) ← P4 new
   │
   ▼
 RepositoryTool<I,O>.run()
-  │── BookContentCache (LRU, MD5 变更检测) ← new
-  │── AnnotationLedger (标注台账) ← new
-  │── JsonRepair (修复截断 JSON) ← new
+  │── BookContentCache (LRU, MD5 变更检测)
+  │── AnnotationLedger (标注台账)
+  │── JsonRepair (修复截断 JSON)
+  │── WebSearchTool (DDG + Serper) ← P4 new
+  │── SpawnSubAgentTool (研究/总结/验证) ← P4 new
   │
   ▼
 Stream<String> → AiChatStream Widget → 渲染
+  │── Token 使用量显示 (aiChatUsageSummaryProvider) ← P4 new
+  │── Skills 选择器 (技能面板) ← P4 new
+  │── KAIROS 提示 (主动阅读助手) ← P4 new
 ```
 
 ---
@@ -102,7 +108,7 @@ lib/
 
 | 场景 | 工具 | 数量 |
 |------|------|------|
-| `global` | calculator, current_time, fetch_url, memory_* | 7 |
+| `global` | calculator, current_time, fetch_url, web_search, spawn_sub_agent, memory_* | 9 |
 | `reading` | book_content_search, current_book_toc, current_chapter_content, chapter_content_by_href, current_book_fulltext, current_reading_metadata, resolve_cfi, semantic_search_current_book, mindmap, create_highlight, create_note, notes_search | 12 |
 | `library` | bookshelf_lookup, bookshelf_organize, notes_search, reading_history, semantic_search_library, tags_list, books_tags_list, apply_book_tags, calendar_*, reminders_*, shortcuts_run | ~25 |
 
@@ -117,6 +123,7 @@ lib/
 | 只读 | 所有搜索/查询/TOC/metadata 工具 | `true` (默认) |
 | 写入 | bookshelf_organize, apply_book_tags, create_highlight, create_note, memory_append, memory_replace | `false` |
 | 破坏 | calendar write/delete, reminders write/delete, shortcuts_run | `false` |
+| 特殊 | spawn_sub_agent（串行，防止并发子 Agent 资源竞争） | `false` |
 
 ---
 
@@ -148,18 +155,64 @@ lib/
 
 ---
 
-## 7. 未来计划（Phase 4）
+## 7. 已完成：Phase 4 差异化功能（2026-04-01）
 
-### 差异化功能（远期）
+| 编号 | 任务 | 文件 | 状态 |
+|------|------|------|------|
+| P4-UI | **Token/成本 UI 显示** — 流式结束后在输入框上方展示 token 用量和费用估算 | `providers/ai_chat.dart` (mod) `widgets/ai/ai_chat_stream.dart` (mod) | ✅ Done |
+| P4-E | **Web Search Tool** — 双策略搜索：Serper API (配置 Key) / DuckDuckGo Lite (免 Key fallback)；HTML 解析提取 title+url+snippet | `tools/web_search_tool.dart` (new) `tools/input/web_search_input.dart` (new) | ✅ Done |
+| P4-0 | **Sub-Agent 系统** — `SubAgentRunner` 复用 `CancelableLangchainRunner` 创建独立上下文子 Agent；3 种类型：`research`/`summarize`/`verify`，各自受限工具集；禁止递归；max 15 步 | `sub_agent_runner.dart` (new) `tools/spawn_sub_agent_tool.dart` (new) `tools/input/spawn_sub_agent_input.dart` (new) | ✅ Done |
+| P4-A | **Skills 系统** — 6 个内置技能模板（paper_analyzer / flashcard_generator / debate_partner / vocab_extractor / reading_companion / seminar_mode）；通过 Prefs 持久化激活状态；system prompt 动态追加技能指令 | `skills/ai_skill.dart` (new) `skills/ai_skill_registry.dart` (new) `langchain_registry.dart` (mod) | ✅ Done |
+| P4-B | **研讨会模式** — 作为 Skills 系统中的 `seminar_mode` 技能实现；系统提示强制 3 段式回复：🔴 批判视角 / 🟢 支持视角 / 🔵 综合评估 | 包含在 `skills/ai_skill_registry.dart` | ✅ Done |
+| P4-C | **KAIROS 主动阅读助手** — `KairosService` 监听 `currentReadingProvider`；`Timer.periodic(5s)` 检测同一 CFI 停留超阈值（30s/20s/10s，可配级别）；触发浮动 Chip 提示；点击后预填 prompt 打开 AI 聊天 | `kairos/kairos_service.dart` (new) `providers/kairos_provider.dart` (new) `page/reading_page.dart` (mod) | ✅ Done |
+| P4-D | **本地/离线 Embedding** — `ai_embeddings_service.dart` 新增 Ollama 本地端点支持（`/api/embeddings` + OpenAI `/v1/embeddings` 双格式）；`isAvailable` 静态检测；Prefs 新增 `localEmbeddingEndpoint` / `localEmbeddingModel` 配置 | `rag/ai_embeddings_service.dart` (mod) `config/shared_preference_provider.dart` (mod) | ✅ Done |
+
+### Phase 4 新文件清单
+
+```
+lib/
+├── providers/
+│   └── kairos_provider.dart                  ← KAIROS 状态
+├── service/ai/
+│   ├── sub_agent_runner.dart                ← 子 Agent 运行器
+│   ├── skills/
+│   │   ├── ai_skill.dart                    ← 技能模型
+│   │   └── ai_skill_registry.dart           ← 技能注册表 (6 内置)
+│   ├── kairos/
+│   │   └── kairos_service.dart              ← 主动阅读服务
+│   └── tools/
+│       ├── web_search_tool.dart             ← 网络搜索工具
+│       ├── spawn_sub_agent_tool.dart        ← 子 Agent 工具
+│       └── input/
+│           ├── web_search_input.dart
+│           └── spawn_sub_agent_input.dart
+```
+
+### Phase 4 修改的文件
+
+| 文件 | 改动内容 |
+|------|----------|
+| `providers/ai_chat.dart` | +`aiChatUsageSummaryProvider`；`_finalizeStreaming` 写入 tracker summary |
+| `widgets/ai/ai_chat_stream.dart` | +token 用量行 (icon + text)；+技能选择器按钮 (PopupMenuButton) |
+| `service/ai/langchain_registry.dart` | +skills import；`_buildPipeline` 读取 `activeAiSkillId` 并传入；`_buildAgentSystemMessage` 追加 skill prompt |
+| `service/ai/langchain_ai_config.dart` | +`registryIdentifierForProvider()` 静态方法 |
+| `service/ai/tools/ai_tool_registry.dart` | +2 import (web_search, spawn_sub_agent)；`_definitions` 添加两个新工具；`_nonConcurrentTools` 添加 `spawn_sub_agent` |
+| `service/rag/ai_embeddings_service.dart` | +`isAvailable` 静态属性；+`_embedViaLocalEndpoint()` 支持 Ollama + OpenAI 格式 |
+| `config/shared_preference_provider.dart` | +`activeAiSkillId` / `kairosLevel` / `localEmbeddingEndpoint` / `localEmbeddingModel` 属性 |
+| `page/reading_page.dart` | +KairosService 初始化/销毁；+位置更新 feed；+浮动 Chip 提示覆盖层 |
+
+---
+
+## 8. 未来计划（Phase 5）
 
 | 编号 | 任务 | 说明 | 优先级 |
 |------|------|------|--------|
-| P4-0 | **Sub-Agent 系统** | `SpawnResearchAgentTool`：主 Agent 生成轻量子 Agent（explore / summarize / verify），各自独立上下文。 | P2 |
-| P4-A | **Skills 系统** | 可安装提示模板（YAML 格式）：`paper_analyzer`, `flashcard_generator`, `debate_partner` 等。用户可自定义和导入。 | P3 |
-| P4-B | **研讨会模式** | 多视角 AI 讨论：针对同一问题生成 3 个不同立场的 AI 回复（批判/支持/中立），汇总后呈现。借鉴 OpenMAIC 的 Director-Agent 分离架构。 | P4 |
-| P4-C | **KAIROS 主动阅读助手** | 监听阅读进度事件；当用户在同一段落停留 >30s 时主动提问；完成一章后自动显示摘要卡片。可配置主动程度。 | P4 |
-| P4-D | **离线 Embedding** | 集成本地 embedding 模型作为离线 fallback，支持增量索引。 | P4 |
-| P4-E | **Web Search Tool** | 基于搜索引擎的 `web_search` 工具，可配置 Google Scholar / Semantic Scholar API。 | P3 |
+| P5-A | **用户自定义 Skills** | 支持用户导入/编辑 YAML 格式技能模板；技能市场概念 | P3 |
+| P5-B | **KAIROS 章节完成检测** | 完成一章后自动弹出摘要卡片（基于 percentage 检测） | P3 |
+| P5-C | **Token 使用历史图表** | 按日/周/月统计 token 消耗和费用趋势 | P4 |
+| P5-D | **Sub-Agent 并行执行** | 主 Agent 同时派出多个子 Agent 并行工作 | P4 |
+| P5-E | **工具单元测试** | 核心工具的输入验证和逻辑单元测试 | P2 |
+| P5-F | **Streaming Tool Execution** | 工具 JSON 完整即刻执行，不等整个响应完成 | P3 |
 
 ---
 
@@ -201,7 +254,7 @@ lib/
 | Phase 1: 自研 AgentTool/ToolRegistry/AgentLoop | ✅ 由 LangChain 实现；本次补充了 ToolOrchestrator / ToolApprovalDelegate / AiToolScene |
 | Phase 2: 核心工具集 | ✅ 已有 40+ 工具；本次补充 CreateHighlight + CreateNote |
 | Phase 3: 系统提示与上下文管理 | ✅ 已有 system prompt 生成；本次补充 ConversationCompressor |
-| Phase 4: UI 集成 | ✅ 已有 tool_step_tile / ai_chat_stream；成本追踪 UI 待集成 |
+| Phase 4: UI 集成 | ✅ 已有 tool_step_tile / ai_chat_stream；成本追踪 UI 已集成 (P4-UI) |
 | Phase 5: 上下文智能管理 | ✅ 本次补充 BookContentCache / MaxTokensStrategy |
 | Phase 6: 测试与 QA | ⏳ 工具单元测试仍需补充 |
 

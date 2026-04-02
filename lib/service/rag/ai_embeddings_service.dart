@@ -32,6 +32,18 @@ class AiEmbeddingsService {
     return list.first;
   }
 
+  /// Whether any embedding provider is available (remote or local).
+  static bool get isAvailable {
+    final localEndpoint = Prefs().localEmbeddingEndpoint;
+    if (localEndpoint != null && localEndpoint.trim().isNotEmpty) return true;
+
+    final pid = Prefs().selectedAiService;
+    final meta = Prefs().getAiProviderMeta(pid);
+    if (meta == null) return false;
+    return meta.type == AiProviderType.openaiCompatible ||
+        meta.type == AiProviderType.openaiResponses;
+  }
+
   static Future<List<List<double>>> embedDocuments(
     List<String> texts, {
     String model = defaultEmbeddingModel,
@@ -40,15 +52,28 @@ class AiEmbeddingsService {
   }) async {
     if (texts.isEmpty) return const [];
 
+    // Try local embedding endpoint first (Ollama, llama.cpp, etc.).
+    final localEndpoint = Prefs().localEmbeddingEndpoint;
+    if (localEndpoint != null && localEndpoint.trim().isNotEmpty) {
+      return _embedViaLocalEndpoint(
+        texts,
+        localEndpoint.trim(),
+        Prefs().localEmbeddingModel,
+        timeoutSeconds,
+      );
+    }
+
     final pid = providerId ?? Prefs().selectedAiService;
     final meta = Prefs().getAiProviderMeta(pid);
 
-    // Only OpenAI-compatible providers are supported for now.
+    // Only OpenAI-compatible providers are supported for remote embedding.
     if (meta != null &&
         meta.type != AiProviderType.openaiCompatible &&
         meta.type != AiProviderType.openaiResponses) {
       throw StateError(
-        'Embeddings require an OpenAI-compatible provider (current: ${meta.type}).',
+        'Embeddings require an OpenAI-compatible provider or a local '
+        'embedding endpoint (current: ${meta.type}). Configure a local '
+        'endpoint in Settings → AI → Local Embedding.',
       );
     }
 
@@ -284,6 +309,67 @@ class AiEmbeddingsService {
     }
 
     throw StateError('Embeddings failed after $attempts attempt(s).');
+  }
+
+  /// Embed texts using a local Ollama-compatible endpoint.
+  ///
+  /// Supports two API formats:
+  /// 1. Ollama: POST /api/embeddings with { model, prompt }
+  /// 2. OpenAI-compatible: POST /v1/embeddings with { model, input }
+  static Future<List<List<double>>> _embedViaLocalEndpoint(
+    List<String> texts,
+    String endpoint,
+    String model,
+    int timeoutSeconds,
+  ) async {
+    final results = <List<double>>[];
+    final isOllama = !endpoint.contains('/v1');
+    final url = isOllama
+        ? _join(endpoint, 'api/embeddings')
+        : _join(endpoint, 'v1/embeddings');
+
+    AnxLog.info('Embeddings: using local endpoint $url model=$model '
+        'texts=${texts.length}');
+
+    if (isOllama) {
+      // Ollama API: one request per text.
+      for (final text in texts) {
+        final response = await _dio.post<Map<String, dynamic>>(
+          url,
+          data: {'model': model, 'prompt': text},
+          options: Options(
+            sendTimeout: Duration(seconds: timeoutSeconds),
+            receiveTimeout: Duration(seconds: timeoutSeconds),
+          ),
+        );
+        final embedding = response.data?['embedding'];
+        if (embedding is List) {
+          results.add(embedding.cast<num>().map((n) => n.toDouble()).toList());
+        } else {
+          throw StateError('Local embedding response missing "embedding" field');
+        }
+      }
+    } else {
+      // OpenAI-compatible batch API.
+      final response = await _dio.post<Map<String, dynamic>>(
+        url,
+        data: {'model': model, 'input': texts},
+        options: Options(
+          sendTimeout: Duration(seconds: timeoutSeconds),
+          receiveTimeout: Duration(seconds: timeoutSeconds),
+        ),
+      );
+      final data = response.data?['data'] as List<dynamic>?;
+      if (data == null) {
+        throw StateError('Local embedding response missing "data" field');
+      }
+      for (final item in data) {
+        final embedding = (item as Map<String, dynamic>)['embedding'] as List;
+        results.add(embedding.cast<num>().map((n) => n.toDouble()).toList());
+      }
+    }
+
+    return results;
   }
 
   static String _join(String baseUrl, String path) {
