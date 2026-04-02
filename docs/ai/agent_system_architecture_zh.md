@@ -1,7 +1,7 @@
 # PaperTok Reader — AI Agent 系统架构与优化记录
 
-> 更新时间：2026-04-01
-> 状态：Phase 0-4 已完成，Phase 5 计划中
+> 更新时间：2026-04-02
+> 状态：Phase 0-4 已完成（含设置 UI），Phase 5 计划中
 
 ---
 
@@ -201,6 +201,29 @@ lib/
 | `config/shared_preference_provider.dart` | +`activeAiSkillId` / `kairosLevel` / `localEmbeddingEndpoint` / `localEmbeddingModel` 属性 |
 | `page/reading_page.dart` | +KairosService 初始化/销毁；+位置更新 feed；+浮动 Chip 提示覆盖层 |
 
+### Phase 4 补充：设置 UI 集成（2026-04-02）
+
+在 AI 设置页面新增"AI Features"区块，为所有 Phase 4 功能提供可发现的配置入口：
+
+| 编号 | 任务 | 文件 | 状态 |
+|------|------|------|------|
+| P4-S1 | **KAIROS 级别选择器** — 底部弹出选单，4 级选择（Off/Light 30s/Medium 20s/Eager 10s） | `page/settings_page/ai.dart` (mod) | ✅ Done |
+| P4-S2 | **Skills 选择器** — 底部弹出选单，列出 6 个内置技能 + None，含图标和描述 | `page/settings_page/ai.dart` (mod) | ✅ Done |
+| P4-S3 | **Web Search API Key** — AlertDialog 输入 Serper.dev Key，存入 provider config map | `page/settings_page/ai.dart` (mod) | ✅ Done |
+| P4-S4 | **Local Embedding 配置** — AlertDialog 输入端点 URL + 模型名，支持 Clear/Save | `page/settings_page/ai.dart` (mod) | ✅ Done |
+
+### Phase 4 构建发布修复（2026-04-02）
+
+iOS release archive 过程中发现并修复的编译问题：
+
+| 问题 | 修复 |
+|------|------|
+| `ConversationCompressor` 缺少 `PromptValue` import | 添加 `import 'package:langchain_core/prompts.dart'` |
+| `BaseChatModelOptions.copyWith` 不支持 `maxTokens` 参数 | 移除该参数（已在 config 初始化时设置） |
+| `AiSkill` 类型在 `langchain_registry.dart` 中未导入 | 添加 `import 'package:anx_reader/service/ai/skills/ai_skill.dart'` |
+| 动态 `IconData()` 构造导致 tree-shaking 失败 | 改用 `Icons.auto_fix_high` 常量 |
+| freezed `BgimgType` switch 表达式不穷尽 | 添加 `_ =>` 通配符 case |
+
 ---
 
 ## 8. 未来计划（Phase 5）
@@ -216,7 +239,7 @@ lib/
 
 ---
 
-## 8. 设计参考
+## 9. 设计参考
 
 本次优化参考了以下项目的架构设计：
 
@@ -244,7 +267,7 @@ lib/
 
 ---
 
-## 9. 与旧计划文档的对照
+## 10. 与旧计划文档的对照
 
 旧文档 `参考/PaperTok_Agent_Implementation_Plan.md` 提出了 6 个 Phase，以"从零构建 Agent 系统"为前提。实际实现已走了 LangChain 路线，大部分 Phase 1-2 的目标已由 LangChain + 现有工具系统实现。
 

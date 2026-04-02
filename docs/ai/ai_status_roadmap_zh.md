@@ -168,29 +168,34 @@
 
 新增文件 8 个，修改核心文件 8 个。
 
+## 6. 已完成：Phase 4 设置 UI 集成（2026-04-02）
+
+在 AI 设置页面新增”AI Features”区块，为所有 Phase 4 功能提供可发现的配置入口：
+
+- **KAIROS 级别选择器** — 底部弹出选单，4 级选择（Off/Light/Medium/Eager）
+- **Skills 选择器** — 底部弹出选单，列出全部内置技能
+- **Web Search API Key** — 对话框输入 Serper.dev Key
+- **Local Embedding 配置** — 对话框输入端点 URL + 模型名
+
+同时修复了 5 个 iOS release archive 编译问题（详见架构文档）。
+
+已发布 TestFlight build 6402（v1.68.5）。
+
 ---
 
-## 6. 未来计划（按优先级拆解）
+## 7. 未来计划（按优先级拆解）
 
 ### P0：稳定性与可观测性
 
 - 为 streaming session 增加更明确的可观测 UI（例如 minimized bar 上的 generating 状态、可停止入口、错误提示）。
 - 增加 1 个关键 widget test：验证 edit+regen 生成分支后切回旧 variant 会恢复旧子树。
 
-### P1：Agent 系统集成 ✅ 已完成
-
-所有 Phase 3+4 集成任务已在 2026-04-01 完成。
-
 ### P1：Thinking 内容策略（当前结论：不做提示词兜底）
 
 - 策略：**只展示供应商返回的思考数据**（`reasoning_content` / `reasoning` / Anthropic thinking / Gemini thoughts）。
 - 不做：通过提示词生成”兜底摘要”（避免误导用户、避免泄露/伪造思考内容）。
 
-> 如果未来确实需要”可控的思考摘要”，建议做成独立字段（例如 `analysis_summary`），并明确标注”摘要/非原始思考”。
-
 ### P1：AI 翻译体验（EPUB/PDF）
-
-来自既有设计文档（仍有效）：
 
 - 选中翻译：保留”翻译 + 讲解/词汇/注释”。
 - 全文翻译：新增 `translate_fulltext` prompt，严格”只输出译文”。
@@ -203,21 +208,20 @@
 - outline 缺失时：采用 page-window（当前页 ±N 页）作为”chapter-like context”。
 - 扫描版 PDF：集成 MinerU OCR，做缓存与状态机（not_started/processing/ready/failed），文本层不足时自动 fallback。
 
-### P3：高级 Agent 能力
+### P3：Agent 系统进阶（Phase 5）
 
-- **Sub-Agent 系统**：主 Agent 可生成轻量子 Agent（explore / summarize / verify）。
-- **Skills 系统**：可安装提示模板（paper_analyzer, flashcard_generator, debate_partner）。
-- **Web Search Tool**：基于搜索引擎的 web_search，可配置学术 API。
-
-### P4：差异化功能
-
-- **研讨会模式**：多视角 AI 讨论（借鉴 OpenMAIC Director-Agent 架构）。
-- **KAIROS 主动阅读助手**：监听阅读进度，主动提供辅助。
-- **离线 Embedding**：集成本地 embedding 模型。
+| 编号 | 任务 | 说明 | 优先级 |
+|------|------|------|--------|
+| P5-A | **用户自定义 Skills** | 支持用户导入/编辑 YAML 格式技能模板；技能市场概念 | P3 |
+| P5-B | **KAIROS 章节完成检测** | 完成一章后自动弹出摘要卡片（基于 percentage 检测） | P3 |
+| P5-C | **Token 使用历史图表** | 按日/周/月统计 token 消耗和费用趋势 | P4 |
+| P5-D | **Sub-Agent 并行执行** | 主 Agent 同时派出多个子 Agent 并行工作 | P4 |
+| P5-E | **工具单元测试** | 核心工具的输入验证和逻辑单元测试 | P2 |
+| P5-F | **Streaming Tool Execution** | 工具 JSON 完整即刻执行，不等整个响应完成 | P3 |
 
 ---
 
-## 6. 分支策略（为何分这么多分支，以及后续建议）
+## 8. 分支策略（为何分这么多分支，以及后续建议）
 
 当前策略是典型的“PR 栈 + 集成分支验收”：
 
@@ -230,7 +234,7 @@
 
 ---
 
-## 7. 开发者注意事项
+## 9. 开发者注意事项
 
 - repo 忽略生成文件（`*.g.dart`, `*.freezed.dart`, `lib/gen/` 等），切分支后必须：
 
@@ -242,7 +246,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 ---
 
-## 8. 推荐验收清单（最小闭环）
+## 10. 推荐验收清单（最小闭环）
 
 1) 阅读页：生成中最小化 → 翻页阅读 → 展开 → 生成不断。
 2) stop 按钮：立即停止（不会假停）。
