@@ -1,8 +1,10 @@
 # AI 改造（PaperTok Reader）— 当前已完成 & 路线图（中文）
 
-> 本文是面向 **真实实现** 的“项目状态 + 路线图”汇总，便于你随时对齐：哪些已经做完、哪些还在计划、下一步怎么验收。
+> 本文是面向 **真实实现** 的”项目状态 + 路线图”汇总，便于你随时对齐：哪些已经做完、哪些还在计划、下一步怎么验收。
 >
 > 集成验收分支：`main`（产品仓库 `ViffyGwaanl/papertok-reader`）
+>
+> 最新 TestFlight：build 6403（v1.68.6，2026-04-02）
 
 ---
 
@@ -183,7 +185,46 @@
 
 ---
 
-## 7. 未来计划（按优先级拆解）
+## 7. 已完成：Phase 4 全量中文本地化（2026-04-02）
+
+为 Phase 4 所有新增 UI 文字补全中文（zh / zh-CN）适配，消除设置页和聊天面板中残留的硬编码英文。
+
+### 7.1 新增 L10n 条目（53 条，三个 ARB 文件同步）
+
+| 分组 | 条目 | 说明 |
+|------|------|------|
+| AI Features 区块头 | `settingsAiFeatures` | “AI 功能” |
+| Conversation Titles | `settingsAiConversationTitles` / `settingsAiConversationTitlesDesc` | 对话标题 tile |
+| KAIROS | `settingsAiKairos` / `settingsAiKairosOff` / `settingsAiKairosLevel{Light,Medium,Eager}` | 设置 tile |
+| KAIROS 选单 | `settingsAiKairosPickerTitle` / `settingsAiKairosPickerDesc` / `settingsAiKairsPicker{Off,Light,Medium,Eager}{Title,Desc}` | 弹出选单 |
+| Active Skill tile | `settingsAiActiveSkill` / `settingsAiSkillNone` | 技能设置 tile |
+| Skills 选单 | `settingsAiSkillPickerTitle/Desc/NoneTitle/NoneDesc` | 弹出选单 |
+| Web Search | `settingsAiWebSearch` / `settingsAiWebSearch{Configured,Default,DialogDesc,KeyLabel,KeyHint}` | 搜索 tile + 对话框 |
+| Local Embedding | `settingsAiLocalEmbedding` / `settingsAiLocalEmbedding{NotConfigured,DialogDesc,EndpointLabel,EndpointHint,ModelLabel,ModelHint}` | Embedding tile + 对话框 |
+| 聊天面板 | `aiSkillsTooltip` / `aiSkillNone` | Skills 按钮 tooltip + “无技能”选项 |
+| 技能名称 × 6 | `aiSkill{PaperAnalyzer,FlashcardGenerator,DebatePartner,VocabExtractor,ReadingCompanion,SeminarMode}{Name,Desc}` | 内置技能的本地化名称和描述 |
+
+### 7.2 补全 zh.arb 遗漏条目
+
+zh.arb（`locale: zh`）此前缺失了多个 Phase 0-3 已在 zh-CN.arb 中存在的条目，此次一并补全：
+
+- `settingsAiDebugTitle` / `settingsAiDebugEnable` / `settingsAiDebugEnableDesc`
+- `settingsAiPadPanelMode*` / `settingsAiDockSide*`
+- `settingsAiQuickPrompts*`（8 条）
+
+### 7.3 代码更新
+
+| 文件 | 改动 |
+|------|------|
+| `lib/page/settings_page/ai.dart` | AI Features SettingsSection、KAIROS picker、Skills picker、Web Search 对话框、Local Embedding 对话框全部改用 `l10n.*` |
+| `lib/page/settings_page/ai.dart` | 新增 `_localizedSkillName(context, id)` / `_localizedSkillDesc(context, id)` helper（switch on skill ID → L10n key） |
+| `lib/widgets/ai/ai_chat_stream.dart` | Skills 按钮 tooltip、”No Skill” popup 选项改用 L10n；新增 `_localizedSkillName(context, skill)` / `_localizedSkillDesc(context, skill)` helper |
+
+已发布 TestFlight build 6403（v1.68.6）。
+
+---
+
+## 8. 未来计划（按优先级拆解）
 
 ### P0：稳定性与可观测性
 
@@ -221,7 +262,7 @@
 
 ---
 
-## 8. 分支策略（为何分这么多分支，以及后续建议）
+## 9. 分支策略（为何分这么多分支，以及后续建议）
 
 当前策略是典型的“PR 栈 + 集成分支验收”：
 
@@ -234,7 +275,7 @@
 
 ---
 
-## 9. 开发者注意事项
+## 10. 开发者注意事项
 
 - repo 忽略生成文件（`*.g.dart`, `*.freezed.dart`, `lib/gen/` 等），切分支后必须：
 
@@ -246,7 +287,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 ---
 
-## 10. 推荐验收清单（最小闭环）
+## 11. 推荐验收清单（最小闭环）
 
 1) 阅读页：生成中最小化 → 翻页阅读 → 展开 → 生成不断。
 2) stop 按钮：立即停止（不会假停）。

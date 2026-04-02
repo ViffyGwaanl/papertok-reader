@@ -1,7 +1,7 @@
 # PaperTok Reader — AI Agent 系统架构与优化记录
 
 > 更新时间：2026-04-02
-> 状态：Phase 0-4 已完成（含设置 UI），Phase 5 计划中
+> 状态：Phase 0-4 已完成（含设置 UI + 全量中文本地化），Phase 5 计划中
 
 ---
 
@@ -223,6 +223,19 @@ iOS release archive 过程中发现并修复的编译问题：
 | `AiSkill` 类型在 `langchain_registry.dart` 中未导入 | 添加 `import 'package:anx_reader/service/ai/skills/ai_skill.dart'` |
 | 动态 `IconData()` 构造导致 tree-shaking 失败 | 改用 `Icons.auto_fix_high` 常量 |
 | freezed `BgimgType` switch 表达式不穷尽 | 添加 `_ =>` 通配符 case |
+
+### Phase 4 补充：全量中文本地化（2026-04-02）
+
+为 Phase 4 所有新增 UI 文字补全 zh / zh-CN 适配；同步修复 zh.arb 对 Phase 0-3 部分条目的遗漏：
+
+| 范围 | 新增 L10n 条目数 | 说明 |
+|------|-----------------|------|
+| Phase 4 新增（3 ARB 文件） | 53 条 | KAIROS picker × 9、Skills picker × 6、技能名称 × 12、Web Search 对话框 × 5、Local Embedding 对话框 × 6、杂项 × 15 |
+| zh.arb 补全（仅 zh.arb） | 17 条 | settingsAiDebug*、settingsAiPadPanel*、settingsAiDockSide*、settingsAiQuickPrompts* |
+
+代码层改动：
+- `ai.dart`：AI Features 区块全部 `const Text('...')` → `Text(l10n.*)` ；新增 `_localizedSkillName/Desc(context, id?)` helper
+- `ai_chat_stream.dart`：Skills tooltip、No Skill popup → L10n；新增 `_localizedSkillName/Desc(context, skill)` helper
 
 ---
 
