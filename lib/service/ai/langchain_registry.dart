@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/ai_thinking_mode.dart';
+import 'package:anx_reader/enums/ai_tool_scene.dart';
 import 'package:anx_reader/providers/current_reading.dart';
+import 'package:anx_reader/service/ai/annotation_ledger.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/mcp/mcp_tool_registry.dart';
 import 'package:riverpod/riverpod.dart';
@@ -122,6 +124,7 @@ class LangchainAiRegistry {
 
     final isReading =
         useAgent && ref != null && ref!.read(currentReadingProvider).isReading;
+    final scene = isReading ? AiToolScene.reading : AiToolScene.library;
 
     var tools = const <Tool>[];
     ChatMessage? systemMessage;
@@ -129,18 +132,26 @@ class LangchainAiRegistry {
     if (useAgent) {
       final enabledIds = Prefs().enabledAiToolIds;
       final toolContext = AiToolContext(ref: ref!);
-      final baseTools = AiToolRegistry.buildTools(toolContext, enabledIds);
+
+      // Scene-aware filtering: only include tools relevant to the
+      // current context (reading vs library), plus global tools.
+      final baseTools =
+          AiToolRegistry.buildToolsForScene(toolContext, enabledIds, scene);
 
       final mcp = McpToolRegistry.buildCachedTools();
-      tools = <Tool>[...baseTools, ...mcp.tools];
+      // Sort tools alphabetically by name for stable prompt cache hits.
+      // When the tool list is identical across requests, LLM providers
+      // (Anthropic, OpenAI) can reuse cached system prompt tokens.
+      tools = <Tool>[...baseTools, ...mcp.tools]
+        ..sort((a, b) => a.name.compareTo(b.name));
 
-      final enabledDefs = AiToolRegistry.definitions
-          .where((def) => enabledIds.contains(def.id))
-          .toList(growable: false);
+      final enabledDefs =
+          AiToolRegistry.definitionsForScene(enabledIds, scene);
       systemMessage = _buildAgentSystemMessage(
         isReading: isReading,
         enabledTools: enabledDefs,
         mcpTools: mcp.descriptors,
+        annotationLedger: toolContext.annotationLedger,
       );
     }
 
@@ -155,6 +166,7 @@ class LangchainAiRegistry {
     required bool isReading,
     required List<AiToolDefinition> enabledTools,
     required List<McpToolDescriptor> mcpTools,
+    AnnotationLedger? annotationLedger,
   }) {
     final currentLanguageCode =
         Prefs().locale?.languageCode ?? Platform.localeName;
@@ -261,7 +273,8 @@ You can also use LaTeX for mathematical expressions. Here's an example:
 - Use the user's language for responses
 
 ## Remember
-You are not just a tool executor, but the user's reading companion. Your mission is to make every reading session more insightful and enjoyable.''';
+You are not just a tool executor, but the user's reading companion. Your mission is to make every reading session more insightful and enjoyable.
+${annotationLedger?.toSystemPromptSection() ?? ''}''';
 
     return ChatMessage.system(guidance);
   }

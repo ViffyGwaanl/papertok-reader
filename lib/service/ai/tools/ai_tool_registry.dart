@@ -1,8 +1,13 @@
 import 'package:anx_reader/enums/ai_tool_risk_level.dart';
+import 'package:anx_reader/enums/ai_tool_scene.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/current_reading.dart';
+import 'package:anx_reader/service/ai/annotation_ledger.dart';
+import 'package:anx_reader/service/ai/book_content_cache.dart';
 import 'package:anx_reader/service/ai/tools/apply_book_tags_tool.dart';
 import 'package:anx_reader/service/ai/tools/book_content_search_tool.dart';
+import 'package:anx_reader/service/ai/tools/create_highlight_tool.dart';
+import 'package:anx_reader/service/ai/tools/create_note_tool.dart';
 import 'package:anx_reader/service/ai/tools/books_tags_list_tool.dart';
 import 'package:anx_reader/service/ai/tools/bookshelf_lookup_tool.dart';
 import 'package:anx_reader/service/ai/tools/bookshelf_organize_tool.dart';
@@ -50,10 +55,48 @@ import 'package:riverpod/riverpod.dart';
 import 'package:langchain_core/tools.dart';
 
 /// Context object shared by AI tools so builders don't need long constructors.
+///
+/// Centralises reading state so that individual tools do not need to reach
+/// into Riverpod providers themselves, improving testability and reducing
+/// coupling between tools and Flutter state management.
 class AiToolContext {
-  AiToolContext({required this.ref});
+  AiToolContext({
+    required this.ref,
+    this.currentBookId,
+    this.currentBookTitle,
+    this.currentChapterId,
+    this.currentChapterTitle,
+    this.currentPageNumber,
+    this.selectedText,
+    this.conversationId,
+    this.locale,
+  });
 
   final Ref ref;
+
+  /// ID of the book currently open in the reader (null when not reading).
+  final String? currentBookId;
+
+  /// Title of the book currently open in the reader.
+  final String? currentBookTitle;
+
+  /// ID of the chapter visible on screen.
+  final String? currentChapterId;
+
+  /// Title of the chapter visible on screen.
+  final String? currentChapterTitle;
+
+  /// Current page number (if available).
+  final int? currentPageNumber;
+
+  /// Text the user has selected/highlighted in the reader.
+  final String? selectedText;
+
+  /// Active conversation session ID.
+  final String? conversationId;
+
+  /// User's locale code (e.g. 'zh-CN', 'en').
+  final String? locale;
 
   late final NotesRepository notesRepository = NotesRepository();
   late final BooksRepository booksRepository = BooksRepository();
@@ -64,7 +107,17 @@ class AiToolContext {
       ReadingHistoryRepository();
   late final TagRepository tagRepository = TagRepository();
 
+  /// Chapter content LRU cache (shared across tools within a conversation).
+  late final BookContentCache bookContentCache = BookContentCache();
+
+  /// Tracks annotations created by AI during this conversation.
+  late final AnnotationLedger annotationLedger = AnnotationLedger();
+
   bool get isReading => ref.read(currentReadingProvider).isReading;
+
+  /// Current scene derived from reading state.
+  AiToolScene get currentScene =>
+      isReading ? AiToolScene.reading : AiToolScene.library;
 }
 
 /// AiToolRiskLevel is defined in lib/enums/ai_tool_risk_level.dart.
@@ -77,6 +130,8 @@ class AiToolDefinition {
     required this.build,
     this.riskLevel = AiToolRiskLevel.readOnly,
     this.alwaysRequireApproval = false,
+    this.scenes = const {AiToolScene.global},
+    this.isConcurrencySafe = true,
   });
 
   final String id;
@@ -93,6 +148,14 @@ class AiToolDefinition {
   /// explicitly approved each time.
   final bool alwaysRequireApproval;
 
+  /// Scenes in which this tool should be available.
+  /// Tools with [AiToolScene.global] are always included.
+  final Set<AiToolScene> scenes;
+
+  /// Whether this tool can run concurrently with other concurrent-safe tools.
+  /// Read-only tools should be `true`; write/destructive tools `false`.
+  final bool isConcurrencySafe;
+
   String displayName(L10n l10n) => displayNameBuilder(l10n);
 
   String description(L10n l10n) => descriptionBuilder(l10n);
@@ -106,9 +169,12 @@ class AiToolDefinition {
 
 class AiToolRegistry {
   static final List<AiToolDefinition> _definitions = [
+    // ── Global tools (available everywhere) ──
     calculatorToolDefinition,
     currentTimeToolDefinition,
     fetchUrlToolDefinition,
+
+    // ── System tools (calendar, reminders, shortcuts) ──
     calendarListCalendarsToolDefinition,
     calendarListEventsToolDefinition,
     calendarGetEventToolDefinition,
@@ -127,12 +193,12 @@ class AiToolRegistry {
     remindersRenameListToolDefinition,
     remindersDeleteListToolDefinition,
     shortcutsRunToolDefinition,
+
+    // ── Reading tools (only when a book is open) ──
     mindmapToolDefinition,
     bookContentSearchToolDefinition,
-    bookshelfLookupToolDefinition,
-    bookshelfOrganizeToolDefinition,
-    notesSearchToolDefinition,
-    readingHistoryToolDefinition,
+    createHighlightToolDefinition,
+    createNoteToolDefinition,
     currentReadingMetadataToolDefinition,
     currentBookTocToolDefinition,
     currentChapterContentToolDefinition,
@@ -140,12 +206,18 @@ class AiToolRegistry {
     currentBookFulltextToolDefinition,
     resolveCfiToolDefinition,
     semanticSearchCurrentBookToolDefinition,
+
+    // ── Library tools (bookshelf / notes / history) ──
+    bookshelfLookupToolDefinition,
+    bookshelfOrganizeToolDefinition,
+    notesSearchToolDefinition,
+    readingHistoryToolDefinition,
     semanticSearchLibraryToolDefinition,
     tagsListToolDefinition,
     booksTagsListToolDefinition,
     applyBookTagsToolDefinition,
 
-    // Local Markdown memory tools (Phase 4).
+    // ── Memory tools (global) ──
     memoryReadToolDefinition,
     memorySearchToolDefinition,
     memoryAppendToolDefinition,
@@ -155,6 +227,81 @@ class AiToolRegistry {
   static final Map<String, AiToolDefinition> _definitionMap = {
     for (final def in _definitions) def.id: def,
   };
+
+  /// Scene overrides for tools that are NOT global.
+  /// Tools not listed here default to {AiToolScene.global}.
+  static const Map<String, Set<AiToolScene>> _sceneOverrides = {
+    // Reading-only tools
+    'book_content_search': {AiToolScene.reading},
+    'current_reading_metadata': {AiToolScene.reading},
+    'current_book_toc': {AiToolScene.reading},
+    'current_chapter_content': {AiToolScene.reading},
+    'chapter_content_by_href': {AiToolScene.reading},
+    'current_book_fulltext': {AiToolScene.reading},
+    'resolve_cfi': {AiToolScene.reading},
+    'semantic_search_current_book': {AiToolScene.reading},
+    'mindmap': {AiToolScene.reading},
+    'create_highlight': {AiToolScene.reading},
+    'create_note': {AiToolScene.reading},
+    // Library-only tools
+    'bookshelf_lookup': {AiToolScene.library},
+    'bookshelf_organize': {AiToolScene.library},
+    'notes_search': {AiToolScene.library, AiToolScene.reading},
+    'reading_history': {AiToolScene.library},
+    'semantic_search_library': {AiToolScene.library},
+    'tags_list': {AiToolScene.library},
+    'books_tags_list': {AiToolScene.library},
+    'apply_book_tags': {AiToolScene.library},
+    // System tools
+    'calendar_list_calendars': {AiToolScene.system, AiToolScene.library},
+    'calendar_list_events': {AiToolScene.system, AiToolScene.library},
+    'calendar_get_event': {AiToolScene.system, AiToolScene.library},
+    'calendar_create_event': {AiToolScene.system, AiToolScene.library},
+    'calendar_update_event': {AiToolScene.system, AiToolScene.library},
+    'calendar_delete_event': {AiToolScene.system, AiToolScene.library},
+    'reminders_list_lists': {AiToolScene.system, AiToolScene.library},
+    'reminders_list': {AiToolScene.system, AiToolScene.library},
+    'reminders_get': {AiToolScene.system, AiToolScene.library},
+    'reminders_create': {AiToolScene.system, AiToolScene.library},
+    'reminders_update': {AiToolScene.system, AiToolScene.library},
+    'reminders_complete': {AiToolScene.system, AiToolScene.library},
+    'reminders_uncomplete': {AiToolScene.system, AiToolScene.library},
+    'reminders_delete': {AiToolScene.system, AiToolScene.library},
+    'reminders_create_list': {AiToolScene.system, AiToolScene.library},
+    'reminders_rename_list': {AiToolScene.system, AiToolScene.library},
+    'reminders_delete_list': {AiToolScene.system, AiToolScene.library},
+    'shortcuts_run': {AiToolScene.system, AiToolScene.library},
+  };
+
+  /// Tools that are NOT concurrency-safe (write/destructive tools).
+  static const Set<String> _nonConcurrentTools = {
+    'bookshelf_organize',
+    'apply_book_tags',
+    'create_highlight',
+    'create_note',
+    'memory_append',
+    'memory_replace',
+    'calendar_create_event',
+    'calendar_update_event',
+    'calendar_delete_event',
+    'reminders_create',
+    'reminders_update',
+    'reminders_complete',
+    'reminders_uncomplete',
+    'reminders_delete',
+    'reminders_create_list',
+    'reminders_rename_list',
+    'reminders_delete_list',
+    'shortcuts_run',
+  };
+
+  /// Returns the effective scenes for a tool, considering overrides.
+  static Set<AiToolScene> scenesForId(String id) =>
+      _sceneOverrides[id] ?? const {AiToolScene.global};
+
+  /// Returns whether a tool is concurrency-safe.
+  static bool isConcurrencySafeForId(String id) =>
+      !_nonConcurrentTools.contains(id);
 
   static List<AiToolDefinition> get definitions =>
       List<AiToolDefinition>.unmodifiable(_definitions);
@@ -180,6 +327,40 @@ class AiToolRegistry {
     return _definitions
         .where((def) => enabled.contains(def.id))
         .map((def) => def.build(context))
+        .toList(growable: false);
+  }
+
+  static bool _isToolVisibleInScene(String toolId, AiToolScene scene) {
+    final toolScenes = scenesForId(toolId);
+    return toolScenes.contains(AiToolScene.global) ||
+        toolScenes.contains(scene);
+  }
+
+  /// Build tools filtered by scene context.
+  ///
+  /// Only returns tools whose scenes include [AiToolScene.global] or [scene].
+  static List<Tool> buildToolsForScene(
+    AiToolContext context,
+    List<String> enabledIds,
+    AiToolScene scene,
+  ) {
+    final enabled = enabledIds.toSet();
+    return _definitions
+        .where((def) =>
+            enabled.contains(def.id) && _isToolVisibleInScene(def.id, scene))
+        .map((def) => def.build(context))
+        .toList(growable: false);
+  }
+
+  /// Returns definitions filtered by scene (for system prompt generation).
+  static List<AiToolDefinition> definitionsForScene(
+    List<String> enabledIds,
+    AiToolScene scene,
+  ) {
+    final enabled = enabledIds.toSet();
+    return _definitions
+        .where((def) =>
+            enabled.contains(def.id) && _isToolVisibleInScene(def.id, scene))
         .toList(growable: false);
   }
 

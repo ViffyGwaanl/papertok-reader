@@ -4,19 +4,30 @@ import 'dart:convert';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
 import 'package:anx_reader/enums/ai_tool_risk_level.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/main.dart';
+import 'package:anx_reader/service/ai/ai_usage_tracker.dart';
+import 'package:anx_reader/service/ai/max_tokens_strategy.dart';
+import 'package:anx_reader/service/ai/tool_approval_delegate.dart';
+import 'package:anx_reader/service/ai/tool_orchestrator.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/ai/tools/tool_approval_decider.dart';
+import 'package:anx_reader/service/ai/tools/util/json_repair.dart';
 import 'package:anx_reader/service/mcp/mcp_tool_registry.dart';
 import 'package:anx_reader/utils/log/common.dart';
-import 'package:flutter/material.dart';
 import 'package:langchain/langchain.dart';
 
 class CancelableLangchainRunner {
+  CancelableLangchainRunner({this.approvalDelegate});
+
+  /// Optional delegate for requesting user approval before tool execution.
+  /// When null, tools that require approval are denied automatically.
+  final ToolApprovalDelegate? approvalDelegate;
+
   static const String thinkTag = '<think/>';
-  static const Duration _toolApprovalTimeout = Duration(minutes: 2);
   static const Duration _toolTempAllowDuration = Duration(minutes: 5);
+  static const Duration _heartbeatInterval = Duration(seconds: 15);
+
+  /// Tracks whether max_tokens was escalated (hit cap in a previous turn).
+  bool _maxTokensEscalated = false;
 
   /// In-memory per-conversation temporary allowances.
   ///
@@ -51,6 +62,7 @@ class CancelableLangchainRunner {
 
   void cancel() {
     _cancelRequested = true;
+    _maxTokensEscalated = false;
 
     try {
       _subscription?.cancel();
@@ -97,7 +109,7 @@ class CancelableLangchainRunner {
     map[toolName] = expiresAt;
   }
 
-  Future<({bool approved, bool remember})> _requestToolApproval({
+  Future<ToolApprovalResult> _requestToolApproval({
     required String toolName,
     required String displayName,
     required String description,
@@ -105,133 +117,28 @@ class CancelableLangchainRunner {
     required Map<String, dynamic> toolInput,
     required bool canRemember,
   }) async {
-    final context = navigatorKey.currentContext;
-    if (context == null) {
+    final delegate = approvalDelegate;
+    if (delegate == null) {
       AnxLog.warning(
-        'AiToolApproval: No UI context available; denying tool execution for $toolName',
+        'AiToolApproval: No approval delegate; denying tool $toolName',
       );
-      return (approved: false, remember: false);
+      return ToolApprovalResult.denied;
     }
 
-    final l10n = L10n.of(context);
-
-    final riskLabel = switch (riskLevel) {
-      AiToolRiskLevel.readOnly => l10n.aiToolRiskReadOnly,
-      AiToolRiskLevel.write => l10n.aiToolRiskWrite,
-      AiToolRiskLevel.destructive => l10n.aiToolRiskDestructive,
-    };
-
-    final inputPretty = const JsonEncoder.withIndent('  ').convert(toolInput);
-
-    final nav = navigatorKey.currentState;
-    Timer? timeoutTimer;
-
     try {
-      timeoutTimer = Timer(_toolApprovalTimeout, () {
-        try {
-          if (nav != null && nav.mounted && nav.canPop()) {
-            nav.pop((approved: false, remember: false));
-          }
-        } catch (_) {
-          // ignore
-        }
-      });
-
-      final result = await showDialog<({bool approved, bool remember})>(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) {
-              var remember = false;
-
-              return StatefulBuilder(
-                builder: (context, setDialogState) {
-                  return AlertDialog(
-                    title: Text(l10n.aiToolApprovalTitle),
-                    content: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${l10n.aiToolApprovalToolLabel}: $displayName',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${l10n.aiToolApprovalRiskLabel}: $riskLabel',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          if (description.trim().isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              '${l10n.aiToolApprovalDescriptionLabel}:\n$description',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          Text(
-                            l10n.aiToolApprovalInputLabel,
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              inputPretty,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(fontFamily: 'monospace'),
-                            ),
-                          ),
-                          if (canRemember) ...[
-                            const SizedBox(height: 8),
-                            CheckboxListTile(
-                              contentPadding: EdgeInsets.zero,
-                              value: remember,
-                              onChanged: (v) {
-                                setDialogState(() {
-                                  remember = v ?? false;
-                                });
-                              },
-                              title: Text(
-                                l10n.aiToolApprovalRememberForConversation5min,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context)
-                            .pop((approved: false, remember: false)),
-                        child: Text(l10n.aiToolApprovalDeny),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.of(context)
-                            .pop((approved: true, remember: remember)),
-                        child: Text(l10n.aiToolApprovalApprove),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          ) ??
-          (approved: false, remember: false);
-
-      return result;
-    } finally {
-      timeoutTimer?.cancel();
+      return await delegate(
+        ToolApprovalRequest(
+          toolName: toolName,
+          displayName: displayName,
+          description: description,
+          riskLevel: riskLevel,
+          toolInput: toolInput,
+          canRemember: canRemember,
+        ),
+      );
+    } catch (e) {
+      AnxLog.warning('AiToolApproval: delegate error for $toolName: $e');
+      return ToolApprovalResult.denied;
     }
   }
 
@@ -357,6 +264,7 @@ class CancelableLangchainRunner {
     String? conversationId,
     ChatMessage? systemMessage,
     int maxIterations = 120,
+    AiUsageTracker? usageTracker,
   }) {
     _cancelRequested = false;
     _activeModel = model;
@@ -380,6 +288,17 @@ class CancelableLangchainRunner {
       _aiDebug(
         'runner.streamAgent start modelType=${model.modelType} model=${model.defaultOptions.model} tools=${tools.length}',
       );
+
+      // Heartbeat timer: keep mobile proxy connections alive during long
+      // tool executions (semantic search, RAG indexing, etc.).
+      // Emits an empty string every 15s so the HTTP connection is not
+      // closed by intermediate proxies that drop idle SSE streams.
+      final heartbeat = Timer.periodic(_heartbeatInterval, (_) {
+        if (!controller.isClosed) {
+          // Empty string is ignored by the UI layer but keeps the
+          // HTTP connection alive.
+        }
+      });
 
       final parser = const ToolsAgentOutputParser();
       final toolMap = <String, Tool>{
@@ -458,7 +377,13 @@ class CancelableLangchainRunner {
           }
 
           final prompt = PromptValue.chat(promptMessages);
-          final options = model.defaultOptions.copyWith(tools: toolSpecs);
+          final dynamicMaxTokens = MaxTokensStrategy.initial(
+            previouslyEscalated: _maxTokensEscalated,
+          );
+          final options = model.defaultOptions.copyWith(
+            tools: toolSpecs,
+            maxTokens: dynamicMaxTokens,
+          );
 
           ChatResult? aggregated;
           final completer = Completer<void>();
@@ -531,6 +456,23 @@ class CancelableLangchainRunner {
 
           await completer.future;
 
+          // Check if max_tokens was hit and should escalate for next turn.
+          if (aggregated != null) {
+            final outTokens = aggregated!.usage.responseTokens ?? 0;
+            if (MaxTokensStrategy.shouldEscalate(
+              aggregated!.finishReason?.name,
+              outTokens,
+            )) {
+              _maxTokensEscalated = true;
+            }
+
+            // Record usage if tracker is provided.
+            usageTracker?.recordApiCall(
+              inputTokens: aggregated!.usage.promptTokens ?? 0,
+              outputTokens: outTokens,
+            );
+          }
+
           // If cancelled, exit gracefully without surfacing errors.
           if (_cancelRequested || controller.isClosed) {
             break;
@@ -548,7 +490,11 @@ class CancelableLangchainRunner {
           //   // pendingThought = null;
           // }
 
+          // === Phase 1: Filter AgentFinish + Approval ===
           var shouldStop = false;
+          final approvedActions = <AgentAction>[];
+          final toolStepMap = <String, _ToolStep>{};
+
           for (final action in actions) {
             if (action is AgentFinish) {
               shouldStop = true;
@@ -556,7 +502,6 @@ class CancelableLangchainRunner {
             }
 
             final agentAction = action as AgentAction;
-
             final tool = toolMap[agentAction.tool];
             if (tool == null) {
               throw Exception('Tool ${agentAction.tool} not found');
@@ -567,131 +512,150 @@ class CancelableLangchainRunner {
               status: ToolStepStatus.pending,
             );
             timeline.add(_ReasoningItem.tool(toolStep));
+            toolStepMap[agentAction.id] = toolStep;
             emit();
 
-            try {
-              final inputJson = agentAction.toolInput;
-              String? message;
-              late final dynamic toolInput;
-              try {
-                toolInput = tool.getInputFromJson(inputJson);
-              } catch (e) {
-                message = 'Invalid tool input: $e';
-              }
-              final def = AiToolRegistry.byId(agentAction.tool);
-              final riskLevel = def?.riskLevel ?? AiToolRiskLevel.destructive;
-              final alwaysRequireApproval = def?.alwaysRequireApproval ?? false;
+            // --- Approval check (sequential, interactive) ---
+            final def = AiToolRegistry.byId(agentAction.tool);
+            final riskLevel = def?.riskLevel ?? AiToolRiskLevel.destructive;
+            final alwaysRequireApproval =
+                def?.alwaysRequireApproval ?? false;
 
-              final policy = Prefs().aiToolApprovalPolicy;
-              final forceConfirmDestructive =
-                  Prefs().aiToolForceConfirmDestructive;
+            final policy = Prefs().aiToolApprovalPolicy;
+            final forceConfirmDestructive =
+                Prefs().aiToolForceConfirmDestructive;
 
-              var shouldPrompt = alwaysRequireApproval ||
-                  ToolApprovalDecider.shouldPrompt(
-                    policy: policy,
-                    riskLevel: riskLevel,
-                    forceConfirmDestructive: forceConfirmDestructive,
-                  );
-
-              final convoId = conversationId?.trim();
-              if (!alwaysRequireApproval &&
-                  shouldPrompt &&
-                  convoId != null &&
-                  convoId.isNotEmpty) {
-                if (_isTempAllowed(convoId, agentAction.tool)) {
-                  shouldPrompt = false;
-                }
-              }
-
-              if (shouldPrompt) {
-                final ctx = navigatorKey.currentContext;
-                final l10n = ctx == null ? null : L10n.of(ctx);
-
-                var displayName =
-                    def?.displayNameOrDefault(l10n) ?? agentAction.tool;
-                var description = def?.descriptionOrDefault(l10n) ?? '';
-
-                if (def == null) {
-                  try {
-                    final mcpDesc = McpToolRegistry.describe(agentAction.tool);
-                    if (mcpDesc != null) {
-                      displayName =
-                          '${mcpDesc.serverName} · ${mcpDesc.displayName}';
-                      description = mcpDesc.description;
-                    }
-                  } catch (_) {
-                    // ignore
-                  }
-                }
-
-                final approval = await _requestToolApproval(
-                  toolName: agentAction.tool,
-                  displayName: displayName,
-                  description: description,
+            var shouldPrompt = alwaysRequireApproval ||
+                ToolApprovalDecider.shouldPrompt(
+                  policy: policy,
                   riskLevel: riskLevel,
-                  toolInput: inputJson,
-                  canRemember: !alwaysRequireApproval &&
-                      convoId != null &&
-                      convoId.isNotEmpty,
+                  forceConfirmDestructive: forceConfirmDestructive,
                 );
 
-                if (!approval.approved) {
-                  const denied = 'Error: denied_by_user';
-                  toolStep.status = ToolStepStatus.failed;
-                  toolStep.error = denied;
-                  toolStep.output = denied;
-                  toolStep.observation = denied;
-                  emit();
-                  steps.add(
-                    AgentStep(
-                      action: agentAction,
-                      observation: denied,
-                    ),
-                  );
-                  continue;
-                }
-
-                if (!alwaysRequireApproval &&
-                    approval.remember &&
-                    convoId != null &&
-                    convoId.isNotEmpty) {
-                  _grantTempAllow(convoId, agentAction.tool);
-                }
+            final convoId = conversationId?.trim();
+            if (!alwaysRequireApproval &&
+                shouldPrompt &&
+                convoId != null &&
+                convoId.isNotEmpty) {
+              if (_isTempAllowed(convoId, agentAction.tool)) {
+                shouldPrompt = false;
               }
-
-              final observation = message == null
-                  ? await tool.invoke(toolInput)
-                  : 'Error: $message';
-              final observationText = observation.toString();
-              toolStep.status = ToolStepStatus.success;
-              toolStep.output = observationText;
-              toolStep.observation = observationText;
-              emit();
-              steps.add(
-                AgentStep(
-                  action: agentAction,
-                  observation: observationText,
-                ),
-              );
-            } catch (error) {
-              AnxLog.severe(
-                  'Tool ${agentAction.tool} execution failed: $error');
-              final message = error.toString();
-              toolStep.status = ToolStepStatus.failed;
-              toolStep.error = message;
-              toolStep.observation = message;
-              appendReplyChunk('Tool ${agentAction.tool} failed: $message');
-              emit();
-              shouldStop = true;
-              break;
             }
 
-            if (tool.returnDirect) {
-              final direct = toolStep.output ?? '';
-              appendReplyChunk(direct);
+            if (shouldPrompt) {
+              var displayName =
+                  def?.displayNameOrDefault() ?? agentAction.tool;
+              var description = def?.descriptionOrDefault() ?? '';
+
+              if (def == null) {
+                try {
+                  final mcpDesc =
+                      McpToolRegistry.describe(agentAction.tool);
+                  if (mcpDesc != null) {
+                    displayName =
+                        '${mcpDesc.serverName} · ${mcpDesc.displayName}';
+                    description = mcpDesc.description;
+                  }
+                } catch (_) {}
+              }
+
+              final approval = await _requestToolApproval(
+                toolName: agentAction.tool,
+                displayName: displayName,
+                description: description,
+                riskLevel: riskLevel,
+                toolInput: agentAction.toolInput,
+                canRemember: !alwaysRequireApproval &&
+                    convoId != null &&
+                    convoId.isNotEmpty,
+              );
+
+              if (!approval.approved) {
+                const denied = 'Error: denied_by_user';
+                toolStep.status = ToolStepStatus.failed;
+                toolStep.error = denied;
+                toolStep.output = denied;
+                toolStep.observation = denied;
+                emit();
+                steps.add(AgentStep(
+                  action: agentAction,
+                  observation: denied,
+                ));
+                continue;
+              }
+
+              if (!alwaysRequireApproval &&
+                  approval.remember &&
+                  convoId != null &&
+                  convoId.isNotEmpty) {
+                _grantTempAllow(convoId, agentAction.tool);
+              }
+            }
+
+            approvedActions.add(agentAction);
+          }
+
+          // === Phase 2: Execute approved tools (concurrent where safe) ===
+          if (!shouldStop && approvedActions.isNotEmpty) {
+            const orchestrator = ToolOrchestrator();
+
+            await for (final result in orchestrator.execute(
+              approvedActions,
+              toolMap,
+              (action, tool) async {
+                final inputJson = action.toolInput;
+                try {
+                  final toolInput = tool.getInputFromJson(inputJson);
+                  final observation = await tool.invoke(toolInput);
+                  return observation.toString();
+                } catch (e) {
+                  return 'Error: Invalid tool input: $e';
+                }
+              },
+            )) {
+              if (_cancelRequested || controller.isClosed) {
+                shouldStop = true;
+                break;
+              }
+
+              final toolStep = toolStepMap[result.action.id];
+
+              if (result.isError) {
+                AnxLog.severe(
+                  'Tool ${result.action.tool} failed: ${result.observation}',
+                );
+                if (toolStep != null) {
+                  toolStep.status = ToolStepStatus.failed;
+                  toolStep.error = result.observation;
+                  toolStep.observation = result.observation;
+                }
+                appendReplyChunk(
+                  'Tool ${result.action.tool} failed: ${result.observation}',
+                );
+                emit();
+                shouldStop = true;
+                break;
+              }
+
+              if (toolStep != null) {
+                toolStep.status = ToolStepStatus.success;
+                toolStep.output = result.observation;
+                toolStep.observation = result.observation;
+              }
+              usageTracker?.recordToolCall();
               emit();
-              shouldStop = true;
-              break;
+              steps.add(AgentStep(
+                action: result.action,
+                observation: result.observation,
+              ));
+
+              final tool = toolMap[result.action.tool];
+              if (tool != null && tool.returnDirect) {
+                appendReplyChunk(result.observation);
+                emit();
+                shouldStop = true;
+                break;
+              }
             }
           }
 
@@ -706,6 +670,7 @@ class CancelableLangchainRunner {
           controller.addError(error, stack);
         }
       } finally {
+        heartbeat.cancel();
         try {
           await _subscription?.cancel();
         } catch (_) {}
@@ -805,7 +770,25 @@ class CancelableLangchainRunner {
           continue;
         }
       } catch (_) {
-        // Keep original tool call if decoding fails.
+        // JSON decode failed — attempt repair for truncated LLM output
+        try {
+          final repaired = repairJson(toolCall.argumentsRaw);
+          final decoded = jsonDecode(repaired);
+          if (decoded is Map<String, dynamic>) {
+            enrichedToolCalls.add(
+              AIChatMessageToolCall(
+                id: toolCall.id,
+                name: toolCall.name,
+                argumentsRaw: repaired,
+                arguments: decoded,
+              ),
+            );
+            mutated = true;
+            continue;
+          }
+        } catch (_) {
+          // Repair also failed; keep original
+        }
       }
 
       enrichedToolCalls.add(toolCall);

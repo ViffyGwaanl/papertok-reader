@@ -134,38 +134,81 @@
 
 ---
 
-## 4. 未来计划（按优先级拆解）
+## 4. 已完成：Agent 系统优化（2026-04-01）
+
+> 详细设计见 `docs/ai/agent_system_architecture_zh.md`
+
+已完成 13 项架构级优化，核心改动：
+
+- **Service/UI 解耦**：`CancelableLangchainRunner` 不再依赖 `flutter/material.dart`，工具审批通过 `ToolApprovalDelegate` 回调注入。
+- **场景感知工具过滤**：新增 `AiToolScene` 枚举，阅读场景从 40+ 工具降到 ~19 个，节省约 50% 工具 token。
+- **并发工具执行引擎**：`ToolOrchestrator` 实现并发/串行分区调度。
+- **CreateHighlight + CreateNote 工具**：AI 可在书内直接创建高亮和笔记。
+- **LLM 摘要式上下文压缩**：替代简单消息截断。
+- **Prompt Cache 优化**：工具按字母序排列确保跨请求缓存命中。
+- **SSE 心跳**：15s 周期，防止移动端代理断连。
+- **JSON 修复层**：容错处理 LLM 截断 JSON。
+- **Token/成本追踪器**：含 5 家模型定价表。
+- **标注台账**：追踪 AI 创建的高亮/笔记，注入 system prompt 防重复。
+
+新增文件 14 个，修改核心文件 4 个。
+
+---
+
+## 5. 未来计划（按优先级拆解）
 
 ### P0：稳定性与可观测性
 
 - 为 streaming session 增加更明确的可观测 UI（例如 minimized bar 上的 generating 状态、可停止入口、错误提示）。
 - 增加 1 个关键 widget test：验证 edit+regen 生成分支后切回旧 variant 会恢复旧子树。
 
+### P1：Agent 系统集成（优化模块接入主流程）
+
+已完成的 Agent 优化模块需要逐步接入主流程：
+
+- **ToolOrchestrator → streamAgent**：替换现有顺序执行逻辑，启用并发工具调度。
+- **ConversationCompressor → PromptBudgetingService**：token 超阈值时自动压缩。
+- **BookContentCache → chapter content tools**：同一章节重复读取时跳过内容传输。
+- **AiUsageTracker → AI 面板 UI**：在面板底部显示 token 和成本。
+- **AnnotationLedger → system prompt**：在 create_highlight/create_note 后更新 ledger 并注入 prompt。
+
 ### P1：Thinking 内容策略（当前结论：不做提示词兜底）
 
 - 策略：**只展示供应商返回的思考数据**（`reasoning_content` / `reasoning` / Anthropic thinking / Gemini thoughts）。
-- 不做：通过提示词生成“兜底摘要”（避免误导用户、避免泄露/伪造思考内容）。
+- 不做：通过提示词生成”兜底摘要”（避免误导用户、避免泄露/伪造思考内容）。
 
-> 如果未来确实需要“可控的思考摘要”，建议做成独立字段（例如 `analysis_summary`），并明确标注“摘要/非原始思考”。
+> 如果未来确实需要”可控的思考摘要”，建议做成独立字段（例如 `analysis_summary`），并明确标注”摘要/非原始思考”。
 
 ### P1：AI 翻译体验（EPUB/PDF）
 
 来自既有设计文档（仍有效）：
 
-- 选中翻译：保留“翻译 + 讲解/词汇/注释”。
-- 全文翻译：新增 `translate_fulltext` prompt，严格“只输出译文”。
+- 选中翻译：保留”翻译 + 讲解/词汇/注释”。
+- 全文翻译：新增 `translate_fulltext` prompt，严格”只输出译文”。
 - 长文本 chunking/长度上限，降低超时与失败率。
 - PDF：默认引导用户用选中翻译；必要时对全文翻译加提示或默认关闭。
 
 ### P2：PDF 章节化与 OCR（MinerU）
 
-- PDF outline 存在时：按 outline item 的页范围组合“章节内容”（多页拼接 + maxChars 截断）。
-- outline 缺失时：采用 page-window（当前页 ±N 页）作为“chapter-like context”。
+- PDF outline 存在时：按 outline item 的页范围组合”章节内容”（多页拼接 + maxChars 截断）。
+- outline 缺失时：采用 page-window（当前页 ±N 页）作为”chapter-like context”。
 - 扫描版 PDF：集成 MinerU OCR，做缓存与状态机（not_started/processing/ready/failed），文本层不足时自动 fallback。
+
+### P3：高级 Agent 能力
+
+- **Sub-Agent 系统**：主 Agent 可生成轻量子 Agent（explore / summarize / verify）。
+- **Skills 系统**：可安装提示模板（paper_analyzer, flashcard_generator, debate_partner）。
+- **Web Search Tool**：基于搜索引擎的 web_search，可配置学术 API。
+
+### P4：差异化功能
+
+- **研讨会模式**：多视角 AI 讨论（借鉴 OpenMAIC Director-Agent 架构）。
+- **KAIROS 主动阅读助手**：监听阅读进度，主动提供辅助。
+- **离线 Embedding**：集成本地 embedding 模型。
 
 ---
 
-## 5. 分支策略（为何分这么多分支，以及后续建议）
+## 6. 分支策略（为何分这么多分支，以及后续建议）
 
 当前策略是典型的“PR 栈 + 集成分支验收”：
 
@@ -178,7 +221,7 @@
 
 ---
 
-## 6. 开发者注意事项
+## 7. 开发者注意事项
 
 - repo 忽略生成文件（`*.g.dart`, `*.freezed.dart`, `lib/gen/` 等），切分支后必须：
 
@@ -190,7 +233,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 ---
 
-## 7. 推荐验收清单（最小闭环）
+## 8. 推荐验收清单（最小闭环）
 
 1) 阅读页：生成中最小化 → 翻页阅读 → 展开 → 生成不断。
 2) stop 按钮：立即停止（不会假停）。

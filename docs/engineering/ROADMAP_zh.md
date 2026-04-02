@@ -93,6 +93,19 @@
 
 证据：PR `https://github.com/ViffyGwaanl/papertok-reader/pull/7`；TestFlight `1.68.5 (6376)`
 
+### 1.8 AI Agent 系统优化（2026-04-01）
+
+> 详细设计见 `docs/ai/agent_system_architecture_zh.md`
+
+- Service/UI 解耦：`CancelableLangchainRunner` 不再依赖 `flutter/material.dart`
+- 场景感知工具过滤：`AiToolScene` 枚举，按阅读/书架场景减少工具 token ~50%
+- 工具字母序排列：稳定 prompt cache 命中
+- 并发工具执行引擎：`ToolOrchestrator`（isConcurrencySafe 分区调度）
+- CreateHighlightTool + CreateNoteTool：AI 书内标注写工具
+- LLM 摘要式上下文压缩：替代简单消息截断
+- SSE 心跳 15s：防移动端代理断连
+- JSON 修复层 / 标注台账 / Token 成本追踪 / 动态 max_tokens / 章节缓存
+
 ---
 
 ## 2. 下一阶段
@@ -152,3 +165,6 @@
 - 翻译失败诊断再增强
 - 命名第二阶段 / 高风险 rename 预研
 - 桌面端适配与 packaging 验证
+- **Agent 系统集成**：将已完成的优化模块（ToolOrchestrator / ConversationCompressor / BookContentCache / AiUsageTracker / AnnotationLedger）接入主 agent loop
+- **Sub-Agent 系统**：explore / summarize / verify 子 Agent
+- **Skills 系统**：可安装提示模板（论文分析 / 抽认卡 / 辩论伙伴）

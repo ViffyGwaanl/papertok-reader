@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/providers/current_reading.dart';
+import 'package:anx_reader/service/ai/book_content_cache.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/text/word_count.dart';
 import 'package:riverpod/riverpod.dart';
@@ -13,8 +15,9 @@ class ChapterContentByHrefTool
     extends RepositoryTool<ChapterContentByHrefInput, Map<String, dynamic>> {
   ChapterContentByHrefTool(
     this._ref,
-    this._repository,
-  ) : super(
+    this._repository, {
+    this.cache,
+  }) : super(
           name: 'chapter_content_by_href',
           description:
               'Retrieve the plain-text body of a specific chapter when you already know its TOC href. Use this to quote or analyse a particular section without changing the current reading position. Returns the chapter text trimmed to the requested length.',
@@ -39,6 +42,7 @@ class ChapterContentByHrefTool
 
   final Ref _ref;
   final ChapterContentRepository _repository;
+  final BookContentCache? cache;
 
   @override
   ChapterContentByHrefInput parseInput(Map<String, dynamic> json) {
@@ -52,6 +56,28 @@ class ChapterContentByHrefTool
       href: input.href,
       maxCharacters: input.maxCharacters,
     );
+
+    // Cache optimization: if content hasn't changed since last fetch,
+    // return a short marker instead of the full text to save tokens.
+    final bookId =
+        _ref.read(currentReadingProvider).book?.id?.toString() ?? '';
+    if (cache != null && bookId.isNotEmpty) {
+      if (cache!.isUnchanged(bookId, input.href, content)) {
+        final stats = TextStats.fromText(content);
+        return {
+          'content': '[unchanged since last read]',
+          'cached': true,
+          'href': input.href,
+          'stats': {
+            'characters': stats.characters,
+            'nonWhitespaceCharacters': stats.nonWhitespaceCharacters,
+            'estimatedWords': stats.estimatedWords,
+          },
+        };
+      }
+      cache!.put(bookId, input.href, content);
+    }
+
     final stats = TextStats.fromText(content);
     return {
       'content': content,
@@ -71,5 +97,6 @@ final AiToolDefinition chapterContentByHrefToolDefinition = AiToolDefinition(
   build: (context) => ChapterContentByHrefTool(
     context.ref,
     const ChapterContentRepository(),
+    cache: context.bookContentCache,
   ).tool,
 );

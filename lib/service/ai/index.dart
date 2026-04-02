@@ -8,22 +8,43 @@ import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/models/ai_api_key_entry.dart';
 import 'package:anx_reader/service/ai/langchain_ai_config.dart';
 import 'package:anx_reader/service/ai/langchain_registry.dart';
+import 'package:anx_reader/service/ai/ai_usage_tracker.dart';
+import 'package:anx_reader/service/ai/conversation_compressor.dart';
 import 'package:anx_reader/service/ai/langchain_runner.dart';
+import 'package:anx_reader/service/ai/tool_approval_delegate.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/service/ai/api_key_rotation.dart';
 import 'package:anx_reader/service/mcp/mcp_client_service.dart';
+import 'package:anx_reader/widgets/ai/tool_approval_dialog.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
 
 enum AiRequestScope { chat, translate, imageAnalysis }
 
-final CancelableLangchainRunner _chatRunner = CancelableLangchainRunner();
+final CancelableLangchainRunner _chatRunner = CancelableLangchainRunner(
+  approvalDelegate: buildToolApprovalDialogDelegate(),
+);
 final CancelableLangchainRunner _translationRunner =
     CancelableLangchainRunner();
 final CancelableLangchainRunner _imageAnalysisRunner =
     CancelableLangchainRunner();
+
+/// Session-level usage trackers (keyed by conversationId).
+final Map<String, AiUsageTracker> _sessionTrackers = {};
+
+/// Session-level compression failure counts.
+final Map<String, int> _compressionFailures = {};
+
+const _compressor = ConversationCompressor();
+
+AiUsageTracker _trackerForSession(String? id) =>
+    _sessionTrackers.putIfAbsent(id ?? '', () => AiUsageTracker());
+
+/// Returns the usage tracker for a conversation (for UI display).
+AiUsageTracker? getUsageTracker(String? conversationId) =>
+    _sessionTrackers[conversationId ?? ''];
 
 CancelableLangchainRunner _runnerForScope(AiRequestScope scope) {
   return switch (scope) {
@@ -328,6 +349,41 @@ Stream<String> _generateStream({
           ? sanitizedMessages.sublist(0, inputIndex).toList(growable: false)
           : const <ChatMessage>[];
 
+      // Conversation compression: if context usage > 85%, summarise old
+      // messages via LLM before sending. Falls back to truncation after
+      // 3 consecutive failures.
+      if (historyMessages.length > ConversationCompressor.keepRecentMessages + 2) {
+        final convoId = conversationId ?? '';
+        final failures = _compressionFailures[convoId] ?? 0;
+        final estimated = historyMessages.fold<int>(
+          0,
+          (sum, m) => sum + (m.contentAsString.length ~/ 4) + 24,
+        );
+
+        if (_compressor.shouldCompress(
+          estimatedTokens: estimated,
+          contextWindowSize: 128000,
+          consecutiveFailures: failures,
+        )) {
+          try {
+            final result = await _compressor.compress(
+              messages: historyMessages,
+              model: model,
+            );
+            if (result.compressed) {
+              _compressionFailures[convoId] = 0;
+            } else {
+              _compressionFailures[convoId] = failures + 1;
+            }
+          } catch (e) {
+            AnxLog.warning('ConversationCompressor failed: $e');
+            _compressionFailures[convoId] = failures + 1;
+          }
+        }
+      }
+
+      final tracker = _trackerForSession(conversationId);
+
       stream = runner.streamAgent(
         model: model,
         tools: tools,
@@ -335,6 +391,7 @@ Stream<String> _generateStream({
         inputMessage: inputMessage,
         conversationId: conversationId,
         systemMessage: pipeline.systemMessage,
+        usageTracker: tracker,
       );
     } else {
       final prompt = PromptValue.chat(sanitizedMessages);
