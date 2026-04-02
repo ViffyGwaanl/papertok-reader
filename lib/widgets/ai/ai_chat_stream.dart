@@ -607,8 +607,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               child: Row(
                 children: [
                   Icon(
-                    IconData(skill.iconCodePoint ?? 0xe14c,
-                        fontFamily: 'MaterialIcons'),
+                    Icons.auto_fix_high,
                     size: 16,
                     color: selected
                         ? Theme.of(context).colorScheme.primary

@@ -377,12 +377,8 @@ class CancelableLangchainRunner {
           }
 
           final prompt = PromptValue.chat(promptMessages);
-          final dynamicMaxTokens = MaxTokensStrategy.initial(
-            previouslyEscalated: _maxTokensEscalated,
-          );
           final options = model.defaultOptions.copyWith(
             tools: toolSpecs,
-            maxTokens: dynamicMaxTokens,
           );
 
           ChatResult? aggregated;

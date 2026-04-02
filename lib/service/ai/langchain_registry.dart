@@ -5,6 +5,7 @@ import 'package:anx_reader/enums/ai_thinking_mode.dart';
 import 'package:anx_reader/enums/ai_tool_scene.dart';
 import 'package:anx_reader/providers/current_reading.dart';
 import 'package:anx_reader/service/ai/annotation_ledger.dart';
+import 'package:anx_reader/service/ai/skills/ai_skill.dart';
 import 'package:anx_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/service/mcp/mcp_tool_registry.dart';

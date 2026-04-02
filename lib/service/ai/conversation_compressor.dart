@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:langchain_core/chat_models.dart';
+import 'package:langchain_core/prompts.dart';
 
 /// LLM-based conversation compressor.
 ///

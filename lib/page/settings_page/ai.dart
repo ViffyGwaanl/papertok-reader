@@ -579,9 +579,8 @@ class _AISettingsState extends ConsumerState<AISettings> {
               ...skills.map((skill) {
                 final isSelected = skill.id == activeId;
                 return ListTile(
-                  leading: Icon(
-                    IconData(skill.iconCodePoint ?? 0xe14c,
-                        fontFamily: 'MaterialIcons'),
+                  leading: const Icon(
+                    Icons.auto_fix_high,
                     size: 20,
                   ),
                   title: Text(skill.name),
