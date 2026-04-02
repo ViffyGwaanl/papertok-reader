@@ -30,6 +30,7 @@ abstract class BgimgModel with _$BgimgModel {
           'http://127.0.0.1:${Server().port}/bgimg/assets/$path',
         BgimgType.localFile =>
           'http://127.0.0.1:${Server().port}/bgimg/local/$path',
+        _ => 'none',
       };
 
   String? get nightUrl => switch (type) {
@@ -40,6 +41,7 @@ abstract class BgimgModel with _$BgimgModel {
         BgimgType.localFile => nightPath != null
             ? 'http://127.0.0.1:${Server().port}/bgimg/local/$nightPath'
             : null,
+        _ => null,
       };
 
   /// Get the effective URL based on user selection and auto-adjust settings

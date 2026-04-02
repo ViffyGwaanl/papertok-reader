@@ -460,6 +460,7 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
                   BgimgType.none => buildNoneBgimgItem(model),
                   BgimgType.assets => buildAssetBgimgItem(model),
                   BgimgType.localFile => buildLocalFileBgimgItem(model),
+                  _ => buildNoneBgimgItem(model),
                 };
 
                 if (!isSelected) return item;
