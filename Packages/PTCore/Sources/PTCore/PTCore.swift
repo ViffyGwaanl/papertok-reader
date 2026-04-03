@@ -1,5 +1,5 @@
 // PTCore — Foundation layer for PaperTok Reader
 // Models, Database (GRDB), Configuration, Utilities
-public enum PTCore {
-    public static let version = "1.0.0"
-}
+
+// Re-export GRDB so downstream packages don't need direct dependency
+@_exported import GRDB
