@@ -1,0 +1,398 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		CB66BCFC24B2225513FEF061 /* PTFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = 6490B3DAD3DCE4DA661D2073 /* PTFeatures */; };
+		D8C42A5C3B426F4EC9C08B6E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */; };
+		F4DE2A562D39504688C24219 /* PaperTokReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperTokReaderApp.swift; sourceTree = "<group>"; };
+		4824BE6D93A2616F2F32B276 /* PTAIServices */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTAIServices; path = Packages/PTAIServices; sourceTree = SOURCE_ROOT; };
+		5C149D74800FC04E5B18E905 /* PTCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTCore; path = Packages/PTCore; sourceTree = SOURCE_ROOT; };
+		604B4E3AA86ABCDE3CEA46D4 /* PTUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTUI; path = Packages/PTUI; sourceTree = SOURCE_ROOT; };
+		70D02DF88F155D7FA350EC22 /* iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iOS.entitlements; sourceTree = "<group>"; };
+		863356412F60909A9DC3ABC8 /* PTFeatures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTFeatures; path = Packages/PTFeatures; sourceTree = SOURCE_ROOT; };
+		87B6C89B78CD691E6F537DD6 /* PaperTokReader.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PaperTokReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8CF0D2E8755DA12A1CCDAFA1 /* PTReader */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTReader; path = Packages/PTReader; sourceTree = SOURCE_ROOT; };
+		AF03DC7DEB141E9D534F0E42 /* PTNetworking */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTNetworking; path = Packages/PTNetworking; sourceTree = SOURCE_ROOT; };
+		BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		E2F6707A5F804C9C2CF422F6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E8C985935F257D966B849C63 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CB66BCFC24B2225513FEF061 /* PTFeatures in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		033B8F7C661A83E67AEE42AF /* App */ = {
+			isa = PBXGroup;
+			children = (
+				32F6FEE50A87BA86E3FE04FD /* Entitlements */,
+				096A66DD39E7074A72EDA28C /* Resources */,
+				BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */,
+				E2F6707A5F804C9C2CF422F6 /* Info.plist */,
+				06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		096A66DD39E7074A72EDA28C /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		32F6FEE50A87BA86E3FE04FD /* Entitlements */ = {
+			isa = PBXGroup;
+			children = (
+				70D02DF88F155D7FA350EC22 /* iOS.entitlements */,
+			);
+			path = Entitlements;
+			sourceTree = "<group>";
+		};
+		6D72FF44B6FDCDA08E282DBD /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				4824BE6D93A2616F2F32B276 /* PTAIServices */,
+				5C149D74800FC04E5B18E905 /* PTCore */,
+				863356412F60909A9DC3ABC8 /* PTFeatures */,
+				AF03DC7DEB141E9D534F0E42 /* PTNetworking */,
+				8CF0D2E8755DA12A1CCDAFA1 /* PTReader */,
+				604B4E3AA86ABCDE3CEA46D4 /* PTUI */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		ACD80EDE6F6FE221193C6115 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				87B6C89B78CD691E6F537DD6 /* PaperTokReader.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D290F9E4B9309C79DBA2342A = {
+			isa = PBXGroup;
+			children = (
+				033B8F7C661A83E67AEE42AF /* App */,
+				6D72FF44B6FDCDA08E282DBD /* Packages */,
+				ACD80EDE6F6FE221193C6115 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		87ED3D597865A04AC682D619 /* PaperTokReader */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C2155364AD03FB300AFB35FC /* Build configuration list for PBXNativeTarget "PaperTokReader" */;
+			buildPhases = (
+				B0C10B0557F1AF95F4D0448D /* Sources */,
+				E8C985935F257D966B849C63 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PaperTokReader;
+			packageProductDependencies = (
+				6490B3DAD3DCE4DA661D2073 /* PTFeatures */,
+			);
+			productName = PaperTokReader;
+			productReference = 87B6C89B78CD691E6F537DD6 /* PaperTokReader.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		33662AE9AC2B17B434834CC3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					87ED3D597865A04AC682D619 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 757FCD3C5FD34B33C73670E8 /* Build configuration list for PBXProject "PaperTokReader" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = D290F9E4B9309C79DBA2342A;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "Packages/PTAIServices" */,
+				7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "Packages/PTCore" */,
+				A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "Packages/PTFeatures" */,
+				9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "Packages/PTNetworking" */,
+				D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "Packages/PTReader" */,
+				A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "Packages/PTUI" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = ACD80EDE6F6FE221193C6115 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				87ED3D597865A04AC682D619 /* PaperTokReader */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B0C10B0557F1AF95F4D0448D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D8C42A5C3B426F4EC9C08B6E /* ContentView.swift in Sources */,
+				F4DE2A562D39504688C24219 /* PaperTokReaderApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3A4652D780F76F37A5B39B3D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Entitlements/iOS.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader;
+				SDKROOT = iphoneos;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		49221ADF31CAEAACD4621B8D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "PaperTok Reader";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		B515E80232492C03E58BE581 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Entitlements/iOS.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader;
+				SDKROOT = iphoneos;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D2254A4ABAF651FD7DFD03E6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "PaperTok Reader";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		757FCD3C5FD34B33C73670E8 /* Build configuration list for PBXProject "PaperTokReader" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D2254A4ABAF651FD7DFD03E6 /* Debug */,
+				49221ADF31CAEAACD4621B8D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C2155364AD03FB300AFB35FC /* Build configuration list for PBXNativeTarget "PaperTokReader" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B515E80232492C03E58BE581 /* Debug */,
+				3A4652D780F76F37A5B39B3D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "Packages/PTCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PTCore;
+		};
+		93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "Packages/PTAIServices" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PTAIServices;
+		};
+		9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "Packages/PTNetworking" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PTNetworking;
+		};
+		A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "Packages/PTUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PTUI;
+		};
+		A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "Packages/PTFeatures" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PTFeatures;
+		};
+		D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "Packages/PTReader" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PTReader;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6490B3DAD3DCE4DA661D2073 /* PTFeatures */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PTFeatures;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 33662AE9AC2B17B434834CC3 /* Project object */;
+}
