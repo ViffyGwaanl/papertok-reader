@@ -9,12 +9,14 @@
 /* Begin PBXBuildFile section */
 		CB66BCFC24B2225513FEF061 /* PTFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = 6490B3DAD3DCE4DA661D2073 /* PTFeatures */; };
 		D8C42A5C3B426F4EC9C08B6E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */; };
+		F05D22F0737E20049C96F4EB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 49A45489E1D974DD57F2F390 /* Assets.xcassets */; };
 		F4DE2A562D39504688C24219 /* PaperTokReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperTokReaderApp.swift; sourceTree = "<group>"; };
 		4824BE6D93A2616F2F32B276 /* PTAIServices */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTAIServices; path = Packages/PTAIServices; sourceTree = SOURCE_ROOT; };
+		49A45489E1D974DD57F2F390 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5C149D74800FC04E5B18E905 /* PTCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTCore; path = Packages/PTCore; sourceTree = SOURCE_ROOT; };
 		604B4E3AA86ABCDE3CEA46D4 /* PTUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTUI; path = Packages/PTUI; sourceTree = SOURCE_ROOT; };
 		70D02DF88F155D7FA350EC22 /* iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iOS.entitlements; sourceTree = "<group>"; };
@@ -53,6 +55,7 @@
 		096A66DD39E7074A72EDA28C /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				49A45489E1D974DD57F2F390 /* Assets.xcassets */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -103,6 +106,7 @@
 			buildConfigurationList = C2155364AD03FB300AFB35FC /* Build configuration list for PBXNativeTarget "PaperTokReader" */;
 			buildPhases = (
 				B0C10B0557F1AF95F4D0448D /* Sources */,
+				BB0E970321E22F5560CF4EAB /* Resources */,
 				E8C985935F257D966B849C63 /* Frameworks */,
 			);
 			buildRules = (
@@ -158,6 +162,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BB0E970321E22F5560CF4EAB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F05D22F0737E20049C96F4EB /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		B0C10B0557F1AF95F4D0448D /* Sources */ = {
