@@ -4,7 +4,7 @@
 >
 > 集成验收分支：`main`（产品仓库 `ViffyGwaanl/papertok-reader`）
 >
-> 最新 TestFlight：build 6403（v1.68.6，2026-04-02）
+> 最新 TestFlight：build 6404（v1.68.7，2026-04-03）
 
 ---
 
@@ -237,6 +237,8 @@ zh.arb（`locale: zh`）此前缺失了多个 Phase 0-3 已在 zh-CN.arb 中存�
 其他清理：
 - 移除 `langchain_runner.dart` 中残留的注释掉的旧 thinking-mode 代码
 - `contextWindowSize` 从硬编码 128000 改为从 `config.maxTokens` 读取（fallback 128K）
+
+已发布 TestFlight build 6404（v1.68.7）。
 
 ---
 

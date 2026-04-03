@@ -1,6 +1,6 @@
 # PaperTok Reader — AI Agent 系统架构与优化记录
 
-> 更新时间：2026-04-02
+> 更新时间：2026-04-03
 > 状态：Phase 0-4 已完成（含设置 UI + L10n + Bug 修复），Phase 5 计划中
 
 ---
