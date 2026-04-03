@@ -90,7 +90,7 @@ PaperTokReader/
 │   │   │   ├── Tools/                     # 76 个 AI 工具 + 编排器
 │   │   │   ├── RAG/                       # Embeddings、向量搜索、索引
 │   │   │   ├── Memory/                    # MemoryStore、摘要、搜索
-│   │   │   ├── Translation/              # AI/DeepL/Google/Microsoft 翻译器
+│   │   │   ├── Translation/              # AI 翻译器
 │   │   │   ├── Skills/                    # Skill 注册表、内置 Skill
 │   │   │   ├── SubAgent/                  # 子 Agent 运行器
 │   │   │   └── MCP/                       # MCP 客户端、JSON-RPC、工具注册表
@@ -153,54 +153,54 @@ App
 Schema 版本 7，与 Flutter SQLite Schema 完全一致，实现零成本数据迁移：
 
 **数据表：**
-| 表名 | 主键 | 描述 |
-|------|------|------|
-| tb_books | id（自增） | 书籍元数据、文件路径、阅读进度、封面 |
-| tb_notes | id（自增） | 划线、书签、笔记（含 CFI 位置） |
+| 数据表 | 主键 | 描述 |
+|--------|------|------|
+| tb_books | id（自增） | 书籍元数据、文件路径、进度、封面 |
+| tb_notes | id（自增） | 高亮、书签、笔记及 CFI 位置信息 |
 | tb_themes | id（自增） | 阅读主题（背景色/文字颜色） |
-| tb_styles | id（自增） | 阅读样式（字体、边距、行距） |
+| tb_styles | id（自增） | 阅读样式（字体、边距、间距） |
 | tb_reading_time | id（自增） | 每日阅读时长记录 |
 | tb_tags | id（自增） | 书籍标签/分类 |
 | tb_groups | id（自增） | 书架文件夹层级（parent_id 外键） |
 
 AI 相关附加表：
-| 表名 | 描述 |
-|------|------|
-| ai_conversations | 对话树 v2（每条对话存储为 JSON Blob） |
+| 数据表 | 描述 |
+|--------|------|
+| ai_conversations | 对话树 v2（每个对话存储 JSON blob） |
 | ai_embeddings | RAG 向量嵌入（book_id、chunk_id、vector BLOB） |
 | ai_memory_index | 记忆搜索索引（文本 + 嵌入向量） |
 
 **迁移策略：**
-- 使用 DatabaseMigrator，按编号执行 v1–v7 迁移
-- 后续迁移从 v8 起递增
-- 从 Flutter 升级的用户：将 `anx_reader.db` 复制到 Swift App 容器，运行待执行迁移即可
+- 使用 DatabaseMigrator 进行编号迁移 v1–v7
+- 未来迁移从 v8 开始递增
+- 从 Flutter 升级的用户：将 `anx_reader.db` 复制到 Swift 应用容器，运行待执行的迁移
 
 ### 4.2 数据模型
 
 所有模型均为 Swift 结构体，遵循 `Codable`、`FetchableRecord`、`PersistableRecord`、`Identifiable`、`Sendable` 协议。
 
-**核心模型（对应 44 个 Dart 模型）：**
+**核心模型（从 44 个 Dart 模型映射）：**
 - `Book` — 元数据、文件路径、阅读进度
-- `BookNote` — 含 CFI、颜色、类型（划线/书签/笔记）的批注
+- `BookNote` — 标注，含 CFI、颜色、类型（高亮/书签/笔记）
 - `ReadingTime` — 每日时长追踪
 - `Tag`、`BookTag` — 分类标签
 - `TbGroup` — 书架文件夹层级
-- `ReadTheme` — 视觉主题（配色）
-- `BookStyle` — 单书阅读偏好（字体、边距、行距）
-- `AiConversation` — 带分支的对话树 v2
-- `AiMessage` — 单条消息（含角色、内容、工具调用、思考过程）
-- `AiProviderConfig` — Provider 配置（端点、API Key、模型列表）
+- `ReadTheme` — 视觉主题（颜色）
+- `BookStyle` — 每本书的阅读偏好（字体、边距、间距）
+- `AiConversation` — 对话树 v2，支持分支
+- `AiMessage` — 单条消息，含角色、内容、工具调用、思考过程
+- `AiProviderConfig` — Provider 配置（端点、API 密钥、模型）
 - `AiToolApproval` — 每个工具的审批策略
 - `AttachmentItem` — 多模态附件（图片/文本，base64/路径）
 - `SyncState` — WebDAV 同步状态
 - `PaperTokPaper` — 学术论文元数据
-- `ChapterSplitRule` — 自定义章节分割正则规则
+- `ChapterSplitRule` — 自定义章节边界正则表达式
 - `SharePromptPreset` — 分享路由预设
 
 ### 4.3 配置
 
 ```swift
-// 通过 AppStorage + App Group UserDefaults 进行全局配置
+// 通过 AppStorage + App Group UserDefaults 实现全局配置
 enum AppConfig {
     static let suiteName = "group.ai.papertok.paperreader"
     static let defaults = UserDefaults(suiteName: suiteName)!
@@ -218,13 +218,13 @@ enum AppConfig {
     // 同步设置
     @AppStorage("webdav_url", store: defaults) static var webdavURL = ""
     @AppStorage("webdav_username", store: defaults) static var webdavUsername = ""
-    // API Key 存储在 Keychain 中，而非 UserDefaults
+    // API 密钥存储在 Keychain 中，不存储在 UserDefaults 中
 }
 ```
 
 ### 4.4 Keychain
 
-API Key 存储在 iOS/macOS Keychain 中（替代 Flutter 的加密 SharedPreferences）：
+API 密钥存储在 iOS/macOS Keychain 中（替代 Flutter 的加密 SharedPreferences）：
 ```swift
 struct KeychainService {
     static func save(key: String, value: String) throws
@@ -235,15 +235,15 @@ struct KeychainService {
 
 ### 4.5 状态管理
 
-用 `@Observable`（Observation 框架，iOS 17+）替代 Riverpod：
+使用 `@Observable`（Observation 框架，iOS 17+）替代 Riverpod：
 
 | Flutter（Riverpod） | Swift（@Observable） |
-|---------------------|----------------------|
+|---------------------|---------------------|
 | `StateNotifierProvider` | `@Observable class ViewModel` |
 | `FutureProvider` | ViewModel 中的 `async func` |
 | `StreamProvider` | `AsyncSequence` / `AsyncStream` |
 | `ref.watch()` | SwiftUI 自动追踪 `@Observable` 属性 |
-| `ref.read()` | 直接访问属性 |
+| `ref.read()` | 直接属性访问 |
 | `ProviderScope` | `@Environment` + `.environment()` 修饰符 |
 
 通过 SwiftUI Environment 进行依赖注入：
@@ -303,9 +303,9 @@ struct SSEParser {
 ```
 
 功能特性：
-- 15 秒心跳检测（防止代理断连）
-- JSON 修复层，处理 LLM 输出截断问题
-- 基于 last-event-id 的自动重连
+- 15 秒心跳检测（防止代理断开连接）
+- JSON 修复层，处理 LLM 截断输出
+- 自动重连，携带 last-event-id
 
 ### 5.3 WebDAV 客户端
 
@@ -317,7 +317,7 @@ actor WebDAVClient {
     func delete(path: String) async throws
     func mkcol(path: String) async throws
     
-    // 鉴权
+    // 认证方式
     enum Auth {
         case basic(user: String, password: String)
         case digest(user: String, password: String, realm: String, nonce: String)
@@ -326,9 +326,9 @@ actor WebDAVClient {
 ```
 
 同步策略：
-- AI 设置快照：整文件以时间戳比较，较新者覆盖旧者
+- AI 设置快照：整文件以较新时间戳为准（时间戳比较）
 - 同步载荷中排除 `api_key`
-- 触发时机：App 进入后台/前台、手动触发
+- 同步触发时机：应用前后台切换、手动触发
 
 ### 5.4 PaperTok API 客户端
 
@@ -351,7 +351,7 @@ struct PaperTokAPI {
 
 - `ReadiumShared` — 核心模型（Publication、Locator、Link）
 - `ReadiumStreamer` — 出版物解析（EPUB/PDF）
-- `ReadiumNavigator` — 渲染（EPUBNavigatorViewController、PDFNavigatorViewController）
+- `ReadiumNavigator` — 渲染引擎（EPUBNavigatorViewController、PDFNavigatorViewController）
 - `ReadiumOPDS` — 可选，用于 OPDS 目录支持
 
 ### 6.2 阅读引擎
@@ -364,7 +364,7 @@ final class ReaderEngine {
     var readingProgress: Double
     var tableOfContents: [Link]
     
-    // Navigator（UIKit，桥接至 SwiftUI）
+    // 导航器（UIKit，桥接至 SwiftUI）
     let epubNavigator: EPUBNavigatorViewController
     // 或
     let pdfNavigator: PDFNavigatorViewController
@@ -379,15 +379,15 @@ final class ReaderEngine {
 | 打开 PDF | Streamer.open(asset:) → Publication |
 | 页面导航 | Navigator.go(to: Locator) |
 | 当前位置 | Navigator.currentLocation → Locator |
-| 阅读进度 | Locator.locations.totalProgression |
+| 进度 | Locator.locations.totalProgression |
 | 目录 | Publication.tableOfContents |
 | 全文搜索 | Publication.search(query:) → SearchIterator |
-| 文字选中 | Navigator.delegate（选中回调） |
-| 划线高亮 | DecorationStyle + Navigator.apply(decorations:) |
-| 书签 | 将 Locator 保存至数据库 |
-| 自定义 CSS | EPUBPreferences（字体大小、字体族、主题、边距等） |
+| 文本选择 | Navigator.delegate（选择回调） |
+| 高亮 | DecorationStyle + Navigator.apply(decorations:) |
+| 书签 | 将 Locator 保存到数据库 |
+| 自定义 CSS | EPUBPreferences（字号、字体、主题、边距等） |
 | 图片 | Navigator delegate 处理图片点击事件 |
-| CFI 支持 | Locator 的 locations 中包含 EPUB CFI |
+| CFI 支持 | Locator 在 locations 中包含 EPUB CFI |
 | 双页/滚动模式 | EPUBPreferences.scroll、.spread |
 
 ### 6.4 SwiftUI 桥接
@@ -408,9 +408,32 @@ struct PDFReaderView: UIViewControllerRepresentable {
 }
 ```
 
-### 6.5 TTS（文字转语音）
+### 6.5 PDF 增强内容桥接（新增）
 
-用原生方案替代 Flutter 的 `flutter_tts` + `audio_service`：
+```swift
+// 统一内容访问接口，适用于 EPUB 和 PDF
+protocol BookContentBridge: Sendable {
+    func extractChapterContent(href: String) async throws -> String
+    func extractFullText() async throws -> String
+    func searchContent(query: String) async throws -> [ContentSearchResult]
+}
+
+// PDF 专用实现
+struct PDFContentBridge: BookContentBridge {
+    let document: PDFDocument                     // PDFKit
+    
+    func extractPageText(page: Int) -> String     // PDFPage.string
+    func extractFullText() async throws -> String // 所有页面文本拼接
+    func ocrPage(page: Int) async throws -> String // Vision VNRecognizeTextRequest 用于扫描版 PDF
+    func segmentByOutline() -> [PDFChapter]       // 按 PDF 书签/大纲拆分
+}
+```
+
+PDF 内容现在可供所有 AI 工具、RAG 索引和翻译功能使用 — 与 EPUB 完全一致。
+
+### 6.6 TTS（文本转语音）
+
+使用原生方案替代 Flutter 的 `flutter_tts` + `audio_service`：
 ```swift
 @Observable final class TTSService {
     private let synthesizer = AVSpeechSynthesizer()
@@ -420,7 +443,7 @@ struct PDFReaderView: UIViewControllerRepresentable {
     func resume()
     func stop()
     
-    // 锁屏 / 控制中心的 NowPlayingInfo
+    // 更新锁屏/控制中心的 NowPlayingInfo
     private func updateNowPlaying()
 }
 ```
@@ -464,13 +487,13 @@ struct ChatStreamChunk {
 
 ### 7.2 Provider 实现
 
-| Provider | 主要特性 |
+| Provider | 主要功能 |
 |----------|----------|
-| `OpenAIProvider` | GPT-4o/4，工具调用，视觉，流式输出 |
-| `AnthropicProvider` | Claude，扩展思考（thinking blocks），流式输出 |
-| `GeminiProvider` | Gemini，includeThoughts 开关，流式输出 |
-| `VolcengineArkProvider` | 火山方舟，多模态，base64 图片 |
-| `OpenAIResponsesProvider` | Responses API，previous_response_id，reasoning_summary |
+| `OpenAIProvider` | GPT-4o/4，工具调用、视觉、流式输出 |
+| `AnthropicProvider` | Claude，扩展思考（thinking blocks）、流式输出 |
+| `GeminiProvider` | Gemini，includeThoughts 开关、流式输出 |
+| `VolcengineArkProvider` | 火山引擎 Ark，多模态，base64 图片 |
+| `OpenAIResponsesProvider` | Responses API，previous_response_id、reasoning_summary |
 | `CustomOpenAICompatibleProvider` | 任意 OpenAI 兼容端点 |
 
 ### 7.3 工具系统（76 个工具）
@@ -505,20 +528,20 @@ enum ToolCategory {
 ```swift
 actor ToolOrchestrator {
     let approvalDelegate: ToolApprovalDelegate
-    let annotationLedger: AnnotationLedger       // 防止重复划线
+    let annotationLedger: AnnotationLedger       // 防止重复高亮
     
     func execute(calls: [ToolCall], context: ToolContext) async throws -> [ToolResult] {
-        // 1. 按工具检查审批策略
-        // 2. 按并发安全性分区
-        // 3. 安全工具并发执行，不安全工具串行执行
-        // 4. 返回带时序信息的结果
+        // 1. 检查每个工具的审批策略
+        // 2. 按并发安全性分组
+        // 3. 安全的工具并发执行，不安全的串行执行
+        // 4. 返回结果及耗时信息
     }
 }
 ```
 
 **场景感知过滤：**
-- 阅读场景：减少约 50% 工具（排除日历、提醒事项、web_search，除非相关）
-- 聊天场景：启用全部工具集
+- 阅读场景：减少约 50% 的工具（排除日历、提醒、网页搜索，除非与上下文相关）
+- 聊天场景：完整工具集
 
 ### 7.4 对话树 v2
 
@@ -533,24 +556,25 @@ struct ConversationTree: Codable {
         let content: MessageContent
         let parentId: String?
         var childIds: [String]                 // 分支：多个子节点
-        var activeChildIndex: Int              // 当前激活的分支
-        let metadata: NodeMetadata             // 时间戳、模型、Token 数
+        var activeChildIndex: Int              // 当前活跃分支
+        let metadata: NodeMetadata             // 时间戳、模型、token 数
     }
 }
 ```
 
 功能特性：
-- 每轮助手回复支持多个变体（可在重新生成结果间切换）
-- 回滚至旧变体而不丢失后续对话
+- 每轮助手回复的变体切换（在不同的重新生成结果间切换）
+- 回滚到旧变体时不丢失后续对话轮次
 - 编辑任意用户轮次并从该处分支
-- App 重启后持久保留
+- 跨应用重启持久化
 
 ### 7.5 RAG（检索增强生成）
 
 ```swift
 struct EmbeddingService {
-    let provider: ChatModelProvider           // 复用 LLM Provider 生成 Embeddings
+    let provider: ChatModelProvider           // 仅远程 API（Ollama 已移除 — 在 iOS 上不可行）
     func embed(texts: [String]) async throws -> [[Float]]
+    // 回退方案：当未配置嵌入向量 Provider 时使用 FTS5 全文搜索
 }
 
 struct SemanticSearchService {
@@ -572,12 +596,12 @@ actor LibraryIndexQueue {
 ```
 
 **文本分块策略：**
-- 固定大小加重叠
+- 固定大小 + 重叠窗口
 - 基于段落
 - AI 辅助语义分块
 
 **搜索模式：**
-- 向量相似度（余弦）
+- 向量相似度（余弦相似度）
 - FTS5 全文搜索（BM25）
 - 混合模式（FTS + 向量 + 可选 MMR 重排序）
 
@@ -585,9 +609,9 @@ actor LibraryIndexQueue {
 
 ```swift
 struct MemoryStore {
-    let basePath: URL                          // App 文档目录/memory/
+    let basePath: URL                          // App documents/memory/
     
-    // 文件路径
+    // 文件
     var dailyPath: URL { basePath/"daily.md" }
     var longTermPath: URL { basePath/"MEMORY.md" }
     var reviewInboxPath: URL { basePath/"review_inbox/" }
@@ -608,23 +632,22 @@ struct MemoryWorkflowService {
 }
 ```
 
-### 7.7 翻译引擎
+### 7.7 翻译引擎（纯 AI）
 
 ```swift
-protocol TranslationProvider: Sendable {
+// 单一 AI 翻译方案 — 不使用第三方 API（DeepL、Google、Microsoft 已移除）
+struct AITranslator: Sendable {
+    let chatProvider: ChatModelProvider
+    
     func translate(text: String, from: Language, to: Language) async throws -> String
     func translateBatch(texts: [String], from: Language, to: Language) async throws -> [String]
 }
 
-// 实现类
-struct AITranslator: TranslationProvider { ... }         // 使用 ChatModelProvider
-struct DeepLTranslator: TranslationProvider { ... }
-struct GoogleTranslator: TranslationProvider { ... }
-struct MicrosoftTranslator: TranslationProvider { ... }
-
-// 全书翻译，带每书缓存
+// 全文翻译，支持按书缓存
 actor FulltextTranslationEngine {
-    func translateBook(bookId: Int64, provider: TranslationProvider) -> AsyncStream<TranslationProgress>
+    let translator: AITranslator
+    
+    func translateBook(bookId: Int64) -> AsyncStream<TranslationProgress>
     func getCachedTranslation(bookId: Int64, segment: String) -> String?
     func clearCache(bookId: Int64) async
 }
@@ -641,7 +664,7 @@ actor MCPClient {
 }
 
 enum MCPTransport {
-    case sse(url: URL)                         // 旧版 HTTP+SSE
+    case sse(url: URL)                         // 传统 HTTP+SSE
     case streamableHTTP(url: URL)              // Streamable HTTP
 }
 ```
@@ -660,7 +683,7 @@ struct SubAgentRunner {
 }
 ```
 
-### 7.10 KAIROS 主动助手
+### 7.10 KAIROS 主动式助手
 
 ```swift
 @Observable final class KairosService {
@@ -681,7 +704,7 @@ struct UsageTracker {
     func totalCost(since: Date) -> Decimal
     func usageHistory() -> [UsageRecord]
     
-    // 内置 5 个模型族的定价表
+    // 内置 5 个模型系列的定价表
     static let pricing: [String: ModelPricing]
 }
 ```
@@ -692,13 +715,14 @@ struct UsageTracker {
 
 ### 8.1 设计系统
 
-**Apple HIG 原则：**
-- 所有图标使用 SF Symbols（替代 icons_plus）
-- 系统颜色 + 自定义 AccentColor
-- 支持 Dynamic Type
-- 深色模式随系统自动切换
-- Materials（`.ultraThinMaterial`、`.regularMaterial`）实现毛玻璃效果
-- 通过 `UIFeedbackGenerator` / `NSHapticFeedbackManager` 提供触感反馈
+**Apple HIG 设计原则：**
+- SF Symbols 用于所有图标（替代 icons_plus）
+- **莫兰迪色系**作为主设计语言（低饱和度莫兰迪色系）
+- Dynamic Type 支持
+- 深色模式跟随系统自动切换（莫兰迪深色变体）
+- 材质效果（`.ultraThinMaterial`、`.regularMaterial`）实现毛玻璃拟态
+- 触觉反馈通过 `UIFeedbackGenerator` / `NSHapticFeedbackManager` 实现
+- 所有设置页面：原生 `Form` + `Section` + `List` 布局
 
 **字体排版：**
 ```swift
@@ -712,15 +736,29 @@ enum PTTypography {
 }
 ```
 
-**配色方案：**
+**莫兰迪色系调色板：**
 ```swift
 enum PTColors {
-    static let accent = Color.accentColor                  // 主题色
-    static let readingBackground = Color("ReadingBG")      // 自定义
-    static let highlightYellow = Color("HighlightYellow")
-    static let highlightBlue = Color("HighlightBlue")
-    static let highlightGreen = Color("HighlightGreen")
-    static let highlightRed = Color("HighlightRed")
+    // 莫兰迪主色调（柔和、低饱和度、优雅）
+    static let morandiRose = Color(hex: "#C4A4A0")        // 烟粉色
+    static let morandiSage = Color(hex: "#A8B5A2")        // 鼠尾草绿
+    static let morandiBlue = Color(hex: "#9AABB9")        // 柔雾蓝
+    static let morandiSand = Color(hex: "#C8B9A6")        // 暖沙色
+    static let morandiLavender = Color(hex: "#B5A8C4")    // 雾紫色
+    static let morandiGray = Color(hex: "#B0A8A0")        // 暖灰色
+    
+    // 功能色（莫兰迪色调）
+    static let accent = Color("MorandiAccent")             // 主强调色
+    static let readingBackground = Color("ReadingBG")
+    static let highlightYellow = Color(hex: "#D4C5A0")    // 莫兰迪黄
+    static let highlightBlue = Color(hex: "#9AABB9")      // 莫兰迪蓝
+    static let highlightGreen = Color(hex: "#A8B5A2")     // 莫兰迪绿
+    static let highlightRed = Color(hex: "#C4A4A0")       // 莫兰迪玫瑰
+    static let highlightPurple = Color(hex: "#B5A8C4")    // 莫兰迪薰衣草
+    
+    // 语义色
+    static let cardBackground = Color("CardBG")            // 微浮表面
+    static let sectionHeader = Color("SectionHeader")      // 柔和文字色
 }
 ```
 
@@ -728,28 +766,28 @@ enum PTColors {
 
 | 组件 | 描述 |
 |------|------|
-| `BookCoverView` | 带阴影和加载骨架屏的书籍封面 |
-| `ChatBubble` | 含 Markdown 的 AI/用户消息气泡 |
-| `MarkdownView` | AI 响应的富文本 Markdown 渲染器 |
+| `BookCoverView` | 书籍封面，带阴影和加载骨架屏 |
+| `ChatBubble` | AI/用户消息气泡，支持 Markdown |
+| `MarkdownView` | 富文本 Markdown 渲染器，用于 AI 响应 |
 | `ThinkingDisclosure` | 可折叠的思考/回答/工具区域 |
 | `ToolApprovalTile` | 工具执行审批 UI |
 | `ProviderSelector` | AI Provider/模型选择器 |
-| `AttachmentPicker` | 图片及文本文件附件 UI |
-| `HeatmapCalendar` | 阅读连续记录热力图 |
+| `AttachmentPicker` | 图片 + 文本文件附件 UI |
+| `HeatmapCalendar` | 阅读连续打卡热力图 |
 | `StatisticTile` | 仪表盘数据分析磁贴 |
-| `SkeletonView` | 加载占位骨架屏 |
-| `SearchBar` | 自定义搜索覆盖层 |
-| `TagChip` | 带颜色的标签药丸 |
-| `ProgressRing` | 环形进度指示器 |
+| `SkeletonView` | 加载占位符 |
+| `SearchBar` | 自定义搜索叠加层 |
+| `TagChip` | 带颜色的标签胶囊 |
+| `ProgressRing` | 圆形进度指示器 |
 | `EmptyStateView` | 空集合占位视图 |
 
 ### 8.3 Markdown 渲染器
 
-用原生 Swift 方案替代 `gpt_markdown`：
-- 使用 `AttributedString`（iOS 15+）实现富文本
-- 代码块语法高亮（TreeSitter 或基于正则）
-- 通过 MathJax WKWebView 渲染 LaTeX（适用于数学密集型论文）
-- 行内图片
+使用原生 Swift 替代 `gpt_markdown`：
+- 使用 `AttributedString`（iOS 15+）进行富文本渲染
+- 代码块语法高亮（基于 TreeSitter 或正则表达式）
+- LaTeX 渲染通过 MathJax WKWebView 实现（适用于数学密集型论文）
+- 内联图片
 - 表格
 - 可折叠 `<think>` 块
 
@@ -762,12 +800,12 @@ enum PTColors {
 **iOS：**
 ```swift
 TabView {
-    PapersView()        // Tab 1: 论文
-    BookshelfView()     // Tab 2: 书架
-    NotesView()         // Tab 3: 笔记
-    StatisticsView()    // Tab 4: 统计
-    AIChatView()        // Tab 5: AI
-    SettingsView()      // Tab 6: 设置
+    PapersView()        // tab 1: 论文
+    BookshelfView()     // tab 2: 书架
+    NotesView()         // tab 3: 笔记
+    StatisticsView()    // tab 4: 统计
+    AIChatView()        // tab 5: AI
+    SettingsView()      // tab 6: 设置
 }
 ```
 
@@ -787,65 +825,68 @@ NavigationSplitView {
 }
 ```
 
-### 9.2 功能详细说明
+### 9.2 功能详解
 
 **论文（PaperTok）：**
-- 随机论文流，带语言选择器（中文/英文）
-- 论文详情视图（摘要、作者、链接）
-- 将论文导入书架
+- 随机论文流，带语言选择器（中/英）
+- 论文详情页（摘要、作者、链接）
+- 导入论文到书架
 - 按日期浏览
 
 **书架：**
-- 网格/列表切换视图
-- 层级分组文件夹（拖拽重排序）
-- 书籍导入（Files、iCloud、分享表单）
+- 网格/列表视图切换
+- 层级分组文件夹（拖拽排序）
+- 双模式书籍导入：
+  - 沙盒导入（文件、iCloud、Share Sheet — 复制到应用容器）
+  - 目录扫描（Security-Scoped Bookmarks — 原位读取，无需复制）
+  - 文件系统监控，自动发现新书
 - 封面提取
-- AI 辅助整理
+- AI 辅助重新整理
 - 按标签、日期、进度排序/筛选
 
 **阅读器：**
 - EPUB 渲染（Readium）
 - PDF 渲染（Readium）
 - 阅读设置面板（字体、主题、边距、翻页模式）
-- 划线、书签、笔记（颜色编码）
-- 内嵌 AI 面板（iPad：可调宽侧边面板；iPhone：Sheet）
+- 高亮、书签、笔记（彩色编码）
+- 阅读器内 AI 面板（iPad：可调整大小的侧面板，iPhone：底部弹出面板）
 - 全文搜索
 - 目录导航
 - 阅读进度条
 - TTS 朗读
-- 内嵌全文翻译
+- 内联全文翻译
 - 图片点击 → AI 分析
 
 **笔记：**
-- 跨全部书籍的统一笔记视图
+- 跨所有书籍的统一笔记视图
 - 笔记内搜索
 - 按书籍分组
 - 导出
 
 **统计：**
 - 可自定义仪表盘磁贴
-- 热力图日历（阅读连续记录）
+- 热力图日历（阅读打卡）
 - 每日阅读趋势
 - 完成度追踪
-- 随机每日划线回顾
+- 每日随机高亮回顾
 
 **AI 聊天：**
 - 对话列表 + 详情
-- 流式响应与最小化交互体验
+- 流式响应，支持最小化 UX
 - 聊天中切换 Provider/模型
-- 思考等级选择器
+- 思考层级选择器
 - 多模态附件（4 张图片 + 3 个文本文件）
 - 对话树 v2（分支、变体、回滚）
-- 编辑任意轮次，重新生成
+- 编辑任意轮次、重新生成
 - 工具执行审批 UI
 - 可折叠思考/回答/工具区域
 - Token/费用显示
 
 **设置：**
 - 外观（主题、背景图、强调色）
-- 阅读偏好（字体、边距、翻页方式、章节分割规则）
+- 阅读偏好（字体、边距、翻页模式、章节拆分规则）
 - AI 通用（Provider 中心、系统提示词、快捷提示词）
-- AI 图像分析（独立 Provider/模型）
+- AI 图片分析（独立 Provider/模型）
 - AI 书库索引（RAG 管理）
 - AI 工具（审批策略）
 - AI 记忆设置
@@ -854,7 +895,7 @@ NavigationSplitView {
 - TTS/朗读设置
 - 同步（WebDAV 配置）
 - 存储（数据库大小、缓存管理）
-- 开发者选项（日志、震动测试）
+- 开发者选项（日志、振动测试）
 - 关于
 
 ### 9.3 iPad AI 面板（阅读页）
@@ -862,21 +903,21 @@ NavigationSplitView {
 ```
 ┌─────────────────────────────────────────────────────┐
 │  ┌──────────────────────┐  ┌──────────────────────┐ │
-│  │                      │  │   AI 聊天面板         │ │
-│  │   EPUB 阅读器         │◄►│   （可调宽）          │ │
-│  │   (Readium)          │  │                      │ │
-│  │                      │  │   - 消息列表          │ │
-│  │                      │  │   - 流式输出          │ │
-│  │                      │  │   - 工具结果          │ │
-│  │                      │  │   - 最小化按钮         │ │
+│  │                      │  │   AI 聊天面板        │ │
+│  │   EPUB 阅读器        │◄►│   （可调整大小）     │ │
+│  │   （Readium）        │  │                      │ │
+│  │                      │  │   - 消息             │ │
+│  │                      │  │   - 流式输出         │ │
+│  │                      │  │   - 工具结果         │ │
+│  │                      │  │   - 最小化按钮       │ │
 │  └──────────────────────┘  └──────────────────────┘ │
 └─────────────────────────────────────────────────────┘
-        拖拽手柄 ◄► 调整宽度
+        拖拽手柄 ◄► 调整大小
 ```
 
-- 每本书持久记忆宽度
-- 可切换左/右侧显示
-- 最小化：在后台继续生成，同时可继续阅读
+- 宽度按书持久化
+- 左/右侧切换
+- 最小化：后台继续生成，同时阅读不受影响
 - 新内容到来时智能自动滚动
 
 ---
@@ -905,7 +946,7 @@ actor EventKitService {
 }
 ```
 
-### 10.2 App Intents（快捷指令）
+### 10.2 AppIntents（快捷指令）
 
 ```swift
 struct SendMessageIntent: AppIntent {
@@ -923,11 +964,11 @@ struct SendMessageIntent: AppIntent {
 
 ### 10.3 Share Extension
 
-独立 Target，纯 Swift 原生实现：
+独立 Target，纯 Swift 原生：
 - App Group 容器：`group.ai.papertok.paperreader`
 - 文件结构：`<AppGroup>/share_handler/inbox/<eventId>/files/`
-- 支持：文本、URL、图片、文件
-- 路由至：AI 聊天、书架导入或快速提问
+- 支持内容类型：文本、URL、图片、文件
+- 路由目标：AI 聊天、书架导入 或 快速提问
 
 ### 10.4 深度链接
 
@@ -938,7 +979,7 @@ struct SendMessageIntent: AppIntent {
 }
 ```
 
-### 10.5 macOS 专属
+### 10.5 macOS 专属功能
 
 ```swift
 #if os(macOS)
@@ -965,44 +1006,44 @@ struct MacCommands: Commands {
 ### 策略
 - Xcode String Catalogs（`.xcstrings`）— 编译时安全，Xcode 原生编辑器
 - 从 Flutter ARB 文件迁移全部 14 种语言
-- 全局使用 `String(localized:)` API
+- 全面使用 `String(localized:)` API
 
-### 语言列表
+### 支持语言
 en、zh-Hans、zh-Hant、de、es、fr、it、ja、ko、pt-BR、ro、ru、tr、ar（+ 蒙古文字）
 
 ### 迁移流程
-1. 解析 Flutter `app_en.arb` 作为参考
+1. 解析 Flutter `app_en.arb` 作为参考基准
 2. 生成包含所有键的 `.xcstrings` 目录
-3. 从每个 `app_*.arb` 文件导入翻译
+3. 从各 `app_*.arb` 文件导入翻译
 4. 对照 `untranslated_messages.txt` 验证覆盖率
 
 ---
 
 ## 12. 数据迁移（Flutter → Swift）
 
-针对从 Flutter 版本升级的用户：
+面向从 Flutter 版本升级的用户：
 
-1. **数据库：** 将 `anx_reader.db` 从 Flutter App 容器复制至 Swift App 容器。GRDB 读取相同的 SQLite Schema。
-2. **书籍：** EPUB/PDF 文件存储在 App 文档目录中 — 通过 Files 或 iCloud 备份复制。
-3. **设置：** 从 Flutter 导出（WebDAV 或加密备份），在 Swift 版本中导入。
-4. **API Key：** 手动重新输入（安全考虑：绝不在应用间自动传输密钥）。
+1. **数据库：** 将 `anx_reader.db` 从 Flutter 应用容器复制到 Swift 应用容器。GRDB 可读取相同的 SQLite Schema。
+2. **书籍：** EPUB/PDF 文件存储在应用文档目录中 — 通过"文件"App 或 iCloud 备份复制。
+3. **设置：** 从 Flutter 导出（通过 WebDAV 或加密备份），在 Swift 中导入。
+4. **API 密钥：** 需手动重新输入（安全考虑：应用间绝不自动传输密钥）。
 5. **记忆：** 复制 `memory/` 目录（Markdown 文件具有可移植性）。
 
 ---
 
 ## 13. 第三方依赖汇总
 
-| Package | 用途 | 平台 |
-|---------|------|------|
-| GRDB.swift | SQLite ORM + 数据库迁移 | iOS + macOS |
+| 包名 | 用途 | 平台 |
+|------|------|------|
+| GRDB.swift | SQLite ORM + 迁移 | iOS + macOS |
 | ReadiumShared | EPUB/PDF 核心模型 | iOS + macOS |
 | ReadiumStreamer | 出版物解析 | iOS + macOS |
-| ReadiumNavigator | EPUB/PDF 渲染 | iOS（macOS 使用 UIKit 桥接） |
+| ReadiumNavigator | EPUB/PDF 渲染 | iOS（macOS 通过 UIKit 桥接） |
 | Kingfisher | 图片缓存（封面、网络图片） | iOS + macOS |
-| swift-markdown-ui | 备选 Markdown 渲染方案 | iOS + macOS |
+| swift-markdown-ui | Markdown 渲染替代方案 | iOS + macOS |
 | KeychainAccess | Keychain 封装 | iOS + macOS |
 
-所有其他功能（HTTP、SSE、WebDAV、AI Provider、翻译）均基于 Foundation/URLSession 自研实现。
+其他所有功能（HTTP、SSE、WebDAV、AI Provider、翻译）均基于 Foundation/URLSession 自行构建。
 
 ---
 
@@ -1011,12 +1052,12 @@ en、zh-Hans、zh-Hant、de、es、fr、it、ja、ko、pt-BR、ro、ru、tr、ar
 | 层级 | 测试方法 |
 |------|----------|
 | PTCore | 单元测试：模型编码、数据库迁移、DAO 查询 |
-| PTNetworking | 单元测试：SSE 解析、Endpoint 构建；集成测试：Mock 服务器 |
+| PTNetworking | 单元测试：SSE 解析、端点构建。集成测试：Mock 服务器 |
 | PTReader | 集成测试：Readium 出版物解析、Locator 转换 |
-| PTAIServices | 单元测试：工具执行、Prompt 生成、对话树；集成测试：Mock LLM |
-| PTUI | 为所有组件提供 SwiftUI 预览 |
-| PTFeatures | UI 测试：导航流程、关键用户旅程 |
-| App | 端到端测试：导入书籍 → 阅读 → 划线 → AI 聊天 |
+| PTAIServices | 单元测试：工具执行、Prompt 生成、对话树。集成测试：Mock LLM |
+| PTUI | SwiftUI 预览覆盖所有组件 |
+| PTFeatures | UI 测试：导航流程、关键用户路径 |
+| App | 端到端测试：导入书籍 → 阅读 → 高亮 → AI 聊天 |
 
 ---
 

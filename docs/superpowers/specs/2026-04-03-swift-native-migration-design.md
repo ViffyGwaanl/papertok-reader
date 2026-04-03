@@ -408,7 +408,30 @@ struct PDFReaderView: UIViewControllerRepresentable {
 }
 ```
 
-### 6.5 TTS (Text-to-Speech)
+### 6.5 PDF Enhanced Content Bridge (New)
+
+```swift
+// Unified content access for both EPUB and PDF
+protocol BookContentBridge: Sendable {
+    func extractChapterContent(href: String) async throws -> String
+    func extractFullText() async throws -> String
+    func searchContent(query: String) async throws -> [ContentSearchResult]
+}
+
+// PDF-specific implementation
+struct PDFContentBridge: BookContentBridge {
+    let document: PDFDocument                     // PDFKit
+    
+    func extractPageText(page: Int) -> String     // PDFPage.string
+    func extractFullText() async throws -> String // All pages concatenated
+    func ocrPage(page: Int) async throws -> String // Vision VNRecognizeTextRequest for scanned PDFs
+    func segmentByOutline() -> [PDFChapter]       // Split by PDF bookmarks/outline
+}
+```
+
+PDF content is now available to all AI tools, RAG indexing, and translation — identical to EPUB.
+
+### 6.6 TTS (Text-to-Speech)
 
 Replace Flutter's `flutter_tts` + `audio_service` with native:
 ```swift
@@ -549,8 +572,9 @@ Features:
 
 ```swift
 struct EmbeddingService {
-    let provider: ChatModelProvider           // reuse LLM provider for embeddings
+    let provider: ChatModelProvider           // remote API only (Ollama removed — not viable on iOS)
     func embed(texts: [String]) async throws -> [[Float]]
+    // Fallback: FTS5 full-text search when no embedding provider configured
 }
 
 struct SemanticSearchService {
@@ -608,23 +632,22 @@ struct MemoryWorkflowService {
 }
 ```
 
-### 7.7 Translation Engine
+### 7.7 Translation Engine (AI-Only)
 
 ```swift
-protocol TranslationProvider: Sendable {
+// Single AI-based translation — no third-party APIs (DeepL, Google, Microsoft removed)
+struct AITranslator: Sendable {
+    let chatProvider: ChatModelProvider
+    
     func translate(text: String, from: Language, to: Language) async throws -> String
     func translateBatch(texts: [String], from: Language, to: Language) async throws -> [String]
 }
 
-// Implementations
-struct AITranslator: TranslationProvider { ... }         // Uses ChatModelProvider
-struct DeepLTranslator: TranslationProvider { ... }
-struct GoogleTranslator: TranslationProvider { ... }
-struct MicrosoftTranslator: TranslationProvider { ... }
-
 // Full-text translation with per-book cache
 actor FulltextTranslationEngine {
-    func translateBook(bookId: Int64, provider: TranslationProvider) -> AsyncStream<TranslationProgress>
+    let translator: AITranslator
+    
+    func translateBook(bookId: Int64) -> AsyncStream<TranslationProgress>
     func getCachedTranslation(bookId: Int64, segment: String) -> String?
     func clearCache(bookId: Int64) async
 }
@@ -694,11 +717,12 @@ struct UsageTracker {
 
 **Apple HIG principles:**
 - SF Symbols for all icons (replaces icons_plus)
-- System colors + custom AccentColor
+- **Morandi color palette** as primary design language (低饱和度莫兰迪色系)
 - Dynamic Type support
-- Dark Mode automatic via system
+- Dark Mode automatic via system (Morandi dark variant)
 - Materials (`.ultraThinMaterial`, `.regularMaterial`) for glassmorphism
 - Haptic feedback via `UIFeedbackGenerator` / `NSHapticFeedbackManager`
+- All Settings pages: native `Form` + `Section` + `List` layout
 
 **Typography:**
 ```swift
@@ -712,15 +736,29 @@ enum PTTypography {
 }
 ```
 
-**Color scheme:**
+**Morandi Color Palette:**
 ```swift
 enum PTColors {
-    static let accent = Color.accentColor                  // Tint color
-    static let readingBackground = Color("ReadingBG")      // Custom
-    static let highlightYellow = Color("HighlightYellow")
-    static let highlightBlue = Color("HighlightBlue")
-    static let highlightGreen = Color("HighlightGreen")
-    static let highlightRed = Color("HighlightRed")
+    // Morandi primary palette (muted, low-saturation, elegant)
+    static let morandiRose = Color(hex: "#C4A4A0")        // Dusty rose
+    static let morandiSage = Color(hex: "#A8B5A2")        // Sage green
+    static let morandiBlue = Color(hex: "#9AABB9")        // Muted blue
+    static let morandiSand = Color(hex: "#C8B9A6")        // Warm sand
+    static let morandiLavender = Color(hex: "#B5A8C4")    // Soft lavender
+    static let morandiGray = Color(hex: "#B0A8A0")        // Warm gray
+    
+    // Functional colors (Morandi-tinted)
+    static let accent = Color("MorandiAccent")             // Primary accent
+    static let readingBackground = Color("ReadingBG")
+    static let highlightYellow = Color(hex: "#D4C5A0")    // Morandi yellow
+    static let highlightBlue = Color(hex: "#9AABB9")      // Morandi blue
+    static let highlightGreen = Color(hex: "#A8B5A2")     // Morandi green
+    static let highlightRed = Color(hex: "#C4A4A0")       // Morandi rose
+    static let highlightPurple = Color(hex: "#B5A8C4")    // Morandi lavender
+    
+    // Semantic
+    static let cardBackground = Color("CardBG")            // Slightly elevated surface
+    static let sectionHeader = Color("SectionHeader")      // Muted text
 }
 ```
 
@@ -798,7 +836,10 @@ NavigationSplitView {
 **Bookshelf:**
 - Grid/List toggle view
 - Hierarchical group folders (drag-and-drop reorder)
-- Book import (Files, iCloud, Share Sheet)
+- Dual-mode book import:
+  - Sandbox import (Files, iCloud, Share Sheet — copies to app container)
+  - Directory scanning (Security-Scoped Bookmarks — reads in-place, no copy)
+  - File system monitoring for auto-discovery of new books
 - Cover extraction
 - AI-assisted reorganization
 - Sort/filter by tags, date, progress

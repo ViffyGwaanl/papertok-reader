@@ -280,26 +280,69 @@ Cross-validation between:
 
 ---
 
+## 5.1 Post-Review Requirement Changes (v2)
+
+The following changes were applied after user review:
+
+### Change 1: Translation — AI-Only
+- **Before**: 6 translation providers (AI, DeepL, Google, Microsoft, Bing Web, Google Web)
+- **After**: AI translation only (via configured LLM)
+- **Impact**: Removes 5 service files, simplifies PTAIServices/Translation/
+- **Architecture**: `AITranslator` struct replaces `TranslationProvider` protocol hierarchy
+
+### Change 2: Embedding — Remove Local/Ollama
+- **Before**: Remote API + local Ollama + FTS5 fallback
+- **After**: Remote API + FTS5 fallback only (Ollama not viable on iOS)
+- **Impact**: Simplifies EmbeddingService; FTS5 provides offline search capability
+- **Architecture**: `EmbeddingService` uses remote provider only; FTS5 as offline fallback
+
+### Change 3: UI — Morandi Color Palette
+- **Before**: System colors + custom AccentColor
+- **After**: Morandi color palette (低饱和度莫兰迪色系) as primary design language
+- **Impact**: All UI elements use muted earth tones; Settings pages redesigned as native Form/Section/List
+- **Architecture**: `PTColors` enum defines Morandi palette; PTUI components adopt it
+
+### Change 4: AI Settings — Restructured Layout
+- **Before**: AI settings scattered across multiple pages
+- **After**: 6 logical sections: Provider Management, Chat Behavior, Tools & Agents, Knowledge & Memory, Multimodal, Translation
+- **Impact**: Better discoverability; all configurable options exposed
+- **Architecture**: PTFeatures/Settings/AISettings/ restructured with section-based layout
+
+### Change 5: PDF Enhancement — Full AI Integration
+- **Before**: PDF rendering + basic text extraction
+- **After**: Full PDF content bridge (PDFKit text extraction, Vision OCR for scanned PDFs), AI tools/RAG/translation work identically for EPUB and PDF
+- **Impact**: New `PDFContentBridge` in PTReader; `BookContentBridge` protocol unifies EPUB/PDF
+- **Architecture**: Added to PTReader/PDF/ and PTReader/Common/
+
+### Change 6: Book Import — Directory Scanning Mode
+- **Before**: Sandbox import only (copy to app container)
+- **After**: Dual mode — sandbox import + directory scanning (Security-Scoped Bookmarks, in-place reading, auto-discovery)
+- **Impact**: New `DirectoryScanner` service; bookmark persistence; file monitoring
+- **Architecture**: Added to PTFeatures/Bookshelf/ with PTCore/Utils/ bookmark helpers
+
+---
+
 ## 6. Review Conclusion
 
 ### Coverage Score: 100%
 All 47 pages, 46 tools, 217 services, 44+ models, 38 providers, and 34+ enums are accounted for in the PRD and mapped to architecture components.
 
 ### Feasibility Score: High
-All requirements are feasible with the proposed architecture. 9 gaps identified and all resolved with concrete solutions.
+All requirements are feasible with the proposed architecture. 9 original gaps + 6 post-review changes all resolved with concrete solutions.
 
 ### Risk Level: Medium
 Primary risks are Readium integration depth and the volume of AI tool re-implementation. Both are mitigatable with early POC work and systematic implementation.
 
 ### Recommendation: **Proceed to implementation planning**
 
-The requirements document and architecture design are complete and consistent. All features have been enumerated, acceptance criteria defined, and cross-validated against the source code. The 9 identified gaps have concrete resolutions.
+The requirements document and architecture design are complete and consistent. All features have been enumerated, acceptance criteria defined, and cross-validated against the source code. The 9 identified gaps and 6 post-review changes have concrete resolutions.
 
 ---
 
 **Sign-off:**
-- Requirements: Complete ✓
-- Architecture: Complete ✓
+- Requirements: Complete ✓ (v2 updated)
+- Architecture: Complete ✓ (v2 updated)
 - Cross-validation: Passed ✓
 - Risk assessment: Documented ✓
 - Gap resolution: All resolved ✓
+- Post-review changes: 6 applied ✓

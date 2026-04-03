@@ -116,13 +116,24 @@ A premium e-book reader for iOS and macOS with integrated academic paper discove
 - Dissolve group (move all books out)
 - Acceptance: Folder hierarchy works, drag-drop reorders
 
-**FR-03.5 Book Import**
-- Import from Files app / iCloud
-- Import via Share Extension
-- Import via drag-and-drop (iPad/Mac)
-- Cover image extraction from EPUB
-- Duplicate detection via MD5
-- Acceptance: All import methods work, covers display
+**FR-03.5 Book Import (Dual Mode)**
+- **Mode A: Sandbox Import (existing)**
+  - Import from Files app / iCloud
+  - Import via Share Extension
+  - Import via drag-and-drop (iPad/Mac)
+  - Files copied into app's private container
+  - Cover image extraction from EPUB
+  - Duplicate detection via MD5
+- **Mode B: Directory Scanning (new)**
+  - User selects a system directory (e.g., Downloads, Books folder) via folder picker
+  - App obtains Security-Scoped Bookmark for persistent access
+  - Auto-scan selected directories for .epub/.pdf files
+  - Index books in-place (no file copy — read directly via bookmark)
+  - File system monitoring (`DispatchSource` / `NSFilePresenter`) for auto-discovery of new books
+  - Settings UI: manage monitored directories (add/remove)
+  - Graceful handling when bookmarked directory becomes unavailable
+- Both modes coexist; user can mix imported and scanned books
+- Acceptance: Sandbox import works as before; directory scan discovers books without copying; new books auto-appear
 
 **FR-03.6 AI-Assisted Organization**
 - Bookshelf organize tool (propose grouping plan)
@@ -184,13 +195,33 @@ A premium e-book reader for iOS and macOS with integrated academic paper discove
 
 ---
 
-### FR-05: PDF Reader (Readium SDK)
+### FR-05: PDF Reader (Enhanced — Readium SDK + PDFKit)
 
 **FR-05.1 PDF Rendering**
 - Readium PDFNavigatorViewController via UIViewControllerRepresentable
 - Page-by-page navigation
 - Text extraction for AI analysis
 - Acceptance: PDF opens, pages render, text extractable
+
+**FR-05.2 PDF Text Extraction (New)**
+- Per-page text extraction via `PDFPage.string` (PDFKit)
+- Full-document text assembly for AI chat context
+- Chapter-like segmentation: split by page ranges or outline (PDF bookmarks)
+- OCR fallback for scanned PDFs via Apple Vision framework (`VNRecognizeTextRequest`)
+- Acceptance: Text extracts from both native and scanned PDFs
+
+**FR-05.3 PDF AI Integration (New)**
+- PDF content available to all AI tools (current_chapter_content, book_content_search, etc.)
+- PDF semantic indexing (RAG) using extracted text
+- PDF inline translation using page-by-page text extraction
+- Content bridge: unified interface for EPUB and PDF content access
+- Acceptance: AI tools work identically for EPUB and PDF books
+
+**FR-05.4 PDF Annotation (New)**
+- Highlight text on PDF pages
+- Add notes anchored to page + text range
+- Bookmarks by page number
+- Acceptance: Annotations persist, display on correct pages
 
 ---
 
@@ -356,13 +387,11 @@ A premium e-book reader for iOS and macOS with integrated academic paper discove
 
 ### FR-09: Translation Engine
 
-**FR-09.1 Translation Providers**
-- AI translation (via configured LLM)
-- DeepL API
-- Google Translate API
-- Microsoft Translator API
-- WebView-based (Bing, Google) for no-API-key fallback
-- Acceptance: Each provider translates correctly
+**FR-09.1 Translation Provider (AI-Only)**
+- AI translation via configured LLM provider (unified with chat provider system)
+- No third-party translation APIs (DeepL, Google, Microsoft removed — reduces 5 service files)
+- Supports all languages the LLM supports
+- Acceptance: AI translation returns correct result for source/target language pair
 
 **FR-09.2 Inline Full-Text Translation**
 - Immersive mode (translation below original text)
@@ -381,10 +410,10 @@ A premium e-book reader for iOS and macOS with integrated academic paper discove
 ### FR-10: RAG (Retrieval-Augmented Generation)
 
 **FR-10.1 Embedding Service**
-- OpenAI-compatible embedding endpoints
-- Local embedding support (Ollama + FTS5 fallback)
-- Multi-key rotation
-- Acceptance: Embeddings generate correctly
+- Remote embedding via OpenAI-compatible API endpoints
+- Multi-key rotation for API keys
+- FTS5 full-text search as offline/fallback (no local embedding models — Ollama not viable on iOS)
+- Acceptance: Remote embeddings generate correctly; FTS5 fallback works offline
 
 **FR-10.2 Text Chunking**
 - Fixed-size with overlap
@@ -535,14 +564,17 @@ A premium e-book reader for iOS and macOS with integrated academic paper discove
 
 ### FR-16: Settings (47 pages total)
 
-**FR-16.1 Appearance**
-- Theme: System/Light/Dark
-- Accent color picker
-- OLED dark mode toggle
+**FR-16.1 Appearance (Apple-Style Redesign + Morandi Color Palette)**
+- Full Apple HIG settings redesign: native `Form` + `Section` + `List` layout
+- All settings pages and subpages follow iOS/macOS native design language
+- **Morandi color palette** (低饱和度莫兰迪色系): muted earth tones, warm grays, dusty pinks, sage greens as accent and UI element colors
+- Theme: System/Light/Dark with Morandi-tinted color scheme
+- Accent color picker (default to Morandi palette presets)
+- OLED dark mode toggle (Morandi dark variant)
 - Language selector (14 languages)
 - Bookshelf folder style
 - E-ink mode toggle
-- Acceptance: All settings apply immediately
+- Acceptance: Settings pages render in native Apple style with Morandi color harmony; all settings apply immediately
 
 **FR-16.2 Reading Preferences**
 - Page turn mode (swipe, tap, button)
@@ -551,16 +583,39 @@ A premium e-book reader for iOS and macOS with integrated academic paper discove
 - Reading duration display
 - Acceptance: Settings persist per-book
 
-**FR-16.3 AI Settings**
-- Provider Center (full CRUD)
-- System prompt editor (max 20K chars)
-- Quick prompts editor (reorderable)
-- Image analysis provider/model override
-- Library index management
-- Tool approval policies
-- Thinking mode configuration
-- Title generation settings
-- Acceptance: All AI configs save and apply
+**FR-16.3 AI Settings (Restructured Layout)**
+- Redesigned AI settings with logical grouping and complete exposure of all configurable options
+- **Section 1: Provider Management**
+  - Provider Center (full CRUD, reorder, enable/disable)
+  - Default provider/model selection
+  - API key management (per-provider, multi-key rotation)
+  - Test connection per provider
+- **Section 2: Chat Behavior**
+  - System prompt editor (max 20K chars)
+  - Quick prompts editor (reorderable, enable/disable)
+  - Thinking mode / level selector
+  - Conversation title auto-generation settings
+  - Max tokens strategy configuration
+  - Temperature / Top-P defaults
+- **Section 3: Tools & Agents**
+  - Tool approval policies (auto/ask/deny per risk level)
+  - MCP servers configuration (link to FR-16.4)
+  - Sub-agent settings
+  - Skills selector (enable/disable built-in skills)
+  - KAIROS proactive assistant level
+- **Section 4: Knowledge & Memory**
+  - Library RAG index management (link to AiLibraryIndexPage)
+  - Embedding provider/model selection
+  - Memory settings (link to FR-16.6)
+  - Web search API key (Serper)
+- **Section 5: Multimodal**
+  - Image analysis provider/model override
+  - Attachment limits (images, text files)
+  - Image quality/resize settings
+- **Section 6: Translation**
+  - AI translation provider/model (uses chat provider or override)
+  - Translation target language defaults
+- Acceptance: All AI configs exposed in logical grouping, save and apply correctly
 
 **FR-16.4 MCP Servers**
 - Server list (add/edit/delete/reorder)
@@ -773,5 +828,6 @@ A premium e-book reader for iOS and macOS with integrated academic paper discove
 | Enums | 34+ |
 | Languages | 14 |
 | Supported AI Providers | 6 |
-| Translation Providers | 6 |
+| Translation Providers | 1 (AI-only) |
 | TTS Providers | 4 |
+| Book Import Modes | 2 (sandbox + directory scan) |
