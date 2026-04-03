@@ -1,0 +1,106 @@
+# PaperTok Reader (Native Swift) Fastfile
+# For building and uploading to TestFlight
+
+ENV["LANG"] ||= "en_US.UTF-8"
+ENV["LC_ALL"] ||= "en_US.UTF-8"
+ENV["PATH"] = "/opt/homebrew/bin:#{ENV["PATH"]}" unless ENV["PATH"].to_s.include?("/opt/homebrew/bin")
+
+default_platform(:ios)
+
+platform :ios do
+  private_lane :asc_api_key do
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_P8_BASE64"],
+      is_key_content_base64: true,
+      in_house: false
+    )
+  end
+
+  desc "Build & upload native Swift app to TestFlight"
+  lane :release_testflight do |options|
+    verify_env(envs: [
+      "ASC_KEY_ID",
+      "ASC_ISSUER_ID",
+      "ASC_KEY_P8_BASE64",
+      "APP_BUNDLE_ID",
+      "APP_TEAM_ID",
+    ])
+
+    api_key = asc_api_key
+
+    # --- Build number (monotonic) ---
+    asc_latest = 0
+    begin
+      asc_latest = latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: ENV["APP_BUNDLE_ID"],
+        initial_build_number: 1
+      ).to_i
+    rescue => e
+      UI.important("ASC latest_testflight_build_number failed (#{e.class}: #{e.message}). Falling back to local counter only.")
+    end
+
+    require "fileutils"
+    state_file = "/Volumes/FanXiang1/.openclaw/workspace/state/papertok-reader/last_testflight_build_number.txt"
+    FileUtils.mkdir_p(File.dirname(state_file))
+    local_latest = File.exist?(state_file) ? File.read(state_file).to_i : 0
+    next_build = [asc_latest, local_latest].max + 1
+    File.write(state_file, next_build.to_s)
+
+    build_number = next_build.to_s
+    version_number = options[:version] || "1.0.0"
+
+    UI.message("*** Native Swift TestFlight build: v#{version_number} (#{build_number}) ***")
+
+    # --- Code signing ---
+    if ENV["USE_MATCH"].to_s.downcase == "true"
+      sync_code_signing(
+        type: "appstore",
+        app_identifier: ENV["APP_BUNDLE_ID"],
+        readonly: is_ci,
+      )
+
+      update_code_signing_settings(
+        path: "PaperTokReader.xcodeproj",
+        use_automatic_signing: false,
+        team_id: ENV["APP_TEAM_ID"],
+        targets: ["PaperTokReader"],
+        build_configurations: ["Release"],
+        code_sign_identity: "Apple Distribution",
+        bundle_identifier: ENV["APP_BUNDLE_ID"],
+        profile_name: "match AppStore #{ENV['APP_BUNDLE_ID']}"
+      )
+    else
+      UI.message("Using Xcode automatic signing")
+      update_code_signing_settings(
+        path: "PaperTokReader.xcodeproj",
+        use_automatic_signing: true,
+        team_id: ENV["APP_TEAM_ID"],
+        targets: ["PaperTokReader"],
+      )
+    end
+
+    # --- Build ---
+    build_app(
+      project: "PaperTokReader.xcodeproj",
+      scheme: "PaperTokReader",
+      configuration: "Release",
+      export_method: ENV["USE_MATCH"].to_s.downcase == "true" ? "app-store" : "app-store",
+      xcargs: "MARKETING_VERSION=#{version_number} CURRENT_PROJECT_VERSION=#{build_number} DEVELOPMENT_TEAM=#{ENV['APP_TEAM_ID']}",
+      output_directory: "build",
+      output_name: "PaperTokReader.ipa",
+      clean: true,
+    )
+
+    # --- Upload ---
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "build/PaperTokReader.ipa",
+      skip_waiting_for_build_processing: true,
+    )
+
+    UI.success("✅ Uploaded v#{version_number} (#{build_number}) to TestFlight")
+  end
+end

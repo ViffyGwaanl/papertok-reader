@@ -2,3 +2,14 @@
 .swiftpm/
 *.xcuserstate
 xcuserdata/
+DerivedData/
+build/
+
+# Fastlane secrets
+fastlane/.env
+fastlane/report.xml
+fastlane/README.md
+
+# Xcode
+*.ipa
+*.dSYM.zip
