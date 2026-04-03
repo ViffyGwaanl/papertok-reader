@@ -224,7 +224,23 @@ zh.arb（`locale: zh`）此前缺失了多个 Phase 0-3 已在 zh-CN.arb 中存�
 
 ---
 
-## 8. 未来计划（按优先级拆解）
+## 8. 已完成：Phase 3 集成 Bug 修复（2026-04-03）
+
+代码审查发现 Phase 3 集成中 3 个未正确接线的模块，已全部修复：
+
+| Bug | 根因 | 修复 |
+|-----|------|------|
+| **ConversationCompressor 压缩结果丢弃** | `index.dart` 调用 `compress()` 后，返回的 `result.messages` 从未赋值回 `historyMessages`，压缩消耗 token 但摘要被丢弃 | 新增 `compressedHistory` 变量；压缩成功时赋值；传入 `streamAgent(history: compressedHistory)` |
+| **AnnotationLedger 无会话级持久化** | `AiToolContext` 在每次 `_buildPipeline()` 重新创建，ledger 在同一对话的不同 turn 间丢失 | `index.dart` 新增 `_sessionLedgers` Map；`AiToolContext` 新增 `externalAnnotationLedger`；通过 `resolve()` → `_buildPipeline()` 注入 |
+| **MaxTokensStrategy 检测但未应用** | `_maxTokensEscalated` 被设置，但 `BaseChatModelOptions.copyWith()` 不支持 `maxTokens` | 移除死逻辑（检测代码 + 字段 + import）；maxTokens 由用户配置直接控制 |
+
+其他清理：
+- 移除 `langchain_runner.dart` 中残留的注释掉的旧 thinking-mode 代码
+- `contextWindowSize` 从硬编码 128000 改为从 `config.maxTokens` 读取（fallback 128K）
+
+---
+
+## 9. 未来计划（按优先级拆解）
 
 ### P0：稳定性与可观测性
 
@@ -243,11 +259,11 @@ zh.arb（`locale: zh`）此前缺失了多个 Phase 0-3 已在 zh-CN.arb 中存�
 - 长文本 chunking/长度上限，降低超时与失败率。
 - PDF：默认引导用户用选中翻译；必要时对全文翻译加提示或默认关闭。
 
-### P2：PDF 章节化与 OCR（MinerU）
+### P2：PDF 章节化与上下文增强
 
 - PDF outline 存在时：按 outline item 的页范围组合”章节内容”（多页拼接 + maxChars 截断）。
 - outline 缺失时：采用 page-window（当前页 ±N 页）作为”chapter-like context”。
-- 扫描版 PDF：集成 MinerU OCR，做缓存与状态机（not_started/processing/ready/failed），文本层不足时自动 fallback。
+- 扫描版 PDF：需要云端 OCR API（Google Vision / AWS Textract）；MinerU 为 Python 库，**无法在 iOS/Android 设备上运行**。
 
 ### P3：Agent 系统进阶（Phase 5）
 
@@ -255,14 +271,23 @@ zh.arb（`locale: zh`）此前缺失了多个 Phase 0-3 已在 zh-CN.arb 中存�
 |------|------|------|--------|
 | P5-A | **用户自定义 Skills** | 支持用户导入/编辑 YAML 格式技能模板；技能市场概念 | P3 |
 | P5-B | **KAIROS 章节完成检测** | 完成一章后自动弹出摘要卡片（基于 percentage 检测） | P3 |
-| P5-C | **Token 使用历史图表** | 按日/周/月统计 token 消耗和费用趋势 | P4 |
-| P5-D | **Sub-Agent 并行执行** | 主 Agent 同时派出多个子 Agent 并行工作 | P4 |
+| P5-C | **Token 使用历史图表** | 按日/周/月统计 token 消耗和费用趋势（需新增 SQLite 持久化） | P4 |
+| P5-D | **Sub-Agent 资源池化** | 串行复用，限制移动端内存；并行在 4GB 设备有 OOM 风险 | P3 |
 | P5-E | **工具单元测试** | 核心工具的输入验证和逻辑单元测试 | P2 |
-| P5-F | **Streaming Tool Execution** | 工具 JSON 完整即刻执行，不等整个响应完成 | P3 |
+| P5-F | **Streaming Tool Execution** | 工具 JSON 完整即刻执行（受限于 LangChain Dart 架构，高复杂度） | P3 |
+
+#### 移动端可行性说明
+
+| 路线图项 | 可行性 | 备注 |
+|----------|--------|------|
+| PDF OCR (MinerU) | 需服务端 | MinerU 是 Python 库，无法在 iOS/Android 运行；替代：云 OCR 或仅用 PDF outline 分章 |
+| Streaming Tool Execution | 高复杂度 | LangChain Dart 等整个 response 完成后才解析 tool_use JSON |
+| Sub-Agent 并行 | 有风险 | 每个 sub-agent 独占 LLM stream + 内存；4GB 设备 OOM 风险 |
+| 本地 Embedding | 需 LAN 服务器 | 模型无法在设备上运行；当前实现支持 LAN Ollama 连接，非真正”离线” |
 
 ---
 
-## 9. 分支策略（为何分这么多分支，以及后续建议）
+## 10. 分支策略（为何分这么多分支，以及后续建议）
 
 当前策略是典型的“PR 栈 + 集成分支验收”：
 
@@ -275,7 +300,7 @@ zh.arb（`locale: zh`）此前缺失了多个 Phase 0-3 已在 zh-CN.arb 中存�
 
 ---
 
-## 10. 开发者注意事项
+## 11. 开发者注意事项
 
 - repo 忽略生成文件（`*.g.dart`, `*.freezed.dart`, `lib/gen/` 等），切分支后必须：
 
@@ -287,7 +312,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 ---
 
-## 11. 推荐验收清单（最小闭环）
+## 12. 推荐验收清单（最小闭环）
 
 1) 阅读页：生成中最小化 → 翻页阅读 → 展开 → 生成不断。
 2) stop 按钮：立即停止（不会假停）。

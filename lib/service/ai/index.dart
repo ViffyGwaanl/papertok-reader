@@ -9,6 +9,7 @@ import 'package:anx_reader/models/ai_api_key_entry.dart';
 import 'package:anx_reader/service/ai/langchain_ai_config.dart';
 import 'package:anx_reader/service/ai/langchain_registry.dart';
 import 'package:anx_reader/service/ai/ai_usage_tracker.dart';
+import 'package:anx_reader/service/ai/annotation_ledger.dart';
 import 'package:anx_reader/service/ai/conversation_compressor.dart';
 import 'package:anx_reader/service/ai/langchain_runner.dart';
 import 'package:anx_reader/service/ai/tool_approval_delegate.dart';
@@ -33,6 +34,10 @@ final CancelableLangchainRunner _imageAnalysisRunner =
 
 /// Session-level usage trackers (keyed by conversationId).
 final Map<String, AiUsageTracker> _sessionTrackers = {};
+
+/// Session-level annotation ledgers (keyed by conversationId).
+/// Persists across turns so AI can see annotations it created earlier.
+final Map<String, AnnotationLedger> _sessionLedgers = {};
 
 /// Session-level compression failure counts.
 final Map<String, int> _compressionFailures = {};
@@ -319,7 +324,15 @@ Stream<String> _generateStream({
       );
     }
 
-    final pipeline = registry.resolve(attemptConfig, useAgent: useAgent);
+    final sessionLedger = useAgent
+        ? _sessionLedgers.putIfAbsent(
+            conversationId ?? '', () => AnnotationLedger())
+        : null;
+    final pipeline = registry.resolve(
+      attemptConfig,
+      useAgent: useAgent,
+      annotationLedger: sessionLedger,
+    );
     final model = pipeline.model;
 
     Stream<String> stream;
@@ -352,6 +365,7 @@ Stream<String> _generateStream({
       // Conversation compression: if context usage > 85%, summarise old
       // messages via LLM before sending. Falls back to truncation after
       // 3 consecutive failures.
+      var compressedHistory = historyMessages;
       if (historyMessages.length > ConversationCompressor.keepRecentMessages + 2) {
         final convoId = conversationId ?? '';
         final failures = _compressionFailures[convoId] ?? 0;
@@ -360,9 +374,12 @@ Stream<String> _generateStream({
           (sum, m) => sum + (m.contentAsString.length ~/ 4) + 24,
         );
 
+        // Derive context window from model config; fall back to 128K.
+        final contextWindow = config.maxTokens ?? 128000;
+
         if (_compressor.shouldCompress(
           estimatedTokens: estimated,
-          contextWindowSize: 128000,
+          contextWindowSize: contextWindow,
           consecutiveFailures: failures,
         )) {
           try {
@@ -371,6 +388,7 @@ Stream<String> _generateStream({
               model: model,
             );
             if (result.compressed) {
+              compressedHistory = result.messages;
               _compressionFailures[convoId] = 0;
             } else {
               _compressionFailures[convoId] = failures + 1;
@@ -387,7 +405,7 @@ Stream<String> _generateStream({
       stream = runner.streamAgent(
         model: model,
         tools: tools,
-        history: historyMessages,
+        history: compressedHistory,
         inputMessage: inputMessage,
         conversationId: conversationId,
         systemMessage: pipeline.systemMessage,

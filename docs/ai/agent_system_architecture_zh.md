@@ -1,7 +1,7 @@
 # PaperTok Reader — AI Agent 系统架构与优化记录
 
 > 更新时间：2026-04-02
-> 状态：Phase 0-4 已完成（含设置 UI + 全量中文本地化），Phase 5 计划中
+> 状态：Phase 0-4 已完成（含设置 UI + L10n + Bug 修复），Phase 5 计划中
 
 ---
 
@@ -237,6 +237,20 @@ iOS release archive 过程中发现并修复的编译问题：
 - `ai.dart`：AI Features 区块全部 `const Text('...')` → `Text(l10n.*)` ；新增 `_localizedSkillName/Desc(context, id?)` helper
 - `ai_chat_stream.dart`：Skills tooltip、No Skill popup → L10n；新增 `_localizedSkillName/Desc(context, skill)` helper
 
+### Phase 4 补充：Bug 修复与代码清理（2026-04-03）
+
+代码审查发现 Phase 3 集成中 3 个未正确接线的模块，已全部修复：
+
+| Bug | 根因 | 修复 |
+|-----|------|------|
+| **ConversationCompressor 压缩结果丢弃** | `index.dart` 调用 `compress()` 后，返回的 `result.messages` 从未赋值回 `historyMessages`，导致压缩消耗 token 但摘要被丢弃 | 新增 `compressedHistory` 变量，压缩成功时赋值，传入 `streamAgent(history: compressedHistory)` |
+| **AnnotationLedger 无会话级持久化** | `AiToolContext` 在每次 `_buildPipeline()` 时重新创建，导致 ledger 在同一对话的不同 turn 间丢失 | 在 `index.dart` 新增 `_sessionLedgers` (Map)；`AiToolContext` 新增 `externalAnnotationLedger` 参数；通过 `resolve()` → `_buildPipeline()` 注入 |
+| **MaxTokensStrategy 检测但未应用** | `_maxTokensEscalated` 标志被正确设置，但 `BaseChatModelOptions.copyWith()` 不支持 `maxTokens` 参数，无法在迭代间动态调整 | 移除死逻辑（检测代码 + 字段 + 未使用的 import）；maxTokens 由用户配置直接控制 |
+
+其他清理：
+- 移除 `langchain_runner.dart` 中残留的注释掉的旧 thinking-mode 代码
+- `contextWindowSize` 从硬编码 128000 改为从 `config.maxTokens` 读取，fallback 128K
+
 ---
 
 ## 8. 未来计划（Phase 5）
@@ -246,9 +260,18 @@ iOS release archive 过程中发现并修复的编译问题：
 | P5-A | **用户自定义 Skills** | 支持用户导入/编辑 YAML 格式技能模板；技能市场概念 | P3 |
 | P5-B | **KAIROS 章节完成检测** | 完成一章后自动弹出摘要卡片（基于 percentage 检测） | P3 |
 | P5-C | **Token 使用历史图表** | 按日/周/月统计 token 消耗和费用趋势 | P4 |
-| P5-D | **Sub-Agent 并行执行** | 主 Agent 同时派出多个子 Agent 并行工作 | P4 |
+| P5-D | **Sub-Agent 并行执行** | Sub-Agent 资源池化（串行复用，限制移动端内存） | P3 |
 | P5-E | **工具单元测试** | 核心工具的输入验证和逻辑单元测试 | P2 |
 | P5-F | **Streaming Tool Execution** | 工具 JSON 完整即刻执行，不等整个响应完成 | P3 |
+
+#### 移动端可行性说明
+
+| 路线图项 | 可行性 | 备注 |
+|----------|--------|------|
+| PDF OCR (MinerU) | 需服务端 | MinerU 是 Python 库，无法在 iOS/Android 运行；替代方案：云 OCR API 或仅用 PDF outline 分章 |
+| Streaming Tool Execution | 高复杂度 | 受限于 LangChain Dart 架构——当前等整个 response 完成后才解析 tool_use JSON |
+| Sub-Agent 并行 | 有风险 | 每个 sub-agent 独占 LLM stream + 内存；4GB 设备 OOM 风险；建议保持串行 |
+| 本地 Embedding | 需 LAN | 模型无法在设备上运行，需 LAN/远程 Ollama 服务器；当前实现已支持 LAN 连接 |
 
 ---
 

@@ -5,7 +5,6 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
 import 'package:anx_reader/enums/ai_tool_risk_level.dart';
 import 'package:anx_reader/service/ai/ai_usage_tracker.dart';
-import 'package:anx_reader/service/ai/max_tokens_strategy.dart';
 import 'package:anx_reader/service/ai/tool_approval_delegate.dart';
 import 'package:anx_reader/service/ai/tool_orchestrator.dart';
 import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
@@ -26,8 +25,9 @@ class CancelableLangchainRunner {
   static const Duration _toolTempAllowDuration = Duration(minutes: 5);
   static const Duration _heartbeatInterval = Duration(seconds: 15);
 
-  /// Tracks whether max_tokens was escalated (hit cap in a previous turn).
-  bool _maxTokensEscalated = false;
+  // MaxTokensStrategy: dynamic escalation is not currently possible because
+  // BaseChatModelOptions.copyWith does not support maxTokens. The user-
+  // configured maxTokens (via LangchainAiConfig) is used directly.
 
   /// In-memory per-conversation temporary allowances.
   ///
@@ -62,7 +62,6 @@ class CancelableLangchainRunner {
 
   void cancel() {
     _cancelRequested = true;
-    _maxTokensEscalated = false;
 
     try {
       _subscription?.cancel();
@@ -452,15 +451,8 @@ class CancelableLangchainRunner {
 
           await completer.future;
 
-          // Check if max_tokens was hit and should escalate for next turn.
           if (aggregated != null) {
             final outTokens = aggregated!.usage.responseTokens ?? 0;
-            if (MaxTokensStrategy.shouldEscalate(
-              aggregated!.finishReason?.name,
-              outTokens,
-            )) {
-              _maxTokensEscalated = true;
-            }
 
             // Record usage if tracker is provided.
             usageTracker?.recordApiCall(
@@ -481,10 +473,6 @@ class CancelableLangchainRunner {
           final message = aggregated!.output;
           final hydratedMessage = _hydrateToolArguments(message);
           final actions = await parser.parseChatMessage(hydratedMessage);
-
-          // if (message.toolCalls.isNotEmpty || pendingThought != null) {
-          //   // pendingThought = null;
-          // }
 
           // === Phase 1: Filter AgentFinish + Approval ===
           var shouldStop = false;

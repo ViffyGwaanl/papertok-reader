@@ -29,6 +29,7 @@ class LangchainAiRegistry {
   LangchainPipeline resolve(
     LangchainAiConfig config, {
     bool useAgent = false,
+    AnnotationLedger? annotationLedger,
   }) {
     switch (config.identifier) {
       case 'claude':
@@ -36,18 +37,21 @@ class LangchainAiRegistry {
           config,
           _buildAnthropic(config),
           useAgent: useAgent,
+          annotationLedger: annotationLedger,
         );
       case 'gemini':
         return _buildPipeline(
           config,
           _buildGoogle(config),
           useAgent: useAgent,
+          annotationLedger: annotationLedger,
         );
       case 'openai-responses':
         return _buildPipeline(
           config,
           _buildOpenAiResponses(config),
           useAgent: useAgent,
+          annotationLedger: annotationLedger,
         );
       case 'deepseek':
       case 'openrouter':
@@ -57,6 +61,7 @@ class LangchainAiRegistry {
           config,
           _buildOpenAi(config),
           useAgent: useAgent,
+          annotationLedger: annotationLedger,
         );
     }
   }
@@ -119,6 +124,7 @@ class LangchainAiRegistry {
     LangchainAiConfig config,
     BaseChatModel model, {
     required bool useAgent,
+    AnnotationLedger? annotationLedger,
   }) {
     if (useAgent) {
       assert(ref != null, 'ref must be provided when useAgent is true');
@@ -133,7 +139,10 @@ class LangchainAiRegistry {
 
     if (useAgent) {
       final enabledIds = Prefs().enabledAiToolIds;
-      final toolContext = AiToolContext(ref: ref!);
+      final toolContext = AiToolContext(
+        ref: ref!,
+        externalAnnotationLedger: annotationLedger,
+      );
 
       // Scene-aware filtering: only include tools relevant to the
       // current context (reading vs library), plus global tools.

@@ -72,7 +72,8 @@ class AiToolContext {
     this.selectedText,
     this.conversationId,
     this.locale,
-  });
+    AnnotationLedger? externalAnnotationLedger,
+  }) : _externalAnnotationLedger = externalAnnotationLedger;
 
   final Ref ref;
 
@@ -112,8 +113,12 @@ class AiToolContext {
   /// Chapter content LRU cache (shared across tools within a conversation).
   late final BookContentCache bookContentCache = BookContentCache();
 
+  final AnnotationLedger? _externalAnnotationLedger;
+
   /// Tracks annotations created by AI during this conversation.
-  late final AnnotationLedger annotationLedger = AnnotationLedger();
+  /// Uses session-level ledger if provided, otherwise creates a local one.
+  late final AnnotationLedger annotationLedger =
+      _externalAnnotationLedger ?? AnnotationLedger();
 
   bool get isReading => ref.read(currentReadingProvider).isReading;
 
