@@ -1,11 +1,14 @@
 import Foundation
 import Observation
+import PTCore
 
 @Observable
 public final class BookshelfViewModel: @unchecked Sendable {
     public var books: [Book] = []
     public var searchQuery: String = ""
     public var isLoading: Bool = false
+    public var isImporting: Bool = false
+    public var importError: BookImportError?
     public var sortOrder: SortOrder = .dateDesc
 
     public enum SortOrder: String, CaseIterable, Sendable {
@@ -13,9 +16,11 @@ public final class BookshelfViewModel: @unchecked Sendable {
     }
 
     private let bookDAO: BookDAO
+    private let importService: BookImportService
 
     public init(database: AppDatabase) {
         self.bookDAO = BookDAO(database: database)
+        self.importService = BookImportService(database: database)
     }
 
     public func loadBooks() async {
@@ -30,6 +35,21 @@ public final class BookshelfViewModel: @unchecked Sendable {
             sortBooks()
         } catch {
             books = []
+        }
+    }
+
+    /// Import a book file from the given URL. On success, prepends the new book to `books`.
+    public func importBook(url: URL) async {
+        isImporting = true
+        importError = nil
+        defer { isImporting = false }
+        do {
+            let book = try await importService.importFile(from: url)
+            books.insert(book, at: 0)
+        } catch let error as BookImportError {
+            importError = error
+        } catch {
+            importError = .saveFailed(error)
         }
     }
 
