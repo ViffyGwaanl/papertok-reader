@@ -36,6 +36,15 @@ public struct BookDAO: Sendable {
         }
     }
 
+    public func fetchByMD5(_ md5: String) async throws -> Book? {
+        try await database.reader.read { db in
+            try Book
+                .filter(Column("file_md5") == md5)
+                .filter(Column("is_deleted") == false)
+                .fetchOne(db)
+        }
+    }
+
     public func softDelete(id: Int64) async throws {
         try await database.writer.write { db in
             if var book = try Book.fetchOne(db, key: id) {

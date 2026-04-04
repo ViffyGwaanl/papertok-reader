@@ -60,6 +60,20 @@ struct BookDAOTests {
         #expect(results[0].title == "Swift Programming")
     }
 
+    @Test("fetchByMD5 returns matching book")
+    func fetchByMD5() async throws {
+        let dao = try makeDAO()
+        var book = Book.placeholder(title: "MD5 Book", filePath: "/md5.pdf")
+        book.md5 = "abc123"
+        let saved = try await dao.save(book)
+
+        let found = try await dao.fetchByMD5("abc123")
+        #expect(found?.id == saved.id)
+
+        let missing = try await dao.fetchByMD5("notexist")
+        #expect(missing == nil)
+    }
+
     @Test("Soft delete sets is_deleted")
     func softDelete() async throws {
         let dao = try makeDAO()
