@@ -8,7 +8,17 @@ import PTReader
 public final class ReaderViewModel: @unchecked Sendable {
     // MARK: - Published state
     public private(set) var pageCount: Int = 0
-    public private(set) var currentPage: Int = 0
+    /// Current page index. Setting this clamps to [0, pageCount-1] and updates readingPercentage.
+    public var currentPage: Int = 0 {
+        didSet {
+            guard pageCount > 0 else { return }
+            let clamped = max(0, min(currentPage, pageCount - 1))
+            if clamped != currentPage { currentPage = clamped; return }
+            readingPercentage = pageCount > 1
+                ? Double(currentPage) / Double(pageCount - 1)
+                : 1.0
+        }
+    }
     public private(set) var readingPercentage: Double = 0
     public private(set) var tocEntries: [ChapterEntry] = []
     public var showTOC: Bool = false
@@ -57,11 +67,7 @@ public final class ReaderViewModel: @unchecked Sendable {
     // MARK: - Navigation
 
     public func goToPage(_ page: Int) {
-        guard pageCount > 0 else { return }
-        currentPage = max(0, min(page, pageCount - 1))
-        readingPercentage = pageCount > 1
-            ? Double(currentPage) / Double(pageCount - 1)
-            : 1.0
+        currentPage = page  // didSet handles clamping and percentage update
     }
 
     public func goToChapter(href: String) {
