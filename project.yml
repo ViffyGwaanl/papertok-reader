@@ -38,8 +38,14 @@ targets:
     sources:
       - path: App
         type: group
+        excludes:
+          - Extensions/ShareExtension/**
+    resources:
+      - path: App/Resources/Localizable.xcstrings
     dependencies:
       - package: PTFeatures
+      - sdk: EventKit.framework
+      - sdk: AppIntents.framework
     settings:
       base:
         INFOPLIST_FILE: App/Info.plist
