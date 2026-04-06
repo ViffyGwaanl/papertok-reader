@@ -9,15 +9,28 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../PTCore"),
+        .package(
+            url: "https://github.com/readium/swift-toolkit.git",
+            from: "3.0.0"
+        ),
     ],
     targets: [
         .target(
             name: "PTReader",
-            dependencies: ["PTCore"]
+            dependencies: [
+                "PTCore",
+                .product(name: "ReadiumShared", package: "swift-toolkit"),
+                .product(name: "ReadiumStreamer", package: "swift-toolkit"),
+                .product(name: "ReadiumNavigator", package: "swift-toolkit"),
+            ]
         ),
         .testTarget(
             name: "PTReaderTests",
-            dependencies: ["PTReader"]
+            dependencies: [
+                "PTReader",
+                "PTCore",
+                .product(name: "ReadiumShared", package: "swift-toolkit"),
+            ]
         ),
     ]
 )
