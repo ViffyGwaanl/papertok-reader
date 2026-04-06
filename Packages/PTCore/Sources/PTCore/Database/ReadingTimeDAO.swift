@@ -38,4 +38,27 @@ public struct ReadingTimeDAO: Sendable {
             try ReadingTime.filter(Column("date") == date).fetchAll(db)
         }
     }
+
+    /// Returns daily reading totals (in seconds) for a date range, keyed by "yyyy-MM-dd".
+    public func dailyReadingData(from startDate: String, to endDate: String) async throws -> [String: Int] {
+        try await database.reader.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                    SELECT date, COALESCE(SUM(reading_time), 0) AS total
+                    FROM tb_reading_time
+                    WHERE date >= ? AND date <= ?
+                    GROUP BY date
+                    """,
+                arguments: [startDate, endDate]
+            )
+            var result: [String: Int] = [:]
+            for row in rows {
+                if let date: String = row["date"], let total: Int = row["total"] {
+                    result[date] = total
+                }
+            }
+            return result
+        }
+    }
 }
