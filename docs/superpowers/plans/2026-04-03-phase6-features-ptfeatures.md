@@ -1,5 +1,7 @@
 # Phase 6: PTFeatures Implementation Plan
 
+> **状态：Tasks 1–6 ✅ 已完成（2026-04-03）。书籍导入 + PDF 阅读器 ✅ 已完成（2026-04-04）。Notes / Statistics / AIChat / Settings UI ⏳ 在 worktree 中已完成，待合并至 swift-native。**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the PTFeatures Swift package — ViewModels for all major screens (Bookshelf, Notes, Statistics, AI Chat, Settings), navigation routing, and core feature logic. SwiftUI views are stubs that will be fleshed out during Phase 7 app integration.
@@ -104,3 +106,37 @@ let package = Package(
 ### Task 6: Full Test Suite + Push
 
 - [x] Run all 6 packages. Push.
+
+---
+
+## 实现进度（更新于 2026-04-06）
+
+### ✅ 已完成并合并至 swift-native
+
+| 组件 | 文件 | 提交 |
+|------|------|------|
+| Package 初始化 | `Package.swift`, `PTFeatures.swift` | `b518e647` |
+| AppTab 导航枚举 | `Navigation/AppTab.swift` | `5d569855` |
+| BookshelfViewModel（加载/搜索/排序/删除） | `Bookshelf/BookshelfViewModel.swift` | `59894ff5` |
+| NotesViewModel | `Notes/NotesViewModel.swift` | `640ebda0` |
+| StatisticsViewModel | `Statistics/StatisticsViewModel.swift` | `640ebda0` |
+| AIChatViewModel | `AIChat/AIChatViewModel.swift` | `7d8a38da` |
+| SettingsViewModel | `Settings/SettingsViewModel.swift` | `7d8a38da` |
+| **BookImportService** | `Bookshelf/BookImportService.swift` | `41e7d919` |
+| **BookshelfViewModel.importBook** | `Bookshelf/BookshelfViewModel.swift` | `41e7d919` |
+| **ReaderViewModel**（加载/目录/翻页/进度） | `Reader/ReaderViewModel.swift` | `c2e2811c` |
+| **PDFReaderView**（PDFKit 封装） | `Reader/PDFReaderView.swift` | `d2b4cd84` |
+| **书架导入按钮 + 阅读器跳转** | `App/ContentView.swift` | `706ea5d5` |
+
+测试覆盖：PTCore 45 个 ✅ | PTFeatures 12 个 ✅
+
+### ⏳ 待合并至 swift-native（已在 worktree 中完成）
+
+以下功能已在各自的 claude/ worktree 分支中实现，尚未合并到 swift-native：
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| Notes UI（完整 SwiftUI 视图） | ⏳ 待合并 | NotesViewModel 已在 swift-native，View 层在 worktree |
+| Statistics UI（仪表盘、热力图） | ⏳ 待合并 | StatisticsViewModel 已在 swift-native，View 层在 worktree |
+| Settings UI（全部设置子页面） | ⏳ 待合并 | SettingsViewModel 已在 swift-native，View 层在 worktree |
+| AIChat UI（聊天界面） | ⏳ 待合并 | AIChatViewModel 已在 swift-native，View 层在 worktree |

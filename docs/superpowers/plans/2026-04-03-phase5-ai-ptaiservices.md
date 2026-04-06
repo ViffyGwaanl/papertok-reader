@@ -1,5 +1,7 @@
 # Phase 5: PTAIServices Implementation Plan
 
+> **状态：Tasks 1–7 ✅ 已完成（2026-04-03）。OpenAIProvider ✅ 已完成（2026-04-04）。AnthropicProvider ⏳ 待实现。**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the PTAIServices Swift package — ChatModelProvider protocol, LLM provider adapters (OpenAI, Anthropic, Gemini, Volcengine, Custom), AITool protocol, ToolOrchestrator, ConversationTree, and foundational AI service types.
@@ -49,7 +51,7 @@ Packages/PTAIServices/
 - Create: `Packages/PTAIServices/Sources/PTAIServices/PTAIServices.swift`
 - Create: `Packages/PTAIServices/Tests/PTAIServicesTests/PTAIServicesImportTests.swift`
 
-- [ ] **Step 1: Create Package.swift**
+- [x] **Step 1: Create Package.swift**
 
 ```swift
 // swift-tools-version: 5.9
@@ -78,7 +80,7 @@ let package = Package(
 )
 ```
 
-- [ ] **Step 2: Create module entry**
+- [x] **Step 2: Create module entry**
 
 ```swift
 // PTAIServices — LLM providers, AI tools, RAG, memory, translation
@@ -87,7 +89,7 @@ import Foundation
 @_exported import PTNetworking
 ```
 
-- [ ] **Step 3: Create import test and verify**
+- [x] **Step 3: Create import test and verify**
 
 ```swift
 import Testing
@@ -100,7 +102,7 @@ struct PTAIServicesImportTests {
 }
 ```
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 cd Packages/PTAIServices && swift test
@@ -117,7 +119,7 @@ git commit -m "feat(PTAIServices): initialize package with PTCore + PTNetworking
 - Create: `Packages/PTAIServices/Sources/PTAIServices/Chat/TokenUsage.swift`
 - Test: `Packages/PTAIServices/Tests/PTAIServicesTests/Chat/ChatMessageTests.swift`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```swift
 import Testing
@@ -170,7 +172,7 @@ struct ChatMessageTests {
 }
 ```
 
-- [ ] **Step 2: Implement ChatMessage**
+- [x] **Step 2: Implement ChatMessage**
 
 ```swift
 import Foundation
@@ -282,7 +284,7 @@ public struct ToolCall: Codable, Sendable, Equatable, Identifiable {
 }
 ```
 
-- [ ] **Step 3: Implement TokenUsage**
+- [x] **Step 3: Implement TokenUsage**
 
 ```swift
 import Foundation
@@ -307,7 +309,7 @@ public struct TokenUsage: Codable, Sendable, Equatable {
 }
 ```
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 ```bash
 cd Packages/PTAIServices && swift test --filter ChatMessageTests
@@ -324,7 +326,7 @@ git commit -m "feat(PTAIServices): add ChatMessage, ContentPart, ToolCall, Token
 - Create: `Packages/PTAIServices/Sources/PTAIServices/Providers/ModelCapability.swift`
 - Create: `Packages/PTAIServices/Sources/PTAIServices/Providers/ProviderError.swift`
 
-- [ ] **Step 1: Create ChatModelProvider protocol**
+- [x] **Step 1: Create ChatModelProvider protocol**
 
 ```swift
 import Foundation
@@ -453,7 +455,7 @@ public struct ToolDefinition: Codable, Sendable {
 }
 ```
 
-- [ ] **Step 2: Create ModelCapability**
+- [x] **Step 2: Create ModelCapability**
 
 ```swift
 import Foundation
@@ -467,7 +469,7 @@ public enum ModelCapability: String, Sendable, CaseIterable {
 }
 ```
 
-- [ ] **Step 3: Create ProviderError**
+- [x] **Step 3: Create ProviderError**
 
 ```swift
 import Foundation
@@ -497,7 +499,7 @@ public enum ProviderError: Error, Sendable, LocalizedError {
 }
 ```
 
-- [ ] **Step 4: Build and commit**
+- [x] **Step 4: Build and commit**
 
 ```bash
 cd Packages/PTAIServices && swift build
@@ -513,7 +515,7 @@ git commit -m "feat(PTAIServices): add ChatModelProvider protocol, ChatRequest/R
 - Create: `Packages/PTAIServices/Sources/PTAIServices/Chat/ConversationTree.swift`
 - Test: `Packages/PTAIServices/Tests/PTAIServicesTests/Chat/ConversationTreeTests.swift`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```swift
 import Testing
@@ -581,7 +583,7 @@ struct ConversationTreeTests {
 }
 ```
 
-- [ ] **Step 2: Implement ConversationTree**
+- [x] **Step 2: Implement ConversationTree**
 
 ```swift
 import Foundation
@@ -683,7 +685,7 @@ public struct ConversationTree: Codable, Sendable {
 }
 ```
 
-- [ ] **Step 3: Run tests and commit**
+- [x] **Step 3: Run tests and commit**
 
 ```bash
 cd Packages/PTAIServices && swift test --filter ConversationTreeTests
@@ -701,7 +703,7 @@ git commit -m "feat(PTAIServices): add ConversationTree with branching and varia
 - Create: `Packages/PTAIServices/Sources/PTAIServices/Tools/ToolOrchestrator.swift`
 - Test: `Packages/PTAIServices/Tests/PTAIServicesTests/Tools/ToolOrchestratorTests.swift`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```swift
 import Testing
@@ -772,7 +774,7 @@ struct ToolOrchestratorTests {
 }
 ```
 
-- [ ] **Step 2: Create AITool protocol**
+- [x] **Step 2: Create AITool protocol**
 
 ```swift
 import Foundation
@@ -812,7 +814,7 @@ public struct ToolResult: Sendable {
 }
 ```
 
-- [ ] **Step 3: Create ToolContext**
+- [x] **Step 3: Create ToolContext**
 
 ```swift
 import Foundation
@@ -829,7 +831,7 @@ public struct ToolContext: Sendable {
 }
 ```
 
-- [ ] **Step 4: Create ToolOrchestrator**
+- [x] **Step 4: Create ToolOrchestrator**
 
 ```swift
 import Foundation
@@ -887,7 +889,7 @@ public final class ToolOrchestrator: @unchecked Sendable {
 }
 ```
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```bash
 cd Packages/PTAIServices && swift test --filter ToolOrchestratorTests
@@ -902,7 +904,7 @@ git commit -m "feat(PTAIServices): add AITool protocol, ToolOrchestrator with co
 **Files:**
 - Create: `Packages/PTAIServices/Sources/PTAIServices/Translation/AITranslationService.swift`
 
-- [ ] **Step 1: Create AITranslationService**
+- [x] **Step 1: Create AITranslationService**
 
 ```swift
 import Foundation
@@ -935,7 +937,7 @@ public struct AITranslationService: Sendable {
 }
 ```
 
-- [ ] **Step 2: Build and commit**
+- [x] **Step 2: Build and commit**
 
 ```bash
 cd Packages/PTAIServices && swift build
@@ -947,13 +949,13 @@ git commit -m "feat(PTAIServices): add AITranslationService using chat provider"
 
 ### Task 7: Full Test Suite and Push
 
-- [ ] **Step 1: Run all tests**
+- [x] **Step 1: Run all tests**
 
 ```bash
 cd Packages/PTAIServices && swift test 2>&1 | tail -15
 ```
 
-- [ ] **Step 2: Push**
+- [x] **Step 2: Push**
 
 ```bash
 git push origin swift-native
@@ -974,3 +976,35 @@ git push origin swift-native
 | 7 | Full suite verification | Run all |
 
 **Total: 7 tasks, ~15 new tests**
+
+---
+
+## 实现进度（更新于 2026-04-06）
+
+### ✅ 已完成
+
+| 组件 | 文件 | 提交 |
+|------|------|------|
+| Package 初始化 | `Package.swift`, `PTAIServices.swift` | `b518e647` |
+| ChatMessage / TokenUsage | `Chat/ChatMessage.swift`, `Chat/TokenUsage.swift` | — |
+| ChatModelProvider 协议 | `Providers/ChatModelProvider.swift`, `Providers/ModelCapability.swift` | — |
+| ConversationTree | `Chat/ConversationTree.swift` | — |
+| AITool / ToolOrchestrator | `Tools/AITool.swift`, `Tools/ToolOrchestrator.swift` | — |
+| AITranslationService | `Translation/AITranslationService.swift` | `969ae92d` |
+| **OpenAIProvider** | `Providers/OpenAIProvider.swift` | `706ea5d5` |
+
+OpenAIProvider 功能覆盖：
+- `complete()` — 同步请求，JSONDecoder 解析
+- `stream()` — AsyncThrowingStream + SSEParser，tool call 增量拼装
+- Function calling — `ToolDefinition` → `OAITool`
+- 自定义 base URL（兼容 DeepSeek / OpenRouter / Alibaba Qwen 等 OpenAI 兼容服务）
+- Keychain API key 读取（`KeychainService.load`）+ `overrideAPIKey` 测试支持
+
+### ⏳ 待实现
+
+| 组件 | 优先级 | 说明 |
+|------|--------|------|
+| **AnthropicProvider** | 🔴 高 | Messages API + SSE + extended thinking blocks + tool use |
+| GeminiProvider | 🟡 中 | Generative Language API，thinking budget |
+| 单元测试：OpenAIProvider | 🟡 中 | 请求序列化、SSE 解析、错误映射 |
+| 单元测试：AnthropicProvider | 🔴 高 | 随 AnthropicProvider 一起实现 |

@@ -1,5 +1,7 @@
 # Book Import + PDF Reader Implementation Plan
 
+> **状态：全部 7 个 Task ✅ 已完成（2026-04-04）。iOS 和 macOS Xcode 构建均通过，PTCore 45 个测试 + PTFeatures 12 个测试全部通过。**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add PDF/EPUB file import from the bookshelf toolbar and a full-screen PDFKit reader with TOC navigation and progress persistence.
