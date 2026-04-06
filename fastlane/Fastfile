@@ -40,7 +40,7 @@ platform :ios do
     end
 
     require "fileutils"
-    state_file = "/Volumes/FanXiang1/.openclaw/workspace/state/papertok-reader/last_testflight_build_number.txt"
+    state_file = File.expand_path("~/.openclaw/workspace/state/papertok-reader/last_testflight_build_number.txt")
     FileUtils.mkdir_p(File.dirname(state_file))
     local_latest = File.exist?(state_file) ? File.read(state_file).to_i : 0
     next_build = [asc_latest, local_latest].max + 1
