@@ -34,25 +34,43 @@ abstract class RepositoryTool<I extends Object, O> {
   FutureOr<O> run(I input);
 
   Map<String, dynamic> serializeSuccess(O output) {
-    return {
-      'status': 'ok',
-      'name': name,
-      'data': output,
-    };
+    return {'status': 'ok', 'name': name, 'data': output};
   }
 
   Map<String, dynamic> serializeError(Object error) {
-    return {
-      'status': 'error',
-      'name': name,
-      'message': error.toString(),
-    };
+    return {'status': 'error', 'name': name, 'message': error.toString()};
   }
 
   bool shouldLogError(Object error) => true;
 
-  Object _sanitizeForLog(Object value) {
-    if (!name.startsWith('memory_')) return value;
+  Object? _normalizeForLog(Object? value) {
+    if (value == null || value is num || value is bool || value is String) {
+      return value;
+    }
+
+    if (value is Map) {
+      final out = <String, dynamic>{};
+      for (final e in value.entries) {
+        out[e.key.toString()] = _normalizeForLog(e.value);
+      }
+      return out;
+    }
+
+    if (value is Iterable) {
+      return value.map(_normalizeForLog).toList(growable: false);
+    }
+
+    try {
+      final dynamic dynamicValue = value;
+      final jsonValue = dynamicValue.toJson();
+      return _normalizeForLog(jsonValue);
+    } catch (_) {
+      return value.toString();
+    }
+  }
+
+  Object? _sanitizeForLog(Object? value) {
+    if (!name.startsWith('memory_')) return _normalizeForLog(value);
 
     if (value is Map) {
       final out = <String, dynamic>{};
@@ -76,7 +94,7 @@ abstract class RepositoryTool<I extends Object, O> {
           continue;
         }
 
-        out[k] = v;
+        out[k] = _normalizeForLog(v);
       }
       return out;
     }
@@ -85,7 +103,7 @@ abstract class RepositoryTool<I extends Object, O> {
       return '<redacted:list>';
     }
 
-    return value;
+    return _normalizeForLog(value);
   }
 
   Future<String> _execute(I input) async {
