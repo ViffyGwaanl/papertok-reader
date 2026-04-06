@@ -7,25 +7,51 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00BC6A59685E9317CBB80DBA /* IntentsDonationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */; };
+		048ABFAE3A2297060654A2E7 /* OpenBookIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */; };
+		075E5D06B8D23EE6E32AD18D /* MigrationProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */; };
+		157ECD2FA728F1B104C283F9 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D3C772688A1BD8165B84AB46 /* EventKit.framework */; };
+		16664A5A64A18B35C546408D /* MacMenuCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */; };
+		1A006277668F9C9092A66A6F /* AskAIIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */; };
+		24BC49A4010C28E702DC2777 /* DeepLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7FABF2B84D350F5A63C0294 /* DeepLinkHandler.swift */; };
+		52BFBF6D928E092740AF4782 /* FlutterMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */; };
+		65DFBFC460E5BF9F1A83D545 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A768AFE5CCD35A044EB45243 /* AppIntents.framework */; };
+		86B5467224AE355C90C36FAD /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */; };
+		AEA843D224796020DF34C9F4 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59DD85ACEA3715614B91646A /* CalendarService.swift */; };
 		CB66BCFC24B2225513FEF061 /* PTFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = 6490B3DAD3DCE4DA661D2073 /* PTFeatures */; };
 		D8C42A5C3B426F4EC9C08B6E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */; };
 		F05D22F0737E20049C96F4EB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 49A45489E1D974DD57F2F390 /* Assets.xcassets */; };
+		F212931280D75426BDE79673 /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E77EC16F6EDA3773224443A4 /* DeepLinkRouter.swift */; };
 		F4DE2A562D39504688C24219 /* PaperTokReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */; };
+		F69EA64B705AB79D8494DD7F /* RemindersService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1E4497A75C2EC7640808B0 /* RemindersService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperTokReaderApp.swift; sourceTree = "<group>"; };
+		07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationProgressView.swift; sourceTree = "<group>"; };
+		3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationService.swift; sourceTree = "<group>"; };
+		470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentsDonationService.swift; sourceTree = "<group>"; };
 		4824BE6D93A2616F2F32B276 /* PTAIServices */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTAIServices; path = Packages/PTAIServices; sourceTree = SOURCE_ROOT; };
 		49A45489E1D974DD57F2F390 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		59DD85ACEA3715614B91646A /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		5C149D74800FC04E5B18E905 /* PTCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTCore; path = Packages/PTCore; sourceTree = SOURCE_ROOT; };
 		604B4E3AA86ABCDE3CEA46D4 /* PTUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTUI; path = Packages/PTUI; sourceTree = SOURCE_ROOT; };
+		62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskAIIntent.swift; sourceTree = "<group>"; };
 		70D02DF88F155D7FA350EC22 /* iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iOS.entitlements; sourceTree = "<group>"; };
 		863356412F60909A9DC3ABC8 /* PTFeatures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTFeatures; path = Packages/PTFeatures; sourceTree = SOURCE_ROOT; };
 		87B6C89B78CD691E6F537DD6 /* PaperTokReader.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PaperTokReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8CF0D2E8755DA12A1CCDAFA1 /* PTReader */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTReader; path = Packages/PTReader; sourceTree = SOURCE_ROOT; };
+		A768AFE5CCD35A044EB45243 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
+		ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBookIntent.swift; sourceTree = "<group>"; };
 		AF03DC7DEB141E9D534F0E42 /* PTNetworking */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTNetworking; path = Packages/PTNetworking; sourceTree = SOURCE_ROOT; };
+		B7FABF2B84D350F5A63C0294 /* DeepLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandler.swift; sourceTree = "<group>"; };
+		BA1E4497A75C2EC7640808B0 /* RemindersService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersService.swift; sourceTree = "<group>"; };
 		BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		D3C772688A1BD8165B84AB46 /* EventKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = EventKit.framework; path = System/Library/Frameworks/EventKit.framework; sourceTree = SDKROOT; };
+		E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacMenuCommands.swift; sourceTree = "<group>"; };
 		E2F6707A5F804C9C2CF422F6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E77EC16F6EDA3773224443A4 /* DeepLinkRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -34,6 +60,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				CB66BCFC24B2225513FEF061 /* PTFeatures in Frameworks */,
+				157ECD2FA728F1B104C283F9 /* EventKit.framework in Frameworks */,
+				65DFBFC460E5BF9F1A83D545 /* AppIntents.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,6 +72,8 @@
 			isa = PBXGroup;
 			children = (
 				32F6FEE50A87BA86E3FE04FD /* Entitlements */,
+				83E1C7F357BD1A7E7E0D6DF1 /* Extensions */,
+				5A8AB48B9B7DF713A1A08500 /* Platform */,
 				096A66DD39E7074A72EDA28C /* Resources */,
 				BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */,
 				E2F6707A5F804C9C2CF422F6 /* Info.plist */,
@@ -56,6 +86,7 @@
 			isa = PBXGroup;
 			children = (
 				49A45489E1D974DD57F2F390 /* Assets.xcassets */,
+				07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -66,6 +97,27 @@
 				70D02DF88F155D7FA350EC22 /* iOS.entitlements */,
 			);
 			path = Entitlements;
+			sourceTree = "<group>";
+		};
+		580A65870938F928066C5F16 /* EventKit */ = {
+			isa = PBXGroup;
+			children = (
+				59DD85ACEA3715614B91646A /* CalendarService.swift */,
+				BA1E4497A75C2EC7640808B0 /* RemindersService.swift */,
+			);
+			path = EventKit;
+			sourceTree = "<group>";
+		};
+		5A8AB48B9B7DF713A1A08500 /* Platform */ = {
+			isa = PBXGroup;
+			children = (
+				972AF4510C68D745D6249A2B /* DeepLink */,
+				580A65870938F928066C5F16 /* EventKit */,
+				AC897DB62AC8D1468A634B80 /* Intents */,
+				FF643AA9EB5310A3A6C86472 /* macOS */,
+				87DA46438456ABB3EF75C2A1 /* Migration */,
+			);
+			path = Platform;
 			sourceTree = "<group>";
 		};
 		6D72FF44B6FDCDA08E282DBD /* Packages */ = {
@@ -81,6 +133,50 @@
 			path = Packages;
 			sourceTree = "<group>";
 		};
+		83E1C7F357BD1A7E7E0D6DF1 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		87DA46438456ABB3EF75C2A1 /* Migration */ = {
+			isa = PBXGroup;
+			children = (
+				3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */,
+				2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */,
+			);
+			path = Migration;
+			sourceTree = "<group>";
+		};
+		972AF4510C68D745D6249A2B /* DeepLink */ = {
+			isa = PBXGroup;
+			children = (
+				B7FABF2B84D350F5A63C0294 /* DeepLinkHandler.swift */,
+				E77EC16F6EDA3773224443A4 /* DeepLinkRouter.swift */,
+			);
+			path = DeepLink;
+			sourceTree = "<group>";
+		};
+		97BA62961A78E94AE5621AEE /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A768AFE5CCD35A044EB45243 /* AppIntents.framework */,
+				D3C772688A1BD8165B84AB46 /* EventKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AC897DB62AC8D1468A634B80 /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */,
+				470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */,
+				ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */,
+			);
+			path = Intents;
+			sourceTree = "<group>";
+		};
 		ACD80EDE6F6FE221193C6115 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -94,8 +190,17 @@
 			children = (
 				033B8F7C661A83E67AEE42AF /* App */,
 				6D72FF44B6FDCDA08E282DBD /* Packages */,
+				97BA62961A78E94AE5621AEE /* Frameworks */,
 				ACD80EDE6F6FE221193C6115 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		FF643AA9EB5310A3A6C86472 /* macOS */ = {
+			isa = PBXGroup;
+			children = (
+				E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */,
+			);
+			path = macOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -141,7 +246,20 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
+				ar,
+				de,
 				en,
+				es,
+				fr,
+				hi,
+				ja,
+				ko,
+				"pt-BR",
+				ru,
+				th,
+				vi,
+				"zh-Hans",
+				"zh-Hant",
 			);
 			mainGroup = D290F9E4B9309C79DBA2342A;
 			minimizedProjectReferenceProxies = 1;
@@ -169,6 +287,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F05D22F0737E20049C96F4EB /* Assets.xcassets in Resources */,
+				86B5467224AE355C90C36FAD /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,8 +298,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A006277668F9C9092A66A6F /* AskAIIntent.swift in Sources */,
+				AEA843D224796020DF34C9F4 /* CalendarService.swift in Sources */,
 				D8C42A5C3B426F4EC9C08B6E /* ContentView.swift in Sources */,
+				24BC49A4010C28E702DC2777 /* DeepLinkHandler.swift in Sources */,
+				F212931280D75426BDE79673 /* DeepLinkRouter.swift in Sources */,
+				52BFBF6D928E092740AF4782 /* FlutterMigrationService.swift in Sources */,
+				00BC6A59685E9317CBB80DBA /* IntentsDonationService.swift in Sources */,
+				16664A5A64A18B35C546408D /* MacMenuCommands.swift in Sources */,
+				075E5D06B8D23EE6E32AD18D /* MigrationProgressView.swift in Sources */,
+				048ABFAE3A2297060654A2E7 /* OpenBookIntent.swift in Sources */,
 				F4DE2A562D39504688C24219 /* PaperTokReaderApp.swift in Sources */,
+				F69EA64B705AB79D8494DD7F /* RemindersService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

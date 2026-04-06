@@ -105,7 +105,9 @@ public final class RemindersService: RemindersServiceProtocol, @unchecked Sendab
                 $0.calendarIdentifier == listId
             }
         }
-        reminder.calendar = reminder.calendar ?? store.defaultCalendarForNewReminders
+        if reminder.calendar == nil {
+            reminder.calendar = store.defaultCalendarForNewReminders()
+        }
         try store.save(reminder, commit: true)
         return reminderToMap(reminder)
     }

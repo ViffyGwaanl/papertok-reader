@@ -6,8 +6,8 @@ struct PaperTokShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: OpenBookIntent(),
             phrases: [
-                "Open \(\.$bookTitle) in \(.applicationName)",
-                "Read \(\.$bookTitle) with \(.applicationName)",
+                "Open a book in \(.applicationName)",
+                "Read with \(.applicationName)",
             ],
             shortTitle: "Open Book",
             systemImageName: "book"
@@ -15,8 +15,8 @@ struct PaperTokShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: AskAIIntent(),
             phrases: [
-                "Ask \(.applicationName) \(\.$question)",
-                "Ask \(.applicationName) about \(\.$question)",
+                "Ask \(.applicationName) a question",
+                "Chat with \(.applicationName)",
             ],
             shortTitle: "Ask AI",
             systemImageName: "brain"
@@ -26,15 +26,11 @@ struct PaperTokShortcuts: AppShortcutsProvider {
 
 /// Donates common actions to Siri for proactive suggestions.
 enum IntentsDonationService {
-    /// Call when user opens a book to improve Siri suggestions.
     static func donateOpenBook(title: String) {
         let intent = OpenBookIntent()
         intent.bookTitle = title
-        // IntentDonationManager is available on iOS 16+
-        // The system automatically picks up AppIntent usage
     }
 
-    /// Call when user starts an AI chat.
     static func donateAskAI(question: String) {
         let intent = AskAIIntent()
         intent.question = question
