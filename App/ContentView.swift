@@ -27,7 +27,7 @@ extension AppTab {
     func destination(database: AppDatabase) -> some View {
         switch self {
         case .papers:
-            PapersPlaceholderView()
+            PapersView()
         case .bookshelf:
             BookshelfScreen(database: database)
         case .notes:
