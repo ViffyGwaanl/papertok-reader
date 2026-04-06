@@ -41,7 +41,7 @@ Packages/PTFeatures/
 
 ### Task 1: Package Setup
 
-- [ ] Create `Packages/PTFeatures/Package.swift`:
+- [x] Create `Packages/PTFeatures/Package.swift`:
 
 ```swift
 // swift-tools-version: 5.9
@@ -65,42 +65,42 @@ let package = Package(
 )
 ```
 
-- [ ] Create module entry + import test, verify, commit.
+- [x] Create module entry + import test, verify, commit.
 
 ---
 
 ### Task 2: AppTab Navigation
 
-- [ ] Create `Navigation/AppTab.swift` — tab enum with 6 tabs (Papers, Bookshelf, Notes, Statistics, AI, Settings), SF Symbol icons, localized titles.
-- [ ] Test: verify all 6 cases, icon names, ordering.
-- [ ] Commit.
+- [x] Create `Navigation/AppTab.swift` — tab enum with 6 tabs (Papers, Bookshelf, Notes, Statistics, AI, Settings), SF Symbol icons, localized titles.
+- [x] Test: verify all 6 cases, icon names, ordering.
+- [x] Commit.
 
 ---
 
 ### Task 3: BookshelfViewModel
 
-- [ ] Create `Bookshelf/BookshelfViewModel.swift` — @Observable class with loadBooks(), search(), sort(), deleteBook(), BookDAO dependency.
-- [ ] Test: verify load, search, sort with in-memory DB.
-- [ ] Commit.
+- [x] Create `Bookshelf/BookshelfViewModel.swift` — @Observable class with loadBooks(), search(), sort(), deleteBook(), BookDAO dependency.
+- [x] Test: verify load, search, sort with in-memory DB.
+- [x] Commit.
 
 ---
 
 ### Task 4: NotesViewModel + StatisticsViewModel
 
-- [ ] Create `Notes/NotesViewModel.swift` — search notes, filter by book.
-- [ ] Create `Statistics/StatisticsViewModel.swift` — total reading time, book count, notes count.
-- [ ] Commit.
+- [x] Create `Notes/NotesViewModel.swift` — search notes, filter by book.
+- [x] Create `Statistics/StatisticsViewModel.swift` — total reading time, book count, notes count.
+- [x] Commit.
 
 ---
 
 ### Task 5: AIChatViewModel + SettingsViewModel
 
-- [ ] Create `AIChat/AIChatViewModel.swift` — manages ConversationTree, send message stub.
-- [ ] Create `Settings/SettingsViewModel.swift` — loads/saves AppConfig values.
-- [ ] Commit.
+- [x] Create `AIChat/AIChatViewModel.swift` — manages ConversationTree, send message stub.
+- [x] Create `Settings/SettingsViewModel.swift` — loads/saves AppConfig values.
+- [x] Commit.
 
 ---
 
 ### Task 6: Full Test Suite + Push
 
-- [ ] Run all 6 packages. Push.
+- [x] Run all 6 packages. Push.
