@@ -106,7 +106,37 @@ struct OAIToolFunction: Encodable, Sendable {
 
 struct OAIToolParameters: Encodable, Sendable {
     let type: String
-    let properties: [String: String]
+    let properties: [String: OAIPropertySchema]
+    var required: [String]?
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        try container.encode(properties, forKey: .properties)
+        try container.encodeIfPresent(required, forKey: .required)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case type, properties, required
+    }
+}
+
+struct OAIPropertySchema: Encodable, Sendable {
+    let type: String
+    let description: String?
+    let enumValues: [String]?
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encodeIfPresent(enumValues, forKey: .enumValues)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case type, description
+        case enumValues = "enum"
+    }
 }
 
 // MARK: - Response model types
@@ -323,8 +353,12 @@ public struct OpenAIProvider: ChatModelProvider {
 
     private func resolveAPIKey() throws -> String {
         if let key = overrideAPIKey { return key }
-        if let key = try? KeychainService.load(key: apiKeyKeychainKey) {
-            return key
+        do {
+            if let key = try KeychainService.load(key: apiKeyKeychainKey) {
+                return key
+            }
+        } catch {
+            throw ProviderError.authenticationFailed("Keychain access failed for '\(apiKeyKeychainKey)': \(error.localizedDescription)")
         }
         throw ProviderError.authenticationFailed("No API key found for key '\(apiKeyKeychainKey)'")
     }
@@ -334,12 +368,22 @@ public struct OpenAIProvider: ChatModelProvider {
 
         let tools: [OAITool]? = request.tools.map { toolDefs in
             toolDefs.map { def in
-                OAITool(
+                let props: [String: OAIPropertySchema]
+                var requiredKeys: [String]?
+                if let schema = def.parameters {
+                    props = schema.properties.mapValues { p in
+                        OAIPropertySchema(type: p.type, description: p.description, enumValues: p.enumValues)
+                    }
+                    requiredKeys = schema.required.isEmpty ? nil : schema.required
+                } else {
+                    props = [:]
+                }
+                return OAITool(
                     type: "function",
                     function: OAIToolFunction(
                         name: def.name,
                         description: def.description,
-                        parameters: OAIToolParameters(type: "object", properties: [:])
+                        parameters: OAIToolParameters(type: "object", properties: props, required: requiredKeys)
                     )
                 )
             }

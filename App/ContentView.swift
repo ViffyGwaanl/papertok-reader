@@ -87,8 +87,8 @@ struct BookshelfScreen: View {
                 guard case .success(let urls) = result, let url = urls.first else { return }
                 let accessing = url.startAccessingSecurityScopedResource()
                 Task {
+                    defer { if accessing { url.stopAccessingSecurityScopedResource() } }
                     await viewModel.importBook(url: url)
-                    if accessing { url.stopAccessingSecurityScopedResource() }
                     if viewModel.importError != nil { showImportError = true }
                 }
             }

@@ -88,8 +88,17 @@ public actor BookImportService {
     // MARK: - Private helpers
 
     private func computeMD5(at url: URL) throws -> String {
-        let data = try Data(contentsOf: url, options: .mappedIfSafe)
-        let digest = Insecure.MD5.hash(data: data)
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { handle.closeFile() }
+        var hasher = Insecure.MD5()
+        let bufferSize = 1024 * 1024 // 1 MB chunks
+        while autoreleasepool(invoking: {
+            let chunk = handle.readData(ofLength: bufferSize)
+            guard !chunk.isEmpty else { return false }
+            hasher.update(data: chunk)
+            return true
+        }) { }
+        let digest = hasher.finalize()
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 

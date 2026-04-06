@@ -4,8 +4,8 @@ import PDFKit
 import PTCore
 import PTReader
 
-@Observable
-public final class ReaderViewModel: @unchecked Sendable {
+@MainActor @Observable
+public final class ReaderViewModel {
     // MARK: - Published state
     public private(set) var pageCount: Int = 0
     /// Current page index. Setting this clamps to [0, pageCount-1] and updates readingPercentage.

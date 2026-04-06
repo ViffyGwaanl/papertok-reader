@@ -27,11 +27,19 @@ public struct BookDAO: Sendable {
     }
 
     public func search(query: String) async throws -> [Book] {
-        let pattern = "%\(query)%"
+        // Escape LIKE wildcards in user input
+        let escaped = query
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "%", with: "\\%")
+            .replacingOccurrences(of: "_", with: "\\_")
+        let pattern = "%\(escaped)%"
         return try await database.reader.read { db in
             try Book
                 .filter(Column("is_deleted") == false)
-                .filter(Column("title").like(pattern) || Column("author").like(pattern))
+                .filter(
+                    Column("title").like(pattern, escape: "\\") ||
+                    Column("author").like(pattern, escape: "\\")
+                )
                 .fetchAll(db)
         }
     }

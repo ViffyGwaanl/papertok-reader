@@ -54,6 +54,10 @@ struct NativePDFView: UIViewRepresentable {
             self.document = document
         }
 
+        deinit {
+            NotificationCenter.default.removeObserver(self)
+        }
+
         @objc func pageChanged(_ notification: Notification) {
             guard let pdfView = notification.object as? PDFView,
                   let page = pdfView.currentPage else { return }
@@ -109,6 +113,10 @@ struct NativePDFView: NSViewRepresentable {
         init(currentPage: Binding<Int>, document: PDFDocument) {
             self._currentPage = currentPage
             self.document = document
+        }
+
+        deinit {
+            NotificationCenter.default.removeObserver(self)
         }
 
         @objc func pageChanged(_ notification: Notification) {

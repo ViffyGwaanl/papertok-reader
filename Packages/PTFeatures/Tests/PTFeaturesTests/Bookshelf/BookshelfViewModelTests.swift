@@ -4,6 +4,7 @@ import PDFKit
 @testable import PTFeatures
 
 @Suite("BookshelfViewModel")
+@MainActor
 struct BookshelfViewModelTests {
     @Test("Loads books from database")
     func loadBooks() async throws {

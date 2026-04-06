@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-@Observable
-public final class AIChatViewModel: @unchecked Sendable {
+@MainActor @Observable
+public final class AIChatViewModel {
     public var conversationTree: ConversationTree
     public var isStreaming: Bool = false
     public var currentStreamText: String = ""

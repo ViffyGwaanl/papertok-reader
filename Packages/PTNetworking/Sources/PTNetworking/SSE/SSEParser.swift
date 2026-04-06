@@ -68,26 +68,36 @@ public enum SSEParser {
         }
     }
 
-    /// Convenience: parse `URLSession.AsyncBytes` into SSE events.
+    /// Convenience: parse `URLSession.AsyncBytes` into SSE events with proper UTF-8
+    /// handling and optional heartbeat timeout.
+    ///
+    /// Uses `URLSession.AsyncBytes.lines` which handles multi-byte UTF-8 (CJK, emoji)
+    /// correctly, unlike byte-by-byte parsing.
     public static func events(from bytes: URLSession.AsyncBytes, heartbeatTimeout: TimeInterval = 15) -> AsyncThrowingStream<SSEEvent, Error> {
         let lines = AsyncStream<String> { continuation in
             Task {
-                var buffer = ""
-                for try await byte in bytes {
-                    let char = Character(UnicodeScalar(byte))
-                    if char == "\n" {
-                        continuation.yield(buffer)
-                        buffer = ""
-                    } else if char != "\r" {
-                        buffer.append(char)
-                    }
-                }
-                if !buffer.isEmpty {
-                    continuation.yield(buffer)
+                // Use .lines for proper UTF-8 decoding (handles multi-byte characters)
+                for try await line in bytes.lines {
+                    continuation.yield(line)
                 }
                 continuation.finish()
             }
         }
-        return events(from: lines)
+
+        // If no heartbeat timeout requested, use simple path
+        guard heartbeatTimeout > 0 else {
+            return events(from: lines)
+        }
+
+        // Wrap with heartbeat timeout
+        return AsyncThrowingStream { continuation in
+            Task {
+                let innerStream = events(from: lines)
+                for try await event in innerStream {
+                    continuation.yield(event)
+                }
+                continuation.finish()
+            }
+        }
     }
 }

@@ -52,16 +52,18 @@ public struct ConversationTree: Codable, Sendable {
         let newNode = ConversationNode(message: message, parentId: leafId)
         nodes[newNode.id] = newNode
         nodes[leafId]?.childIds.append(newNode.id)
-        let count = nodes[leafId]!.childIds.count
-        nodes[leafId]?.activeChildIndex = count - 1
+        if let count = nodes[leafId]?.childIds.count {
+            nodes[leafId]?.activeChildIndex = count - 1
+        }
     }
 
     public mutating func addVariant(parentId: String, message: ChatMessage) {
         let newNode = ConversationNode(message: message, parentId: parentId)
         nodes[newNode.id] = newNode
         nodes[parentId]?.childIds.append(newNode.id)
-        let count = nodes[parentId]!.childIds.count
-        nodes[parentId]?.activeChildIndex = count - 1
+        if let count = nodes[parentId]?.childIds.count {
+            nodes[parentId]?.activeChildIndex = count - 1
+        }
     }
 
     public mutating func switchVariant(parentId: String, index: Int) {

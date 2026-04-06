@@ -2,8 +2,8 @@ import Foundation
 import Observation
 import PTCore
 
-@Observable
-public final class BookshelfViewModel: @unchecked Sendable {
+@MainActor @Observable
+public final class BookshelfViewModel {
     public var books: [Book] = []
     public var searchQuery: String = ""
     public var isLoading: Bool = false

@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-@Observable
-public final class SettingsViewModel: @unchecked Sendable {
+@MainActor @Observable
+public final class SettingsViewModel {
     // Appearance
     public var themeMode: String
     public var accentColorIndex: Int

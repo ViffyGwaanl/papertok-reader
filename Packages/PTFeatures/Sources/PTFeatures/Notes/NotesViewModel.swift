@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-@Observable
-public final class NotesViewModel: @unchecked Sendable {
+@MainActor @Observable
+public final class NotesViewModel {
     public var notes: [BookNote] = []
     public var searchQuery: String = ""
     public var isLoading: Bool = false

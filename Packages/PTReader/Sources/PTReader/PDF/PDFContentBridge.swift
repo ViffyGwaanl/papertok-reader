@@ -8,7 +8,8 @@ import Vision
 #endif
 
 /// BookContentBridge implementation for PDF documents using PDFKit.
-public final class PDFContentBridge: BookContentBridge, @unchecked Sendable {
+@MainActor
+public final class PDFContentBridge: BookContentBridge {
     private let document: PDFDocument
     public let title: String
 

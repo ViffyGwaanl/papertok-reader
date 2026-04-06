@@ -53,5 +53,25 @@ public enum ResponseFormat: Sendable { case text, json }
 public struct ToolDefinition: Sendable {
     public let name: String
     public let description: String
-    public init(name: String, description: String) { self.name = name; self.description = description }
+    public let parameters: ToolParametersSchema?
+    public init(name: String, description: String, parameters: ToolParametersSchema? = nil) {
+        self.name = name; self.description = description; self.parameters = parameters
+    }
+}
+
+public struct ToolParametersSchema: Sendable {
+    public let properties: [String: ToolPropertySchema]
+    public let required: [String]
+    public init(properties: [String: ToolPropertySchema], required: [String] = []) {
+        self.properties = properties; self.required = required
+    }
+}
+
+public struct ToolPropertySchema: Sendable {
+    public let type: String
+    public let description: String?
+    public let enumValues: [String]?
+    public init(type: String, description: String? = nil, enumValues: [String]? = nil) {
+        self.type = type; self.description = description; self.enumValues = enumValues
+    }
 }

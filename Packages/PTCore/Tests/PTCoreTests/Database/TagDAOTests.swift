@@ -5,14 +5,22 @@ import GRDB
 @Suite("TagDAO Tests")
 struct TagDAOTests {
 
-    private func makeDAO() throws -> TagDAO {
-        let db = try AppDatabase.makeInMemory()
-        return TagDAO(database: db)
+    private func makeDB() throws -> AppDatabase {
+        try AppDatabase.makeInMemory()
+    }
+
+    /// Insert a parent book so FK constraints are satisfied.
+    private func insertBook(id: Int64, database: AppDatabase) async throws {
+        let dao = BookDAO(database: database)
+        var book = Book.placeholder(title: "Book \(id)", filePath: "/book\(id).pdf")
+        book.id = id
+        _ = try await dao.save(book)
     }
 
     @Test("CRUD tags")
     func crudTags() async throws {
-        let dao = try makeDAO()
+        let db = try makeDB()
+        let dao = TagDAO(database: db)
 
         // Create
         let saved = try await dao.save(Tag(id: nil, name: "Fiction", colorHex: "#FF0000"))
@@ -31,7 +39,10 @@ struct TagDAOTests {
 
     @Test("Attach and detach book tags")
     func attachDetachBookTags() async throws {
-        let dao = try makeDAO()
+        let db = try makeDB()
+        try await insertBook(id: 1, database: db)
+        try await insertBook(id: 2, database: db)
+        let dao = TagDAO(database: db)
         let tag = try await dao.save(Tag(id: nil, name: "Sci-Fi", colorHex: nil))
 
         try await dao.attachTag(tagId: tag.id!, toBookId: 1)
@@ -51,7 +62,9 @@ struct TagDAOTests {
 
     @Test("Deleting a tag also removes book_tags")
     func deleteTagCascades() async throws {
-        let dao = try makeDAO()
+        let db = try makeDB()
+        try await insertBook(id: 1, database: db)
+        let dao = TagDAO(database: db)
         let tag = try await dao.save(Tag(id: nil, name: "Drama", colorHex: nil))
         try await dao.attachTag(tagId: tag.id!, toBookId: 1)
 

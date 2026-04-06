@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-@Observable
-public final class StatisticsViewModel: @unchecked Sendable {
+@MainActor @Observable
+public final class StatisticsViewModel {
     public var totalReadingTimeSeconds: Int = 0
     public var totalBooks: Int = 0
     public var totalNotes: Int = 0

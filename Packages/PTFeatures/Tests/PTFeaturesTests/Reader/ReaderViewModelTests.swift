@@ -14,6 +14,7 @@ private func makeMinimalPDF(at url: URL) throws {
 }
 
 @Suite("ReaderViewModel")
+@MainActor
 struct ReaderViewModelTests {
 
     @Test("loadDocument sets pageCount and currentPage")

@@ -55,7 +55,7 @@ public final class AppDatabase: Sendable {
             // tb_notes
             try db.create(table: "tb_notes") { t in
                 t.autoIncrementedPrimaryKey("id")
-                t.column("book_id", .integer)
+                t.column("book_id", .integer).notNull().references("tb_books", onDelete: .cascade)
                 t.column("content", .text)
                 t.column("cfi", .text)
                 t.column("chapter", .text)
@@ -90,8 +90,8 @@ public final class AppDatabase: Sendable {
 
             // tb_reading_time
             try db.create(table: "tb_reading_time") { t in
-                t.primaryKey("id", .integer)
-                t.column("book_id", .integer)
+                t.autoIncrementedPrimaryKey("id")
+                t.column("book_id", .integer).notNull().references("tb_books", onDelete: .cascade)
                 t.column("date", .text)
                 t.column("reading_time", .integer)
             }
@@ -116,9 +116,17 @@ public final class AppDatabase: Sendable {
             // tb_book_tags
             try db.create(table: "tb_book_tags") { t in
                 t.autoIncrementedPrimaryKey("id")
-                t.column("book_id", .integer).notNull()
-                t.column("tag_id", .integer).notNull()
+                t.column("book_id", .integer).notNull().references("tb_books", onDelete: .cascade)
+                t.column("tag_id", .integer).notNull().references("tb_tags", onDelete: .cascade)
             }
+
+            // Indexes for frequently queried columns
+            try db.create(index: "idx_books_file_md5", on: "tb_books", columns: ["file_md5"])
+            try db.create(index: "idx_books_is_deleted", on: "tb_books", columns: ["is_deleted"])
+            try db.create(index: "idx_notes_book_id", on: "tb_notes", columns: ["book_id"])
+            try db.create(index: "idx_reading_time_book_id", on: "tb_reading_time", columns: ["book_id"])
+            try db.create(index: "idx_book_tags_book_id", on: "tb_book_tags", columns: ["book_id"])
+            try db.create(index: "idx_book_tags_tag_id", on: "tb_book_tags", columns: ["tag_id"])
 
             // Set schema version
             try db.execute(sql: "PRAGMA user_version = 7")

@@ -6,9 +6,16 @@ import GRDB
 @Suite("BookNoteDAO Tests")
 struct BookNoteDAOTests {
 
-    private func makeDAO() throws -> BookNoteDAO {
-        let db = try AppDatabase.makeInMemory()
-        return BookNoteDAO(database: db)
+    private func makeDB() throws -> AppDatabase {
+        try AppDatabase.makeInMemory()
+    }
+
+    /// Insert a parent book so FK constraints are satisfied.
+    private func insertBook(id: Int64, database: AppDatabase) async throws {
+        let dao = BookDAO(database: database)
+        var book = Book.placeholder(title: "Book \(id)", filePath: "/book\(id).pdf")
+        book.id = id
+        _ = try await dao.save(book)
     }
 
     private func makeNote(bookId: Int64, content: String = "Some content", chapter: String = "Chapter 1") -> BookNote {
@@ -28,7 +35,9 @@ struct BookNoteDAOTests {
 
     @Test("Insert and fetch by book id")
     func insertAndFetchByBook() async throws {
-        let dao = try makeDAO()
+        let db = try makeDB()
+        try await insertBook(id: 1, database: db)
+        let dao = BookNoteDAO(database: db)
         let saved = try await dao.save(makeNote(bookId: 1))
         #expect(saved.id != nil)
 
@@ -39,7 +48,9 @@ struct BookNoteDAOTests {
 
     @Test("Delete by id")
     func deleteById() async throws {
-        let dao = try makeDAO()
+        let db = try makeDB()
+        try await insertBook(id: 1, database: db)
+        let dao = BookNoteDAO(database: db)
         let saved = try await dao.save(makeNote(bookId: 1))
         try await dao.delete(id: saved.id!)
 
@@ -49,7 +60,10 @@ struct BookNoteDAOTests {
 
     @Test("Count notes and books with notes")
     func countNotesAndBooks() async throws {
-        let dao = try makeDAO()
+        let db = try makeDB()
+        try await insertBook(id: 1, database: db)
+        try await insertBook(id: 2, database: db)
+        let dao = BookNoteDAO(database: db)
         _ = try await dao.save(makeNote(bookId: 1))
         _ = try await dao.save(makeNote(bookId: 1))
         _ = try await dao.save(makeNote(bookId: 2))
@@ -61,7 +75,9 @@ struct BookNoteDAOTests {
 
     @Test("Search by keyword")
     func searchByKeyword() async throws {
-        let dao = try makeDAO()
+        let db = try makeDB()
+        try await insertBook(id: 1, database: db)
+        let dao = BookNoteDAO(database: db)
         _ = try await dao.save(makeNote(bookId: 1, content: "Swift is great"))
         _ = try await dao.save(makeNote(bookId: 1, content: "Kotlin is nice"))
 
