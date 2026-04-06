@@ -6,6 +6,7 @@ import Foundation
 import PDFKit
 
 @Suite("PDFContentBridge")
+@MainActor
 struct PDFContentBridgeTests {
     @Test("Initializes with a PDFDocument")
     func initialization() {
