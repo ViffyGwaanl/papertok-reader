@@ -35,7 +35,9 @@ extension AppTab {
         case .statistics:
             StatisticsScreen(database: database)
         case .ai:
-            AIChatPlaceholderView()
+            NavigationStack {
+                AIChatView(viewModel: AIChatViewModel())
+            }
         case .settings:
             SettingsScreen()
         }
@@ -608,12 +610,5 @@ struct SettingsScreen: View {
     }
 }
 
-struct AIChatPlaceholderView: View {
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView("AI Assistant", systemImage: "sparkles", description: Text("AI-powered reading assistant coming soon."))
-                .navigationTitle("AI")
-        }
-    }
-}
+// AIChatPlaceholderView removed — replaced by AIChatView (Phase 9)
 

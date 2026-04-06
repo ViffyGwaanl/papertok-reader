@@ -33,5 +33,79 @@ public final class AIChatViewModel {
         conversationTree = ConversationTree(systemPrompt: systemPrompt)
         currentStreamText = ""
         errorMessage = nil
+        streamingTokens.removeAll()
+        pendingApprovals.removeAll()
+        attachments.removeAll()
+    }
+
+    // MARK: - Attachment Support
+
+    public struct Attachment: Sendable, Identifiable {
+        public enum AttachmentType: Sendable { case image, file }
+        public let id = UUID()
+        public let type: AttachmentType
+        public let name: String
+        public let data: Data
+        public init(type: AttachmentType, name: String, data: Data) {
+            self.type = type; self.name = name; self.data = data
+        }
+    }
+
+    public var attachments: [Attachment] = []
+
+    public func addAttachment(_ attachment: Attachment) {
+        attachments.append(attachment)
+    }
+
+    public func removeAttachment(id: UUID) {
+        attachments.removeAll { $0.id == id }
+    }
+
+    public func clearAttachments() {
+        attachments.removeAll()
+    }
+
+    // MARK: - Provider Selection
+
+    public var selectedProviderId: String = ""
+    public var selectedModelId: String = ""
+
+    // MARK: - Streaming Tokens
+
+    public var streamingTokens: [String] = []
+
+    public func appendStreamToken(_ token: String) {
+        streamingTokens.append(token)
+        currentStreamText += token
+    }
+
+    public func finalizeStream() {
+        let text = currentStreamText
+        addAssistantMessage(text)
+        currentStreamText = ""
+        streamingTokens.removeAll()
+        isStreaming = false
+    }
+
+    // MARK: - Tool Approval Queue
+
+    public struct PendingToolApproval: Sendable, Identifiable {
+        public let id = UUID()
+        public let toolName: String
+        public let toolCallId: String
+        public let arguments: String
+        public var isApproved: Bool? = nil
+    }
+
+    public var pendingApprovals: [PendingToolApproval] = []
+
+    public func requestApproval(toolName: String, toolCallId: String, arguments: String) {
+        pendingApprovals.append(PendingToolApproval(toolName: toolName, toolCallId: toolCallId, arguments: arguments))
+    }
+
+    public func resolveApproval(id: UUID, approved: Bool) {
+        if let idx = pendingApprovals.firstIndex(where: { $0.id == id }) {
+            pendingApprovals[idx].isApproved = approved
+        }
     }
 }
