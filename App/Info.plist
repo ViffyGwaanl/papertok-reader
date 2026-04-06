@@ -44,6 +44,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCalendarsUsageDescription</key>
+	<string>PaperTok Reader uses your calendar to create reading reminders and study schedules via AI.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>PaperTok Reader uses your calendar to create reading reminders and study schedules via AI.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>PaperTok Reader uses reminders to help you track reading goals and deadlines.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>PaperTok Reader uses reminders to help you track reading goals and deadlines.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
