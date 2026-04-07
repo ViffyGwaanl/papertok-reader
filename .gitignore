@@ -51,6 +51,7 @@ release.sh
 *.freezed.dart
 
 /.vscode/
+.worktrees/
 CLAUDE.md
 .claude/
 AGENTS.md
