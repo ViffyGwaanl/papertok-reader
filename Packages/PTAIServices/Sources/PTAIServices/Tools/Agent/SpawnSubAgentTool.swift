@@ -9,10 +9,26 @@ public struct SpawnSubAgentTool: AITool {
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        let task = arguments["task"] as? String ?? ""
+        guard let task = arguments["task"] as? String, task.isEmpty == false else {
+            return ToolResult(content: "Missing 'task' argument", isError: true)
+        }
         let agentType = arguments["type"] as? String ?? "research"
-        // Sub-agent execution implemented in Phase 12 (needs full ChatModelProvider)
-        return ToolResult(content: jsonString(["status": "queued", "task": task, "type": agentType,
-            "note": "Sub-agent dispatch requires active ChatModelProvider (Phase 12)"]))
+        let requestedSteps = (arguments["steps"] as? Int).map { min(max($0, 1), 15) }
+
+        guard let service = context.subAgentService else {
+            return ToolResult(
+                content: jsonString([
+                    "status": "unsupported",
+                    "error_type": "missing_runtime_prerequisite",
+                    "requires": "subAgentService",
+                    "task": task,
+                    "agent_type": agentType,
+                ]),
+                isError: true
+            )
+        }
+
+        let result = try await service.spawn(task: task, type: agentType, requestedSteps: requestedSteps)
+        return ToolResult(content: jsonString(result.jsonValue))
     }
 }

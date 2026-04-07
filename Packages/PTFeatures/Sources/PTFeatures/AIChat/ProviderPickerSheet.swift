@@ -10,21 +10,7 @@ struct ProviderPickerSheet: View {
     @Bindable var viewModel: AIChatViewModel
     @Environment(\.dismiss) private var dismiss
 
-    // Provider list is injected; in Phase 12 this will come from PTAIServices registry
-    let providers: [ProviderOption]
-
-    struct ProviderOption: Identifiable {
-        let id: String
-        let displayName: String
-        let models: [ModelOption]
-    }
-
-    struct ModelOption: Identifiable {
-        let id: String
-        let displayName: String
-        let supportsThinking: Bool
-        let supportsVision: Bool
-    }
+    let providers: [AIChatViewModel.ProviderOption]
 
     var body: some View {
         NavigationStack {

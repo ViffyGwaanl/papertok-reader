@@ -25,12 +25,10 @@ public struct RemindersListListsTool: AITool {
     public static let description = "List all Reminders lists on the device."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.safe
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         let lists = try await svc.listLists()
@@ -43,12 +41,10 @@ public struct RemindersListTool: AITool {
     public static let description = "List reminders from a specific list, optionally filtered by completion status."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.safe
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         let listId = arguments["list_id"] as? String
@@ -63,12 +59,10 @@ public struct RemindersGetTool: AITool {
     public static let description = "Get details of a specific reminder by ID."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.safe
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         guard let reminderId = arguments["reminder_id"] as? String else {
@@ -84,12 +78,10 @@ public struct RemindersCreateTool: AITool {
     public static let description = "Create a new reminder with title, due date, priority, and notes."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         let reminder = try await svc.createReminder(arguments)
@@ -102,12 +94,10 @@ public struct RemindersUpdateTool: AITool {
     public static let description = "Update an existing reminder by ID."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         guard let id = arguments["reminder_id"] as? String else {
@@ -123,12 +113,10 @@ public struct RemindersDeleteTool: AITool {
     public static let description = "Delete a reminder by ID."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         guard let id = arguments["reminder_id"] as? String else {
@@ -144,12 +132,10 @@ public struct RemindersCompleteTool: AITool {
     public static let description = "Mark a reminder as completed."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         guard let id = arguments["reminder_id"] as? String else {
@@ -165,12 +151,10 @@ public struct RemindersUncompleteTool: AITool {
     public static let description = "Mark a completed reminder as not completed."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         guard let id = arguments["reminder_id"] as? String else {
@@ -186,12 +170,10 @@ public struct RemindersListCreateTool: AITool {
     public static let description = "Create a new Reminders list."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         guard let title = arguments["title"] as? String else {
@@ -207,12 +189,10 @@ public struct RemindersListDeleteTool: AITool {
     public static let description = "Delete a Reminders list by ID."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         guard let id = arguments["list_id"] as? String else {
@@ -228,12 +208,10 @@ public struct RemindersListRenameTool: AITool {
     public static let description = "Rename a Reminders list."
     public static let category = ToolCategory.reminders
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var remindersService: (any RemindersServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = remindersService else {
+        guard let svc = context.remindersService else {
             return ToolResult(content: "Reminders service not available.", isError: true)
         }
         guard let id = arguments["list_id"] as? String,

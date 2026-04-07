@@ -12,8 +12,21 @@ public struct ShortcutsRunTool: AITool {
         guard let shortcutName = arguments["shortcut_name"] as? String else {
             return ToolResult(content: "Missing 'shortcut_name' argument", isError: true)
         }
-        // Actual URL scheme invocation in App Target (requires UIApplication.open)
-        return ToolResult(content: jsonString(["status": "pending_dispatch", "shortcut": shortcutName,
-            "note": "Shortcut execution requires App Target context"]))
+        let input = arguments["input"] as? String
+
+        guard let service = context.shortcutsService else {
+            return ToolResult(
+                content: jsonString([
+                    "status": "unsupported",
+                    "error_type": "missing_runtime_prerequisite",
+                    "requires": "shortcutsService",
+                    "shortcut_name": shortcutName,
+                ]),
+                isError: true
+            )
+        }
+
+        let result = try await service.runShortcut(named: shortcutName, input: input)
+        return ToolResult(content: jsonString(result.jsonValue))
     }
 }

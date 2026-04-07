@@ -20,12 +20,10 @@ public struct CalendarListCalendarsTool: AITool {
     public static let description = "List all device calendars with their ID, title, and color."
     public static let category = ToolCategory.calendar
     public static let riskLevel = ToolRiskLevel.safe
-    public var calendarService: (any CalendarServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = calendarService else {
+        guard let svc = context.calendarService else {
             return ToolResult(content: "Calendar service not available. Ensure EventKit permission is granted.", isError: true)
         }
         let calendars = try await svc.listCalendars()
@@ -38,12 +36,10 @@ public struct CalendarListEventsTool: AITool {
     public static let description = "List events from a calendar within a date range."
     public static let category = ToolCategory.calendar
     public static let riskLevel = ToolRiskLevel.safe
-    public var calendarService: (any CalendarServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = calendarService else {
+        guard let svc = context.calendarService else {
             return ToolResult(content: "Calendar service not available.", isError: true)
         }
         let calendarId = arguments["calendar_id"] as? String
@@ -60,12 +56,10 @@ public struct CalendarGetEventTool: AITool {
     public static let description = "Get details of a specific calendar event by ID."
     public static let category = ToolCategory.calendar
     public static let riskLevel = ToolRiskLevel.safe
-    public var calendarService: (any CalendarServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = calendarService else {
+        guard let svc = context.calendarService else {
             return ToolResult(content: "Calendar service not available.", isError: true)
         }
         guard let eventId = arguments["event_id"] as? String else {
@@ -81,12 +75,10 @@ public struct CalendarCreateEventTool: AITool {
     public static let description = "Create a new calendar event with title, start/end time, location, and notes."
     public static let category = ToolCategory.calendar
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var calendarService: (any CalendarServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = calendarService else {
+        guard let svc = context.calendarService else {
             return ToolResult(content: "Calendar service not available.", isError: true)
         }
         let event = try await svc.createEvent(arguments)
@@ -99,12 +91,10 @@ public struct CalendarUpdateEventTool: AITool {
     public static let description = "Update an existing calendar event by ID."
     public static let category = ToolCategory.calendar
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var calendarService: (any CalendarServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = calendarService else {
+        guard let svc = context.calendarService else {
             return ToolResult(content: "Calendar service not available.", isError: true)
         }
         guard let eventId = arguments["event_id"] as? String else {
@@ -120,12 +110,10 @@ public struct CalendarDeleteEventTool: AITool {
     public static let description = "Delete a calendar event by ID."
     public static let category = ToolCategory.calendar
     public static let riskLevel = ToolRiskLevel.dangerous
-    public var calendarService: (any CalendarServiceProtocol)?
-
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let svc = calendarService else {
+        guard let svc = context.calendarService else {
             return ToolResult(content: "Calendar service not available.", isError: true)
         }
         guard let eventId = arguments["event_id"] as? String else {

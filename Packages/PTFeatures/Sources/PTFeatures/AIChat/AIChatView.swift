@@ -84,7 +84,7 @@ public struct AIChatView: View {
             }
         }
         .sheet(isPresented: $showProviderPicker) {
-            ProviderPickerSheet(viewModel: viewModel, providers: [])
+            ProviderPickerSheet(viewModel: viewModel, providers: viewModel.providerOptions)
         }
         .sheet(item: Binding(
             get: { viewModel.pendingApprovals.first(where: { $0.isApproved == nil }) },
@@ -118,8 +118,9 @@ public struct AIChatView: View {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         inputText = ""
-        viewModel.sendMessage(text)
-        viewModel.clearAttachments()
-        // Actual streaming implementation in Phase 12 (needs ChatModelProvider instance)
+        Task {
+            await viewModel.sendMessage(text)
+            viewModel.clearAttachments()
+        }
     }
 }

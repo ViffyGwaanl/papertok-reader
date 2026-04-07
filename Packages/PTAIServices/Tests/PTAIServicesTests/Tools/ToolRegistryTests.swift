@@ -35,6 +35,24 @@ struct ToolRegistryTests {
         #expect(defs.count == 46)
     }
 
+    @Test("allDefinitions includes parameter schemas when available")
+    func allDefinitionsIncludeSchemas() {
+        let registry = ToolRegistry()
+        let defs = registry.allDefinitions()
+
+        let calculator = defs.first { $0.name == "calculator" }
+        #expect(calculator?.parameters?.properties["expression"]?.type == "string")
+
+        let calendarCreate = defs.first { $0.name == "calendar_create_event" }
+        #expect(calendarCreate?.parameters?.properties["title"]?.type == "string")
+
+        let spawnSubAgent = defs.first { $0.name == "spawn_sub_agent" }
+        #expect(spawnSubAgent?.parameters?.properties["task"]?.type == "string")
+
+        let shortcutsRun = defs.first { $0.name == "shortcuts_run" }
+        #expect(shortcutsRun?.parameters?.properties["shortcut_name"]?.type == "string")
+    }
+
     @Test("extra tools can be registered")
     func extraTools() {
         let registry = ToolRegistry(extras: [])
