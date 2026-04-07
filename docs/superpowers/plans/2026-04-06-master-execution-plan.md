@@ -1,5 +1,7 @@
 # Master Execution Plan — Phases 5-12 Completion
 
+> Superseded on 2026-04-07 by [`2026-04-07-swift-native-closure-master-plan.md`](./2026-04-07-swift-native-closure-master-plan.md). This 2026-04-06 document reflects the pre-integration view of the branch and should no longer be used as the active execution source.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Complete all remaining phases (5-12) of the PaperTok Reader Swift native migration, producing a fully functional iOS/macOS app with EPUB/PDF reading, AI chat, 46 tools, academic papers feed, and platform integration.
