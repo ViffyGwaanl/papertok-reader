@@ -1,226 +1,228 @@
 # Swift 原生迁移 — 整体进度追踪
 
-**最后更新：** 2026-04-06  
-**分支：** `swift-native`  
-**最新 TestFlight 构建：** v1.0.0 (build 6408) — 已上传 ASC，等待处理
+**最后更新：** 2026-04-10
+**分支：** `swift-native`
 
 ---
 
-## 阶段总览
+## 2026-04-10 收官重置
 
-| 阶段 | 计划文档 | 状态 | 说明 |
-|------|----------|------|------|
-| Phase 1：PTCore | `2026-04-03-phase1-foundation-ptcore.md` | ✅ 完成 | 数据模型、GRDB、BookDAO、45 个测试 |
-| Phase 2：PTNetworking | `2026-04-03-phase2-networking-ptnetworking.md` | ✅ 完成 | NetworkClient、SSEParser、WebDAVClient |
-| Phase 3：PTReader | `2026-04-03-phase3-reader-ptreader.md` | ✅ 完成 | PDFContentBridge、ReadingPreferences、TTSService |
-| Phase 4：PTUI | `2026-04-03-phase4-ui-ptui.md` | ✅ 完成 | MorandiPalette、AppSpacing、PTButton、PTCard |
-| Phase 5：PTAIServices | `2026-04-03-phase5-ai-ptaiservices.md` | 🔄 进行中 | OpenAI ✅；Anthropic ⏳ |
-| Phase 6：PTFeatures | `2026-04-03-phase6-features-ptfeatures.md` | 🔄 进行中 | ViewModel 层 ✅；SwiftUI Views 待合并 |
-| 书籍导入 + PDF 阅读器 | `2026-04-04-book-import-pdf-reader.md` | ✅ 完成 | 全功能 BookshelfScreen + PDFReaderView |
-| Phase 7：Settings / Notes / Stats UI | `2026-04-04-phase7-settings-notes-statistics-ui.md` | ⏳ 待实现 | — |
-| Phase 8：EPUB 阅读器 | `2026-04-04-phase8-epub-reader.md` | ⏳ 待实现 | Readium SDK 集成 |
-| Phase 9：AI Chat UI | `2026-04-04-phase9-ai-chat-ui.md` | ⏳ 待实现 | 聊天界面、Provider 切换 |
-| Phase 10：AI 工具（46 个） | `2026-04-04-phase10-ai-tools.md` | ⏳ 待实现 | 书架/笔记/搜索/记忆工具 |
-| Phase 11：Papers 页 | `2026-04-04-phase11-papers-page.md` | ⏳ 待实现 | 学术论文 Feed |
-| Phase 12：平台集成 | `2026-04-04-phase12-platform-integration.md` | ⏳ 待实现 | Share Extension、App Intents、WebDAV 同步 |
+当前执行不再只依赖 2026-04-07 的 wave 文档，而是正式切换到“三层真相”：
 
----
+- 最终契约：
+  - `docs/superpowers/specs/2026-04-03-swift-migration-requirements.md`
+  - `docs/superpowers/specs/2026-04-03-swift-native-migration-design.md`
+- 收官设计：
+  - `docs/superpowers/specs/2026-04-10-swift-native-full-spec-closure-design.md`
+- 当前执行矩阵：
+  - `docs/superpowers/plans/2026-04-10-swift-native-gap-matrix.md`
+- 当前脏 worktree 分桶台账：
+  - `docs/superpowers/plans/2026-04-10-swift-native-dirty-delta-ledger.md`
+- 当前执行总计划：
+  - `docs/superpowers/plans/2026-04-10-swift-native-full-spec-closure-master-plan.md`
 
-## 代码质量修复（2026-04-06）
+新的控制原则：
 
-经过系统代码审核，发现并修复了以下 13 个问题：
+- `2026-04-03` requirements/design 是最终验收契约；
+- `2026-04-07` closure/verification 继续作为当前实现基线和历史证据；
+- `main` Flutter 分支作为行为对照物；
+- `iOS / iPad / macOS` 三端都必须达到原生规格，不能再把 “iOS app 兼容跑在 Mac 上” 当成完成。
 
-### ✅ Critical（4 项）
+今天新增的 fresh evidence：
 
-| # | 问题 | 修复方案 |
-| --- | --- | --- |
-| C1 | ToolOrchestrator 数据竞争 | 改为 `actor`，tools 快照传入 TaskGroup |
-| C2 | ViewModel `@unchecked Sendable` 不安全 | 全部 6 个 ViewModel 改为 `@MainActor` |
-| C3 | PDFContentBridge 包裹非线程安全 PDFDocument | 改为 `@MainActor` |
-| C4 | OpenAIProvider 吞掉 Keychain 错误 | `try?` 改为 `do/catch`，区分"无 Key"和"访问失败" |
+- `swift test --package-path Packages/PTCore --filter 'ReadingTimeDAOTests|ReadingSessionRecorderTests'`
+  - ✅ 2026-04-10 fresh 7 tests / 2 suites
+- `swift test --package-path Packages/PTAIServices --filter 'ToolRegistryTests|ToolRuntimeContextTests'`
+  - ✅ 2026-04-10 fresh 28 tests / 2 suites
 
-### ✅ Warning（9 项）
+核心结论：
 
-| # | 问题 | 修复方案 |
-| --- | --- | --- |
-| W1 | PDFReaderView Coordinator 未移除 NotificationCenter observer | 添加 `deinit`（iOS + macOS 各自） |
-| W2 | OAIToolParameters 类型简单无法表示 JSON Schema | 新增 `OAIPropertySchema`（type/description/enum） |
-| W3+W4 | SSEParser 逐字节解析，多字节 UTF-8 乱码 | 改用 `AsyncBytes.lines`，正确处理 CJK/emoji |
-| W5 | 数据库缺少外键约束和索引 | 添加 6 个 FK + 6 个索引（notes/reading_time/book_tags） |
-| W6 | BookDAO.search LIKE 通配符注入 | 转义 `%`/`_`/`\` |
-| W7 | BookImportService MD5 全量读内存 | 改为 1 MB 分块流式计算 |
-| W8 | Security-scoped resource 可能泄漏 | ContentView 改用 `defer` 确保释放 |
-| W9 | ConversationTree 强制解包 | `!` 改为 `if let` |
+- 当前分支已经进入完整收官工程，而不是“补几个尾项”；
+- `Wave A` 的首要任务是统一 truth table、分桶当前 dirty delta、补独立 macOS target、拆解 app shell 热点文件，然后再进入大规模 subagent 并行。
 
 ---
 
-## 当前源文件状态
+## 2026-04-07 真相基线
 
-### ✅ PTCore（45 个测试全部通过）
+这份文档不再把“能构建 / 能跑 TestFlight lane”当成“已完成 Swift 原生迁移”。
 
-| 文件 | 内容 |
-|------|------|
-| `Models/Book.swift` | 书籍模型，CodingKeys 与 Flutter DB 兼容 |
-| `Models/BookNote.swift` | 笔记/高亮/书签 |
-| `Models/BookStyle.swift` | 每本书的阅读样式 |
-| `Models/ReadTheme.swift` | 阅读主题（背景/文字颜色） |
-| `Models/ReadingTime.swift` | 每日阅读时长追踪 |
-| `Models/Tag.swift`, `BookTag.swift` | 标签系统 |
-| `Models/TbGroup.swift` | 书架文件夹层级 |
-| `Database/AppDatabase.swift` | GRDB + Schema v7 + FK 约束 + 6 个索引 |
-| `Database/BookDAO.swift` | CRUD + LIKE 转义搜索 + MD5 去重 |
-| `Database/BookNoteDAO.swift` | 笔记查询 |
-| `Database/BookStyleDAO.swift` | 样式持久化 |
-| `Database/GroupDAO.swift` | 书架文件夹 |
-| `Database/ReadThemeDAO.swift` | 主题持久化 |
-| `Database/ReadingTimeDAO.swift` | 阅读时长记录 |
-| `Database/TagDAO.swift` | 标签管理 |
-| `Config/AppConfig.swift` | UserDefaults 包装 |
-| `Config/KeychainService.swift` | API Key 安全存储 |
-| `Utils/DateFormatting.swift` | 日期格式化工具 |
+当前 authoritative 文档只有三份：
 
-### ✅ PTNetworking（SSE 已修复 UTF-8）
+- `docs/superpowers/specs/2026-04-03-swift-migration-requirements.md`
+- `docs/superpowers/specs/2026-04-03-swift-native-migration-design.md`
+- `docs/superpowers/plans/2026-04-07-swift-native-closure-master-plan.md`
 
-| 文件 | 内容 |
-|------|------|
-| `HTTP/NetworkClient.swift` | URLSession actor |
-| `HTTP/Endpoint.swift` | 请求描述符 |
-| `HTTP/NetworkError.swift` | 网络错误类型 |
-| `SSE/SSEParser.swift` | `AsyncBytes.lines` 正确 UTF-8 解析 |
-| `SSE/SSEEvent.swift` | SSE 事件结构 |
-| `WebDAV/WebDAVClient.swift` | PROPFIND/GET/PUT/DELETE |
-| `PaperTok/PaperTokAPI.swift` | REST 客户端 |
+当前 fresh verification 文档：
 
-### ✅ PTReader（@MainActor 安全）
+- `docs/superpowers/plans/2026-04-07-swift-native-verification-report.md`
 
-| 文件 | 内容 |
-|------|------|
-| `PDF/PDFContentBridge.swift` | `@MainActor`，PDFKit 安全 |
-| `PDF/PDFChapter.swift` | 章节结构 |
-| `Common/BookContentBridge.swift` | 统一内容协议 |
-| `Common/ContentSearchResult.swift` | 搜索结果模型 |
-| `Common/HighlightStyle.swift` | Morandi 标注样式 |
-| `Preferences/ReadingPreferences.swift` | @Observable 偏好 |
-| `TTS/TTSService.swift` | AVSpeechSynthesizer 封装 |
+核心结论：
 
-### ✅ PTUI
+- 当前分支已经拿到一组新的 build/test 证据，证明 repo 的**已实现面**可以继续稳定推进；
+- 但当前分支仍然**不能**宣称已经完成 2026-04-03 规格中的全量 Swift-native 重写；
+- TestFlight 现在只能算 release gate，不能再被当成规格完成的替代证明。
 
-| 文件 | 内容 |
-|------|------|
-| `Theme/MorandiPalette.swift` | 12 色 + 语义色 + 暗色 |
-| `Theme/AppSpacing.swift` | 间距系统 |
-| `Theme/AppTypography.swift` | 字体规范 |
-| `Components/PTButton.swift` | 四种样式 |
-| `Components/PTCard.swift` | 卡片容器 |
-| `Components/PTChip.swift` | 标签 Chip |
-| `Components/PTSearchBar.swift` | 搜索栏 |
-| `Modifiers/PTModifiers.swift` | `.ptCard()` 等 |
+---
 
-### 🔄 PTAIServices（OpenAI 完成；Anthropic 待实现）
+## 当前已 Fresh 验证
 
-| 文件 | 状态 | 内容 |
+| 验证面 | 命令 | 结果 |
 |------|------|------|
-| `Providers/ChatModelProvider.swift` | ✅ | 协议 + `ToolDefinition`（含参数 Schema） |
-| `Providers/ModelCapability.swift` | ✅ | 能力枚举 |
-| `Providers/ProviderError.swift` | ✅ | 类型化错误 |
-| `Providers/OpenAIProvider.swift` | ✅ | SSE/tools/vision/自定义 base URL；Keychain 错误传播 |
-| `Providers/AnthropicProvider.swift` | ❌ 待实现 | Messages API + extended thinking + tool use |
-| `Chat/ChatMessage.swift` | ✅ | 消息类型 |
-| `Chat/ConversationTree.swift` | ✅ | 分支对话树；移除强制解包 |
-| `Chat/TokenUsage.swift` | ✅ | Token 计数 |
-| `Tools/AITool.swift` | ✅ | 工具协议 |
-| `Tools/ToolContext.swift` | ✅ | 执行上下文 |
-| `Tools/ToolOrchestrator.swift` | ✅ | `actor`，并发安全 |
-| `Translation/AITranslationService.swift` | ✅ | AI 翻译封装 |
+| Xcode 工程生成 | `xcodegen generate` | ✅ 通过 |
+| Scheme 清单 | `xcodebuild -list -project PaperTokReader.xcodeproj` | ✅ `PaperTokReader` / `PTFeaturesPackageTests` / `PTReaderPackageTests` 均存在 |
+| PTCore | `swift test --package-path Packages/PTCore` | ✅ 49 tests / 17 suites |
+| PTCore 阅读时长子集 | `swift test --package-path Packages/PTCore --filter 'ReadingTimeDAOTests|ReadingSessionRecorderTests'` | ✅ 2026-04-09 fresh 7 tests / 2 suites；✅ 2026-04-10 fresh 7 tests / 2 suites |
+| PTNetworking | `swift test --package-path Packages/PTNetworking` | ✅ 29 tests / 6 suites |
+| PTUI | `swift test --package-path Packages/PTUI` | ✅ 5 tests / 2 suites |
+| PTAIServices | `swift test --package-path Packages/PTAIServices` | ✅ XCTest 24 + Swift Testing 46 |
+| Flutter migration 定向测试 | `xcodebuild ... -scheme PaperTokReaderAppTests ... -only-testing:PaperTokReaderTests/FlutterMigrationServiceTests test` | ✅ 3 tests / 1 suite |
+| PTFeatures 目标回归矩阵 | `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/PapersViewModelTests -only-testing:PTFeaturesTests/PaperDetailDataLoaderTests -only-testing:PTFeaturesTests/PaperDownloadPlanTests -only-testing:PTFeaturesTests/PaperDownloadWorkerTests -only-testing:PTFeaturesTests/BookImportServiceEPUBTests -only-testing:PTFeaturesTests/BookshelfViewModelTests test` | ✅ 29 tests / 6 suites |
+| PTReader iOS 全量测试 | `xcodebuild ... -scheme PTReaderPackageTests ... test` | ✅ 42 tests / 9 suites |
+| PTAIServices runtime honesty 子集 | `swift test --package-path Packages/PTAIServices --filter 'ToolRegistryTests|ToolRuntimeContextTests'` | ✅ 2026-04-09 fresh 28 tests；✅ 2026-04-10 fresh 28 tests |
+| PTReader PDFContentBridge 子集 | `xcodebuild ... -scheme PTReaderPackageTests ... -only-testing:PTReaderTests/PDFContentBridgeTests test` | ✅ 2026-04-08 fresh 9 tests / 1 suite |
+| PTReader PDFAnnotationBridge 子集 | `xcodebuild ... -scheme PTReaderPackageTests ... -only-testing:PTReaderTests/PDFAnnotationBridgeTests test` | ✅ 2026-04-09 fresh 2 tests / 1 suite |
+| PTReader EPUB 图片桥/协调器子集 | `xcodebuild ... -scheme PTReaderPackageTests ... -only-testing:PTReaderTests/EPUBImageScriptBridgeTests -only-testing:PTReaderTests/EPUBNavigatorCoordinatorImageTests test` | ✅ 2026-04-09 fresh 3 tests / 2 suites |
+| PTFeatures Reader/AI 子集 | `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/AIChatViewModelExtTests -only-testing:PTFeaturesTests/ReaderViewModelTests -only-testing:PTFeaturesTests/ReaderAIPanelPreferencesStoreTests test` | ✅ 25 tests / 3 suites |
+| PTFeatures Reader Controls 子集 | `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/EPUBReaderControlsViewModelTests -only-testing:PTFeaturesTests/PDFReaderControlsViewModelTests -only-testing:PTFeaturesTests/ReaderViewModelTests test` | ✅ 2026-04-08 fresh 通过 |
+| PTFeatures Reader Annotations + Controls 子集 | `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/EPUBReaderAnnotationsViewModelTests -only-testing:PTFeaturesTests/EPUBReaderControlsViewModelTests -only-testing:PTFeaturesTests/PDFReaderControlsViewModelTests -only-testing:PTFeaturesTests/ReaderViewModelTests test` | ✅ 2026-04-08 fresh 21 tests / 4 suites |
+| PTFeatures Reader 图片体验子集 | `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/ReaderImageAnalysisPromptTests -only-testing:PTFeaturesTests/ReaderImageExperienceControllerTests -only-testing:PTFeaturesTests/ReaderImageFileStoreTests test` | ✅ 2026-04-09 fresh 5 tests / 3 suites |
+| PTFeatures PDF 注释 ViewModel 子集 | `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/PDFReaderAnnotationsViewModelTests test` | ✅ 2026-04-09 fresh 4 tests / 1 suite |
+| PTFeatures Notes/Statistics 子集 | `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/NotesViewModelTests -only-testing:PTFeaturesTests/StatisticsViewModelTests test` | ✅ 2026-04-09 fresh 8 tests / 2 suites |
+| App Platform iOS 测试 | `xcodebuild ... -scheme PaperTokReaderAppTests ... -only-testing:PaperTokReaderTests/AppAIToolContextFactoryTests ... -only-testing:PaperTokReaderTests/SharedInboxTests test` | ✅ 12 tests / 8 suites |
+| App Share / Import 定向测试 | `xcodebuild ... -scheme PaperTokReaderAppTests ... -only-testing:PaperTokReaderTests/DeepLinkRouterTests -only-testing:PaperTokReaderTests/SharedInboxTests -only-testing:PaperTokReaderTests/ShareHandlerTests -only-testing:PaperTokReaderTests/SharedInboxImportProcessorTests test` | ✅ 通过 |
+| App iOS 模拟器构建 | `xcodebuild ... -scheme PaperTokReader ... build` | ✅ 2026-04-07 fresh 通过；2026-04-08 与 2026-04-09（含 PDF 注释与 EPUB 图片查看器 delta）以 `iPhone 17 Pro (iOS 26.2)` destination 复跑也通过 |
 
-### 🔄 PTFeatures（ViewModel 完成；SwiftUI Views 待合并）
+---
 
-| 文件 | 状态 | 内容 |
+## 这轮已实际收口的问题
+
+### 1. 验证基线恢复
+
+- `project.yml` 重新补回了 `PaperTokReader` app scheme。
+- `xcodegen generate` 后，主 app 的 scheme 再次可被 `xcodebuild` 直接验证。
+- `PTFeatures` / `PTReader` 现在有可用的 package test schemes，可以在 iOS Simulator 下跑真实测试。
+
+### 2. Papers / 导入链路
+
+- 书籍导入落盘路径改为稳定的 MD5 文件名，不再是随机 UUID。
+- EPUB 导入现在会从真实样本提取 metadata 与 cover art，并落盘到 `Covers/`。
+- Paper 下载取消现在会取消真实 `Task`，而不是只改 UI 状态。
+- Paper detail 现在按当前 live API 真实 payload 解码，不再只依赖旧字段假设。
+- 论文详情的 `zh/en` explanation / dialogue 选择已经贯通到 detail 加载与展示。
+- 下载按钮现在有真实字节进度、导入阶段状态、原文链接和 raw markdown 链接。
+- 已补上 EPUB 导入与下载策略相关测试；其中真实 EPUB fixture 现在覆盖 metadata + cover extraction。
+
+### 3. Bookshelf 可操作性
+
+- 书架删除现在保留 `pendingUndo` 状态，可以在 UI 上执行 Undo 恢复。
+- `BookDAO` 新增恢复接口，Undo 会把软删除的书恢复回列表。
+- 书架列表 context menu 现在包含 `Open` / `Edit` / `Delete` / `Move to Group` / `Tags`。
+- 已补上书籍标题/作者的持久化编辑路径，并有 fresh regression test 证明会落库。
+- 现在已有标签管理/筛选 sheet，与分组管理 sheet，用来真正 surfacing 现有 tag/group CRUD 能力。
+
+### 4. AI Runtime 诚实性
+
+- `spawn_sub_agent` 接受 `agentType` / `agent_type` 等别名，不再因参数名漂移而报错。
+- `ToolRegistry.availableDefinitions(for:)` 会按运行时上下文过滤不可用工具。
+- `AIChatViewModel` 只向模型暴露当前真正可运行的工具，避免“广告了但运行不了”。
+
+### 5. 平台壳层集成已落到代码面
+
+- `ContentView`、DeepLink、Share、Migration、App Intents、EventKit 相关文件已有一轮实装，不再只是空壳目录。
+- 这些部分已经进入需要继续做规格对齐和行为补完的阶段，而不是从零开始搭脚手架。
+- 这轮又补上了一组 app-level platform tests，fresh 覆盖了 `AppAIToolContextFactory`、`DeepLinkRouter`、`FlutterMigrationPlanner`、`FlutterMigrationService`、`MigrationLocalizationCatalog`、`PendingAIRequestStore`、`ShareExtensionInfoPlist`、`SharedInbox`。
+- `AppAIToolContextFactoryTests` 现在改成纯 mock 依赖，不再把真实 EventKit 服务拖进测试运行时。
+- `FlutterMigrationService` 的 schema/table preflight 现在接受 `<= expectedLegacySchemaVersion` 的受支持旧库，并有 fresh 定向测试证明。
+- Deep-link 冷启动 pending destination 消费、Share Extension 激活规则、SharedInbox TTL cleanup 现在都有 fresh app-test 证据。
+- Shared inbox 导入现在有独立 processor：全成功会消费 event，部分成功只保留失败书籍重试，丢失文件会被丢弃而不是无限 pending，并有 fresh app-test 覆盖。
+- Share routing 现在已有 first-class `ask` contract：event 会持久化 `requestedRoute` 与 fallback 原因，`shortcuts/ask` 不再只是 `aiChat` 的解析别名。
+- `directory scanning` 不再被模糊算进“已接近完成”的书架导入；它已被明确拆成单独 follow-up wave，需要后续专门做 bookmark / monitoring / unavailable-folder 流程。
+
+### 6. Notes / Statistics 产品面收口
+
+- Notes tab 现在已经有真实书名分组、总量 summary、note type 表达、markdown reader note 渲染，以及 Markdown / CSV / TXT 的 share/copy/export。
+- Statistics tab 现在已经有 current/longest streak、week/month/year trends、nearly finished books、daily highlight 刷新，以及 dashboard tile 自定义持久化。
+- Statistics 的日期 key 现在统一绑定到注入 `calendar.timeZone`，不再出现 streak / trend 的时区漂移。
+- Statistics 现在加载全历史日阅读数据，而不是只取近 91 天，因此 longest streak 和 year view 不会再被 heatmap 窗口静默截断。
+- Statistics 现在已经补上 FR-13.3 的 per-book trend breakdown，并在 UI 里有 `By Book` 细分面。
+- PDF / EPUB reader 现在会通过共享 `ReadingSessionRecorder` 把原生 Swift 阅读会话落回 `tb_reading_time`，统计数据不再只能依赖 Flutter 迁移过来的旧记录。
+- Statistics 的可见 label formatter 现在也绑定注入 `calendar.timeZone`，不会再出现 bucket date key 正确但周几/日期标签漂移的问题。
+- `swift test --package-path Packages/PTCore --filter 'ReadingTimeDAOTests|ReadingSessionRecorderTests'` fresh 通过，证明 core 层的同日合并落库与 pause/resume/flush 会话累计行为成立。
+- `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/NotesViewModelTests -only-testing:PTFeaturesTests/StatisticsViewModelTests test` 已在 2026-04-09 fresh 通过 8 tests / 2 suites，说明 Wave 5A 当前 Notes/Statistics delta 已补齐匹配的 iOS-side 复验证据，而不再只有 PTCore 层信心。
+
+---
+
+### 7. Reader parity 新增进展
+
+- EPUB reader 现在已经有用户可见的 TOC 与全文搜索 sheet，背后直接走 `EPUBContentBridge`，不再只有底层 bridge/AI tool 能搜索。
+- PDF reader 现在也补上了用户可见的全文搜索入口、结果列表与页跳转，背后复用了共享 `ReaderControlsViewModel` 和现有 `PDFContentBridge`。
+- `ReaderViewModel` 现在显式暴露 live `contentBridge` 给 reader controls seam，避免 PDF 搜索 UI 继续靠重复解析文档或临时状态拼接。
+- `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/EPUBReaderControlsViewModelTests -only-testing:PTFeaturesTests/PDFReaderControlsViewModelTests -only-testing:PTFeaturesTests/ReaderViewModelTests test` 已在 2026-04-08 fresh 通过。
+- `xcodebuild ... -scheme PaperTokReader ... -destination 'id=725F8480-FA37-431F-B369-84059728E299' build` 已在 2026-04-08 fresh 通过，说明这轮 reader controls delta 不只是 package-level 自洽，也进了主 app 构建面。
+- `PDFContentBridge.searchContent` 现在改成直接对原文做 Unicode-aware case/diacritic-insensitive 匹配，并修正最后一页结果的 `progression = 1.0`；`xcodebuild ... -scheme PTReaderPackageTests ... -only-testing:PTReaderTests/PDFContentBridgeTests test` 已在 2026-04-08 fresh 通过 9 tests / 1 suite。
+- EPUB 注释创建现在会拒绝“空选区 + highlight/note”这种非法组合，注释编辑器在这类 draft 下也会禁用保存按钮，不再把空内容笔记写入库；`xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/EPUBReaderAnnotationsViewModelTests -only-testing:PTFeaturesTests/EPUBReaderControlsViewModelTests -only-testing:PTFeaturesTests/PDFReaderControlsViewModelTests -only-testing:PTFeaturesTests/ReaderViewModelTests test` 已在 2026-04-08 fresh 通过 21 tests / 4 suites。
+- PDF 注释现在除了创建 / 书签 / 持久化 / 渲染外，还支持直接点击已渲染批注重新打开编辑器做更新或删除；`xcodebuild ... -scheme PTReaderPackageTests ... -only-testing:PTReaderTests/PDFAnnotationBridgeTests test` 与 `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/PDFReaderAnnotationsViewModelTests test` 已在 2026-04-09 fresh 通过，分别证明 bridge 层和 view-model 编辑 draft 路径成立。
+- EPUB reader 现在也补上了 FR-04.6 的图片查看器：Readium 会把图片点击经 JS bridge 转成原生图片资产，reader 可全屏查看、缩放/平移、双击回到 fit，并把该图片连同上下文 prompt 推送给现有 AI panel；`PTReader` 的 `EPUBImageScriptBridgeTests` / `EPUBNavigatorCoordinatorImageTests` 与 `PTFeatures` 的 `ReaderImageAnalysisPromptTests` / `ReaderImageExperienceControllerTests` / `ReaderImageFileStoreTests` 已在 2026-04-09 fresh 通过。
+
+### 8. 2026-04-09 当前阻塞与未闭环点
+
+- `swift test --package-path Packages/PTFeatures --filter StatisticsViewModelTests` 在跑到测试前就失败，根因是现有 Readium / SwiftSoup / ZIPFoundation 的 macOS deployment target 约束冲突，不是本次统计逻辑回归。
+- 早先的 Xcode simulator destination / runtime mismatch 已不应再被视为当前 blocker：`xcrun simctl list devices available --json` 与 `xcodebuild -showdestinations` 现在都能看到 iOS 26.2 / 26.4 simulators，且 2026-04-08 的 destination-based package tests 与 app build 已再次成功。
+- 但这不等于 Wave 2/5A 已经完全闭环：Wave 5A 的 PTFeatures/app 侧 fresh 证据现在已补齐，PDF 注释 bridge/view-model 新回归也已独立 fresh 通过，EPUB 图片查看器也已 fresh 落地；剩余 reader 侧主要缺口已经转移到 PDF 侧更深的设置对齐、TTS 的产品面与锁屏/后台行为，以及更完整的 FR-08 AI panel 产品面。
+
+## 规格完成度快照
+
+| 子系统 | 当前判断 | 说明 |
 |------|------|------|
-| `Navigation/AppTab.swift` | ✅ | 6 个 Tab |
-| `Bookshelf/BookshelfViewModel.swift` | ✅ | `@MainActor`，加载/搜索/排序/删除/导入 |
-| `Bookshelf/BookImportService.swift` | ✅ | MD5 流式 + 文件复制 + PDF 元数据 |
-| `Reader/ReaderViewModel.swift` | ✅ | `@MainActor`，PDF 加载/翻页/TOC/进度 |
-| `Reader/PDFReaderView.swift` | ✅ | PDFKit wrapper + deinit 修复 |
-| `Notes/NotesViewModel.swift` | ✅ | `@MainActor` |
-| `Statistics/StatisticsViewModel.swift` | ✅ | `@MainActor` |
-| `AIChat/AIChatViewModel.swift` | ✅ | `@MainActor` |
-| `Settings/SettingsViewModel.swift` | ✅ | `@MainActor` |
-| Notes SwiftUI View | ⏳ 待合并 | worktree 中 |
-| Statistics SwiftUI View | ⏳ 待合并 | worktree 中 |
-| Settings SwiftUI View | ⏳ 待合并 | worktree 中 |
-| AIChat SwiftUI View | ⏳ 待合并 | worktree 中 |
-
-### ✅ App Target
-
-| 文件 | 内容 |
-|------|------|
-| `PaperTokReaderApp.swift` | `@main` 入口，GRDB 初始化 |
-| `ContentView.swift` | MainTabView + BookshelfScreen + PDFReaderView；security-scoped `defer` 修复 |
-| `Resources/Assets.xcassets/AppIcon.appiconset/` | 1024×1024 图标 |
-| `Entitlements/iOS.entitlements` | App Groups + Keychain |
-
-### ✅ 构建基础设施
-
-| 文件 | 内容 |
-|------|------|
-| `fastlane/Fastfile` | TestFlight 自动化（build number 单调递增） |
-| `fastlane/Appfile` | App 标识 |
-| `fastlane/Pluginfile` | 插件占位 |
-| `Gemfile` / `Gemfile.lock` | fastlane 2.228.0 |
-| `project.yml` | XcodeGen 配置 |
+| FR-01 导航与基础壳 | 部分完成 | 6 tab 壳层、AI/Bookshelf/Settings 基础路径已存在，但 iPad/macOS/full customization 仍未验收 |
+| FR-02 Papers | 部分完成 | 基础列表/筛选/下载/导入链路有实现，`zh/en` 与 detail metadata/progress 也已有一轮收口；但 authors/venue 仍受当前 API payload 限制，整体 UX 仍未完全对齐 |
+| FR-03 Bookshelf | 部分完成 | 基础导入、列表、打开阅读器、tag/group 管理面、书籍编辑、EPUB cover extraction、shared inbox partial-failure hardening 已落地；但 custom order、拖拽重排、AI organize，以及已显式拆波次的 directory scanning 仍未完成 |
+| FR-04/05 Reader | 部分完成 | EPUB/PDF reader-session 桥、统一 content bridge、PDF OCR fallback、EPUB 可见 TOC/搜索、PDF 可见全文搜索、EPUB 注释 create/edit/bookmark、PDF 注释 create/edit/delete/bookmark、EPUB 图片查看器 + AI 分析入口、EPUB per-book settings、以及 exact-locator EPUB 搜索跳转都已落地；但 PDF 侧设置对齐、以及完整 TTS 产品面仍未闭环 |
+| FR-06/07/08/09/10/11 AI 系统 | 部分完成 | provider/tool/runtime 基础已打通，reader-aware tools 现在按 live session 诚实暴露；FR-08 也已有 dock/sheet/minimized bar 的 AI panel baseline，但 provider center、附件、历史、thinking/usage、完整工具与 RAG/Memory 体验仍未完成 |
+| FR-12/13 Notes & Statistics | 部分完成 | Notes 的真实书籍上下文、类型表达、markdown note 显示、导出与 fresh regression 已落地；Statistics 的 streak/trends/completion/random highlight/tile customization、全历史准确性、per-book breakdown，以及原生 reader session 回写阅读时长的核心链路都已补上，且 2026-04-09 已补齐匹配的 PTFeatures iOS 复验证据；当前主要欠缺是 screen-level 交互验证深度 |
+| FR-14 Sync & Backup | 明显未完成 | 只有部分底层 WebDAV / migration plumbing，远没有 fresh evidence 证明达到规格要求 |
+| FR-15 TTS | 部分完成 | 基础 service 与测试存在，但完整用户功能未验收 |
+| FR-16 Settings | 部分完成 | 页面壳层与部分偏好持久化存在，但 share presets/diagnostics/TTL、导航定制、AI/provider 深设置等规格深度远未覆盖 |
+| FR-17 Platform Integration | 部分完成 | DeepLink / App Intents / Share / Migration 已进入集成阶段，shared import hardening 与 quick-ask route contract 已落地；但 presets/diagnostics/headless parity 等仍未完成 |
+| FR-18 Localization | 部分完成 | `.xcstrings` 在增长，但还没有完整覆盖验收 |
+| FR-19 Flutter → Swift 数据迁移 | 部分完成 | migration service 已有实现，legacy schema preflight 兼容性也已补上；但远未能声称 1:1 迁移完成 |
+| FR-20/21/22/23 MCP / KAIROS / Sub-Agent / Skills | 明显未完成 | 基础能力与内部运行时有雏形；其中 sub-agent 参数兼容性 bug 已修，MCP/KAIROS/skills 的终端产品面仍有明显差距 |
 
 ---
 
-## 测试覆盖汇总
+## 当前最重要的执行顺序
 
-| Package | 测试数 | 状态 |
-|---------|--------|------|
-| PTCore | 45 | ✅ 全部通过 |
-| PTNetworking | ~12 | ✅ 全部通过 |
-| PTReader | ~8 | ✅ 全部通过 |
-| PTUI | 5 | ✅ 全部通过 |
-| PTAIServices | 15 | ✅ 全部通过 |
-| PTFeatures | 12 | ✅ 全部通过 |
-| **合计** | **~97** | ✅ 全部通过 |
+1. **Reader parity**
+   - reader-session shell、OCR fallback、in-reader AI panel baseline、EPUB visible TOC/search、PDF visible search、EPUB annotation UX、EPUB per-book settings、以及 exact-locator EPUB 搜索跳转都已经落地；下一步最高杠杆切片应切到 PDF annotation，然后是图片查看器 / PDF 侧 settings parity / TTS。
 
----
+2. **Wave 5A: Notes + Statistics productization**
+   - FR-13.3 的结构性缺口已经补到 core + view-model + UI，并把 native reader reading-time persistence 接上；当前真正剩下的是补齐 PTFeatures / app 侧 fresh iOS 复验，以及必要的 screen-level 验证补强。
 
-## TestFlight 历史
+3. **AI Chat / Tools / Provider 体验对齐**
+   - 在 reader-session seam 基础上，补 provider center、附件、历史、thinking/usage、reader-aware 工具闭环。
 
-| 版本 | Build | 日期 | 说明 |
-| --- | --- | --- | --- |
-| 1.0.0 | 6408 | 2026-04-06 | 首个原生 Swift 构建；Phase 1-6 基础 + PDF 阅读器 |
+4. **Platform Integration + Migration**
+   - 把 share / deep link / App Intents / Flutter 迁移做成真实可验收的行为，不再停留在“壳层已接线”。
 
----
+5. **Bookshelf 外部目录扫描 follow-up**
+   - 单独完成 directory scanning / bookmark / monitoring，不再和已闭环的 copy-import 混为一谈。
 
-## 下一步优先级
-
-### 🔴 高优先级
-
-1. **AnthropicProvider**（Messages API + SSE + extended thinking + tool use）
-2. **合并 SwiftUI Views**（Notes、Statistics、Settings、AIChat 在 worktree）
-
-### 🟡 中优先级
-
-1. **Phase 7：Settings / Notes / Statistics / AIChat 完整 UI**
-2. **Phase 8：EPUB 阅读器**（Readium Swift SDK 集成）
-
-### 🟢 后续规划
-
-1. **Phase 9：AI Chat UI**（消息气泡、Provider 切换、流式显示）
-2. **Phase 10：46 个 AI 工具**（书架/笔记/搜索/记忆/文档工具）
-3. **Phase 11：Papers 学术论文 Feed**
-4. **Phase 12：平台集成**（Share Extension、App Intents、WebDAV 同步、macOS 优化）
+6. **Release / TestFlight**
+   - 只在前面这些规格波次收口后再做 fresh archive/upload；
+   - 否则 TestFlight 只能证明“当前壳层可以发包”，不能证明迁移完成。
 
 ---
 
-## 已知技术债
+## 当前不应再说的话
 
-| 问题 | 影响 | 优先级 |
-| --- | --- | --- |
-| AnthropicProvider 未实现 | AI 功能只有 OpenAI 提供商 | 🔴 高 |
-| worktree SwiftUI Views 未合并 | 书架以外 4 个 tab 显示占位符 | 🟡 中 |
-| Phase 6 缺少 Highlights/Bookmarks UI | 笔记功能仅后端，无 UI | 🟡 中 |
-| `eraseDatabaseOnSchemaChange=true` 在 DEBUG | 开发时 Schema 变化会清空数据 | ℹ️ 低（预期行为） |
-| UserDefaults 未使用 App Group（AppConfig 只定义 suiteName） | 跨扩展共享数据未启用 | ℹ️ 低 |
+以下表述当前都不成立：
+
+- “代码已基本收口”
+- “只剩 provisioning 阻塞”
+- “Swift 原生迁移已经完成，只差上传”
+- “TestFlight 是最后唯一 blocker”
+
+更准确的说法是：
+
+- 当前 repo 的**构建与测试基线已经恢复并 fresh 通过**；
+- 但离 2026-04-03 的完整 Swift-native 规格，仍有多波次子系统工作要做。
