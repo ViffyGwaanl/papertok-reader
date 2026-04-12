@@ -30,6 +30,24 @@ public final class WebDAVSyncService {
     private static let lastSyncKey = "webdav_last_sync"
     private static let autoSyncKey = "webdav_auto_sync"
     private static let remoteFolderKey = "webdav_remote_folder"
+    private static let conflictStrategyKey = "webdav_conflict_strategy"
+    private static let aiSettingsSyncKey = "webdav_ai_settings_sync"
+
+    public var conflictStrategy: ConflictStrategy {
+        get {
+            if let raw = defaults.string(forKey: Self.conflictStrategyKey),
+               let value = ConflictStrategy(rawValue: raw) {
+                return value
+            }
+            return .lastModifiedWins
+        }
+        set { defaults.set(newValue.rawValue, forKey: Self.conflictStrategyKey) }
+    }
+
+    public var aiSettingsSyncEnabled: Bool {
+        get { defaults.bool(forKey: Self.aiSettingsSyncKey) }
+        set { defaults.set(newValue, forKey: Self.aiSettingsSyncKey) }
+    }
 
     public var autoSyncEnabled: Bool {
         get { defaults.bool(forKey: Self.autoSyncKey) }
@@ -191,6 +209,74 @@ public final class WebDAVSyncService {
                     try data.write(to: localURL, options: .atomic)
                     progress = 0.4 + 0.5 * Double(index + 1) / Double(max(remoteFiles.count, 1))
                 }
+            }
+
+            progress = 1.0
+            lastSyncDate = Date()
+            defaults.set(lastSyncDate, forKey: Self.lastSyncKey)
+            status = .success
+        } catch {
+            errorMessage = error.localizedDescription
+            status = .error
+        }
+    }
+
+    // MARK: - Incremental Sync
+
+    /// Run a delta-based sync pass using `IncrementalSyncEngine`. This is the
+    /// preferred code path going forward; the original `sync()` remains as a
+    /// legacy full-sync fallback.
+    public func incrementalSync() async {
+        guard let client = makeClient() else {
+            errorMessage = "WebDAV not configured"
+            status = .error
+            return
+        }
+
+        status = .syncing
+        progress = 0
+        errorMessage = nil
+
+        let container = AppConfig.appGroupContainerURL()
+        let roots: [SyncFileRoot] = [
+            SyncFileRoot(
+                entityKey: "database",
+                localDirectory: databaseURL(),
+                remotePath: "\(remoteFolder)/paperreader.db"
+            ),
+            SyncFileRoot(
+                entityKey: "books",
+                localDirectory: container.appendingPathComponent("books", isDirectory: true),
+                remotePath: "\(remoteFolder)/books"
+            ),
+            SyncFileRoot(
+                entityKey: "covers",
+                localDirectory: container.appendingPathComponent("covers", isDirectory: true),
+                remotePath: "\(remoteFolder)/covers"
+            ),
+        ]
+
+        let manifestStore = SyncManifestStore()
+        let resolver = ConflictResolver(strategy: conflictStrategy)
+        let engine = IncrementalSyncEngine(
+            webdavClient: client,
+            manifestStore: manifestStore,
+            conflictResolver: resolver,
+            fileRoots: roots,
+            remoteFolder: remoteFolder
+        )
+
+        do {
+            let folder = remoteFolder
+            _ = try await engine.sync(progressCallback: { [weak self] progress in
+                Task { @MainActor [weak self] in
+                    self?.progress = progress.fraction
+                }
+            })
+
+            if aiSettingsSyncEnabled {
+                let ai = AISettingsSyncService(remoteFolder: folder)
+                try await ai.syncToRemote(webdav: client)
             }
 
             progress = 1.0

@@ -1,4 +1,5 @@
 import SwiftUI
+import PTCore
 import PTUI
 
 /// Settings view for configuring WebDAV sync and local backup/restore.
@@ -16,6 +17,7 @@ public struct SyncSettingsView: View {
     public var body: some View {
         Form {
             webdavSection
+            syncOptionsSection
             syncActionsSection
             backupSection
         }
@@ -111,12 +113,43 @@ public struct SyncSettingsView: View {
         }
     }
 
+    // MARK: - Sync Options
+
+    private var syncOptionsSection: some View {
+        Section {
+            Picker("Conflict strategy", selection: Binding(
+                get: { syncService.conflictStrategy },
+                set: { syncService.conflictStrategy = $0 }
+            )) {
+                Text("Last modified wins").tag(ConflictStrategy.lastModifiedWins)
+                Text("Local wins").tag(ConflictStrategy.localWins)
+                Text("Remote wins").tag(ConflictStrategy.remoteWins)
+                Text("Ask me").tag(ConflictStrategy.manual)
+            }
+            .foregroundStyle(Morandi.primaryText)
+
+            Toggle("Sync AI settings", isOn: Binding(
+                get: { syncService.aiSettingsSyncEnabled },
+                set: { syncService.aiSettingsSyncEnabled = $0 }
+            ))
+            .tint(Morandi.accent)
+            .foregroundStyle(Morandi.primaryText)
+
+            NavigationLink("Connection tester") {
+                ConnectionTesterView(syncService: syncService)
+            }
+            .foregroundStyle(Morandi.primaryText)
+        } header: {
+            Text("Sync Options")
+        }
+    }
+
     // MARK: - Sync Actions
 
     private var syncActionsSection: some View {
         Section {
             Button {
-                Task { await syncService.sync() }
+                Task { await syncService.incrementalSync() }
             } label: {
                 HStack {
                     Label("Sync Now", systemImage: "arrow.triangle.2.circlepath")
@@ -126,6 +159,14 @@ public struct SyncSettingsView: View {
                         ProgressView()
                     }
                 }
+            }
+            .disabled(syncService.status == .syncing || webdavURL.isEmpty)
+
+            Button {
+                Task { await syncService.sync() }
+            } label: {
+                Label("Full Sync (Legacy)", systemImage: "arrow.up.arrow.down.circle")
+                    .foregroundStyle(Morandi.secondaryText)
             }
             .disabled(syncService.status == .syncing || webdavURL.isEmpty)
 
