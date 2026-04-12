@@ -29,7 +29,7 @@ public struct MCPConfigView: View {
 
             addSection
         }
-        .navigationTitle("MCP Servers")
+        .navigationTitle(String(localized: "settings.mcp_servers"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

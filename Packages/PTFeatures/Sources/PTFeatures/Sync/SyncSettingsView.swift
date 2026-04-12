@@ -21,7 +21,7 @@ public struct SyncSettingsView: View {
             syncActionsSection
             backupSection
         }
-        .navigationTitle("Sync & Backup")
+        .navigationTitle(String(localized: "settings.sync_backup"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

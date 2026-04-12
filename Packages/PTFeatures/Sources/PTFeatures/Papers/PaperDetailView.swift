@@ -62,7 +62,7 @@ struct PaperDetailView: View {
                 }
             }
             .background(Morandi.background)
-            .navigationTitle("Paper Detail")
+            .navigationTitle(String(localized: "papers.paper_detail"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

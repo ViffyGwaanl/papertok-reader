@@ -157,7 +157,7 @@ struct TTSExpandedControlsSheet: View {
                 .padding()
             }
             .background(Morandi.background)
-            .navigationTitle("Text-to-Speech")
+            .navigationTitle(String(localized: "tts.text_to_speech"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

@@ -751,7 +751,7 @@ public struct PDFReaderView: View {
                 }
             }
             .background(Morandi.background)
-            .navigationTitle("Contents")
+            .navigationTitle(String(localized: "reader.contents"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { viewModel.showTOC = false }
@@ -826,7 +826,7 @@ public struct PDFReaderView: View {
                 }
             }
             .background(Morandi.background)
-            .navigationTitle("Search")
+            .navigationTitle(String(localized: "common.search"))
             .searchable(text: searchQueryBinding, prompt: "Search in this PDF")
             .onSubmit(of: .search) {
                 Task { await readerControlsViewModel?.performSearch() }

@@ -53,7 +53,7 @@ public struct QuickPromptsEditorView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Morandi.background)
-        .navigationTitle("Quick Prompts")
+        .navigationTitle(String(localized: "settings.quick_prompts"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { EditButton() }

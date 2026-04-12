@@ -54,7 +54,7 @@ public struct MemoryView: View {
             }
         }
         .background(Morandi.background)
-        .navigationTitle("Memory")
+        .navigationTitle(String(localized: "ai.memory"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

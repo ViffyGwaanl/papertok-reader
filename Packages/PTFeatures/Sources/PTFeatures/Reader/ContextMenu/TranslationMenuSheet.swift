@@ -32,7 +32,7 @@ struct TranslationMenuSheet: View {
                 .padding(AppSpacing.lg)
             }
             .background(Morandi.background)
-            .navigationTitle("Translate")
+            .navigationTitle(String(localized: "reader.translate"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif

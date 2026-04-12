@@ -41,7 +41,7 @@ struct ExcerptMenuSheet: View {
                 .padding(AppSpacing.lg)
             }
             .background(Morandi.background)
-            .navigationTitle("Excerpt")
+            .navigationTitle(String(localized: "reader.excerpt"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif

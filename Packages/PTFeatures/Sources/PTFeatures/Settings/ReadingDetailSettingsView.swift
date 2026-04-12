@@ -38,7 +38,7 @@ public struct ReadingDetailSettingsView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Morandi.background)
-        .navigationTitle("Reading Appearance")
+        .navigationTitle(String(localized: "reader.appearance.title"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

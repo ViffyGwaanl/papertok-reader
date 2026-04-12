@@ -31,7 +31,7 @@ public struct ConversationListView: View {
                 conversationList
             }
         }
-        .navigationTitle("Conversations")
+        .navigationTitle(String(localized: "ai.conversations"))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {

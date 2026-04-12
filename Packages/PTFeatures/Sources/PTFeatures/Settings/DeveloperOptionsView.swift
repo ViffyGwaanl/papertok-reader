@@ -25,7 +25,7 @@ public struct DeveloperOptionsView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Morandi.background)
-        .navigationTitle("Developer")
+        .navigationTitle(String(localized: "settings.developer"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -126,7 +126,7 @@ public struct DeveloperOptionsView: View {
                     }
                 }
             }
-            .navigationTitle("Recent Errors")
+            .navigationTitle(String(localized: "settings.recent_errors"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

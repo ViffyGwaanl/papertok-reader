@@ -46,7 +46,7 @@ public struct StorageManagementView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Morandi.background)
-        .navigationTitle("Storage")
+        .navigationTitle(String(localized: "settings.storage"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

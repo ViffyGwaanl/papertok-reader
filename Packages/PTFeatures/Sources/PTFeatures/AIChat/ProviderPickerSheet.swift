@@ -56,7 +56,7 @@ struct ProviderPickerSheet: View {
             }
             .listStyle(.plain)
             .background(Morandi.background)
-            .navigationTitle("Select Model")
+            .navigationTitle(String(localized: "common.select_model"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

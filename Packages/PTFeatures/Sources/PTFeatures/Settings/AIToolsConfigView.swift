@@ -35,7 +35,7 @@ public struct AIToolsConfigView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Morandi.background)
-        .navigationTitle("AI Tools")
+        .navigationTitle(String(localized: "settings.ai_tools"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

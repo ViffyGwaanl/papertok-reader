@@ -282,7 +282,7 @@ public struct KAIROSSettingsView: View {
                 }
             }
         }
-        .navigationTitle("KAIROS")
+        .navigationTitle(String(localized: "kairos.title"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

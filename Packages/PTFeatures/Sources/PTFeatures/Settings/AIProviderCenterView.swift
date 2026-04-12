@@ -28,7 +28,7 @@ public struct AIProviderCenterView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Morandi.background)
-        .navigationTitle("AI Providers")
+        .navigationTitle(String(localized: "settings.ai_providers"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -174,7 +174,7 @@ public struct AIProviderCenterView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle("Add Custom Provider")
+            .navigationTitle(String(localized: "ai.providers.add_custom"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

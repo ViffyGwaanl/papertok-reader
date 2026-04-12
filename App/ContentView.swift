@@ -96,7 +96,7 @@ struct MainTabView: View {
                         .tag(tab)
                 }
             }
-            .navigationTitle("PaperTok")
+            .navigationTitle(String(localized: "app.name"))
             .listStyle(.sidebar)
         } detail: {
             destination(for: navigation.selectedTab)
@@ -413,7 +413,7 @@ struct BookshelfScreen: View {
             bookshelfStateView
         }
         .background(Morandi.background)
-        .navigationTitle("Bookshelf")
+        .navigationTitle(String(localized: "bookshelf.title"))
         .searchable(text: $viewModel.searchQuery, prompt: "Search books")
         .toolbar { toolbarItems }
         .navigationDestination(isPresented: navigationPresentation) {
@@ -1124,7 +1124,7 @@ private struct BookshelfBookEditorSheet: View {
                     Text("File")
                 }
             }
-            .navigationTitle("Edit Book")
+            .navigationTitle(String(localized: "bookshelf.edit_book"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
@@ -1291,7 +1291,7 @@ private struct BookshelfTagManagerSheet: View {
                     Text("Existing Tags")
                 }
             }
-            .navigationTitle("Tags")
+            .navigationTitle(String(localized: "common.tags"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
@@ -1490,7 +1490,7 @@ private struct BookshelfGroupManagerSheet: View {
                     Text("Move books between groups from each book's context menu.")
                 }
             }
-            .navigationTitle("Groups")
+            .navigationTitle(String(localized: "bookshelf.groups"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
@@ -2058,7 +2058,7 @@ struct EPUBBookshelfReaderView: View {
                 }
             }
             .background(Morandi.background)
-            .navigationTitle("Contents")
+            .navigationTitle(String(localized: "reader.contents"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -2137,7 +2137,7 @@ struct EPUBBookshelfReaderView: View {
                 }
             }
             .background(Morandi.background)
-            .navigationTitle("Search")
+            .navigationTitle(String(localized: "common.search"))
             .searchable(text: searchQueryBinding, prompt: "Search in this book")
             .onSubmit(of: .search) {
                 Task { await readerControlsViewModel?.performSearch() }
@@ -2386,7 +2386,7 @@ struct PapersPlaceholderView: View {
     var body: some View {
         NavigationStack {
             ContentUnavailableView("Papers", systemImage: "doc.text.magnifyingglass", description: Text("Academic paper feed coming soon."))
-                .navigationTitle("Papers")
+                .navigationTitle(String(localized: "papers.title"))
         }
     }
 }
@@ -2425,7 +2425,7 @@ struct NotesScreen: View {
                 }
             }
             .background(Morandi.background)
-            .navigationTitle("Notes")
+            .navigationTitle(String(localized: "common.notes"))
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
                     notesSortMenu
@@ -2750,7 +2750,7 @@ private struct NoteEditSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle("Edit Note")
+            .navigationTitle(String(localized: "notes.edit_note"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
@@ -2834,7 +2834,7 @@ struct StatisticsScreen: View {
                 .padding(AppSpacing.lg)
             }
             .background(Morandi.background)
-            .navigationTitle("Statistics")
+            .navigationTitle(String(localized: "statistics.title"))
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -3285,7 +3285,7 @@ private struct StatisticsTileCustomizationSheet: View {
                     }
                 }
             }
-            .navigationTitle("Dashboard Tiles")
+            .navigationTitle(String(localized: "settings.home_nav.dashboard_tiles"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -3345,7 +3345,7 @@ struct SettingsScreen: View {
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle("Settings")
+            .navigationTitle(String(localized: "settings.title"))
             .onChange(of: viewModel.themeMode) { _, _ in viewModel.save() }
             .onChange(of: viewModel.isOLEDDarkMode) { _, _ in viewModel.save() }
             .onChange(of: viewModel.defaultFontSize) { _, _ in viewModel.save() }
@@ -3724,7 +3724,7 @@ struct OpenSourceLicensesView: View {
                 .padding(.vertical, AppSpacing.xs)
             }
         }
-        .navigationTitle("Open Source Licenses")
+        .navigationTitle(String(localized: "settings.open_source_licenses"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

@@ -111,7 +111,7 @@ struct PapersFilterBar: View {
                     }
                 }
                 .padding(AppSpacing.lg)
-                .navigationTitle("Pick a Date")
+                .navigationTitle(String(localized: "papers.pick_a_date"))
                 #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
                 #endif

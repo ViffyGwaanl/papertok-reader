@@ -34,7 +34,7 @@ public struct HomeNavigationConfigView: View {
             tabsSection
             resetSection
         }
-        .navigationTitle("Home Navigation")
+        .navigationTitle(String(localized: "settings.home_navigation"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { EditButton() }

@@ -89,7 +89,7 @@ public struct ConnectionTesterView: View {
                 .disabled(isRunning)
             }
         }
-        .navigationTitle("Connection Tester")
+        .navigationTitle(String(localized: "sync.connection_tester"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

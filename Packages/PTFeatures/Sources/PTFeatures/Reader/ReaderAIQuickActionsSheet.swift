@@ -75,7 +75,7 @@ public struct ReaderAIQuickActionsSheet: View {
             }
             .padding(AppSpacing.lg)
             .background(Morandi.background)
-            .navigationTitle("AI Actions")
+            .navigationTitle(String(localized: "reader.ai_actions"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif

@@ -82,7 +82,7 @@ public struct EPUBReaderSettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle("Reader Settings")
+            .navigationTitle(String(localized: "reader.reader_settings"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
