@@ -48,8 +48,9 @@ targets:
       - package: PTFeatures
       - sdk: EventKit.framework
       - sdk: AppIntents.framework
-      - target: ShareExtension
-        platformFilter: ios
+      # ShareExtension disabled until App Groups provisioning is configured
+      # - target: ShareExtension
+      #   platformFilter: ios
     settings:
       base:
         INFOPLIST_FILE: App/Info.plist
