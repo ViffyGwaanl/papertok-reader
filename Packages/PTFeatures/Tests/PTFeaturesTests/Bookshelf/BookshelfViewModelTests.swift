@@ -240,4 +240,104 @@ struct BookshelfViewModelTests {
         await vm.loadGroups()
         #expect(vm.groups.isEmpty)
     }
+
+    @Test("Sort order persists to UserDefaults and restores on init")
+    func sortOrderPersistence() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let defaults = UserDefaults(suiteName: "test-sort-\(UUID().uuidString)")!
+        defer { defaults.removePersistentDomain(forName: defaults.suiteName!) }
+
+        let vm1 = BookshelfViewModel(database: db, userDefaults: defaults)
+        #expect(vm1.sortOrder == .dateDesc) // default
+
+        vm1.sortOrder = .titleAsc
+        #expect(defaults.string(forKey: "bookshelf.sortOrder") == "titleAsc")
+
+        let vm2 = BookshelfViewModel(database: db, userDefaults: defaults)
+        #expect(vm2.sortOrder == .titleAsc)
+    }
+
+    @Test("Edit mode toggle and selection")
+    func editModeToggle() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let dao = BookDAO(database: db)
+        let bookA = try await dao.save(Book.placeholder(title: "A", filePath: "/a.epub"))
+        let bookB = try await dao.save(Book.placeholder(title: "B", filePath: "/b.epub"))
+
+        let vm = BookshelfViewModel(database: db)
+        await vm.loadBooks()
+        #expect(vm.isEditMode == false)
+
+        vm.toggleEditMode()
+        #expect(vm.isEditMode == true)
+
+        vm.toggleBookSelection(bookA.id!)
+        vm.toggleBookSelection(bookB.id!)
+        #expect(vm.selectedBookIDs.count == 2)
+
+        // Deselect one
+        vm.toggleBookSelection(bookA.id!)
+        #expect(vm.selectedBookIDs == [bookB.id!])
+
+        // Toggle edit mode off clears selection
+        vm.toggleEditMode()
+        #expect(vm.isEditMode == false)
+        #expect(vm.selectedBookIDs.isEmpty)
+    }
+
+    @Test("Select all selects every visible book")
+    func selectAll() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let dao = BookDAO(database: db)
+        _ = try await dao.save(Book.placeholder(title: "A", filePath: "/a.epub"))
+        _ = try await dao.save(Book.placeholder(title: "B", filePath: "/b.epub"))
+        _ = try await dao.save(Book.placeholder(title: "C", filePath: "/c.epub"))
+
+        let vm = BookshelfViewModel(database: db)
+        await vm.loadBooks()
+        vm.selectAllBooks()
+        #expect(vm.selectedBookIDs.count == 3)
+    }
+
+    @Test("Batch delete removes selected books")
+    func batchDelete() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let dao = BookDAO(database: db)
+        let bookA = try await dao.save(Book.placeholder(title: "A", filePath: "/a.epub"))
+        let bookB = try await dao.save(Book.placeholder(title: "B", filePath: "/b.epub"))
+        _ = try await dao.save(Book.placeholder(title: "C", filePath: "/c.epub"))
+
+        let vm = BookshelfViewModel(database: db)
+        await vm.loadBooks()
+        #expect(vm.books.count == 3)
+
+        vm.selectedBookIDs = [bookA.id!, bookB.id!]
+        await vm.batchDeleteSelectedBooks()
+
+        #expect(vm.books.count == 1)
+        #expect(vm.books.first?.title == "C")
+        #expect(vm.selectedBookIDs.isEmpty)
+    }
+
+    @Test("Batch move moves selected books to target group")
+    func batchMove() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let dao = BookDAO(database: db)
+        let bookA = try await dao.save(Book.placeholder(title: "A", filePath: "/a.epub"))
+        let bookB = try await dao.save(Book.placeholder(title: "B", filePath: "/b.epub"))
+
+        let vm = BookshelfViewModel(database: db)
+        let group = try await vm.createGroup(name: "Target")
+        let groupID = try #require(group.id)
+        await vm.loadBooks()
+
+        vm.selectedBookIDs = [bookA.id!, bookB.id!]
+        await vm.batchMoveSelectedBooks(toGroupId: groupID)
+
+        let movedA = try #require(await dao.fetchById(bookA.id!))
+        let movedB = try #require(await dao.fetchById(bookB.id!))
+        #expect(movedA.groupId == groupID)
+        #expect(movedB.groupId == groupID)
+        #expect(vm.selectedBookIDs.isEmpty)
+    }
 }

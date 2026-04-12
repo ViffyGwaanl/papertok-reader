@@ -61,6 +61,22 @@ struct MainTabView: View {
     }
 
     var body: some View {
+        Group {
+#if os(iOS)
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                iPadSplitLayout
+            } else {
+                iPhoneTabLayout
+            }
+#else
+            iPadSplitLayout
+#endif
+        }
+        .tint(Morandi.accent)
+        .handleDeepLinks(navigation: navigation)
+    }
+
+    private var iPhoneTabLayout: some View {
         TabView(selection: $navigation.selectedTab) {
             ForEach(AppTab.defaultOrder) { tab in
                 destination(for: tab)
@@ -70,8 +86,21 @@ struct MainTabView: View {
                     .tag(tab)
             }
         }
-        .tint(Morandi.accent)
-        .handleDeepLinks(navigation: navigation)
+    }
+
+    private var iPadSplitLayout: some View {
+        NavigationSplitView {
+            List(selection: $navigation.optionalSelectedTab) {
+                ForEach(AppTab.defaultOrder) { tab in
+                    Label(tab.title, systemImage: tab.icon)
+                        .tag(tab)
+                }
+            }
+            .navigationTitle("PaperTok")
+            .listStyle(.sidebar)
+        } detail: {
+            destination(for: navigation.selectedTab)
+        }
     }
 
     @ViewBuilder
@@ -175,6 +204,7 @@ struct BookshelfScreen: View {
     @State private var showImportError = false
     @State private var undoDismissTask: Task<Void, Never>?
     @State private var presentedSheet: BookshelfSheet?
+    @State private var showBatchMoveSheet = false
 
     private enum BookshelfDisplayMode: String {
         case grid
@@ -275,6 +305,10 @@ struct BookshelfScreen: View {
                 bookshelfMoveGroupMenu(for: book)
                 bookshelfTagMenu(for: book)
 
+                ShareLink(item: URL(fileURLWithPath: book.filePath)) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+
                 Button(role: .destructive) {
                     handleDelete(book)
                 } label: {
@@ -294,6 +328,17 @@ struct BookshelfScreen: View {
                 spacing: AppSpacing.lg
             ) {
                 ForEach(viewModel.books) { book in
+                    if viewModel.isEditMode {
+                        bookGridCard(book)
+                            .overlay(alignment: .topLeading) {
+                                editModeCheckmark(for: book)
+                            }
+                            .onTapGesture {
+                                if let id = book.id {
+                                    viewModel.toggleBookSelection(id)
+                                }
+                            }
+                    } else {
                     NavigationLink {
                         readerDestination(for: book)
                     } label: {
@@ -321,11 +366,16 @@ struct BookshelfScreen: View {
                         bookshelfMoveGroupMenu(for: book)
                         bookshelfTagMenu(for: book)
 
+                        ShareLink(item: URL(fileURLWithPath: book.filePath)) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+
                         Button(role: .destructive) {
                             handleDelete(book)
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
+                    }
                     }
                 }
             }
@@ -333,6 +383,15 @@ struct BookshelfScreen: View {
             .padding(.vertical, AppSpacing.sm)
         }
         .background(Morandi.background)
+    }
+
+    @ViewBuilder
+    private func editModeCheckmark(for book: Book) -> some View {
+        let isSelected = book.id.map { viewModel.selectedBookIDs.contains($0) } ?? false
+        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+            .font(.title3)
+            .foregroundStyle(isSelected ? Morandi.accent : Morandi.tertiaryText)
+            .padding(AppSpacing.sm)
     }
 
     @ViewBuilder
@@ -347,6 +406,9 @@ struct BookshelfScreen: View {
 
     private var bookshelfContent: some View {
         let base = VStack(spacing: 0) {
+            if viewModel.isEditMode {
+                editModeBanner
+            }
             bookshelfFilters
             bookshelfStateView
         }
@@ -361,6 +423,49 @@ struct BookshelfScreen: View {
         }
 
         return attachImportPresentation(to: attachLifecycleHandlers(to: base))
+    }
+
+    private var editModeBanner: some View {
+        HStack(spacing: AppSpacing.md) {
+            Text("\(viewModel.selectedBookIDs.count) selected")
+                .font(AppTypography.subheadline.weight(.medium))
+                .foregroundStyle(Morandi.primaryText)
+
+            Spacer()
+
+            Button {
+                viewModel.selectAllBooks()
+            } label: {
+                Text("Select All")
+                    .font(AppTypography.caption.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+            .tint(Morandi.accent)
+
+            Menu {
+                Button {
+                    showBatchMoveSheet = true
+                } label: {
+                    Label("Move to Group", systemImage: "folder")
+                }
+
+                Button(role: .destructive) {
+                    Task {
+                        await viewModel.batchDeleteSelectedBooks()
+                        viewModel.toggleEditMode()
+                    }
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .foregroundStyle(Morandi.accent)
+            }
+            .disabled(viewModel.selectedBookIDs.isEmpty)
+        }
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.vertical, AppSpacing.sm)
+        .background(Morandi.cardBackground)
     }
 
     @ViewBuilder
@@ -494,6 +599,12 @@ struct BookshelfScreen: View {
                     BookshelfBookEditorSheet(viewModel: viewModel, book: book)
                 }
             }
+            .sheet(isPresented: $showBatchMoveSheet) {
+                BookshelfBatchMoveSheet(viewModel: viewModel, onDone: {
+                    showBatchMoveSheet = false
+                    viewModel.toggleEditMode()
+                })
+            }
             .alert(
                 "Import Failed",
                 isPresented: $showImportError,
@@ -546,13 +657,7 @@ struct BookshelfScreen: View {
 
     private func bookRow(_ book: Book) -> some View {
         HStack(spacing: AppSpacing.md) {
-            RoundedRectangle(cornerRadius: AppSpacing.cornerRadiusSmall)
-                .fill(Morandi.sand.opacity(0.6))
-                .frame(width: 44, height: 60)
-                .overlay(
-                    Image(systemName: "doc.text")
-                        .foregroundStyle(Morandi.warmGray)
-                )
+            bookRowCover(for: book)
 
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(book.title)
@@ -595,54 +700,79 @@ struct BookshelfScreen: View {
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
-            Menu {
-                Section("View") {
-                    ForEach([BookshelfDisplayMode.grid, .list], id: \.rawValue) { mode in
-                        Button {
-                            displayMode = mode
-                        } label: {
-                            Label(mode.title, systemImage: displayMode == mode ? "checkmark" : mode.icon)
-                        }
-                    }
-                }
-
-                Section("Sort") {
-                    ForEach(Array(BookshelfViewModel.SortOrder.allCases), id: \.rawValue) { sortOrder in
-                        Button {
-                            viewModel.sortOrder = sortOrder
-                            Task { await viewModel.loadBooks() }
-                        } label: {
-                            Label(sortLabel(for: sortOrder), systemImage: viewModel.sortOrder == sortOrder ? "checkmark" : "arrow.up.arrow.down")
-                        }
-                    }
-                }
-
-                Section("Manage") {
-                    Button {
-                        presentedSheet = .manageTags
-                    } label: {
-                        Label("Manage Tags", systemImage: "tag")
-                    }
-
-                    Button {
-                        presentedSheet = .manageGroups
-                    } label: {
-                        Label("Manage Groups", systemImage: "folder.badge.gearshape")
-                    }
-                }
-            } label: {
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                    .foregroundStyle(Morandi.accent)
+            if viewModel.isEditMode {
+                editModeToolbarItems
+            } else {
+                normalToolbarItems
             }
+        }
+    }
+
+    @ViewBuilder
+    private var normalToolbarItems: some View {
+        Menu {
+            Section("View") {
+                ForEach([BookshelfDisplayMode.grid, .list], id: \.rawValue) { mode in
+                    Button {
+                        displayMode = mode
+                    } label: {
+                        Label(mode.title, systemImage: displayMode == mode ? "checkmark" : mode.icon)
+                    }
+                }
+            }
+
+            Section("Sort") {
+                ForEach(Array(BookshelfViewModel.SortOrder.allCases), id: \.rawValue) { sortOrder in
+                    Button {
+                        viewModel.sortOrder = sortOrder
+                        Task { await viewModel.loadBooks() }
+                    } label: {
+                        Label(sortLabel(for: sortOrder), systemImage: viewModel.sortOrder == sortOrder ? "checkmark" : "arrow.up.arrow.down")
+                    }
+                }
+            }
+
+            Section("Manage") {
+                Button {
+                    presentedSheet = .manageTags
+                } label: {
+                    Label("Manage Tags", systemImage: "tag")
+                }
+
+                Button {
+                    presentedSheet = .manageGroups
+                } label: {
+                    Label("Manage Groups", systemImage: "folder.badge.gearshape")
+                }
+            }
+
+            Divider()
 
             Button {
-                showImporter = true
+                viewModel.toggleEditMode()
             } label: {
-                Image(systemName: "plus")
-                    .foregroundStyle(Morandi.accent)
+                Label("Select", systemImage: "checkmark.circle")
             }
-            .disabled(viewModel.isImporting)
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .foregroundStyle(Morandi.accent)
         }
+
+        Button {
+            showImporter = true
+        } label: {
+            Image(systemName: "plus")
+                .foregroundStyle(Morandi.accent)
+        }
+        .disabled(viewModel.isImporting)
+    }
+
+    @ViewBuilder
+    private var editModeToolbarItems: some View {
+        Button("Done") {
+            viewModel.toggleEditMode()
+        }
+        .fontWeight(.semibold)
     }
 
     private func sortLabel(for sortOrder: BookshelfViewModel.SortOrder) -> String {
@@ -714,6 +844,25 @@ struct BookshelfScreen: View {
         .frame(maxWidth: .infinity)
         .aspectRatio(1 / 2.1, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
+    }
+
+    @ViewBuilder
+    private func bookRowCover(for book: Book) -> some View {
+        let cover = bookshelfCoverImage(for: book)
+        ZStack {
+            RoundedRectangle(cornerRadius: AppSpacing.cornerRadiusSmall)
+                .fill(Morandi.sand.opacity(0.6))
+            if let cover {
+                cover
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: book.filePath.lowercased().hasSuffix(".epub") ? "book.closed" : "doc.text")
+                    .foregroundStyle(Morandi.warmGray)
+            }
+        }
+        .frame(width: 44, height: 60)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadiusSmall))
     }
 
     private func readingProgressBar(for book: Book) -> some View {
@@ -1462,6 +1611,50 @@ private struct BookshelfGroupManagerSheet: View {
     }
 }
 
+private struct BookshelfBatchMoveSheet: View {
+    let viewModel: BookshelfViewModel
+    let onDone: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Button {
+                    Task {
+                        await viewModel.batchMoveSelectedBooks(toGroupId: nil)
+                        onDone()
+                    }
+                } label: {
+                    Label("No Group (Root)", systemImage: "folder")
+                }
+
+                ForEach(viewModel.groups) { group in
+                    if let groupID = group.id {
+                        Button {
+                            Task {
+                                await viewModel.batchMoveSelectedBooks(toGroupId: groupID)
+                                onDone()
+                            }
+                        } label: {
+                            Label(group.name, systemImage: "folder")
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Move \(viewModel.selectedBookIDs.count) Books")
+#if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+#endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
 #if canImport(ReadiumShared)
 struct EPUBBookshelfReaderView: View {
     let book: Book
@@ -2205,6 +2398,7 @@ struct NotesScreen: View {
     @State private var viewModel: NotesViewModel
     @State private var exportFeedbackMessage = ""
     @State private var isExportFeedbackPresented = false
+    @State private var editingNote: BookNote?
 
     init(database: AppDatabase) {
         self.database = database
@@ -2221,11 +2415,9 @@ struct NotesScreen: View {
                         .background(Morandi.background)
                 } else if viewModel.notes.isEmpty {
                     ContentUnavailableView(
-                        viewModel.searchQuery.isEmpty ? "No Notes Yet" : "No Results",
-                        systemImage: viewModel.searchQuery.isEmpty ? "note.text" : "magnifyingglass",
-                        description: Text(viewModel.searchQuery.isEmpty
-                            ? "Highlight text while reading to create notes."
-                            : "No notes match your search.")
+                        notesEmptyTitle,
+                        systemImage: notesEmptyIcon,
+                        description: Text(notesEmptyDescription)
                     )
                     .background(Morandi.background)
                 } else {
@@ -2235,8 +2427,9 @@ struct NotesScreen: View {
             .background(Morandi.background)
             .navigationTitle("Notes")
             .toolbar {
-                if viewModel.notes.isEmpty == false {
-                    ToolbarItem(placement: .primaryAction) {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    notesSortMenu
+                    if viewModel.notes.isEmpty == false {
                         exportMenu
                     }
                 }
@@ -2251,7 +2444,93 @@ struct NotesScreen: View {
             } message: {
                 Text(exportFeedbackMessage)
             }
+            .sheet(item: $editingNote) { note in
+                NoteEditSheet(note: note) { updatedNote in
+                    Task { await viewModel.updateNote(updatedNote) }
+                }
+            }
         }
+    }
+
+    private var notesEmptyTitle: String {
+        if !viewModel.searchQuery.isEmpty { return "No Results" }
+        if viewModel.filterType != .all { return "No \(viewModel.filterType.displayName)" }
+        return "No Notes Yet"
+    }
+
+    private var notesEmptyIcon: String {
+        if !viewModel.searchQuery.isEmpty { return "magnifyingglass" }
+        return viewModel.filterType.systemImage
+    }
+
+    private var notesEmptyDescription: String {
+        if !viewModel.searchQuery.isEmpty { return "No notes match your search." }
+        if viewModel.filterType != .all { return "No \(viewModel.filterType.displayName.lowercased()) found." }
+        return "Highlight text while reading to create notes."
+    }
+
+    // MARK: - Filter & Sort
+
+    private var notesFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppSpacing.sm) {
+                ForEach(NotesFilterType.allCases) { filterType in
+                    Button {
+                        viewModel.filterType = filterType
+                    } label: {
+                        Label(filterType.displayName, systemImage: filterType.systemImage)
+                            .font(AppTypography.footnote.weight(viewModel.filterType == filterType ? .semibold : .regular))
+                            .foregroundStyle(viewModel.filterType == filterType ? Morandi.accent : Morandi.secondaryText)
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, AppSpacing.sm)
+                            .background(
+                                Capsule()
+                                    .fill(viewModel.filterType == filterType ? Morandi.accent.opacity(0.12) : Morandi.cardBackground)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, AppSpacing.md)
+        }
+    }
+
+    @ViewBuilder
+    private var notesSortMenu: some View {
+        Menu {
+            Section("Sort") {
+                ForEach(NotesSortOrder.allCases) { order in
+                    Button {
+                        viewModel.sortOrder = order
+                    } label: {
+                        if viewModel.sortOrder == order {
+                            Label(order.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(order.displayName)
+                        }
+                    }
+                }
+            }
+
+            Section("Filter") {
+                ForEach(NotesFilterType.allCases) { filterType in
+                    Button {
+                        viewModel.filterType = filterType
+                    } label: {
+                        if viewModel.filterType == filterType {
+                            Label(filterType.displayName, systemImage: "checkmark")
+                        } else {
+                            Label(filterType.displayName, systemImage: filterType.systemImage)
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .foregroundStyle(Morandi.accent)
+                .symbolVariant(viewModel.filterType != .all || viewModel.sortOrder != .dateDescending ? .fill : .none)
+        }
+        .accessibilityLabel("Filter and Sort")
     }
 
     private var notesList: some View {
@@ -2265,11 +2544,21 @@ struct NotesScreen: View {
                 .listRowBackground(Morandi.background)
             }
 
+            Section {
+                notesFilterBar
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Morandi.background)
+            }
+
             ForEach(viewModel.groupedNotes) { group in
                 Section {
                     ForEach(group.notes) { note in
                         noteRow(note)
                             .listRowBackground(Morandi.background)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                editingNote = note
+                            }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     if let id = note.id {
@@ -2279,6 +2568,14 @@ struct NotesScreen: View {
                                     Label("Delete", systemImage: "trash")
                                 }
                                 .tint(Morandi.destructive)
+                            }
+                            .swipeActions(edge: .leading) {
+                                Button {
+                                    editingNote = note
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(Morandi.accent)
                             }
                     }
                 } header: {
@@ -2299,7 +2596,6 @@ struct NotesScreen: View {
 
     private func noteRow(_ note: BookNote) -> some View {
         HStack(spacing: AppSpacing.md) {
-            // Color indicator bar
             RoundedRectangle(cornerRadius: 2)
                 .fill(highlightColor(for: note.color))
                 .frame(width: 4)
@@ -2408,6 +2704,82 @@ struct NotesScreen: View {
     }
 }
 
+// MARK: - Note Edit Sheet
+
+private struct NoteEditSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var editedNote: BookNote
+    private let onSave: (BookNote) -> Void
+
+    init(note: BookNote, onSave: @escaping (BookNote) -> Void) {
+        _editedNote = State(initialValue: note)
+        self.onSave = onSave
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Content") {
+                    Text(editedNote.content)
+                        .font(AppTypography.body)
+                        .foregroundStyle(Morandi.primaryText)
+                }
+
+                if !editedNote.chapter.isEmpty {
+                    Section("Chapter") {
+                        Text(editedNote.chapter)
+                            .font(AppTypography.body)
+                            .foregroundStyle(Morandi.secondaryText)
+                    }
+                }
+
+                Section("Note") {
+                    TextEditor(text: noteEditReaderNoteBinding)
+                        .frame(minHeight: 120)
+                        .font(AppTypography.body)
+                }
+
+                Section("Type") {
+                    Picker("Type", selection: $editedNote.type) {
+                        Text("Highlight").tag("highlight")
+                        Text("Bookmark").tag("bookmark")
+                        Text("Note").tag("note")
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Morandi.background)
+            .navigationTitle("Edit Note")
+#if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+#endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Morandi.secondaryText)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        editedNote.updateTime = Date()
+                        onSave(editedNote)
+                        dismiss()
+                    }
+                    .foregroundStyle(Morandi.accent)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var noteEditReaderNoteBinding: Binding<String> {
+        Binding(
+            get: { editedNote.readerNote ?? "" },
+            set: { editedNote.readerNote = $0.isEmpty ? nil : $0 }
+        )
+    }
+}
+
 // MARK: - Statistics Screen
 
 struct StatisticsScreen: View {
@@ -2454,6 +2826,7 @@ struct StatisticsScreen: View {
             ScrollView {
                 VStack(spacing: AppSpacing.xl) {
                     dashboardSection
+                    periodSummarySection
                     heatmapSection
                     trendSection
                     completionSection
@@ -2533,6 +2906,64 @@ struct StatisticsScreen: View {
     }
 
     // MARK: - Heatmap
+
+    private var periodSummarySection: some View {
+        VStack(spacing: AppSpacing.md) {
+            HStack(spacing: AppSpacing.md) {
+                periodSummaryCard(title: "This Week", summary: viewModel.weeklySummary)
+                periodSummaryCard(title: "This Month", summary: viewModel.monthlySummary)
+            }
+        }
+    }
+
+    private func periodSummaryCard(title: String, summary: StatisticsPeriodSummary) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            Text(title)
+                .font(AppTypography.headline)
+                .foregroundStyle(Morandi.primaryText)
+
+            HStack(alignment: .firstTextBaseline, spacing: AppSpacing.xs) {
+                Text(summary.formattedTotal)
+                    .font(AppTypography.title3)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Morandi.accent)
+                    .monospacedDigit()
+
+                Text("total")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.secondaryText)
+            }
+
+            HStack(spacing: AppSpacing.lg) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(summary.dailyAverageMinutes)m")
+                        .font(AppTypography.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Morandi.primaryText)
+                        .monospacedDigit()
+                    Text("avg/day")
+                        .font(AppTypography.caption2)
+                        .foregroundStyle(Morandi.secondaryText)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(summary.activeDays)")
+                        .font(AppTypography.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Morandi.primaryText)
+                        .monospacedDigit()
+                    Text("active days")
+                        .font(AppTypography.caption2)
+                        .foregroundStyle(Morandi.secondaryText)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(AppSpacing.lg)
+        .background(Morandi.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
+        .shadow(color: Morandi.warmGray.opacity(0.15), radius: AppSpacing.shadowRadius)
+    }
 
     private var heatmapSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {

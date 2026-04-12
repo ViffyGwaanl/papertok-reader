@@ -29,8 +29,15 @@ public final class BookshelfViewModel {
     public var selectedStatusFilters: Set<ReadingStatusFilter> = []
     public var selectedTagIDs: Set<Int64> = []
     public var includeNoTagFilter = false
-    public var sortOrder: SortOrder = .dateDesc
+    public var sortOrder: SortOrder {
+        didSet { persistSortOrder() }
+    }
     public private(set) var bookTagIDs: [Int64: Set<Int64>] = [:]
+
+    // MARK: - Edit mode (multi-select & batch)
+
+    public var isEditMode: Bool = false
+    public var selectedBookIDs: Set<Int64> = []
 
     public enum SortOrder: String, CaseIterable, Sendable {
         case dateDesc, dateAsc, titleAsc, titleDesc, authorAsc
@@ -54,12 +61,22 @@ public final class BookshelfViewModel {
     private let tagDAO: TagDAO
     private let groupDAO: GroupDAO
     private let importService: BookImportService
+    private let userDefaults: UserDefaults
 
-    public init(database: AppDatabase) {
+    private static let sortOrderKey = "bookshelf.sortOrder"
+
+    public init(database: AppDatabase, userDefaults: UserDefaults = .standard) {
         self.bookDAO = BookDAO(database: database)
         self.tagDAO = TagDAO(database: database)
         self.groupDAO = GroupDAO(database: database)
         self.importService = BookImportService(database: database)
+        self.userDefaults = userDefaults
+        if let raw = userDefaults.string(forKey: Self.sortOrderKey),
+           let restored = SortOrder(rawValue: raw) {
+            self.sortOrder = restored
+        } else {
+            self.sortOrder = .dateDesc
+        }
     }
 
     public func loadBooks() async {
@@ -313,6 +330,47 @@ public final class BookshelfViewModel {
             status = .reading
         }
         return selectedStatusFilters.contains(status)
+    }
+
+    // MARK: - Batch operations (edit mode)
+
+    public func toggleEditMode() {
+        isEditMode.toggle()
+        if !isEditMode {
+            selectedBookIDs.removeAll()
+        }
+    }
+
+    public func toggleBookSelection(_ bookId: Int64) {
+        if selectedBookIDs.contains(bookId) {
+            selectedBookIDs.remove(bookId)
+        } else {
+            selectedBookIDs.insert(bookId)
+        }
+    }
+
+    public func selectAllBooks() {
+        selectedBookIDs = Set(books.compactMap(\.id))
+    }
+
+    public func batchDeleteSelectedBooks() async {
+        for bookId in selectedBookIDs {
+            try? await bookDAO.softDelete(id: bookId)
+        }
+        books.removeAll { selectedBookIDs.contains($0.id ?? -1) }
+        selectedBookIDs.removeAll()
+    }
+
+    public func batchMoveSelectedBooks(toGroupId groupId: Int64?) async {
+        for bookId in selectedBookIDs {
+            try? await bookDAO.move(id: bookId, toGroupId: groupId)
+        }
+        selectedBookIDs.removeAll()
+        await loadBooks()
+    }
+
+    private func persistSortOrder() {
+        userDefaults.set(sortOrder.rawValue, forKey: Self.sortOrderKey)
     }
 
     private func normalizedColorHex(_ colorHex: String?) -> String? {

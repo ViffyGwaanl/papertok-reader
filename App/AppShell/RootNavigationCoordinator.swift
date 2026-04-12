@@ -25,6 +25,12 @@ final class RootNavigationCoordinator {
     var pendingAIRequest: AIChatOpenRequest?
     var sharedInboxImportRequest: SharedInboxImportRequest?
 
+    /// Optional binding wrapper for use with `List(selection:)` on iPad/macOS.
+    var optionalSelectedTab: AppTab? {
+        get { selectedTab }
+        set { if let newValue { selectedTab = newValue } }
+    }
+
     func consumePendingDestinationIfNeeded(router: DeepLinkRouter = .shared) {
         Self.consumePendingDestinationIfNeeded(
             router: router,
