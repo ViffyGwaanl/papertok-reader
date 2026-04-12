@@ -49,6 +49,9 @@ struct PaperTokReaderApp: App {
             RootScene(environment: environment, showMigration: $showMigration)
                 .task {
                     IntentsDonationService.refreshShortcuts()
+                    Task.detached(priority: .utility) {
+                        await MultiStepShortcutExecutor.shared.resumePending()
+                    }
                     let migrationService = FlutterMigrationService()
                     showMigration = await migrationService.isMigrationAvailable()
                 }

@@ -8,6 +8,18 @@
 
 /* Begin PBXBuildFile section */
 		00BC6A59685E9317CBB80DBA /* IntentsDonationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */; };
+		A2C82771D5CD058425BBA2CE /* ShortcutsCallbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A673F78B47E333FF4937B2A2 /* ShortcutsCallbackService.swift */; };
+		23BAB4F8F162CCB59639385B /* ShortcutsCallbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A673F78B47E333FF4937B2A2 /* ShortcutsCallbackService.swift */; };
+		9676EDD403C4A6F97F54F5A0 /* PendingShortcutQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6B8B4E25C05587C17C1774 /* PendingShortcutQueue.swift */; };
+		9C7C3D004B2C0CBF4C2CB1E2 /* PendingShortcutQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6B8B4E25C05587C17C1774 /* PendingShortcutQueue.swift */; };
+		A90043D9490769D4D69DBBBF /* MultiStepShortcutExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B4F632FF761B9DA55AB930 /* MultiStepShortcutExecutor.swift */; };
+		654FBA78ADA961BF6031C6EB /* MultiStepShortcutExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B4F632FF761B9DA55AB930 /* MultiStepShortcutExecutor.swift */; };
+		BDB83C5BC6047214CAC6E13E /* SearchBooksIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FF17ED8F77DB9B01C16D89 /* SearchBooksIntent.swift */; };
+		76191895EE768A11C5DBAD97 /* SearchBooksIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FF17ED8F77DB9B01C16D89 /* SearchBooksIntent.swift */; };
+		36C8459AE2854671327480B3 /* GetReadingStatsIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89034EE0502B524718276DD7 /* GetReadingStatsIntent.swift */; };
+		F4762CF86D10632265D0C2BB /* GetReadingStatsIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89034EE0502B524718276DD7 /* GetReadingStatsIntent.swift */; };
+		CA4052A9ACD5AB8E2DC66C62 /* CreateNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3692FB0BD5555100775577 /* CreateNoteIntent.swift */; };
+		475A45E7B04F398C9CB83EE6 /* CreateNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3692FB0BD5555100775577 /* CreateNoteIntent.swift */; };
 		048ABFAE3A2297060654A2E7 /* OpenBookIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */; };
 		04C28DF5D496918DF8A990CD /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6932166FAF1D7324853A45F6 /* AppEnvironment.swift */; };
 		062533589205397C9E3D6E24 /* RootScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39BD2CD771AFC83F56C5445 /* RootScene.swift */; };
@@ -129,6 +141,12 @@
 		9F2BFF3926E7F060EE92CEA7 /* FlutterMigrationPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationPlanner.swift; sourceTree = "<group>"; };
 		A768AFE5CCD35A044EB45243 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBookIntent.swift; sourceTree = "<group>"; };
+		A673F78B47E333FF4937B2A2 /* ShortcutsCallbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutsCallbackService.swift; sourceTree = "<group>"; };
+		BD6B8B4E25C05587C17C1774 /* PendingShortcutQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShortcutQueue.swift; sourceTree = "<group>"; };
+		D9B4F632FF761B9DA55AB930 /* MultiStepShortcutExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiStepShortcutExecutor.swift; sourceTree = "<group>"; };
+		F7FF17ED8F77DB9B01C16D89 /* SearchBooksIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBooksIntent.swift; sourceTree = "<group>"; };
+		89034EE0502B524718276DD7 /* GetReadingStatsIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetReadingStatsIntent.swift; sourceTree = "<group>"; };
+		FA3692FB0BD5555100775577 /* CreateNoteIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateNoteIntent.swift; sourceTree = "<group>"; };
 		ADEB537F9D7A1064ED1F84F5 /* FlutterMigrationPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationPlannerTests.swift; sourceTree = "<group>"; };
 		AF03DC7DEB141E9D534F0E42 /* PTNetworking */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTNetworking; path = Packages/PTNetworking; sourceTree = SOURCE_ROOT; };
 		B0DF0AC09D1FE4047983C495 /* ShareHandlerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareHandlerTests.swift; sourceTree = "<group>"; };
@@ -336,9 +354,15 @@
 			isa = PBXGroup;
 			children = (
 				62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */,
+				FA3692FB0BD5555100775577 /* CreateNoteIntent.swift */,
+				89034EE0502B524718276DD7 /* GetReadingStatsIntent.swift */,
 				470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */,
+				D9B4F632FF761B9DA55AB930 /* MultiStepShortcutExecutor.swift */,
 				ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */,
+				BD6B8B4E25C05587C17C1774 /* PendingShortcutQueue.swift */,
+				F7FF17ED8F77DB9B01C16D89 /* SearchBooksIntent.swift */,
 				14C563F1A2ACF9DF6A869C6D /* SendMessageIntent.swift */,
+				A673F78B47E333FF4937B2A2 /* ShortcutsCallbackService.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -611,6 +635,12 @@
 				6B48B7A1F076BCEBB2EBB5A6 /* SharedInbox.swift in Sources */,
 				B6CF97DCEA333578A81831EB /* SharedInboxImportProcessor.swift in Sources */,
 				FBEC5330A6ECCB30F6509317 /* ShortcutAIService.swift in Sources */,
+				A2C82771D5CD058425BBA2CE /* ShortcutsCallbackService.swift in Sources */,
+				9676EDD403C4A6F97F54F5A0 /* PendingShortcutQueue.swift in Sources */,
+				A90043D9490769D4D69DBBBF /* MultiStepShortcutExecutor.swift in Sources */,
+				BDB83C5BC6047214CAC6E13E /* SearchBooksIntent.swift in Sources */,
+				36C8459AE2854671327480B3 /* GetReadingStatsIntent.swift in Sources */,
+				CA4052A9ACD5AB8E2DC66C62 /* CreateNoteIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -654,6 +684,12 @@
 				4AA06C0EC5A324E5488C89DF /* SharedInbox.swift in Sources */,
 				7EA342E5303FADA47A061F4A /* SharedInboxImportProcessor.swift in Sources */,
 				57CE53936CCD95B087C1B6B3 /* ShortcutAIService.swift in Sources */,
+				23BAB4F8F162CCB59639385B /* ShortcutsCallbackService.swift in Sources */,
+				9C7C3D004B2C0CBF4C2CB1E2 /* PendingShortcutQueue.swift in Sources */,
+				654FBA78ADA961BF6031C6EB /* MultiStepShortcutExecutor.swift in Sources */,
+				76191895EE768A11C5DBAD97 /* SearchBooksIntent.swift in Sources */,
+				F4762CF86D10632265D0C2BB /* GetReadingStatsIntent.swift in Sources */,
+				475A45E7B04F398C9CB83EE6 /* CreateNoteIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
