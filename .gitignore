@@ -4,6 +4,9 @@
 xcuserdata/
 DerivedData/
 build/
+.bundle/
+vendor/bundle/
+.DS_Store
 
 # Fastlane secrets
 fastlane/.env

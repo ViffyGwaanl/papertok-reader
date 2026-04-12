@@ -1,7 +1,8 @@
 # Swift-Native Full-Spec Closure Design
 
 **Date:** 2026-04-10  
-**Status:** Draft for review  
+**Status:** Active execution spec  
+**Mode:** Full-Spec Closure, no MVP reduction  
 **Scope:** Complete the `swift-native` branch to full product parity against the approved Swift-native migration contract, with native-grade delivery on iPhone, iPad, and macOS.
 
 ---
@@ -19,6 +20,17 @@ The target state is:
 - release readiness only after feature readiness is honest.
 
 This document is intentionally stricter than the existing branch-local execution notes. If a requirement exists in the approved migration contract but is not fully closed in the branch today, it remains in scope.
+
+### 1.1 Approved Closure Decisions
+
+The following decisions are already approved and are part of this spec:
+
+- use the 2026-04-03 requirements/design documents as the final acceptance contract;
+- use the 2026-04-07 closure/verification documents as the execution realism baseline, not as scope reducers;
+- use the `main` Flutter product as the behavioral parity reference wherever the contract is silent or underspecified;
+- require native-grade delivery on iPhone, iPad, and macOS, with a real standalone macOS target as mandatory scope;
+- reject MVP reductions, release-first shortcuts, and "ship the shell now, finish the product later" framing;
+- execute through controller-managed subagent-driven development rather than ad hoc parallel edits.
 
 ---
 
@@ -59,6 +71,16 @@ Rule:
 - if the contract is silent or ambiguous, use `main` behavior as the parity reference;
 - if `main` conflicts with the approved contract, follow the contract and document the difference explicitly.
 
+### 2.4 Active Operating Artifacts
+
+The following 2026-04-10 artifacts operationalize this spec:
+
+- `docs/superpowers/plans/2026-04-10-swift-native-gap-matrix.md`
+- `docs/superpowers/plans/2026-04-10-swift-native-dirty-delta-ledger.md`
+- `docs/superpowers/plans/2026-04-10-swift-native-full-spec-closure-master-plan.md`
+
+These artifacts are subordinate to this spec and the 2026-04-03 contract. They translate scope into execution truth, sequencing, and evidence.
+
 ---
 
 ## 3. Completion Contract
@@ -70,6 +92,12 @@ The branch may be called "Swift-native complete" only when all conditions below 
 - iPhone reaches native-grade completion for all in-scope FRs.
 - iPad reaches native-grade completion, including split-view and large-screen behaviors where required.
 - macOS reaches native-grade completion through a real standalone macOS target, not only "Designed for iPad/iPhone on Mac" compatibility.
+
+Platform-specific acceptance bar:
+
+- iPhone must preserve compact-native navigation, reader presentation, share/deep-link landing, and AI/chat interactions instead of stretching tablet or desktop patterns into phone layouts.
+- iPad must preserve large-screen-native information architecture, navigation model, import interactions, and reader/AI presentation instead of behaving like an enlarged iPhone shell.
+- macOS must compile and run through its own target/scheme, expose desktop-appropriate menu/command and file-import behavior, and avoid hidden dependence on UIKit-only shared surfaces.
 
 ### 3.2 Functional Completion
 
@@ -94,6 +122,15 @@ The branch may be called "Swift-native complete" only when all conditions below 
 
 - Progress docs no longer rely on stale optimistic claims.
 - Remaining open risks, if any, are release-level or external, not hidden product-level gaps.
+
+### 3.6 Parity Interpretation Rules
+
+The following rules prevent false-positive completion claims:
+
+- a backend capability does not count as parity if the corresponding user-facing entry point, setting, or workflow is absent;
+- a visually improved native implementation still counts as incomplete if it removes a `main` behavior that users rely on;
+- a feature row cannot be called closed if one platform still falls back to a degraded compatibility mode;
+- intentional departures from `main` are allowed only when they preserve or improve the approved contract and are documented explicitly in the relevant closure notes.
 
 ---
 
@@ -128,14 +165,14 @@ Implication:
 
 - the first execution wave must reduce structural coupling before large-scale parallel implementation begins.
 
-### 4.3 macOS Is Not Yet A First-Class Product Target
+### 4.3 macOS Has Entered Wave A But Is Not Yet Closure-Grade
 
-The branch currently has macOS-oriented deployment settings and command code, but lacks a true standalone macOS app target in the active project definition.
+The branch now has initial standalone macOS-target scaffolding in flight, including a dedicated app target path in `project.yml`, a generated macOS scheme, macOS entitlements, and a platform-specific root scene wrapper.
 
 Implication:
 
-- macOS target creation and platform-host architecture are not optional follow-up work;
-- they must be lifted into an early foundation wave.
+- this is meaningful Wave A progress, not a future placeholder;
+- however, macOS still cannot be treated as closed until the standalone target builds cleanly on the current branch state and the shared app shell stops depending on UIKit-only surfaces in parity-critical paths.
 
 ### 4.4 Fresh Verification Must Replace Borrowed Confidence
 
@@ -144,6 +181,24 @@ The branch contains useful verification history, but completion claims cannot co
 Implication:
 
 - every wave must produce new evidence on the current branch state.
+
+### 4.5 Wave A Is Started But Open
+
+Wave A has already landed the following foundation work:
+
+- the three-layer truth model is now documented and active;
+- the 2026-04-10 gap matrix, dirty-delta ledger, and full-spec closure master plan exist;
+- `App/PaperTokReaderApp.swift` has been split into platform-aware scene entry points;
+- `App/AppShell/AppEnvironment.swift` and `App/AppShell/RootScene.swift` establish an initial app-shell boundary;
+- `App/Platform/macOS/MacRootScene.swift` establishes a standalone macOS scene wrapper;
+- `project.yml` and the generated Xcode project now expose a standalone macOS target/scheme path.
+
+Wave A remains open because the following are still required:
+
+- shared root navigation and request-routing state must move out of the oversized app host into explicit app-shell coordination;
+- shared reader and host paths that are still UIKit-only must be gated, adapted, or restructured for the standalone macOS build path;
+- the standalone macOS target still needs fresh passing build evidence on the current branch state;
+- truth-bearing docs must continue to be updated as each Wave A slice lands.
 
 ---
 
@@ -166,6 +221,12 @@ Primary outcomes:
 - standalone macOS app target, entitlements, scheme, and verification path;
 - app-shell and platform-host boundaries that support parallel execution;
 - reduced hotspot pressure in `App/ContentView.swift`.
+
+Wave A is not closed until:
+
+- the standalone macOS target builds on the current branch state;
+- the root app shell owns lifecycle/bootstrap and root navigation state explicitly instead of hiding them in `PaperTokReaderApp.swift` and `ContentView.swift`;
+- the current gap matrix and verification docs reflect the post-Wave-A reality truthfully.
 
 ### Wave B: Navigation, Bookshelf, Papers, And Directory Scanning
 
@@ -251,29 +312,33 @@ Primary outcomes:
 
 The central operating artifact for this closure effort is the spec-to-main-to-swift gap matrix.
 
-Each FR or parity-critical subfeature must be represented with the following columns:
+The current 2026-04-10 matrix already tracks the minimum operating columns required to steer closure:
 
 - FR / sub-requirement ID
-- spec requirement summary
+- scope summary
 - `main` Flutter behavior reference
 - current `swift-native` implementation state
 - gap classification:
   - `missing`
   - `partial`
-  - `implemented but unverified`
-  - `implemented but behavior-divergent`
+  - `unverified`
   - `complete`
 - target wave
-- primary owning files/modules
-- automated verification target
-- walkthrough verification path
-- platform notes for iPhone / iPad / macOS
+- verification focus
+
+Before any row is upgraded to `complete`, the closure record for that row must also be able to point to:
+
+- primary owning files/modules;
+- automated verification target;
+- walkthrough verification path;
+- platform notes for iPhone / iPad / macOS;
+- any intentional divergence from `main`, if one exists.
 
 Rules:
 
 - no work is considered complete until the matrix row reaches `complete`;
 - no row may be upgraded to `complete` without current evidence;
-- the matrix must explicitly call out divergences from `main` when they are intentional.
+- the closure record for a row must explicitly call out divergences from `main` when they are intentional.
 
 ---
 
@@ -303,6 +368,14 @@ The app layer should be split into focused responsibilities:
 - `Platform Presentation`
   - migration-specific or permission-specific app UI
   - platform-dependent presentation wrappers
+
+Wave A boundary decisions:
+
+- app lifecycle/bootstrap, database initialization, root scene composition, one-time shortcut refresh, and migration availability checks belong in `AppShell`;
+- root tab selection plus pending open/import/AI request state belongs in an explicit app-shell coordinator rather than in `ContentView.swift` glue code;
+- URL parsing stays in `Platform/DeepLink`, but translation from parsed platform destinations into root tab/request state belongs in the app shell;
+- shared root-owned instances such as the global AI chat model lifetime and reader-session context store belong to the app shell even when the types themselves live in `PTFeatures`;
+- platform-specific presentation views such as migration progress remain in `Platform`, while the decision to present them remains app-shell responsibility.
 
 ### 7.2 PTFeatures Boundaries
 
@@ -343,7 +416,7 @@ Reader UI state and user flows belong in `PTFeatures`, not in `PTReader`.
 
 ### 7.4 macOS Product Boundary
 
-A standalone macOS product target must be introduced with:
+A standalone macOS product target must exist and be verified with:
 
 - dedicated target configuration;
 - dedicated entitlements where needed;
@@ -586,4 +659,3 @@ That plan should assume:
 - no release-first shortcuts;
 - no platform downgrades;
 - no unverified completion claims.
-

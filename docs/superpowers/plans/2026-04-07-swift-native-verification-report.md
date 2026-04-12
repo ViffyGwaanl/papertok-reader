@@ -1,6 +1,6 @@
 # Swift-Native Verification Report
 
-**Date:** 2026-04-10  
+**Date:** 2026-04-11  
 **Branch:** `swift-native`  
 **Workspace:** `/Users/gwaanl/GitHub/papertok-reader/.worktrees/swift-native`
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-This report records only **fresh verification run on 2026-04-07, 2026-04-08, 2026-04-09, and 2026-04-10**.
+This report records only **fresh verification run on 2026-04-07, 2026-04-08, 2026-04-09, 2026-04-10, and 2026-04-11**.
 
 What is now freshly verified:
 
@@ -32,7 +32,9 @@ What is now freshly verified:
 - the targeted `PTFeatures` Notes/Statistics regression subset now passes again on 2026-04-09, so the FR-13.3/native-reading-time Wave 5A delta is no longer only verified at the `PTCore` layer;
 - the targeted Flutter migration preflight regression test passes on the current dirty branch state;
 - targeted app-level platform tests pass for the current Wave 4 surfaces;
+- the targeted `PaperTokReaderTests/DeepLinkRouterTests` subset now also passes again on 2026-04-11 after aligning the `reader/open?bookId=...` route parsing and clearing stale root-navigation requests;
 - the `PaperTokReader` iOS Simulator app build passes again on 2026-04-09 after the PDF annotation edit-entry and EPUB image-viewer deltas, using a concrete iPhone 17 Pro (iOS 26.2) simulator destination.
+- the standalone `PaperTokReader-macOS` target now also passes a fresh 2026-04-11 no-sign build after the Wave A package-graph and availability fixes, so the macOS target is no longer only a generated-project skeleton.
 
 What this report does **not** claim:
 
@@ -50,6 +52,15 @@ What changed on 2026-04-10:
   - `docs/superpowers/plans/2026-04-10-swift-native-dirty-delta-ledger.md`
 - the branch now has a full-spec closure implementation plan:
   - `docs/superpowers/plans/2026-04-10-swift-native-full-spec-closure-master-plan.md`
+
+What changed on 2026-04-11:
+
+- the standalone macOS target now compiles with `CODE_SIGNING_ALLOWED=NO` on the current dirty branch state;
+- the macOS package graph no longer collapses on the iOS-only Readium dependency chain before Swift compilation begins;
+- the Wave A app shell now owns root deep-link-to-navigation translation explicitly through `RootNavigationCoordinator`, and that seam now clears stale pending requests instead of leaking old book/AI/import state across route changes;
+- the app-side deep-link parser now respects the active `main` `paperreader://reader/open?bookId=...` contract instead of misreading the literal `open` path segment as a book ID;
+- the standalone macOS target now uses a dedicated app `Info.plist` again, instead of inheriting the share-extension plist path through generated-project defaults;
+- Wave A now has fresh evidence for a real macOS build path, while signed local development builds and full macOS reader parity remain open.
 
 ---
 
@@ -78,9 +89,56 @@ Interpretation:
 
 ---
 
+## 2026-04-11 Addendum
+
+### Fresh Verification
+
+```bash
+xcodebuild -project /Users/gwaanl/GitHub/papertok-reader/.worktrees/swift-native/PaperTokReader.xcodeproj \
+  -scheme PaperTokReaderAppTests \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4' \
+  -parallel-testing-enabled NO \
+  -maximum-parallel-testing-workers 1 \
+  -derivedDataPath /tmp/papertok-reader-deeplink-router \
+  CODE_SIGNING_ALLOWED=NO \
+  -only-testing:PaperTokReaderTests/DeepLinkRouterTests \
+  test
+
+xcodebuild -project /Users/gwaanl/GitHub/papertok-reader/.worktrees/swift-native/PaperTokReader.xcodeproj \
+  -scheme PaperTokReader-macOS \
+  -showBuildSettings | rg 'GENERATE_INFOPLIST_FILE|INFOPLIST_FILE|PRODUCT_BUNDLE_IDENTIFIER'
+
+xcodebuild -project /Users/gwaanl/GitHub/papertok-reader/.worktrees/swift-native/PaperTokReader.xcodeproj \
+  -scheme PaperTokReader-macOS \
+  -destination 'platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+```
+
+Result:
+
+- `PaperTokReaderTests/DeepLinkRouterTests`: passed
+  - fresh 2026-04-11 iOS Simulator run on `iPhone 17 Pro (iOS 26.4)`
+- `PaperTokReader-macOS -showBuildSettings`: passed
+  - `GENERATE_INFOPLIST_FILE = NO`
+  - `INFOPLIST_FILE = App/Platform/macOS/Info.plist`
+  - `PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.mac`
+- `PaperTokReader-macOS` standalone target: passed
+  - fresh 2026-04-11 no-sign build on the current dirty branch state
+
+Interpretation:
+
+- the Wave A root-navigation refactor is now backed by a fresh app-side regression test proving both `reader/open?bookId=...` parsing and stale-request clearing;
+- the standalone macOS target is now using a dedicated app plist again, so the no-sign build is not silently succeeding on top of share-extension metadata inheritance;
+- the standalone macOS target is now structurally real at build time, not only at project-generation time;
+- the Wave A root cause was the iOS-only Readium dependency chain reaching the macOS package graph plus a handful of macOS SwiftUI availability differences in shared UI files;
+- the remaining signed-build blocker is local development signing configuration, not the package graph or shared Swift source compiling.
+
+---
+
 ## Issues Found During Verification
 
-Nineteen repo-local problems were found and fixed as part of this cycle:
+Twenty repo-local problems were found and fixed as part of this cycle:
 
 1. `Packages/PTFeatures/Tests/PTFeaturesTests/AIChat/AIChatViewModelExtTests.swift`
    - initial `PTFeaturesPackageTests` failed to compile because a JSON string interpolation used an invalid Swift string literal form;
@@ -164,6 +222,11 @@ Nineteen repo-local problems were found and fixed as part of this cycle:
    - the Wave 2 audit still found FR-04.6 completely absent on the EPUB side: tapping inline images did nothing, there was no full-screen viewer, and the reader AI panel had no direct image-analysis handoff from in-book images;
    - fix: inject a small Readium user script that captures tapped `<img>` elements and posts a data URL back to native code, decode that into a reusable `ReaderImageAsset`, route it through the navigator coordinator into a reader image-experience controller, present a full-screen viewer with zoom/pan/double-tap fit plus share/export support, and hand the tapped image into the existing reader AI panel using a contextual analysis prompt;
    - fresh verification: `xcodebuild ... -scheme PTReaderPackageTests ... -only-testing:PTReaderTests/EPUBImageScriptBridgeTests -only-testing:PTReaderTests/EPUBNavigatorCoordinatorImageTests test` passes with 3 tests / 2 suites, `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/ReaderImageAnalysisPromptTests -only-testing:PTFeaturesTests/ReaderImageExperienceControllerTests -only-testing:PTFeaturesTests/ReaderImageFileStoreTests test` passes with 5 tests / 3 suites, and `xcodebuild ... -scheme PaperTokReader ... -destination 'platform=iOS Simulator,OS=26.2,name=iPhone 17 Pro' build` passes on 2026-04-09.
+
+20. `Packages/PTReader/Package.swift`, `Packages/PTReader/Sources/PTReader/EPUB/**`, `Packages/PTFeatures/Sources/PTFeatures/Bookshelf/BookImportService.swift`, `Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderAIPanelHost.swift`, and `App/ContentView.swift`
+   - the first standalone macOS build failed before Swift compilation because the shared reader package graph pulled in the iOS-only Readium toolkit, which collapsed onto macOS 10.13 defaults against newer package minimums, and then hit a few shared SwiftUI availability differences once the package graph was fixed;
+   - fix: restrict Readium product dependencies in `PTReader` to iOS builds, gate Readium-backed EPUB sources when those modules are unavailable, fall back to non-Readium EPUB metadata import behavior when the standalone macOS target is compiling, gate the shared app's EPUB route on macOS until the dedicated parity wave, and fix the shared SwiftUI toolbar/input availability mismatches discovered by the first macOS compile passes;
+   - fresh verification: `xcodebuild -project .../PaperTokReader.xcodeproj -scheme PaperTokReader-macOS -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build` passes on 2026-04-11.
 
 ---
 

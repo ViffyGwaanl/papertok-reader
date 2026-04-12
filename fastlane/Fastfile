@@ -20,6 +20,10 @@ platform :ios do
 
   desc "Build & upload native Swift app to TestFlight"
   lane :release_testflight do |options|
+    project_root = File.expand_path("..", __dir__)
+    project_path = File.join(project_root, "PaperTokReader.xcodeproj")
+    build_output_dir = File.join(project_root, "build")
+
     # Verify required env vars
     %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64 APP_BUNDLE_ID APP_TEAM_ID].each do |key|
       UI.user_error!("Missing required env var: #{key}") if ENV[key].to_s.empty?
@@ -47,26 +51,31 @@ platform :ios do
     File.write(state_file, next_build.to_s)
 
     build_number = next_build.to_s
-    version_number = options[:version] || "1.0.0"
+    project_spec = File.read(File.join(project_root, "project.yml"))
+    spec_version = project_spec[/MARKETING_VERSION:\s*"([^"]+)"/, 1]
+    version_number = options[:version] || spec_version || "1.68.7"
 
     UI.message("*** Native Swift TestFlight build: v#{version_number} (#{build_number}) ***")
 
+    # --- Regenerate the Xcode project from project.yml before signing/building ---
+    sh("cd '#{project_root}' && xcodegen generate")
+
     # --- Code signing (automatic for native Swift app) ---
     update_code_signing_settings(
-      path: "PaperTokReader.xcodeproj",
+      path: project_path,
       use_automatic_signing: true,
       team_id: ENV["APP_TEAM_ID"],
-      targets: ["PaperTokReader"],
+      targets: ["PaperTokReader", "ShareExtension"],
     )
 
     # --- Build ---
     build_app(
-      project: "PaperTokReader.xcodeproj",
+      project: project_path,
       scheme: "PaperTokReader",
       configuration: "Release",
       export_method: ENV["USE_MATCH"].to_s.downcase == "true" ? "app-store" : "app-store",
       xcargs: "MARKETING_VERSION=#{version_number} CURRENT_PROJECT_VERSION=#{build_number} DEVELOPMENT_TEAM=#{ENV['APP_TEAM_ID']}",
-      output_directory: "build",
+      output_directory: build_output_dir,
       output_name: "PaperTokReader.ipa",
       clean: true,
     )
@@ -74,7 +83,7 @@ platform :ios do
     # --- Upload ---
     upload_to_testflight(
       api_key: api_key,
-      ipa: "build/PaperTokReader.ipa",
+      ipa: File.join(build_output_dir, "PaperTokReader.ipa"),
       skip_waiting_for_build_processing: true,
     )
 

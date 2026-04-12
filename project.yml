@@ -11,7 +11,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    MARKETING_VERSION: "1.0.0"
+    MARKETING_VERSION: "1.68.7"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
@@ -40,16 +40,21 @@ targets:
         type: group
         excludes:
           - Extensions/ShareExtension/**
+          - Info.plist
+          - Platform/macOS/Info.plist
     resources:
       - path: App/Resources/Localizable.xcstrings
     dependencies:
       - package: PTFeatures
       - sdk: EventKit.framework
       - sdk: AppIntents.framework
+      - target: ShareExtension
+        platformFilter: ios
     settings:
       base:
         INFOPLIST_FILE: App/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: ai.papertok.paperreader
+        PRODUCT_MODULE_NAME: PaperTokReader
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: true
@@ -61,3 +66,125 @@ targets:
           - group.ai.papertok.paperreader
         keychain-access-groups:
           - $(AppIdentifierPrefix)ai.papertok.paperreader
+
+  PaperTokReaderMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: App
+        type: group
+        excludes:
+          - Extensions/ShareExtension/**
+          - Info.plist
+          - Platform/macOS/Info.plist
+    resources:
+      - path: App/Resources/Localizable.xcstrings
+    dependencies:
+      - package: PTFeatures
+      - sdk: EventKit.framework
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: App/Platform/macOS/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: ai.papertok.paperreader.mac
+        PRODUCT_NAME: "PaperTok Reader"
+        PRODUCT_MODULE_NAME: PaperTokReaderMac
+        CODE_SIGN_ENTITLEMENTS: App/Entitlements/macOS.entitlements
+    entitlements:
+      path: App/Entitlements/macOS.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - group.ai.papertok.paperreader
+
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: App/Extensions/ShareExtension
+        excludes:
+          - Info.plist
+      - path: App/Platform/Share
+    dependencies:
+      - package: PTCore
+    settings:
+      base:
+        INFOPLIST_FILE: App/Extensions/ShareExtension/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: ai.papertok.paperreader.share
+        PRODUCT_NAME: PaperTok Reader Share
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+        CODE_SIGN_ENTITLEMENTS: App/Entitlements/ShareExtension.entitlements
+    entitlements:
+      path: App/Entitlements/ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.ai.papertok.paperreader
+
+  PaperTokReaderTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests/AppTests
+    dependencies:
+      - target: PaperTokReader
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: ai.papertok.paperreader.tests
+        PRODUCT_NAME: PaperTokReaderTests
+        PRODUCT_MODULE_NAME: PaperTokReaderTests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PaperTok Reader.app/PaperTok Reader"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  PaperTokReader:
+    build:
+      targets:
+        PaperTokReader: all
+
+  PaperTokReader-macOS:
+    build:
+      targets:
+        PaperTokReaderMac: all
+
+  PaperTokReaderAppTests:
+    build:
+      targets:
+        PaperTokReader: [test]
+    test:
+      gatherCoverageData: true
+      targets:
+        - name: PaperTokReaderTests
+          parallelizable: true
+          randomExecutionOrder: true
+
+  PTFeaturesPackageTests:
+    build:
+      targets:
+        PaperTokReader: [test]
+    test:
+      gatherCoverageData: true
+      coverageTargets:
+        - package: PTFeatures/PTFeatures
+      targets:
+        - package: PTFeatures/PTFeaturesTests
+          parallelizable: true
+          randomExecutionOrder: true
+
+  PTReaderPackageTests:
+    build:
+      targets:
+        PaperTokReader: [test]
+    test:
+      gatherCoverageData: true
+      coverageTargets:
+        - package: PTReader/PTReader
+      targets:
+        - package: PTReader/PTReaderTests
+          parallelizable: true
+          randomExecutionOrder: true

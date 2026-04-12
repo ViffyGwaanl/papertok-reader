@@ -1,7 +1,53 @@
 # Swift 原生迁移 — 整体进度追踪
 
-**最后更新：** 2026-04-10
+**最后更新：** 2026-04-11
 **分支：** `swift-native`
+
+---
+
+## 2026-04-11 Wave A macOS 编译穿透
+
+今天新增的 fresh evidence：
+
+- `xcodebuild -project PaperTokReader.xcodeproj -scheme PaperTokReader-macOS -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build`
+  - ✅ 2026-04-11 fresh 通过
+
+这条证据的意义不是“macOS 已完成”，而是：
+
+- `PaperTokReaderMac` 不再只是 `xcodegen generate` / `xcodebuild -list` 层面的壳 target；
+- Wave A 已经把最初的 macOS blocker 从“包图和共享代码根本编不过”推进到了“签名配置与后续产品 parity 仍待收口”；
+- 当前剩余问题已经从 `Readium` 依赖图崩塌，收缩为后续 reader parity、app-shell 继续拆分，以及本机 development signing。
+
+这轮实际解决的根因：
+
+- `PTReader` 原先把 iOS-only `Readium` 依赖无条件带进 macOS 包图，导致 SwiftSoup / ZIPFoundation 最低平台要求先于业务代码炸掉；
+- 共享 `ContentView` 里有直连 `ReadiumShared` / EPUB reader 的路径，会把整个 macOS app target 一起拖下水；
+- 共享 SwiftUI 里仍有少量 iOS-only API，例：`topBarLeading`、`textInputAutocapitalization(.characters)`、`EditButton`。
+
+当前结论：
+
+- standalone macOS target 现在已有 fresh no-sign build path；
+- signed development build 仍然是本机 team / provisioning 配置问题，不应再和代码编译根因混为一谈；
+- macOS EPUB surface 目前是显式 gated 状态，这是 Wave A 为了让目标真正可编译而做的结构性穿透，不代表 FR-04 已闭环。
+
+## 2026-04-11 Wave A app shell / DeepLink 收口
+
+今天补上的另一组 fresh evidence：
+
+- `xcodebuild -project PaperTokReader.xcodeproj -scheme PaperTokReaderAppTests -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4' -parallel-testing-enabled NO -maximum-parallel-testing-workers 1 -derivedDataPath /tmp/papertok-reader-deeplink-router CODE_SIGNING_ALLOWED=NO -only-testing:PaperTokReaderTests/DeepLinkRouterTests test`
+  - ✅ 2026-04-11 fresh 通过
+- `xcodebuild -project PaperTokReader.xcodeproj -scheme PaperTokReader-macOS -showBuildSettings | rg 'GENERATE_INFOPLIST_FILE|INFOPLIST_FILE|PRODUCT_BUNDLE_IDENTIFIER'`
+  - ✅ 2026-04-11 fresh 通过
+  - `GENERATE_INFOPLIST_FILE = NO`
+  - `INFOPLIST_FILE = App/Platform/macOS/Info.plist`
+  - `PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.mac`
+
+这组收口的意义：
+
+- `RootNavigationCoordinator` 不再只是把 `ContentView` 里的零散状态搬个位置，而是真正开始承担 app-shell 级 root request translation；
+- `paperreader://reader/open?bookId=...` 现在不会再把 `open` 误判成书籍 ID，至少在 root route ingestion 这一层已经对齐 `main` 的主干 contract；
+- route 切换时旧的 `pendingBookRequest` / `pendingAIRequest` / `sharedInboxImportRequest` 现在会被清掉，减少“隔一个 tab 又触发旧请求”的隐藏状态污染；
+- standalone macOS target 现在也不再偷偷继承 share extension 的 `Info.plist`，而是有独立 app plist，说明这条 target 已进一步脱离“生成出来能编”但产品元数据仍然错位的阶段。
 
 ---
 
@@ -90,7 +136,9 @@
 | PTFeatures Notes/Statistics 子集 | `xcodebuild ... -scheme PTFeaturesPackageTests ... -only-testing:PTFeaturesTests/NotesViewModelTests -only-testing:PTFeaturesTests/StatisticsViewModelTests test` | ✅ 2026-04-09 fresh 8 tests / 2 suites |
 | App Platform iOS 测试 | `xcodebuild ... -scheme PaperTokReaderAppTests ... -only-testing:PaperTokReaderTests/AppAIToolContextFactoryTests ... -only-testing:PaperTokReaderTests/SharedInboxTests test` | ✅ 12 tests / 8 suites |
 | App Share / Import 定向测试 | `xcodebuild ... -scheme PaperTokReaderAppTests ... -only-testing:PaperTokReaderTests/DeepLinkRouterTests -only-testing:PaperTokReaderTests/SharedInboxTests -only-testing:PaperTokReaderTests/ShareHandlerTests -only-testing:PaperTokReaderTests/SharedInboxImportProcessorTests test` | ✅ 通过 |
+| App DeepLink Router 子集 | `xcodebuild -project PaperTokReader.xcodeproj -scheme PaperTokReaderAppTests -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4' -parallel-testing-enabled NO -maximum-parallel-testing-workers 1 -derivedDataPath /tmp/papertok-reader-deeplink-router CODE_SIGNING_ALLOWED=NO -only-testing:PaperTokReaderTests/DeepLinkRouterTests test` | ✅ 2026-04-11 fresh 通过 |
 | App iOS 模拟器构建 | `xcodebuild ... -scheme PaperTokReader ... build` | ✅ 2026-04-07 fresh 通过；2026-04-08 与 2026-04-09（含 PDF 注释与 EPUB 图片查看器 delta）以 `iPhone 17 Pro (iOS 26.2)` destination 复跑也通过 |
+| macOS target build settings | `xcodebuild -project PaperTokReader.xcodeproj -scheme PaperTokReader-macOS -showBuildSettings | rg 'GENERATE_INFOPLIST_FILE|INFOPLIST_FILE|PRODUCT_BUNDLE_IDENTIFIER'` | ✅ 2026-04-11 fresh 通过 |
 
 ---
 
@@ -183,7 +231,7 @@
 | FR-14 Sync & Backup | 明显未完成 | 只有部分底层 WebDAV / migration plumbing，远没有 fresh evidence 证明达到规格要求 |
 | FR-15 TTS | 部分完成 | 基础 service 与测试存在，但完整用户功能未验收 |
 | FR-16 Settings | 部分完成 | 页面壳层与部分偏好持久化存在，但 share presets/diagnostics/TTL、导航定制、AI/provider 深设置等规格深度远未覆盖 |
-| FR-17 Platform Integration | 部分完成 | DeepLink / App Intents / Share / Migration 已进入集成阶段，shared import hardening 与 quick-ask route contract 已落地；但 presets/diagnostics/headless parity 等仍未完成 |
+| FR-17 Platform Integration | 部分完成 | DeepLink / App Intents / Share / Migration 已进入集成阶段，`reader/open?bookId=...` 路由解析与 root request clearing 已 fresh 落地；但 shortcuts callback、reader locator parity、presets/diagnostics/headless parity 等仍未完成 |
 | FR-18 Localization | 部分完成 | `.xcstrings` 在增长，但还没有完整覆盖验收 |
 | FR-19 Flutter → Swift 数据迁移 | 部分完成 | migration service 已有实现，legacy schema preflight 兼容性也已补上；但远未能声称 1:1 迁移完成 |
 | FR-20/21/22/23 MCP / KAIROS / Sub-Agent / Skills | 明显未完成 | 基础能力与内部运行时有雏形；其中 sub-agent 参数兼容性 bug 已修，MCP/KAIROS/skills 的终端产品面仍有明显差距 |
