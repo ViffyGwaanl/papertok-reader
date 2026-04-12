@@ -110,6 +110,36 @@ public final class StatisticsViewModel {
         DateFormatting.formatDuration(seconds: totalReadingTimeSeconds)
     }
 
+    /// Weekly reading summary: total minutes, daily average, and number of active days.
+    public var weeklySummary: StatisticsPeriodSummary {
+        buildPeriodSummary(days: 7)
+    }
+
+    /// Monthly reading summary: total minutes, daily average, and number of active days.
+    public var monthlySummary: StatisticsPeriodSummary {
+        buildPeriodSummary(days: 30)
+    }
+
+    private func buildPeriodSummary(days: Int) -> StatisticsPeriodSummary {
+        let formatter = StatisticsDateKeyFormatter.make(calendar: calendar)
+        let today = nowProvider()
+        var totalMinutes = 0
+        var activeDays = 0
+        for offset in 0..<days {
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
+            let key = formatter.string(from: date)
+            let minutes = dailyReadingData[key] ?? 0
+            totalMinutes += minutes
+            if minutes > 0 { activeDays += 1 }
+        }
+        return StatisticsPeriodSummary(
+            periodDays: days,
+            totalMinutes: totalMinutes,
+            activeDays: activeDays,
+            dailyAverageMinutes: days > 0 ? totalMinutes / days : 0
+        )
+    }
+
     public func saveVisibleTiles(_ tiles: [StatisticsDashboardTile]) {
         visibleTiles = tiles
         tilePreferencesStore.saveTiles(tiles)

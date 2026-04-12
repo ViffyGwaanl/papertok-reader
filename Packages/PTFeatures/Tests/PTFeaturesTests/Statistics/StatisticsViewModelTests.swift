@@ -172,6 +172,47 @@ struct StatisticsViewModelTests {
         #expect(aiBreakdown.points.last?.minutes == 15)
     }
 
+    @Test("weekly and monthly summaries compute correctly")
+    func weeklyAndMonthlySummaries() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let bookDAO = BookDAO(database: database)
+        let readingTimeDAO = ReadingTimeDAO(database: database)
+        let book = try await bookDAO.save(Book.placeholder(title: "Summary Book", filePath: "/summary.epub"))
+        let bookID = try #require(book.id)
+
+        // 3 active days in the last 7 days: Apr 5, 6, 7
+        for (date, minutes) in [("2026-04-05", 40), ("2026-04-06", 35), ("2026-04-07", 30)] {
+            _ = try await readingTimeDAO.save(ReadingTime(bookId: bookID, date: date, readingTime: minutes * 60))
+        }
+        // 1 active day in the 8-30 day window: Mar 15
+        _ = try await readingTimeDAO.save(ReadingTime(bookId: bookID, date: "2026-03-15", readingTime: 60 * 60))
+
+        let viewModel = makeViewModel(database: database)
+        await viewModel.loadStats()
+
+        let weekly = viewModel.weeklySummary
+        #expect(weekly.totalMinutes == 105)
+        #expect(weekly.activeDays == 3)
+        #expect(weekly.dailyAverageMinutes == 15) // 105 / 7
+
+        let monthly = viewModel.monthlySummary
+        #expect(monthly.totalMinutes == 165) // 105 + 60
+        #expect(monthly.activeDays == 4)
+        #expect(monthly.dailyAverageMinutes == 5) // 165 / 30
+    }
+
+    @Test("period summary formattedTotal formats hours and minutes")
+    func periodSummaryFormattedTotal() {
+        let shortSummary = StatisticsPeriodSummary(periodDays: 7, totalMinutes: 45, activeDays: 3, dailyAverageMinutes: 6)
+        #expect(shortSummary.formattedTotal == "45m")
+
+        let longSummary = StatisticsPeriodSummary(periodDays: 30, totalMinutes: 150, activeDays: 10, dailyAverageMinutes: 5)
+        #expect(longSummary.formattedTotal == "2h 30m")
+
+        let exactHours = StatisticsPeriodSummary(periodDays: 7, totalMinutes: 120, activeDays: 5, dailyAverageMinutes: 17)
+        #expect(exactHours.formattedTotal == "2h")
+    }
+
     private func makeDate(_ raw: String) -> Date {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)

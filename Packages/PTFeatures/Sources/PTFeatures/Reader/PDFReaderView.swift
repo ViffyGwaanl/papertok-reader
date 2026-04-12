@@ -418,6 +418,11 @@ public struct PDFReaderView: View {
     @State private var annotationDraft: EPUBReaderAnnotationDraft?
     @State private var annotationErrorMessage: String?
     @State private var selectionResetToken = 0
+    @State private var isFullScreen = false
+    @State private var showPageSlider = true
+    @State private var aiQuickActionText: String?
+    @State private var aiQuickActionChapter: String = ""
+    @State private var currentSearchResultIndex: Int = 0
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
@@ -452,11 +457,14 @@ public struct PDFReaderView: View {
         .navigationTitle(viewModel.book.title)
 #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(isFullScreen ? .hidden : .visible, for: .navigationBar)
+        .statusBarHidden(isFullScreen)
 #endif
         .toolbar { toolbarContent }
         .sheet(isPresented: $viewModel.showTOC) { tocSheet }
         .sheet(isPresented: searchSheetBinding) { searchSheet }
         .sheet(isPresented: annotationEditorPresentedBinding) { annotationEditorSheet }
+        .sheet(isPresented: aiQuickActionsPresentedBinding) { aiQuickActionsSheet }
         .task { await loadReader() }
         .onDisappear {
             Task {
@@ -465,10 +473,24 @@ public struct PDFReaderView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if isAIPanelPresented == false {
-                ReaderAIMinimizedBar(aiChatViewModel: aiChatViewModel) {
-                    isAIPanelPresented = true
+            VStack(spacing: 0) {
+                if isAIPanelPresented == false {
+                    ReaderAIMinimizedBar(aiChatViewModel: aiChatViewModel) {
+                        isAIPanelPresented = true
+                    }
                 }
+                if showPageSlider && !isFullScreen && viewModel.pageCount > 1 {
+                    ReaderPageSlider(
+                        currentPage: $viewModel.currentPage,
+                        pageCount: viewModel.pageCount,
+                        onPageChange: { page in viewModel.goToPage(page) }
+                    )
+                }
+            }
+        }
+        .onTapGesture(count: 2) {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                isFullScreen.toggle()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -540,6 +562,16 @@ public struct PDFReaderView: View {
         }
 
         ToolbarItemGroup(placement: .primaryAction) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isFullScreen.toggle()
+                }
+            } label: {
+                Image(systemName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                    .foregroundStyle(Morandi.accent)
+            }
+            .accessibilityLabel(isFullScreen ? "Exit Full Screen" : "Full Screen")
+
             Button {
                 isAIPanelPresented = true
             } label: {
@@ -775,11 +807,38 @@ public struct PDFReaderView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Search") {
-                        Task { await readerControlsViewModel?.performSearch() }
+                    HStack(spacing: AppSpacing.sm) {
+                        if let controls = readerControlsViewModel,
+                           !controls.searchResults.isEmpty {
+                            Text("\(currentSearchResultIndex + 1)/\(controls.searchResults.count)")
+                                .font(AppTypography.caption)
+                                .foregroundStyle(Morandi.secondaryText)
+                                .monospacedDigit()
+
+                            Button {
+                                navigateToPreviousSearchResult()
+                            } label: {
+                                Image(systemName: "chevron.up")
+                            }
+                            .disabled(currentSearchResultIndex <= 0)
+                            .foregroundStyle(Morandi.accent)
+
+                            Button {
+                                navigateToNextSearchResult()
+                            } label: {
+                                Image(systemName: "chevron.down")
+                            }
+                            .disabled(currentSearchResultIndex >= (controls.searchResults.count - 1))
+                            .foregroundStyle(Morandi.accent)
+                        }
+
+                        Button("Search") {
+                            currentSearchResultIndex = 0
+                            Task { await readerControlsViewModel?.performSearch() }
+                        }
+                        .foregroundStyle(Morandi.accent)
+                        .disabled((readerControlsViewModel?.searchQuery.isEmpty ?? true) || (readerControlsViewModel?.isSearching ?? false))
                     }
-                    .foregroundStyle(Morandi.accent)
-                    .disabled((readerControlsViewModel?.searchQuery.isEmpty ?? true) || (readerControlsViewModel?.isSearching ?? false))
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -815,6 +874,10 @@ public struct PDFReaderView: View {
     }
 
     private func presentAnnotationDraft(selection: PDFSelectionSnapshot) {
+        // Store selection context for AI quick actions
+        aiQuickActionText = selection.selectedText
+        aiQuickActionChapter = selection.pageLabel
+
         annotationDraft = EPUBReaderAnnotationDraft(
             locatorString: selection.anchorString,
             selectedText: selection.selectedText,
@@ -888,5 +951,55 @@ public struct PDFReaderView: View {
 
         annotationDraft = nil
         selectionResetToken += 1
+    }
+
+    // MARK: - AI Quick Actions
+
+    private var aiQuickActionsPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { aiQuickActionText != nil && annotationDraft == nil },
+            set: { isPresented in
+                if !isPresented { aiQuickActionText = nil }
+            }
+        )
+    }
+
+    private var aiQuickActionsSheet: some View {
+        ReaderAIQuickActionsSheet(
+            selectedText: aiQuickActionText ?? "",
+            chapterTitle: aiQuickActionChapter,
+            bookTitle: viewModel.book.title,
+            onAction: { action in
+                let prompt = action.prompt(
+                    selectedText: aiQuickActionText ?? "",
+                    bookTitle: viewModel.book.title,
+                    chapterTitle: aiQuickActionChapter
+                )
+                aiQuickActionText = nil
+                isAIPanelPresented = true
+                Task {
+                    await aiChatViewModel.sendMessage(prompt)
+                }
+            },
+            onDismiss: {
+                aiQuickActionText = nil
+            }
+        )
+    }
+
+    // MARK: - Search Result Navigation
+
+    private func navigateToNextSearchResult() {
+        guard let controls = readerControlsViewModel,
+              !controls.searchResults.isEmpty else { return }
+        currentSearchResultIndex = min(currentSearchResultIndex + 1, controls.searchResults.count - 1)
+        navigateToSearchResult(controls.searchResults[currentSearchResultIndex])
+    }
+
+    private func navigateToPreviousSearchResult() {
+        guard let controls = readerControlsViewModel,
+              !controls.searchResults.isEmpty else { return }
+        currentSearchResultIndex = max(currentSearchResultIndex - 1, 0)
+        navigateToSearchResult(controls.searchResults[currentSearchResultIndex])
     }
 }

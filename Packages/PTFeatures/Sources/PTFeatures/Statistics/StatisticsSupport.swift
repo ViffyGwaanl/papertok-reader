@@ -58,6 +58,29 @@ public struct StatisticsDailyHighlight: Equatable, Sendable {
     }
 }
 
+public struct StatisticsPeriodSummary: Equatable, Sendable {
+    public let periodDays: Int
+    public let totalMinutes: Int
+    public let activeDays: Int
+    public let dailyAverageMinutes: Int
+
+    public init(periodDays: Int, totalMinutes: Int, activeDays: Int, dailyAverageMinutes: Int) {
+        self.periodDays = periodDays
+        self.totalMinutes = totalMinutes
+        self.activeDays = activeDays
+        self.dailyAverageMinutes = dailyAverageMinutes
+    }
+
+    public var formattedTotal: String {
+        if totalMinutes >= 60 {
+            let hours = totalMinutes / 60
+            let mins = totalMinutes % 60
+            return mins > 0 ? "\(hours)h \(mins)m" : "\(hours)h"
+        }
+        return "\(totalMinutes)m"
+    }
+}
+
 public enum StatisticsDashboardTile: String, CaseIterable, Identifiable, Sendable {
     case readingTime
     case totalBooks

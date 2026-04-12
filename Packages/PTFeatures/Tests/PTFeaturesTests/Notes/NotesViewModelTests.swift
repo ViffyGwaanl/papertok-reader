@@ -88,6 +88,91 @@ struct NotesViewModelTests {
         #expect(csv.contains("Important paragraph"))
     }
 
+    @Test("filterType filters notes by type")
+    func filterTypeFiltersNotes() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let bookDAO = BookDAO(database: database)
+        let noteDAO = BookNoteDAO(database: database)
+
+        let book = try await bookDAO.save(Book.placeholder(title: "Filter Book", filePath: "/filter.epub"))
+        let bookID = try #require(book.id)
+
+        _ = try await noteDAO.save(
+            BookNote(bookId: bookID, content: "Highlighted text", cfi: "cfi1", chapter: "Ch1", type: "highlight", color: "yellow", createTime: makeDate("2026-04-07"), updateTime: makeDate("2026-04-07"))
+        )
+        _ = try await noteDAO.save(
+            BookNote(bookId: bookID, content: "Bookmarked page", cfi: "cfi2", chapter: "Ch2", type: "bookmark", color: "blue", createTime: makeDate("2026-04-06"), updateTime: makeDate("2026-04-06"))
+        )
+        _ = try await noteDAO.save(
+            BookNote(bookId: bookID, content: "A note with text", cfi: "cfi3", chapter: "Ch3", type: "note", color: "green", readerNote: "My thoughts", createTime: makeDate("2026-04-05"), updateTime: makeDate("2026-04-05"))
+        )
+
+        let viewModel = NotesViewModel(database: database)
+        await viewModel.loadNotes()
+        #expect(viewModel.notes.count == 3)
+
+        viewModel.filterType = .highlight
+        // filterType setter triggers loadNotes, but we need to wait
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(viewModel.notes.count == 1)
+        #expect(viewModel.notes.first?.type == "highlight")
+
+        viewModel.filterType = .bookmark
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(viewModel.notes.count == 1)
+        #expect(viewModel.notes.first?.type == "bookmark")
+
+        viewModel.filterType = .all
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(viewModel.notes.count == 3)
+    }
+
+    @Test("sortOrder sorts notes by chapter")
+    func sortOrderSortsByChapter() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let bookDAO = BookDAO(database: database)
+        let noteDAO = BookNoteDAO(database: database)
+
+        let book = try await bookDAO.save(Book.placeholder(title: "Sort Book", filePath: "/sort.epub"))
+        let bookID = try #require(book.id)
+
+        _ = try await noteDAO.save(
+            BookNote(bookId: bookID, content: "Note C", cfi: "cfi1", chapter: "Chapter C", type: "highlight", color: "yellow", createTime: makeDate("2026-04-07"), updateTime: makeDate("2026-04-07"))
+        )
+        _ = try await noteDAO.save(
+            BookNote(bookId: bookID, content: "Note A", cfi: "cfi2", chapter: "Chapter A", type: "highlight", color: "yellow", createTime: makeDate("2026-04-06"), updateTime: makeDate("2026-04-06"))
+        )
+
+        let viewModel = NotesViewModel(database: database)
+        await viewModel.loadNotes()
+        viewModel.sortOrder = .chapter
+
+        let chapters = viewModel.groupedNotes.flatMap(\.notes).map(\.chapter)
+        #expect(chapters == ["Chapter A", "Chapter C"])
+    }
+
+    @Test("updateNote persists changes")
+    func updateNotePersistsChanges() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let bookDAO = BookDAO(database: database)
+        let noteDAO = BookNoteDAO(database: database)
+
+        let book = try await bookDAO.save(Book.placeholder(title: "Edit Book", filePath: "/edit.epub"))
+        let bookID = try #require(book.id)
+
+        var note = try await noteDAO.save(
+            BookNote(bookId: bookID, content: "Original", cfi: "cfi1", chapter: "Ch1", type: "highlight", color: "yellow", createTime: makeDate("2026-04-07"), updateTime: makeDate("2026-04-07"))
+        )
+
+        let viewModel = NotesViewModel(database: database)
+        await viewModel.loadNotes()
+        #expect(viewModel.notes.first?.readerNote == nil)
+
+        note.readerNote = "Added a note"
+        await viewModel.updateNote(note)
+        #expect(viewModel.notes.first?.readerNote == "Added a note")
+    }
+
     @Test("note color normalization handles named and hex values")
     func noteColorNormalization() {
         #expect(NoteColorResolver.normalizedHex(for: "yellow") == "E8D890")

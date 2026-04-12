@@ -1,6 +1,49 @@
 import Foundation
 import Observation
 
+public enum NotesFilterType: String, CaseIterable, Identifiable, Sendable {
+    case all
+    case highlight
+    case bookmark
+    case note
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .all: return "All"
+        case .highlight: return "Highlights"
+        case .bookmark: return "Bookmarks"
+        case .note: return "Notes"
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .all: return "tray.full"
+        case .highlight: return "highlighter"
+        case .bookmark: return "bookmark.fill"
+        case .note: return "text.bubble.fill"
+        }
+    }
+}
+
+public enum NotesSortOrder: String, CaseIterable, Identifiable, Sendable {
+    case dateDescending
+    case dateAscending
+    case chapter
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .dateDescending: return "Newest First"
+        case .dateAscending: return "Oldest First"
+        case .chapter: return "By Chapter"
+        }
+    }
+}
+
 @MainActor @Observable
 public final class NotesViewModel {
     public var notes: [BookNote] = []
@@ -9,9 +52,17 @@ public final class NotesViewModel {
     public var searchQuery: String = ""
     public var isLoading: Bool = false
     public var filterBookId: Int64?
+    public var filterType: NotesFilterType = .all {
+        didSet { Task { await loadNotes() } }
+    }
+    public var sortOrder: NotesSortOrder = .dateDescending {
+        didSet { groupedNotes = buildGroupsSynchronously(from: filteredNotes) }
+    }
 
     private let noteDAO: BookNoteDAO
     private let bookDAO: BookDAO
+    private var bookTitlesByID: [Int64: String] = [:]
+    private var allLoadedNotes: [BookNote] = []
 
     public init(database: AppDatabase) {
         self.noteDAO = BookNoteDAO(database: database)
@@ -23,17 +74,25 @@ public final class NotesViewModel {
         defer { isLoading = false }
         do {
             if !searchQuery.isEmpty {
-                notes = try await noteDAO.search(keyword: searchQuery, bookId: filterBookId)
+                allLoadedNotes = try await noteDAO.search(keyword: searchQuery, bookId: filterBookId)
             } else if let bookId = filterBookId {
-                notes = try await noteDAO.fetchByBookId(bookId)
+                allLoadedNotes = try await noteDAO.fetchByBookId(bookId)
             } else {
-                // Fetch all notes (no filter)
-                notes = try await noteDAO.search(keyword: "")
+                allLoadedNotes = try await noteDAO.search(keyword: "")
             }
             let counts = (try? await noteDAO.countNotesAndBooks()) ?? (0, 0)
             summary = NotesSummary(totalNotes: counts.0, booksWithNotes: counts.1)
-            groupedNotes = await buildGroups(from: notes)
+
+            let books = (try? await bookDAO.fetchAll()) ?? []
+            bookTitlesByID = Dictionary(uniqueKeysWithValues: books.compactMap { book in
+                guard let id = book.id else { return nil }
+                return (id, book.title)
+            })
+
+            notes = filteredNotes
+            groupedNotes = buildGroupsSynchronously(from: notes)
         } catch {
+            allLoadedNotes = []
             notes = []
             groupedNotes = []
             summary = NotesSummary()
@@ -43,10 +102,22 @@ public final class NotesViewModel {
     public func deleteNote(id: Int64) async {
         do {
             try await noteDAO.delete(id: id)
-            notes.removeAll { $0.id == id }
-            groupedNotes = await buildGroups(from: notes)
+            allLoadedNotes.removeAll { $0.id == id }
+            notes = filteredNotes
+            groupedNotes = buildGroupsSynchronously(from: notes)
             let counts = (try? await noteDAO.countNotesAndBooks()) ?? (0, 0)
             summary = NotesSummary(totalNotes: counts.0, booksWithNotes: counts.1)
+        } catch { }
+    }
+
+    public func updateNote(_ note: BookNote) async {
+        do {
+            let saved = try await noteDAO.save(note)
+            if let index = allLoadedNotes.firstIndex(where: { $0.id == saved.id }) {
+                allLoadedNotes[index] = saved
+            }
+            notes = filteredNotes
+            groupedNotes = buildGroupsSynchronously(from: notes)
         } catch { }
     }
 
@@ -58,22 +129,41 @@ public final class NotesViewModel {
         NotesExportBuilder.render(groups: groupedNotes, summary: summary, format: format)
     }
 
-    private func buildGroups(from notes: [BookNote]) async -> [NotesBookGroup] {
-        let books = (try? await bookDAO.fetchAll()) ?? []
-        let titlesByBookID: [Int64: String] = Dictionary(uniqueKeysWithValues: books.compactMap { book in
-            guard let id = book.id else { return nil }
-            return (id, book.title)
-        })
+    private var filteredNotes: [BookNote] {
+        let typeFiltered: [BookNote]
+        switch filterType {
+        case .all:
+            typeFiltered = allLoadedNotes
+        case .highlight:
+            typeFiltered = allLoadedNotes.filter { $0.type.lowercased() == "highlight" }
+        case .bookmark:
+            typeFiltered = allLoadedNotes.filter { $0.type.lowercased() == "bookmark" }
+        case .note:
+            typeFiltered = allLoadedNotes.filter { $0.type.lowercased() == "note" }
+        }
+        return typeFiltered
+    }
 
+    private func buildGroupsSynchronously(from notes: [BookNote]) -> [NotesBookGroup] {
         return Dictionary(grouping: notes, by: \.bookId)
             .map { bookId, bookNotes in
-                let sortedNotes = bookNotes.sorted { lhs, rhs in
-                    let lhsDate = lhs.createTime ?? lhs.updateTime
-                    let rhsDate = rhs.createTime ?? rhs.updateTime
-                    return lhsDate > rhsDate
+                let sortedNotes: [BookNote]
+                switch sortOrder {
+                case .dateDescending:
+                    sortedNotes = bookNotes.sorted { lhs, rhs in
+                        (lhs.createTime ?? lhs.updateTime) > (rhs.createTime ?? rhs.updateTime)
+                    }
+                case .dateAscending:
+                    sortedNotes = bookNotes.sorted { lhs, rhs in
+                        (lhs.createTime ?? lhs.updateTime) < (rhs.createTime ?? rhs.updateTime)
+                    }
+                case .chapter:
+                    sortedNotes = bookNotes.sorted { lhs, rhs in
+                        lhs.chapter.localizedCaseInsensitiveCompare(rhs.chapter) == .orderedAscending
+                    }
                 }
                 let latestDate = sortedNotes.first.map { $0.createTime ?? $0.updateTime } ?? .distantPast
-                let title = titlesByBookID[bookId] ?? "Book #\(bookId)"
+                let title = bookTitlesByID[bookId] ?? "Book #\(bookId)"
                 return NotesBookGroup(
                     bookId: bookId,
                     bookTitle: title,

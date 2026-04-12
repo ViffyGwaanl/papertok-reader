@@ -244,8 +244,9 @@ struct BookshelfViewModelTests {
     @Test("Sort order persists to UserDefaults and restores on init")
     func sortOrderPersistence() async throws {
         let db = try AppDatabase.makeInMemory()
-        let defaults = UserDefaults(suiteName: "test-sort-\(UUID().uuidString)")!
-        defer { defaults.removePersistentDomain(forName: defaults.suiteName!) }
+        let suiteName = "test-sort-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let vm1 = BookshelfViewModel(database: db, userDefaults: defaults)
         #expect(vm1.sortOrder == .dateDesc) // default
