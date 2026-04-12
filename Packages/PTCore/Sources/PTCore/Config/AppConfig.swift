@@ -42,5 +42,9 @@ public enum AppConfig {
         public static let defaultOpenAIModelID = "gpt-4o"
         public static let defaultAnthropicModelID = "claude-sonnet-4-20250514"
         public static let defaultShareDefaultRoute = "auto"
+        public static let defaultTTSBackend = "system"
+        public static let syncConflictStrategy = "lastModifiedWins"
+        public static let ragEmbeddingEndpoint = ""
+        public static let mcpTransportType = "http"
     }
 }

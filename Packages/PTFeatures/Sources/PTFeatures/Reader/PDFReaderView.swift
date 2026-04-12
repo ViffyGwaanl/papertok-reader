@@ -423,6 +423,7 @@ public struct PDFReaderView: View {
     @State private var aiQuickActionText: String?
     @State private var aiQuickActionChapter: String = ""
     @State private var currentSearchResultIndex: Int = 0
+    @State private var contextMenuCoordinator: ContextMenuCoordinator?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
@@ -465,6 +466,19 @@ public struct PDFReaderView: View {
         .sheet(isPresented: searchSheetBinding) { searchSheet }
         .sheet(isPresented: annotationEditorPresentedBinding) { annotationEditorSheet }
         .sheet(isPresented: aiQuickActionsPresentedBinding) { aiQuickActionsSheet }
+        .sheet(item: contextMenuSheetBinding) { sheet in
+            contextMenuSheetContent(sheet)
+        }
+        .overlay(alignment: .center) {
+            if let coordinator = contextMenuCoordinator, coordinator.isMenuVisible {
+                ReaderContextMenuView(coordinator: coordinator) {
+                    coordinator.dismiss()
+                    selectionResetToken += 1
+                }
+                .transition(.scale.combined(with: .opacity))
+                .zIndex(100)
+            }
+        }
         .task { await loadReader() }
         .onDisappear {
             Task {
@@ -626,6 +640,18 @@ public struct PDFReaderView: View {
 
         if readerControlsViewModel == nil {
             readerControlsViewModel = PDFReaderControlsViewModel(bridge: bridge)
+        }
+
+        if contextMenuCoordinator == nil, let bookID = viewModel.book.id {
+            contextMenuCoordinator = ContextMenuCoordinator(
+                bookId: bookID,
+                bookTitle: viewModel.book.title,
+                bookAuthor: viewModel.book.author,
+                database: database,
+                onSendToAI: { [aiChatViewModel] prompt in
+                    _ = await aiChatViewModel.sendMessage(prompt)
+                }
+            )
         }
 
         if annotationsViewModel == nil,
@@ -878,6 +904,13 @@ public struct PDFReaderView: View {
         aiQuickActionText = selection.selectedText
         aiQuickActionChapter = selection.pageLabel
 
+        // Show context menu if coordinator is available
+        contextMenuCoordinator?.showMenu(
+            text: selection.selectedText,
+            locator: selection.anchorString,
+            chapter: selection.pageLabel
+        )
+
         annotationDraft = EPUBReaderAnnotationDraft(
             locatorString: selection.anchorString,
             selectedText: selection.selectedText,
@@ -985,6 +1018,62 @@ public struct PDFReaderView: View {
                 aiQuickActionText = nil
             }
         )
+    }
+
+    // MARK: - Context Menu Sheet
+
+    private var contextMenuSheetBinding: Binding<ContextMenuCoordinator.ActiveSheet?> {
+        Binding(
+            get: { contextMenuCoordinator?.activeSheet },
+            set: { newValue in contextMenuCoordinator?.activeSheet = newValue }
+        )
+    }
+
+    @ViewBuilder
+    private func contextMenuSheetContent(_ sheet: ContextMenuCoordinator.ActiveSheet) -> some View {
+        if let coordinator = contextMenuCoordinator {
+            switch sheet {
+            case .translation:
+                TranslationMenuSheet(
+                    selectedText: coordinator.selectedText,
+                    translationService: coordinator.translationService,
+                    onDismiss: { coordinator.activeSheet = nil }
+                )
+            case .excerpt:
+                ExcerptMenuSheet(
+                    selectedText: coordinator.selectedText,
+                    bookTitle: viewModel.book.title,
+                    author: viewModel.book.author,
+                    chapterTitle: coordinator.chapterTitle,
+                    onSaveToNotes: {
+                        Task { await coordinator.saveExcerptToNotes() }
+                    },
+                    onDismiss: { coordinator.activeSheet = nil }
+                )
+            case .note:
+                NoteEditorSheet(
+                    selectedText: coordinator.selectedText,
+                    chapterTitle: coordinator.chapterTitle,
+                    onSave: { color, noteText in
+                        Task { await coordinator.saveNote(color: color, noteText: noteText) }
+                    },
+                    onDismiss: { coordinator.activeSheet = nil }
+                )
+            case .noteEdit(let noteID):
+                NoteEditorSheet(
+                    selectedText: coordinator.selectedText,
+                    chapterTitle: coordinator.chapterTitle,
+                    existingNoteID: noteID,
+                    onSave: { color, noteText in
+                        Task { await coordinator.saveNote(color: color, noteText: noteText, existingID: noteID) }
+                    },
+                    onDelete: {
+                        Task { await coordinator.deleteNote(id: noteID) }
+                    },
+                    onDismiss: { coordinator.activeSheet = nil }
+                )
+            }
+        }
     }
 
     // MARK: - Search Result Navigation
