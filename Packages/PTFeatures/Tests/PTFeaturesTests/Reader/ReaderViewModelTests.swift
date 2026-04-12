@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import PDFKit
 @testable import PTFeatures
+import PTAIServices
 
 private func makeMinimalPDF(at url: URL) throws {
     let pdfDoc = PDFDocument()
@@ -16,6 +17,13 @@ private func makeMinimalPDF(at url: URL) throws {
 @Suite("ReaderViewModel")
 @MainActor
 struct ReaderViewModelTests {
+    private func makePDF(pageCount: Int, at url: URL) throws {
+        let pdfDoc = PDFDocument()
+        for _ in 0..<pageCount {
+            pdfDoc.insert(PDFPage(), at: pdfDoc.pageCount)
+        }
+        try pdfDoc.dataRepresentation()!.write(to: url)
+    }
 
     @Test("loadDocument sets pageCount and currentPage")
     func loadDocumentSetsPageCount() async throws {
@@ -73,5 +81,65 @@ struct ReaderViewModelTests {
         await vm.loadDocument()
 
         #expect(vm.currentPage == 2)
+    }
+
+    @Test("loadDocument publishes an active PDF reader session shell")
+    func loadDocumentPublishesReaderSession() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("reader_session_\(UUID().uuidString).pdf")
+        try makeMinimalPDF(at: tempURL)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        var book = Book.placeholder(title: "Test", filePath: tempURL.path)
+        book.id = 11
+        let readerSessionStore = ReaderSessionContextStore()
+        let vm = ReaderViewModel(book: book, database: db, readerSessionStore: readerSessionStore)
+
+        await vm.loadDocument()
+
+        #expect(readerSessionStore.activeBookId == 11)
+        #expect(readerSessionStore.locationHref == "pages:0-0")
+        #expect(readerSessionStore.chapterTitle == "Pages 1–1")
+        #expect(readerSessionStore.hasBookContentBridge)
+    }
+
+    @Test("goToPage updates the shared PDF reader session location")
+    func goToPageUpdatesReaderSessionLocation() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("reader_session_page_\(UUID().uuidString).pdf")
+        try makePDF(pageCount: 25, at: tempURL)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        var book = Book.placeholder(title: "Test", filePath: tempURL.path)
+        book.id = 12
+        let readerSessionStore = ReaderSessionContextStore()
+        let vm = ReaderViewModel(book: book, database: db, readerSessionStore: readerSessionStore)
+
+        await vm.loadDocument()
+        vm.goToPage(22)
+
+        #expect(readerSessionStore.locationHref == "pages:20-24")
+        #expect(readerSessionStore.chapterTitle == "Pages 21–25")
+    }
+
+    @Test("loadDocument exposes the PDF content bridge for reader controls")
+    func loadDocumentExposesContentBridge() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("reader_bridge_\(UUID().uuidString).pdf")
+        try makeMinimalPDF(at: tempURL)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        var book = Book.placeholder(title: "Test", filePath: tempURL.path)
+        book.id = 13
+        let vm = ReaderViewModel(book: book, database: db)
+
+        await vm.loadDocument()
+
+        let bridge = try #require(vm.contentBridge)
+        let toc = try await bridge.tableOfContents
+        #expect(toc.isEmpty == false)
     }
 }

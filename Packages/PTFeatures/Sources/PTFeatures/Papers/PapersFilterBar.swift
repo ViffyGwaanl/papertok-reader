@@ -6,12 +6,31 @@ struct PapersFilterBar: View {
     @Binding var searchQuery: String
     @Binding var likedOnly: Bool
     @Binding var dayFilter: String
+    @Binding var language: String
+    @Binding var customDate: Date?
     let onRefresh: () -> Void
+
+    @State private var isShowingDatePicker = false
+    @State private var draftDate = Date()
 
     private let dayOptions: [(label: String, value: String)] = [
         ("Latest", "latest"),
         ("All", "all"),
     ]
+
+    private let languageOptions: [(label: String, value: String)] = [
+        ("ZH", "zh"),
+        ("EN", "en"),
+    ]
+
+    private var isCustomDateSelected: Bool {
+        customDate != nil && dayFilter != "latest" && dayFilter != "all"
+    }
+
+    private var customDateLabel: String {
+        guard let customDate else { return "Pick a date" }
+        return customDate.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
+    }
 
     var body: some View {
         VStack(spacing: AppSpacing.sm) {
@@ -19,6 +38,15 @@ struct PapersFilterBar: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: AppSpacing.sm) {
+                    ForEach(languageOptions, id: \.value) { option in
+                        FilterChip(
+                            label: option.label,
+                            isSelected: language == option.value
+                        ) { language = option.value }
+                    }
+
+                    Divider().frame(height: 20)
+
                     FilterChip(
                         label: "Liked",
                         icon: "heart.fill",
@@ -32,6 +60,15 @@ struct PapersFilterBar: View {
                             label: option.label,
                             isSelected: dayFilter == option.value
                         ) { dayFilter = option.value }
+                    }
+
+                    FilterChip(
+                        label: customDateLabel,
+                        icon: isCustomDateSelected ? "calendar.badge.checkmark" : "calendar",
+                        isSelected: isCustomDateSelected
+                    ) {
+                        draftDate = customDate ?? Date()
+                        isShowingDatePicker = true
                     }
 
                     Spacer(minLength: AppSpacing.xs)
@@ -48,6 +85,38 @@ struct PapersFilterBar: View {
             }
         }
         .padding(.vertical, AppSpacing.sm)
+        .sheet(isPresented: $isShowingDatePicker) {
+            NavigationStack {
+                VStack(spacing: AppSpacing.lg) {
+                    DatePicker(
+                        "Paper date",
+                        selection: $draftDate,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.graphical)
+                    .labelsHidden()
+
+                    HStack(spacing: AppSpacing.md) {
+                        Button("Cancel") {
+                            isShowingDatePicker = false
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button("Apply") {
+                            customDate = draftDate
+                            isShowingDatePicker = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Morandi.accent)
+                    }
+                }
+                .padding(AppSpacing.lg)
+                .navigationTitle("Pick a Date")
+                #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+                #endif
+            }
+        }
     }
 }
 

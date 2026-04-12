@@ -1,14 +1,18 @@
 import SwiftUI
+import PTCore
 import PTNetworking
 import PTUI
 
 /// Main Papers tab view -- vertical paged card feed of academic papers.
 public struct PapersView: View {
+    let database: AppDatabase
     @State private var viewModel = PapersViewModel()
     @State private var selectedCard: PaperTokCard?
     @State private var currentIndex = 0
 
-    public init() {}
+    public init(database: AppDatabase) {
+        self.database = database
+    }
 
     public var body: some View {
         NavigationStack {
@@ -19,6 +23,17 @@ public struct PapersView: View {
                     dayFilter: Binding(
                         get: { viewModel.dayFilter },
                         set: { newValue in Task { await viewModel.applyDayFilter(newValue) } }
+                    ),
+                    language: Binding(
+                        get: { viewModel.language },
+                        set: { newValue in Task { await viewModel.applyLanguage(newValue) } }
+                    ),
+                    customDate: Binding(
+                        get: { viewModel.customDate },
+                        set: { newValue in
+                            guard let newValue else { return }
+                            Task { await viewModel.applyCustomDate(newValue) }
+                        }
                     ),
                     onRefresh: { Task { await viewModel.loadMore(reset: true) } }
                 )
@@ -39,7 +54,9 @@ public struct PapersView: View {
         .task { await viewModel.loadMore(reset: true) }
         .sheet(item: $selectedCard) { card in
             PaperDetailView(
+                database: database,
                 paperId: card.id,
+                language: viewModel.language,
                 isLiked: viewModel.isLiked(card),
                 onToggleLike: { viewModel.toggleLike(card) }
             )

@@ -1,7 +1,8 @@
-import SwiftUI
 import PDFKit
 import PTCore
+import PTReader
 import PTUI
+import SwiftUI
 
 // MARK: - PDFKit platform wrapper
 
@@ -11,6 +12,10 @@ import UIKit
 /// SwiftUI wrapper for PDFKit's PDFView on iOS.
 struct NativePDFView: UIViewRepresentable {
     let document: PDFDocument
+    let renderedAnnotations: [PDFRenderedAnnotation]
+    let selectionResetToken: Int
+    let onSelectionChange: (PDFSelectionSnapshot) -> Void
+    let onAnnotationTap: (Int64) -> Void
     @Binding var currentPage: Int
 
     func makeUIView(context: Context) -> PDFView {
@@ -27,6 +32,18 @@ struct NativePDFView: UIViewRepresentable {
             name: .PDFViewPageChanged,
             object: pdfView
         )
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.selectionChanged(_:)),
+            name: .PDFViewSelectionChanged,
+            object: pdfView
+        )
+        let tapRecognizer = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleTap(_:))
+        )
+        tapRecognizer.cancelsTouchesInView = false
+        pdfView.addGestureRecognizer(tapRecognizer)
         return pdfView
     }
 
@@ -39,19 +56,45 @@ struct NativePDFView: UIViewRepresentable {
            pdfView.currentPage !== page {
             pdfView.go(to: page)
         }
+
+        context.coordinator.onSelectionChange = onSelectionChange
+        context.coordinator.onAnnotationTap = onAnnotationTap
+        context.coordinator.syncRenderedAnnotations(renderedAnnotations, on: pdfView)
+        if context.coordinator.lastSelectionResetToken != selectionResetToken {
+            context.coordinator.lastSelectionResetToken = selectionResetToken
+            pdfView.clearSelection()
+        }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(currentPage: $currentPage, document: document)
+        Coordinator(
+            currentPage: $currentPage,
+            document: document,
+            onSelectionChange: onSelectionChange,
+            onAnnotationTap: onAnnotationTap
+        )
     }
 
     final class Coordinator: NSObject {
         @Binding var currentPage: Int
         let document: PDFDocument
+        var onSelectionChange: (PDFSelectionSnapshot) -> Void
+        var onAnnotationTap: (Int64) -> Void
+        var lastSelectionResetToken: Int = 0
 
-        init(currentPage: Binding<Int>, document: PDFDocument) {
+        private var appliedAnnotationsByPage: [Int: [PDFAnnotation]] = [:]
+        private var suppressNextSelectionChange = false
+
+        init(
+            currentPage: Binding<Int>,
+            document: PDFDocument,
+            onSelectionChange: @escaping (PDFSelectionSnapshot) -> Void,
+            onAnnotationTap: @escaping (Int64) -> Void
+        ) {
             self._currentPage = currentPage
             self.document = document
+            self.onSelectionChange = onSelectionChange
+            self.onAnnotationTap = onAnnotationTap
         }
 
         deinit {
@@ -64,6 +107,103 @@ struct NativePDFView: UIViewRepresentable {
             let index = document.index(for: page)
             DispatchQueue.main.async { self.currentPage = index }
         }
+
+        @objc func selectionChanged(_ notification: Notification) {
+            if suppressNextSelectionChange {
+                suppressNextSelectionChange = false
+                return
+            }
+
+            guard let pdfView = notification.object as? PDFView,
+                  let selection = pdfView.currentSelection,
+                  let snapshot = PDFAnnotationBridge.selectionSnapshot(from: selection, in: document) else {
+                return
+            }
+
+            DispatchQueue.main.async {
+                self.onSelectionChange(snapshot)
+            }
+        }
+
+        @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
+            guard recognizer.state == .ended,
+                  let pdfView = recognizer.view as? PDFView else {
+                return
+            }
+
+            let location = recognizer.location(in: pdfView)
+            guard let page = pdfView.page(for: location, nearest: true) else {
+                return
+            }
+
+            let pagePoint = pdfView.convert(location, to: page)
+            guard let annotation = page.annotation(at: pagePoint),
+                  let noteID = noteID(from: annotation) else {
+                return
+            }
+
+            suppressNextSelectionChange = true
+            DispatchQueue.main.async {
+                self.onAnnotationTap(noteID)
+            }
+        }
+
+        func syncRenderedAnnotations(_ renderedAnnotations: [PDFRenderedAnnotation], on pdfView: PDFView) {
+            for (pageIndex, annotations) in appliedAnnotationsByPage {
+                guard let page = document.page(at: pageIndex) else { continue }
+                for annotation in annotations {
+                    page.removeAnnotation(annotation)
+                }
+            }
+
+            var nextAppliedAnnotationsByPage: [Int: [PDFAnnotation]] = [:]
+            for renderedAnnotation in renderedAnnotations {
+                guard let page = document.page(at: renderedAnnotation.pageIndex) else { continue }
+                let annotation = PDFAnnotation(
+                    bounds: renderedAnnotation.bounds,
+                    forType: renderedAnnotation.type == .bookmark ? .text : .highlight,
+                    withProperties: nil
+                )
+                annotation.color = color(from: renderedAnnotation.colorHex) ?? .systemYellow
+                if let noteID = renderedAnnotation.noteID {
+                    annotation.userName = String(noteID)
+                }
+                annotation.contents = renderedAnnotation.readerNote ?? (renderedAnnotation.type == .bookmark ? "Bookmark" : nil)
+                page.addAnnotation(annotation)
+                nextAppliedAnnotationsByPage[renderedAnnotation.pageIndex, default: []].append(annotation)
+            }
+
+            appliedAnnotationsByPage = nextAppliedAnnotationsByPage
+            pdfView.setNeedsDisplay()
+        }
+
+        private func color(from hex: String) -> UIColor? {
+            let clean = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+            guard clean.count == 6 || clean.count == 8 else { return nil }
+            var rgbValue: UInt64 = 0
+            Scanner(string: clean).scanHexInt64(&rgbValue)
+            if clean.count == 8 {
+                return UIColor(
+                    red: CGFloat((rgbValue >> 16) & 0xFF) / 255.0,
+                    green: CGFloat((rgbValue >> 8) & 0xFF) / 255.0,
+                    blue: CGFloat(rgbValue & 0xFF) / 255.0,
+                    alpha: CGFloat((rgbValue >> 24) & 0xFF) / 255.0
+                )
+            }
+            return UIColor(
+                red: CGFloat((rgbValue >> 16) & 0xFF) / 255.0,
+                green: CGFloat((rgbValue >> 8) & 0xFF) / 255.0,
+                blue: CGFloat(rgbValue & 0xFF) / 255.0,
+                alpha: 1.0
+            )
+        }
+
+        private func noteID(from annotation: PDFAnnotation) -> Int64? {
+            guard let userName = annotation.userName else {
+                return nil
+            }
+            return Int64(userName)
+        }
     }
 }
 
@@ -73,6 +213,10 @@ import AppKit
 /// SwiftUI wrapper for PDFKit's PDFView on macOS.
 struct NativePDFView: NSViewRepresentable {
     let document: PDFDocument
+    let renderedAnnotations: [PDFRenderedAnnotation]
+    let selectionResetToken: Int
+    let onSelectionChange: (PDFSelectionSnapshot) -> Void
+    let onAnnotationTap: (Int64) -> Void
     @Binding var currentPage: Int
 
     func makeNSView(context: Context) -> PDFView {
@@ -88,6 +232,17 @@ struct NativePDFView: NSViewRepresentable {
             name: .PDFViewPageChanged,
             object: pdfView
         )
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.selectionChanged(_:)),
+            name: .PDFViewSelectionChanged,
+            object: pdfView
+        )
+        let clickRecognizer = NSClickGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleClick(_:))
+        )
+        pdfView.addGestureRecognizer(clickRecognizer)
         return pdfView
     }
 
@@ -100,19 +255,45 @@ struct NativePDFView: NSViewRepresentable {
            pdfView.currentPage !== page {
             pdfView.go(to: page)
         }
+
+        context.coordinator.onSelectionChange = onSelectionChange
+        context.coordinator.onAnnotationTap = onAnnotationTap
+        context.coordinator.syncRenderedAnnotations(renderedAnnotations, on: pdfView)
+        if context.coordinator.lastSelectionResetToken != selectionResetToken {
+            context.coordinator.lastSelectionResetToken = selectionResetToken
+            pdfView.clearSelection()
+        }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(currentPage: $currentPage, document: document)
+        Coordinator(
+            currentPage: $currentPage,
+            document: document,
+            onSelectionChange: onSelectionChange,
+            onAnnotationTap: onAnnotationTap
+        )
     }
 
     final class Coordinator: NSObject {
         @Binding var currentPage: Int
         let document: PDFDocument
+        var onSelectionChange: (PDFSelectionSnapshot) -> Void
+        var onAnnotationTap: (Int64) -> Void
+        var lastSelectionResetToken: Int = 0
 
-        init(currentPage: Binding<Int>, document: PDFDocument) {
+        private var appliedAnnotationsByPage: [Int: [PDFAnnotation]] = [:]
+        private var suppressNextSelectionChange = false
+
+        init(
+            currentPage: Binding<Int>,
+            document: PDFDocument,
+            onSelectionChange: @escaping (PDFSelectionSnapshot) -> Void,
+            onAnnotationTap: @escaping (Int64) -> Void
+        ) {
             self._currentPage = currentPage
             self.document = document
+            self.onSelectionChange = onSelectionChange
+            self.onAnnotationTap = onAnnotationTap
         }
 
         deinit {
@@ -125,6 +306,103 @@ struct NativePDFView: NSViewRepresentable {
             let index = document.index(for: page)
             DispatchQueue.main.async { self.currentPage = index }
         }
+
+        @objc func selectionChanged(_ notification: Notification) {
+            if suppressNextSelectionChange {
+                suppressNextSelectionChange = false
+                return
+            }
+
+            guard let pdfView = notification.object as? PDFView,
+                  let selection = pdfView.currentSelection,
+                  let snapshot = PDFAnnotationBridge.selectionSnapshot(from: selection, in: document) else {
+                return
+            }
+
+            DispatchQueue.main.async {
+                self.onSelectionChange(snapshot)
+            }
+        }
+
+        @objc func handleClick(_ recognizer: NSClickGestureRecognizer) {
+            guard recognizer.state == .ended,
+                  let pdfView = recognizer.view as? PDFView else {
+                return
+            }
+
+            let location = recognizer.location(in: pdfView)
+            guard let page = pdfView.page(for: location, nearest: true) else {
+                return
+            }
+
+            let pagePoint = pdfView.convert(location, to: page)
+            guard let annotation = page.annotation(at: pagePoint),
+                  let noteID = noteID(from: annotation) else {
+                return
+            }
+
+            suppressNextSelectionChange = true
+            DispatchQueue.main.async {
+                self.onAnnotationTap(noteID)
+            }
+        }
+
+        func syncRenderedAnnotations(_ renderedAnnotations: [PDFRenderedAnnotation], on pdfView: PDFView) {
+            for (pageIndex, annotations) in appliedAnnotationsByPage {
+                guard let page = document.page(at: pageIndex) else { continue }
+                for annotation in annotations {
+                    page.removeAnnotation(annotation)
+                }
+            }
+
+            var nextAppliedAnnotationsByPage: [Int: [PDFAnnotation]] = [:]
+            for renderedAnnotation in renderedAnnotations {
+                guard let page = document.page(at: renderedAnnotation.pageIndex) else { continue }
+                let annotation = PDFAnnotation(
+                    bounds: renderedAnnotation.bounds,
+                    forType: renderedAnnotation.type == .bookmark ? .text : .highlight,
+                    withProperties: nil
+                )
+                annotation.color = color(from: renderedAnnotation.colorHex) ?? .systemYellow
+                if let noteID = renderedAnnotation.noteID {
+                    annotation.userName = String(noteID)
+                }
+                annotation.contents = renderedAnnotation.readerNote ?? (renderedAnnotation.type == .bookmark ? "Bookmark" : nil)
+                page.addAnnotation(annotation)
+                nextAppliedAnnotationsByPage[renderedAnnotation.pageIndex, default: []].append(annotation)
+            }
+
+            appliedAnnotationsByPage = nextAppliedAnnotationsByPage
+            pdfView.needsDisplay = true
+        }
+
+        private func color(from hex: String) -> NSColor? {
+            let clean = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+            guard clean.count == 6 || clean.count == 8 else { return nil }
+            var rgbValue: UInt64 = 0
+            Scanner(string: clean).scanHexInt64(&rgbValue)
+            if clean.count == 8 {
+                return NSColor(
+                    red: CGFloat((rgbValue >> 16) & 0xFF) / 255.0,
+                    green: CGFloat((rgbValue >> 8) & 0xFF) / 255.0,
+                    blue: CGFloat(rgbValue & 0xFF) / 255.0,
+                    alpha: CGFloat((rgbValue >> 24) & 0xFF) / 255.0
+                )
+            }
+            return NSColor(
+                red: CGFloat((rgbValue >> 16) & 0xFF) / 255.0,
+                green: CGFloat((rgbValue >> 8) & 0xFF) / 255.0,
+                blue: CGFloat(rgbValue & 0xFF) / 255.0,
+                alpha: 1.0
+            )
+        }
+
+        private func noteID(from annotation: PDFAnnotation) -> Int64? {
+            guard let userName = annotation.userName else {
+                return nil
+            }
+            return Int64(userName)
+        }
     }
 }
 #endif
@@ -134,13 +412,88 @@ struct NativePDFView: NSViewRepresentable {
 /// Full-screen PDF reader with toolbar, TOC sheet, and reading progress.
 public struct PDFReaderView: View {
     @State private var viewModel: ReaderViewModel
+    @State private var isAIPanelPresented = false
+    @State private var readerControlsViewModel: PDFReaderControlsViewModel?
+    @State private var annotationsViewModel: PDFReaderAnnotationsViewModel?
+    @State private var annotationDraft: EPUBReaderAnnotationDraft?
+    @State private var annotationErrorMessage: String?
+    @State private var selectionResetToken = 0
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
-    public init(book: Book, database: AppDatabase) {
-        _viewModel = State(initialValue: ReaderViewModel(book: book, database: database))
+    private let aiChatViewModel: AIChatViewModel
+    private let database: AppDatabase
+
+    public init(
+        book: Book,
+        database: AppDatabase,
+        aiChatViewModel: AIChatViewModel,
+        readerSessionStore: ReaderSessionContextStore? = nil
+    ) {
+        self.database = database
+        self.aiChatViewModel = aiChatViewModel
+        _viewModel = State(
+            initialValue: ReaderViewModel(
+                book: book,
+                database: database,
+                readerSessionStore: readerSessionStore
+            )
+        )
     }
 
     public var body: some View {
+        ReaderAIPanelHost(
+            book: viewModel.book,
+            aiChatViewModel: aiChatViewModel,
+            isPresented: $isAIPanelPresented
+        ) {
+            readerContent
+        }
+        .navigationTitle(viewModel.book.title)
+#if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+#endif
+        .toolbar { toolbarContent }
+        .sheet(isPresented: $viewModel.showTOC) { tocSheet }
+        .sheet(isPresented: searchSheetBinding) { searchSheet }
+        .sheet(isPresented: annotationEditorPresentedBinding) { annotationEditorSheet }
+        .task { await loadReader() }
+        .onDisappear {
+            Task {
+                await viewModel.saveProgress()
+                await viewModel.endReadingSession()
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if isAIPanelPresented == false {
+                ReaderAIMinimizedBar(aiChatViewModel: aiChatViewModel) {
+                    isAIPanelPresented = true
+                }
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            Task {
+                if newPhase == .background {
+                    await viewModel.saveProgress()
+                }
+                await viewModel.handleScenePhaseChange(newPhase)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PaperTokToggleAI"))) { _ in
+            isAIPanelPresented.toggle()
+        }
+        .alert("Annotation Error", isPresented: annotationErrorPresentedBinding) {
+            Button("OK") {
+                annotationErrorMessage = nil
+            }
+        } message: {
+            Text(annotationErrorMessage ?? "")
+        }
+    }
+
+    // MARK: - Toolbar
+
+    private var readerContent: some View {
         ZStack {
             Morandi.background.ignoresSafeArea()
 
@@ -149,8 +502,15 @@ public struct PDFReaderView: View {
                     .tint(Morandi.accent)
 
             } else if let doc = viewModel.pdfDocument {
-                NativePDFView(document: doc, currentPage: $viewModel.currentPage)
-                    .ignoresSafeArea(edges: .bottom)
+                NativePDFView(
+                    document: doc,
+                    renderedAnnotations: annotationsViewModel?.renderedAnnotations ?? [],
+                    selectionResetToken: selectionResetToken,
+                    onSelectionChange: presentAnnotationDraft(selection:),
+                    onAnnotationTap: presentAnnotationDraft(noteID:),
+                    currentPage: $viewModel.currentPage
+                )
+                .ignoresSafeArea(edges: .bottom)
 
             } else {
                 ContentUnavailableView(
@@ -160,17 +520,7 @@ public struct PDFReaderView: View {
                 )
             }
         }
-        .navigationTitle(viewModel.book.title)
-#if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-#endif
-        .toolbar { toolbarContent }
-        .sheet(isPresented: $viewModel.showTOC) { tocSheet }
-        .task { await viewModel.loadDocument() }
-        .onDisappear { Task { await viewModel.saveProgress() } }
     }
-
-    // MARK: - Toolbar
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
@@ -189,7 +539,33 @@ public struct PDFReaderView: View {
             }
         }
 
-        ToolbarItem(placement: .primaryAction) {
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button {
+                isAIPanelPresented = true
+            } label: {
+                Image(systemName: "bubble.left.and.text.bubble.right")
+                    .foregroundStyle(Morandi.accent)
+            }
+            .accessibilityLabel("Open AI Panel")
+
+            Button {
+                readerControlsViewModel?.showSearch = true
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(Morandi.accent)
+            }
+            .accessibilityLabel("Search Book")
+            .disabled(readerControlsViewModel == nil)
+
+            Button {
+                presentBookmarkDraft()
+            } label: {
+                Image(systemName: "bookmark")
+                    .foregroundStyle(Morandi.accent)
+            }
+            .accessibilityLabel("Add Bookmark")
+            .disabled(viewModel.pdfDocument == nil)
+
             Button {
                 viewModel.showTOC = true
             } label: {
@@ -206,6 +582,80 @@ public struct PDFReaderView: View {
                     .monospacedDigit()
             }
         }
+    }
+
+    private func loadReader() async {
+        await viewModel.loadDocument()
+
+        guard let bridge = viewModel.contentBridge else {
+            readerControlsViewModel = nil
+            return
+        }
+
+        if readerControlsViewModel == nil {
+            readerControlsViewModel = PDFReaderControlsViewModel(bridge: bridge)
+        }
+
+        if annotationsViewModel == nil,
+           let bookID = viewModel.book.id,
+           let document = viewModel.pdfDocument {
+            let annotationsViewModel = PDFReaderAnnotationsViewModel(
+                bookId: bookID,
+                database: database,
+                document: document
+            )
+            await annotationsViewModel.loadAnnotations()
+            self.annotationsViewModel = annotationsViewModel
+        }
+    }
+
+    private var searchSheetBinding: Binding<Bool> {
+        Binding(
+            get: { readerControlsViewModel?.showSearch ?? false },
+            set: { newValue in readerControlsViewModel?.showSearch = newValue }
+        )
+    }
+
+    private var searchQueryBinding: Binding<String> {
+        Binding(
+            get: { readerControlsViewModel?.searchQuery ?? "" },
+            set: { newValue in readerControlsViewModel?.searchQuery = newValue }
+        )
+    }
+
+    private var annotationEditorPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { annotationDraft != nil },
+            set: { isPresented in
+                guard isPresented == false else { return }
+                annotationDraft = nil
+                selectionResetToken += 1
+            }
+        )
+    }
+
+    private var annotationErrorPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { annotationErrorMessage?.isEmpty == false },
+            set: { isPresented in
+                if isPresented == false {
+                    annotationErrorMessage = nil
+                }
+            }
+        )
+    }
+
+    private var annotationDraftBinding: Binding<EPUBReaderAnnotationDraft> {
+        Binding(
+            get: {
+                annotationDraft ?? EPUBReaderAnnotationDraft(
+                    locatorString: "",
+                    selectedText: "",
+                    chapterTitle: ""
+                )
+            },
+            set: { annotationDraft = $0 }
+        )
     }
 
     // MARK: - TOC Sheet
@@ -252,5 +702,191 @@ public struct PDFReaderView: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    private var searchSheet: some View {
+        NavigationStack {
+            Group {
+                if let readerControlsViewModel {
+                    if readerControlsViewModel.searchQuery.isEmpty {
+                        ContentUnavailableView(
+                            "Search This PDF",
+                            systemImage: "magnifyingglass",
+                            description: Text("Enter a phrase to search across the PDF contents.")
+                        )
+                    } else if readerControlsViewModel.isSearching {
+                        ProgressView("Searching…")
+                            .tint(Morandi.accent)
+                    } else if let searchErrorMessage = readerControlsViewModel.searchErrorMessage {
+                        ContentUnavailableView(
+                            "Search Failed",
+                            systemImage: "exclamationmark.magnifyingglass",
+                            description: Text(searchErrorMessage)
+                        )
+                    } else if readerControlsViewModel.searchResults.isEmpty {
+                        ContentUnavailableView(
+                            "No Results",
+                            systemImage: "doc.text.magnifyingglass",
+                            description: Text("No matches were found for “\(readerControlsViewModel.searchQuery)”.")
+                        )
+                    } else {
+                        List(readerControlsViewModel.searchResults) { result in
+                            Button {
+                                navigateToSearchResult(result)
+                                readerControlsViewModel.showSearch = false
+                            } label: {
+                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                    Text(result.chapterTitle)
+                                        .font(AppTypography.headline)
+                                        .foregroundStyle(Morandi.primaryText)
+
+                                    (
+                                        Text(result.textBefore)
+                                            .foregroundStyle(Morandi.secondaryText)
+                                        + Text(result.text)
+                                            .foregroundStyle(Morandi.accent)
+                                            .bold()
+                                        + Text(result.textAfter)
+                                            .foregroundStyle(Morandi.secondaryText)
+                                    )
+                                    .font(AppTypography.body)
+                                    .lineLimit(4)
+
+                                    Text("Match at \(Int((result.progression * 100).rounded()))% of document")
+                                        .font(AppTypography.caption)
+                                        .foregroundStyle(Morandi.secondaryText)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .listRowBackground(Morandi.background)
+                        }
+                        .listStyle(.plain)
+                    }
+                } else {
+                    ProgressView("Preparing search…")
+                        .tint(Morandi.accent)
+                }
+            }
+            .background(Morandi.background)
+            .navigationTitle("Search")
+            .searchable(text: searchQueryBinding, prompt: "Search in this PDF")
+            .onSubmit(of: .search) {
+                Task { await readerControlsViewModel?.performSearch() }
+            }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Search") {
+                        Task { await readerControlsViewModel?.performSearch() }
+                    }
+                    .foregroundStyle(Morandi.accent)
+                    .disabled((readerControlsViewModel?.searchQuery.isEmpty ?? true) || (readerControlsViewModel?.isSearching ?? false))
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        readerControlsViewModel?.showSearch = false
+                    }
+                    .foregroundStyle(Morandi.accent)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var annotationEditorSheet: some View {
+        EPUBReaderAnnotationEditorView(
+            draft: annotationDraftBinding,
+            onSave: {
+                Task { await saveAnnotationDraft() }
+            },
+            onDelete: annotationDraft?.noteID == nil ? nil : {
+                Task { await deleteCurrentAnnotation() }
+            },
+            onCancel: {
+                annotationDraft = nil
+                selectionResetToken += 1
+            }
+        )
+    }
+
+    private func navigateToSearchResult(_ result: ContentSearchResult) {
+        guard let range = PDFChapter.parsePageRange(from: result.chapterHref) else { return }
+        viewModel.goToPage(range.startPage)
+    }
+
+    private func presentAnnotationDraft(selection: PDFSelectionSnapshot) {
+        annotationDraft = EPUBReaderAnnotationDraft(
+            locatorString: selection.anchorString,
+            selectedText: selection.selectedText,
+            chapterTitle: selection.pageLabel,
+            type: .highlight,
+            color: .yellow
+        )
+    }
+
+    private func presentBookmarkDraft() {
+        let pageIndex = viewModel.currentPage
+        let pageLabel = viewModel.pdfDocument?.page(at: pageIndex)?.label ?? "Page \(pageIndex + 1)"
+        annotationDraft = EPUBReaderAnnotationDraft(
+            locatorString: PDFAnnotationBridge.storedString(from: .bookmark(pageIndex: pageIndex, pageLabel: pageLabel)),
+            selectedText: "",
+            chapterTitle: pageLabel,
+            type: .bookmark,
+            color: .yellow
+        )
+    }
+
+    private func presentAnnotationDraft(noteID: Int64) {
+        annotationDraft = annotationsViewModel?.annotationDraft(noteID: noteID)
+    }
+
+    private func saveAnnotationDraft() async {
+        guard let annotationDraft,
+              let annotationsViewModel else {
+            return
+        }
+
+        let savedNote: BookNote?
+        if let noteID = annotationDraft.noteID {
+            savedNote = await annotationsViewModel.updateAnnotation(
+                id: noteID,
+                type: annotationDraft.type,
+                color: annotationDraft.color,
+                readerNote: annotationDraft.readerNote
+            )
+        } else {
+            savedNote = await annotationsViewModel.createAnnotation(
+                selectedText: annotationDraft.selectedText,
+                locatorString: annotationDraft.locatorString,
+                chapterTitle: annotationDraft.chapterTitle,
+                type: annotationDraft.type,
+                color: annotationDraft.color,
+                readerNote: annotationDraft.readerNote
+            )
+        }
+
+        guard savedNote != nil else {
+            annotationErrorMessage = annotationsViewModel.errorMessage ?? "The annotation could not be saved."
+            return
+        }
+
+        self.annotationDraft = nil
+        selectionResetToken += 1
+    }
+
+    private func deleteCurrentAnnotation() async {
+        guard let noteID = annotationDraft?.noteID,
+              let annotationsViewModel else {
+            return
+        }
+
+        await annotationsViewModel.deleteAnnotation(id: noteID)
+        guard annotationsViewModel.errorMessage == nil else {
+            annotationErrorMessage = annotationsViewModel.errorMessage ?? "The annotation could not be deleted."
+            return
+        }
+
+        annotationDraft = nil
+        selectionResetToken += 1
     }
 }

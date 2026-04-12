@@ -120,7 +120,6 @@ public struct AIChatView: View {
         inputText = ""
         Task {
             await viewModel.sendMessage(text)
-            viewModel.clearAttachments()
         }
     }
 }

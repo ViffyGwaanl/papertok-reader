@@ -103,6 +103,12 @@ public final class AIChatViewModel {
     public var currentStreamText: String = ""
     public var errorMessage: String?
     public let runtime: Runtime
+    private var activeTurnProviderId: String?
+    private var activeTurnModelId: String?
+    private var isContinuingTurn = false
+    private var currentTurnRoundCount = 0
+    private var approvalExecutionsInFlight: Set<UUID> = []
+    private static let maxToolRoundsPerTurn = 8
 
     public init(
         systemPrompt: String = "You are a helpful reading assistant.",
@@ -124,71 +130,30 @@ public final class AIChatViewModel {
     }
 
     /// Send a user message and stream the provider response into the active branch.
-    public func sendMessage(_ text: String) async {
+    @discardableResult
+    public func sendMessage(_ text: String) async -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.isEmpty == false else { return }
+        guard trimmed.isEmpty == false else { return false }
+        guard !isStreaming else { return false }
         guard let providerOption = providerOptions.first(where: { $0.id == selectedProviderId }) else {
             errorMessage = "Selected provider is unavailable."
-            return
+            return false
         }
         guard providerOption.models.contains(where: { $0.id == selectedModelId }) else {
             errorMessage = "Selected model is unavailable."
-            return
+            return false
+        }
+        guard pendingApprovals.isEmpty else {
+            errorMessage = "Resolve pending tool approvals before sending another message."
+            return false
         }
 
         errorMessage = nil
-        currentStreamText = ""
-        streamingTokens.removeAll()
-        isStreaming = true
-        conversationTree.append(.user(trimmed))
-
-        let provider = providerOption.makeProvider()
-        let request = ChatRequest(
-            messages: messages,
-            model: selectedModelId,
-            tools: runtime.toolRegistry.allDefinitions()
-        )
-
-        var partialToolCalls: [Int: PartialToolCall] = [:]
-        do {
-            for try await chunk in provider.stream(request) {
-                switch chunk.delta {
-                case .text(let text):
-                    appendStreamToken(text)
-                case .thinking:
-                    continue
-                case let .toolCall(index, id, name, arguments):
-                    var partial = partialToolCalls[index] ?? PartialToolCall()
-                    partial.merge(id: id, name: name, arguments: arguments)
-                    partialToolCalls[index] = partial
-                }
-            }
-        } catch {
-            isStreaming = false
-            errorMessage = error.localizedDescription
-            return
-        }
-
-        if partialToolCalls.isEmpty == false {
-            let toolCalls = partialToolCalls
-                .sorted { $0.key < $1.key }
-                .compactMap { _, partial -> ToolCall? in
-                    guard let id = partial.id,
-                          let name = partial.name,
-                          partial.arguments.isEmpty == false else { return nil }
-                    return ToolCall(id: id, name: name, arguments: partial.arguments)
-                }
-            if toolCalls.isEmpty == false {
-                conversationTree.append(ChatMessage.assistant(currentStreamText, toolCalls: toolCalls))
-                await executeToolCalls(toolCalls)
-            }
-            currentStreamText = ""
-            streamingTokens.removeAll()
-            isStreaming = false
-            return
-        }
-
-        finalizeStream()
+        beginTurn(providerId: providerOption.id, modelId: selectedModelId)
+        conversationTree.append(ChatMessage(role: .user, content: buildUserContentParts(text: trimmed)))
+        clearAttachments()
+        await continueCurrentTurn()
+        return errorMessage == nil
     }
 
     /// Add an assistant response (used after streaming completes).
@@ -199,9 +164,8 @@ public final class AIChatViewModel {
     /// Clear conversation and start fresh.
     public func clearConversation(systemPrompt: String = "You are a helpful reading assistant.") {
         conversationTree = ConversationTree(systemPrompt: systemPrompt)
-        currentStreamText = ""
+        endTurn()
         errorMessage = nil
-        streamingTokens.removeAll()
         pendingApprovals.removeAll()
         attachments.removeAll()
     }
@@ -249,7 +213,9 @@ public final class AIChatViewModel {
 
     public func finalizeStream() {
         let text = currentStreamText
-        addAssistantMessage(text)
+        if text.isEmpty == false {
+            addAssistantMessage(text)
+        }
         currentStreamText = ""
         streamingTokens.removeAll()
         isStreaming = false
@@ -287,10 +253,123 @@ public final class AIChatViewModel {
     public func resolveApproval(id: UUID, approved: Bool) {
         if let idx = pendingApprovals.firstIndex(where: { $0.id == id }) {
             pendingApprovals[idx].isApproved = approved
+            Task { await processApproval(id: id) }
         }
     }
 
-    private func executeToolCalls(_ toolCalls: [ToolCall]) async {
+    private func continueCurrentTurn() async {
+        guard activeProviderOption != nil,
+              activeTurnModelId != nil else {
+            endTurn()
+            return
+        }
+        guard isContinuingTurn == false else { return }
+
+        isContinuingTurn = true
+        defer { isContinuingTurn = false }
+
+        while true {
+            guard let providerOption = activeProviderOption,
+                  let modelId = activeTurnModelId else {
+                endTurn()
+                return
+            }
+            guard currentTurnRoundCount < Self.maxToolRoundsPerTurn else {
+                errorMessage = "Stopped after \(Self.maxToolRoundsPerTurn) tool rounds to avoid an infinite loop."
+                endTurn()
+                return
+            }
+
+            currentTurnRoundCount += 1
+            currentStreamText = ""
+            streamingTokens.removeAll()
+            isStreaming = true
+
+            let provider = providerOption.makeProvider()
+            let toolDefinitions = runtime.toolRegistry.availableDefinitions(for: runtime.toolContext)
+            let request = ChatRequest(
+                messages: messages,
+                model: modelId,
+                tools: toolDefinitions.isEmpty ? nil : toolDefinitions
+            )
+
+            var partialToolCalls: [Int: PartialToolCall] = [:]
+            do {
+                for try await chunk in provider.stream(request) {
+                    switch chunk.delta {
+                    case .text(let text):
+                        appendStreamToken(text)
+                    case .thinking:
+                        continue
+                    case let .toolCall(index, id, name, arguments):
+                        var partial = partialToolCalls[index] ?? PartialToolCall()
+                        partial.merge(id: id, name: name, arguments: arguments)
+                        partialToolCalls[index] = partial
+                    }
+                }
+            } catch {
+                endTurn()
+                errorMessage = error.localizedDescription
+                return
+            }
+
+            let toolCalls = partialToolCalls
+                .sorted { $0.key < $1.key }
+                .compactMap { _, partial -> ToolCall? in
+                    guard let id = partial.id,
+                          let name = partial.name,
+                          partial.arguments.isEmpty == false else { return nil }
+                    return ToolCall(id: id, name: name, arguments: partial.arguments)
+                }
+
+            if toolCalls.isEmpty == false {
+                conversationTree.append(ChatMessage.assistant(currentStreamText, toolCalls: toolCalls))
+                currentStreamText = ""
+                streamingTokens.removeAll()
+                isStreaming = false
+
+                let didQueueApproval = await executeToolCalls(toolCalls)
+                if didQueueApproval {
+                    return
+                }
+                continue
+            }
+
+            finalizeStream()
+            endTurn()
+            return
+        }
+    }
+
+    private var activeProviderOption: ProviderOption? {
+        let providerId = activeTurnProviderId ?? selectedProviderId
+        return providerOptions.first(where: { $0.id == providerId })
+    }
+
+    private func beginTurn(providerId: String, modelId: String) {
+        activeTurnProviderId = providerId
+        activeTurnModelId = modelId
+        currentTurnRoundCount = 0
+        approvalExecutionsInFlight.removeAll()
+        currentStreamText = ""
+        streamingTokens.removeAll()
+        isStreaming = false
+    }
+
+    private func endTurn() {
+        activeTurnProviderId = nil
+        activeTurnModelId = nil
+        currentTurnRoundCount = 0
+        approvalExecutionsInFlight.removeAll()
+        currentStreamText = ""
+        streamingTokens.removeAll()
+        isStreaming = false
+    }
+
+    private func executeToolCalls(_ toolCalls: [ToolCall]) async -> Bool {
+        var safeToolCalls: [ToolCall] = []
+        var queuedApproval = false
+
         for toolCall in toolCalls {
             guard let tool = runtime.toolRegistry.tool(named: toolCall.name) else {
                 conversationTree.append(.toolResult(toolCallId: toolCall.id, content: "Error: Unknown tool '\(toolCall.name)'"))
@@ -305,16 +384,68 @@ public final class AIChatViewModel {
                     arguments: toolCall.arguments,
                     riskLevel: riskLevel
                 )
-                continue
+                queuedApproval = true
+            } else {
+                safeToolCalls.append(toolCall)
             }
+        }
 
-            let arguments = Self.parseArguments(toolCall.arguments)
-            do {
-                let result = try await tool.execute(arguments: arguments, context: runtime.toolContext)
-                conversationTree.append(.toolResult(toolCallId: toolCall.id, content: result.content))
-            } catch {
+        guard safeToolCalls.isEmpty == false else {
+            return queuedApproval
+        }
+
+        let orchestrator = ToolOrchestrator()
+        await runtime.toolRegistry.registerAll(into: orchestrator)
+        do {
+            let results = try await orchestrator.execute(calls: safeToolCalls, context: runtime.toolContext)
+            for result in results {
+                conversationTree.append(.toolResult(toolCallId: result.toolCallId, content: result.content))
+            }
+        } catch {
+            for toolCall in safeToolCalls {
                 conversationTree.append(.toolResult(toolCallId: toolCall.id, content: "Error: \(error.localizedDescription)"))
             }
+        }
+
+        return queuedApproval
+    }
+
+    private func processApproval(id: UUID) async {
+        guard let approval = pendingApprovals.first(where: { $0.id == id }) else { return }
+        guard let isApproved = approval.isApproved else { return }
+
+        if isApproved {
+            guard approvalExecutionsInFlight.contains(id) == false else { return }
+            approvalExecutionsInFlight.insert(id)
+        }
+
+        let resultContent: String
+        if isApproved == false {
+            resultContent = "Denied by user"
+        } else if let tool = runtime.toolRegistry.tool(named: approval.toolName) {
+            resultContent = await executeToolCall(tool, toolCallId: approval.toolCallId, argumentsJSON: approval.arguments)
+        } else {
+            resultContent = "Error: Unknown tool '\(approval.toolName)'"
+        }
+
+        if isApproved {
+            approvalExecutionsInFlight.remove(id)
+        }
+        pendingApprovals.removeAll { $0.id == id }
+        conversationTree.append(.toolResult(toolCallId: approval.toolCallId, content: resultContent))
+
+        if pendingApprovals.isEmpty && approvalExecutionsInFlight.isEmpty {
+            await continueCurrentTurn()
+        }
+    }
+
+    private func executeToolCall(_ tool: any AITool, toolCallId: String, argumentsJSON: String) async -> String {
+        let arguments = Self.parseArguments(argumentsJSON)
+        do {
+            let result = try await tool.execute(arguments: arguments, context: runtime.toolContext)
+            return result.content
+        } catch {
+            return "Error: \(error.localizedDescription)"
         }
     }
 
@@ -324,5 +455,36 @@ public final class AIChatViewModel {
             return [:]
         }
         return object
+    }
+
+    private func buildUserContentParts(text: String) -> [ContentPart] {
+        var parts: [ContentPart] = [.text(text)]
+
+        for attachment in attachments {
+            switch attachment.type {
+            case .image:
+                let mediaType = Self.mediaType(for: attachment.name)
+                parts.append(.imageBase64(data: attachment.data.base64EncodedString(), mediaType: mediaType))
+            case .file:
+                parts.append(.text("[Attached file: \(attachment.name)]"))
+            }
+        }
+
+        return parts
+    }
+
+    private static func mediaType(for filename: String) -> String {
+        switch URL(fileURLWithPath: filename).pathExtension.lowercased() {
+        case "jpg", "jpeg":
+            return "image/jpeg"
+        case "gif":
+            return "image/gif"
+        case "webp":
+            return "image/webp"
+        case "heic", "heif":
+            return "image/heic"
+        default:
+            return "image/png"
+        }
     }
 }

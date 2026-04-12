@@ -2,6 +2,7 @@ import Foundation
 import PDFKit
 import CryptoKit
 import PTCore
+import PTReader
 
 #if canImport(UIKit)
 import UIKit
@@ -27,14 +28,20 @@ public enum BookImportError: Error, LocalizedError, Sendable {
 
 public actor BookImportService {
     private let bookDAO: BookDAO
+    private let fileManager: FileManager
     private let booksDirectory: URL
     private let coversDirectory: URL
 
-    public init(database: AppDatabase) {
+    public init(
+        database: AppDatabase,
+        libraryRoot: URL? = nil,
+        fileManager: FileManager = .default
+    ) {
         self.bookDAO = BookDAO(database: database)
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.booksDirectory = docs.appendingPathComponent("Books", isDirectory: true)
-        self.coversDirectory = docs.appendingPathComponent("Covers", isDirectory: true)
+        self.fileManager = fileManager
+        let rootDirectory = libraryRoot ?? fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        self.booksDirectory = rootDirectory.appendingPathComponent("Books", isDirectory: true)
+        self.coversDirectory = rootDirectory.appendingPathComponent("Covers", isDirectory: true)
     }
 
     /// Import a book file from `sourceURL`.
@@ -47,8 +54,8 @@ public actor BookImportService {
         }
 
         // 2. Prepare directories
-        try FileManager.default.createDirectory(at: booksDirectory, withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: coversDirectory, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: booksDirectory, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: coversDirectory, withIntermediateDirectories: true)
 
         // 3. Compute MD5 for deduplication
         let md5 = try computeMD5(at: sourceURL)
@@ -56,21 +63,34 @@ public actor BookImportService {
             throw BookImportError.alreadyExists(existing)
         }
 
-        // 4. Copy file to Books directory (unique name)
-        let destName = "\(UUID().uuidString).\(ext)"
+        // 4. Copy file to a deterministic library path based on the content hash.
+        let destName = "\(md5).\(ext)"
         let destURL = booksDirectory.appendingPathComponent(destName)
         do {
-            try FileManager.default.copyItem(at: sourceURL, to: destURL)
+            if fileManager.fileExists(atPath: destURL.path) {
+                try fileManager.removeItem(at: destURL)
+            }
+            try fileManager.copyItem(at: sourceURL, to: destURL)
         } catch {
             throw BookImportError.copyFailed(error)
         }
 
         // 5. Extract metadata & generate cover
-        let (title, author, _) = extractPDFMetadata(
-            at: destURL,
-            fallbackName: sourceURL.deletingPathExtension().lastPathComponent
-        )
-        let coverPath = generatePDFCover(at: destURL, md5: md5)
+        let fallbackName = sourceURL.deletingPathExtension().lastPathComponent
+        let title: String
+        let author: String
+        let coverPath: String
+        if ext == "epub" {
+            let metadata = await extractEPUBMetadata(at: destURL, fallbackName: fallbackName, md5: md5)
+            title = metadata.title
+            author = metadata.author
+            coverPath = metadata.coverPath
+        } else {
+            let metadata = extractPDFMetadata(at: destURL, fallbackName: fallbackName)
+            title = metadata.title
+            author = metadata.author
+            coverPath = generatePDFCover(at: destURL, md5: md5)
+        }
 
         // 6. Create and save Book record
         var book = Book.placeholder(title: title, filePath: destURL.path)
@@ -80,7 +100,7 @@ public actor BookImportService {
         do {
             return try await bookDAO.save(book)
         } catch {
-            try? FileManager.default.removeItem(at: destURL)
+            try? fileManager.removeItem(at: destURL)
             throw BookImportError.saveFailed(error)
         }
     }
@@ -118,12 +138,43 @@ public actor BookImportService {
         )
     }
 
+    private func extractEPUBMetadata(at url: URL, fallbackName: String, md5: String) async -> (title: String, author: String, coverPath: String) {
+#if canImport(ReadiumShared)
+        do {
+            let metadata = try await EPUBPublicationOpener().readImportMetadata(
+                at: url,
+                fallbackTitle: fallbackName
+            )
+            return (
+                metadata.title,
+                metadata.author,
+                persistEPUBCover(metadata.coverPNGData, md5: md5)
+            )
+        } catch {
+            return (fallbackName, "", "")
+        }
+#else
+        return (fallbackName, "", "")
+#endif
+    }
+
+    private func persistEPUBCover(_ data: Data?, md5: String) -> String {
+        guard let data, data.isEmpty == false else { return "" }
+
+        let coverName = "\(md5)_cover.png"
+        let coverURL = coversDirectory.appendingPathComponent(coverName)
+        if fileManager.fileExists(atPath: coverURL.path) == false {
+            try? data.write(to: coverURL, options: .atomic)
+        }
+        return coverName
+    }
+
     /// Renders the first PDF page as a PNG thumbnail. Returns the cover filename.
     private func generatePDFCover(at url: URL, md5: String) -> String {
         let coverName = "\(md5)_cover.png"
         let coverURL = coversDirectory.appendingPathComponent(coverName)
 
-        guard !FileManager.default.fileExists(atPath: coverURL.path),
+        guard !fileManager.fileExists(atPath: coverURL.path),
               let doc = PDFDocument(url: url),
               let firstPage = doc.page(at: 0) else {
             return coverName

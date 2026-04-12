@@ -44,6 +44,26 @@ struct BookshelfViewModelTests {
 
         await vm.deleteBook(id: book.id!)
         #expect(vm.books.count == 0)
+        #expect(vm.pendingUndoBook?.id == book.id)
+    }
+
+    @Test("Undo restore brings a soft-deleted book back")
+    func undoDelete() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let dao = BookDAO(database: db)
+        let book = try await dao.save(Book.placeholder(title: "Restore Me", filePath: "/restore.epub"))
+
+        let vm = BookshelfViewModel(database: db)
+        await vm.loadBooks()
+        await vm.deleteBook(id: book.id!)
+        #expect(vm.books.isEmpty)
+        #expect(vm.pendingUndoBook?.id == book.id)
+
+        await vm.undoLastDelete()
+
+        #expect(vm.pendingUndoBook == nil)
+        #expect(vm.books.count == 1)
+        #expect(vm.books.first?.title == "Restore Me")
     }
 
     @Test("Import adds book to list")
@@ -82,5 +102,142 @@ struct BookshelfViewModelTests {
         await vm.loadBooks()
         #expect(vm.books[0].title == "Apple")
         #expect(vm.books[1].title == "Zebra")
+    }
+
+    @Test("Editing book metadata persists updated title and author")
+    func editBookMetadata() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let dao = BookDAO(database: db)
+        var draft = Book.placeholder(title: "Draft Title", filePath: "/draft.epub")
+        draft.author = "Anon"
+        let book = try await dao.save(draft)
+        let bookID = try #require(book.id)
+
+        let vm = BookshelfViewModel(database: db)
+        try await vm.updateBookMetadata(id: bookID, title: "Published Title", author: "PaperTok")
+
+        let persisted = try #require(await dao.fetchById(bookID))
+        #expect(persisted.title == "Published Title")
+        #expect(persisted.author == "PaperTok")
+
+        await vm.loadBooks()
+        #expect(vm.books.first?.title == "Published Title")
+        #expect(vm.books.first?.author == "PaperTok")
+    }
+
+    @Test("Reading status filters combine correctly")
+    func readingStatusFilters() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let dao = BookDAO(database: db)
+
+        var unread = Book.placeholder(title: "Unread", filePath: "/u.epub")
+        unread.readingPercentage = 0
+        _ = try await dao.save(unread)
+
+        var reading = Book.placeholder(title: "Reading", filePath: "/r.epub")
+        reading.readingPercentage = 0.45
+        _ = try await dao.save(reading)
+
+        var finished = Book.placeholder(title: "Finished", filePath: "/f.epub")
+        finished.readingPercentage = 1
+        _ = try await dao.save(finished)
+
+        let vm = BookshelfViewModel(database: db)
+        vm.selectedStatusFilters = [.notStarted, .reading]
+        await vm.loadBooks()
+
+        #expect(vm.books.count == 2)
+        #expect(vm.books.map(\.title).contains("Unread"))
+        #expect(vm.books.map(\.title).contains("Reading"))
+        #expect(vm.books.map(\.title).contains("Finished") == false)
+    }
+
+    @Test("Tag CRUD, assignment, and no-tag filtering work through the view model")
+    func tagCrudAndFiltering() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let dao = BookDAO(database: db)
+        let taggedBook = try await dao.save(Book.placeholder(title: "Tagged", filePath: "/tagged.epub"))
+        _ = try await dao.save(Book.placeholder(title: "Untagged", filePath: "/untagged.epub"))
+
+        let vm = BookshelfViewModel(database: db)
+        let createdTag = try await vm.createTag(name: "AI", colorHex: "#ff0000")
+        let createdTagID = try #require(createdTag.id)
+        let taggedBookID = try #require(taggedBook.id)
+        #expect(createdTag.name == "AI")
+        #expect(createdTag.colorHex == "#ff0000")
+
+        let updatedTag = try await vm.updateTag(id: createdTagID, name: "ML", colorHex: "#00ff00")
+        let updatedTagID = try #require(updatedTag.id)
+        #expect(updatedTag.name == "ML")
+        #expect(updatedTag.colorHex == "#00ff00")
+
+        try await vm.assignTag(tagId: updatedTagID, toBookId: taggedBookID)
+        await vm.loadBooks()
+        #expect(vm.tagIDs(forBookId: taggedBookID).contains(updatedTagID))
+
+        vm.selectedTagIDs = [updatedTagID]
+        vm.includeNoTagFilter = false
+        await vm.loadBooks()
+        #expect(vm.books.map(\.title) == ["Tagged"])
+
+        vm.selectedTagIDs = []
+        vm.includeNoTagFilter = true
+        await vm.loadBooks()
+        #expect(vm.books.map(\.title) == ["Untagged"])
+
+        try await vm.deleteTag(id: updatedTagID)
+        await vm.loadTags()
+        #expect(vm.tags.isEmpty)
+
+        await vm.loadBooks()
+        #expect(Set(vm.books.map(\.title)) == Set(["Tagged", "Untagged"]))
+    }
+
+    @Test("Group hierarchy, rename, move, and dissolve update persisted state")
+    func groupsHierarchyMoveAndDissolve() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let bookDAO = BookDAO(database: db)
+        let book = try await bookDAO.save(Book.placeholder(title: "Grouped", filePath: "/grouped.epub"))
+
+        let vm = BookshelfViewModel(database: db)
+        let parent = try await vm.createGroup(name: "Parent")
+        let parentID = try #require(parent.id)
+        let bookID = try #require(book.id)
+        let child = try await vm.createGroup(name: "Child", parentId: parentID)
+        let childID = try #require(child.id)
+
+        await vm.loadGroups()
+        #expect(vm.rootGroups.map(\.name) == ["Parent"])
+        #expect(vm.childGroups(of: parentID).map(\.name) == ["Child"])
+
+        let renamedChild = try await vm.renameGroup(id: childID, to: "Renamed Child")
+        #expect(renamedChild.name == "Renamed Child")
+
+        try await vm.moveBook(id: bookID, toGroupId: parentID)
+        let movedBook = try #require(await bookDAO.fetchById(bookID))
+        #expect(movedBook.groupId == parentID)
+
+        try await vm.dissolveGroup(id: parentID)
+        await vm.loadGroups()
+
+        let dissolvedBook = try #require(await bookDAO.fetchById(bookID))
+        #expect(dissolvedBook.groupId == 0)
+        #expect(vm.rootGroups.map(\.name).contains("Parent") == false)
+        #expect(vm.rootGroups.map(\.name).contains("Renamed Child"))
+    }
+
+    @Test("Deleting a group hides it from the loaded hierarchy")
+    func deleteGroup() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let vm = BookshelfViewModel(database: db)
+
+        let group = try await vm.createGroup(name: "Archive")
+        let groupID = try #require(group.id)
+        await vm.loadGroups()
+        #expect(vm.rootGroups.map(\.name) == ["Archive"])
+
+        try await vm.deleteGroup(id: groupID)
+        await vm.loadGroups()
+        #expect(vm.groups.isEmpty)
     }
 }

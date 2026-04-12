@@ -5,22 +5,48 @@ import PTAIServices
 
 @Suite("AIChatViewModel Extensions")
 struct AIChatViewModelExtTests {
+    struct MockReaderBridge: BookContentBridgeProtocol {
+        func tableOfContentsJSON() async throws -> String {
+            #"{"chapters":[{"title":"Introduction","href":"chapter-1"}]}"#
+        }
+
+        func chapterContent(href: String) async throws -> String { "Introduction body" }
+        func fullText() async throws -> String { "Short body" }
+        func search(query: String) async throws -> String {
+            #"{"results":[{"href":"chapter-1"}]}"#
+        }
+    }
+
+    actor RequestRecorder {
+        private(set) var lastRequest: ChatRequest?
+
+        func record(_ request: ChatRequest) {
+            lastRequest = request
+        }
+    }
+
     struct MockStreamProvider: ChatModelProvider {
         let id: String
         let displayName: String
         let supportedCapabilities: Set<ModelCapability>
         let chunks: [ChatStreamChunk]
+        let followupChunks: [ChatStreamChunk]
+        let requestObserver: @Sendable (ChatRequest) -> Void
 
         init(
             id: String = "mock",
             displayName: String = "Mock Provider",
             supportedCapabilities: Set<ModelCapability> = [.chat, .streaming, .toolCalling],
-            chunks: [ChatStreamChunk]
+            chunks: [ChatStreamChunk],
+            followupChunks: [ChatStreamChunk] = [],
+            requestObserver: @escaping @Sendable (ChatRequest) -> Void = { _ in }
         ) {
             self.id = id
             self.displayName = displayName
             self.supportedCapabilities = supportedCapabilities
             self.chunks = chunks
+            self.followupChunks = followupChunks
+            self.requestObserver = requestObserver
         }
 
         func complete(_ request: ChatRequest) async throws -> ChatResponse {
@@ -28,7 +54,13 @@ struct AIChatViewModelExtTests {
         }
 
         func stream(_ request: ChatRequest) -> AsyncThrowingStream<ChatStreamChunk, Error> {
-            let chunks = self.chunks
+            let chunks: [ChatStreamChunk]
+            if request.messages.last?.role == .tool, followupChunks.isEmpty == false {
+                chunks = followupChunks
+            } else {
+                chunks = self.chunks
+            }
+            requestObserver(request)
             return AsyncThrowingStream { continuation in
                 for chunk in chunks {
                     continuation.yield(chunk)
@@ -45,7 +77,32 @@ struct AIChatViewModelExtTests {
         static let riskLevel = ToolRiskLevel.safe
 
         func execute(arguments: [String : Any], context: ToolContext) async throws -> ToolResult {
-            ToolResult(content: "{\"status\":\"ok\",\"echo\":\(arguments[\"value\"] as? Int ?? 0)}")
+            let value = arguments["value"] as? Int ?? 0
+            return ToolResult(content: #"{"status":"ok","echo":\#(value)}"#)
+        }
+    }
+
+    enum MockStreamError: LocalizedError {
+        case failed
+
+        var errorDescription: String? {
+            "Mock stream failure"
+        }
+    }
+
+    struct MockFailingStreamProvider: ChatModelProvider {
+        let id: String = "mock-failing"
+        let displayName: String = "Mock Failing Provider"
+        let supportedCapabilities: Set<ModelCapability> = [.chat, .streaming]
+
+        func complete(_ request: ChatRequest) async throws -> ChatResponse {
+            throw MockStreamError.failed
+        }
+
+        func stream(_ request: ChatRequest) -> AsyncThrowingStream<ChatStreamChunk, Error> {
+            AsyncThrowingStream { continuation in
+                continuation.finish(throwing: MockStreamError.failed)
+            }
         }
     }
 
@@ -63,7 +120,10 @@ struct AIChatViewModelExtTests {
     @MainActor
     private func makeRuntime(
         chunks: [ChatStreamChunk],
-        extras: [any AITool] = []
+        followupChunks: [ChatStreamChunk] = [],
+        extras: [any AITool] = [],
+        toolContext: ToolContext = ToolContext(),
+        requestObserver: @escaping @Sendable (ChatRequest) -> Void = { _ in }
     ) -> AIChatViewModel.Runtime {
         AIChatViewModel.Runtime(
             providers: [
@@ -78,11 +138,17 @@ struct AIChatViewModelExtTests {
                             supportsVision: false
                         )
                     ],
-                    makeProvider: { MockStreamProvider(chunks: chunks) }
+                    makeProvider: {
+                        MockStreamProvider(
+                            chunks: chunks,
+                            followupChunks: followupChunks,
+                            requestObserver: requestObserver
+                        )
+                    }
                 )
             ],
             toolRegistry: ToolRegistry(extras: extras),
-            toolContext: ToolContext()
+            toolContext: toolContext
         )
     }
 
@@ -201,12 +267,69 @@ struct AIChatViewModelExtTests {
         ])
         let vm = AIChatViewModel(runtime: runtime)
 
-        await vm.sendMessage("Hi")
+        let success = await vm.sendMessage("Hi")
 
+        #expect(success)
         #expect(vm.isStreaming == false)
         let assistantMessages = vm.messages.filter { $0.role == .assistant }
         #expect(assistantMessages.count == 1)
         #expect(assistantMessages.first?.textContent == "Hello world")
+    }
+
+    @MainActor
+    @Test("sendMessage returns false and exposes provider errors")
+    func sendMessageReturnsFalseOnProviderFailure() async {
+        let runtime = AIChatViewModel.Runtime(
+            providers: [
+                .init(
+                    id: "mock-failing",
+                    displayName: "Mock Failing Provider",
+                    models: [
+                        .init(
+                            id: "mock-model",
+                            displayName: "Mock Model",
+                            supportsThinking: false,
+                            supportsVision: false
+                        )
+                    ],
+                    makeProvider: { MockFailingStreamProvider() }
+                )
+            ]
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+
+        let success = await vm.sendMessage("Hi")
+
+        #expect(success == false)
+        #expect(vm.errorMessage == "Mock stream failure")
+        #expect(vm.messages.filter { $0.role == .user }.count == 1)
+        #expect(vm.messages.contains(where: { $0.role == .assistant }) == false)
+    }
+
+    @MainActor
+    @Test("sendMessage includes current image attachments in the user message and clears the composer")
+    func sendMessageIncludesImageAttachments() async throws {
+        let recorder = RequestRecorder()
+        let runtime = makeRuntime(
+            chunks: [
+                .init(delta: .text("done"), finishReason: .stop)
+            ],
+            requestObserver: { request in
+                Task { await recorder.record(request) }
+            }
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+        vm.addAttachment(.init(type: .image, name: "photo.jpg", data: Data([0x89, 0x50, 0x4E, 0x47])))
+
+        await vm.sendMessage("Analyze this")
+
+        let request = try #require(await recorder.lastRequest)
+        let userMessage = try #require(request.messages.last(where: { $0.role == .user }))
+        #expect(userMessage.content.contains(where: {
+            if case .imageBase64 = $0 { return true }
+            return false
+        }))
+        #expect(vm.attachments.isEmpty)
     }
 
     @MainActor
@@ -215,6 +338,9 @@ struct AIChatViewModelExtTests {
         let runtime = makeRuntime(
             chunks: [
                 .init(delta: .toolCall(index: 0, id: "tool-1", name: "mock_safe_tool", arguments: "{\"value\":7}"), finishReason: .toolCalls)
+            ],
+            followupChunks: [
+                .init(delta: .text("Tool finished"), finishReason: .stop)
             ],
             extras: [MockSafeTool()]
         )
@@ -226,6 +352,8 @@ struct AIChatViewModelExtTests {
         let toolMessages = vm.messages.filter { $0.role == .tool }
         #expect(toolMessages.count == 1)
         #expect(toolMessages.first?.textContent?.contains("\"status\":\"ok\"") == true)
+        #expect(vm.messages.last?.role == .assistant)
+        #expect(vm.messages.last?.textContent == "Tool finished")
     }
 
     @MainActor
@@ -244,5 +372,62 @@ struct AIChatViewModelExtTests {
         #expect(vm.pendingApprovals.count == 1)
         #expect(vm.pendingApprovals[0].toolName == "mock_dangerous_tool")
         #expect(vm.messages.contains(where: { $0.role == .tool }) == false)
+    }
+
+    @MainActor
+    @Test("sendMessage advertises only tools that are runnable in the current context")
+    func sendMessageAdvertisesRunnableToolsOnly() async {
+        let recorder = RequestRecorder()
+        let runtime = makeRuntime(
+            chunks: [.init(delta: .text("ok"), finishReason: .stop)],
+            requestObserver: { request in
+                Task { await recorder.record(request) }
+            }
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+
+        await vm.sendMessage("Hi")
+
+        let toolNames = Set((await recorder.lastRequest?.tools ?? []).map(\.name))
+        #expect(toolNames.contains("spawn_sub_agent") == false)
+        #expect(toolNames.contains("shortcuts_run") == false)
+        #expect(toolNames.contains("memory_read") == false)
+        #expect(toolNames.contains("current_book_toc") == false)
+        #expect(toolNames.contains("current_time"))
+    }
+
+    @MainActor
+    @Test("sendMessage advertises reader-session tools when runtime has an active reader session")
+    func sendMessageAdvertisesReaderSessionTools() async {
+        let recorder = RequestRecorder()
+        let readerSessionStore = ReaderSessionContextStore()
+        readerSessionStore.update(
+            ReaderSessionSnapshot(
+                bookId: 7,
+                readingProgress: 0.33,
+                chapterTitle: "Introduction",
+                locationHref: "chapter-1",
+                contentBridgeProvider: { MockReaderBridge() }
+            )
+        )
+        let runtime = makeRuntime(
+            chunks: [.init(delta: .text("ok"), finishReason: .stop)],
+            toolContext: ToolContext(readerSessionStore: readerSessionStore),
+            requestObserver: { request in
+                Task { await recorder.record(request) }
+            }
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+
+        await vm.sendMessage("Hi")
+
+        let toolNames = Set((await recorder.lastRequest?.tools ?? []).map(\.name))
+        #expect(toolNames.contains("current_book_toc"))
+        #expect(toolNames.contains("current_chapter_content"))
+        #expect(toolNames.contains("current_book_fulltext"))
+        #expect(toolNames.contains("chapter_content_by_href"))
+        #expect(toolNames.contains("book_content_search"))
+        #expect(toolNames.contains("resolve_cfi") == false)
+        #expect(toolNames.contains("semantic_search_current_book") == false)
     }
 }

@@ -16,8 +16,21 @@ struct PapersViewModelTests {
     }
 
     @MainActor
-    private func makeViewModel() -> PapersViewModel {
-        PapersViewModel(api: MockPaperTokAPI(), userDefaults: UserDefaults(suiteName: "PapersViewModelTests")!)
+    private func makeViewModel(api: any PaperTokAPIProtocol = MockPaperTokAPI()) -> PapersViewModel {
+        let suiteName = "PapersViewModelTests.\(UUID().uuidString)"
+        let userDefaults = UserDefaults(suiteName: suiteName)!
+        userDefaults.removePersistentDomain(forName: suiteName)
+        return PapersViewModel(api: api, userDefaults: userDefaults)
+    }
+
+    private func makeDate(year: Int, month: Int, day: Int) -> Date {
+        var components = DateComponents()
+        components.calendar = Calendar(identifier: .gregorian)
+        components.timeZone = .current
+        components.year = year
+        components.month = month
+        components.day = day
+        return components.date!
     }
 
     // MARK: - Tests
@@ -116,6 +129,52 @@ struct PapersViewModelTests {
         #expect(vm.visibleCards.count == 1)
         #expect(vm.visibleCards.first?.id == 1)
     }
+
+    @Test("applyCustomDate activates custom date and reloads with yyyy-MM-dd day")
+    @MainActor
+    func applyCustomDateReloadsWithFormattedDay() async {
+        let api = RecordingPaperTokAPI()
+        let vm = makeViewModel(api: api)
+        let date = makeDate(year: 2026, month: 4, day: 7)
+
+        await vm.applyCustomDate(date)
+
+        #expect(vm.dayFilter == "2026-04-07")
+        #expect(vm.hasCustomDateFilter)
+        #expect(vm.customDate != nil)
+        #expect(await api.requestedDaysSnapshot() == ["2026-04-07"])
+    }
+
+    @Test("preset day filters clear custom date and keep latest/all API values")
+    @MainActor
+    func presetDayFiltersClearCustomDate() async {
+        let api = RecordingPaperTokAPI()
+        let vm = makeViewModel(api: api)
+
+        await vm.applyCustomDate(makeDate(year: 2026, month: 4, day: 7))
+        await vm.applyDayFilter("latest")
+        #expect(vm.dayFilter == "latest")
+        #expect(vm.customDate == nil)
+        #expect(!vm.hasCustomDateFilter)
+
+        await vm.applyDayFilter("all")
+        #expect(vm.dayFilter == "all")
+        #expect(vm.customDate == nil)
+        #expect(await api.requestedDaysSnapshot() == ["2026-04-07", "latest", "all"])
+    }
+
+    @Test("applyLanguage reloads papers using the selected language")
+    @MainActor
+    func applyLanguageReloadsWithSelectedLanguage() async {
+        let api = RecordingPaperTokAPI()
+        let vm = makeViewModel(api: api)
+
+        await vm.loadMore(reset: true)
+        await vm.applyLanguage("en")
+
+        #expect(vm.language == "en")
+        #expect(await api.requestedLanguagesSnapshot() == ["zh", "en"])
+    }
 }
 
 // MARK: - Mock
@@ -127,5 +186,28 @@ private struct MockPaperTokAPI: PaperTokAPIProtocol {
 
     func fetchPaperDetail(id: Int, language: String) async throws -> PaperTokDetail {
         throw URLError(.notConnectedToInternet)
+    }
+}
+
+private actor RecordingPaperTokAPI: PaperTokAPIProtocol {
+    private var requestedDays: [String?] = []
+    private var requestedLanguages: [String] = []
+
+    func fetchRandomPapers(limit: Int, language: String, day: String?) async throws -> [PaperTokCard] {
+        requestedDays.append(day)
+        requestedLanguages.append(language)
+        return []
+    }
+
+    func fetchPaperDetail(id: Int, language: String) async throws -> PaperTokDetail {
+        throw URLError(.notConnectedToInternet)
+    }
+
+    func requestedDaysSnapshot() -> [String?] {
+        requestedDays
+    }
+
+    func requestedLanguagesSnapshot() -> [String] {
+        requestedLanguages
     }
 }
