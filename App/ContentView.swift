@@ -3312,6 +3312,8 @@ struct SettingsScreen: View {
     @State private var viewModel = SettingsViewModel()
     @State private var kairosService = KAIROSService()
     @State private var showClearCacheConfirmation = false
+    @State private var versionTapCount = 0
+    @State private var showDeveloperOptions = false
 
     private let themeModes = ["system", "light", "dark"]
     private let pageTurnModes = ["swipe", "scroll"]
@@ -3372,21 +3374,25 @@ struct SettingsScreen: View {
                 #endif
                 .autocorrectionDisabled()
 
-            ForEach(AIProviderID.allCases) { provider in
-                NavigationLink {
-                    AIProviderKeyView(provider: provider, viewModel: viewModel)
-                } label: {
-                    HStack {
-                        Text("\(provider.displayName) API Key")
-                            .foregroundStyle(Morandi.primaryText)
-                        Spacer()
-                        if !viewModel.loadAPIKey(for: provider.rawValue).isEmpty {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Morandi.sage)
-                                .font(AppTypography.caption)
-                        }
-                    }
-                }
+            NavigationLink {
+                AIProviderCenterView(viewModel: viewModel)
+            } label: {
+                Label("Provider Center", systemImage: "server.rack")
+                    .foregroundStyle(Morandi.primaryText)
+            }
+
+            NavigationLink {
+                AIToolsConfigView(viewModel: viewModel)
+            } label: {
+                Label("AI Tools", systemImage: "hammer")
+                    .foregroundStyle(Morandi.primaryText)
+            }
+
+            NavigationLink {
+                QuickPromptsEditorView(viewModel: viewModel)
+            } label: {
+                Label("Quick Prompts", systemImage: "text.bubble")
+                    .foregroundStyle(Morandi.primaryText)
             }
 
             NavigationLink("MCP Servers") {
@@ -3468,6 +3474,20 @@ struct SettingsScreen: View {
                 }
             }
             .foregroundStyle(Morandi.primaryText)
+
+            NavigationLink {
+                ReadingDetailSettingsView(viewModel: viewModel)
+            } label: {
+                Label("Advanced Appearance", systemImage: "textformat")
+                    .foregroundStyle(Morandi.primaryText)
+            }
+
+            NavigationLink {
+                HomeNavigationConfigView()
+            } label: {
+                Label("Home Navigation", systemImage: "square.grid.2x2")
+                    .foregroundStyle(Morandi.primaryText)
+            }
         } header: {
             Text("Reading")
         }
@@ -3515,6 +3535,13 @@ struct SettingsScreen: View {
 
     private var dataManagementSection: some View {
         Section {
+            NavigationLink {
+                StorageManagementView(viewModel: viewModel)
+            } label: {
+                Label("Storage", systemImage: "internaldrive")
+                    .foregroundStyle(Morandi.primaryText)
+            }
+
             HStack {
                 Text("Cache Size")
                     .foregroundStyle(Morandi.primaryText)
@@ -3548,6 +3575,23 @@ struct SettingsScreen: View {
                 Spacer()
                 Text(appVersion)
                     .foregroundStyle(Morandi.secondaryText)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                versionTapCount += 1
+                if versionTapCount >= 5 {
+                    showDeveloperOptions = true
+                    versionTapCount = 0
+                }
+            }
+
+            if showDeveloperOptions {
+                NavigationLink {
+                    DeveloperOptionsView(viewModel: viewModel)
+                } label: {
+                    Label("Developer Options", systemImage: "ladybug")
+                        .foregroundStyle(Morandi.primaryText)
+                }
             }
 
             HStack {

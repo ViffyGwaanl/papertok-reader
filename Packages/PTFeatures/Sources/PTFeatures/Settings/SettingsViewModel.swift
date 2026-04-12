@@ -17,6 +17,30 @@ public final class SettingsViewModel {
     public var aiProviderID: String
     public var aiModelID: String
 
+    // Reading detail
+    public var lineHeight: Double
+    public var letterSpacing: Double
+    public var paragraphSpacing: Double
+    public var textIndent: Bool
+    public var sideMargin: Double
+    public var topMargin: Double
+    public var bottomMargin: Double
+    public var customCSS: String
+    public var readingTheme: String
+
+    // AI Tools
+    public var enabledToolNames: Set<String>
+    public var toolApprovalThreshold: String // "always" | "moderate" | "dangerous" | "never"
+
+    // Quick Prompts (JSON-serialized)
+    public var quickPromptsData: Data
+
+    // Developer Options
+    public var verboseLogging: Bool
+    public var networkRequestLogging: Bool
+    public var slowAnimations: Bool
+    public var showDebugOverlay: Bool
+
     private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = AppConfig.groupDefaults) {
@@ -29,6 +53,30 @@ public final class SettingsViewModel {
         self.defaultFontFamily = defaults.string(forKey: "default_font_family") ?? "System"
         self.aiProviderID = defaults.string(forKey: AppConfig.Keys.aiProviderID) ?? AppConfig.Defaults.defaultAIProviderID
         self.aiModelID = defaults.string(forKey: AppConfig.Keys.aiModelID) ?? AppConfig.Defaults.defaultOpenAIModelID
+
+        self.lineHeight = defaults.double(forKey: "reading_line_height").nonZero ?? 1.4
+        self.letterSpacing = defaults.double(forKey: "reading_letter_spacing")
+        self.paragraphSpacing = defaults.double(forKey: "reading_paragraph_spacing").nonZero ?? 8.0
+        self.textIndent = defaults.bool(forKey: "reading_text_indent")
+        self.sideMargin = defaults.double(forKey: "reading_side_margin").nonZero ?? 16.0
+        self.topMargin = defaults.double(forKey: "reading_top_margin").nonZero ?? 12.0
+        self.bottomMargin = defaults.double(forKey: "reading_bottom_margin").nonZero ?? 12.0
+        self.customCSS = defaults.string(forKey: "reading_custom_css") ?? ""
+        self.readingTheme = defaults.string(forKey: "reading_theme") ?? "light"
+
+        if let raw = defaults.stringArray(forKey: "ai_enabled_tools") {
+            self.enabledToolNames = Set(raw)
+        } else {
+            self.enabledToolNames = []
+        }
+        self.toolApprovalThreshold = defaults.string(forKey: "ai_tool_approval_threshold") ?? "moderate"
+
+        self.quickPromptsData = defaults.data(forKey: "ai_quick_prompts") ?? Data()
+
+        self.verboseLogging = defaults.bool(forKey: "dev_verbose_logging")
+        self.networkRequestLogging = defaults.bool(forKey: "dev_network_logging")
+        self.slowAnimations = defaults.bool(forKey: "dev_slow_animations")
+        self.showDebugOverlay = defaults.bool(forKey: "dev_debug_overlay")
     }
 
     public func save() {
@@ -40,6 +88,56 @@ public final class SettingsViewModel {
         defaults.set(defaultFontFamily, forKey: "default_font_family")
         defaults.set(aiProviderID, forKey: AppConfig.Keys.aiProviderID)
         defaults.set(aiModelID, forKey: AppConfig.Keys.aiModelID)
+
+        defaults.set(lineHeight, forKey: "reading_line_height")
+        defaults.set(letterSpacing, forKey: "reading_letter_spacing")
+        defaults.set(paragraphSpacing, forKey: "reading_paragraph_spacing")
+        defaults.set(textIndent, forKey: "reading_text_indent")
+        defaults.set(sideMargin, forKey: "reading_side_margin")
+        defaults.set(topMargin, forKey: "reading_top_margin")
+        defaults.set(bottomMargin, forKey: "reading_bottom_margin")
+        defaults.set(customCSS, forKey: "reading_custom_css")
+        defaults.set(readingTheme, forKey: "reading_theme")
+
+        defaults.set(Array(enabledToolNames), forKey: "ai_enabled_tools")
+        defaults.set(toolApprovalThreshold, forKey: "ai_tool_approval_threshold")
+        defaults.set(quickPromptsData, forKey: "ai_quick_prompts")
+
+        defaults.set(verboseLogging, forKey: "dev_verbose_logging")
+        defaults.set(networkRequestLogging, forKey: "dev_network_logging")
+        defaults.set(slowAnimations, forKey: "dev_slow_animations")
+        defaults.set(showDebugOverlay, forKey: "dev_debug_overlay")
+    }
+
+    /// Load persisted QuickPrompts (or built-in defaults).
+    public func loadQuickPrompts() -> [QuickPrompt] {
+        if !quickPromptsData.isEmpty,
+           let decoded = try? JSONDecoder().decode([QuickPrompt].self, from: quickPromptsData) {
+            return decoded.sorted { $0.sortOrder < $1.sortOrder }
+        }
+        return QuickPrompt.builtIn
+    }
+
+    /// Persist QuickPrompts array.
+    public func saveQuickPrompts(_ prompts: [QuickPrompt]) {
+        if let data = try? JSONEncoder().encode(prompts) {
+            quickPromptsData = data
+            defaults.set(data, forKey: "ai_quick_prompts")
+        }
+    }
+
+    /// Reset reading-detail values to defaults.
+    public func resetReadingDetail() {
+        lineHeight = 1.4
+        letterSpacing = 0
+        paragraphSpacing = 8.0
+        textIndent = false
+        sideMargin = 16.0
+        topMargin = 12.0
+        bottomMargin = 12.0
+        customCSS = ""
+        readingTheme = "light"
+        save()
     }
 
     // MARK: - AI Provider API Key Management
