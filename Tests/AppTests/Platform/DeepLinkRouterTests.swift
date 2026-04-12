@@ -26,7 +26,7 @@ struct DeepLinkRouterTests {
         let url = URL(string: "paperreader://reader/open?bookId=42&href=Text%2Fchapter-1.xhtml")!
         let destination = DeepLinkParser.parse(url: url)
 
-        #expect(destination == .openBook(id: "42", title: nil))
+        #expect(destination == .openBook(id: "42", title: nil, locator: "Text/chapter-1.xhtml"))
     }
 
     @Test("shortcut ask URLs keep a distinct quick ask destination")

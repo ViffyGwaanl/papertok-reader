@@ -71,7 +71,7 @@ final class RootNavigationCoordinator {
         sharedInboxImportRequest = nil
 
         switch destination {
-        case .openBook(let id, let title):
+        case .openBook(let id, let title, _):
             selectedTab = .bookshelf
             pendingBookRequest = BookshelfOpenRequest(bookID: id, title: title)
         case .aiChat(let initialMessage, let shareToken):

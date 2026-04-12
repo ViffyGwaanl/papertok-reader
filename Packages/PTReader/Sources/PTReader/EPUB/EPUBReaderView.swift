@@ -14,18 +14,23 @@ public struct EPUBReaderView: UIViewControllerRepresentable {
     public let publication: Publication
     public let initialLocator: Locator?
     public let readingPreferences: EPUBReadingPreferencesSnapshot
+    /// Optional custom CSS (built via `EPUBCustomCSSBuilder`) to inject into
+    /// the Readium navigator on every page change.
+    public let customCSS: String?
     @Bindable public var coordinator: EPUBNavigatorCoordinator
 
     public init(
         publication: Publication,
         coordinator: EPUBNavigatorCoordinator,
         initialLocator: Locator? = nil,
-        readingPreferences: EPUBReadingPreferencesSnapshot = .init(readingPreferences: ReadingPreferences())
+        readingPreferences: EPUBReadingPreferencesSnapshot = .init(readingPreferences: ReadingPreferences()),
+        customCSS: String? = nil
     ) {
         self.publication = publication
         self.coordinator = coordinator
         self.initialLocator = initialLocator
         self.readingPreferences = readingPreferences
+        self.customCSS = customCSS
     }
 
     public func makeUIViewController(context: Context) -> UIViewController {
@@ -62,6 +67,9 @@ public struct EPUBReaderView: UIViewControllerRepresentable {
 
     public func updateUIViewController(_ vc: UIViewController, context: Context) {
         coordinator.setReadingPreferences(readingPreferences)
+        if let css = customCSS, css.isEmpty == false {
+            coordinator.applyCustomCSS(css)
+        }
     }
 }
 #endif

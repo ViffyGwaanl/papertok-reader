@@ -4,6 +4,7 @@ import CoreGraphics
 import Observation
 import ReadiumNavigator
 import ReadiumShared
+import UIKit
 import WebKit
 
 /// @Observable coordinator that bridges EPUBNavigatorViewController state to SwiftUI.
@@ -103,6 +104,55 @@ public final class EPUBNavigatorCoordinator: NSObject {
         }
         readingPreferencesSnapshot = snapshot
         applyReadingPreferencesIfNeeded()
+    }
+
+    /// Stores a CSS string built via `EPUBCustomCSSBuilder` for injection into
+    /// the Readium navigator WebViews.
+    ///
+    /// The string is injected on the main frame of every visible WebView via
+    /// `evaluateJavaScript`, replacing any previously injected `<style>` tag
+    /// with a known id. Callers should re-invoke this whenever the underlying
+    /// `BookStyle` / `ReadTheme` changes.
+    public private(set) var customCSS: String?
+
+    public func applyCustomCSS(_ css: String) {
+        customCSS = css
+        injectCustomCSSIfNeeded()
+    }
+
+    private func injectCustomCSSIfNeeded() {
+        guard let css = customCSS,
+              let navigatorViewController else {
+            return
+        }
+        let escaped = css
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "`", with: "\\`")
+            .replacingOccurrences(of: "$", with: "\\$")
+        let script = """
+        (function() {
+            var id = 'ptreader-custom-css';
+            var existing = document.getElementById(id);
+            if (existing) { existing.remove(); }
+            var style = document.createElement('style');
+            style.id = id;
+            style.innerHTML = `\(escaped)`;
+            document.head.appendChild(style);
+        })();
+        """
+        for subview in navigatorViewController.view.subviews {
+            findAndInjectWebViews(in: subview, script: script)
+        }
+    }
+
+    private func findAndInjectWebViews(in view: UIView, script: String) {
+        if let webView = view as? WKWebView {
+            webView.evaluateJavaScript(script, completionHandler: nil)
+            return
+        }
+        for sub in view.subviews {
+            findAndInjectWebViews(in: sub, script: script)
+        }
     }
 
     private func flushNavigatorState() {

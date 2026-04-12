@@ -15,7 +15,7 @@ import Observation
 /// - `paperreader://papers` — open Papers tab
 /// - `paperreader://import?token={share-event-id}` — import files from the share inbox
 public enum DeepLinkDestination: Equatable {
-    case openBook(id: String? = nil, title: String? = nil)
+    case openBook(id: String? = nil, title: String? = nil, locator: String? = nil)
     case aiChat(initialMessage: String? = nil, shareToken: String? = nil)
     case quickAsk(initialMessage: String? = nil, shareToken: String? = nil)
     case papers
@@ -79,7 +79,8 @@ public enum DeepLinkParser {
                 let id = queryValue(named: ["bookId", "bookID", "book_id", "bookld", "bookLd", "id"])
                     ?? pathComponents.dropFirst().first
                 let title = queryValue(named: ["title"])
-                return .openBook(id: id, title: title)
+                let locator = queryValue(named: ["locator", "cfi", "page", "href"])
+                return .openBook(id: id, title: title, locator: locator)
             }
 
             let id = pathComponents.first
