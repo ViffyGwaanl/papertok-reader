@@ -5,16 +5,17 @@ public struct CurrentChapterContentTool: AITool {
     public static let description = "Get the plain-text content of the current chapter being read."
     public static let category = ToolCategory.bookContent
     public static let riskLevel = ToolRiskLevel.safe
-    public var contentBridgeProvider: (@Sendable () async -> (any BookContentBridgeProtocol)?)?
 
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let provider = contentBridgeProvider, let bridge = await provider() else {
+        guard let session = await context.activeReaderSession() else {
             return ToolResult(content: "No active book reader session", isError: true)
         }
-        let href = arguments["href"] as? String ?? ""
-        let text = try await bridge.chapterContent(href: href)
-        return ToolResult(content: String(text.prefix(20_000)))
+        guard let href = (arguments["href"] as? String).flatMap({ $0.isEmpty ? nil : $0 }) ?? session.snapshot.locationHref else {
+            return ToolResult(content: "No active chapter in the current reader session", isError: true)
+        }
+        let text = try await session.bridge.chapterContent(href: href)
+        return ToolResult(content: text)
     }
 }

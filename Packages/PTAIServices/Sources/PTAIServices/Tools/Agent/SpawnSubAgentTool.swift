@@ -12,7 +12,7 @@ public struct SpawnSubAgentTool: AITool {
         guard let task = arguments["task"] as? String, task.isEmpty == false else {
             return ToolResult(content: "Missing 'task' argument", isError: true)
         }
-        let agentType = arguments["type"] as? String ?? "research"
+        let agentType = Self.normalizedAgentType(from: arguments)
         let requestedSteps = (arguments["steps"] as? Int).map { min(max($0, 1), 15) }
 
         guard let service = context.subAgentService else {
@@ -30,5 +30,20 @@ public struct SpawnSubAgentTool: AITool {
 
         let result = try await service.spawn(task: task, type: agentType, requestedSteps: requestedSteps)
         return ToolResult(content: jsonString(result.jsonValue))
+    }
+
+    private static let validAgentTypes: Set<String> = ["research", "summarize", "verify"]
+
+    private static func normalizedAgentType(from arguments: [String: Any]) -> String {
+        for key in ["type", "agentType", "agent_type"] {
+            guard let rawValue = arguments[key] as? String else { continue }
+            let normalized = rawValue
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            if validAgentTypes.contains(normalized) {
+                return normalized
+            }
+        }
+        return "research"
     }
 }

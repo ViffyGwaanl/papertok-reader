@@ -5,7 +5,6 @@ public struct ChapterContentByHrefTool: AITool {
     public static let description = "Retrieve chapter content by TOC href identifier."
     public static let category = ToolCategory.bookContent
     public static let riskLevel = ToolRiskLevel.safe
-    public var contentBridgeProvider: (@Sendable () async -> (any BookContentBridgeProtocol)?)?
 
     public init() {}
 
@@ -13,10 +12,10 @@ public struct ChapterContentByHrefTool: AITool {
         guard let href = arguments["href"] as? String, !href.isEmpty else {
             return ToolResult(content: "Missing 'href' argument", isError: true)
         }
-        guard let provider = contentBridgeProvider, let bridge = await provider() else {
+        guard let session = await context.activeReaderSession() else {
             return ToolResult(content: "No active book reader session", isError: true)
         }
-        let text = try await bridge.chapterContent(href: href)
-        return ToolResult(content: String(text.prefix(20_000)))
+        let text = try await session.bridge.chapterContent(href: href)
+        return ToolResult(content: text)
     }
 }

@@ -13,7 +13,7 @@ public struct CreateNoteTool: AITool {
               let content = arguments["content"] as? String else {
             return ToolResult(content: "Missing 'cfi' or 'content' argument", isError: true)
         }
-        guard let bookId = context.bookId, let db = context.database else {
+        guard let bookId = context.activeBookId, let db = context.database else {
             return ToolResult(content: "No active session or database", isError: true)
         }
         let chapter = arguments["chapter"] as? String ?? ""

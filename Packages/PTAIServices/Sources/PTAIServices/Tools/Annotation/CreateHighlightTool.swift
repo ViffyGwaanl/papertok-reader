@@ -13,7 +13,7 @@ public struct CreateHighlightTool: AITool {
               let content = arguments["content"] as? String else {
             return ToolResult(content: "Missing 'cfi' or 'content' argument", isError: true)
         }
-        guard let bookId = context.bookId else {
+        guard let bookId = context.activeBookId else {
             return ToolResult(content: "No active book session", isError: true)
         }
         guard let db = context.database else {

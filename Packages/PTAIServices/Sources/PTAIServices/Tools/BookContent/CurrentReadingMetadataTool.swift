@@ -9,16 +9,23 @@ public struct CurrentReadingMetadataTool: AITool {
     public init() {}
 
     public func execute(arguments: [String: Any], context: ToolContext) async throws -> ToolResult {
-        guard let bookId = context.bookId else {
+        let snapshot = context.readerSessionSnapshot()
+        guard let bookId = snapshot?.bookId ?? context.bookId else {
             return ToolResult(content: jsonString(["status": "no_active_book"]))
         }
         guard let db = context.database else {
             return ToolResult(content: "Database not available", isError: true)
         }
-        let books = try await db.fetchBooks(query: nil, groupId: nil, limit: 200)
-        if let book = books.first(where: { ($0["id"] as? Int64) == bookId }) {
-            return ToolResult(content: jsonString(["book": book]))
+        guard let book = try await db.fetchBook(id: bookId) else {
+            return ToolResult(content: "Book not found", isError: true)
         }
-        return ToolResult(content: "Book not found", isError: true)
+        var payload: [String: Any] = ["book": book]
+        if let progress = snapshot?.readingProgress {
+            payload["progress"] = progress
+        }
+        if let chapterTitle = snapshot?.chapterTitle, chapterTitle.isEmpty == false {
+            payload["chapter_title"] = chapterTitle
+        }
+        return ToolResult(content: jsonString(payload))
     }
 }

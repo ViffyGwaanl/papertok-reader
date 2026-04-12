@@ -99,6 +99,19 @@ public final class ToolRegistry: @unchecked Sendable {
         }
     }
 
+    /// Generate only the tool definitions that can actually run in the current runtime context.
+    public func availableDefinitions(for context: ToolContext) -> [ToolDefinition] {
+        allTools
+            .filter { Self.isDefinitionAvailable(named: type(of: $0).name, context: context) }
+            .map { tool in
+                ToolDefinition(
+                    name: type(of: tool).name,
+                    description: type(of: tool).description,
+                    parameters: Self.schema(forToolNamed: type(of: tool).name)
+                )
+            }
+    }
+
     /// Register all tools into a ToolOrchestrator for concurrent execution.
     public func registerAll(into orchestrator: ToolOrchestrator) async {
         for tool in allTools {
@@ -106,7 +119,106 @@ public final class ToolRegistry: @unchecked Sendable {
         }
     }
 
+    private static let databaseBackedTools: Set<String> = [
+        "bookshelf_lookup",
+        "notes_search",
+        "reading_history",
+        "semantic_search_library",
+        "tags_list",
+        "books_tags_list",
+        "apply_book_tags",
+    ]
+
+    private static let activeBookTools: Set<String> = [
+        "current_reading_metadata",
+        "create_highlight",
+        "create_note",
+    ]
+
+    private static let readerSessionTools: Set<String> = [
+        "current_book_toc",
+        "current_book_fulltext",
+        "chapter_content_by_href",
+        "book_content_search",
+    ]
+
+    private static let readerSessionLocationTools: Set<String> = [
+        "current_chapter_content",
+    ]
+
+    private static let hiddenReaderSessionTools: Set<String> = [
+        "resolve_cfi",
+        "semantic_search_current_book",
+    ]
+
+    private static let memoryTools: Set<String> = [
+        "memory_read",
+        "memory_write",
+        "memory_search",
+    ]
+
+    private static let calendarTools: Set<String> = [
+        "calendar_list_calendars",
+        "calendar_list_events",
+        "calendar_get_event",
+        "calendar_create_event",
+        "calendar_update_event",
+        "calendar_delete_event",
+    ]
+
+    private static let remindersTools: Set<String> = [
+        "reminders_list_lists",
+        "reminders_list",
+        "reminders_get",
+        "reminders_create",
+        "reminders_update",
+        "reminders_complete",
+        "reminders_uncomplete",
+        "reminders_delete",
+        "reminders_list_create",
+        "reminders_list_rename",
+        "reminders_list_delete",
+    ]
+
+    private static func isDefinitionAvailable(named name: String, context: ToolContext) -> Bool {
+        switch name {
+        case "spawn_sub_agent":
+            return context.subAgentService != nil
+        case "shortcuts_run":
+            return context.shortcutsService != nil
+        default:
+            break
+        }
+
+        if memoryTools.contains(name) {
+            return context.memoryDirectory != nil
+        }
+        if calendarTools.contains(name) {
+            return context.calendarService != nil
+        }
+        if remindersTools.contains(name) {
+            return context.remindersService != nil
+        }
+        if databaseBackedTools.contains(name) {
+            return context.database != nil
+        }
+        if activeBookTools.contains(name) {
+            return context.activeBookId != nil && context.database != nil
+        }
+        if hiddenReaderSessionTools.contains(name) {
+            return false
+        }
+        if readerSessionLocationTools.contains(name) {
+            return context.hasBookContentBridge && (context.currentChapterHref?.isEmpty == false)
+        }
+        if readerSessionTools.contains(name) {
+            return context.hasBookContentBridge
+        }
+        return true
+    }
+
     private static func schema(forToolNamed name: String) -> ToolParametersSchema? {
+        let empty = ToolParametersSchema(properties: [:])
         switch name {
         case "calculator":
             return ToolParametersSchema(
@@ -133,6 +245,120 @@ public final class ToolRegistry: @unchecked Sendable {
                 ],
                 required: ["query"]
             )
+        case "mindmap_draw":
+            return ToolParametersSchema(
+                properties: [
+                    "content": ToolPropertySchema(type: "string", description: "Hierarchical bullet list content to convert into a mindmap JSON.")
+                ],
+                required: ["content"]
+            )
+        case "current_time":
+            return empty
+        case "tool_approval_decider":
+            return ToolParametersSchema(
+                properties: [
+                    "tool_name": ToolPropertySchema(type: "string", description: "Name of the tool being considered."),
+                    "risk_level": ToolPropertySchema(type: "string", description: "Risk level string for the pending tool call.", enumValues: ["safe", "moderate", "dangerous"])
+                ]
+            )
+        case "bookshelf_lookup":
+            return ToolParametersSchema(
+                properties: [
+                    "query": ToolPropertySchema(type: "string", description: "Optional title/author keyword query."),
+                    "group_id": ToolPropertySchema(type: "integer", description: "Optional bookshelf group identifier."),
+                    "limit": ToolPropertySchema(type: "integer", description: "Optional max results (default 20).")
+                ]
+            )
+        case "bookshelf_organize":
+            return ToolParametersSchema(
+                properties: [
+                    "moves": ToolPropertySchema(type: "array", description: "Optional list of proposed book moves. Each item should include book identifiers and destination group."),
+                    "renames": ToolPropertySchema(type: "array", description: "Optional list of proposed group renames.")
+                ]
+            )
+        case "books_tags_list":
+            return empty
+        case "tags_list":
+            return empty
+        case "apply_book_tags":
+            return ToolParametersSchema(
+                properties: [
+                    "changes": ToolPropertySchema(type: "array", description: "List of tag changes to apply. Each item should include book id and tags to add/remove.")
+                ]
+            )
+        case "current_reading_metadata":
+            return empty
+        case "current_book_toc":
+            return empty
+        case "current_chapter_content":
+            return ToolParametersSchema(
+                properties: [
+                    "href": ToolPropertySchema(type: "string", description: "Optional TOC href to fetch instead of the currently active chapter.")
+                ]
+            )
+        case "current_book_fulltext":
+            return empty
+        case "chapter_content_by_href":
+            return ToolParametersSchema(
+                properties: [
+                    "href": ToolPropertySchema(type: "string", description: "TOC href identifier for the chapter.")
+                ],
+                required: ["href"]
+            )
+        case "resolve_cfi":
+            return ToolParametersSchema(
+                properties: [
+                    "cfi": ToolPropertySchema(type: "string", description: "EPUB CFI locator string to resolve.")
+                ],
+                required: ["cfi"]
+            )
+        case "book_content_search":
+            return ToolParametersSchema(
+                properties: [
+                    "query": ToolPropertySchema(type: "string", description: "Full-text search query for the current book.")
+                ],
+                required: ["query"]
+            )
+        case "create_highlight":
+            return ToolParametersSchema(
+                properties: [
+                    "cfi": ToolPropertySchema(type: "string", description: "EPUB CFI locator where the highlight is anchored."),
+                    "content": ToolPropertySchema(type: "string", description: "Highlighted text content."),
+                    "color": ToolPropertySchema(type: "string", description: "Optional highlight color name.", enumValues: ["yellow", "green", "blue", "red", "purple"]),
+                    "chapter": ToolPropertySchema(type: "string", description: "Optional chapter title for context.")
+                ],
+                required: ["cfi", "content"]
+            )
+        case "create_note":
+            return ToolParametersSchema(
+                properties: [
+                    "cfi": ToolPropertySchema(type: "string", description: "EPUB CFI locator where the note is anchored."),
+                    "content": ToolPropertySchema(type: "string", description: "Selected text (or context) at the note position."),
+                    "chapter": ToolPropertySchema(type: "string", description: "Optional chapter title for context."),
+                    "reader_note": ToolPropertySchema(type: "string", description: "Optional freeform note text written by the user.")
+                ],
+                required: ["cfi", "content"]
+            )
+        case "notes_search":
+            return ToolParametersSchema(
+                properties: [
+                    "keyword": ToolPropertySchema(type: "string", description: "Optional keyword to search within notes."),
+                    "book_id": ToolPropertySchema(type: "integer", description: "Optional book identifier to filter notes by."),
+                    "limit": ToolPropertySchema(type: "integer", description: "Optional max results (default 20).")
+                ]
+            )
+        case "reading_history":
+            return ToolParametersSchema(
+                properties: [
+                    "book_id": ToolPropertySchema(type: "integer", description: "Optional book identifier to filter reading sessions by.")
+                ]
+            )
+        case "semantic_search_current_book":
+            return empty
+        case "semantic_search_library":
+            return empty
+        case "calendar_list_calendars":
+            return empty
         case "calendar_list_events":
             return ToolParametersSchema(
                 properties: [
@@ -186,6 +412,8 @@ public final class ToolRegistry: @unchecked Sendable {
                 ],
                 required: ["reminder_id"]
             )
+        case "reminders_list_lists":
+            return empty
         case "reminders_create":
             return ToolParametersSchema(
                 properties: [
@@ -235,6 +463,7 @@ public final class ToolRegistry: @unchecked Sendable {
                 properties: [
                     "task": ToolPropertySchema(type: "string", description: "Focused task for the sub-agent."),
                     "type": ToolPropertySchema(type: "string", description: "Sub-agent type.", enumValues: ["research", "summarize", "verify"]),
+                    "agentType": ToolPropertySchema(type: "string", description: "Alias for 'type'.", enumValues: ["research", "summarize", "verify"]),
                     "steps": ToolPropertySchema(type: "integer", description: "Optional max step count from 1 to 15.")
                 ],
                 required: ["task"]
@@ -246,6 +475,27 @@ public final class ToolRegistry: @unchecked Sendable {
                     "input": ToolPropertySchema(type: "string", description: "Optional text input for the shortcut.")
                 ],
                 required: ["shortcut_name"]
+            )
+        case "memory_read":
+            return ToolParametersSchema(
+                properties: [
+                    "filename": ToolPropertySchema(type: "string", description: "Optional memory filename to read (default MEMORY.md).")
+                ]
+            )
+        case "memory_write":
+            return ToolParametersSchema(
+                properties: [
+                    "content": ToolPropertySchema(type: "string", description: "Markdown content to write or append."),
+                    "filename": ToolPropertySchema(type: "string", description: "Optional memory filename to write (default MEMORY.md)."),
+                    "append": ToolPropertySchema(type: "boolean", description: "Whether to append if file exists (default true).")
+                ],
+                required: ["content"]
+            )
+        case "memory_search":
+            return ToolParametersSchema(
+                properties: [
+                    "keyword": ToolPropertySchema(type: "string", description: "Optional keyword to search within memory files. Empty means list all.")
+                ]
             )
         default:
             return nil

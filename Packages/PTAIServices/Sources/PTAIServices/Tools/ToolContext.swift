@@ -19,6 +19,8 @@ public struct ToolContext: Sendable {
     public let subAgentService: (any SubAgentServiceProtocol)?
     /// Shortcuts runtime bridge for launching iOS/macOS shortcuts.
     public let shortcutsService: (any ShortcutsServiceProtocol)?
+    /// Shared live reader-session carrier for active-book tools.
+    public let readerSessionStore: ReaderSessionContextStore?
 
     public init(
         bookId: Int64? = nil,
@@ -29,7 +31,8 @@ public struct ToolContext: Sendable {
         calendarService: (any CalendarServiceProtocol)? = nil,
         remindersService: (any RemindersServiceProtocol)? = nil,
         subAgentService: (any SubAgentServiceProtocol)? = nil,
-        shortcutsService: (any ShortcutsServiceProtocol)? = nil
+        shortcutsService: (any ShortcutsServiceProtocol)? = nil,
+        readerSessionStore: ReaderSessionContextStore? = nil
     ) {
         self.bookId = bookId
         self.conversationId = conversationId
@@ -40,6 +43,139 @@ public struct ToolContext: Sendable {
         self.remindersService = remindersService
         self.subAgentService = subAgentService
         self.shortcutsService = shortcutsService
+        self.readerSessionStore = readerSessionStore
+    }
+
+    public var activeBookId: Int64? {
+        readerSessionSnapshot()?.bookId ?? bookId
+    }
+
+    public var activeReadingProgress: Double? {
+        readerSessionSnapshot()?.readingProgress
+    }
+
+    public var currentChapterTitle: String? {
+        readerSessionSnapshot()?.chapterTitle
+    }
+
+    public var currentChapterHref: String? {
+        readerSessionSnapshot()?.locationHref
+    }
+
+    public var hasActiveReaderSession: Bool {
+        readerSessionStore?.hasActiveReaderSession ?? false
+    }
+
+    public var hasBookContentBridge: Bool {
+        readerSessionStore?.hasBookContentBridge ?? false
+    }
+
+    public func readerSessionSnapshot() -> ReaderSessionSnapshot? {
+        readerSessionStore?.currentSnapshot()
+    }
+
+    public func activeReaderSession() async -> ResolvedReaderSession? {
+        guard let snapshot = readerSessionSnapshot(),
+              let provider = snapshot.contentBridgeProvider,
+              let bridge = await provider() else {
+            return nil
+        }
+        return ResolvedReaderSession(snapshot: snapshot, bridge: bridge)
+    }
+
+    public func bookContentBridge() async -> (any BookContentBridgeProtocol)? {
+        await activeReaderSession()?.bridge
+    }
+}
+
+public struct ResolvedReaderSession: Sendable {
+    public let snapshot: ReaderSessionSnapshot
+    public let bridge: any BookContentBridgeProtocol
+
+    public init(snapshot: ReaderSessionSnapshot, bridge: any BookContentBridgeProtocol) {
+        self.snapshot = snapshot
+        self.bridge = bridge
+    }
+}
+
+public struct ReaderSessionSnapshot: Sendable {
+    public let bookId: Int64?
+    public let readingProgress: Double?
+    public let chapterTitle: String?
+    public let locationHref: String?
+    public let contentBridgeProvider: (@Sendable () async -> (any BookContentBridgeProtocol)?)?
+
+    public init(
+        bookId: Int64?,
+        readingProgress: Double? = nil,
+        chapterTitle: String? = nil,
+        locationHref: String? = nil,
+        contentBridgeProvider: (@Sendable () async -> (any BookContentBridgeProtocol)?)? = nil
+    ) {
+        self.bookId = bookId
+        self.readingProgress = readingProgress
+        self.chapterTitle = chapterTitle
+        self.locationHref = locationHref
+        self.contentBridgeProvider = contentBridgeProvider
+    }
+}
+
+public final class ReaderSessionContextStore: @unchecked Sendable {
+    private let lock = NSLock()
+    private var snapshot: ReaderSessionSnapshot?
+
+    public init(snapshot: ReaderSessionSnapshot? = nil) {
+        self.snapshot = snapshot
+    }
+
+    public var activeBookId: Int64? {
+        withLock { snapshot?.bookId }
+    }
+
+    public var readingProgress: Double? {
+        withLock { snapshot?.readingProgress }
+    }
+
+    public var chapterTitle: String? {
+        withLock { snapshot?.chapterTitle }
+    }
+
+    public var locationHref: String? {
+        withLock { snapshot?.locationHref }
+    }
+
+    public var hasActiveReaderSession: Bool {
+        withLock { snapshot != nil }
+    }
+
+    public var hasBookContentBridge: Bool {
+        withLock { snapshot?.contentBridgeProvider != nil }
+    }
+
+    public func update(_ snapshot: ReaderSessionSnapshot?) {
+        withLock {
+            self.snapshot = snapshot
+        }
+    }
+
+    public func clear() {
+        update(nil)
+    }
+
+    public func currentSnapshot() -> ReaderSessionSnapshot? {
+        withLock { snapshot }
+    }
+
+    public func bookContentBridge() async -> (any BookContentBridgeProtocol)? {
+        let provider = withLock { snapshot?.contentBridgeProvider }
+        return await provider?()
+    }
+
+    @discardableResult
+    private func withLock<T>(_ body: () -> T) -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return body()
     }
 }
 
@@ -51,6 +187,14 @@ public protocol ToolDatabaseAccess: Sendable {
     func fetchReadingTime(bookId: Int64?, since: Date?) async throws -> [[String: Any]]
     func fetchTags() async throws -> [[String: Any]]
     func insertBookNote(_ fields: [String: Any]) async throws
+    func fetchBook(id: Int64) async throws -> [String: Any]?
+}
+
+public extension ToolDatabaseAccess {
+    func fetchBook(id: Int64) async throws -> [String: Any]? {
+        let books = try await fetchBooks(query: nil, groupId: nil, limit: Int.max)
+        return books.first { ($0["id"] as? Int64) == id }
+    }
 }
 
 /// Protocol for HTTP operations needed by AI tools.
@@ -75,7 +219,7 @@ public struct SubAgentSpawnResult: Sendable {
         self.requestedSteps = requestedSteps
     }
 
-    var jsonValue: [String: Any] {
+    public var jsonValue: [String: Any] {
         var value: [String: Any] = [
             "status": status,
             "summary": summary,
@@ -103,7 +247,7 @@ public struct ShortcutsRunResult: Sendable {
         self.detail = detail
     }
 
-    var jsonValue: [String: Any] {
+    public var jsonValue: [String: Any] {
         var value: [String: Any] = [
             "status": status,
             "shortcut_name": shortcutName,
