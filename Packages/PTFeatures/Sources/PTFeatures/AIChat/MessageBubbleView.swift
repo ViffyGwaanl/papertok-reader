@@ -41,6 +41,7 @@ struct MessageBubbleView: View {
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                         .textSelection(.enabled)
+                        .contextMenu { messageCopyMenu(text: text) }
                 }
             }
         }
@@ -60,6 +61,7 @@ struct MessageBubbleView: View {
                         .background(Morandi.cardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                         .textSelection(.enabled)
+                        .contextMenu { messageCopyMenu(text: text) }
                 }
                 if let toolCalls = message.toolCalls, !toolCalls.isEmpty {
                     ForEach(toolCalls) { call in
@@ -150,6 +152,28 @@ struct MessageBubbleView: View {
                 EmptyView()
             }
         }
+    }
+
+    // MARK: - Context Menu
+
+    @ViewBuilder
+    private func messageCopyMenu(text: String) -> some View {
+        Button {
+            #if os(iOS)
+            UIPasteboard.general.string = text
+            #else
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            #endif
+        } label: {
+            Label("Copy", systemImage: "doc.on.doc")
+        }
+
+        #if os(iOS)
+        ShareLink(item: text) {
+            Label("Share", systemImage: "square.and.arrow.up")
+        }
+        #endif
     }
 
     // MARK: - Markdown Helpers

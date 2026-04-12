@@ -110,12 +110,21 @@ public final class AIChatViewModel {
     private var approvalExecutionsInFlight: Set<UUID> = []
     private static let maxToolRoundsPerTurn = 8
 
+    /// Persistence service for saving/loading conversations (optional).
+    public var persistenceService: ConversationPersistenceService?
+    /// Identifier of the current conversation for persistence.
+    public var conversationId: String?
+    /// Title of the current conversation (derived from first user message).
+    public var conversationTitle: String = "New Chat"
+
     public init(
         systemPrompt: String = "You are a helpful reading assistant.",
-        runtime: Runtime = .default
+        runtime: Runtime = .default,
+        persistenceService: ConversationPersistenceService? = nil
     ) {
         self.conversationTree = ConversationTree(systemPrompt: systemPrompt)
         self.runtime = runtime
+        self.persistenceService = persistenceService
         self.selectedProviderId = runtime.providers.first?.id ?? ""
         self.selectedModelId = runtime.providers.first?.models.first?.id ?? ""
     }
@@ -164,10 +173,56 @@ public final class AIChatViewModel {
     /// Clear conversation and start fresh.
     public func clearConversation(systemPrompt: String = "You are a helpful reading assistant.") {
         conversationTree = ConversationTree(systemPrompt: systemPrompt)
+        conversationId = nil
+        conversationTitle = "New Chat"
         endTurn()
         errorMessage = nil
         pendingApprovals.removeAll()
         attachments.removeAll()
+    }
+
+    // MARK: - Conversation Persistence
+
+    /// Save the current conversation to disk.
+    public func saveConversation() {
+        guard let service = persistenceService else { return }
+        let id = conversationId ?? UUID().uuidString
+        if conversationId == nil { conversationId = id }
+
+        // Derive title from the first user message if still default
+        if conversationTitle == "New Chat" {
+            if let firstUserMsg = messages.first(where: { $0.role == .user })?.textContent {
+                conversationTitle = String(firstUserMsg.prefix(60))
+            }
+        }
+
+        let systemPrompt = messages.first(where: { $0.role == .system })?.textContent ?? "You are a helpful reading assistant."
+        let persisted = ConversationPersistenceService.PersistedConversation(
+            id: id,
+            title: conversationTitle,
+            systemPrompt: systemPrompt,
+            tree: conversationTree,
+            updatedAt: Date(),
+            providerId: selectedProviderId,
+            modelId: selectedModelId
+        )
+        try? service.save(persisted)
+    }
+
+    /// Load and resume a conversation from disk.
+    public func loadConversation(id: String) -> Bool {
+        guard let service = persistenceService,
+              let persisted = try? service.load(id: id) else { return false }
+        conversationTree = persisted.tree
+        conversationId = persisted.id
+        conversationTitle = persisted.title
+        if let providerId = persisted.providerId { selectedProviderId = providerId }
+        if let modelId = persisted.modelId { selectedModelId = modelId }
+        endTurn()
+        errorMessage = nil
+        pendingApprovals.removeAll()
+        attachments.removeAll()
+        return true
     }
 
     // MARK: - Attachment Support
@@ -219,6 +274,8 @@ public final class AIChatViewModel {
         currentStreamText = ""
         streamingTokens.removeAll()
         isStreaming = false
+        // Auto-save after stream completes
+        saveConversation()
     }
 
     // MARK: - Tool Approval Queue

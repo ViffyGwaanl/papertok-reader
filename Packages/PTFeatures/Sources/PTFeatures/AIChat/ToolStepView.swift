@@ -5,6 +5,7 @@ import PTUI
 /// Displays a single tool call + its result in the chat message list.
 ///
 /// States: pending -> running (spinner) -> completed / error.
+/// Completed results render rich markdown content including code blocks and tables.
 public struct ToolStepView: View {
     public enum ToolStepState: Sendable {
         case pending
@@ -30,28 +31,49 @@ public struct ToolStepView: View {
                 .frame(width: 18, height: 18)
 
             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
-                Text(toolName)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Morandi.primaryText)
+                HStack(spacing: AppSpacing.xs) {
+                    Text(toolName)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Morandi.primaryText)
+
+                    if case .running = state {
+                        Text("Running")
+                            .font(AppTypography.caption2)
+                            .foregroundStyle(Morandi.accent)
+                    } else if case .completed = state {
+                        Text("Done")
+                            .font(AppTypography.caption2)
+                            .foregroundStyle(Morandi.sage)
+                    }
+                }
 
                 if showDetails {
-                    Text(arguments)
-                        .font(AppTypography.caption2)
+                    // Arguments (formatted JSON if possible)
+                    Text(formattedArguments)
+                        .font(.system(.caption2, design: .monospaced))
                         .foregroundStyle(Morandi.secondaryText)
+                        .padding(AppSpacing.xs)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Morandi.background)
+                        )
                         .padding(.top, AppSpacing.xxs)
 
-                    if case .completed(let output) = state {
+                    if case .completed(let output) = state, !output.isEmpty {
                         Divider()
                             .background(Morandi.divider)
                             .padding(.vertical, AppSpacing.xxs)
-                        Text(output)
-                            .font(AppTypography.caption2)
-                            .foregroundStyle(Morandi.secondaryText)
-                            .lineLimit(5)
+
+                        richResultView(output: output)
                     } else if case .failed(let error) = state {
-                        Text(error)
-                            .font(AppTypography.caption2)
-                            .foregroundStyle(Morandi.destructive)
+                        HStack(spacing: AppSpacing.xs) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(AppTypography.caption2)
+                            Text(error)
+                                .font(AppTypography.caption2)
+                        }
+                        .foregroundStyle(Morandi.destructive)
                     }
                 }
             }
@@ -75,6 +97,88 @@ public struct ToolStepView: View {
         )
     }
 
+    // MARK: - Rich Result Rendering
+
+    @ViewBuilder
+    private func richResultView(output: String) -> some View {
+        let blocks = parseOutputBlocks(output)
+
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            ForEach(blocks.indices, id: \.self) { index in
+                switch blocks[index] {
+                case .text(let text):
+                    Text(markdownAttributedString(text))
+                        .font(AppTypography.caption2)
+                        .foregroundStyle(Morandi.secondaryText)
+                        .textSelection(.enabled)
+
+                case .codeBlock(let language, let code):
+                    VStack(alignment: .leading, spacing: 0) {
+                        if !language.isEmpty {
+                            Text(language)
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(Morandi.tertiaryText)
+                                .padding(.horizontal, AppSpacing.xs)
+                                .padding(.vertical, 2)
+                        }
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            Text(code)
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(Morandi.primaryText)
+                                .padding(AppSpacing.xs)
+                                .textSelection(.enabled)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Morandi.background)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(Morandi.divider, lineWidth: 0.5)
+                    )
+
+                case .table(let rows):
+                    tableView(rows: rows)
+                }
+            }
+        }
+        .lineLimit(showDetails ? nil : 8)
+    }
+
+    @ViewBuilder
+    private func tableView(rows: [[String]]) -> some View {
+        if rows.isEmpty { EmptyView() } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(rows.indices, id: \.self) { rowIdx in
+                        HStack(spacing: 0) {
+                            ForEach(rows[rowIdx].indices, id: \.self) { colIdx in
+                                Text(rows[rowIdx][colIdx])
+                                    .font(rowIdx == 0 ? AppTypography.caption2.weight(.semibold) : AppTypography.caption2)
+                                    .foregroundStyle(Morandi.primaryText)
+                                    .padding(.horizontal, AppSpacing.xs)
+                                    .padding(.vertical, 3)
+                                    .frame(minWidth: 60, alignment: .leading)
+                            }
+                        }
+                        if rowIdx == 0 {
+                            Divider().background(Morandi.divider)
+                        }
+                    }
+                }
+                .padding(AppSpacing.xs)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Morandi.background)
+            )
+        }
+    }
+
+    // MARK: - State Icon
+
     @ViewBuilder
     private var stateIcon: some View {
         switch state {
@@ -92,5 +196,107 @@ public struct ToolStepView: View {
             Image(systemName: "xmark.circle.fill")
                 .foregroundStyle(Morandi.destructive)
         }
+    }
+
+    // MARK: - Formatting Helpers
+
+    private var formattedArguments: String {
+        guard let data = arguments.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data),
+              let pretty = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+              let result = String(data: pretty, encoding: .utf8) else {
+            return arguments
+        }
+        return result
+    }
+
+    private func markdownAttributedString(_ text: String) -> AttributedString {
+        if let attributed = try? AttributedString(
+            markdown: text,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        ) {
+            return attributed
+        }
+        return AttributedString(text)
+    }
+
+    // MARK: - Output Block Parsing
+
+    private enum OutputBlock {
+        case text(String)
+        case codeBlock(language: String, code: String)
+        case table(rows: [[String]])
+    }
+
+    private func parseOutputBlocks(_ output: String) -> [OutputBlock] {
+        var blocks: [OutputBlock] = []
+        var currentText = ""
+        let lines = output.components(separatedBy: "\n")
+        var i = 0
+
+        while i < lines.count {
+            let line = lines[i]
+
+            // Code block detection
+            if line.hasPrefix("```") {
+                if !currentText.isEmpty {
+                    blocks.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
+                    currentText = ""
+                }
+                let language = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                var codeLines: [String] = []
+                i += 1
+                while i < lines.count && !lines[i].hasPrefix("```") {
+                    codeLines.append(lines[i])
+                    i += 1
+                }
+                blocks.append(.codeBlock(language: language, code: codeLines.joined(separator: "\n")))
+                i += 1
+                continue
+            }
+
+            // Table detection (pipe-delimited)
+            if line.contains("|") && line.trimmingCharacters(in: .whitespaces).hasPrefix("|") {
+                if !currentText.isEmpty {
+                    blocks.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
+                    currentText = ""
+                }
+                var tableRows: [[String]] = []
+                while i < lines.count {
+                    let tableLine = lines[i].trimmingCharacters(in: .whitespaces)
+                    guard tableLine.contains("|") else { break }
+                    // Skip separator lines (|---|---|)
+                    if tableLine.replacingOccurrences(of: "|", with: "")
+                        .replacingOccurrences(of: "-", with: "")
+                        .replacingOccurrences(of: ":", with: "")
+                        .replacingOccurrences(of: " ", with: "")
+                        .isEmpty {
+                        i += 1
+                        continue
+                    }
+                    let cells = tableLine
+                        .split(separator: "|", omittingEmptySubsequences: false)
+                        .map { $0.trimmingCharacters(in: .whitespaces) }
+                        .filter { !$0.isEmpty }
+                    if !cells.isEmpty {
+                        tableRows.append(cells)
+                    }
+                    i += 1
+                }
+                if !tableRows.isEmpty {
+                    blocks.append(.table(rows: tableRows))
+                }
+                continue
+            }
+
+            currentText += line + "\n"
+            i += 1
+        }
+
+        if !currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            blocks.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+
+        return blocks
     }
 }
