@@ -10,85 +10,100 @@ public enum TTSState: String, Sendable {
     case paused
 }
 
+/// Backward-compatible facade over `TTSOrchestrator`.
+///
+/// Existing call sites (reader controls, FAB) continue to use this API. New
+/// code can reach into `orchestrator` for queue / cloud-backend features.
 @Observable
-public final class TTSService: NSObject, @unchecked Sendable {
-    @ObservationIgnored private var _synthesizer: AVSpeechSynthesizer?
-    private var synthesizer: AVSpeechSynthesizer {
-        if let s = _synthesizer { return s }
-        let s = AVSpeechSynthesizer()
-        s.delegate = self
-        _synthesizer = s
-        return s
+@MainActor
+public final class TTSService {
+    public let orchestrator: TTSOrchestrator
+
+    public init() {
+        self.orchestrator = TTSOrchestrator()
     }
 
-    public private(set) var state: TTSState = .stopped
-    public private(set) var currentText: String?
+    public init(orchestrator: TTSOrchestrator) {
+        self.orchestrator = orchestrator
+    }
 
-    @ObservationIgnored private var _rate: Float = AVSpeechUtteranceDefaultSpeechRate
+    // MARK: - Legacy state mapping
+
+    public var state: TTSState {
+        if orchestrator.isPaused { return .paused }
+        if orchestrator.isPlaying { return .speaking }
+        return .stopped
+    }
+
+    public var currentText: String? { orchestrator.currentText }
+
+    // Legacy AVSpeech rate (0.0...1.0ish) — map to orchestrator's 0.5...2.0.
     public var rate: Float {
-        get { _rate }
-        set { _rate = min(max(newValue, AVSpeechUtteranceMinimumSpeechRate), AVSpeechUtteranceMaximumSpeechRate) }
+        get {
+            let min = Double(AVSpeechUtteranceMinimumSpeechRate)
+            let max = Double(AVSpeechUtteranceMaximumSpeechRate)
+            let def = Double(AVSpeechUtteranceDefaultSpeechRate)
+            let mul = orchestrator.rate
+            // Inverse of SystemTTSBackend.mapRate
+            if mul < 1.0 {
+                return Float(min + (def - min) * ((mul - 0.5) / 0.5))
+            } else {
+                return Float(def + (max - def) * (mul - 1.0))
+            }
+        }
+        set {
+            let min = Double(AVSpeechUtteranceMinimumSpeechRate)
+            let max = Double(AVSpeechUtteranceMaximumSpeechRate)
+            let def = Double(AVSpeechUtteranceDefaultSpeechRate)
+            let v = Double(newValue)
+            let multiplier: Double
+            if v <= def {
+                multiplier = 0.5 + 0.5 * ((v - min) / (def - min))
+            } else {
+                multiplier = 1.0 + ((v - def) / (max - def))
+            }
+            orchestrator.rate = Swift.max(0.5, Swift.min(2.0, multiplier))
+        }
     }
 
-    public var voiceLanguage: String = "en-US"
-    public var voiceIdentifier: String?
-
-    public override init() {
-        super.init()
+    public var voiceLanguage: String = "en-US" {
+        didSet { syncVoice() }
     }
+
+    public var voiceIdentifier: String? {
+        didSet { syncVoice() }
+    }
+
+    private func syncVoice() {
+        let id = voiceIdentifier ?? AVSpeechSynthesisVoice(language: voiceLanguage)?.identifier ?? voiceLanguage
+        let name = voiceIdentifier.flatMap { AVSpeechSynthesisVoice(identifier: $0)?.name } ?? "Default"
+        orchestrator.setVoice(TTSVoice(id: id, name: name, language: voiceLanguage, gender: nil))
+    }
+
+    // MARK: - Playback
 
     public func speak(_ text: String) {
-        stop()
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.rate = rate
-
-        if let id = voiceIdentifier {
-            utterance.voice = AVSpeechSynthesisVoice(identifier: id)
-        } else {
-            utterance.voice = AVSpeechSynthesisVoice(language: voiceLanguage)
+        Task { @MainActor in
+            do {
+                try await orchestrator.play(text: text)
+            } catch {
+                // Swallow — state reflects error via orchestrator.lastError
+            }
         }
-
-        currentText = text
-        state = .speaking
-        synthesizer.speak(utterance)
     }
 
-    public func pause() {
-        guard state == .speaking else { return }
-        synthesizer.pauseSpeaking(at: .word)
-        state = .paused
-    }
+    public func pause() { orchestrator.pause() }
+    public func resume() { orchestrator.resume() }
+    public func stop() { orchestrator.stop() }
 
-    public func resume() {
-        guard state == .paused else { return }
-        synthesizer.continueSpeaking()
-        state = .speaking
-    }
+    // MARK: - Voice catalogue (legacy helpers)
 
-    public func stop() {
-        synthesizer.stopSpeaking(at: .immediate)
-        state = .stopped
-        currentText = nil
-    }
-
-    public static func availableVoices() -> [AVSpeechSynthesisVoice] {
+    nonisolated public static func availableVoices() -> [AVSpeechSynthesisVoice] {
         AVSpeechSynthesisVoice.speechVoices()
     }
 
-    public static func voices(for language: String) -> [AVSpeechSynthesisVoice] {
+    nonisolated public static func voices(for language: String) -> [AVSpeechSynthesisVoice] {
         AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix(language) }
-    }
-}
-
-extension TTSService: AVSpeechSynthesizerDelegate {
-    public func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        state = .stopped
-        currentText = nil
-    }
-
-    public func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        state = .stopped
-        currentText = nil
     }
 }
 #endif

@@ -9,6 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../PTCore"),
+        .package(path: "../PTNetworking"),
         .package(
             url: "https://github.com/readium/swift-toolkit.git",
             from: "3.0.0"
@@ -19,6 +20,7 @@ let package = Package(
             name: "PTReader",
             dependencies: [
                 "PTCore",
+                "PTNetworking",
                 .product(name: "ReadiumShared", package: "swift-toolkit", condition: .when(platforms: [.iOS])),
                 .product(name: "ReadiumStreamer", package: "swift-toolkit", condition: .when(platforms: [.iOS])),
                 .product(name: "ReadiumNavigator", package: "swift-toolkit", condition: .when(platforms: [.iOS])),
