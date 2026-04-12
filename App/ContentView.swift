@@ -3310,98 +3310,36 @@ private struct StatisticsTileCustomizationSheet: View {
 
 struct SettingsScreen: View {
     @State private var viewModel = SettingsViewModel()
+    @State private var kairosService = KAIROSService()
+    @State private var showClearCacheConfirmation = false
 
     private let themeModes = ["system", "light", "dark"]
     private let pageTurnModes = ["swipe", "scroll"]
+    private let fontFamilies = ["System", "Georgia", "Palatino", "Times New Roman", "Helvetica Neue"]
 
     var body: some View {
         NavigationStack {
             Form {
+                // AI Providers
+                aiProviderSection
+
                 // Appearance
-                Section {
-                    Picker("Theme", selection: $viewModel.themeMode) {
-                        ForEach(themeModes, id: \.self) { mode in
-                            Text(mode.capitalized).tag(mode)
-                        }
-                    }
-                    .foregroundStyle(Morandi.primaryText)
+                appearanceSection
 
-                    Toggle("OLED Dark Mode", isOn: $viewModel.isOLEDDarkMode)
-                        .tint(Morandi.accent)
-                        .foregroundStyle(Morandi.primaryText)
+                // Reading Defaults
+                readingSection
 
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("Accent Color")
-                            .font(AppTypography.subheadline)
-                            .foregroundStyle(Morandi.primaryText)
+                // Sync & Backup
+                syncSection
 
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: AppSpacing.sm) {
-                            ForEach(Array(Morandi.accentPresets.enumerated()), id: \.offset) { index, preset in
-                                Circle()
-                                    .fill(preset.color)
-                                    .frame(width: 36, height: 36)
-                                    .overlay {
-                                        if viewModel.accentColorIndex == index {
-                                            Circle()
-                                                .strokeBorder(Morandi.primaryText, lineWidth: 2.5)
-                                        }
-                                    }
-                                    .onTapGesture {
-                                        viewModel.accentColorIndex = index
-                                        viewModel.save()
-                                    }
-                                    .accessibilityLabel(preset.name)
-                            }
-                        }
-                    }
-                    .padding(.vertical, AppSpacing.xs)
-                } header: {
-                    Text("Appearance")
-                }
+                // KAIROS
+                kairosSection
 
-                // Reading
-                Section {
-                    VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                        Text("Default Font Size: \(Int(viewModel.defaultFontSize))")
-                            .font(AppTypography.subheadline)
-                            .foregroundStyle(Morandi.primaryText)
-                        Slider(value: $viewModel.defaultFontSize, in: 12...32, step: 1)
-                            .tint(Morandi.accent)
-                    }
-
-                    Picker("Page Turn Mode", selection: $viewModel.pageTurnMode) {
-                        ForEach(pageTurnModes, id: \.self) { mode in
-                            Text(mode.capitalized).tag(mode)
-                        }
-                    }
-                    .foregroundStyle(Morandi.primaryText)
-                } header: {
-                    Text("Reading")
-                }
+                // Data Management
+                dataManagementSection
 
                 // About
-                Section {
-                    HStack {
-                        Text("Version")
-                            .foregroundStyle(Morandi.primaryText)
-                        Spacer()
-                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                            .foregroundStyle(Morandi.secondaryText)
-                    }
-
-                    Link(destination: URL(string: "https://github.com/ArcticFoxPro/PaperTok")!) {
-                        HStack {
-                            Text("Open Source")
-                                .foregroundStyle(Morandi.primaryText)
-                            Spacer()
-                            Image(systemName: "arrow.up.right")
-                                .font(AppTypography.caption)
-                                .foregroundStyle(Morandi.accent)
-                        }
-                    }
-                } header: {
-                    Text("About")
-                }
+                aboutSection
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
@@ -3410,7 +3348,342 @@ struct SettingsScreen: View {
             .onChange(of: viewModel.isOLEDDarkMode) { _, _ in viewModel.save() }
             .onChange(of: viewModel.defaultFontSize) { _, _ in viewModel.save() }
             .onChange(of: viewModel.pageTurnMode) { _, _ in viewModel.save() }
+            .onChange(of: viewModel.defaultFontFamily) { _, _ in viewModel.save() }
+            .onChange(of: viewModel.aiProviderID) { _, _ in viewModel.save() }
+            .onChange(of: viewModel.aiModelID) { _, _ in viewModel.save() }
         }
+    }
+
+    // MARK: - AI Providers
+
+    private var aiProviderSection: some View {
+        Section {
+            Picker("Provider", selection: $viewModel.aiProviderID) {
+                ForEach(AIProviderID.allCases) { provider in
+                    Text(provider.displayName).tag(provider.rawValue)
+                }
+            }
+            .foregroundStyle(Morandi.primaryText)
+
+            TextField("Model ID", text: $viewModel.aiModelID)
+                .foregroundStyle(Morandi.primaryText)
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+                .autocorrectionDisabled()
+
+            ForEach(AIProviderID.allCases) { provider in
+                NavigationLink {
+                    AIProviderKeyView(provider: provider, viewModel: viewModel)
+                } label: {
+                    HStack {
+                        Text("\(provider.displayName) API Key")
+                            .foregroundStyle(Morandi.primaryText)
+                        Spacer()
+                        if !viewModel.loadAPIKey(for: provider.rawValue).isEmpty {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Morandi.sage)
+                                .font(AppTypography.caption)
+                        }
+                    }
+                }
+            }
+
+            NavigationLink("MCP Servers") {
+                MCPConfigView()
+            }
+            .foregroundStyle(Morandi.primaryText)
+        } header: {
+            Text("AI Providers")
+        }
+    }
+
+    // MARK: - Appearance
+
+    private var appearanceSection: some View {
+        Section {
+            Picker("Theme", selection: $viewModel.themeMode) {
+                ForEach(themeModes, id: \.self) { mode in
+                    Text(mode.capitalized).tag(mode)
+                }
+            }
+            .foregroundStyle(Morandi.primaryText)
+
+            Toggle("OLED Dark Mode", isOn: $viewModel.isOLEDDarkMode)
+                .tint(Morandi.accent)
+                .foregroundStyle(Morandi.primaryText)
+
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                Text("Accent Color")
+                    .font(AppTypography.subheadline)
+                    .foregroundStyle(Morandi.primaryText)
+
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: AppSpacing.sm) {
+                    ForEach(Array(Morandi.accentPresets.enumerated()), id: \.offset) { index, preset in
+                        Circle()
+                            .fill(preset.color)
+                            .frame(width: 36, height: 36)
+                            .overlay {
+                                if viewModel.accentColorIndex == index {
+                                    Circle()
+                                        .strokeBorder(Morandi.primaryText, lineWidth: 2.5)
+                                }
+                            }
+                            .onTapGesture {
+                                viewModel.accentColorIndex = index
+                                viewModel.save()
+                            }
+                            .accessibilityLabel(preset.name)
+                    }
+                }
+            }
+            .padding(.vertical, AppSpacing.xs)
+        } header: {
+            Text("Appearance")
+        }
+    }
+
+    // MARK: - Reading Defaults
+
+    private var readingSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                Text("Default Font Size: \(Int(viewModel.defaultFontSize))")
+                    .font(AppTypography.subheadline)
+                    .foregroundStyle(Morandi.primaryText)
+                Slider(value: $viewModel.defaultFontSize, in: 12...32, step: 1)
+                    .tint(Morandi.accent)
+            }
+
+            Picker("Font Family", selection: $viewModel.defaultFontFamily) {
+                ForEach(fontFamilies, id: \.self) { font in
+                    Text(font).tag(font)
+                }
+            }
+            .foregroundStyle(Morandi.primaryText)
+
+            Picker("Page Turn Mode", selection: $viewModel.pageTurnMode) {
+                ForEach(pageTurnModes, id: \.self) { mode in
+                    Text(mode.capitalized).tag(mode)
+                }
+            }
+            .foregroundStyle(Morandi.primaryText)
+        } header: {
+            Text("Reading")
+        }
+    }
+
+    // MARK: - Sync & Backup
+
+    private var syncSection: some View {
+        Section {
+            NavigationLink {
+                SyncSettingsView()
+            } label: {
+                Label("Sync & Backup", systemImage: "arrow.triangle.2.circlepath")
+                    .foregroundStyle(Morandi.primaryText)
+            }
+        } header: {
+            Text("Sync")
+        }
+    }
+
+    // MARK: - KAIROS
+
+    private var kairosSection: some View {
+        Section {
+            NavigationLink {
+                KAIROSSettingsView(service: kairosService)
+            } label: {
+                HStack {
+                    Label("KAIROS Reading Goals", systemImage: "flame")
+                        .foregroundStyle(Morandi.primaryText)
+                    Spacer()
+                    if kairosService.isEnabled {
+                        Text("\(kairosService.currentStreak) day streak")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(Morandi.accent)
+                    }
+                }
+            }
+        } header: {
+            Text("Reading Assistant")
+        }
+    }
+
+    // MARK: - Data Management
+
+    private var dataManagementSection: some View {
+        Section {
+            HStack {
+                Text("Cache Size")
+                    .foregroundStyle(Morandi.primaryText)
+                Spacer()
+                Text(viewModel.cacheSize())
+                    .foregroundStyle(Morandi.secondaryText)
+            }
+
+            Button(role: .destructive) {
+                showClearCacheConfirmation = true
+            } label: {
+                Text("Clear Cache")
+            }
+            .confirmationDialog("Clear all cached data?", isPresented: $showClearCacheConfirmation) {
+                Button("Clear Cache", role: .destructive) {
+                    viewModel.clearCache()
+                }
+            }
+        } header: {
+            Text("Data Management")
+        }
+    }
+
+    // MARK: - About
+
+    private var aboutSection: some View {
+        Section {
+            HStack {
+                Text("Version")
+                    .foregroundStyle(Morandi.primaryText)
+                Spacer()
+                Text(appVersion)
+                    .foregroundStyle(Morandi.secondaryText)
+            }
+
+            HStack {
+                Text("Build")
+                    .foregroundStyle(Morandi.primaryText)
+                Spacer()
+                Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
+                    .foregroundStyle(Morandi.secondaryText)
+            }
+
+            Link(destination: URL(string: "https://github.com/ArcticFoxPro/PaperTok")!) {
+                HStack {
+                    Text("Source Code")
+                        .foregroundStyle(Morandi.primaryText)
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(Morandi.accent)
+                }
+            }
+
+            NavigationLink {
+                OpenSourceLicensesView()
+            } label: {
+                Text("Open Source Licenses")
+                    .foregroundStyle(Morandi.primaryText)
+            }
+
+            Link(destination: URL(string: "https://github.com/ArcticFoxPro/PaperTok/blob/main/CHANGELOG.md")!) {
+                HStack {
+                    Text("Changelog")
+                        .foregroundStyle(Morandi.primaryText)
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(Morandi.accent)
+                }
+            }
+        } header: {
+            Text("About")
+        }
+    }
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+}
+
+// MARK: - AI Provider Key Management View
+
+struct AIProviderKeyView: View {
+    let provider: AIProviderID
+    let viewModel: SettingsViewModel
+    @State private var apiKey: String = ""
+    @State private var isSaved = false
+
+    var body: some View {
+        Form {
+            Section {
+                SecureField("API Key", text: $apiKey)
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    #endif
+                    .autocorrectionDisabled()
+            } header: {
+                Text("\(provider.displayName) API Key")
+            } footer: {
+                Text("Your API key is stored securely in the device Keychain.")
+                    .font(AppTypography.caption2)
+                    .foregroundStyle(Morandi.tertiaryText)
+            }
+
+            Section {
+                Button("Save") {
+                    viewModel.saveAPIKey(apiKey, for: provider.rawValue)
+                    isSaved = true
+                }
+                .foregroundStyle(Morandi.accent)
+
+                if !apiKey.isEmpty {
+                    Button("Remove Key", role: .destructive) {
+                        viewModel.saveAPIKey("", for: provider.rawValue)
+                        apiKey = ""
+                        isSaved = true
+                    }
+                }
+            }
+
+            if isSaved {
+                Section {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Morandi.sage)
+                        Text("Saved")
+                            .foregroundStyle(Morandi.sage)
+                    }
+                }
+            }
+        }
+        .navigationTitle("\(provider.displayName) Key")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .onAppear {
+            apiKey = viewModel.loadAPIKey(for: provider.rawValue)
+        }
+    }
+}
+
+// MARK: - Open Source Licenses View
+
+struct OpenSourceLicensesView: View {
+    private let licenses: [(name: String, license: String)] = [
+        ("GRDB.swift", "MIT License"),
+        ("Readium Swift Toolkit", "BSD-3-Clause License"),
+        ("SwiftSoup", "MIT License"),
+    ]
+
+    var body: some View {
+        List {
+            ForEach(licenses, id: \.name) { item in
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text(item.name)
+                        .font(AppTypography.body.weight(.medium))
+                        .foregroundStyle(Morandi.primaryText)
+                    Text(item.license)
+                        .font(AppTypography.caption)
+                        .foregroundStyle(Morandi.secondaryText)
+                }
+                .padding(.vertical, AppSpacing.xs)
+            }
+        }
+        .navigationTitle("Open Source Licenses")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 }
 

@@ -22,4 +22,14 @@ public enum DateFormatting {
         }
         return "\(minutes)m"
     }
+
+    /// Format a Date as a "yyyy-MM-dd" string.
+    public static func dateString(from date: Date) -> String {
+        dateOnly.string(from: date)
+    }
+
+    /// Parse a "yyyy-MM-dd" string back into a Date.
+    public static func date(from string: String) -> Date? {
+        dateOnly.date(from: string)
+    }
 }

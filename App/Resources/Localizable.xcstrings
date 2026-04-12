@@ -1,841 +1,4933 @@
 {
-  "sourceLanguage" : "en",
-  "version" : "1.0",
-  "strings" : {
-    "tab.bookshelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bookshelf" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "书架" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "書架" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "本棚" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "책장" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Bibliothèque" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Bücherregal" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estantería" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Estante" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Книжная полка" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "رف الكتب" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "किताबों की अलमारी" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ชั้นหนังสือ" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Giá sách" } }
-      }
-    },
-    "tab.papers" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Papers" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "论文" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "論文" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "論文" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "논문" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Articles" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Artikel" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Artículos" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Artigos" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Статьи" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "أوراق بحثية" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "शोधपत्र" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "บทความวิจัย" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bài báo" } }
-      }
-    },
-    "tab.notes" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notes" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "笔记" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "筆記" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ノート" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "노트" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Notes" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Notizen" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Notas" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Notas" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Заметки" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "ملاحظات" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "नोट्स" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "บันทึก" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Ghi chú" } }
-      }
-    },
-    "tab.statistics" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Statistics" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "统计" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "統計" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "統計" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "통계" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Statistiques" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Statistiken" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estadísticas" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Estatísticas" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Статистика" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "إحصائيات" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "सांख्यिकी" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "สถิติ" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thống kê" } }
-      }
-    },
-    "tab.ai" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "AI" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AI" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "AI" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AI" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "AI" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "IA" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "KI" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "IA" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "IA" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "ИИ" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "الذكاء الاصطناعي" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "AI" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "AI" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "AI" } }
-      }
-    },
-    "tab.settings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "设置" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "設定" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "設定" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "설정" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Paramètres" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Einstellungen" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ajustes" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Configurações" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Настройки" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "الإعدادات" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "सेटिंग्स" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ตั้งค่า" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cài đặt" } }
-      }
-    },
-    "bookshelf.empty.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "No Books Yet" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无书籍" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "暫無書籍" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "書籍がありません" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "아직 책이 없습니다" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun livre" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Noch keine Bücher" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin libros aún" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nenhum livro ainda" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Книг пока нет" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "لا توجد كتب بعد" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "अभी कोई किताब नहीं" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ยังไม่มีหนังสือ" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có sách nào" } }
-      }
-    },
-    "bookshelf.empty.description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Tap + to import a PDF file." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "点击 + 导入 PDF 文件。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "點擊 + 匯入 PDF 檔案。" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "+ をタップして PDF をインポート" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "+ 를 눌러 PDF 파일을 가져오세요." } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Appuyez sur + pour importer un fichier PDF." } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Tippen Sie auf +, um eine PDF-Datei zu importieren." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Toca + para importar un archivo PDF." } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Toque em + para importar um arquivo PDF." } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Нажмите +, чтобы импортировать PDF-файл." } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "اضغط على + لاستيراد ملف PDF." } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "PDF फ़ाइल आयात करने के लिए + दबाएं।" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "แตะ + เพื่อนำเข้าไฟล์ PDF" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Nhấn + để nhập tệp PDF." } }
-      }
-    },
-    "bookshelf.search.prompt" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search books" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "搜索书籍" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "搜尋書籍" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "書籍を検索" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "책 검색" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rechercher des livres" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Bücher suchen" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscar libros" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Buscar livros" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Поиск книг" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "البحث عن كتب" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "किताबें खोजें" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ค้นหาหนังสือ" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tìm sách" } }
-      }
-    },
-    "import.failed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Import Failed" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导入失败" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "匯入失敗" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "インポート失敗" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "가져오기 실패" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Échec de l'importation" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Import fehlgeschlagen" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Error al importar" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Falha na importação" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Ошибка импорта" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "فشل الاستيراد" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "आयात विफल" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "นำเข้าล้มเหลว" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Nhập thất bại" } }
-      }
-    },
-    "import.importing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入…" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "インポート中…" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "가져오는 중…" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Importation…" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Importieren…" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Importando…" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Importando…" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Импорт…" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "جارٍ الاستيراد…" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "आयात हो रहा है…" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "กำลังนำเข้า…" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đang nhập…" } }
-      }
-    },
-    "notes.empty.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "No Notes Yet" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无笔记" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "暫無筆記" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ノートがありません" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "아직 노트가 없습니다" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune note" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Noch keine Notizen" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin notas aún" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nenhuma nota ainda" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Заметок пока нет" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "لا توجد ملاحظات بعد" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "अभी कोई नोट नहीं" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ยังไม่มีบันทึก" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có ghi chú nào" } }
-      }
-    },
-    "notes.empty.description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Highlight text while reading to create notes." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "阅读时高亮文本即可创建笔记。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "閱讀時標記文字即可建立筆記。" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "読書中にテキストをハイライトしてノートを作成" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "독서 중 텍스트를 하이라이트하여 노트를 만드세요." } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Surlignez du texte pendant la lecture pour créer des notes." } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Markieren Sie Text beim Lesen, um Notizen zu erstellen." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Resalta texto mientras lees para crear notas." } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Destaque texto durante a leitura para criar notas." } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выделяйте текст при чтении, чтобы создавать заметки." } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "قم بتمييز النص أثناء القراءة لإنشاء ملاحظات." } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "नोट बनाने के लिए पढ़ते समय टेक्स्ट हाइलाइट करें।" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ไฮไลท์ข้อความขณะอ่านเพื่อสร้างบันทึก" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tô sáng văn bản khi đọc để tạo ghi chú." } }
-      }
-    },
-    "settings.appearance" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Appearance" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "外观" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "外觀" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "外観" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "모양" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apparence" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Erscheinungsbild" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Apariencia" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Aparência" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Внешний вид" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "المظهر" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "दिखावट" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "รูปลักษณ์" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Giao diện" } }
-      }
-    },
-    "settings.theme" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Theme" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "主题" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "主題" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "テーマ" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "테마" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Thème" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Thema" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tema" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Tema" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Тема" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "المظهر" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "थीम" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ธีม" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chủ đề" } }
-      }
-    },
-    "settings.reading" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reading" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "阅读" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "閱讀" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "読書" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "독서" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lecture" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Lesen" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lectura" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Leitura" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Чтение" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "القراءة" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "पठन" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "การอ่าน" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đọc sách" } }
-      }
-    },
-    "settings.about" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "About" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关于" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "關於" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アプリについて" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "정보" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "À propos" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Über" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Acerca de" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Sobre" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "О приложении" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "حول" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "के बारे में" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "เกี่ยวกับ" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Giới thiệu" } }
-      }
-    },
-    "settings.version" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Version" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "版本" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "版本" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "バージョン" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "버전" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Version" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Version" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Versión" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Versão" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Версия" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "الإصدار" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "संस्करण" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "เวอร์ชัน" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Phiên bản" } }
-      }
-    },
-    "statistics.readingTime" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reading Time" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "阅读时间" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "閱讀時間" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "読書時間" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "독서 시간" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Temps de lecture" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Lesezeit" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tiempo de lectura" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Tempo de leitura" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Время чтения" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "وقت القراءة" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "पढ़ने का समय" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "เวลาอ่าน" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thời gian đọc" } }
-      }
-    },
-    "statistics.readingActivity" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reading Activity" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "阅读活动" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "閱讀活動" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "読書アクティビティ" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "독서 활동" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Activité de lecture" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Leseaktivität" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Actividad de lectura" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Atividade de leitura" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Активность чтения" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "نشاط القراءة" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "पठन गतिविधि" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "กิจกรรมการอ่าน" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hoạt động đọc sách" } }
-      }
-    },
-    "ai.chat.placeholder" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ask anything about your reading..." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "问任何关于阅读的问题…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "詢問任何關於閱讀的問題…" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "読書について何でも聞いてください…" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "독서에 관해 무엇이든 물어보세요…" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Posez une question sur votre lecture…" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Fragen Sie etwas zu Ihrem Lesestoff…" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Pregunta cualquier cosa sobre tu lectura…" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Pergunte qualquer coisa sobre sua leitura…" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Задайте вопрос о прочитанном…" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "اسأل أي شيء عن قراءتك…" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "अपने पठन के बारे में कुछ भी पूछें…" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ถามอะไรก็ได้เกี่ยวกับการอ่าน…" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hỏi bất cứ điều gì về việc đọc sách…" } }
-      }
-    },
-    "migration.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Migrate Your Library" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "迁移您的书库数据" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "遷移您的書庫資料" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ライブラリを移行" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "라이브러리 마이그레이션" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Migrer votre bibliothèque" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Bibliothek migrieren" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Migrar su biblioteca" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Migrar sua biblioteca" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Перенос библиотеки" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "نقل مكتبتك" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "अपनी लाइब्रेरी माइग्रेट करें" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ย้ายข้อมูลห้องสมุดของคุณ" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Di chuyển thư viện của bạn" } }
-      }
-    },
-    "migration.complete" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Migration Complete" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "迁移完成" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "遷移完成" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "移行完了" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "마이그레이션 완료" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Migration terminée" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Migration abgeschlossen" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Migración completada" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Migração concluída" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Миграция завершена" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "اكتمل النقل" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "माइग्रेशन पूर्ण" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ย้ายข้อมูลเสร็จสิ้น" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Di chuyển hoàn tất" } }
-      }
-    },
-    "migration.description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing your library, notes, and reading history from the previous version's database. This only covers data we can read from the legacy database." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在从旧版本的数据库导入书库、笔记与阅读记录。本迁移仅覆盖我们能从旧数据库读取的数据。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在從舊版本的資料庫匯入書庫、筆記與閱讀記錄。本遷移僅涵蓋我們能從舊資料庫讀取的資料。" } }
-      }
-    },
-    "migration.button.skip_migration" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Skip Migration" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "跳过迁移" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "跳過遷移" } }
-      }
-    },
-    "migration.status.preparing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Preparing…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "准备中…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "準備中…" } }
-      }
-    },
-    "migration.status.reading_bookshelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reading legacy database…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在读取旧数据库…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在讀取舊資料庫…" } }
-      }
-    },
-    "migration.status.migrating_books_count" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing %lld books…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入 %lld 本书…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入 %lld 本書…" } }
-      }
-    },
-    "migration.status.migrating_notes" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing notes and highlights…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入笔记与划线…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入筆記與劃線…" } }
-      }
-    },
-    "migration.status.migrating_reading_records" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing reading records…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入阅读记录…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入閱讀記錄…" } }
-      }
-    },
-    "migration.status.migrating_themes" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing reading themes…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入阅读主题…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入閱讀主題…" } }
-      }
-    },
-    "migration.status.migrating_styles" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing reading styles…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入阅读样式…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入閱讀樣式…" } }
-      }
-    },
-    "migration.status.migrating_groups" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing bookshelf groups…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入书架分组…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入書架分組…" } }
-      }
-    },
-    "migration.status.migrating_tags" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing tags…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入标签…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入標籤…" } }
-      }
-    },
-    "migration.status.migrating_book_tags" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Linking tags to books…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在关联书籍标签…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在關聯書籍標籤…" } }
-      }
-    },
-    "migration.status.migrating_memory" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copying memory files…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在复制记忆文件…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在複製記憶檔案…" } }
-      }
-    },
-    "migration.status.migrating_settings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing non-secret settings…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入非敏感设置…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入非敏感設定…" } }
-      }
-    },
-    "migration.status.complete_summary" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Import complete (supported data): %lld books, %lld notes, %lld reading records." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导入完成（支持的数据）：%lld 本书，%lld 条笔记，%lld 条阅读记录。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "匯入完成（支援的資料）：%lld 本書，%lld 條筆記，%lld 條閱讀記錄。" } }
-      }
-    },
-    "migration.status.failed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Import failed." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导入失败。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "匯入失敗。" } }
-      }
-    },
-    "migration.status.legacy_done" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Migration was marked complete by a previous version. No further import will be performed automatically." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "迁移已被旧版本标记为完成。应用不会自动再次导入。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "遷移已被舊版本標記為完成。App 不會自動再次匯入。" } }
-      }
-    },
-    "migration.error.db_not_found" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Legacy database file not found." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未找到旧数据库文件。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "未找到舊資料庫檔案。" } }
-      }
-    },
-    "migration.error.failed_with_detail" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Import failed: %@" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导入失败：%@" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "匯入失敗：%@" } }
-      }
-    },
-    "migration.error.unsupported_schema" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Legacy database schema version %lld is not supported. Expected %lld." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "旧数据库 schema 版本 %lld 不受支持，当前仅支持 %lld。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "舊資料庫 schema 版本 %lld 不受支援，目前僅支援 %lld。" } }
-      }
-    },
-    "migration.error.missing_required_tables" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Legacy database is missing required tables: %@." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "旧数据库缺少必需的数据表：%@。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "舊資料庫缺少必要的資料表：%@。" } }
-      }
-    },
-    "migration.warning.api_keys_not_migrated" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "API keys are not migrated. Re-enter them in Settings after import." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "API 密钥不会被迁移。导入完成后请在设置中重新填写。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "API 金鑰不會被遷移。匯入完成後請在設定中重新填寫。" } }
-      }
-    },
-    "share.error.content_unavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shared content is no longer available." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "共享内容已不可用。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "共享內容已不可用。" } }
-      }
-    },
-    "share.error.route_requires_bookshelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "This shared item should be imported from the Bookshelf tab." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这个共享项目应当从书架标签页导入。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "這個共享項目應該從書架分頁匯入。" } }
-      }
-    },
-    "share.ai_prompt.image_analysis" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Please analyze the attached image." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请分析所附图片。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "請分析附上的圖片。" } }
-      }
-    },
-    "share.ai_prompt.content_analysis" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Please analyze this shared content." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请分析这段共享内容。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "請分析這段共享內容。" } }
-      }
-    },
-    "intent.ask_ai.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ask AI" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "询问 AI" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "詢問 AI" } }
-      }
-    },
-    "intent.ask_ai.description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Send a message to PaperTok Reader's AI assistant" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "向 PaperTok Reader 的 AI 助手发送消息" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "向 PaperTok Reader 的 AI 助手傳送訊息" } }
-      }
-    },
-    "intent.ask_ai.parameter.question" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Question" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "问题" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "問題" } }
-      }
-    },
-    "intent.open_book.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Book" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开书籍" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "打開書籍" } }
-      }
-    },
-    "intent.open_book.description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open a specific book in PaperTok Reader" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在 PaperTok Reader 中打开指定书籍" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "在 PaperTok Reader 中打開指定書籍" } }
-      }
-    },
-    "intent.open_book.parameter.book_title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Book Title" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "书名" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "書名" } }
-      }
-    },
-    "intent.send_message.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Send Message" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "发送消息" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "傳送訊息" } }
-      }
-    },
-    "intent.send_message.description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Send text and images to PaperTok Reader AI without opening the app" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无需打开 App，即可把文本和图片发送给 PaperTok Reader AI" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "無需打開 App，即可把文字與圖片傳送給 PaperTok Reader AI" } }
-      }
-    },
-    "intent.send_message.parameter.message" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Message" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "消息" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "訊息" } }
-      }
-    },
-    "intent.send_message.parameter.images" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Images" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "图片" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "圖片" } }
-      }
-    },
-    "common.skip" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Skip" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "跳过" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "跳過" } }
-      }
-    },
-    "common.retry" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "重試" } }
-      }
-    },
-    "common.ok" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确定" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "確定" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Aceptar" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "ОК" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "حسناً" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "ठीक है" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ตกลง" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }
-      }
-    },
-    "common.cancel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "取消" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "キャンセル" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annuler" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Abbrechen" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Отмена" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "إلغاء" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "रद्द करें" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ยกเลิก" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hủy" } }
-      }
-    },
-    "common.delete" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "刪除" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "削除" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Löschen" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Excluir" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "حذف" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "हटाएं" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ลบ" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xóa" } }
-      }
-    },
-    "common.done" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "完成" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "完成" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "完了" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Terminé" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Fertig" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Listo" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Concluído" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Готово" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "تم" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "पूर्ण" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "เสร็จสิ้น" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xong" } }
-      }
-    },
-    "common.loading" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading..." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "加载中…" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "載入中…" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "読み込み中…" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "로딩 중…" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Chargement…" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Wird geladen…" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cargando…" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Carregando…" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Загрузка…" } },
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "جارٍ التحميل…" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "लोड हो रहा है…" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "กำลังโหลด…" } },
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đang tải…" } }
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "tab.bookshelf": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bookshelf"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "书架"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書架"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本棚"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "책장"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothèque"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bücherregal"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estantería"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estante"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Книжная полка"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رف الكتب"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "किताबों की अलमारी"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ชั้นหนังสือ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giá sách"
+          }
+        }
+      }
+    },
+    "tab.papers": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "论文"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "論文"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "論文"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "논문"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Articles"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artículos"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artigos"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Статьи"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أوراق بحثية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शोधपत्र"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "บทความวิจัย"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bài báo"
+          }
+        }
+      }
+    },
+    "tab.notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "筆記"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ノート"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notizen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notas"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заметки"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملاحظات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नोट्स"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "บันทึก"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ghi chú"
+          }
+        }
+      }
+    },
+    "tab.statistics": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistics"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "统计"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "統計"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "統計"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통계"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistiques"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistiken"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estadísticas"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estatísticas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Статистика"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إحصائيات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सांख्यिकी"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "สถิติ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thống kê"
+          }
+        }
+      }
+    },
+    "tab.ai": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KI"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ИИ"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الذكاء الاصطناعي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        }
+      }
+    },
+    "tab.settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paramètres"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurações"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإعدادات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेटिंग्स"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ตั้งค่า"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cài đặt"
+          }
+        }
+      }
+    },
+    "bookshelf.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Books Yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无书籍"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫無書籍"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書籍がありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 책이 없습니다"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun livre"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Bücher"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin libros aún"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum livro ainda"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Книг пока нет"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد كتب بعد"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी कोई किताब नहीं"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ยังไม่มีหนังสือ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có sách nào"
+          }
+        }
+      }
+    },
+    "bookshelf.empty.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap + to import a PDF file."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击 + 导入 PDF 文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點擊 + 匯入 PDF 檔案。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ をタップして PDF をインポート"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ 를 눌러 PDF 파일을 가져오세요."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appuyez sur + pour importer un fichier PDF."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippen Sie auf +, um eine PDF-Datei zu importieren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toca + para importar un archivo PDF."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toque em + para importar um arquivo PDF."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нажмите +, чтобы импортировать PDF-файл."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اضغط على + لاستيراد ملف PDF."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF फ़ाइल आयात करने के लिए + दबाएं।"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แตะ + เพื่อนำเข้าไฟล์ PDF"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhấn + để nhập tệp PDF."
+          }
+        }
+      }
+    },
+    "bookshelf.search.prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search books"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索书籍"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋書籍"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書籍を検索"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "책 검색"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher des livres"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bücher suchen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar libros"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar livros"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поиск книг"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "البحث عن كتب"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "किताबें खोजें"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ค้นหาหนังสือ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tìm sách"
+          }
+        }
+      }
+    },
+    "import.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Failed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入失败"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入失敗"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インポート失敗"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가져오기 실패"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échec de l'importation"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import fehlgeschlagen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error al importar"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falha na importação"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ошибка импорта"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فشل الاستيراد"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आयात विफल"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "นำเข้าล้มเหลว"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhập thất bại"
+          }
+        }
+      }
+    },
+    "import.importing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インポート中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가져오는 중…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importation…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importieren…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importando…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importando…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Импорт…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ الاستيراد…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आयात हो रहा है…"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "กำลังนำเข้า…"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang nhập…"
+          }
+        }
+      }
+    },
+    "notes.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Notes Yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无笔记"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫無筆記"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ノートがありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 노트가 없습니다"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune note"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Notizen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin notas aún"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma nota ainda"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заметок пока нет"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد ملاحظات بعد"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी कोई नोट नहीं"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ยังไม่มีบันทึก"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có ghi chú nào"
+          }
+        }
+      }
+    },
+    "notes.empty.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlight text while reading to create notes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读时高亮文本即可创建笔记。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閱讀時標記文字即可建立筆記。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読書中にテキストをハイライトしてノートを作成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "독서 중 텍스트를 하이라이트하여 노트를 만드세요."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surlignez du texte pendant la lecture pour créer des notes."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markieren Sie Text beim Lesen, um Notizen zu erstellen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resalta texto mientras lees para crear notas."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destaque texto durante a leitura para criar notas."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выделяйте текст при чтении, чтобы создавать заметки."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قم بتمييز النص أثناء القراءة لإنشاء ملاحظات."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नोट बनाने के लिए पढ़ते समय टेक्स्ट हाइलाइट करें।"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ไฮไลท์ข้อความขณะอ่านเพื่อสร้างบันทึก"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tô sáng văn bản khi đọc để tạo ghi chú."
+          }
+        }
+      }
+    },
+    "settings.appearance": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外观"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外觀"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外観"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모양"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apparence"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erscheinungsbild"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apariencia"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aparência"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Внешний вид"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المظهر"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "दिखावट"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "รูปลักษณ์"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giao diện"
+          }
+        }
+      }
+    },
+    "settings.theme": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Theme"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主题"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主題"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テーマ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "테마"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thème"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thema"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tema"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tema"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тема"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المظهر"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "थीम"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ธีม"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chủ đề"
+          }
+        }
+      }
+    },
+    "settings.reading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閱讀"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読書"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "독서"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lesen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lectura"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leitura"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Чтение"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القراءة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पठन"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "การอ่าน"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đọc sách"
+          }
+        }
+      }
+    },
+    "settings.about": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关于"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリについて"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정보"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À propos"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acerca de"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobre"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "О приложении"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حول"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "के बारे में"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "เกี่ยวกับ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giới thiệu"
+          }
+        }
+      }
+    },
+    "settings.version": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バージョン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버전"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versión"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versão"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Версия"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإصدار"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संस्करण"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "เวอร์ชัน"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phiên bản"
+          }
+        }
+      }
+    },
+    "statistics.readingTime": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading Time"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读时间"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閱讀時間"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読書時間"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "독서 시간"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temps de lecture"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lesezeit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiempo de lectura"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo de leitura"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Время чтения"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وقت القراءة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पढ़ने का समय"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "เวลาอ่าน"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thời gian đọc"
+          }
+        }
+      }
+    },
+    "statistics.readingActivity": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading Activity"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读活动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閱讀活動"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読書アクティビティ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "독서 활동"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activité de lecture"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leseaktivität"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actividad de lectura"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atividade de leitura"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Активность чтения"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نشاط القراءة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पठन गतिविधि"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "กิจกรรมการอ่าน"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoạt động đọc sách"
+          }
+        }
+      }
+    },
+    "ai.chat.placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask anything about your reading..."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "问任何关于阅读的问题…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詢問任何關於閱讀的問題…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読書について何でも聞いてください…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "독서에 관해 무엇이든 물어보세요…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posez une question sur votre lecture…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragen Sie etwas zu Ihrem Lesestoff…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pregunta cualquier cosa sobre tu lectura…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pergunte qualquer coisa sobre sua leitura…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Задайте вопрос о прочитанном…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اسأل أي شيء عن قراءتك…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपने पठन के बारे में कुछ भी पूछें…"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ถามอะไรก็ได้เกี่ยวกับการอ่าน…"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hỏi bất cứ điều gì về việc đọc sách…"
+          }
+        }
+      }
+    },
+    "migration.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migrate Your Library"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "迁移您的书库数据"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遷移您的書庫資料"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリを移行"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라이브러리 마이그레이션"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migrer votre bibliothèque"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothek migrieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migrar su biblioteca"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migrar sua biblioteca"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перенос библиотеки"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نقل مكتبتك"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपनी लाइब्रेरी माइग्रेट करें"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ย้ายข้อมูลห้องสมุดของคุณ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Di chuyển thư viện của bạn"
+          }
+        }
+      }
+    },
+    "migration.complete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migration Complete"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "迁移完成"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遷移完成"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移行完了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마이그레이션 완료"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migration terminée"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migration abgeschlossen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migración completada"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migração concluída"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Миграция завершена"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اكتمل النقل"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "माइग्रेशन पूर्ण"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ย้ายข้อมูลเสร็จสิ้น"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Di chuyển hoàn tất"
+          }
+        }
+      }
+    },
+    "migration.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing your library, notes, and reading history from the previous version's database. This only covers data we can read from the legacy database."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在从旧版本的数据库导入书库、笔记与阅读记录。本迁移仅覆盖我们能从旧数据库读取的数据。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在從舊版本的資料庫匯入書庫、筆記與閱讀記錄。本遷移僅涵蓋我們能從舊資料庫讀取的資料。"
+          }
+        }
+      }
+    },
+    "migration.button.skip_migration": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip Migration"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳过迁移"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳過遷移"
+          }
+        }
+      }
+    },
+    "migration.status.preparing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "准备中…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備中…"
+          }
+        }
+      }
+    },
+    "migration.status.reading_bookshelf": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading legacy database…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在读取旧数据库…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在讀取舊資料庫…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_books_count": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing %lld books…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入 %lld 本书…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入 %lld 本書…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing notes and highlights…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入笔记与划线…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入筆記與劃線…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_reading_records": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing reading records…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入阅读记录…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入閱讀記錄…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_themes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing reading themes…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入阅读主题…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入閱讀主題…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_styles": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing reading styles…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入阅读样式…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入閱讀樣式…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_groups": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing bookshelf groups…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入书架分组…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入書架分組…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_tags": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing tags…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入标签…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入標籤…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_book_tags": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linking tags to books…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在关联书籍标签…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在關聯書籍標籤…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_memory": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copying memory files…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在复制记忆文件…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在複製記憶檔案…"
+          }
+        }
+      }
+    },
+    "migration.status.migrating_settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing non-secret settings…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入非敏感设置…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入非敏感設定…"
+          }
+        }
+      }
+    },
+    "migration.status.complete_summary": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import complete (supported data): %lld books, %lld notes, %lld reading records."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入完成（支持的数据）：%lld 本书，%lld 条笔记，%lld 条阅读记录。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入完成（支援的資料）：%lld 本書，%lld 條筆記，%lld 條閱讀記錄。"
+          }
+        }
+      }
+    },
+    "migration.status.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import failed."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入失败。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入失敗。"
+          }
+        }
+      }
+    },
+    "migration.status.legacy_done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migration was marked complete by a previous version. No further import will be performed automatically."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "迁移已被旧版本标记为完成。应用不会自动再次导入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遷移已被舊版本標記為完成。App 不會自動再次匯入。"
+          }
+        }
+      }
+    },
+    "migration.error.db_not_found": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legacy database file not found."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到旧数据库文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到舊資料庫檔案。"
+          }
+        }
+      }
+    },
+    "migration.error.failed_with_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import failed: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入失败：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入失敗：%@"
+          }
+        }
+      }
+    },
+    "migration.error.unsupported_schema": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legacy database schema version %lld is not supported. Expected %lld."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旧数据库 schema 版本 %lld 不受支持，当前仅支持 %lld。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "舊資料庫 schema 版本 %lld 不受支援，目前僅支援 %lld。"
+          }
+        }
+      }
+    },
+    "migration.error.missing_required_tables": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legacy database is missing required tables: %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旧数据库缺少必需的数据表：%@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "舊資料庫缺少必要的資料表：%@。"
+          }
+        }
+      }
+    },
+    "migration.warning.api_keys_not_migrated": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API keys are not migrated. Re-enter them in Settings after import."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 密钥不会被迁移。导入完成后请在设置中重新填写。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 金鑰不會被遷移。匯入完成後請在設定中重新填寫。"
+          }
+        }
+      }
+    },
+    "share.error.content_unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared content is no longer available."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共享内容已不可用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共享內容已不可用。"
+          }
+        }
+      }
+    },
+    "share.error.route_requires_bookshelf": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This shared item should be imported from the Bookshelf tab."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这个共享项目应当从书架标签页导入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這個共享項目應該從書架分頁匯入。"
+          }
+        }
+      }
+    },
+    "share.ai_prompt.image_analysis": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please analyze the attached image."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请分析所附图片。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請分析附上的圖片。"
+          }
+        }
+      }
+    },
+    "share.ai_prompt.content_analysis": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please analyze this shared content."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请分析这段共享内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請分析這段共享內容。"
+          }
+        }
+      }
+    },
+    "intent.ask_ai.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask AI"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "询问 AI"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詢問 AI"
+          }
+        }
+      }
+    },
+    "intent.ask_ai.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send a message to PaperTok Reader's AI assistant"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向 PaperTok Reader 的 AI 助手发送消息"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向 PaperTok Reader 的 AI 助手傳送訊息"
+          }
+        }
+      }
+    },
+    "intent.ask_ai.parameter.question": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Question"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "问题"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "問題"
+          }
+        }
+      }
+    },
+    "intent.open_book.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Book"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开书籍"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開書籍"
+          }
+        }
+      }
+    },
+    "intent.open_book.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open a specific book in PaperTok Reader"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 PaperTok Reader 中打开指定书籍"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 PaperTok Reader 中打開指定書籍"
+          }
+        }
+      }
+    },
+    "intent.open_book.parameter.book_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book Title"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "书名"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書名"
+          }
+        }
+      }
+    },
+    "intent.send_message.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Message"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送消息"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "傳送訊息"
+          }
+        }
+      }
+    },
+    "intent.send_message.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send text and images to PaperTok Reader AI without opening the app"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需打开 App，即可把文本和图片发送给 PaperTok Reader AI"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無需打開 App，即可把文字與圖片傳送給 PaperTok Reader AI"
+          }
+        }
+      }
+    },
+    "intent.send_message.parameter.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消息"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "訊息"
+          }
+        }
+      }
+    },
+    "intent.send_message.parameter.images": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图片"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "圖片"
+          }
+        }
+      }
+    },
+    "common.skip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳过"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳過"
+          }
+        }
+      }
+    },
+    "common.retry": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重試"
+          }
+        }
+      }
+    },
+    "common.ok": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确定"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確定"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aceptar"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ОК"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حسناً"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ठीक है"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ตกลง"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "common.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "취소"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отмена"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إلغاء"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रद्द करें"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ยกเลิก"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hủy"
+          }
+        }
+      }
+    },
+    "common.delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हटाएं"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ลบ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xóa"
+          }
+        }
+      }
+    },
+    "common.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminé"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listo"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concluído"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Готово"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पूर्ण"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "เสร็จสิ้น"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xong"
+          }
+        }
+      }
+    },
+    "common.loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading..."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加载中…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "載入中…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み込み中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로딩 중…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chargement…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird geladen…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cargando…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carregando…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ التحميل…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लोड हो रहा है…"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "กำลังโหลด…"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang tải…"
+          }
+        }
+      }
+    },
+    "settings.ai_providers": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI Providers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 提供商"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 提供商"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIプロバイダー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 제공자"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fournisseurs IA"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KI-Anbieter"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proveedores de IA"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provedores de IA"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Провайдеры ИИ"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مزودو الذكاء الاصطناعي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI प्रदाता"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ผู้ให้บริการ AI"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhà cung cấp AI"
+          }
+        }
+      }
+    },
+    "settings.ai_provider": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provider"
+          }
+        }
+      }
+    },
+    "settings.ai_model": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model ID"
+          }
+        }
+      }
+    },
+    "settings.ai_api_key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Key"
+          }
+        }
+      }
+    },
+    "settings.mcp_servers": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MCP Servers"
+          }
+        }
+      }
+    },
+    "settings.sync": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisation"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisierung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronización"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronização"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Синхронизация"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المزامنة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सिंक"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ซิงค์"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đồng bộ"
+          }
+        }
+      }
+    },
+    "settings.sync_backup": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync & Backup"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步与备份"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步與備份"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期とバックアップ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화 및 백업"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisation et sauvegarde"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisierung und Sicherung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronización y respaldo"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronização e backup"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Синхронизация и резервное копирование"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المزامنة والنسخ الاحتياطي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सिंक और बैकअप"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ซิงค์และสำรองข้อมูล"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đồng bộ và sao lưu"
+          }
+        }
+      }
+    },
+    "settings.data_management": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data Management"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数据管理"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "資料管理"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "データ管理"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "데이터 관리"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestion des données"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datenverwaltung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestión de datos"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerenciamento de dados"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Управление данными"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إدارة البيانات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डेटा प्रबंधन"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "จัดการข้อมูล"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quản lý dữ liệu"
+          }
+        }
+      }
+    },
+    "settings.cache_size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache Size"
+          }
+        }
+      }
+    },
+    "settings.clear_cache": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Cache"
+          }
+        }
+      }
+    },
+    "settings.export_backup": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Backup"
+          }
+        }
+      }
+    },
+    "settings.import_backup": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Backup"
+          }
+        }
+      }
+    },
+    "settings.font_family": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Font Family"
+          }
+        }
+      }
+    },
+    "settings.source_code": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source Code"
+          }
+        }
+      }
+    },
+    "settings.open_source_licenses": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Source Licenses"
+          }
+        }
+      }
+    },
+    "settings.changelog": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changelog"
+          }
+        }
+      }
+    },
+    "settings.build": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Build"
+          }
+        }
+      }
+    },
+    "settings.reading_assistant": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading Assistant"
+          }
+        }
+      }
+    },
+    "sync.webdav_server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WebDAV Server"
+          }
+        }
+      }
+    },
+    "sync.not_configured": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not configured"
+          }
+        }
+      }
+    },
+    "sync.configure": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure"
+          }
+        }
+      }
+    },
+    "sync.auto_sync": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-sync"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动同步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動同步"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動同期"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 동기화"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisation automatique"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatische Synchronisierung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronización automática"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronização automática"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автосинхронизация"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المزامنة التلقائية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्वतः सिंक"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ซิงค์อัตโนมัติ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tự động đồng bộ"
+          }
+        }
+      }
+    },
+    "sync.sync_now": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync Now"
+          }
+        }
+      }
+    },
+    "sync.restore_from_server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore from Server"
+          }
+        }
+      }
+    },
+    "sync.last_sync": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last sync"
+          }
+        }
+      }
+    },
+    "sync.test_connection": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test Connection"
+          }
+        }
+      }
+    },
+    "sync.local_backup": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local Backup"
+          }
+        }
+      }
+    },
+    "tts.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text-to-Speech"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字转语音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字轉語音"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト読み上げ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트 음성 변환"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synthèse vocale"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text-zu-Sprache"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texto a voz"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texto para fala"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текст в речь"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحويل النص إلى كلام"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टेक्स्ट-टू-स्पीच"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แปลงข้อความเป็นเสียง"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyển văn bản thành giọng nói"
+          }
+        }
+      }
+    },
+    "tts.speed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speed"
+          }
+        }
+      }
+    },
+    "tts.voice": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice"
+          }
+        }
+      }
+    },
+    "tts.language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        }
+      }
+    },
+    "tts.stopped": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopped"
+          }
+        }
+      }
+    },
+    "tts.speaking": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaking"
+          }
+        }
+      }
+    },
+    "tts.paused": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
+          }
+        }
+      }
+    },
+    "tts.read_aloud": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read aloud"
+          }
+        }
+      }
+    },
+    "kairos.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KAIROS"
+          }
+        }
+      }
+    },
+    "kairos.enable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable KAIROS"
+          }
+        }
+      }
+    },
+    "kairos.reading_goal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading Goal"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读目标"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閱讀目標"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読書目標"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "독서 목표"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objectif de lecture"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leseziel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meta de lectura"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meta de leitura"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Цель чтения"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هدف القراءة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पढ़ने का लक्ष्य"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "เป้าหมายการอ่าน"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mục tiêu đọc sách"
+          }
+        }
+      }
+    },
+    "kairos.daily_reminder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily Reminder"
+          }
+        }
+      }
+    },
+    "kairos.reminder_time": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminder Time"
+          }
+        }
+      }
+    },
+    "kairos.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progress"
+          }
+        }
+      }
+    },
+    "kairos.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
+          }
+        }
+      }
+    },
+    "kairos.current_streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current Streak"
+          }
+        }
+      }
+    },
+    "kairos.longest_streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Longest Streak"
+          }
+        }
+      }
+    },
+    "kairos.time_to_read": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time to Read"
+          }
+        }
+      }
+    },
+    "kairos.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KAIROS helps you build a consistent reading habit with daily goals and reminders."
+          }
+        }
+      }
+    },
+    "statistics.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Reading Data"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无阅读数据"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫無閱讀資料"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読書データなし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "독서 데이터 없음"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune donnée de lecture"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Lesedaten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin datos de lectura"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem dados de leitura"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет данных о чтении"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد بيانات قراءة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई पढ़ने का डेटा नहीं"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ไม่มีข้อมูลการอ่าน"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có dữ liệu đọc"
+          }
+        }
+      }
+    },
+    "statistics.empty.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start reading to see your statistics here."
+          }
+        }
+      }
+    },
+    "statistics.total_books": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total Books"
+          }
+        }
+      }
+    },
+    "statistics.total_time": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total Time"
+          }
+        }
+      }
+    },
+    "ai.new_conversation": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Conversation"
+          }
+        }
+      }
+    },
+    "ai.send": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send"
+          }
+        }
+      }
+    },
+    "ai.thinking": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thinking..."
+          }
+        }
+      }
+    },
+    "ai.error": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
+          }
+        }
+      }
+    },
+    "ai.conversations": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversations"
+          }
+        }
+      }
+    },
+    "ai.memory": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memory"
+          }
+        }
+      }
+    },
+    "ai.tools": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tools"
+          }
+        }
+      }
+    },
+    "common.save": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حفظ"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सहेजें"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "บันทึก"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lưu"
+          }
+        }
+      }
+    },
+    "common.edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "편집"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeiten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Редактировать"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعديل"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संपादित करें"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แก้ไข"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉnh sửa"
+          }
+        }
+      }
+    },
+    "common.error": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "错误"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錯誤"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エラー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오류"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erreur"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehler"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erro"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ошибка"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خطأ"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "त्रुटि"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ข้อผิดพลาด"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lỗi"
+          }
+        }
+      }
+    },
+    "common.success": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Success"
+          }
+        }
+      }
+    },
+    "common.test": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test"
+          }
+        }
+      }
+    },
+    "common.remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "common.configure": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure"
+          }
+        }
       }
     }
   }
