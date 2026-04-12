@@ -53,6 +53,21 @@ struct EPUBAnnotationBridgeTests {
         #expect(style.style == "underline")
     }
 
+    @Test("BookNote with note type maps to highlight style")
+    func noteToDecoratorStyleNote() {
+        let note = BookNote(
+            bookId: 1,
+            content: "Reader note text",
+            cfi: "",
+            chapter: "Chapter 3",
+            type: "note",
+            color: "FF9C27B0",
+            updateTime: Date()
+        )
+        let style = EPUBAnnotationBridge.decoratorStyle(for: note)
+        #expect(style.style == "highlight")
+    }
+
     @Test("bookNote factory creates correct BookNote")
     func bookNoteFactory() {
         let href = AnyURL(path: "ch1.xhtml")!
@@ -67,13 +82,16 @@ struct EPUBAnnotationBridgeTests {
             locator: locator,
             selectedText: "selected text",
             chapter: "Chapter 1",
-            color: "FFF44336"
+            color: "FFF44336",
+            readerNote: "**Remember** this."
         )
         #expect(note.bookId == 42)
         #expect(note.content == "selected text")
         #expect(note.chapter == "Chapter 1")
         #expect(note.type == "highlight")
         #expect(note.color == "FFF44336")
+        #expect(note.readerNote == "**Remember** this.")
+        #expect(note.createTime != nil)
         #expect(!note.cfi.isEmpty) // locator serialized to JSON
     }
 

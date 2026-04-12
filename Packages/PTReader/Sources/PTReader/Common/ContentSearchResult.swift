@@ -8,6 +8,7 @@ public struct ContentSearchResult: Sendable, Equatable, Identifiable {
     public let textBefore: String
     public let textAfter: String
     public let progression: Double
+    public let locatorString: String?
 
     public init(
         text: String,
@@ -15,7 +16,8 @@ public struct ContentSearchResult: Sendable, Equatable, Identifiable {
         chapterHref: String,
         textBefore: String = "",
         textAfter: String = "",
-        progression: Double = 0
+        progression: Double = 0,
+        locatorString: String? = nil
     ) {
         self.text = text
         self.chapterTitle = chapterTitle
@@ -23,5 +25,6 @@ public struct ContentSearchResult: Sendable, Equatable, Identifiable {
         self.textBefore = textBefore
         self.textAfter = textAfter
         self.progression = progression
+        self.locatorString = locatorString
     }
 }

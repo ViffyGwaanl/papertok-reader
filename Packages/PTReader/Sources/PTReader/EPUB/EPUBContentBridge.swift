@@ -1,3 +1,4 @@
+ #if canImport(ReadiumShared)
 import Foundation
 import ReadiumShared
 
@@ -57,47 +58,39 @@ public final class EPUBContentBridge: BookContentBridge, @unchecked Sendable {
     }
 
     public func searchContent(query: String) async throws -> [ContentSearchResult] {
-        let toc = try await tableOfContents
-        var results: [ContentSearchResult] = []
-        let lowerQuery = query.lowercased()
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalizedQuery.isEmpty == false else { return [] }
 
-        // Build a lookup for chapter titles by href
-        let chapterTitles = Dictionary(toc.map { ($0.href, $0.title) }, uniquingKeysWith: { first, _ in first })
-
-        for link in publication.readingOrder {
-            let text: String
-            do {
-                text = try await extractChapterContent(href: link.href)
-            } catch {
-                continue
+        switch await publication.search(query: normalizedQuery) {
+        case .success(let iterator):
+            var results: [ContentSearchResult] = []
+            switch await iterator.forEach({ collection in
+                results.append(contentsOf: collection.locators.map(Self.makeSearchResult(from:)))
+            }) {
+            case .success:
+                return results
+            case .failure(let error):
+                throw EPUBOpenError.streamerError("Search failed: \(error)")
             }
 
-            let lowerText = text.lowercased()
-            var searchPos = lowerText.startIndex
-
-            while let range = lowerText.range(of: lowerQuery, range: searchPos ..< lowerText.endIndex) {
-                let snippetStart = lowerText.index(range.lowerBound, offsetBy: -60, limitedBy: lowerText.startIndex) ?? lowerText.startIndex
-                let snippetEnd = lowerText.index(range.upperBound, offsetBy: 60, limitedBy: lowerText.endIndex) ?? lowerText.endIndex
-
-                let matchedText = String(text[range])
-                let textBefore = String(text[snippetStart ..< range.lowerBound])
-                let textAfter = String(text[range.upperBound ..< snippetEnd])
-                let chapterTitle = chapterTitles[link.href] ?? link.title ?? link.href
-
-                results.append(ContentSearchResult(
-                    text: matchedText,
-                    chapterTitle: chapterTitle,
-                    chapterHref: link.href,
-                    textBefore: textBefore,
-                    textAfter: textAfter
-                ))
-                searchPos = range.upperBound
-            }
+        case .failure(let error):
+            throw EPUBOpenError.streamerError("Search failed: \(error)")
         }
-        return results
     }
 
     // MARK: - Private
+
+    private static func makeSearchResult(from locator: Locator) -> ContentSearchResult {
+        ContentSearchResult(
+            text: locator.text.highlight ?? "",
+            chapterTitle: locator.title ?? locator.href.string,
+            chapterHref: locator.href.string,
+            textBefore: locator.text.before ?? "",
+            textAfter: locator.text.after ?? "",
+            progression: locator.locations.progression ?? 0,
+            locatorString: EPUBAnnotationBridge.storedString(from: locator)
+        )
+    }
 
     private func stripHTML(_ html: String) -> String {
         html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
@@ -110,3 +103,4 @@ public final class EPUBContentBridge: BookContentBridge, @unchecked Sendable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
+#endif

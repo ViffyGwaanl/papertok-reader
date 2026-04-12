@@ -110,4 +110,30 @@ struct NetworkClientTests {
             let _: Item = try await client.request(endpoint)
         }
     }
+
+    @Test("Decodes ISO8601 dates with fractional seconds")
+    func decodesFractionalISO8601Dates() async throws {
+        struct Payload: Decodable, Sendable, Equatable {
+            let createdAt: Date
+        }
+
+        StubURLProtocol.responseData = """
+        {"created_at":"2026-02-05T11:43:35.774462"}
+        """.data(using: .utf8)
+
+        let client = makeClient()
+        let endpoint = Endpoint(
+            method: .get,
+            baseURL: URL(string: "https://example.com")!,
+            path: "/dates"
+        )
+        let payload: Payload = try await client.request(endpoint)
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        let expectedDate = try #require(formatter.date(from: "2026-02-05T11:43:35.774462"))
+        #expect(payload.createdAt == expectedDate)
+    }
 }

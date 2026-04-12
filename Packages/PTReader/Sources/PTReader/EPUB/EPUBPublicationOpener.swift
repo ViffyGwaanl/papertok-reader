@@ -1,6 +1,25 @@
+#if canImport(ReadiumShared) && canImport(ReadiumStreamer)
 import Foundation
 import ReadiumShared
 import ReadiumStreamer
+
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
+
+public struct EPUBImportMetadata: Sendable, Equatable {
+    public let title: String
+    public let author: String
+    public let coverPNGData: Data?
+
+    public init(title: String, author: String, coverPNGData: Data?) {
+        self.title = title
+        self.author = author
+        self.coverPNGData = coverPNGData
+    }
+}
 
 /// Opens an .epub file from disk and returns a Readium Publication.
 ///
@@ -45,6 +64,29 @@ public final class EPUBPublicationOpener: @unchecked Sendable {
             throw EPUBOpenError.streamerError(String(describing: error))
         }
     }
+
+    public func readImportMetadata(at url: URL, fallbackTitle: String? = nil) async throws -> EPUBImportMetadata {
+        let publication = try await open(at: url)
+        let rawTitle = publication.manifest.metadata.title?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawAuthor = publication.manifest.metadata.authors.first?.name
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+#if canImport(UIKit)
+        let coverImage = try await publication.cover().get()
+        let coverPNGData = coverImage?.pngData()
+#elseif canImport(AppKit)
+        let coverPNGData: Data? = nil
+#else
+        let coverPNGData: Data? = nil
+#endif
+
+        return EPUBImportMetadata(
+            title: (rawTitle?.isEmpty ?? true) ? (fallbackTitle ?? "") : rawTitle!,
+            author: rawAuthor ?? "",
+            coverPNGData: coverPNGData
+        )
+    }
 }
 
 public enum EPUBOpenError: Error, LocalizedError {
@@ -63,3 +105,4 @@ public enum EPUBOpenError: Error, LocalizedError {
         }
     }
 }
+#endif

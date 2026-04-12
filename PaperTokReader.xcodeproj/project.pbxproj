@@ -9,28 +9,126 @@
 /* Begin PBXBuildFile section */
 		00BC6A59685E9317CBB80DBA /* IntentsDonationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */; };
 		048ABFAE3A2297060654A2E7 /* OpenBookIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */; };
+		04C28DF5D496918DF8A990CD /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6932166FAF1D7324853A45F6 /* AppEnvironment.swift */; };
+		062533589205397C9E3D6E24 /* RootScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39BD2CD771AFC83F56C5445 /* RootScene.swift */; };
+		06F1AFA8C700892526581773 /* MigrationProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */; };
 		075E5D06B8D23EE6E32AD18D /* MigrationProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */; };
+		0DD5686F9209C8FA836576E0 /* AppAIToolContextFactoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736F6CAB2377109D7FFEEC2D /* AppAIToolContextFactoryTests.swift */; };
+		0E6A0DAEF7490EC3BF00FF17 /* DeepLinkRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F021FFA36AAA92466D6B0408 /* DeepLinkRouterTests.swift */; };
+		12B148AA25DB9EA7DD00784A /* RootScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39BD2CD771AFC83F56C5445 /* RootScene.swift */; };
+		1361C569DF391D9C7986E604 /* SendMessageIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C563F1A2ACF9DF6A869C6D /* SendMessageIntent.swift */; };
+		13AD5CF7FF9864D37A140E6D /* PTFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = B9A7DAF9EF56293ABC8B4FC5 /* PTFeatures */; };
 		157ECD2FA728F1B104C283F9 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D3C772688A1BD8165B84AB46 /* EventKit.framework */; };
 		16664A5A64A18B35C546408D /* MacMenuCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */; };
 		1A006277668F9C9092A66A6F /* AskAIIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */; };
+		226623B14EB1EB59F771035B /* SharedInboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1318196DCF4395B32822A498 /* SharedInboxTests.swift */; };
 		24BC49A4010C28E702DC2777 /* DeepLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7FABF2B84D350F5A63C0294 /* DeepLinkHandler.swift */; };
+		268A0EC525742F6B86682FCE /* FlutterMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */; };
+		2A37EB434D4F9559725B039F /* ShareHandlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0DF0AC09D1FE4047983C495 /* ShareHandlerTests.swift */; };
+		2F7F0EED6E917D0A47752FF2 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D3C772688A1BD8165B84AB46 /* EventKit.framework */; };
+		31A6F025F782432942627F6D /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E77EC16F6EDA3773224443A4 /* DeepLinkRouter.swift */; };
+		33FACE2533F53E04BB39D3C3 /* RootNavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C080C6EF680B717F0C5BF6D5 /* RootNavigationCoordinator.swift */; };
+		3C86E16BE8A170A46E2A4E11 /* FlutterMigrationPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2BFF3926E7F060EE92CEA7 /* FlutterMigrationPlanner.swift */; };
+		42BFF581FCA9F11C99570D5D /* RemindersService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1E4497A75C2EC7640808B0 /* RemindersService.swift */; };
+		45386E49AD4F30B70CCD42D4 /* MacRootScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96EE94DCBFA9D76FC43355D9 /* MacRootScene.swift */; };
+		4AA06C0EC5A324E5488C89DF /* SharedInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F0E1E59821837D32715C07 /* SharedInbox.swift */; };
+		524F2CC27AB1A25C0AB34843 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DF0BEACE2B73ED668304FF9 /* ShareViewController.swift */; };
 		52BFBF6D928E092740AF4782 /* FlutterMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */; };
+		555DF56B263EF5EBEB978B3B /* SendMessageIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C563F1A2ACF9DF6A869C6D /* SendMessageIntent.swift */; };
+		57CE53936CCD95B087C1B6B3 /* ShortcutAIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88957ED09C3369217AD0A30D /* ShortcutAIService.swift */; };
+		5C6299070050381C878F7CA2 /* PTCore in Frameworks */ = {isa = PBXBuildFile; productRef = 231295C1EBE4221399A3BA81 /* PTCore */; };
+		5E954AB81FB35C9BD1D89198 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A768AFE5CCD35A044EB45243 /* AppIntents.framework */; };
 		65DFBFC460E5BF9F1A83D545 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A768AFE5CCD35A044EB45243 /* AppIntents.framework */; };
+		66E1054DFAF978CADB78399E /* AppAIToolContextFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41719E23938C9D9FBA36F8C /* AppAIToolContextFactory.swift */; };
+		6B48B7A1F076BCEBB2EBB5A6 /* SharedInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F0E1E59821837D32715C07 /* SharedInbox.swift */; };
+		6F4E3707DE8D354698B5ABF7 /* ShareHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE4520CF97A9EDE5785D2E7 /* ShareHandler.swift */; };
+		772AE087FFC3C26E95AA2854 /* FlutterMigrationPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADEB537F9D7A1064ED1F84F5 /* FlutterMigrationPlannerTests.swift */; };
+		7A0636431A419D80975222B0 /* AppAIToolContextFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41719E23938C9D9FBA36F8C /* AppAIToolContextFactory.swift */; };
+		7BB0F61C651D8D96D11C1410 /* ShareHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE4520CF97A9EDE5785D2E7 /* ShareHandler.swift */; };
+		7BCF59D568B04176DFC5DD4B /* SharedInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F0E1E59821837D32715C07 /* SharedInbox.swift */; };
+		7EA342E5303FADA47A061F4A /* SharedInboxImportProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C90F323C19C9E5544390796 /* SharedInboxImportProcessor.swift */; };
 		86B5467224AE355C90C36FAD /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */; };
+		8982C15BD3691561A8DFF488 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FB944AA3BBE4EE1EC4FD9161 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8B60761111A8FF95C6D6E335 /* OpenBookIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */; };
+		8E6CD2F23869E4732291A5D8 /* IntentsDonationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */; };
+		949D6456087846D96E750C0F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 49A45489E1D974DD57F2F390 /* Assets.xcassets */; };
+		9B942382483B33E11E5593E5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */; };
+		9F13B45058E94526B5F9A918 /* FlutterMigrationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2010F60CC1F5766BE1D25ED1 /* FlutterMigrationServiceTests.swift */; };
+		A195F1431284E06DFB467E0E /* SharedInboxImportProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C90F323C19C9E5544390796 /* SharedInboxImportProcessor.swift */; };
+		A29481DDFB0E9C571C3DE7D5 /* AppDatabaseToolContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AB1088870E1CE5C05BA455B /* AppDatabaseToolContext.swift */; };
+		AC30C6E530916E861FC2C529 /* PendingAIRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F41C91CE13FFC7FCD99BDD7B /* PendingAIRequestStore.swift */; };
 		AEA843D224796020DF34C9F4 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59DD85ACEA3715614B91646A /* CalendarService.swift */; };
+		B6CF97DCEA333578A81831EB /* SharedInboxImportProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C90F323C19C9E5544390796 /* SharedInboxImportProcessor.swift */; };
+		B7D803D87C070530946D808E /* DeepLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7FABF2B84D350F5A63C0294 /* DeepLinkHandler.swift */; };
+		BB0F72E63D2AB05C8E9A28E8 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59DD85ACEA3715614B91646A /* CalendarService.swift */; };
+		BBE782F0DC733157521437BB /* MacMenuCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */; };
+		BFDEED47C361495811A1C75F /* ShareHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE4520CF97A9EDE5785D2E7 /* ShareHandler.swift */; };
+		C3F6F2794B9026030D94FE55 /* MigrationLocalizationCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD25A8251359DEFBB2F5C62 /* MigrationLocalizationCatalogTests.swift */; };
+		C5366664CE38401EB8CCCA66 /* RootNavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C080C6EF680B717F0C5BF6D5 /* RootNavigationCoordinator.swift */; };
+		C5BCA1B395631D3F3CE8E185 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6932166FAF1D7324853A45F6 /* AppEnvironment.swift */; };
+		CACE6E07DBADD3D4AFC654C4 /* PendingAIRequestStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */; };
 		CB66BCFC24B2225513FEF061 /* PTFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = 6490B3DAD3DCE4DA661D2073 /* PTFeatures */; };
+		CC0E4BD722A7720DCCBFF474 /* SharedInboxImportProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */; };
+		D174551E5B0C43D707D1499C /* AppDatabaseToolContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AB1088870E1CE5C05BA455B /* AppDatabaseToolContext.swift */; };
+		D37C3D2F58589EB71A68CDF5 /* PaperTokReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */; };
+		D4A6F01E2782F86D6A82FDE2 /* ShareExtensionInfoPlistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000149E4483078E18005783 /* ShareExtensionInfoPlistTests.swift */; };
+		D50DA2C45D28AEC7F8A87F98 /* AskAIIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */; };
 		D8C42A5C3B426F4EC9C08B6E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */; };
+		E0BD0C8965C2FC139407BD03 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */; };
+		E4B864DE42AF2E4D43265F94 /* PendingAIRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F41C91CE13FFC7FCD99BDD7B /* PendingAIRequestStore.swift */; };
 		F05D22F0737E20049C96F4EB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 49A45489E1D974DD57F2F390 /* Assets.xcassets */; };
 		F212931280D75426BDE79673 /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E77EC16F6EDA3773224443A4 /* DeepLinkRouter.swift */; };
 		F4DE2A562D39504688C24219 /* PaperTokReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */; };
+		F58A859B291618E9478438B8 /* FlutterMigrationPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2BFF3926E7F060EE92CEA7 /* FlutterMigrationPlanner.swift */; };
 		F69EA64B705AB79D8494DD7F /* RemindersService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1E4497A75C2EC7640808B0 /* RemindersService.swift */; };
+		F995649C4F94512AF65CC7E0 /* MacRootScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96EE94DCBFA9D76FC43355D9 /* MacRootScene.swift */; };
+		FBEC5330A6ECCB30F6509317 /* ShortcutAIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88957ED09C3369217AD0A30D /* ShortcutAIService.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		3EE19465B91FBC198E99755C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 33662AE9AC2B17B434834CC3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 87ED3D597865A04AC682D619;
+			remoteInfo = PaperTokReader;
+		};
+		FF720898543D741B35441A23 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 33662AE9AC2B17B434834CC3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9CE1E1746C881EB7002A456E;
+			remoteInfo = ShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D42B067D03A581E76A89A543 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8982C15BD3691561A8DFF488 /* ShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		03E036FB3ECF195A23BBE74B /* macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = macOS.entitlements; sourceTree = "<group>"; };
 		06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperTokReaderApp.swift; sourceTree = "<group>"; };
 		07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		1318196DCF4395B32822A498 /* SharedInboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInboxTests.swift; sourceTree = "<group>"; };
+		14C563F1A2ACF9DF6A869C6D /* SendMessageIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendMessageIntent.swift; sourceTree = "<group>"; };
+		1AB1088870E1CE5C05BA455B /* AppDatabaseToolContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabaseToolContext.swift; sourceTree = "<group>"; };
+		2010F60CC1F5766BE1D25ED1 /* FlutterMigrationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationServiceTests.swift; sourceTree = "<group>"; };
 		2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationProgressView.swift; sourceTree = "<group>"; };
+		31B3258F79C09DC91F43EC67 /* PaperTokReaderTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PaperTokReaderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3C90F323C19C9E5544390796 /* SharedInboxImportProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInboxImportProcessor.swift; sourceTree = "<group>"; };
 		3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationService.swift; sourceTree = "<group>"; };
+		41846382576E0B1C4F9612F5 /* PaperTokReaderMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaperTokReaderMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentsDonationService.swift; sourceTree = "<group>"; };
 		4824BE6D93A2616F2F32B276 /* PTAIServices */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTAIServices; path = Packages/PTAIServices; sourceTree = SOURCE_ROOT; };
 		49A45489E1D974DD57F2F390 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -38,23 +136,61 @@
 		5C149D74800FC04E5B18E905 /* PTCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTCore; path = Packages/PTCore; sourceTree = SOURCE_ROOT; };
 		604B4E3AA86ABCDE3CEA46D4 /* PTUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTUI; path = Packages/PTUI; sourceTree = SOURCE_ROOT; };
 		62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskAIIntent.swift; sourceTree = "<group>"; };
+		6932166FAF1D7324853A45F6 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		6CE4520CF97A9EDE5785D2E7 /* ShareHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareHandler.swift; sourceTree = "<group>"; };
 		70D02DF88F155D7FA350EC22 /* iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iOS.entitlements; sourceTree = "<group>"; };
+		736F6CAB2377109D7FFEEC2D /* AppAIToolContextFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAIToolContextFactoryTests.swift; sourceTree = "<group>"; };
+		7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInboxImportProcessorTests.swift; sourceTree = "<group>"; };
+		7AD25A8251359DEFBB2F5C62 /* MigrationLocalizationCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationLocalizationCatalogTests.swift; sourceTree = "<group>"; };
+		7DF0BEACE2B73ED668304FF9 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		863356412F60909A9DC3ABC8 /* PTFeatures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTFeatures; path = Packages/PTFeatures; sourceTree = SOURCE_ROOT; };
 		87B6C89B78CD691E6F537DD6 /* PaperTokReader.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PaperTokReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		88957ED09C3369217AD0A30D /* ShortcutAIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutAIService.swift; sourceTree = "<group>"; };
 		8CF0D2E8755DA12A1CCDAFA1 /* PTReader */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTReader; path = Packages/PTReader; sourceTree = SOURCE_ROOT; };
+		96EE94DCBFA9D76FC43355D9 /* MacRootScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacRootScene.swift; sourceTree = "<group>"; };
+		9F2BFF3926E7F060EE92CEA7 /* FlutterMigrationPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationPlanner.swift; sourceTree = "<group>"; };
 		A768AFE5CCD35A044EB45243 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBookIntent.swift; sourceTree = "<group>"; };
+		ADEB537F9D7A1064ED1F84F5 /* FlutterMigrationPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationPlannerTests.swift; sourceTree = "<group>"; };
 		AF03DC7DEB141E9D534F0E42 /* PTNetworking */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTNetworking; path = Packages/PTNetworking; sourceTree = SOURCE_ROOT; };
+		B0DF0AC09D1FE4047983C495 /* ShareHandlerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareHandlerTests.swift; sourceTree = "<group>"; };
+		B39BD2CD771AFC83F56C5445 /* RootScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootScene.swift; sourceTree = "<group>"; };
+		B41719E23938C9D9FBA36F8C /* AppAIToolContextFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAIToolContextFactory.swift; sourceTree = "<group>"; };
 		B7FABF2B84D350F5A63C0294 /* DeepLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandler.swift; sourceTree = "<group>"; };
 		BA1E4497A75C2EC7640808B0 /* RemindersService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersService.swift; sourceTree = "<group>"; };
 		BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		C080C6EF680B717F0C5BF6D5 /* RootNavigationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootNavigationCoordinator.swift; sourceTree = "<group>"; };
+		C8F0E1E59821837D32715C07 /* SharedInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInbox.swift; sourceTree = "<group>"; };
 		D3C772688A1BD8165B84AB46 /* EventKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = EventKit.framework; path = System/Library/Frameworks/EventKit.framework; sourceTree = SDKROOT; };
+		D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingAIRequestStoreTests.swift; sourceTree = "<group>"; };
 		E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacMenuCommands.swift; sourceTree = "<group>"; };
-		E2F6707A5F804C9C2CF422F6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E22BAD75425206502C29B24E /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		E77EC16F6EDA3773224443A4 /* DeepLinkRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
+		F000149E4483078E18005783 /* ShareExtensionInfoPlistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionInfoPlistTests.swift; sourceTree = "<group>"; };
+		F021FFA36AAA92466D6B0408 /* DeepLinkRouterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouterTests.swift; sourceTree = "<group>"; };
+		F41C91CE13FFC7FCD99BDD7B /* PendingAIRequestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingAIRequestStore.swift; sourceTree = "<group>"; };
+		FB944AA3BBE4EE1EC4FD9161 /* ShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2A5CEF6F71ADDB5E8854A509 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				13AD5CF7FF9864D37A140E6D /* PTFeatures in Frameworks */,
+				2F7F0EED6E917D0A47752FF2 /* EventKit.framework in Frameworks */,
+				5E954AB81FB35C9BD1D89198 /* AppIntents.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		36E43F3D1397F60A4AAF6ECF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C6299070050381C878F7CA2 /* PTCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E8C985935F257D966B849C63 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -71,15 +207,24 @@
 		033B8F7C661A83E67AEE42AF /* App */ = {
 			isa = PBXGroup;
 			children = (
+				DCDC92C13A5C2DEA82CDEF59 /* AppShell */,
 				32F6FEE50A87BA86E3FE04FD /* Entitlements */,
 				83E1C7F357BD1A7E7E0D6DF1 /* Extensions */,
 				5A8AB48B9B7DF713A1A08500 /* Platform */,
 				096A66DD39E7074A72EDA28C /* Resources */,
 				BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */,
-				E2F6707A5F804C9C2CF422F6 /* Info.plist */,
 				06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		058A8387D0C637F72ADA288F /* AppTests */ = {
+			isa = PBXGroup;
+			children = (
+				917A111C7B06DA9419FE2F81 /* Platform */,
+			);
+			name = AppTests;
+			path = Tests/AppTests;
 			sourceTree = "<group>";
 		};
 		096A66DD39E7074A72EDA28C /* Resources */ = {
@@ -91,10 +236,32 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		0F9A6C43B6DE152005EE31EE /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				7DF0BEACE2B73ED668304FF9 /* ShareViewController.swift */,
+			);
+			name = ShareExtension;
+			path = App/Extensions/ShareExtension;
+			sourceTree = "<group>";
+		};
+		249DAF0415315BD1D5F2C624 /* AI */ = {
+			isa = PBXGroup;
+			children = (
+				B41719E23938C9D9FBA36F8C /* AppAIToolContextFactory.swift */,
+				1AB1088870E1CE5C05BA455B /* AppDatabaseToolContext.swift */,
+				F41C91CE13FFC7FCD99BDD7B /* PendingAIRequestStore.swift */,
+				88957ED09C3369217AD0A30D /* ShortcutAIService.swift */,
+			);
+			path = AI;
+			sourceTree = "<group>";
+		};
 		32F6FEE50A87BA86E3FE04FD /* Entitlements */ = {
 			isa = PBXGroup;
 			children = (
 				70D02DF88F155D7FA350EC22 /* iOS.entitlements */,
+				03E036FB3ECF195A23BBE74B /* macOS.entitlements */,
+				E22BAD75425206502C29B24E /* ShareExtension.entitlements */,
 			);
 			path = Entitlements;
 			sourceTree = "<group>";
@@ -111,11 +278,13 @@
 		5A8AB48B9B7DF713A1A08500 /* Platform */ = {
 			isa = PBXGroup;
 			children = (
+				249DAF0415315BD1D5F2C624 /* AI */,
 				972AF4510C68D745D6249A2B /* DeepLink */,
 				580A65870938F928066C5F16 /* EventKit */,
 				AC897DB62AC8D1468A634B80 /* Intents */,
 				FF643AA9EB5310A3A6C86472 /* macOS */,
 				87DA46438456ABB3EF75C2A1 /* Migration */,
+				D77A2C633981475CE5598924 /* Share */,
 			);
 			path = Platform;
 			sourceTree = "<group>";
@@ -143,10 +312,28 @@
 		87DA46438456ABB3EF75C2A1 /* Migration */ = {
 			isa = PBXGroup;
 			children = (
+				9F2BFF3926E7F060EE92CEA7 /* FlutterMigrationPlanner.swift */,
 				3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */,
 				2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */,
 			);
 			path = Migration;
+			sourceTree = "<group>";
+		};
+		917A111C7B06DA9419FE2F81 /* Platform */ = {
+			isa = PBXGroup;
+			children = (
+				736F6CAB2377109D7FFEEC2D /* AppAIToolContextFactoryTests.swift */,
+				F021FFA36AAA92466D6B0408 /* DeepLinkRouterTests.swift */,
+				ADEB537F9D7A1064ED1F84F5 /* FlutterMigrationPlannerTests.swift */,
+				2010F60CC1F5766BE1D25ED1 /* FlutterMigrationServiceTests.swift */,
+				7AD25A8251359DEFBB2F5C62 /* MigrationLocalizationCatalogTests.swift */,
+				D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */,
+				7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */,
+				1318196DCF4395B32822A498 /* SharedInboxTests.swift */,
+				F000149E4483078E18005783 /* ShareExtensionInfoPlistTests.swift */,
+				B0DF0AC09D1FE4047983C495 /* ShareHandlerTests.swift */,
+			);
+			path = Platform;
 			sourceTree = "<group>";
 		};
 		972AF4510C68D745D6249A2B /* DeepLink */ = {
@@ -173,6 +360,7 @@
 				62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */,
 				470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */,
 				ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */,
+				14C563F1A2ACF9DF6A869C6D /* SendMessageIntent.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -181,6 +369,9 @@
 			isa = PBXGroup;
 			children = (
 				87B6C89B78CD691E6F537DD6 /* PaperTokReader.app */,
+				41846382576E0B1C4F9612F5 /* PaperTokReaderMac.app */,
+				31B3258F79C09DC91F43EC67 /* PaperTokReaderTests.xctest */,
+				FB944AA3BBE4EE1EC4FD9161 /* ShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -189,16 +380,39 @@
 			isa = PBXGroup;
 			children = (
 				033B8F7C661A83E67AEE42AF /* App */,
+				058A8387D0C637F72ADA288F /* AppTests */,
 				6D72FF44B6FDCDA08E282DBD /* Packages */,
+				0F9A6C43B6DE152005EE31EE /* ShareExtension */,
 				97BA62961A78E94AE5621AEE /* Frameworks */,
 				ACD80EDE6F6FE221193C6115 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		D77A2C633981475CE5598924 /* Share */ = {
+			isa = PBXGroup;
+			children = (
+				C8F0E1E59821837D32715C07 /* SharedInbox.swift */,
+				3C90F323C19C9E5544390796 /* SharedInboxImportProcessor.swift */,
+				6CE4520CF97A9EDE5785D2E7 /* ShareHandler.swift */,
+			);
+			path = Share;
+			sourceTree = "<group>";
+		};
+		DCDC92C13A5C2DEA82CDEF59 /* AppShell */ = {
+			isa = PBXGroup;
+			children = (
+				6932166FAF1D7324853A45F6 /* AppEnvironment.swift */,
+				C080C6EF680B717F0C5BF6D5 /* RootNavigationCoordinator.swift */,
+				B39BD2CD771AFC83F56C5445 /* RootScene.swift */,
+			);
+			path = AppShell;
 			sourceTree = "<group>";
 		};
 		FF643AA9EB5310A3A6C86472 /* macOS */ = {
 			isa = PBXGroup;
 			children = (
 				E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */,
+				96EE94DCBFA9D76FC43355D9 /* MacRootScene.swift */,
 			);
 			path = macOS;
 			sourceTree = "<group>";
@@ -206,6 +420,44 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1A774D2D3028A08DA84B125F /* PaperTokReaderTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 96D04B5D8DC4991B2317808C /* Build configuration list for PBXNativeTarget "PaperTokReaderTests" */;
+			buildPhases = (
+				17E2F5B253597A3E7BFEA2E3 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C09AFDFAA9BAC61F8E7019BF /* PBXTargetDependency */,
+			);
+			name = PaperTokReaderTests;
+			packageProductDependencies = (
+			);
+			productName = PaperTokReaderTests;
+			productReference = 31B3258F79C09DC91F43EC67 /* PaperTokReaderTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		1FD9A99F75D409C94B86AACC /* PaperTokReaderMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 230FC383FE5C7745CE6E90F7 /* Build configuration list for PBXNativeTarget "PaperTokReaderMac" */;
+			buildPhases = (
+				50CAD5F92158914A944C905E /* Sources */,
+				62A02F071CEAF7CD4794D75E /* Resources */,
+				2A5CEF6F71ADDB5E8854A509 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PaperTokReaderMac;
+			packageProductDependencies = (
+				B9A7DAF9EF56293ABC8B4FC5 /* PTFeatures */,
+			);
+			productName = PaperTokReaderMac;
+			productReference = 41846382576E0B1C4F9612F5 /* PaperTokReaderMac.app */;
+			productType = "com.apple.product-type.application";
+		};
 		87ED3D597865A04AC682D619 /* PaperTokReader */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C2155364AD03FB300AFB35FC /* Build configuration list for PBXNativeTarget "PaperTokReader" */;
@@ -213,10 +465,12 @@
 				B0C10B0557F1AF95F4D0448D /* Sources */,
 				BB0E970321E22F5560CF4EAB /* Resources */,
 				E8C985935F257D966B849C63 /* Frameworks */,
+				D42B067D03A581E76A89A543 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CBC624A5381140168AFF5BAD /* PBXTargetDependency */,
 			);
 			name = PaperTokReader;
 			packageProductDependencies = (
@@ -225,6 +479,25 @@
 			productName = PaperTokReader;
 			productReference = 87B6C89B78CD691E6F537DD6 /* PaperTokReader.app */;
 			productType = "com.apple.product-type.application";
+		};
+		9CE1E1746C881EB7002A456E /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 728E2948C07230A90234A199 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
+			buildPhases = (
+				50E07238A31784A65EDDC0AC /* Sources */,
+				36E43F3D1397F60A4AAF6ECF /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShareExtension;
+			packageProductDependencies = (
+				231295C1EBE4221399A3BA81 /* PTCore */,
+			);
+			productName = ShareExtension;
+			productReference = FB944AA3BBE4EE1EC4FD9161 /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -235,7 +508,19 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
+					1A774D2D3028A08DA84B125F = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					1FD9A99F75D409C94B86AACC = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
 					87ED3D597865A04AC682D619 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					9CE1E1746C881EB7002A456E = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
@@ -264,12 +549,12 @@
 			mainGroup = D290F9E4B9309C79DBA2342A;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "PTAIServices" */,
-				7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "PTCore" */,
-				A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "PTFeatures" */,
-				9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "PTNetworking" */,
-				D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "PTReader" */,
-				A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "PTUI" */,
+				93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "Packages/PTAIServices" */,
+				7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "Packages/PTCore" */,
+				A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "Packages/PTFeatures" */,
+				9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "Packages/PTNetworking" */,
+				D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "Packages/PTReader" */,
+				A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "Packages/PTUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ACD80EDE6F6FE221193C6115 /* Products */;
@@ -277,11 +562,23 @@
 			projectRoot = "";
 			targets = (
 				87ED3D597865A04AC682D619 /* PaperTokReader */,
+				1FD9A99F75D409C94B86AACC /* PaperTokReaderMac */,
+				1A774D2D3028A08DA84B125F /* PaperTokReaderTests */,
+				9CE1E1746C881EB7002A456E /* ShareExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		62A02F071CEAF7CD4794D75E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				949D6456087846D96E750C0F /* Assets.xcassets in Resources */,
+				E0BD0C8965C2FC139407BD03 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BB0E970321E22F5560CF4EAB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -294,42 +591,167 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		17E2F5B253597A3E7BFEA2E3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0DD5686F9209C8FA836576E0 /* AppAIToolContextFactoryTests.swift in Sources */,
+				0E6A0DAEF7490EC3BF00FF17 /* DeepLinkRouterTests.swift in Sources */,
+				772AE087FFC3C26E95AA2854 /* FlutterMigrationPlannerTests.swift in Sources */,
+				9F13B45058E94526B5F9A918 /* FlutterMigrationServiceTests.swift in Sources */,
+				C3F6F2794B9026030D94FE55 /* MigrationLocalizationCatalogTests.swift in Sources */,
+				CACE6E07DBADD3D4AFC654C4 /* PendingAIRequestStoreTests.swift in Sources */,
+				D4A6F01E2782F86D6A82FDE2 /* ShareExtensionInfoPlistTests.swift in Sources */,
+				2A37EB434D4F9559725B039F /* ShareHandlerTests.swift in Sources */,
+				CC0E4BD722A7720DCCBFF474 /* SharedInboxImportProcessorTests.swift in Sources */,
+				226623B14EB1EB59F771035B /* SharedInboxTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50CAD5F92158914A944C905E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7A0636431A419D80975222B0 /* AppAIToolContextFactory.swift in Sources */,
+				A29481DDFB0E9C571C3DE7D5 /* AppDatabaseToolContext.swift in Sources */,
+				C5BCA1B395631D3F3CE8E185 /* AppEnvironment.swift in Sources */,
+				D50DA2C45D28AEC7F8A87F98 /* AskAIIntent.swift in Sources */,
+				BB0F72E63D2AB05C8E9A28E8 /* CalendarService.swift in Sources */,
+				9B942382483B33E11E5593E5 /* ContentView.swift in Sources */,
+				B7D803D87C070530946D808E /* DeepLinkHandler.swift in Sources */,
+				31A6F025F782432942627F6D /* DeepLinkRouter.swift in Sources */,
+				3C86E16BE8A170A46E2A4E11 /* FlutterMigrationPlanner.swift in Sources */,
+				268A0EC525742F6B86682FCE /* FlutterMigrationService.swift in Sources */,
+				8E6CD2F23869E4732291A5D8 /* IntentsDonationService.swift in Sources */,
+				BBE782F0DC733157521437BB /* MacMenuCommands.swift in Sources */,
+				F995649C4F94512AF65CC7E0 /* MacRootScene.swift in Sources */,
+				06F1AFA8C700892526581773 /* MigrationProgressView.swift in Sources */,
+				8B60761111A8FF95C6D6E335 /* OpenBookIntent.swift in Sources */,
+				D37C3D2F58589EB71A68CDF5 /* PaperTokReaderApp.swift in Sources */,
+				E4B864DE42AF2E4D43265F94 /* PendingAIRequestStore.swift in Sources */,
+				42BFF581FCA9F11C99570D5D /* RemindersService.swift in Sources */,
+				33FACE2533F53E04BB39D3C3 /* RootNavigationCoordinator.swift in Sources */,
+				062533589205397C9E3D6E24 /* RootScene.swift in Sources */,
+				1361C569DF391D9C7986E604 /* SendMessageIntent.swift in Sources */,
+				7BB0F61C651D8D96D11C1410 /* ShareHandler.swift in Sources */,
+				6B48B7A1F076BCEBB2EBB5A6 /* SharedInbox.swift in Sources */,
+				B6CF97DCEA333578A81831EB /* SharedInboxImportProcessor.swift in Sources */,
+				FBEC5330A6ECCB30F6509317 /* ShortcutAIService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50E07238A31784A65EDDC0AC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BFDEED47C361495811A1C75F /* ShareHandler.swift in Sources */,
+				524F2CC27AB1A25C0AB34843 /* ShareViewController.swift in Sources */,
+				7BCF59D568B04176DFC5DD4B /* SharedInbox.swift in Sources */,
+				A195F1431284E06DFB467E0E /* SharedInboxImportProcessor.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B0C10B0557F1AF95F4D0448D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				66E1054DFAF978CADB78399E /* AppAIToolContextFactory.swift in Sources */,
+				D174551E5B0C43D707D1499C /* AppDatabaseToolContext.swift in Sources */,
+				04C28DF5D496918DF8A990CD /* AppEnvironment.swift in Sources */,
 				1A006277668F9C9092A66A6F /* AskAIIntent.swift in Sources */,
 				AEA843D224796020DF34C9F4 /* CalendarService.swift in Sources */,
 				D8C42A5C3B426F4EC9C08B6E /* ContentView.swift in Sources */,
 				24BC49A4010C28E702DC2777 /* DeepLinkHandler.swift in Sources */,
 				F212931280D75426BDE79673 /* DeepLinkRouter.swift in Sources */,
+				F58A859B291618E9478438B8 /* FlutterMigrationPlanner.swift in Sources */,
 				52BFBF6D928E092740AF4782 /* FlutterMigrationService.swift in Sources */,
 				00BC6A59685E9317CBB80DBA /* IntentsDonationService.swift in Sources */,
 				16664A5A64A18B35C546408D /* MacMenuCommands.swift in Sources */,
+				45386E49AD4F30B70CCD42D4 /* MacRootScene.swift in Sources */,
 				075E5D06B8D23EE6E32AD18D /* MigrationProgressView.swift in Sources */,
 				048ABFAE3A2297060654A2E7 /* OpenBookIntent.swift in Sources */,
 				F4DE2A562D39504688C24219 /* PaperTokReaderApp.swift in Sources */,
+				AC30C6E530916E861FC2C529 /* PendingAIRequestStore.swift in Sources */,
 				F69EA64B705AB79D8494DD7F /* RemindersService.swift in Sources */,
+				C5366664CE38401EB8CCCA66 /* RootNavigationCoordinator.swift in Sources */,
+				12B148AA25DB9EA7DD00784A /* RootScene.swift in Sources */,
+				555DF56B263EF5EBEB978B3B /* SendMessageIntent.swift in Sources */,
+				6F4E3707DE8D354698B5ABF7 /* ShareHandler.swift in Sources */,
+				4AA06C0EC5A324E5488C89DF /* SharedInbox.swift in Sources */,
+				7EA342E5303FADA47A061F4A /* SharedInboxImportProcessor.swift in Sources */,
+				57CE53936CCD95B087C1B6B3 /* ShortcutAIService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		C09AFDFAA9BAC61F8E7019BF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 87ED3D597865A04AC682D619 /* PaperTokReader */;
+			targetProxy = 3EE19465B91FBC198E99755C /* PBXContainerItemProxy */;
+		};
+		CBC624A5381140168AFF5BAD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9CE1E1746C881EB7002A456E /* ShareExtension */;
+			targetProxy = FF720898543D741B35441A23 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		1F18EDBBE15B73EF44E0286B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Entitlements/macOS.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Platform/macOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.mac;
+				PRODUCT_MODULE_NAME = PaperTokReaderMac;
+				PRODUCT_NAME = "PaperTok Reader";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		23247C1DB3C0E94AFFC355B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.tests;
+				PRODUCT_MODULE_NAME = PaperTokReaderTests;
+				PRODUCT_NAME = PaperTokReaderTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PaperTok Reader.app/PaperTok Reader";
+			};
+			name = Release;
+		};
 		3A4652D780F76F37A5B39B3D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader;
+				PRODUCT_MODULE_NAME = PaperTokReader;
 				SDKROOT = iphoneos;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -386,16 +808,54 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.68.7;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "PaperTok Reader";
-				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
 			};
 			name = Release;
+		};
+		639D97AC46ACA1D6F201BCE7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = App/Entitlements/ShareExtension.entitlements;
+				INFOPLIST_FILE = App/Extensions/ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.share;
+				PRODUCT_NAME = "PaperTok Reader Share";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		746ABB6DBD74FDAC62B0EA93 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Entitlements/macOS.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Platform/macOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.mac;
+				PRODUCT_MODULE_NAME = PaperTokReaderMac;
+				PRODUCT_NAME = "PaperTok Reader";
+				SDKROOT = macosx;
+			};
+			name = Debug;
 		};
 		B515E80232492C03E58BE581 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -403,14 +863,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader;
+				PRODUCT_MODULE_NAME = PaperTokReader;
 				SDKROOT = iphoneos;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -473,26 +932,91 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.68.7;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "PaperTok Reader";
-				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;
 			};
 			name = Debug;
 		};
+		D2B0F4CEDB17B90463C366A9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = App/Entitlements/ShareExtension.entitlements;
+				INFOPLIST_FILE = App/Extensions/ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.share;
+				PRODUCT_NAME = "PaperTok Reader Share";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F4996F0CD3217769F7516365 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.tests;
+				PRODUCT_MODULE_NAME = PaperTokReaderTests;
+				PRODUCT_NAME = PaperTokReaderTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PaperTok Reader.app/PaperTok Reader";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		230FC383FE5C7745CE6E90F7 /* Build configuration list for PBXNativeTarget "PaperTokReaderMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				746ABB6DBD74FDAC62B0EA93 /* Debug */,
+				1F18EDBBE15B73EF44E0286B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		728E2948C07230A90234A199 /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				639D97AC46ACA1D6F201BCE7 /* Debug */,
+				D2B0F4CEDB17B90463C366A9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		757FCD3C5FD34B33C73670E8 /* Build configuration list for PBXProject "PaperTokReader" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D2254A4ABAF651FD7DFD03E6 /* Debug */,
 				49221ADF31CAEAACD4621B8D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		96D04B5D8DC4991B2317808C /* Build configuration list for PBXNativeTarget "PaperTokReaderTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F4996F0CD3217769F7516365 /* Debug */,
+				23247C1DB3C0E94AFFC355B5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -509,34 +1033,42 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "PTCore" */ = {
+		7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "Packages/PTCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTCore;
 		};
-		93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "PTAIServices" */ = {
+		93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "Packages/PTAIServices" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTAIServices;
 		};
-		9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "PTNetworking" */ = {
+		9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "Packages/PTNetworking" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTNetworking;
 		};
-		A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "PTUI" */ = {
+		A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "Packages/PTUI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTUI;
 		};
-		A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "PTFeatures" */ = {
+		A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "Packages/PTFeatures" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTFeatures;
 		};
-		D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "PTReader" */ = {
+		D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "Packages/PTReader" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTReader;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		231295C1EBE4221399A3BA81 /* PTCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PTCore;
+		};
 		6490B3DAD3DCE4DA661D2073 /* PTFeatures */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PTFeatures;
+		};
+		B9A7DAF9EF56293ABC8B4FC5 /* PTFeatures */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PTFeatures;
 		};

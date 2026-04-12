@@ -1,3 +1,4 @@
+#if canImport(ReadiumShared)
 import Foundation
 import ReadiumShared
 
@@ -24,3 +25,4 @@ public enum EPUBTOCMapper {
         return result
     }
 }
+#endif

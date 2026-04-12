@@ -19,9 +19,9 @@ let package = Package(
             name: "PTReader",
             dependencies: [
                 "PTCore",
-                .product(name: "ReadiumShared", package: "swift-toolkit"),
-                .product(name: "ReadiumStreamer", package: "swift-toolkit"),
-                .product(name: "ReadiumNavigator", package: "swift-toolkit"),
+                .product(name: "ReadiumShared", package: "swift-toolkit", condition: .when(platforms: [.iOS])),
+                .product(name: "ReadiumStreamer", package: "swift-toolkit", condition: .when(platforms: [.iOS])),
+                .product(name: "ReadiumNavigator", package: "swift-toolkit", condition: .when(platforms: [.iOS])),
             ]
         ),
         .testTarget(
@@ -29,7 +29,7 @@ let package = Package(
             dependencies: [
                 "PTReader",
                 "PTCore",
-                .product(name: "ReadiumShared", package: "swift-toolkit"),
+                .product(name: "ReadiumShared", package: "swift-toolkit", condition: .when(platforms: [.iOS])),
             ]
         ),
     ]

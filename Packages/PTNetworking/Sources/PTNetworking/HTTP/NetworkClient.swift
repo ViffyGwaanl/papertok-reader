@@ -6,16 +6,52 @@ public actor NetworkClient {
 
     public init(
         configuration: URLSessionConfiguration = .default,
-        decoder: JSONDecoder = {
-            let d = JSONDecoder()
-            d.keyDecodingStrategy = .convertFromSnakeCase
-            d.dateDecodingStrategy = .iso8601
-            return d
-        }()
+        decoder: JSONDecoder = NetworkClient.makeDefaultDecoder()
     ) {
         self.session = URLSession(configuration: configuration)
         self.decoder = decoder
     }
+
+    public static func makeDefaultDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+
+            if let date = Self.apiTimestampFormatter.date(from: value)
+                ?? Self.iso8601WithFractionalSeconds.date(from: value)
+                ?? Self.iso8601.date(from: value) {
+                return date
+            }
+
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid ISO8601 date string: \(value)"
+            )
+        }
+        return decoder
+    }
+
+    private static let iso8601WithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let apiTimestampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        return formatter
+    }()
+
+    private static let iso8601: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 
     /// Send a request and decode the JSON response into `T`.
     public func request<T: Decodable & Sendable>(_ endpoint: Endpoint) async throws -> T {

@@ -10,12 +10,20 @@ import Vision
 /// BookContentBridge implementation for PDF documents using PDFKit.
 @MainActor
 public final class PDFContentBridge: BookContentBridge {
+    public typealias OCRTextProvider = @Sendable @MainActor (Int) async throws -> String
+
     private let document: PDFDocument
+    private let ocrTextProvider: OCRTextProvider?
     public let title: String
 
-    public init(document: PDFDocument, title: String) {
+    public init(
+        document: PDFDocument,
+        title: String,
+        ocrTextProvider: OCRTextProvider? = nil
+    ) {
         self.document = document
         self.title = title
+        self.ocrTextProvider = ocrTextProvider
     }
 
     public var pageCount: Int {
@@ -40,7 +48,7 @@ public final class PDFContentBridge: BookContentBridge {
         }
         var texts: [String] = []
         for page in range.startPage...min(range.endPage, pageCount - 1) {
-            let text = extractPageText(page: page)
+            let text = try await resolvedPageText(page: page)
             if !text.isEmpty {
                 texts.append(text)
             }
@@ -51,7 +59,7 @@ public final class PDFContentBridge: BookContentBridge {
     public func extractFullText() async throws -> String {
         var texts: [String] = []
         for i in 0..<pageCount {
-            let text = extractPageText(page: i)
+            let text = try await resolvedPageText(page: i)
             if !text.isEmpty {
                 texts.append(text)
             }
@@ -60,18 +68,50 @@ public final class PDFContentBridge: BookContentBridge {
     }
 
     public func searchContent(query: String) async throws -> [ContentSearchResult] {
-        let selections = document.findString(query, withOptions: .caseInsensitive)
-        return selections.compactMap { selection -> ContentSearchResult? in
-            guard let page = selection.pages.first else { return nil }
-            let pageIndex = document.index(for: page)
-            let pageLabel = page.label ?? "Page \(pageIndex + 1)"
-            return ContentSearchResult(
-                text: selection.string ?? query,
-                chapterTitle: pageLabel,
-                chapterHref: "pages:\(pageIndex)-\(pageIndex)",
-                progression: Double(pageIndex) / max(Double(pageCount), 1)
-            )
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalizedQuery.isEmpty == false else { return [] }
+
+        var results: [ContentSearchResult] = []
+
+        for pageIndex in 0..<pageCount {
+            let text = try await resolvedPageText(page: pageIndex)
+            guard text.isEmpty == false else { continue }
+
+            var searchStart = text.startIndex
+
+            while let range = text.range(
+                of: normalizedQuery,
+                options: [.caseInsensitive, .diacriticInsensitive],
+                range: searchStart..<text.endIndex
+            ) {
+                let snippetStart = text.index(
+                    range.lowerBound,
+                    offsetBy: -60,
+                    limitedBy: text.startIndex
+                ) ?? text.startIndex
+                let snippetEnd = text.index(
+                    range.upperBound,
+                    offsetBy: 60,
+                    limitedBy: text.endIndex
+                ) ?? text.endIndex
+
+                let pageLabel = document.page(at: pageIndex)?.label ?? "Page \(pageIndex + 1)"
+                results.append(
+                    ContentSearchResult(
+                        text: String(text[range]),
+                        chapterTitle: pageLabel,
+                        chapterHref: "pages:\(pageIndex)-\(pageIndex)",
+                        textBefore: String(text[snippetStart..<range.lowerBound]),
+                        textAfter: String(text[range.upperBound..<snippetEnd]),
+                        progression: pageCount > 1
+                            ? Double(pageIndex) / Double(pageCount - 1)
+                            : 1.0
+                    )
+                )
+                searchStart = range.upperBound
+            }
         }
+        return results
     }
 
     // MARK: - Page Text Extraction
@@ -86,6 +126,9 @@ public final class PDFContentBridge: BookContentBridge {
 
     #if canImport(Vision)
     public func ocrPage(page: Int) async throws -> String {
+        if let ocrTextProvider {
+            return normalizedText(try await ocrTextProvider(page))
+        }
         guard page >= 0 && page < pageCount,
               let pdfPage = document.page(at: page) else { return "" }
 
@@ -129,6 +172,26 @@ public final class PDFContentBridge: BookContentBridge {
         }
     }
     #endif
+
+    private func resolvedPageText(page: Int) async throws -> String {
+        let nativeText = normalizedText(extractPageText(page: page))
+        if nativeText.isEmpty == false {
+            return nativeText
+        }
+
+        #if canImport(Vision)
+        return try await ocrPage(page: page)
+        #else
+        if let ocrTextProvider {
+            return normalizedText(try await ocrTextProvider(page))
+        }
+        return ""
+        #endif
+    }
+
+    private func normalizedText(_ text: String) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     // MARK: - Chapter Segmentation
 

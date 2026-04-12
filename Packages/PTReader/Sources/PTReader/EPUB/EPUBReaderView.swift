@@ -13,27 +13,32 @@ import ReadiumShared
 public struct EPUBReaderView: UIViewControllerRepresentable {
     public let publication: Publication
     public let initialLocator: Locator?
+    public let readingPreferences: EPUBReadingPreferencesSnapshot
     @Bindable public var coordinator: EPUBNavigatorCoordinator
 
     public init(
         publication: Publication,
         coordinator: EPUBNavigatorCoordinator,
-        initialLocator: Locator? = nil
+        initialLocator: Locator? = nil,
+        readingPreferences: EPUBReadingPreferencesSnapshot = .init(readingPreferences: ReadingPreferences())
     ) {
         self.publication = publication
         self.coordinator = coordinator
         self.initialLocator = initialLocator
+        self.readingPreferences = readingPreferences
     }
 
     public func makeUIViewController(context: Context) -> UIViewController {
         do {
-            let config = EPUBNavigatorViewController.Configuration()
+            var config = EPUBNavigatorViewController.Configuration()
+            config.preferences = readingPreferences.preferences
             let vc = try EPUBNavigatorViewController(
                 publication: publication,
                 initialLocation: initialLocator,
                 config: config
             )
             vc.delegate = coordinator
+            coordinator.setReadingPreferences(readingPreferences)
             coordinator.navigatorViewController = vc
             return vc
         } catch {
@@ -56,7 +61,7 @@ public struct EPUBReaderView: UIViewControllerRepresentable {
     }
 
     public func updateUIViewController(_ vc: UIViewController, context: Context) {
-        // Locator navigation handled via coordinator.navigate(to:)
+        coordinator.setReadingPreferences(readingPreferences)
     }
 }
 #endif

@@ -1,3 +1,4 @@
+#if canImport(ReadiumShared) && canImport(ReadiumNavigator)
 #if canImport(UIKit)
 import UIKit
 #elseif canImport(AppKit)
@@ -30,7 +31,7 @@ public enum EPUBAnnotationBridge {
         let noteType = NoteType(rawValue: note.type)
         return DecoratorStyle(
             tint: note.color.isEmpty ? HighlightColor.yellow.hex : note.color,
-            style: noteType == .highlight ? "highlight" : "underline"
+            style: noteType == .bookmark ? "underline" : "highlight"
         )
     }
 
@@ -68,9 +69,11 @@ public enum EPUBAnnotationBridge {
         selectedText: String,
         chapter: String,
         color: String = "",
-        type: NoteType = .highlight
+        type: NoteType = .highlight,
+        readerNote: String? = nil
     ) -> BookNote {
         let cfi = storedString(from: locator)
+        let timestamp = Date()
         return BookNote(
             bookId: bookId,
             content: selectedText,
@@ -78,7 +81,9 @@ public enum EPUBAnnotationBridge {
             chapter: chapter,
             type: type.rawValue,
             color: color.isEmpty ? HighlightColor.yellow.hex : color,
-            updateTime: Date()
+            readerNote: readerNote,
+            createTime: timestamp,
+            updateTime: timestamp
         )
     }
 
@@ -144,3 +149,4 @@ public enum EPUBAnnotationBridge {
     }
     #endif
 }
+#endif
