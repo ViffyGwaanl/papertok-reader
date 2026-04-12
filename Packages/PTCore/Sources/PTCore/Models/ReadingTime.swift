@@ -16,6 +16,18 @@ public struct ReadingTime: Codable, FetchableRecord, PersistableRecord, Identifi
         case readingTime = "reading_time"
     }
 
+    public init(
+        id: Int64? = nil,
+        bookId: Int64,
+        date: String? = nil,
+        readingTime: Int
+    ) {
+        self.id = id
+        self.bookId = bookId
+        self.date = date
+        self.readingTime = readingTime
+    }
+
     public mutating func didInsert(_ inserted: InsertionSuccess) {
         id = inserted.rowID
     }

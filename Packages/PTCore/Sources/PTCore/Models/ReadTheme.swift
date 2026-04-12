@@ -33,4 +33,11 @@ public struct ReadTheme: Codable, FetchableRecord, PersistableRecord, Identifiab
         textColor: "FFE0E0E0",
         backgroundImagePath: ""
     )
+
+    public static let defaultSepia = ReadTheme(
+        id: nil,
+        backgroundColor: "FFFAF4E8",
+        textColor: "FF121212",
+        backgroundImagePath: ""
+    )
 }

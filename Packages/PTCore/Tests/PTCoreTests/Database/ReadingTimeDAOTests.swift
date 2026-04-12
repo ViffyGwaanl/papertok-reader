@@ -54,4 +54,37 @@ struct ReadingTimeDAOTests {
         #expect(records.count == 1)
         #expect(records[0].readingTime == 300)
     }
+
+    @Test("Daily reading data grouped by book")
+    func dailyReadingDataGroupedByBook() async throws {
+        let db = try makeDB()
+        try await insertBook(id: 10, database: db)
+        try await insertBook(id: 20, database: db)
+        let dao = ReadingTimeDAO(database: db)
+        _ = try await dao.save(ReadingTime(id: nil, bookId: 10, date: "2025-01-01", readingTime: 300))
+        _ = try await dao.save(ReadingTime(id: nil, bookId: 10, date: "2025-01-01", readingTime: 120))
+        _ = try await dao.save(ReadingTime(id: nil, bookId: 10, date: "2025-01-02", readingTime: 60))
+        _ = try await dao.save(ReadingTime(id: nil, bookId: 20, date: "2025-01-01", readingTime: 150))
+
+        let grouped = try await dao.dailyReadingDataByBook()
+
+        #expect(grouped[10]?["2025-01-01"] == 420)
+        #expect(grouped[10]?["2025-01-02"] == 60)
+        #expect(grouped[20]?["2025-01-01"] == 150)
+    }
+
+    @Test("Add reading time merges the same book day")
+    func addReadingTimeMergesTheSameBookDay() async throws {
+        let db = try makeDB()
+        try await insertBook(id: 10, database: db)
+        let dao = ReadingTimeDAO(database: db)
+
+        try await dao.addReadingTime(bookId: 10, dayKey: "2025-01-01", readingTime: 300)
+        try await dao.addReadingTime(bookId: 10, dayKey: "2025-01-01", readingTime: 120)
+
+        let records = try await dao.fetchByDate("2025-01-01")
+        #expect(records.count == 1)
+        #expect(records[0].bookId == 10)
+        #expect(records[0].readingTime == 420)
+    }
 }
