@@ -103,6 +103,10 @@ extension Double {
 public enum AIProviderID: String, CaseIterable, Identifiable {
     case openai = "openai"
     case anthropic = "anthropic"
+    case gemini = "gemini"
+    case azure = "azure"
+    case volcengine = "volcengine"
+    case custom = "custom"
 
     public var id: String { rawValue }
 
@@ -110,6 +114,10 @@ public enum AIProviderID: String, CaseIterable, Identifiable {
         switch self {
         case .openai: return "OpenAI"
         case .anthropic: return "Anthropic"
+        case .gemini: return "Google Gemini"
+        case .azure: return "Azure OpenAI"
+        case .volcengine: return "Volcengine (Doubao)"
+        case .custom: return "Custom"
         }
     }
 
@@ -117,6 +125,10 @@ public enum AIProviderID: String, CaseIterable, Identifiable {
         switch self {
         case .openai: return AppConfig.Defaults.defaultOpenAIModelID
         case .anthropic: return AppConfig.Defaults.defaultAnthropicModelID
+        case .gemini: return "gemini-2.0-flash-exp"
+        case .azure: return ""
+        case .volcengine: return "doubao-pro-32k"
+        case .custom: return ""
         }
     }
 }
