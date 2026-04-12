@@ -1,5 +1,13 @@
 import Foundation
 
+/// Transport mechanism for MCP server communication.
+public enum MCPTransportType: String, Codable, Sendable, CaseIterable {
+    /// HTTP POST for requests, Server-Sent Events for notifications.
+    case httpSSE = "http_sse"
+    /// Standard I/O (stdin/stdout) for local process-based servers.
+    case stdio = "stdio"
+}
+
 /// Model Context Protocol server configuration and connection state.
 ///
 /// Stores server endpoints, authentication, and discovered tools for MCP integration.
@@ -9,6 +17,7 @@ public struct MCPServerConfig: Codable, Sendable, Identifiable, Equatable {
     public var url: String
     public var apiKey: String?
     public var isEnabled: Bool
+    public var transportType: MCPTransportType
     public var discoveredTools: [MCPToolInfo]
 
     public init(
@@ -17,6 +26,7 @@ public struct MCPServerConfig: Codable, Sendable, Identifiable, Equatable {
         url: String,
         apiKey: String? = nil,
         isEnabled: Bool = true,
+        transportType: MCPTransportType = .httpSSE,
         discoveredTools: [MCPToolInfo] = []
     ) {
         self.id = id
@@ -24,6 +34,7 @@ public struct MCPServerConfig: Codable, Sendable, Identifiable, Equatable {
         self.url = url
         self.apiKey = apiKey
         self.isEnabled = isEnabled
+        self.transportType = transportType
         self.discoveredTools = discoveredTools
     }
 }

@@ -126,14 +126,31 @@ public struct MCPConfigView: View {
 
     private func testConnection(config: MCPServerConfig) {
         statuses[config.id] = .connecting
-        // Simulate connection test (real implementation would attempt MCP handshake)
         Task {
-            try? await Task.sleep(for: .seconds(1))
-            await MainActor.run {
-                if URL(string: config.url) != nil {
-                    statuses[config.id] = .connected(toolCount: config.discoveredTools.count)
-                } else {
-                    statuses[config.id] = .error("Invalid URL")
+            do {
+                guard let url = URL(string: config.url) else {
+                    await MainActor.run { statuses[config.id] = .error("Invalid URL") }
+                    return
+                }
+                let transport = MCPHTTPSSETransport(serverURL: url, apiKey: config.apiKey)
+                let client = MCPClient(transport: transport)
+                let capabilities = try await client.initialize()
+                let tools = try await client.listTools()
+
+                // Update config with discovered tools
+                if let idx = configs.firstIndex(where: { $0.id == config.id }) {
+                    configs[idx].discoveredTools = tools
+                    save()
+                }
+
+                await MainActor.run {
+                    statuses[config.id] = .connected(toolCount: tools.count)
+                }
+
+                try await client.shutdown()
+            } catch {
+                await MainActor.run {
+                    statuses[config.id] = .error(error.localizedDescription)
                 }
             }
         }
@@ -287,6 +304,7 @@ struct MCPServerEditSheet: View {
                             url: url.trimmingCharacters(in: .whitespacesAndNewlines),
                             apiKey: apiKey.isEmpty ? nil : apiKey,
                             isEnabled: config?.isEnabled ?? true,
+                            transportType: config?.transportType ?? .httpSSE,
                             discoveredTools: config?.discoveredTools ?? []
                         )
                         onSave(updated)
