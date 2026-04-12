@@ -9,6 +9,9 @@ public struct ToolContext: Sendable {
     public let database: (any ToolDatabaseAccess)?
     /// Memory store for memory tools.
     public let memoryDirectory: URL?
+    /// Optional FTS5-backed memory index. When present, memory search tools should prefer
+    /// this over linear file scans.
+    public let memoryIndex: MemoryIndexDatabase?
     /// HTTP client for fetch/search tools.
     public let httpClient: (any ToolHTTPClient)?
     /// Calendar service for EventKit calendar operations (injected by App target).
@@ -27,6 +30,7 @@ public struct ToolContext: Sendable {
         conversationId: String? = nil,
         database: (any ToolDatabaseAccess)? = nil,
         memoryDirectory: URL? = nil,
+        memoryIndex: MemoryIndexDatabase? = nil,
         httpClient: (any ToolHTTPClient)? = nil,
         calendarService: (any CalendarServiceProtocol)? = nil,
         remindersService: (any RemindersServiceProtocol)? = nil,
@@ -38,6 +42,7 @@ public struct ToolContext: Sendable {
         self.conversationId = conversationId
         self.database = database
         self.memoryDirectory = memoryDirectory
+        self.memoryIndex = memoryIndex
         self.httpClient = httpClient
         self.calendarService = calendarService
         self.remindersService = remindersService

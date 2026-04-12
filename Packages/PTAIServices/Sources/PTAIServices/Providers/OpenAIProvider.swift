@@ -363,7 +363,7 @@ public struct OpenAIProvider: ChatModelProvider {
         throw ProviderError.authenticationFailed("No API key found for key '\(apiKeyKeychainKey)'")
     }
 
-    private func buildRequestBody(request: ChatRequest, stream: Bool) -> OAIRequestBody {
+    internal func buildRequestBody(request: ChatRequest, stream: Bool) -> OAIRequestBody {
         let messages = request.messages.map { encodeMessage($0) }
 
         let tools: [OAITool]? = request.tools.map { toolDefs in
