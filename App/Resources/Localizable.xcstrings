@@ -439,6 +439,310 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Di chuyển hoàn tất" } }
       }
     },
+    "migration.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing your library, notes, and reading history from the previous version's database. This only covers data we can read from the legacy database." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在从旧版本的数据库导入书库、笔记与阅读记录。本迁移仅覆盖我们能从旧数据库读取的数据。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在從舊版本的資料庫匯入書庫、筆記與閱讀記錄。本遷移僅涵蓋我們能從舊資料庫讀取的資料。" } }
+      }
+    },
+    "migration.button.skip_migration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Skip Migration" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "跳过迁移" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "跳過遷移" } }
+      }
+    },
+    "migration.status.preparing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Preparing…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "准备中…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "準備中…" } }
+      }
+    },
+    "migration.status.reading_bookshelf" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reading legacy database…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在读取旧数据库…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在讀取舊資料庫…" } }
+      }
+    },
+    "migration.status.migrating_books_count" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing %lld books…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入 %lld 本书…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入 %lld 本書…" } }
+      }
+    },
+    "migration.status.migrating_notes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing notes and highlights…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入笔记与划线…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入筆記與劃線…" } }
+      }
+    },
+    "migration.status.migrating_reading_records" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing reading records…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入阅读记录…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入閱讀記錄…" } }
+      }
+    },
+    "migration.status.migrating_themes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing reading themes…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入阅读主题…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入閱讀主題…" } }
+      }
+    },
+    "migration.status.migrating_styles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing reading styles…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入阅读样式…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入閱讀樣式…" } }
+      }
+    },
+    "migration.status.migrating_groups" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing bookshelf groups…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入书架分组…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入書架分組…" } }
+      }
+    },
+    "migration.status.migrating_tags" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing tags…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入标签…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入標籤…" } }
+      }
+    },
+    "migration.status.migrating_book_tags" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Linking tags to books…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在关联书籍标签…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在關聯書籍標籤…" } }
+      }
+    },
+    "migration.status.migrating_memory" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copying memory files…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在复制记忆文件…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在複製記憶檔案…" } }
+      }
+    },
+    "migration.status.migrating_settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Importing non-secret settings…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在导入非敏感设置…" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在匯入非敏感設定…" } }
+      }
+    },
+    "migration.status.complete_summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Import complete (supported data): %lld books, %lld notes, %lld reading records." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导入完成（支持的数据）：%lld 本书，%lld 条笔记，%lld 条阅读记录。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "匯入完成（支援的資料）：%lld 本書，%lld 條筆記，%lld 條閱讀記錄。" } }
+      }
+    },
+    "migration.status.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Import failed." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导入失败。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "匯入失敗。" } }
+      }
+    },
+    "migration.status.legacy_done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Migration was marked complete by a previous version. No further import will be performed automatically." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "迁移已被旧版本标记为完成。应用不会自动再次导入。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "遷移已被舊版本標記為完成。App 不會自動再次匯入。" } }
+      }
+    },
+    "migration.error.db_not_found" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Legacy database file not found." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未找到旧数据库文件。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "未找到舊資料庫檔案。" } }
+      }
+    },
+    "migration.error.failed_with_detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Import failed: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导入失败：%@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "匯入失敗：%@" } }
+      }
+    },
+    "migration.error.unsupported_schema" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Legacy database schema version %lld is not supported. Expected %lld." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "旧数据库 schema 版本 %lld 不受支持，当前仅支持 %lld。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "舊資料庫 schema 版本 %lld 不受支援，目前僅支援 %lld。" } }
+      }
+    },
+    "migration.error.missing_required_tables" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Legacy database is missing required tables: %@." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "旧数据库缺少必需的数据表：%@。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "舊資料庫缺少必要的資料表：%@。" } }
+      }
+    },
+    "migration.warning.api_keys_not_migrated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "API keys are not migrated. Re-enter them in Settings after import." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "API 密钥不会被迁移。导入完成后请在设置中重新填写。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "API 金鑰不會被遷移。匯入完成後請在設定中重新填寫。" } }
+      }
+    },
+    "share.error.content_unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shared content is no longer available." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "共享内容已不可用。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "共享內容已不可用。" } }
+      }
+    },
+    "share.error.route_requires_bookshelf" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This shared item should be imported from the Bookshelf tab." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这个共享项目应当从书架标签页导入。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "這個共享項目應該從書架分頁匯入。" } }
+      }
+    },
+    "share.ai_prompt.image_analysis" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Please analyze the attached image." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请分析所附图片。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "請分析附上的圖片。" } }
+      }
+    },
+    "share.ai_prompt.content_analysis" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Please analyze this shared content." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请分析这段共享内容。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "請分析這段共享內容。" } }
+      }
+    },
+    "intent.ask_ai.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ask AI" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "询问 AI" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "詢問 AI" } }
+      }
+    },
+    "intent.ask_ai.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Send a message to PaperTok Reader's AI assistant" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "向 PaperTok Reader 的 AI 助手发送消息" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "向 PaperTok Reader 的 AI 助手傳送訊息" } }
+      }
+    },
+    "intent.ask_ai.parameter.question" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Question" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "问题" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "問題" } }
+      }
+    },
+    "intent.open_book.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Book" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开书籍" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "打開書籍" } }
+      }
+    },
+    "intent.open_book.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open a specific book in PaperTok Reader" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在 PaperTok Reader 中打开指定书籍" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "在 PaperTok Reader 中打開指定書籍" } }
+      }
+    },
+    "intent.open_book.parameter.book_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Book Title" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "书名" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "書名" } }
+      }
+    },
+    "intent.send_message.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Send Message" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "发送消息" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "傳送訊息" } }
+      }
+    },
+    "intent.send_message.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Send text and images to PaperTok Reader AI without opening the app" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无需打开 App，即可把文本和图片发送给 PaperTok Reader AI" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "無需打開 App，即可把文字與圖片傳送給 PaperTok Reader AI" } }
+      }
+    },
+    "intent.send_message.parameter.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Message" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "消息" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "訊息" } }
+      }
+    },
+    "intent.send_message.parameter.images" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Images" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "图片" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "圖片" } }
+      }
+    },
+    "common.skip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Skip" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "跳过" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "跳過" } }
+      }
+    },
+    "common.retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "重試" } }
+      }
+    },
     "common.ok" : {
       "extractionState" : "manual",
       "localizations" : {

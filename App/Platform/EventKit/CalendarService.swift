@@ -54,11 +54,12 @@ public final class CalendarService: CalendarServiceProtocol, @unchecked Sendable
     public func createEvent(_ params: [String: Any]) async throws -> [String: Any] {
         guard await requestAccess() else { throw CalendarError.accessDenied }
         let event = EKEvent(eventStore: store)
-        event.title = params["title"] as? String ?? "Untitled"
-        event.startDate = (params["startDate"] as? Date) ?? Date()
-        event.endDate = (params["endDate"] as? Date) ?? Date().addingTimeInterval(3600)
-        event.notes = params["notes"] as? String
-        if let calId = params["calendarId"] as? String {
+        event.title = stringValue(["title"], from: params) ?? "Untitled"
+        event.startDate = dateValue(["start_date", "startDate"], from: params) ?? Date()
+        event.endDate = dateValue(["end_date", "endDate"], from: params) ?? Date().addingTimeInterval(3600)
+        event.notes = stringValue(["notes"], from: params)
+        event.location = stringValue(["location"], from: params)
+        if let calId = stringValue(["calendar_id", "calendarId"], from: params) {
             event.calendar = store.calendars(for: .event).first { $0.calendarIdentifier == calId }
         }
         event.calendar = event.calendar ?? store.defaultCalendarForNewEvents
@@ -71,10 +72,14 @@ public final class CalendarService: CalendarServiceProtocol, @unchecked Sendable
         guard let event = store.event(withIdentifier: eventId) else {
             throw CalendarError.eventNotFound(eventId)
         }
-        if let title = params["title"] as? String { event.title = title }
-        if let start = params["startDate"] as? Date { event.startDate = start }
-        if let end = params["endDate"] as? Date { event.endDate = end }
-        if let notes = params["notes"] as? String { event.notes = notes }
+        if let title = stringValue(["title"], from: params) { event.title = title }
+        if let start = dateValue(["start_date", "startDate"], from: params) { event.startDate = start }
+        if let end = dateValue(["end_date", "endDate"], from: params) { event.endDate = end }
+        if let notes = stringValue(["notes"], from: params) { event.notes = notes }
+        if let location = stringValue(["location"], from: params) { event.location = location }
+        if let calId = stringValue(["calendar_id", "calendarId"], from: params) {
+            event.calendar = store.calendars(for: .event).first { $0.calendarIdentifier == calId } ?? event.calendar
+        }
         try store.save(event, span: .thisEvent)
         return eventToMap(event)
     }
@@ -102,6 +107,36 @@ public final class CalendarService: CalendarServiceProtocol, @unchecked Sendable
         map["calendarId"] = event.calendar?.calendarIdentifier ?? ""
         return map
     }
+
+    private func stringValue(_ keys: [String], from params: [String: Any]) -> String? {
+        for key in keys {
+            if let value = params[key] as? String {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private func dateValue(_ keys: [String], from params: [String: Any]) -> Date? {
+        for key in keys {
+            if let value = params[key] as? Date {
+                return value
+            }
+            if let value = params[key] as? String,
+               let date = Self.iso8601FormatterWithFractionalSeconds.date(from: value) ?? Self.iso8601Formatter.date(from: value) {
+                return date
+            }
+        }
+        return nil
+    }
+
+    private static let iso8601FormatterWithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let iso8601Formatter = ISO8601DateFormatter()
 
     private func hexColor(_ cgColor: CGColor?) -> String {
         guard let components = cgColor?.components, components.count >= 3 else { return "#808080" }

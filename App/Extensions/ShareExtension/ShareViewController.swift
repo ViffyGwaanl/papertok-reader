@@ -3,10 +3,6 @@ import UIKit
 
 /// Share Extension entry point.
 /// Receives shared files (PDF/EPUB) and passes them to the main app via URL scheme.
-///
-/// Note: This file is a placeholder for the Share Extension target.
-/// Full implementation requires a separate Xcode target with its own bundle ID
-/// and App Group entitlement (group.ai.papertok.paperreader).
 class ShareViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -19,11 +15,25 @@ class ShareViewController: UIViewController {
         let providers = extensionItems.compactMap { $0.attachments }.flatMap { $0 }
 
         Task {
-            let urls = await ShareHandler.extractFiles(from: providers)
-            if !urls.isEmpty {
-                let fileNames = urls.map { $0.lastPathComponent }.joined(separator: ",")
-                let encoded = fileNames.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                if let openURL = URL(string: "paperreader://import?files=\(encoded)") {
+            let eventID = UUID().uuidString
+            let requestedRoute = ShareDefaultRoute.current()
+            if let event = await ShareHandler.captureEvent(
+                from: providers,
+                eventID: eventID,
+                requestedRoute: requestedRoute
+            ) {
+                let encodedEventID = eventID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? eventID
+                let openURL: URL?
+                switch event.route {
+                case .bookshelfImport:
+                    openURL = URL(string: "paperreader://import?token=\(encodedEventID)")
+                case .aiChat:
+                    openURL = URL(string: "paperreader://ai?share_token=\(encodedEventID)")
+                case .ask:
+                    openURL = URL(string: "paperreader://shortcuts/ask?share_token=\(encodedEventID)")
+                }
+
+                if let openURL {
                     // Open the main app to handle the import
                     await self.extensionContext?.open(openURL)
                 }

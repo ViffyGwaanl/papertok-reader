@@ -21,18 +21,36 @@ struct PaperTokShortcuts: AppShortcutsProvider {
             shortTitle: "Ask AI",
             systemImageName: "brain"
         )
+        AppShortcut(
+            intent: SendMessageIntent(),
+            phrases: [
+                "Send a message to \(.applicationName)",
+                "Send images to \(.applicationName)",
+            ],
+            shortTitle: "Send Message",
+            systemImageName: "message.badge"
+        )
     }
 }
 
 /// Donates common actions to Siri for proactive suggestions.
 enum IntentsDonationService {
-    static func donateOpenBook(title: String) {
-        let intent = OpenBookIntent()
-        intent.bookTitle = title
+    @MainActor
+    static func refreshShortcuts() {
+        PaperTokShortcuts.updateAppShortcutParameters()
     }
 
-    static func donateAskAI(question: String) {
-        let intent = AskAIIntent()
+    @MainActor
+    static func donateOpenBook(title: String) async {
+        var intent = OpenBookIntent()
+        intent.bookTitle = title
+        _ = try? await intent.donate()
+    }
+
+    @MainActor
+    static func donateAskAI(question: String) async {
+        var intent = AskAIIntent()
         intent.question = question
+        _ = try? await intent.donate()
     }
 }

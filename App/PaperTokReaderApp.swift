@@ -14,31 +14,57 @@ struct PaperTokReaderApp: App {
     private let remindersService = RemindersService()
 
     var body: some Scene {
-        WindowGroup {
-            Group {
-                if let database {
-                    MainTabView(database: database)
-                        .sheet(isPresented: $showMigration) {
-                            MigrationProgressView(database: database)
-                        }
-                        .onOpenURL { url in
-                            _ = router.handle(url: url)
-                        }
-                        .task {
-                            // Check for Flutter data migration on first launch
-                            let migrationService = FlutterMigrationService()
-                            showMigration = await migrationService.isMigrationAvailable()
-                        }
-                } else {
-                    ProgressView("Loading...")
-                        .task { await initializeDatabase() }
-                }
-            }
-        }
         #if os(macOS)
-        .commands { MacMenuCommands() }
-        .defaultSize(width: 1100, height: 750)
+        macOSScene
+        #else
+        iOSScene
         #endif
+    }
+
+    @SceneBuilder
+    private var iOSScene: some Scene {
+        WindowGroup {
+            rootContent
+                .onOpenURL { url in
+                    _ = router.handle(url: url)
+                }
+        }
+    }
+
+    #if os(macOS)
+    @SceneBuilder
+    private var macOSScene: some Scene {
+        MacRootScene {
+            rootContent
+                .onOpenURL { url in
+                    _ = router.handle(url: url)
+                }
+        }
+    }
+    #endif
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if let environment {
+            RootScene(environment: environment, showMigration: $showMigration)
+                .task {
+                    IntentsDonationService.refreshShortcuts()
+                    let migrationService = FlutterMigrationService()
+                    showMigration = await migrationService.isMigrationAvailable()
+                }
+        } else {
+            ProgressView("Loading...")
+                .task { await initializeDatabase() }
+        }
+    }
+
+    private var environment: AppEnvironment? {
+        guard let database else { return nil }
+        return AppEnvironment(
+            database: database,
+            calendarService: calendarService,
+            remindersService: remindersService
+        )
     }
 
     private func initializeDatabase() async {

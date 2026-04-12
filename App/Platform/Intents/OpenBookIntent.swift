@@ -3,10 +3,11 @@ import PTCore
 
 /// Siri Shortcut: "Open [Book Title] in PaperTok Reader"
 struct OpenBookIntent: AppIntent {
-    static let title: LocalizedStringResource = "Open Book"
-    static let description = IntentDescription("Open a specific book in PaperTok Reader")
+    static let title: LocalizedStringResource = "intent.open_book.title"
+    static let description = IntentDescription("intent.open_book.description")
+    static let openAppWhenRun = true
 
-    @Parameter(title: "Book Title")
+    @Parameter(title: "intent.open_book.parameter.book_title")
     var bookTitle: String
 
     @MainActor

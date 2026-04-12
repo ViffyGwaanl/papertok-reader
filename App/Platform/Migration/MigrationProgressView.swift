@@ -8,17 +8,23 @@ struct MigrationProgressView: View {
     let database: AppDatabase
     @Environment(\.dismiss) private var dismiss
 
+    private var statusText: String {
+        migrationService.statusMessage.isEmpty
+            ? NSLocalizedString("migration.status.preparing", comment: "")
+            : migrationService.statusMessage
+    }
+
     var body: some View {
         VStack(spacing: 24) {
             Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
                 .font(.system(size: 56))
                 .foregroundStyle(Morandi.accent)
 
-            Text("Migrate Your Library")
+            Text("migration.title")
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(Morandi.primaryText)
 
-            Text("Migrating books, notes, and reading records from the previous version of PaperTok Reader...")
+            Text("migration.description")
                 .font(.subheadline)
                 .foregroundStyle(Morandi.secondaryText)
                 .multilineTextAlignment(.center)
@@ -29,9 +35,15 @@ struct MigrationProgressView: View {
                 .tint(Morandi.accent)
                 .animation(.easeInOut, value: migrationService.progress)
 
-            Text(migrationService.statusMessage)
+            Text(statusText)
                 .font(.caption)
                 .foregroundStyle(Morandi.secondaryText)
+
+            Text("migration.warning.api_keys_not_migrated")
+                .font(.caption2)
+                .foregroundStyle(Morandi.secondaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
 
             if let error = migrationService.errorMessage {
                 Text(error)
@@ -43,19 +55,19 @@ struct MigrationProgressView: View {
 
             HStack(spacing: 16) {
                 if migrationService.isComplete {
-                    Button("Done") {
+                    Button("common.done") {
                         dismiss()
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(Morandi.accent)
                 } else if migrationService.errorMessage != nil {
-                    Button("Skip") {
+                    Button("common.skip") {
                         migrationService.skipMigration()
                         dismiss()
                     }
                     .buttonStyle(.bordered)
 
-                    Button("Retry") {
+                    Button("common.retry") {
                         migrationService.errorMessage = nil
                         Task {
                             await migrationService.migrate(into: database)
@@ -64,7 +76,7 @@ struct MigrationProgressView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(Morandi.accent)
                 } else {
-                    Button("Skip Migration") {
+                    Button("migration.button.skip_migration") {
                         migrationService.skipMigration()
                         dismiss()
                     }

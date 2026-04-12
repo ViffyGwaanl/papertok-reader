@@ -93,14 +93,14 @@ public final class RemindersService: RemindersServiceProtocol, @unchecked Sendab
     public func createReminder(_ params: [String: Any]) async throws -> [String: Any] {
         guard await requestAccess() else { throw RemindersError.accessDenied }
         let reminder = EKReminder(eventStore: store)
-        reminder.title = params["title"] as? String ?? "Untitled"
-        if let notes = params["notes"] as? String { reminder.notes = notes }
-        if let due = params["dueDate"] as? Date {
+        reminder.title = stringValue(["title"], from: params) ?? "Untitled"
+        if let notes = stringValue(["notes"], from: params) { reminder.notes = notes }
+        if let due = dateValue(["due_date", "dueDate"], from: params) {
             reminder.dueDateComponents = Calendar.current.dateComponents(
                 [.year, .month, .day, .hour, .minute], from: due
             )
         }
-        if let listId = params["listId"] as? String {
+        if let listId = stringValue(["list_id", "listId"], from: params) {
             reminder.calendar = store.calendars(for: .reminder).first {
                 $0.calendarIdentifier == listId
             }
@@ -117,12 +117,17 @@ public final class RemindersService: RemindersServiceProtocol, @unchecked Sendab
         guard let reminder = try await fetchReminder(id: id) else {
             throw RemindersError.reminderNotFound(id)
         }
-        if let title = params["title"] as? String { reminder.title = title }
-        if let notes = params["notes"] as? String { reminder.notes = notes }
-        if let due = params["dueDate"] as? Date {
+        if let title = stringValue(["title"], from: params) { reminder.title = title }
+        if let notes = stringValue(["notes"], from: params) { reminder.notes = notes }
+        if let due = dateValue(["due_date", "dueDate"], from: params) {
             reminder.dueDateComponents = Calendar.current.dateComponents(
                 [.year, .month, .day, .hour, .minute], from: due
             )
+        }
+        if let listId = stringValue(["list_id", "listId"], from: params) {
+            reminder.calendar = store.calendars(for: .reminder).first {
+                $0.calendarIdentifier == listId
+            } ?? reminder.calendar
         }
         try store.save(reminder, commit: true)
         return reminderToMap(reminder)
@@ -178,6 +183,40 @@ public final class RemindersService: RemindersServiceProtocol, @unchecked Sendab
         }
         return map
     }
+
+    private func stringValue(_ keys: [String], from params: [String: Any]) -> String? {
+        for key in keys {
+            if let value = params[key] as? String {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private func dateValue(_ keys: [String], from params: [String: Any]) -> Date? {
+        for key in keys {
+            if let value = params[key] as? Date {
+                return value
+            }
+            if let value = params[key] as? String {
+                if let date = Self.iso8601FormatterWithFractionalSeconds.date(from: value) {
+                    return date
+                }
+                if let date = Self.iso8601Formatter.date(from: value) {
+                    return date
+                }
+            }
+        }
+        return nil
+    }
+
+    private static let iso8601FormatterWithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let iso8601Formatter = ISO8601DateFormatter()
 
     private func hexColor(_ cgColor: CGColor?) -> String {
         guard let c = cgColor?.components, c.count >= 3 else { return "#808080" }

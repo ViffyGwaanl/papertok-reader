@@ -2,15 +2,15 @@ import AppIntents
 
 /// Siri Shortcut: "Ask PaperTok AI [question]"
 struct AskAIIntent: AppIntent {
-    static let title: LocalizedStringResource = "Ask AI"
-    static let description = IntentDescription("Send a message to PaperTok Reader's AI assistant")
+    static let title: LocalizedStringResource = "intent.ask_ai.title"
+    static let description = IntentDescription("intent.ask_ai.description")
+    static let openAppWhenRun = false
 
-    @Parameter(title: "Question")
+    @Parameter(title: "intent.ask_ai.parameter.question")
     var question: String
 
-    @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
-        DeepLinkRouter.shared.route(to: .aiChat(initialMessage: question))
-        return .result(dialog: "Sent question: \(question)")
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let response = try await ShortcutAIService().sendMessage(prompt: question, images: nil)
+        return .result(value: response)
     }
 }
