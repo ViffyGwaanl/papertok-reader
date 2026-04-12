@@ -135,6 +135,23 @@ public final class RAGIndexService: Sendable {
         }
     }
 
+    /// Index a book and additionally compute and store embeddings for provided chunks.
+    ///
+    /// This complements `indexBook(bookId:chapters:)` (which populates the FTS5
+    /// table) by also populating a `VectorStore` with embeddings, enabling
+    /// hybrid FTS + vector search.
+    public func indexBookWithEmbeddings(
+        bookId: Int64,
+        chunks: [TextChunk],
+        vectorStore: VectorStore,
+        embedding: EmbeddingService
+    ) async throws {
+        guard !chunks.isEmpty else { return }
+        let vectors = try await embedding.embedBatch(chunks.map { $0.text })
+        try await vectorStore.removeBook(bookId: bookId)
+        try await vectorStore.store(chunks: chunks, embeddings: vectors, bookId: bookId)
+    }
+
     /// Check whether a book has been indexed.
     public func isBookIndexed(bookId: Int64) async throws -> Bool {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
@@ -203,6 +220,7 @@ internal final class SQLiteConnection: @unchecked Sendable {
         case integer(Int64)
         case text(String)
         case real(Double)
+        case blob(Data)
         case null
     }
 
@@ -256,6 +274,13 @@ internal final class SQLiteConnection: @unchecked Sendable {
                     row[name] = sqlite3_column_double(stmt, i)
                 case SQLITE_TEXT:
                     row[name] = String(cString: sqlite3_column_text(stmt, i))
+                case SQLITE_BLOB:
+                    let byteCount = Int(sqlite3_column_bytes(stmt, i))
+                    if byteCount > 0, let bytes = sqlite3_column_blob(stmt, i) {
+                        row[name] = Data(bytes: bytes, count: byteCount)
+                    } else {
+                        row[name] = Data()
+                    }
                 default:
                     row[name] = nil as Any?
                 }
@@ -273,6 +298,15 @@ internal final class SQLiteConnection: @unchecked Sendable {
             case .integer(let v): result = sqlite3_bind_int64(stmt, idx, v)
             case .text(let v): result = sqlite3_bind_text(stmt, idx, v, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
             case .real(let v): result = sqlite3_bind_double(stmt, idx, v)
+            case .blob(let data):
+                result = data.withUnsafeBytes { raw -> Int32 in
+                    let count = Int32(data.count)
+                    if let base = raw.baseAddress, count > 0 {
+                        return sqlite3_bind_blob(stmt, idx, base, count, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+                    } else {
+                        return sqlite3_bind_zeroblob(stmt, idx, 0)
+                    }
+                }
             case .null: result = sqlite3_bind_null(stmt, idx)
             }
             guard result == SQLITE_OK else {
