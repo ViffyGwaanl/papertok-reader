@@ -22,6 +22,7 @@ struct MainTabView: View {
     @State private var navigation = RootNavigationCoordinator()
     @State private var readerSessionStore: ReaderSessionContextStore
     @State private var aiChatViewModel: AIChatViewModel
+    @State private var tabConfigVersion: Int = AppTab.configurationVersion
 
     init(
         database: AppDatabase,
@@ -74,11 +75,14 @@ struct MainTabView: View {
         }
         .tint(Morandi.accent)
         .handleDeepLinks(navigation: navigation)
+        .onReceive(NotificationCenter.default.publisher(for: AppTab.configurationDidChangeNotification)) { _ in
+            tabConfigVersion = AppTab.configurationVersion
+        }
     }
 
     private var iPhoneTabLayout: some View {
         TabView(selection: $navigation.selectedTab) {
-            ForEach(AppTab.defaultOrder) { tab in
+            ForEach(AppTab.currentOrder()) { tab in
                 destination(for: tab)
                     .tabItem {
                         Label(tab.title, systemImage: tab.icon)
@@ -86,18 +90,20 @@ struct MainTabView: View {
                     .tag(tab)
             }
         }
+        .id(tabConfigVersion)
     }
 
     private var iPadSplitLayout: some View {
         NavigationSplitView {
             List(selection: $navigation.optionalSelectedTab) {
-                ForEach(AppTab.defaultOrder) { tab in
+                ForEach(AppTab.currentOrder()) { tab in
                     Label(tab.title, systemImage: tab.icon)
                         .tag(tab)
                 }
             }
             .navigationTitle(String(localized: "app.name"))
             .listStyle(.sidebar)
+            .id(tabConfigVersion)
         } detail: {
             destination(for: navigation.selectedTab)
         }
@@ -1140,7 +1146,7 @@ private struct BookshelfBookEditorSheet: View {
                 }
             }
         }
-        .alert("Edit Failed", isPresented: isShowingError) {
+        .alert("notes.edit_failed", isPresented: isShowingError) {
             Button(String(localized: "common.ok")) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "Unknown error")
@@ -1304,7 +1310,7 @@ private struct BookshelfTagManagerSheet: View {
                 await viewModel.loadTags()
             }
         }
-        .alert("Tag Error", isPresented: isShowingError) {
+        .alert("bookshelf.tag_error", isPresented: isShowingError) {
             Button(String(localized: "common.ok")) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "Unknown error")
@@ -1503,7 +1509,7 @@ private struct BookshelfGroupManagerSheet: View {
                 await viewModel.loadGroups()
             }
         }
-        .alert("Group Error", isPresented: isShowingError) {
+        .alert("bookshelf.group_error", isPresented: isShowingError) {
             Button(String(localized: "common.ok")) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "Unknown error")
@@ -1642,7 +1648,7 @@ private struct BookshelfBatchMoveSheet: View {
                     }
                 }
             }
-            .navigationTitle("Move \(viewModel.selectedBookIDs.count) Books")
+            .navigationTitle(Text(String(format: NSLocalizedString("bookshelf.move_books_format", comment: ""), viewModel.selectedBookIDs.count)))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
@@ -1750,14 +1756,14 @@ struct EPUBBookshelfReaderView: View {
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PaperTokToggleAI"))) { _ in
             isAIPanelPresented.toggle()
         }
-        .alert("Annotation Error", isPresented: annotationErrorPresentedBinding) {
+        .alert("reader.annotation_error", isPresented: annotationErrorPresentedBinding) {
             Button(String(localized: "common.ok")) {
                 annotationErrorMessage = nil
             }
         } message: {
             Text(annotationErrorMessage ?? "")
         }
-        .alert("Reader Settings Error", isPresented: readerSettingsErrorPresentedBinding) {
+        .alert("reader.reader_settings_error", isPresented: readerSettingsErrorPresentedBinding) {
             Button(String(localized: "common.ok")) {
                 preferencesViewModel?.clearError()
             }
@@ -2094,7 +2100,7 @@ struct EPUBBookshelfReaderView: View {
                         ContentUnavailableView(
                             "No Results",
                             systemImage: "doc.text.magnifyingglass",
-                            description: Text("No matches were found for “\(readerControlsViewModel.searchQuery)”.")
+                            description: Text(String(format: NSLocalizedString("reader.search.no_matches_format", comment: ""), readerControlsViewModel.searchQuery))
                         )
                     } else {
                         List(readerControlsViewModel.searchResults) { result in
@@ -2439,7 +2445,7 @@ struct NotesScreen: View {
                 Task { await viewModel.loadNotes() }
             }
             .task { await viewModel.loadNotes() }
-            .alert("Notes Exported", isPresented: $isExportFeedbackPresented) {
+            .alert("notes.notes_exported", isPresented: $isExportFeedbackPresented) {
                 Button(String(localized: "common.ok"), role: .cancel) { }
             } message: {
                 Text(exportFeedbackMessage)
@@ -2640,7 +2646,7 @@ struct NotesScreen: View {
                     item: viewModel.export(format: format),
                     preview: SharePreview("PaperTok Notes \(format.displayName)", image: Image(systemName: "square.and.arrow.up"))
                 ) {
-                    Label("Share \(format.displayName)", systemImage: "square.and.arrow.up")
+                    Label(String(format: NSLocalizedString("notes.share_format", comment: ""), format.displayName), systemImage: "square.and.arrow.up")
                 }
 
                 Button {
@@ -2648,7 +2654,7 @@ struct NotesScreen: View {
                     exportFeedbackMessage = "\(format.displayName) copied to clipboard."
                     isExportFeedbackPresented = true
                 } label: {
-                    Label("Copy \(format.displayName)", systemImage: "doc.on.doc")
+                    Label(String(format: NSLocalizedString("notes.copy_format", comment: ""), format.displayName), systemImage: "doc.on.doc")
                 }
             }
         } label: {
@@ -3414,10 +3420,30 @@ struct SettingsScreen: View {
                     tint: Morandi.powder
                 )
             }
+
+            NavigationLink {
+                AILibraryIndexView()
+            } label: {
+                SettingsIconLabel(
+                    "AI Library Index",
+                    systemImage: "books.vertical.fill",
+                    tint: Morandi.sage
+                )
+            }
+
+            NavigationLink {
+                AIImageAnalysisView()
+            } label: {
+                SettingsIconLabel(
+                    "AI Image Analysis",
+                    systemImage: "photo.on.rectangle.angled",
+                    tint: Morandi.dustyRose
+                )
+            }
         } header: {
             Text("settings.ai_providers")
         } footer: {
-            Text("Configure AI providers, tools, reusable prompts and external MCP servers.")
+            Text("settings.ai_providers.footer")
         }
     }
 
@@ -3471,7 +3497,7 @@ struct SettingsScreen: View {
     private var readingSection: some View {
         Section {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text("Default Font Size: \(Int(viewModel.defaultFontSize))")
+                Text(String(format: NSLocalizedString("reader.default_font_size_format", comment: ""), Int(viewModel.defaultFontSize)))
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
                 Slider(value: $viewModel.defaultFontSize, in: 12...32, step: 1)

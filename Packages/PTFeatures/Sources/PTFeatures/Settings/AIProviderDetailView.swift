@@ -27,6 +27,31 @@ public struct AIProviderDetailView: View {
     @State private var originalModel: String = ""
     @State private var showDeleteConfirmation = false
 
+    // Generation defaults
+    @State private var temperature: Double = 0.7
+    @State private var topP: Double = 1.0
+    @State private var maxTokensText: String = "4096"
+    @State private var presencePenalty: Double = 0.0
+    @State private var frequencyPenalty: Double = 0.0
+    @State private var stopSequencesText: String = ""
+    @State private var advancedExpanded: Bool = false
+
+    // Provider-specific
+    @State private var includeThoughts: Bool = true
+    @State private var safetySettings: String = "default" // default | strict | relaxed
+    @State private var reasoningEffort: String = "medium" // minimal | low | medium | high
+    @State private var returnReasoningSummary: Bool = false
+    @State private var usePreviousResponseId: Bool = false
+
+    // Failover policy
+    @State private var failureThreshold: Int = 3
+    @State private var authCooldownSeconds: Int = 900
+    @State private var rateLimitCooldownSeconds: Int = 60
+    @State private var serviceCooldownSeconds: Int = 300
+
+    // Multi-key count for navigation badge
+    @State private var apiKeyCount: Int = 0
+
     private enum TestStatus: Equatable {
         case idle
         case testing
@@ -43,11 +68,15 @@ public struct AIProviderDetailView: View {
     public var body: some View {
         Form {
             apiKeySection
+            multiKeySection
             endpointSection
             modelSection
             if provider == .azure { azureSection }
             if provider == .custom { customHeadersSection }
             capabilitiesSection
+            generationDefaultsSection
+            providerSpecificSection
+            failoverPolicySection
             testSection
             saveSection
         }
@@ -60,7 +89,7 @@ public struct AIProviderDetailView: View {
         .toolbar {
             if hasUnsavedChanges {
                 ToolbarItem(placement: .automatic) {
-                    Text("Unsaved")
+                    Text("settings.ai_provider.unsaved")
                         .font(.caption2.weight(.semibold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -118,7 +147,7 @@ public struct AIProviderDetailView: View {
             if let url = getApiKeyURL {
                 Link(destination: url) {
                     HStack(spacing: 4) {
-                        Text("Get API Key")
+                        Text("settings.ai_provider.get_api_key")
                             .font(AppTypography.caption)
                         Image(systemName: "arrow.up.right")
                             .font(.caption2)
@@ -346,6 +375,219 @@ public struct AIProviderDetailView: View {
         }
     }
 
+    // MARK: - Multi-key Section
+
+    private var multiKeySection: some View {
+        Section {
+            NavigationLink {
+                APIKeyListView(providerId: storageID)
+            } label: {
+                HStack {
+                    Image(systemName: "key.horizontal.fill")
+                        .foregroundStyle(Morandi.lavender)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Manage API Keys")
+                            .font(AppTypography.body)
+                            .foregroundStyle(Morandi.primaryText)
+                        Text("\(apiKeyCount) key\(apiKeyCount == 1 ? "" : "s") configured")
+                            .font(AppTypography.caption2)
+                            .foregroundStyle(Morandi.secondaryText)
+                    }
+                    Spacer()
+                }
+            }
+        } footer: {
+            Text("Add multiple API keys for round-robin rotation, automatic failover and per-key cooldowns.")
+                .font(AppTypography.caption2)
+                .foregroundStyle(Morandi.tertiaryText)
+        }
+    }
+
+    // MARK: - Generation Defaults
+
+    private var generationDefaultsSection: some View {
+        Section {
+            DisclosureGroup(isExpanded: $advancedExpanded) {
+                VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                    sliderRow(
+                        title: "Temperature",
+                        value: $temperature,
+                        range: 0.0...2.0,
+                        step: 0.05,
+                        format: "%.2f"
+                    )
+                    sliderRow(
+                        title: "Top P",
+                        value: $topP,
+                        range: 0.0...1.0,
+                        step: 0.01,
+                        format: "%.2f"
+                    )
+                    HStack {
+                        Text("Max Tokens")
+                            .foregroundStyle(Morandi.primaryText)
+                        Spacer()
+                        TextField("4096", text: $maxTokensText)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 90)
+                            #if os(iOS)
+                            .keyboardType(.numberPad)
+                            #endif
+                    }
+                    sliderRow(
+                        title: "Presence Penalty",
+                        value: $presencePenalty,
+                        range: -2.0...2.0,
+                        step: 0.1,
+                        format: "%.1f"
+                    )
+                    sliderRow(
+                        title: "Frequency Penalty",
+                        value: $frequencyPenalty,
+                        range: -2.0...2.0,
+                        step: 0.1,
+                        format: "%.1f"
+                    )
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Stop Sequences")
+                            .font(AppTypography.subheadline)
+                            .foregroundStyle(Morandi.primaryText)
+                        TextField("comma,separated,sequences", text: $stopSequencesText)
+                            #if os(iOS)
+                            .textInputAutocapitalization(.never)
+                            #endif
+                            .autocorrectionDisabled()
+                            .font(AppTypography.caption)
+                    }
+                    Button {
+                        resetGenerationDefaults()
+                    } label: {
+                        Label("Reset to Defaults", systemImage: "arrow.counterclockwise")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(Morandi.clay)
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .padding(.vertical, 4)
+            } label: {
+                Label("Advanced", systemImage: "slider.horizontal.3")
+                    .foregroundStyle(Morandi.primaryText)
+            }
+        } header: {
+            Text("Generation Defaults")
+        } footer: {
+            Text("These values are sent with every chat request unless overridden by a tool or prompt.")
+                .font(AppTypography.caption2)
+                .foregroundStyle(Morandi.tertiaryText)
+        }
+    }
+
+    @ViewBuilder
+    private func sliderRow(
+        title: String,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        step: Double,
+        format: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(title)
+                    .font(AppTypography.subheadline)
+                    .foregroundStyle(Morandi.primaryText)
+                Spacer()
+                Text(String(format: format, value.wrappedValue))
+                    .font(AppTypography.caption.monospacedDigit())
+                    .foregroundStyle(Morandi.secondaryText)
+            }
+            Slider(value: value, in: range, step: step)
+                .tint(Morandi.accent)
+        }
+    }
+
+    private func resetGenerationDefaults() {
+        temperature = 0.7
+        topP = 1.0
+        maxTokensText = "4096"
+        presencePenalty = 0.0
+        frequencyPenalty = 0.0
+        stopSequencesText = ""
+    }
+
+    // MARK: - Provider-Specific
+
+    @ViewBuilder
+    private var providerSpecificSection: some View {
+        switch provider {
+        case .gemini:
+            Section("Gemini Options") {
+                Toggle("Include Thinking Steps", isOn: $includeThoughts)
+                    .tint(Morandi.accent)
+                Picker("Safety Settings", selection: $safetySettings) {
+                    Text("Default").tag("default")
+                    Text("Strict").tag("strict")
+                    Text("Relaxed").tag("relaxed")
+                }
+            }
+        case .openai, .anthropic:
+            Section("Reasoning") {
+                Picker("Reasoning Effort", selection: $reasoningEffort) {
+                    Text("Minimal").tag("minimal")
+                    Text("Low").tag("low")
+                    Text("Medium").tag("medium")
+                    Text("High").tag("high")
+                }
+                Toggle("Return Reasoning Summary", isOn: $returnReasoningSummary)
+                    .tint(Morandi.accent)
+                if provider == .openai {
+                    Toggle("Use Previous Response ID", isOn: $usePreviousResponseId)
+                        .tint(Morandi.accent)
+                }
+            }
+        default:
+            EmptyView()
+        }
+    }
+
+    // MARK: - Failover Policy
+
+    private var failoverPolicySection: some View {
+        Section {
+            Picker("Failure Threshold", selection: $failureThreshold) {
+                ForEach(1...10, id: \.self) { n in
+                    Text("\(n)").tag(n)
+                }
+            }
+            cooldownPicker(title: "Auth Cooldown (401)", selection: $authCooldownSeconds)
+            cooldownPicker(title: "Rate Limit Cooldown (429)", selection: $rateLimitCooldownSeconds)
+            cooldownPicker(title: "Service Cooldown (5xx)", selection: $serviceCooldownSeconds)
+        } header: {
+            Text("Failover Policy")
+        } footer: {
+            Text("After N consecutive failures the key is marked failed; cooldowns control how long until it is retried.")
+                .font(AppTypography.caption2)
+                .foregroundStyle(Morandi.tertiaryText)
+        }
+    }
+
+    private static let cooldownOptions: [(Int, String)] = [
+        (60, "1 min"),
+        (300, "5 min"),
+        (900, "15 min"),
+        (3600, "1 hour"),
+        (21600, "6 hours"),
+        (86400, "24 hours")
+    ]
+
+    @ViewBuilder
+    private func cooldownPicker(title: String, selection: Binding<Int>) -> some View {
+        Picker(title, selection: selection) {
+            ForEach(Self.cooldownOptions, id: \.0) { (seconds, label) in
+                Text(label).tag(seconds)
+            }
+        }
+    }
+
     // MARK: - Persistence
 
     private func loadValues() {
@@ -361,6 +603,48 @@ public struct AIProviderDetailView: View {
         originalApiKey = apiKey
         originalBaseURL = baseURL
         originalModel = selectedModel
+
+        // Generation defaults
+        let id = storageID
+        if defaults.object(forKey: "ai_temperature_\(id)") != nil {
+            temperature = defaults.double(forKey: "ai_temperature_\(id)")
+        }
+        if defaults.object(forKey: "ai_top_p_\(id)") != nil {
+            topP = defaults.double(forKey: "ai_top_p_\(id)")
+        }
+        maxTokensText = defaults.string(forKey: "ai_max_tokens_\(id)") ?? "4096"
+        if defaults.object(forKey: "ai_presence_penalty_\(id)") != nil {
+            presencePenalty = defaults.double(forKey: "ai_presence_penalty_\(id)")
+        }
+        if defaults.object(forKey: "ai_frequency_penalty_\(id)") != nil {
+            frequencyPenalty = defaults.double(forKey: "ai_frequency_penalty_\(id)")
+        }
+        stopSequencesText = defaults.string(forKey: "ai_stop_sequences_\(id)") ?? ""
+
+        // Provider-specific
+        if defaults.object(forKey: "ai_include_thoughts_\(id)") != nil {
+            includeThoughts = defaults.bool(forKey: "ai_include_thoughts_\(id)")
+        }
+        safetySettings = defaults.string(forKey: "ai_safety_\(id)") ?? "default"
+        reasoningEffort = defaults.string(forKey: "ai_reasoning_effort_\(id)") ?? "medium"
+        returnReasoningSummary = defaults.bool(forKey: "ai_reasoning_summary_\(id)")
+        usePreviousResponseId = defaults.bool(forKey: "ai_prev_response_id_\(id)")
+
+        // Failover
+        if defaults.object(forKey: "ai_failure_threshold_\(id)") != nil {
+            failureThreshold = defaults.integer(forKey: "ai_failure_threshold_\(id)")
+        }
+        if defaults.object(forKey: "ai_cooldown_auth_\(id)") != nil {
+            authCooldownSeconds = defaults.integer(forKey: "ai_cooldown_auth_\(id)")
+        }
+        if defaults.object(forKey: "ai_cooldown_rate_\(id)") != nil {
+            rateLimitCooldownSeconds = defaults.integer(forKey: "ai_cooldown_rate_\(id)")
+        }
+        if defaults.object(forKey: "ai_cooldown_service_\(id)") != nil {
+            serviceCooldownSeconds = defaults.integer(forKey: "ai_cooldown_service_\(id)")
+        }
+
+        apiKeyCount = APIKeyStore.load(providerId: id).count
     }
 
     private func saveValues() {
@@ -379,6 +663,26 @@ public struct AIProviderDetailView: View {
                 AIProviderCenterView.saveCustomProviders(entries)
             }
         }
+        // Generation defaults
+        let id = storageID
+        defaults.set(temperature, forKey: "ai_temperature_\(id)")
+        defaults.set(topP, forKey: "ai_top_p_\(id)")
+        defaults.set(maxTokensText, forKey: "ai_max_tokens_\(id)")
+        defaults.set(presencePenalty, forKey: "ai_presence_penalty_\(id)")
+        defaults.set(frequencyPenalty, forKey: "ai_frequency_penalty_\(id)")
+        defaults.set(stopSequencesText, forKey: "ai_stop_sequences_\(id)")
+
+        defaults.set(includeThoughts, forKey: "ai_include_thoughts_\(id)")
+        defaults.set(safetySettings, forKey: "ai_safety_\(id)")
+        defaults.set(reasoningEffort, forKey: "ai_reasoning_effort_\(id)")
+        defaults.set(returnReasoningSummary, forKey: "ai_reasoning_summary_\(id)")
+        defaults.set(usePreviousResponseId, forKey: "ai_prev_response_id_\(id)")
+
+        defaults.set(failureThreshold, forKey: "ai_failure_threshold_\(id)")
+        defaults.set(authCooldownSeconds, forKey: "ai_cooldown_auth_\(id)")
+        defaults.set(rateLimitCooldownSeconds, forKey: "ai_cooldown_rate_\(id)")
+        defaults.set(serviceCooldownSeconds, forKey: "ai_cooldown_service_\(id)")
+
         isSaved = true
         originalApiKey = apiKey
         originalBaseURL = baseURL
