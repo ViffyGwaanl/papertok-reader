@@ -14,6 +14,7 @@ import 'package:anx_reader/providers/book_filters.dart';
 import 'package:anx_reader/providers/tags.dart';
 import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/page/search/search_page.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
 import 'package:anx_reader/utils/color/hash_color.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
@@ -537,10 +538,9 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
           constraints: const BoxConstraints(maxWidth: 400),
           child: InkWell(
             onTap: () {
+              HapticFeedback.lightImpact();
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const SearchPage(),
-                ),
+                CupertinoStyleRoute(page: const SearchPage()),
               );
             },
             child: FilledContainer(

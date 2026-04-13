@@ -18,6 +18,7 @@ import 'package:anx_reader/page/settings_page/subpage/log_page.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -140,9 +141,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
         description: Text(l10n.settingsAiProviderCenterDesc),
         onPressed: (context) {
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const AiProviderCenterPage(),
-            ),
+            CupertinoStyleRoute(page: const AiProviderCenterPage()),
           );
         },
       ),
@@ -247,9 +246,8 @@ class _AISettingsState extends ConsumerState<AISettings> {
             description: Text(l10n.settingsAiConversationTitlesDesc),
             onPressed: (context) {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const AiTitleGenerationSettingsPage(),
-                ),
+                CupertinoStyleRoute(
+                    page: const AiTitleGenerationSettingsPage()),
               );
             },
           ),
@@ -288,8 +286,8 @@ class _AISettingsState extends ConsumerState<AISettings> {
             onPressed: (context) {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsSubpageScaffold(
+                CupertinoStyleRoute(
+                  page: SettingsSubpageScaffold(
                     title: l10n.settingsAiTools,
                     child: const AiToolsSettingsPage(),
                   ),
@@ -344,9 +342,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
             onPressed: (context) {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const AiQuickPromptsEditor(),
-                ),
+                CupertinoStyleRoute(page: const AiQuickPromptsEditor()),
               );
             },
           ),
@@ -485,7 +481,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
             title: Text(L10n.of(context).settingsAdvancedLog),
             onPressed: (context) {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const LogPage()),
+                CupertinoStyleRoute(page: const LogPage()),
               );
             },
           ),

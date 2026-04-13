@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_motion.dart';
 
 class AnimatedPress extends StatefulWidget {
@@ -23,7 +24,12 @@ class _AnimatedPressState extends State<AnimatedPress> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              HapticFeedback.lightImpact();
+              widget.onTap!.call();
+            },
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),

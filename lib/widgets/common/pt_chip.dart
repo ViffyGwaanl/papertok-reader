@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/morandi_palette.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_motion.dart';
@@ -34,7 +35,10 @@ class PTChip extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
           borderRadius: BorderRadius.circular(AppSpacing.cornerRadiusPill),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

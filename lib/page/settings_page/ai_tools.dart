@@ -10,6 +10,7 @@ import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:flutter/material.dart';
 
 class AiToolsSettingsPage extends StatefulWidget {
@@ -499,9 +500,7 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
           onPressed: (_) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const ShareAndShortcutsPanelPage(),
-              ),
+              CupertinoStyleRoute(page: const ShareAndShortcutsPanelPage()),
             );
           },
         ),
@@ -511,8 +510,8 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
         onPressed: (_) {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => SettingsSubpageScaffold(
+            CupertinoStyleRoute(
+              page: SettingsSubpageScaffold(
                 title: l10n.settingsMcpServers,
                 child: const McpServersSettingsPage(),
               ),

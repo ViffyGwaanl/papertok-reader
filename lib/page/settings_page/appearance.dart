@@ -1,6 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/home_navigation.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:anx_reader/widgets/settings/simple_dialog.dart';
@@ -234,9 +235,8 @@ class _AppearanceSettingState extends State<AppearanceSetting> {
               onPressed: (context) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const HomeNavigationSettingsPage(),
-                  ),
+                  CupertinoStyleRoute(
+                      page: const HomeNavigationSettingsPage()),
                 );
               },
             ),
