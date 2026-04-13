@@ -3377,30 +3377,47 @@ struct SettingsScreen: View {
             NavigationLink {
                 AIProviderCenterView(viewModel: viewModel)
             } label: {
-                Label(String(localized: "ai.providers.center"), systemImage: "server.rack")
-                    .foregroundStyle(Morandi.primaryText)
+                SettingsIconLabel(
+                    String(localized: "ai.providers.center"),
+                    systemImage: "sparkles",
+                    tint: Morandi.accent,
+                    subtitle: AIProviderID(rawValue: viewModel.aiProviderID)?.displayName
+                )
             }
 
             NavigationLink {
                 AIToolsConfigView(viewModel: viewModel)
             } label: {
-                Label(String(localized: "ai.tools.config"), systemImage: "hammer")
-                    .foregroundStyle(Morandi.primaryText)
+                SettingsIconLabel(
+                    String(localized: "ai.tools.config"),
+                    systemImage: "wrench.and.screwdriver.fill",
+                    tint: Morandi.lavender
+                )
             }
 
             NavigationLink {
                 QuickPromptsEditorView(viewModel: viewModel)
             } label: {
-                Label(String(localized: "ai.prompts.quick"), systemImage: "text.bubble")
-                    .foregroundStyle(Morandi.primaryText)
+                SettingsIconLabel(
+                    String(localized: "ai.prompts.quick"),
+                    systemImage: "text.bubble.fill",
+                    tint: Morandi.clay
+                )
             }
 
-            NavigationLink("MCP Servers") {
+            NavigationLink {
                 MCPConfigView()
+            } label: {
+                SettingsIconLabel(
+                    "MCP Servers",
+                    systemImage: "network",
+                    tint: Morandi.powder
+                )
             }
-            .foregroundStyle(Morandi.primaryText)
         } header: {
             Text("settings.ai_providers")
+        } footer: {
+            Text("Configure AI providers, tools, reusable prompts and external MCP servers.")
         }
     }
 
@@ -3478,15 +3495,22 @@ struct SettingsScreen: View {
             NavigationLink {
                 ReadingDetailSettingsView(viewModel: viewModel)
             } label: {
-                Label(String(localized: "reader.appearance.advanced"), systemImage: "textformat")
-                    .foregroundStyle(Morandi.primaryText)
+                SettingsIconLabel(
+                    String(localized: "reader.appearance.advanced"),
+                    systemImage: "textformat",
+                    tint: Morandi.dustyRose,
+                    subtitle: "\(Int(viewModel.defaultFontSize)) pt · \(viewModel.defaultFontFamily)"
+                )
             }
 
             NavigationLink {
                 HomeNavigationConfigView()
             } label: {
-                Label(String(localized: "settings.home_navigation"), systemImage: "square.grid.2x2")
-                    .foregroundStyle(Morandi.primaryText)
+                SettingsIconLabel(
+                    String(localized: "settings.home_navigation"),
+                    systemImage: "square.grid.2x2.fill",
+                    tint: Morandi.sage
+                )
             }
         } header: {
             Text("settings.reading")
@@ -3500,8 +3524,11 @@ struct SettingsScreen: View {
             NavigationLink {
                 SyncSettingsView()
             } label: {
-                Label(String(localized: "settings.sync_backup"), systemImage: "arrow.triangle.2.circlepath")
-                    .foregroundStyle(Morandi.primaryText)
+                SettingsIconLabel(
+                    String(localized: "settings.sync_backup"),
+                    systemImage: "arrow.triangle.2.circlepath.circle.fill",
+                    tint: .green
+                )
             }
         } header: {
             Text("settings.sync")
@@ -3515,16 +3542,14 @@ struct SettingsScreen: View {
             NavigationLink {
                 KAIROSSettingsView(service: kairosService)
             } label: {
-                HStack {
-                    Label(String(localized: "kairos.reading_goals"), systemImage: "flame")
-                        .foregroundStyle(Morandi.primaryText)
-                    Spacer()
-                    if kairosService.isEnabled {
-                        Text("\(kairosService.currentStreak) day streak")
-                            .font(AppTypography.caption)
-                            .foregroundStyle(Morandi.accent)
-                    }
-                }
+                SettingsIconLabel(
+                    String(localized: "kairos.reading_goals"),
+                    systemImage: "flame.fill",
+                    tint: .orange,
+                    subtitle: kairosService.isEnabled
+                        ? "\(kairosService.currentStreak) day streak"
+                        : "Off"
+                )
             }
         } header: {
             Text("settings.reading_assistant")
@@ -3538,8 +3563,12 @@ struct SettingsScreen: View {
             NavigationLink {
                 StorageManagementView(viewModel: viewModel)
             } label: {
-                Label(String(localized: "settings.storage"), systemImage: "internaldrive")
-                    .foregroundStyle(Morandi.primaryText)
+                SettingsIconLabel(
+                    String(localized: "settings.storage"),
+                    systemImage: "internaldrive.fill",
+                    tint: .gray,
+                    subtitle: viewModel.cacheSize()
+                )
             }
 
             HStack {
@@ -3589,8 +3618,11 @@ struct SettingsScreen: View {
                 NavigationLink {
                     DeveloperOptionsView(viewModel: viewModel)
                 } label: {
-                    Label(String(localized: "settings.developer_options"), systemImage: "ladybug")
-                        .foregroundStyle(Morandi.primaryText)
+                    SettingsIconLabel(
+                        String(localized: "settings.developer_options"),
+                        systemImage: "ladybug.fill",
+                        tint: .red
+                    )
                 }
             }
 

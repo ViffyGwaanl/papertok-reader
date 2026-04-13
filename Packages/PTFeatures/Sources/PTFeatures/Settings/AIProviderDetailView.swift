@@ -21,6 +21,11 @@ public struct AIProviderDetailView: View {
     @State private var customHeadersText: String = ""
     @State private var testStatus: TestStatus = .idle
     @State private var isSaved = false
+    @State private var showAPIKey = false
+    @State private var originalApiKey: String = ""
+    @State private var originalBaseURL: String = ""
+    @State private var originalModel: String = ""
+    @State private var showDeleteConfirmation = false
 
     private enum TestStatus: Equatable {
         case idle
@@ -52,18 +57,75 @@ public struct AIProviderDetailView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .toolbar {
+            if hasUnsavedChanges {
+                ToolbarItem(placement: .automatic) {
+                    Text("Unsaved")
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Morandi.clay.opacity(0.25)))
+                        .foregroundStyle(Morandi.clay)
+                }
+            }
+        }
+        .confirmationDialog(
+            "Delete this custom provider?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Provider", role: .destructive) { deleteCustomProvider() }
+            Button("Cancel", role: .cancel) {}
+        }
         .onAppear(perform: loadValues)
+    }
+
+    private func deleteCustomProvider() {
+        guard let id = customProviderID else { return }
+        var entries = AIProviderCenterView.loadCustomProviders()
+        entries.removeAll { $0.id == id }
+        AIProviderCenterView.saveCustomProviders(entries)
+        viewModel.saveAPIKey("", for: storageID)
     }
 
     // MARK: - Sections
 
     private var apiKeySection: some View {
         Section {
-            SecureField("API Key", text: $apiKey)
+            HStack(spacing: AppSpacing.sm) {
+                Group {
+                    if showAPIKey {
+                        TextField("API Key", text: $apiKey)
+                    } else {
+                        SecureField("API Key", text: $apiKey)
+                    }
+                }
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
                 #endif
                 .autocorrectionDisabled()
+
+                Button {
+                    showAPIKey.toggle()
+                } label: {
+                    Image(systemName: showAPIKey ? "eye.slash" : "eye")
+                        .foregroundStyle(Morandi.secondaryText)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(showAPIKey ? "Hide API key" : "Show API key")
+            }
+
+            if let url = getApiKeyURL {
+                Link(destination: url) {
+                    HStack(spacing: 4) {
+                        Text("Get API Key")
+                            .font(AppTypography.caption)
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(Morandi.accent)
+                }
+            }
         } header: {
             Text("common.authentication")
         } footer: {
@@ -71,6 +133,28 @@ public struct AIProviderDetailView: View {
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
+    }
+
+    private var getApiKeyURL: URL? {
+        switch provider {
+        case .openai: return URL(string: "https://platform.openai.com/api-keys")
+        case .anthropic: return URL(string: "https://console.anthropic.com/settings/keys")
+        case .gemini: return URL(string: "https://aistudio.google.com/app/apikey")
+        case .azure: return URL(string: "https://portal.azure.com/")
+        case .volcengine: return URL(string: "https://console.volcengine.com/ark")
+        case .custom: return nil
+        }
+    }
+
+    private var hasUnsavedChanges: Bool {
+        apiKey != originalApiKey || baseURL != originalBaseURL || selectedModel != originalModel
+    }
+
+    private var isValid: Bool {
+        if provider == .custom {
+            return !baseURL.trimmingCharacters(in: .whitespaces).isEmpty
+        }
+        return !apiKey.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private var endpointSection: some View {
@@ -207,8 +291,9 @@ public struct AIProviderDetailView: View {
             } label: {
                 Text("common.save")
                     .frame(maxWidth: .infinity)
-                    .foregroundStyle(Morandi.accent)
+                    .foregroundStyle(isValid ? Morandi.accent : Morandi.tertiaryText)
             }
+            .disabled(!isValid)
 
             if isSaved {
                 HStack {
@@ -222,7 +307,14 @@ public struct AIProviderDetailView: View {
             if !apiKey.isEmpty {
                 Button(String(localized: "ai.providers.remove_api_key"), role: .destructive) {
                     apiKey = ""
+                    originalApiKey = ""
                     viewModel.saveAPIKey("", for: storageID)
+                }
+            }
+
+            if provider == .custom, customProviderID != nil {
+                Button("Delete Provider", role: .destructive) {
+                    showDeleteConfirmation = true
                 }
             }
         }
@@ -266,6 +358,9 @@ public struct AIProviderDetailView: View {
         deploymentName = defaults.string(forKey: "ai_azure_deployment_\(storageID)") ?? ""
         apiVersion = defaults.string(forKey: "ai_azure_api_version_\(storageID)") ?? "2024-02-15-preview"
         customHeadersText = defaults.string(forKey: "ai_custom_headers_\(storageID)") ?? ""
+        originalApiKey = apiKey
+        originalBaseURL = baseURL
+        originalModel = selectedModel
     }
 
     private func saveValues() {
@@ -285,6 +380,9 @@ public struct AIProviderDetailView: View {
             }
         }
         isSaved = true
+        originalApiKey = apiKey
+        originalBaseURL = baseURL
+        originalModel = selectedModel
     }
 
     private func parseCustomHeaders() -> [String: String] {

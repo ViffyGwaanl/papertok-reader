@@ -10,6 +10,7 @@ public struct QuickPromptsEditorView: View {
     @State private var prompts: [QuickPrompt] = []
     @State private var editingPrompt: QuickPrompt?
     @State private var showAdd = false
+    @State private var showResetConfirmation = false
 
     @MainActor
     public init(viewModel: SettingsViewModel? = nil) {
@@ -29,6 +30,14 @@ public struct QuickPromptsEditorView: View {
                         Button { editingPrompt = prompt } label: {
                             row(prompt)
                         }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                duplicate(prompt)
+                            } label: {
+                                Label("Duplicate", systemImage: "plus.square.on.square")
+                            }
+                            .tint(Morandi.sage)
+                        }
                     }
                     .onDelete(perform: delete)
                     .onMove(perform: move)
@@ -44,12 +53,27 @@ public struct QuickPromptsEditorView: View {
                         .foregroundStyle(Morandi.accent)
                 }
 
-                Button(String(localized: "common.restore_defaults")) {
-                    prompts = QuickPrompt.builtIn
-                    persist()
+                Button(role: .destructive) {
+                    showResetConfirmation = true
+                } label: {
+                    Text("common.restore_defaults")
                 }
-                .foregroundStyle(Morandi.accent)
+            } footer: {
+                Text("Swipe left to delete, swipe right to duplicate. Drag to reorder.")
+                    .font(AppTypography.caption2)
+                    .foregroundStyle(Morandi.tertiaryText)
             }
+        }
+        .confirmationDialog(
+            "Restore default prompts? Your custom prompts will be removed.",
+            isPresented: $showResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Restore Defaults", role: .destructive) {
+                prompts = QuickPrompt.builtIn
+                persist()
+            }
+            Button("Cancel", role: .cancel) {}
         }
         .scrollContentBackground(.hidden)
         .background(Morandi.background)
@@ -96,8 +120,24 @@ public struct QuickPromptsEditorView: View {
                     .lineLimit(2)
             }
             Spacer()
+            Image(systemName: "line.3.horizontal")
+                .font(.caption)
+                .foregroundStyle(Morandi.tertiaryText)
         }
         .padding(.vertical, 2)
+    }
+
+    private func duplicate(_ prompt: QuickPrompt) {
+        let copy = QuickPrompt(
+            id: UUID(),
+            title: prompt.title + " Copy",
+            promptText: prompt.promptText,
+            iconName: prompt.iconName,
+            sortOrder: prompts.count
+        )
+        prompts.append(copy)
+        reindex()
+        persist()
     }
 
     private func delete(at offsets: IndexSet) {
@@ -181,6 +221,42 @@ struct QuickPromptEditSheet: View {
                         }
                     }
                     .padding(.vertical, AppSpacing.xs)
+
+                    TextField("Or paste an emoji", text: $iconName)
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
+                        .autocorrectionDisabled()
+                        .font(.system(size: 14))
+                }
+
+                Section("Preview") {
+                    HStack(spacing: AppSpacing.md) {
+                        Group {
+                            if iconName.count == 1 || iconName.unicodeScalars.first.map({ $0.properties.isEmoji }) == true {
+                                Text(iconName)
+                                    .font(.system(size: 18))
+                            } else {
+                                Image(systemName: iconName.isEmpty ? "sparkles" : iconName)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(Morandi.accent)
+                            }
+                        }
+                        .frame(width: 32, height: 32)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Morandi.sage.opacity(0.15)))
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(title.isEmpty ? "Untitled" : title)
+                                .font(AppTypography.body.weight(.medium))
+                                .foregroundStyle(Morandi.primaryText)
+                            Text(promptText.isEmpty ? "Tap to edit prompt text…" : promptText)
+                                .font(AppTypography.caption2)
+                                .foregroundStyle(Morandi.secondaryText)
+                                .lineLimit(2)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
                 }
             }
             .scrollContentBackground(.hidden)

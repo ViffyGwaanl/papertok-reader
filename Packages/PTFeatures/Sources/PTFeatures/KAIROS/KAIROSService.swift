@@ -220,16 +220,36 @@ public struct KAIROSSettingsView: View {
 
             if service.isEnabled {
                 Section {
-                    Stepper(
-                        "Daily Goal: \(service.dailyGoalMinutes) min",
-                        value: Binding(
-                            get: { service.dailyGoalMinutes },
-                            set: { service.dailyGoalMinutes = $0 }
-                        ),
-                        in: 5...180,
-                        step: 5
-                    )
-                    .foregroundStyle(Morandi.primaryText)
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        HStack {
+                            Text("Daily Goal")
+                                .foregroundStyle(Morandi.primaryText)
+                            Spacer()
+                            Text("\(service.dailyGoalMinutes) min")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Morandi.accent)
+                                .monospacedDigit()
+                        }
+                        Slider(
+                            value: Binding(
+                                get: { Double(service.dailyGoalMinutes) },
+                                set: { service.dailyGoalMinutes = Int($0) }
+                            ),
+                            in: 5...120,
+                            step: 5
+                        )
+                        .tint(Morandi.accent)
+                        HStack {
+                            Text("5 min")
+                                .font(.caption2)
+                                .foregroundStyle(Morandi.tertiaryText)
+                            Spacer()
+                            Text("120 min")
+                                .font(.caption2)
+                                .foregroundStyle(Morandi.tertiaryText)
+                        }
+                    }
+                    .padding(.vertical, 4)
                 } header: {
                     Text("kairos.reading_goal")
                 }
@@ -254,20 +274,46 @@ public struct KAIROSSettingsView: View {
                 }
 
                 Section {
-                    HStack {
-                        Text("common.today")
-                            .foregroundStyle(Morandi.primaryText)
-                        Spacer()
-                        Text("\(service.todayReadingMinutes) / \(service.dailyGoalMinutes) min")
-                            .foregroundStyle(service.goalReachedToday ? Morandi.sage : Morandi.secondaryText)
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        HStack {
+                            Text("common.today")
+                                .foregroundStyle(Morandi.primaryText)
+                            Spacer()
+                            Text("\(service.todayReadingMinutes) / \(service.dailyGoalMinutes) min")
+                                .foregroundStyle(service.goalReachedToday ? Morandi.sage : Morandi.secondaryText)
+                                .monospacedDigit()
+                        }
+                        GeometryReader { geo in
+                            let progress = min(1.0, Double(service.todayReadingMinutes) / Double(max(1, service.dailyGoalMinutes)))
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Morandi.divider)
+                                    .frame(height: 10)
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(service.goalReachedToday ? Morandi.sage : Morandi.accent)
+                                    .frame(width: geo.size.width * progress, height: 10)
+                            }
+                        }
+                        .frame(height: 10)
                     }
+                    .padding(.vertical, 4)
 
-                    HStack {
-                        Text("kairos.current_streak")
-                            .foregroundStyle(Morandi.primaryText)
+                    HStack(spacing: AppSpacing.sm) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.orange.opacity(0.18))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "flame.fill")
+                                .foregroundStyle(.orange)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("kairos.current_streak")
+                                .foregroundStyle(Morandi.primaryText)
+                            Text("\(service.currentStreak) days")
+                                .font(AppTypography.caption)
+                                .foregroundStyle(Morandi.accent)
+                        }
                         Spacer()
-                        Text("\(service.currentStreak) days")
-                            .foregroundStyle(Morandi.accent)
                     }
 
                     HStack {
@@ -279,6 +325,32 @@ public struct KAIROSSettingsView: View {
                     }
                 } header: {
                     Text("kairos.progress")
+                }
+
+                Section {
+                    achievementRow(
+                        title: "First Steps",
+                        detail: "Reach your daily goal once",
+                        unlocked: service.longestStreak >= 1,
+                        icon: "star.fill",
+                        tint: .yellow
+                    )
+                    achievementRow(
+                        title: "Week Warrior",
+                        detail: "7-day reading streak",
+                        unlocked: service.longestStreak >= 7,
+                        icon: "flame.fill",
+                        tint: .orange
+                    )
+                    achievementRow(
+                        title: "Unstoppable",
+                        detail: "30-day reading streak",
+                        unlocked: service.longestStreak >= 30,
+                        icon: "crown.fill",
+                        tint: Morandi.lavender
+                    )
+                } header: {
+                    Text("Achievements")
                 }
             }
         }
@@ -302,6 +374,33 @@ public struct KAIROSSettingsView: View {
         let components = Calendar.current.dateComponents([.hour, .minute], from: date)
         service.reminderHour = components.hour ?? 20
         service.reminderMinute = components.minute ?? 0
+    }
+
+    @ViewBuilder
+    private func achievementRow(title: String, detail: String, unlocked: Bool, icon: String, tint: Color) -> some View {
+        HStack(spacing: AppSpacing.md) {
+            ZStack {
+                Circle()
+                    .fill(unlocked ? tint.opacity(0.18) : Morandi.divider.opacity(0.5))
+                    .frame(width: 36, height: 36)
+                Image(systemName: unlocked ? icon : "lock.fill")
+                    .foregroundStyle(unlocked ? tint : Morandi.tertiaryText)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(AppTypography.body.weight(.medium))
+                    .foregroundStyle(unlocked ? Morandi.primaryText : Morandi.secondaryText)
+                Text(detail)
+                    .font(AppTypography.caption2)
+                    .foregroundStyle(Morandi.tertiaryText)
+            }
+            Spacer()
+            if unlocked {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(Morandi.sage)
+            }
+        }
+        .opacity(unlocked ? 1.0 : 0.6)
     }
 }
 

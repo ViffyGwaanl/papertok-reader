@@ -11,6 +11,7 @@ public struct AIProviderCenterView: View {
     @State private var customProviders: [CustomProviderEntry]
     @State private var showAddCustom = false
     @State private var newCustomName: String = ""
+    @State private var pendingDeleteOffsets: IndexSet?
 
     private static let customProvidersKey = "ai_custom_providers"
 
@@ -34,6 +35,23 @@ public struct AIProviderCenterView: View {
         #endif
         .sheet(isPresented: $showAddCustom) {
             addCustomSheet
+        }
+        .confirmationDialog(
+            "Delete this custom provider?",
+            isPresented: Binding(
+                get: { pendingDeleteOffsets != nil },
+                set: { if !$0 { pendingDeleteOffsets = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let offsets = pendingDeleteOffsets {
+                    customProviders.remove(atOffsets: offsets)
+                    Self.saveCustomProviders(customProviders)
+                }
+                pendingDeleteOffsets = nil
+            }
+            Button("Cancel", role: .cancel) { pendingDeleteOffsets = nil }
         }
     }
 
@@ -258,8 +276,7 @@ public struct AIProviderCenterView: View {
     }
 
     private func deleteCustom(at offsets: IndexSet) {
-        customProviders.remove(atOffsets: offsets)
-        Self.saveCustomProviders(customProviders)
+        pendingDeleteOffsets = offsets
     }
 
     public static func loadCustomProviders() -> [CustomProviderEntry] {

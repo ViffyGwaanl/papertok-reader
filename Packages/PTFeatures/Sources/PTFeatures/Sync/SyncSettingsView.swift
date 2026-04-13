@@ -32,32 +32,40 @@ public struct SyncSettingsView: View {
 
     private var webdavSection: some View {
         Section {
-            if showCredentialEditor {
-                credentialFields
-            } else {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("sync.webdav_server")
-                            .font(AppTypography.body)
-                            .foregroundStyle(Morandi.primaryText)
-                        if webdavURL.isEmpty {
-                            Text("sync.not_configured")
-                                .font(AppTypography.caption)
-                                .foregroundStyle(Morandi.tertiaryText)
-                        } else {
-                            Text(webdavURL)
-                                .font(AppTypography.caption)
-                                .foregroundStyle(Morandi.secondaryText)
-                                .lineLimit(1)
-                        }
-                    }
-                    Spacer()
-                    Button(webdavURL.isEmpty ? "Configure" : "Edit") {
-                        showCredentialEditor = true
-                    }
-                    .font(AppTypography.caption)
-                    .foregroundStyle(Morandi.accent)
+            HStack(spacing: AppSpacing.sm) {
+                Circle()
+                    .fill(connectionStatusColor)
+                    .frame(width: 10, height: 10)
+                TextField("Server URL", text: $webdavURL)
+                    #if os(iOS)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    #endif
+                    .autocorrectionDisabled()
+            }
+
+            TextField("Username", text: $webdavUsername)
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+                .autocorrectionDisabled()
+
+            SecureField("Password", text: $webdavPassword)
+
+            HStack {
+                Button(String(localized: "sync.test_connection")) {
+                    Task { await testConnection() }
                 }
+                .disabled(webdavURL.isEmpty || isTesting)
+                .foregroundStyle(Morandi.accent)
+
+                Spacer()
+
+                Button(String(localized: "common.save")) {
+                    saveCredentials()
+                }
+                .disabled(webdavURL.isEmpty)
+                .foregroundStyle(Morandi.accent)
             }
 
             Toggle("Auto-sync", isOn: $syncService.autoSyncEnabled)
@@ -75,42 +83,19 @@ public struct SyncSettingsView: View {
             }
         } header: {
             Text("sync.webdav")
+        } footer: {
+            Text("Credentials are stored securely in the device Keychain.")
+                .font(AppTypography.caption2)
+                .foregroundStyle(Morandi.tertiaryText)
         }
     }
 
-    @ViewBuilder
-    private var credentialFields: some View {
-        TextField("Server URL", text: $webdavURL)
-            #if os(iOS)
-            .keyboardType(.URL)
-            .textInputAutocapitalization(.never)
-            #endif
-            .autocorrectionDisabled()
-
-        TextField("Username", text: $webdavUsername)
-            #if os(iOS)
-            .textInputAutocapitalization(.never)
-            #endif
-            .autocorrectionDisabled()
-
-        SecureField("Password", text: $webdavPassword)
-
-        HStack {
-            Button(String(localized: "sync.test_connection")) {
-                Task { await testConnection() }
-            }
-            .disabled(webdavURL.isEmpty || isTesting)
-            .foregroundStyle(Morandi.accent)
-
-            Spacer()
-
-            Button(String(localized: "common.save")) {
-                saveCredentials()
-                showCredentialEditor = false
-            }
-            .disabled(webdavURL.isEmpty)
-            .foregroundStyle(Morandi.accent)
+    private var connectionStatusColor: Color {
+        guard !webdavURL.isEmpty else { return Morandi.tertiaryText }
+        if let testResult {
+            return testResult.contains("Success") ? Morandi.sage : Morandi.destructive
         }
+        return Morandi.tertiaryText
     }
 
     // MARK: - Sync Options
@@ -127,6 +112,10 @@ public struct SyncSettingsView: View {
                 Text("ai.ask_me").tag(ConflictStrategy.manual)
             }
             .foregroundStyle(Morandi.primaryText)
+
+            Text(conflictStrategyDescription)
+                .font(AppTypography.caption2)
+                .foregroundStyle(Morandi.tertiaryText)
 
             Toggle("Sync AI settings", isOn: Binding(
                 get: { syncService.aiSettingsSyncEnabled },
@@ -178,25 +167,55 @@ public struct SyncSettingsView: View {
             }
             .disabled(syncService.status == .syncing || webdavURL.isEmpty)
 
+            if syncService.status == .syncing {
+                ProgressView()
+                    .progressViewStyle(.linear)
+                    .tint(Morandi.accent)
+            }
+
             if let lastSync = syncService.lastSyncDate {
                 HStack {
                     Text("sync.last_sync")
                         .font(AppTypography.caption)
                         .foregroundStyle(Morandi.secondaryText)
                     Spacer()
-                    Text(lastSync, style: .relative)
+                    Text(lastSync, format: .relative(presentation: .named))
                         .font(AppTypography.caption)
                         .foregroundStyle(Morandi.tertiaryText)
                 }
             }
 
             if let error = syncService.errorMessage {
-                Text(error)
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    HStack(alignment: .top, spacing: AppSpacing.xs) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Morandi.destructive)
+                        Text(error)
+                            .font(AppTypography.caption)
+                            .foregroundStyle(Morandi.destructive)
+                    }
+                    Button("Retry") {
+                        Task { await syncService.incrementalSync() }
+                    }
                     .font(AppTypography.caption)
-                    .foregroundStyle(Morandi.destructive)
+                    .foregroundStyle(Morandi.accent)
+                }
             }
         } header: {
             Text("settings.sync")
+        }
+    }
+
+    private var conflictStrategyDescription: String {
+        switch syncService.conflictStrategy {
+        case .lastModifiedWins:
+            return "Automatically keep the version with the most recent modification date."
+        case .localWins:
+            return "Always prefer the local copy when conflicts occur."
+        case .remoteWins:
+            return "Always prefer the server copy when conflicts occur."
+        case .manual:
+            return "Ask each time a conflict is detected."
         }
     }
 

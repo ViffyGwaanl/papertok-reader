@@ -7,6 +7,7 @@ import PTUI
 public struct HomeNavigationConfigView: View {
     @State private var order: [AppTab]
     @State private var enabled: Set<AppTab>
+    @State private var showResetConfirmation = false
 
     public init() {
         let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
@@ -42,27 +43,45 @@ public struct HomeNavigationConfigView: View {
     }
 
     private var previewSection: some View {
-        Section(String(localized: "common.preview")) {
-            HStack(spacing: AppSpacing.md) {
-                ForEach(order.filter { enabled.contains($0) }) { tab in
-                    VStack(spacing: 4) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 18))
-                            .foregroundStyle(Morandi.accent)
-                        Text(tab.title)
-                            .font(AppTypography.caption2)
-                            .foregroundStyle(Morandi.primaryText)
+        Section {
+            VStack(spacing: AppSpacing.xs) {
+                HStack(spacing: AppSpacing.md) {
+                    ForEach(order.filter { enabled.contains($0) }) { tab in
+                        VStack(spacing: 4) {
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 18))
+                                .foregroundStyle(Morandi.accent)
+                            Text(tab.title)
+                                .font(AppTypography.caption2)
+                                .foregroundStyle(Morandi.primaryText)
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
                 }
+                .padding(.vertical, AppSpacing.sm)
+                .padding(.horizontal, AppSpacing.xs)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Morandi.cardBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(Morandi.divider, lineWidth: 1)
+                        )
+                )
             }
-            .padding(.vertical, AppSpacing.sm)
+        } header: {
+            Text("common.preview")
+        } footer: {
+            Text("Live preview of your home tab bar. Toggle tabs or drag to reorder below.")
+                .font(AppTypography.caption2)
+                .foregroundStyle(Morandi.tertiaryText)
         }
     }
 
     private var tabsSection: some View {
         Section(String(localized: "settings.home_nav.tabs")) {
             ForEach(order) { tab in
+                let isEnabled = enabled.contains(tab)
                 HStack(spacing: AppSpacing.md) {
                     Image(systemName: tab.icon)
                         .foregroundStyle(Morandi.accent)
@@ -85,7 +104,11 @@ public struct HomeNavigationConfigView: View {
                         .labelsHidden()
                         .tint(Morandi.accent)
                     }
+                    Image(systemName: "line.3.horizontal")
+                        .font(.caption)
+                        .foregroundStyle(Morandi.tertiaryText)
                 }
+                .opacity(isEnabled ? 1.0 : 0.4)
             }
             .onMove(perform: move)
         }
@@ -93,12 +116,23 @@ public struct HomeNavigationConfigView: View {
 
     private var resetSection: some View {
         Section {
-            Button(String(localized: "common.reset_to_defaults")) {
+            Button(role: .destructive) {
+                showResetConfirmation = true
+            } label: {
+                Text("common.reset_to_defaults")
+            }
+        }
+        .confirmationDialog(
+            "Reset home navigation to defaults?",
+            isPresented: $showResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Reset", role: .destructive) {
                 AppTab.resetConfiguration()
                 order = AppTab.defaultOrder
                 enabled = Set(AppTab.allCases)
             }
-            .foregroundStyle(Morandi.accent)
+            Button("Cancel", role: .cancel) {}
         }
     }
 
