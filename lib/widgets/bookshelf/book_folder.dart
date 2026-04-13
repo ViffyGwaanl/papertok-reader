@@ -4,6 +4,9 @@ import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/models/tb_group.dart';
 import 'package:anx_reader/providers/book_list.dart';
 import 'package:anx_reader/providers/tb_groups.dart';
+import 'package:anx_reader/theme/app_elevation.dart';
+import 'package:anx_reader/theme/app_spacing.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
 import 'package:anx_reader/widgets/bookshelf/book_item.dart';
 import 'package:anx_reader/widgets/bookshelf/book_opened_folder.dart';
@@ -116,11 +119,13 @@ class _BookFolderState extends ConsumerState<BookFolder> {
                     scale: 1 - (count * 0.08),
                     child: Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.cornerRadius),
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.outlineVariant,
+                          color: MorandiPalette.divider(context),
                           width: 1,
                         ),
+                        boxShadow: AppElevation.level1(context),
                       ),
                       child: BookCover(book: book),
                     ),
@@ -135,9 +140,9 @@ class _BookFolderState extends ConsumerState<BookFolder> {
           final previewBooks = widget.books.take(4).toList();
           return OutlinedContainer(
             color: Colors.transparent,
-            outlineColor: Theme.of(context).colorScheme.outlineVariant,
+            outlineColor: MorandiPalette.divider(context),
             padding: const EdgeInsets.all(6),
-            radius: 10,
+            radius: AppSpacing.cornerRadius,
             child: GridView.builder(
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,

@@ -3,7 +3,20 @@ import 'dart:math' as math;
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/models/book.dart';
+import 'package:anx_reader/theme/app_elevation.dart';
+import 'package:anx_reader/theme/app_spacing.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
+import 'package:anx_reader/widgets/common/animated_press.dart';
 import 'package:flutter/material.dart';
+
+const List<Color> _morandiCoverTints = [
+  MorandiPalette.sageLight,
+  MorandiPalette.dustyRoseLight,
+  MorandiPalette.clayLight,
+  MorandiPalette.lavenderLight,
+  MorandiPalette.powderLight,
+  MorandiPalette.mossLight,
+];
 
 class BookCover extends StatelessWidget {
   const BookCover({
@@ -27,7 +40,7 @@ class BookCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double effectiveRadius = radius ?? 8;
+    final double effectiveRadius = radius ?? AppSpacing.cornerRadiusSmall;
     final BorderRadius borderRadius = BorderRadius.circular(effectiveRadius);
     final File file = File(book.coverFullPath);
 
@@ -54,9 +67,8 @@ class BookCover extends StatelessWidget {
           final iconSize = coverWidth * 0.8;
           final padding = coverWidth * 0.08;
 
-          final backgroundColor = Colors
-              .primaries[book.title.hashCode % Colors.primaries.length]
-              .shade200;
+          final backgroundColor = _morandiCoverTints[
+              book.title.hashCode.abs() % _morandiCoverTints.length];
           final textColor = _getContrastColor(backgroundColor);
 
           final showTitle = Prefs().showBookTitleOnDefaultCover;
@@ -124,23 +136,31 @@ class BookCover extends StatelessWidget {
 
     final RoundedSuperellipseBorder borderShape = RoundedSuperellipseBorder(
       borderRadius: borderRadius,
-      side: const BorderSide(
+      side: BorderSide(
         width: 0.3,
-        color: Colors.grey,
+        color: MorandiPalette.divider(context),
       ),
     );
 
-    return SizedBox(
-      height: height,
-      width: width,
-      child: DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: ShapeDecoration(
-          shape: borderShape,
-        ),
-        child: ClipRSuperellipse(
-          borderRadius: borderRadius,
-          child: child,
+    return AnimatedPress(
+      child: SizedBox(
+        height: height,
+        width: width,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            boxShadow: AppElevation.level1(context),
+          ),
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: ShapeDecoration(
+              shape: borderShape,
+            ),
+            child: ClipRSuperellipse(
+              borderRadius: borderRadius,
+              child: child,
+            ),
+          ),
         ),
       ),
     );

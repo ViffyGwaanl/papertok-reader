@@ -22,6 +22,7 @@ import 'package:anx_reader/widgets/bookshelf/book_bottom_sheet.dart';
 import 'package:anx_reader/widgets/bookshelf/book_folder.dart';
 import 'package:anx_reader/widgets/bookshelf/sync_button.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/common/pt_chip.dart';
 import 'package:anx_reader/widgets/common/tag_chip.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
@@ -664,14 +665,10 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        labelPadding: const EdgeInsets.all(0),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        label: Text(label),
+      child: PTChip(
+        label: label,
         selected: selected,
-        onSelected: (_) => onTap(),
-        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-        checkmarkColor: Theme.of(context).colorScheme.primary,
+        onTap: onTap,
       ),
     );
   }
