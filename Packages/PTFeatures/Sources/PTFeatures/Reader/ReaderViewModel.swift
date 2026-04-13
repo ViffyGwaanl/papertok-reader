@@ -19,6 +19,7 @@ public final class ReaderViewModel {
             readingPercentage = pageCount > 1
                 ? Double(currentPage) / Double(pageCount - 1)
                 : 1.0
+            recomputeBookmarkFlag()
             publishReaderSession()
         }
     }
@@ -31,9 +32,14 @@ public final class ReaderViewModel {
     public private(set) var pdfDocument: PDFDocument?
     public let book: Book
     private let bookDAO: BookDAO
+    private let noteDAO: BookNoteDAO
     private let readingSessionRecorder: ReadingSessionRecorder
     private let readerSessionStore: ReaderSessionContextStore?
     private var pdfContentBridge: PDFContentBridge?
+
+    /// Whether the current page already has a bookmark.
+    public private(set) var isCurrentPageBookmarked: Bool = false
+    private var bookmarkCache: [BookNote] = []
 
     public var contentBridge: (any BookContentBridge)? {
         pdfContentBridge
@@ -46,6 +52,7 @@ public final class ReaderViewModel {
     ) {
         self.book = book
         self.bookDAO = BookDAO(database: database)
+        self.noteDAO = BookNoteDAO(database: database)
         self.readingSessionRecorder = ReadingSessionRecorder(bookId: book.id, database: database)
         self.readerSessionStore = readerSessionStore
         self.currentPage = Int(book.lastReadPosition) ?? 0
@@ -83,6 +90,7 @@ public final class ReaderViewModel {
             tocEntries = chapters.map { $0.toChapterEntry() }
         }
         publishReaderSession()
+        await loadBookmarks()
         await readingSessionRecorder.resume()
     }
 
@@ -141,6 +149,83 @@ public final class ReaderViewModel {
                 contentBridgeProvider: { adapter }
             )
         )
+    }
+
+    // MARK: - Bookmarks
+
+    /// Reload bookmarks for the current book from the database.
+    @discardableResult
+    public func loadBookmarks() async -> [BookNote] {
+        guard let bookId = book.id else {
+            bookmarkCache = []
+            recomputeBookmarkFlag()
+            return []
+        }
+        do {
+            let notes = try await noteDAO.fetchByBookId(bookId)
+            bookmarkCache = notes.filter { $0.type == NoteType.bookmark.rawValue }
+            recomputeBookmarkFlag()
+            return bookmarkCache
+        } catch {
+            return bookmarkCache
+        }
+    }
+
+    /// Toggle bookmark for the currently displayed page. If a bookmark
+    /// already exists on this page it is deleted, otherwise a new one
+    /// is created.
+    public func toggleBookmark() async {
+        guard let bookId = book.id else { return }
+        let pageIndex = currentPage
+        let pageLabel = pdfDocument?.page(at: pageIndex)?.label ?? "Page \(pageIndex + 1)"
+
+        if let existing = bookmark(forPage: pageIndex), let id = existing.id {
+            try? await noteDAO.delete(id: id)
+        } else {
+            let anchor = PDFAnnotationAnchor.bookmark(pageIndex: pageIndex, pageLabel: pageLabel)
+            let locatorString = PDFAnnotationBridge.storedString(from: anchor)
+            let now = Date()
+            let note = BookNote(
+                bookId: bookId,
+                content: pageLabel,
+                cfi: locatorString,
+                chapter: currentChapterEntry?.title ?? pageLabel,
+                type: NoteType.bookmark.rawValue,
+                color: HighlightColor.yellow.hex,
+                readerNote: nil,
+                createTime: now,
+                updateTime: now
+            )
+            _ = try? await noteDAO.save(note)
+        }
+
+        await loadBookmarks()
+    }
+
+    /// Delete a single bookmark by id.
+    public func deleteBookmark(id: Int64) async {
+        try? await noteDAO.delete(id: id)
+        await loadBookmarks()
+    }
+
+    /// Jump to the page referenced by the given bookmark.
+    public func jumpToBookmark(_ note: BookNote) {
+        if let anchor = PDFAnnotationBridge.anchor(fromStoredString:note.cfi) {
+            goToPage(anchor.pageIndex)
+        }
+    }
+
+    private func bookmark(forPage pageIndex: Int) -> BookNote? {
+        bookmarkCache.first { note in
+            guard let anchor = PDFAnnotationBridge.anchor(fromStoredString:note.cfi) else {
+                return false
+            }
+            return anchor.kind == .bookmark && anchor.pageIndex == pageIndex
+        }
+    }
+
+    private func recomputeBookmarkFlag() {
+        isCurrentPageBookmarked = bookmark(forPage: currentPage) != nil
     }
 
     private var currentChapterEntry: ChapterEntry? {

@@ -41,6 +41,7 @@ public final class ContextMenuCoordinator {
         case excerpt
         case note
         case noteEdit(noteID: Int64)
+        case dictionary
 
         public var id: String {
             switch self {
@@ -48,6 +49,7 @@ public final class ContextMenuCoordinator {
             case .excerpt: return "excerpt"
             case .note: return "note"
             case .noteEdit(let id): return "noteEdit-\(id)"
+            case .dictionary: return "dictionary"
             }
         }
     }
@@ -124,7 +126,10 @@ public final class ContextMenuCoordinator {
             sendToAI(prompt: summarizePrompt)
 
         case .define:
-            sendToAI(prompt: definePrompt)
+            // Show the system dictionary instead of asking the LLM. The
+            // dictionary lookup runs entirely on-device.
+            activeSheet = .dictionary
+            isMenuVisible = false
 
         case .search:
             // Search is handled by the reader view model directly;
@@ -250,9 +255,6 @@ public final class ContextMenuCoordinator {
         "Please summarize the key points of this passage \(contextLine):\n\n\"\(selectedText)\""
     }
 
-    private var definePrompt: String {
-        "Please define and explain the vocabulary in this passage \(contextLine):\n\n\"\(selectedText)\""
-    }
 }
 
 // MARK: - Notification Name

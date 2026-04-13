@@ -44,11 +44,23 @@ public final class SystemTTSBackend: NSObject, TTSBackend, @unchecked Sendable {
         voice: TTSVoice,
         rate: Double
     ) async throws -> TTSAudioStream {
+        try await synthesize(text: text, voice: voice, rate: rate, pitch: 1.0, volume: 1.0)
+    }
+
+    public func synthesize(
+        text: String,
+        voice: TTSVoice,
+        rate: Double,
+        pitch: Double,
+        volume: Double
+    ) async throws -> TTSAudioStream {
         guard !text.isEmpty else { throw TTSBackendError.emptyText }
 
         let utterance = AVSpeechUtterance(string: text)
         // Map the user-facing 0.5...2.0 multiplier onto AVSpeech's internal range.
         utterance.rate = Self.mapRate(rate)
+        utterance.pitchMultiplier = Float(max(0.5, min(2.0, pitch)))
+        utterance.volume = Float(max(0.0, min(1.0, volume)))
 
         if let avVoice = AVSpeechSynthesisVoice(identifier: voice.id) {
             utterance.voice = avVoice

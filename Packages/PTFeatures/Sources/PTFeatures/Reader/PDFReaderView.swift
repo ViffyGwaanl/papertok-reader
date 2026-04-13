@@ -424,6 +424,11 @@ public struct PDFReaderView: View {
     @State private var aiQuickActionChapter: String = ""
     @State private var currentSearchResultIndex: Int = 0
     @State private var contextMenuCoordinator: ContextMenuCoordinator?
+    @State private var showBookmarkManager = false
+    @State private var tocSearchQuery = ""
+    @State private var showBrightnessControl = false
+    @State private var volumeKeysEnabled = UserDefaults.standard.bool(forKey: "pt.reader.volumeKeysEnabled")
+    @State private var volumeKeyHandler = VolumeKeyHandler()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
@@ -469,6 +474,23 @@ public struct PDFReaderView: View {
         .sheet(item: contextMenuSheetBinding) { sheet in
             contextMenuSheetContent(sheet)
         }
+        .sheet(isPresented: $showBookmarkManager) {
+            BookmarkManagerView(
+                viewModel: viewModel,
+                database: database,
+                onJump: { note in
+                    viewModel.jumpToBookmark(note)
+                }
+            )
+        }
+        .overlay(alignment: .top) {
+            if showBrightnessControl {
+                ScreenBrightnessSlider()
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.top, AppSpacing.sm)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
         .overlay(alignment: .center) {
             if let coordinator = contextMenuCoordinator, coordinator.isMenuVisible {
                 ReaderContextMenuView(coordinator: coordinator) {
@@ -479,8 +501,23 @@ public struct PDFReaderView: View {
                 .zIndex(100)
             }
         }
-        .task { await loadReader() }
+        .task {
+            await loadReader()
+            volumeKeyHandler.onVolumeUp = {
+                Task { @MainActor in
+                    viewModel.goToPage(viewModel.currentPage + 1)
+                }
+            }
+            volumeKeyHandler.onVolumeDown = {
+                Task { @MainActor in
+                    viewModel.goToPage(viewModel.currentPage - 1)
+                }
+            }
+            applyVolumeKeyHandler()
+        }
         .onDisappear {
+            volumeKeyHandler.stop()
+            WakeLockController.setKeepScreenOn(false)
             Task {
                 await viewModel.saveProgress()
                 await viewModel.endReadingSession()
@@ -518,7 +555,7 @@ public struct PDFReaderView: View {
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PaperTokToggleAI"))) { _ in
             isAIPanelPresented.toggle()
         }
-        .alert("Annotation Error", isPresented: annotationErrorPresentedBinding) {
+        .alert("reader.annotation_error", isPresented: annotationErrorPresentedBinding) {
             Button(String(localized: "common.ok")) {
                 annotationErrorMessage = nil
             }
@@ -604,16 +641,45 @@ public struct PDFReaderView: View {
             .disabled(readerControlsViewModel == nil)
 
             Button {
-                presentBookmarkDraft()
+                Task {
+                    await viewModel.toggleBookmark()
+                    if let annotationsViewModel {
+                        await annotationsViewModel.loadAnnotations()
+                    }
+                }
             } label: {
-                Image(systemName: "bookmark")
+                Image(systemName: viewModel.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark")
                     .foregroundStyle(Morandi.accent)
             }
             .accessibilityLabel(String(localized: "bookmark.add"))
             .disabled(viewModel.pdfDocument == nil)
 
-            Button {
-                viewModel.showTOC = true
+            Menu {
+                Button {
+                    showBookmarkManager = true
+                } label: {
+                    Label("Bookmarks", systemImage: "bookmark.circle")
+                }
+                Button {
+                    viewModel.showTOC = true
+                } label: {
+                    Label("Contents", systemImage: "list.bullet")
+                }
+                Button {
+                    showBrightnessControl.toggle()
+                } label: {
+                    Label("Brightness", systemImage: "sun.max")
+                }
+                Toggle(isOn: Binding(
+                    get: { volumeKeysEnabled },
+                    set: { newValue in
+                        volumeKeysEnabled = newValue
+                        UserDefaults.standard.set(newValue, forKey: "pt.reader.volumeKeysEnabled")
+                        applyVolumeKeyHandler()
+                    }
+                )) {
+                    Label("Volume keys turn pages", systemImage: "speaker.wave.2")
+                }
             } label: {
                 Image(systemName: "list.bullet")
                     .foregroundStyle(Morandi.accent)
@@ -728,26 +794,38 @@ public struct PDFReaderView: View {
                         description: Text("reader.no_toc_pdf")
                     )
                 } else {
-                    List(viewModel.tocEntries) { entry in
-                        Button {
-                            viewModel.goToChapter(href: entry.href)
-                            viewModel.showTOC = false
-                        } label: {
-                            HStack(spacing: AppSpacing.xs) {
-                                if entry.level > 0 {
-                                    Spacer().frame(width: CGFloat(entry.level) * AppSpacing.lg)
-                                }
-                                Text(entry.title)
-                                    .font(entry.level == 0 ? AppTypography.headline : AppTypography.body)
-                                    .foregroundStyle(
-                                        entry.level == 0 ? Morandi.primaryText : Morandi.secondaryText
-                                    )
+                    let entries = filteredTOCEntries
+                    VStack(spacing: 0) {
+                        if !tocSearchQuery.isEmpty {
+                            HStack {
+                                Text("\(entries.count) match\(entries.count == 1 ? "" : "es")")
+                                    .font(AppTypography.caption)
+                                    .foregroundStyle(Morandi.secondaryText)
                                 Spacer()
                             }
+                            .padding(.horizontal, AppSpacing.lg)
+                            .padding(.top, AppSpacing.xs)
                         }
-                        .listRowBackground(Morandi.background)
+                        List(entries) { entry in
+                            Button {
+                                viewModel.goToChapter(href: entry.href)
+                                viewModel.showTOC = false
+                                tocSearchQuery = ""
+                            } label: {
+                                HStack(spacing: AppSpacing.xs) {
+                                    if entry.level > 0 {
+                                        Spacer().frame(width: CGFloat(entry.level) * AppSpacing.lg)
+                                    }
+                                    highlightedTOCTitle(entry.title)
+                                        .font(entry.level == 0 ? AppTypography.headline : AppTypography.body)
+                                    Spacer()
+                                }
+                            }
+                            .listRowBackground(Morandi.background)
+                        }
+                        .listStyle(.plain)
                     }
-                    .listStyle(.plain)
+                    .searchable(text: $tocSearchQuery, prompt: "Search contents")
                 }
             }
             .background(Morandi.background)
@@ -785,7 +863,7 @@ public struct PDFReaderView: View {
                         ContentUnavailableView(
                             "No Results",
                             systemImage: "doc.text.magnifyingglass",
-                            description: Text("No matches were found for “\(readerControlsViewModel.searchQuery)”.")
+                            description: Text(String(format: NSLocalizedString("reader.search.no_matches_format", comment: ""), readerControlsViewModel.searchQuery))
                         )
                     } else {
                         List(readerControlsViewModel.searchResults) { result in
@@ -810,7 +888,7 @@ public struct PDFReaderView: View {
                                     .font(AppTypography.body)
                                     .lineLimit(4)
 
-                                    Text("Match at \(Int((result.progression * 100).rounded()))% of document")
+                                    Text(String(format: NSLocalizedString("reader.search.match_at_progress_format", comment: ""), Int((result.progression * 100).rounded())))
                                         .font(AppTypography.caption)
                                         .foregroundStyle(Morandi.secondaryText)
                                 }
@@ -1059,6 +1137,11 @@ public struct PDFReaderView: View {
                     },
                     onDismiss: { coordinator.activeSheet = nil }
                 )
+            case .dictionary:
+                DictionaryLookupSheet(
+                    term: coordinator.selectedText,
+                    onDismiss: { coordinator.activeSheet = nil }
+                )
             case .noteEdit(let noteID):
                 NoteEditorSheet(
                     selectedText: coordinator.selectedText,
@@ -1074,6 +1157,41 @@ public struct PDFReaderView: View {
                 )
             }
         }
+    }
+
+    // MARK: - TOC search highlighting
+
+    private func highlightedTOCTitle(_ title: String) -> Text {
+        let q = tocSearchQuery.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty,
+              let range = title.range(of: q, options: .caseInsensitive) else {
+            return Text(title).foregroundStyle(Morandi.primaryText)
+        }
+        let before = String(title[..<range.lowerBound])
+        let match = String(title[range])
+        let after = String(title[range.upperBound...])
+        return Text(before).foregroundStyle(Morandi.primaryText)
+            + Text(match).foregroundStyle(Morandi.accent).bold()
+            + Text(after).foregroundStyle(Morandi.primaryText)
+    }
+
+    // MARK: - Volume Key Handler
+
+    private func applyVolumeKeyHandler() {
+        if volumeKeysEnabled {
+            volumeKeyHandler.start()
+            WakeLockController.setKeepScreenOn(true)
+        } else {
+            volumeKeyHandler.stop()
+        }
+    }
+
+    // MARK: - TOC Search Helpers
+
+    private var filteredTOCEntries: [ChapterEntry] {
+        let q = tocSearchQuery.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return viewModel.tocEntries }
+        return viewModel.tocEntries.filter { $0.title.range(of: q, options: .caseInsensitive) != nil }
     }
 
     // MARK: - Search Result Navigation

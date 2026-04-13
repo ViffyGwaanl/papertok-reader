@@ -57,3 +57,17 @@ public protocol TTSBackend: Sendable {
         rate: Double
     ) async throws -> TTSAudioStream
 }
+
+public extension TTSBackend {
+    /// Extended synthesis hook with pitch + volume. Backends that don't
+    /// override default to the basic `synthesize(text:voice:rate:)`.
+    func synthesize(
+        text: String,
+        voice: TTSVoice,
+        rate: Double,
+        pitch: Double,
+        volume: Double
+    ) async throws -> TTSAudioStream {
+        try await synthesize(text: text, voice: voice, rate: rate)
+    }
+}

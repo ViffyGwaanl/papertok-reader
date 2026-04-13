@@ -147,6 +147,8 @@ struct TTSExpandedControlsSheet: View {
                     backendSection
                     voiceSection
                     rateSection
+                    pitchSection
+                    volumeSection
                     transportSection
                     if let errorMessage {
                         Text(errorMessage)
@@ -250,6 +252,68 @@ struct TTSExpandedControlsSheet: View {
         }
     }
 
+    private var pitchSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            HStack {
+                Text("Pitch")
+                    .font(AppTypography.subheadline)
+                    .foregroundStyle(Morandi.primaryText)
+                Spacer()
+                Text(String(format: "%.2f", service.orchestrator.pitch))
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.secondaryText)
+            }
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "arrow.down")
+                    .font(.caption)
+                    .foregroundStyle(Morandi.tertiaryText)
+                Slider(
+                    value: Binding(
+                        get: { service.orchestrator.pitch },
+                        set: { service.orchestrator.pitch = $0 }
+                    ),
+                    in: 0.5...2.0,
+                    step: 0.05
+                )
+                .tint(Morandi.accent)
+                Image(systemName: "arrow.up")
+                    .font(.caption)
+                    .foregroundStyle(Morandi.tertiaryText)
+            }
+        }
+    }
+
+    private var volumeSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            HStack {
+                Text("Volume")
+                    .font(AppTypography.subheadline)
+                    .foregroundStyle(Morandi.primaryText)
+                Spacer()
+                Text(String(format: "%.0f%%", service.orchestrator.volume * 100))
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.secondaryText)
+            }
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "speaker.fill")
+                    .font(.caption)
+                    .foregroundStyle(Morandi.tertiaryText)
+                Slider(
+                    value: Binding(
+                        get: { service.orchestrator.volume },
+                        set: { service.orchestrator.volume = $0 }
+                    ),
+                    in: 0.0...1.0,
+                    step: 0.05
+                )
+                .tint(Morandi.accent)
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.caption)
+                    .foregroundStyle(Morandi.tertiaryText)
+            }
+        }
+    }
+
     private var transportSection: some View {
         HStack(spacing: AppSpacing.xl) {
             Button {
@@ -259,7 +323,7 @@ struct TTSExpandedControlsSheet: View {
                     .font(.title2)
                     .foregroundStyle(Morandi.primaryText)
             }
-            .accessibilityLabel("Previous chapter")
+            .accessibilityLabel(Text("tts.previous_chapter"))
 
             Button {
                 togglePlay()
@@ -277,7 +341,7 @@ struct TTSExpandedControlsSheet: View {
                     .font(.title2)
                     .foregroundStyle(Morandi.primaryText)
             }
-            .accessibilityLabel("Next chapter")
+            .accessibilityLabel(Text("tts.next_chapter"))
 
             Button {
                 service.stop()

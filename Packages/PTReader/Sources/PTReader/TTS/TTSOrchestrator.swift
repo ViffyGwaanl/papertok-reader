@@ -28,6 +28,24 @@ public final class TTSOrchestrator: NSObject {
     /// User-facing rate multiplier, 0.5...2.0. 1.0 is normal speed.
     public var rate: Double = 1.0
 
+    /// Pitch multiplier, 0.5...2.0. 1.0 is normal pitch.
+    public var pitch: Double = 1.0 {
+        didSet {
+            UserDefaults.standard.set(pitch, forKey: Self.pitchKey)
+        }
+    }
+
+    /// Volume multiplier, 0.0...1.0. 1.0 is full volume.
+    public var volume: Double = 1.0 {
+        didSet {
+            UserDefaults.standard.set(volume, forKey: Self.volumeKey)
+            audioPlayer?.volume = Float(max(0, min(1, volume)))
+        }
+    }
+
+    private static let pitchKey = "pt.tts.pitch"
+    private static let volumeKey = "pt.tts.volume"
+
     public private(set) var currentBackend: TTSBackend
     public var currentVoice: TTSVoice
 
@@ -57,6 +75,14 @@ public final class TTSOrchestrator: NSObject {
             gender: nil
         )
         super.init()
+
+        // Restore persisted pitch/volume defaults.
+        if UserDefaults.standard.object(forKey: Self.pitchKey) != nil {
+            self.pitch = UserDefaults.standard.double(forKey: Self.pitchKey)
+        }
+        if UserDefaults.standard.object(forKey: Self.volumeKey) != nil {
+            self.volume = UserDefaults.standard.double(forKey: Self.volumeKey)
+        }
 
         let sd = SynthDelegate(owner: self)
         self.synthDelegate = sd
@@ -116,7 +142,9 @@ public final class TTSOrchestrator: NSObject {
             let stream = try await currentBackend.synthesize(
                 text: text,
                 voice: currentVoice,
-                rate: rate
+                rate: rate,
+                pitch: pitch,
+                volume: volume
             )
             try await handleStream(stream)
         } catch {
@@ -214,6 +242,7 @@ public final class TTSOrchestrator: NSObject {
         player.delegate = playerDelegate
         player.enableRate = true
         player.rate = Float(rate)
+        player.volume = Float(max(0, min(1, volume)))
         player.prepareToPlay()
         audioPlayer = player
         player.play()
