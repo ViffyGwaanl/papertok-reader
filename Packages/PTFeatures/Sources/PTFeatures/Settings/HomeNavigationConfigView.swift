@@ -72,7 +72,7 @@ public struct HomeNavigationConfigView: View {
         } header: {
             Text("common.preview")
         } footer: {
-            Text("Live preview of your home tab bar. Toggle tabs or drag to reorder below.")
+            Text("settings.home_nav.preview_hint")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }

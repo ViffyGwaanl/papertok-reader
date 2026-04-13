@@ -114,16 +114,16 @@ public struct ConversationListView: View {
             Form {
                 TextField("Title", text: $renameText)
             }
-            .navigationTitle("Rename")
+            .navigationTitle("common.rename")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { renameTarget = nil }
+                    Button("common.cancel") { renameTarget = nil }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { performRename(target) }.bold()
+                    Button("common.save") { performRename(target) }.bold()
                 }
             }
         }
@@ -227,19 +227,19 @@ public struct ConversationListView: View {
                                 pinnedIds.remove(summary.id)
                                 savePinned()
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Label("common.delete", systemImage: "trash")
                             }
                             Button {
                                 renameText = summary.title
                                 renameTarget = summary
                             } label: {
-                                Label("Rename", systemImage: "pencil")
+                                Label("common.rename", systemImage: "pencil")
                             }
                             .tint(Morandi.clay)
                             Button {
                                 export(summary)
                             } label: {
-                                Label("Export", systemImage: "square.and.arrow.up")
+                                Label("ai.conversation.export", systemImage: "square.and.arrow.up")
                             }
                             .tint(Morandi.powder)
                         }
@@ -256,12 +256,12 @@ public struct ConversationListView: View {
                                 renameText = summary.title
                                 renameTarget = summary
                             } label: {
-                                Label("Rename", systemImage: "pencil")
+                                Label("common.rename", systemImage: "pencil")
                             }
                             Button {
                                 export(summary)
                             } label: {
-                                Label("Export markdown", systemImage: "square.and.arrow.up")
+                                Label("ai.conversation.export_markdown", systemImage: "square.and.arrow.up")
                             }
                         }
                     }

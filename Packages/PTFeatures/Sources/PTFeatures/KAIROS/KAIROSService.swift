@@ -222,7 +222,7 @@ public struct KAIROSSettingsView: View {
                 Section {
                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
                         HStack {
-                            Text("Daily Goal")
+                            Text("kairos.daily_goal")
                                 .foregroundStyle(Morandi.primaryText)
                             Spacer()
                             Text("\(service.dailyGoalMinutes) min")
@@ -350,7 +350,7 @@ public struct KAIROSSettingsView: View {
                         tint: Morandi.lavender
                     )
                 } header: {
-                    Text("Achievements")
+                    Text("kairos.achievements")
                 }
             }
         }

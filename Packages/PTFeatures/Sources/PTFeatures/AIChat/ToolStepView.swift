@@ -77,7 +77,7 @@ public struct ToolStepView: View {
                             .font(AppTypography.caption2)
                             .foregroundStyle(Morandi.sage)
                     } else if case .failed = state {
-                        Text("Failed")
+                        Text("intent.result.failed")
                             .font(AppTypography.caption2)
                             .foregroundStyle(Morandi.destructive)
                     }

@@ -84,7 +84,7 @@ public struct SyncSettingsView: View {
         } header: {
             Text("sync.webdav")
         } footer: {
-            Text("Credentials are stored securely in the device Keychain.")
+            Text("sync.keychain_hint")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
@@ -194,7 +194,7 @@ public struct SyncSettingsView: View {
                             .font(AppTypography.caption)
                             .foregroundStyle(Morandi.destructive)
                     }
-                    Button("Retry") {
+                    Button("common.retry") {
                         Task { await syncService.incrementalSync() }
                     }
                     .font(AppTypography.caption)

@@ -52,7 +52,7 @@ struct ChatSettingsSheet: View {
                         .scrollContentBackground(.hidden)
                         .background(Morandi.cardBackground)
                 } header: {
-                    Text("System prompt")
+                    Text("ai.chat_settings.system_prompt")
                         .foregroundStyle(Morandi.secondaryText)
                 }
 
@@ -71,13 +71,13 @@ struct ChatSettingsSheet: View {
                     Button(role: .destructive) {
                         reset()
                     } label: {
-                        Label("Reset to defaults", systemImage: "arrow.counterclockwise")
+                        Label("ai.chat_settings.reset_to_defaults", systemImage: "arrow.counterclockwise")
                     }
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle("Chat settings")
+            .navigationTitle("ai.chat_settings.title")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

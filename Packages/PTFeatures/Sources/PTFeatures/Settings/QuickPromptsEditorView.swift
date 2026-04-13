@@ -34,7 +34,7 @@ public struct QuickPromptsEditorView: View {
                             Button {
                                 duplicate(prompt)
                             } label: {
-                                Label("Duplicate", systemImage: "plus.square.on.square")
+                                Label("prompts.duplicate", systemImage: "plus.square.on.square")
                             }
                             .tint(Morandi.sage)
                         }
@@ -59,7 +59,7 @@ public struct QuickPromptsEditorView: View {
                     Text("common.restore_defaults")
                 }
             } footer: {
-                Text("Swipe left to delete, swipe right to duplicate. Drag to reorder.")
+                Text("prompts.swipe_hint")
                     .font(AppTypography.caption2)
                     .foregroundStyle(Morandi.tertiaryText)
             }
@@ -230,7 +230,7 @@ struct QuickPromptEditSheet: View {
                         .font(.system(size: 14))
                 }
 
-                Section("Preview") {
+                Section("common.preview_section") {
                     HStack(spacing: AppSpacing.md) {
                         Group {
                             if iconName.count == 1 || iconName.unicodeScalars.first.map({ $0.properties.isEmoji }) == true {

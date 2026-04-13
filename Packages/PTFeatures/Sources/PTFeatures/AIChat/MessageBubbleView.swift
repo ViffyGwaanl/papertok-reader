@@ -164,14 +164,14 @@ struct MessageBubbleView: View {
                 switch status {
                 case .sending:
                     ProgressView().scaleEffect(0.6).tint(Morandi.secondaryText)
-                    Text("Sending").font(AppTypography.caption2).foregroundStyle(Morandi.tertiaryText)
+                    Text("common.sending").font(AppTypography.caption2).foregroundStyle(Morandi.tertiaryText)
                 case .sent:
                     Image(systemName: "checkmark").font(.system(size: 10)).foregroundStyle(Morandi.sage)
                 case .failed:
                     Image(systemName: "exclamationmark.circle.fill").font(.system(size: 10)).foregroundStyle(Morandi.destructive)
-                    Text("Failed").font(AppTypography.caption2).foregroundStyle(Morandi.destructive)
+                    Text("intent.result.failed").font(AppTypography.caption2).foregroundStyle(Morandi.destructive)
                     if let onRetry {
-                        Button("Retry", action: onRetry)
+                        Button("common.retry", action: onRetry)
                             .font(AppTypography.caption2)
                             .foregroundStyle(Morandi.accent)
                     }
@@ -197,7 +197,7 @@ struct MessageBubbleView: View {
     private func userMenu(text: String) -> some View {
         messageCopyMenu(text: text)
         if status == .failed, let onRetry {
-            Button { onRetry() } label: { Label("Retry", systemImage: "arrow.clockwise") }
+            Button { onRetry() } label: { Label("common.retry", systemImage: "arrow.clockwise") }
         }
     }
 
@@ -205,7 +205,7 @@ struct MessageBubbleView: View {
     private func assistantMenu(text: String) -> some View {
         messageCopyMenu(text: text)
         if let onRegenerate {
-            Button { onRegenerate() } label: { Label("Regenerate", systemImage: "arrow.clockwise") }
+            Button { onRegenerate() } label: { Label("ai.regenerate", systemImage: "arrow.clockwise") }
         }
     }
 

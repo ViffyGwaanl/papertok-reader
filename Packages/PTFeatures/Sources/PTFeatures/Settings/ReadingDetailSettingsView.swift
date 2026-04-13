@@ -108,7 +108,7 @@ public struct ReadingDetailSettingsView: View {
             .onChange(of: viewModel.defaultFontFamily) { _, _ in viewModel.save() }
 
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text("Size: \(Int(viewModel.defaultFontSize)) pt")
+                Text(String(format: NSLocalizedString("reader.font_size_pt_format", comment: ""), Int(viewModel.defaultFontSize)))
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
                 Slider(value: $viewModel.defaultFontSize, in: 12...32, step: 1)

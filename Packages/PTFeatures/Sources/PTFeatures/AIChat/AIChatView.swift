@@ -82,7 +82,7 @@ public struct AIChatView: View {
             )
         }
         .background(Morandi.background)
-        .navigationTitle("PaperTok AI")
+        .navigationTitle("ai.app_name")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -134,7 +134,7 @@ public struct AIChatView: View {
                 .foregroundStyle(.white)
                 .lineLimit(2)
             Spacer()
-            Button("Retry") {
+            Button("common.retry") {
                 Task { await viewModel.retryLastUserMessage() }
             }
             .font(AppTypography.caption.weight(.semibold))
@@ -174,10 +174,10 @@ public struct AIChatView: View {
                         .foregroundStyle(.white)
                 }
                 VStack(spacing: AppSpacing.xs) {
-                    Text("PaperTok AI")
+                    Text("ai.app_name")
                         .font(AppTypography.largeTitle.weight(.bold))
                         .foregroundStyle(Morandi.primaryText)
-                    Text("Your premium reading assistant")
+                    Text("ai.empty.subtitle")
                         .font(AppTypography.body)
                         .foregroundStyle(Morandi.secondaryText)
                 }

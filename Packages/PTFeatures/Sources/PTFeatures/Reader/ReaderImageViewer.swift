@@ -65,7 +65,7 @@ public struct ReaderImageViewer: View {
                 exportError = error.localizedDescription
             }
         }
-        .alert("Unable to Prepare Image", isPresented: exportErrorPresentedBinding) {
+        .alert("reader.unable_prepare_image", isPresented: exportErrorPresentedBinding) {
             Button(String(localized: "common.ok")) { exportError = nil }
         } message: {
             Text(exportError ?? "")
