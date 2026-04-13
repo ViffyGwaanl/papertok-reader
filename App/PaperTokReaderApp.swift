@@ -9,6 +9,21 @@ struct PaperTokReaderApp: App {
     @State private var router = DeepLinkRouter.shared
     @State private var showMigration = false
 
+    /// Persisted theme preference: "system" | "light" | "dark".
+    /// Backed by the shared app-group UserDefaults so extensions stay in sync.
+    @AppStorage(AppConfig.Keys.themeMode, store: AppConfig.groupDefaults)
+    private var themeMode: String = AppConfig.Defaults.defaultThemeMode
+
+    /// Resolves `themeMode` into a SwiftUI `ColorScheme?` override.
+    /// `nil` means "follow system".
+    private var preferredColorScheme: ColorScheme? {
+        switch themeMode {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
+
     // Platform services (lazy initialization — only created when needed)
     private let calendarService = CalendarService()
     private let remindersService = RemindersService()
@@ -25,6 +40,7 @@ struct PaperTokReaderApp: App {
     private var iOSScene: some Scene {
         WindowGroup {
             rootContent
+                .preferredColorScheme(preferredColorScheme)
                 .onOpenURL { url in
                     _ = router.handle(url: url)
                 }
@@ -36,6 +52,7 @@ struct PaperTokReaderApp: App {
     private var macOSScene: some Scene {
         MacRootScene {
             rootContent
+                .preferredColorScheme(preferredColorScheme)
                 .onOpenURL { url in
                     _ = router.handle(url: url)
                 }

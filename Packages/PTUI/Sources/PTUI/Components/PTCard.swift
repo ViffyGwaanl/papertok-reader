@@ -9,6 +9,6 @@ public struct PTCard<Content: View>: View {
             .padding(AppSpacing.lg)
             .background(Morandi.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
-            .shadow(color: Morandi.shadow, radius: AppSpacing.shadowRadius, y: 2) // darkmode
+            .shadow(color: Morandi.shadow, radius: AppSpacing.shadowRadius, y: 2)
     }
 }

@@ -534,7 +534,7 @@ struct BookshelfScreen: View {
 
     private var importOverlay: some View {
         ZStack {
-            Color.black.opacity(0.25).ignoresSafeArea()
+            Morandi.primaryText.opacity(0.25).ignoresSafeArea()
             VStack(spacing: AppSpacing.md) {
                 ProgressView()
                     .tint(Morandi.accent)

@@ -60,7 +60,7 @@ public struct ReadingDetailSettingsView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(previewBackground)
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
+                    .shadow(color: Morandi.shadow, radius: 4, y: 2)
 
                 VStack(alignment: .leading, spacing: viewModel.paragraphSpacing) {
                     Text("reader.chapter_title")

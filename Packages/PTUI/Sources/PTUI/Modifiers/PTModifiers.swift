@@ -5,7 +5,7 @@ public struct PTCardModifier: ViewModifier {
         content.padding(AppSpacing.lg)
             .background(Morandi.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
-            .shadow(color: Morandi.warmGray.opacity(0.15), radius: AppSpacing.shadowRadius, y: 2)
+            .shadow(color: Morandi.shadow, radius: AppSpacing.shadowRadius, y: 2)
     }
 }
 

@@ -2,14 +2,16 @@ import SwiftUI
 import PTAIServices
 import PTUI
 
-/// Renders a single chat message as a bubble.
-///
-/// - User: right-aligned, Morandi accent background
-/// - Assistant: left-aligned, card background + basic text rendering
-/// - System: centered, small secondary text (collapsed by default)
-/// - Tool result: shown inline via ToolStepView
+/// Production-quality chat message bubble with avatars, timestamps, status indicators,
+/// rich markdown, code blocks, and contextual menus.
 struct MessageBubbleView: View {
     let message: ChatMessage
+    var timestamp: Date? = nil
+    var status: AIChatViewModel.MessageStatus? = nil
+    var onCopy: ((String) -> Void)? = nil
+    var onRegenerate: (() -> Void)? = nil
+    var onRetry: (() -> Void)? = nil
+
     @State private var showSystemContent = false
 
     var body: some View {
@@ -38,7 +40,7 @@ struct MessageBubbleView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(Morandi.accent)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color(light: .white, dark: Morandi.cardBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                         .textSelection(.enabled)
                         .contextMenu { messageCopyMenu(text: text) }

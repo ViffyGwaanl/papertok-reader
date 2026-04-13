@@ -32,7 +32,7 @@ struct ExcerptMenuSheet: View {
                                 .aspectRatio(contentMode: .fit)
                                 .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
                                 .shadow(
-                                    color: .black.opacity(0.08),
+                                    color: Morandi.shadow,
                                     radius: AppSpacing.shadowRadius
                                 )
                         }
