@@ -32,7 +32,7 @@ class AppTypography {
       titleSmall: base.copyWith(fontSize: subheadlineSize, fontWeight: FontWeight.w600),
       bodyLarge: base.copyWith(fontSize: bodySize, fontWeight: FontWeight.w400),
       bodyMedium: base.copyWith(fontSize: calloutSize, fontWeight: FontWeight.w400),
-      bodySmall: base.copyWith(fontSize: subheadlineSize, fontWeight: FontWeight.w400, color: colors.onSurface.withOpacity(0.7)),
+      bodySmall: base.copyWith(fontSize: subheadlineSize, fontWeight: FontWeight.w400, color: colors.onSurface.withValues(alpha: 0.7)),
       labelLarge: base.copyWith(fontSize: footnoteSize, fontWeight: FontWeight.w600),
       labelMedium: base.copyWith(fontSize: captionSize, fontWeight: FontWeight.w500),
       labelSmall: base.copyWith(fontSize: caption2Size, fontWeight: FontWeight.w500),

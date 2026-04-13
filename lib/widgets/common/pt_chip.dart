@@ -21,7 +21,7 @@ class PTChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = selected
         ? MorandiPalette.sage(context)
-        : MorandiPalette.divider(context).withOpacity(0.5);
+        : MorandiPalette.divider(context).withValues(alpha: 0.5);
     final fg = selected ? Colors.white : MorandiPalette.secondaryText(context);
 
     return AnimatedContainer(

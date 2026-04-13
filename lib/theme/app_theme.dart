@@ -11,9 +11,7 @@ class AppTheme {
       seedColor: MorandiPalette.sageLight,
       brightness: Brightness.light,
       surface: MorandiPalette.cardLight,
-      background: MorandiPalette.backgroundLight,
       onSurface: MorandiPalette.primaryTextLight,
-      onBackground: MorandiPalette.primaryTextLight,
       primary: MorandiPalette.sageLight,
       error: MorandiPalette.errorLight,
     );
@@ -38,9 +36,7 @@ class AppTheme {
       seedColor: MorandiPalette.sageDark,
       brightness: Brightness.dark,
       surface: MorandiPalette.cardDark,
-      background: MorandiPalette.backgroundDark,
       onSurface: MorandiPalette.primaryTextDark,
-      onBackground: MorandiPalette.primaryTextDark,
       primary: MorandiPalette.sageDark,
       error: MorandiPalette.errorDark,
     );

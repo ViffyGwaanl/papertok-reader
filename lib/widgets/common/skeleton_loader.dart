@@ -38,8 +38,8 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
 
   @override
   Widget build(BuildContext context) {
-    final base = MorandiPalette.divider(context).withOpacity(0.4);
-    final highlight = MorandiPalette.divider(context).withOpacity(0.7);
+    final base = MorandiPalette.divider(context).withValues(alpha: 0.4);
+    final highlight = MorandiPalette.divider(context).withValues(alpha: 0.7);
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {

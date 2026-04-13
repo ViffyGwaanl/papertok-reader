@@ -8,7 +8,7 @@ class AppElevation {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
       BoxShadow(
-        color: Colors.black.withOpacity(isDark ? 0.30 : 0.08),
+        color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.08),
         blurRadius: 4,
         offset: const Offset(0, 2),
       ),
@@ -19,7 +19,7 @@ class AppElevation {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
       BoxShadow(
-        color: Colors.black.withOpacity(isDark ? 0.35 : 0.10),
+        color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.10),
         blurRadius: 8,
         offset: const Offset(0, 4),
       ),
@@ -30,7 +30,7 @@ class AppElevation {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
       BoxShadow(
-        color: Colors.black.withOpacity(isDark ? 0.40 : 0.12),
+        color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.12),
         blurRadius: 16,
         offset: const Offset(0, 8),
       ),
@@ -41,7 +41,7 @@ class AppElevation {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
       BoxShadow(
-        color: Colors.black.withOpacity(isDark ? 0.50 : 0.15),
+        color: Colors.black.withValues(alpha: isDark ? 0.50 : 0.15),
         blurRadius: 24,
         offset: const Offset(0, 12),
       ),
