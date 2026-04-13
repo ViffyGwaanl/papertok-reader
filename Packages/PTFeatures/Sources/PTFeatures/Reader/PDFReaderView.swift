@@ -429,6 +429,9 @@ public struct PDFReaderView: View {
     @State private var showBrightnessControl = false
     @State private var volumeKeysEnabled = UserDefaults.standard.bool(forKey: "pt.reader.volumeKeysEnabled")
     @State private var volumeKeyHandler = VolumeKeyHandler()
+#if canImport(AVFoundation)
+    @State private var ttsService = TTSService()
+#endif
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
@@ -501,6 +504,21 @@ public struct PDFReaderView: View {
                 .zIndex(100)
             }
         }
+#if canImport(AVFoundation)
+        .overlay(alignment: .bottomTrailing) {
+            if !isFullScreen && viewModel.pdfDocument != nil {
+                TTSFloatingActionButton(
+                    service: ttsService,
+                    chapterTitle: viewModel.currentChapterTitle,
+                    currentText: { currentPagePlainText() }
+                )
+                .padding(.trailing, AppSpacing.md)
+                .padding(.bottom, AppSpacing.md)
+                .transition(.opacity)
+                .zIndex(50)
+            }
+        }
+#endif
         .task {
             await loadReader()
             volumeKeyHandler.onVolumeUp = {
@@ -517,6 +535,9 @@ public struct PDFReaderView: View {
         }
         .onDisappear {
             volumeKeyHandler.stop()
+#if canImport(AVFoundation)
+            ttsService.stop()
+#endif
             WakeLockController.setKeepScreenOn(false)
             Task {
                 await viewModel.saveProgress()
@@ -1173,6 +1194,17 @@ public struct PDFReaderView: View {
         return Text(before).foregroundStyle(Morandi.primaryText)
             + Text(match).foregroundStyle(Morandi.accent).bold()
             + Text(after).foregroundStyle(Morandi.primaryText)
+    }
+
+    // MARK: - TTS
+
+    /// Returns the plain text of the current PDF page for TTS playback.
+    private func currentPagePlainText() -> String? {
+        guard let document = viewModel.pdfDocument else { return nil }
+        let index = max(0, min(viewModel.currentPage, document.pageCount - 1))
+        guard let page = document.page(at: index) else { return nil }
+        let text = page.string?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (text?.isEmpty == false) ? text : nil
     }
 
     // MARK: - Volume Key Handler

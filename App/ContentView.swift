@@ -1681,6 +1681,12 @@ struct EPUBBookshelfReaderView: View {
     @State private var annotationErrorMessage: String?
     @State private var isReaderSettingsPresented = false
     @State private var readingSessionRecorder: ReadingSessionRecorder
+    @State private var showBrightnessControl = false
+    @State private var volumeKeysEnabled = UserDefaults.standard.bool(forKey: "pt.reader.volumeKeysEnabled")
+    @State private var volumeKeyHandler = VolumeKeyHandler()
+#if canImport(AVFoundation)
+    @State private var ttsService = TTSService()
+#endif
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
@@ -1720,6 +1726,29 @@ struct EPUBBookshelfReaderView: View {
         .sheet(isPresented: searchSheetBinding) { searchSheet }
         .sheet(isPresented: annotationEditorPresentedBinding) { annotationEditorSheet }
         .sheet(isPresented: readerSettingsPresentedBinding) { readerSettingsSheet }
+        .overlay(alignment: .top) {
+            if showBrightnessControl {
+                ScreenBrightnessSlider()
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.top, AppSpacing.sm)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+#if canImport(AVFoundation)
+        .overlay(alignment: .bottomTrailing) {
+            if publication != nil {
+                let title = coordinator.currentChapterTitle.isEmpty ? book.title : coordinator.currentChapterTitle
+                TTSFloatingActionButton(
+                    service: ttsService,
+                    chapterTitle: title,
+                    currentText: { currentEPUBPlainText() }
+                )
+                .padding(.trailing, AppSpacing.md)
+                .padding(.bottom, AppSpacing.md)
+                .zIndex(50)
+            }
+        }
+#endif
         .fullScreenCover(item: presentedImageBinding) { asset in
             ReaderImageViewer(
                 asset: asset,
@@ -1731,12 +1760,26 @@ struct EPUBBookshelfReaderView: View {
                 onAnalyze: handlePresentedImageAnalysis
             )
         }
-        .task { await loadPublication() }
+        .task {
+            await loadPublication()
+            volumeKeyHandler.onVolumeUp = {
+                Task { @MainActor in coordinator.goForward() }
+            }
+            volumeKeyHandler.onVolumeDown = {
+                Task { @MainActor in coordinator.goBackward() }
+            }
+            applyVolumeKeyHandler()
+        }
         .onDisappear {
             coordinator.onLocatorChange = nil
             coordinator.onSelectionChange = nil
             coordinator.onDecorationActivated = nil
             coordinator.onImageActivate = nil
+            volumeKeyHandler.stop()
+#if canImport(AVFoundation)
+            ttsService.stop()
+#endif
+            WakeLockController.setKeepScreenOn(false)
             readerSessionStore?.clear()
             Task {
                 await saveProgress()
@@ -1851,14 +1894,33 @@ struct EPUBBookshelfReaderView: View {
             .accessibilityLabel(String(localized: "bookmark.add"))
             .disabled((coordinator.currentLocator ?? initialLocator) == nil)
 
-            Button {
-                readerControlsViewModel?.showTOC = true
+            Menu {
+                Button {
+                    readerControlsViewModel?.showTOC = true
+                } label: {
+                    Label("Contents", systemImage: "list.bullet")
+                }
+                .disabled(readerControlsViewModel == nil)
+                Button {
+                    withAnimation { showBrightnessControl.toggle() }
+                } label: {
+                    Label("Brightness", systemImage: "sun.max")
+                }
+                Toggle(isOn: Binding(
+                    get: { volumeKeysEnabled },
+                    set: { newValue in
+                        volumeKeysEnabled = newValue
+                        UserDefaults.standard.set(newValue, forKey: "pt.reader.volumeKeysEnabled")
+                        applyVolumeKeyHandler()
+                    }
+                )) {
+                    Label("Volume keys turn pages", systemImage: "speaker.wave.2")
+                }
             } label: {
                 Image(systemName: "list.bullet")
                     .foregroundStyle(Morandi.accent)
             }
             .accessibilityLabel(String(localized: "reader.open_contents"))
-            .disabled(readerControlsViewModel == nil)
         }
 
         ToolbarItem(placement: .status) {
@@ -2382,6 +2444,32 @@ struct EPUBBookshelfReaderView: View {
     private func applyAnnotationDecorations(using annotationsViewModel: EPUBReaderAnnotationsViewModel?) {
         let decorations = annotationsViewModel?.notes.compactMap(EPUBAnnotationBridge.decoration(from:)) ?? []
         coordinator.applyDecorations(decorations, in: annotationDecorationGroup)
+    }
+
+    private func applyVolumeKeyHandler() {
+        if volumeKeysEnabled {
+            volumeKeyHandler.start()
+            WakeLockController.setKeepScreenOn(true)
+        } else {
+            volumeKeyHandler.stop()
+        }
+    }
+
+    /// Returns the best-available plain text snippet around the current
+    /// EPUB locator for TTS playback. Readium does not expose full page
+    /// text in this layer, so we fall back to the locator's highlight /
+    /// surrounding context which is what the user is currently seeing.
+    private func currentEPUBPlainText() -> String? {
+        guard let locator = coordinator.currentLocator else { return nil }
+        let snippet = [locator.text.before, locator.text.highlight, locator.text.after]
+            .compactMap { $0 }
+            .joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if snippet.isEmpty {
+            let title = coordinator.currentChapterTitle
+            return title.isEmpty ? nil : title
+        }
+        return snippet
     }
 }
 #endif

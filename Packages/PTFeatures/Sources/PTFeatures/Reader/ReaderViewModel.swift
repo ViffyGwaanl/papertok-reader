@@ -234,4 +234,11 @@ public final class ReaderViewModel {
             return range.startPage <= currentPage && currentPage <= range.endPage
         })
     }
+
+    /// Public accessor for the current chapter's title, used by reader UI
+    /// (e.g. the TTS floating action button). Falls back to the book title
+    /// when no TOC entry matches the current page.
+    public var currentChapterTitle: String {
+        currentChapterEntry?.title ?? book.title
+    }
 }
