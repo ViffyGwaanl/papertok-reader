@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
+import 'package:anx_reader/theme/app_spacing.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
 
@@ -182,7 +183,7 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
           return Material(
             clipBehavior: Clip.antiAlias,
             borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(16),
+              top: Radius.circular(AppSpacing.cornerRadiusLarge),
             ),
             child: AiChatStream(
               key: widget.aiChatKey,

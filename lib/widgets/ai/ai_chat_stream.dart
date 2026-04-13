@@ -36,6 +36,9 @@ import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart';
 import 'package:anx_reader/service/receive_file/share_inbox_paths.dart';
 import 'package:anx_reader/service/receive_file/share_safe_import.dart';
+import 'package:anx_reader/theme/app_elevation.dart';
+import 'package:anx_reader/theme/app_spacing.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1945,7 +1948,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
     Widget inputBox = FilledContainer(
       padding: const EdgeInsets.all(4),
-      radius: 15,
+      radius: AppSpacing.cornerRadiusLarge,
       child: SafeArea(
         top: false,
         bottom: widget.inputSafeAreaBottom,
@@ -2211,8 +2214,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       chatIsStreaming ? Icons.stop : Icons.send,
                       size: 18,
                     ),
-                    onPressed:
-                        chatIsStreaming ? _cancelStreaming : _sendMessage,
+                    onPressed: chatIsStreaming
+                        ? _cancelStreaming
+                        : () {
+                            HapticFeedback.lightImpact();
+                            _sendMessage();
+                          },
                   ),
                 ],
               ),
@@ -2616,17 +2623,26 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           const SizedBox(width: 8),
           Flexible(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
                 color: isUser
-                    ? Theme.of(context).colorScheme.surfaceContainer
-                    : Theme.of(context).colorScheme.surface,
+                    ? MorandiPalette.sage(context).withValues(alpha: 0.15)
+                    : MorandiPalette.elevated(context),
                 borderRadius: BorderRadius.only(
-                  topLeft: isUser ? const Radius.circular(12) : Radius.zero,
-                  topRight: isUser ? Radius.zero : const Radius.circular(12),
-                  bottomLeft: isUser ? Radius.zero : const Radius.circular(12),
-                  bottomRight: isUser ? const Radius.circular(12) : Radius.zero,
+                  topLeft: isUser
+                      ? const Radius.circular(AppSpacing.cornerRadius)
+                      : Radius.zero,
+                  topRight: isUser
+                      ? Radius.zero
+                      : const Radius.circular(AppSpacing.cornerRadius),
+                  bottomLeft: isUser
+                      ? Radius.zero
+                      : const Radius.circular(AppSpacing.cornerRadius),
+                  bottomRight: isUser
+                      ? const Radius.circular(AppSpacing.cornerRadius)
+                      : Radius.zero,
                 ),
+                boxShadow: isUser ? null : AppElevation.level1(context),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2701,14 +2717,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           const SizedBox(width: 8),
           Flexible(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainer,
+                color: MorandiPalette.sage(context).withValues(alpha: 0.15),
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
+                  topLeft: Radius.circular(AppSpacing.cornerRadius),
                   topRight: Radius.zero,
                   bottomLeft: Radius.zero,
-                  bottomRight: Radius.circular(12),
+                  bottomRight: Radius.circular(AppSpacing.cornerRadius),
                 ),
               ),
               child: Column(
@@ -2777,13 +2793,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           const SizedBox(width: 8),
           Flexible(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                color: MorandiPalette.elevated(context),
                 borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
+                  topRight: Radius.circular(AppSpacing.cornerRadius),
+                  bottomLeft: Radius.circular(AppSpacing.cornerRadius),
                 ),
+                boxShadow: AppElevation.level1(context),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
