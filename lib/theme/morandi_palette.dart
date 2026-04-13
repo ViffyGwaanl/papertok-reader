@@ -101,4 +101,38 @@ class MorandiPalette {
       Theme.of(context).brightness == Brightness.dark ? errorDark : errorLight;
   static Color info(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark ? infoDark : infoLight;
+  static Color destructive(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? destructiveDark
+          : destructiveLight;
+  static Color dustyRose(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? dustyRoseDark
+          : dustyRoseLight;
+  static Color clay(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? clayDark : clayLight;
+  static Color taupe(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? taupeDark : taupeLight;
+  static Color stone(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? stoneDark : stoneLight;
+  static Color warmGray(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? warmGrayDark
+          : warmGrayLight;
+  static Color moss(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? mossDark : mossLight;
+  static Color powder(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? powderDark
+          : powderLight;
+  static Color lavender(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? lavenderDark
+          : lavenderLight;
+  static Color mauve(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? mauveDark : mauveLight;
+  static Color sand(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? sandDark : sandLight;
+  static Color mist(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? mistDark : mistLight;
 }

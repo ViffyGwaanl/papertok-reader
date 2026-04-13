@@ -64,27 +64,29 @@ class SettingsIconLabel extends StatelessWidget {
   }
 }
 
-/// Standard tint palette for Settings icons (matches swift-native conventions).
+/// Warm Morandi tint palette for Settings icons. Intentionally narrow —
+/// desaturated earthy neutrals keep the settings feel calm and Claude-like
+/// instead of iOS rainbow.
 class SettingsIconTints {
   SettingsIconTints._();
   // AI / Assistant
-  static const Color sparkles = Color(0xFFFF9500);    // orange
-  static const Color tools    = Color(0xFF9B59B6);    // purple
-  static const Color prompt   = Color(0xFFC17A6C);    // clay
-  static const Color network  = Color(0xFF8FA6D9);    // powder
+  static const Color sparkles = Color(0xFFC0A890); // clay
+  static const Color tools    = Color(0xFFB0A498); // taupe
+  static const Color prompt   = Color(0xFFC4A4A0); // dusty rose
+  static const Color network  = Color(0xFFA0B8C8); // powder
   // Reading
-  static const Color reading  = Color(0xFFD47B8C);    // dusty rose
-  static const Color kairos   = Color(0xFFFF9500);    // flame orange
-  static const Color translate = Color(0xFF4285F4);    // blue
+  static const Color reading  = Color(0xFFC4A4A0); // dusty rose
+  static const Color kairos   = Color(0xFFC0A890); // clay
+  static const Color translate = Color(0xFFA0B8C8); // powder
   // Data
-  static const Color sync     = Color(0xFF34C759);    // green
-  static const Color storage  = Color(0xFF8E8E93);    // gray
+  static const Color sync     = Color(0xFF8FA68A); // sage
+  static const Color storage  = Color(0xFFA8A098); // warm gray
   // Customization
-  static const Color appearance = Color(0xFF98A890);  // moss
-  static const Color homeNav  = Color(0xFF8FA68A);    // sage
+  static const Color appearance = Color(0xFF98A890); // moss
+  static const Color homeNav  = Color(0xFF8FA68A); // sage
   // Other
-  static const Color about    = Color(0xFF8E8E93);    // gray
-  static const Color tts      = Color(0xFFAF52DE);    // purple
-  static const Color advanced = Color(0xFF5856D6);    // indigo
-  static const Color memory   = Color(0xFF34C759);    // green
+  static const Color about    = Color(0xFFA8A098); // warm gray
+  static const Color tts      = Color(0xFFB8A8C8); // muted lavender
+  static const Color advanced = Color(0xFFB0A498); // taupe
+  static const Color memory   = Color(0xFF98A890); // moss
 }
