@@ -8,6 +8,7 @@ import 'package:anx_reader/service/memory/memory_search_service.dart';
 import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/memory/memory_workflow_service.dart';
 import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -515,8 +516,8 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
     }
 
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => MemoryEditorPage(
+      CupertinoStyleRoute(
+        page: MemoryEditorPage(
           store: _store,
           longTerm: isLongTerm,
           date: date,

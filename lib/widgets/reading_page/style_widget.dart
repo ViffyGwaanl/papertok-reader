@@ -10,6 +10,7 @@ import 'package:anx_reader/service/book_player/book_player_server.dart';
 import 'package:anx_reader/service/font.dart';
 import 'package:anx_reader/utils/font_parser.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/widgets/icon_and_text.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/more_settings.dart';
 import 'package:anx_reader/widgets/reading_page/widget_title.dart';
@@ -20,6 +21,7 @@ import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/widgets/reading_page/widgets/bgimg_selector.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 enum PageTurn {
@@ -201,8 +203,9 @@ class StyleWidgetState extends State<StyleWidget> {
               widget.hideAppBarAndBottomBar(false);
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (context) => const FontsSettingPage()),
+                CupertinoStyleRoute(
+                  page: const FontsSettingPage(),
+                ),
               );
               return;
             } else {
@@ -256,6 +259,8 @@ class StyleWidgetState extends State<StyleWidget> {
                       });
                     }
                   : null,
+              onChangeEnd:
+                  enabled ? (_) => HapticFeedback.selectionClick() : null,
               min: 0,
               max: 3,
               divisions: 10,
@@ -278,6 +283,8 @@ class StyleWidgetState extends State<StyleWidget> {
                     });
                   }
                 : null,
+            onChangeEnd:
+                enabled ? (_) => HapticFeedback.selectionClick() : null,
             min: 0,
             max: 5,
             divisions: 10,
@@ -308,6 +315,8 @@ class StyleWidgetState extends State<StyleWidget> {
                     });
                   }
                 : null,
+            onChangeEnd:
+                enabled ? (_) => HapticFeedback.selectionClick() : null,
             min: 0.5,
             max: 3.0,
             divisions: 25,

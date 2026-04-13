@@ -5,6 +5,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_transport_mode.dart';
 import 'package:anx_reader/service/mcp/mcp_client_service.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
@@ -12,6 +13,7 @@ import 'package:anx_reader/page/settings_page/mcp_server_detail_page.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
 class McpServersSettingsPage extends StatefulWidget {
@@ -474,7 +476,10 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
           SettingsTile.navigation(
             title: Text(l10n.settingsMcpAddServer),
             description: Text(l10n.settingsMcpAddServerDesc),
-            onPressed: (_) => _editServer(),
+            onPressed: (_) {
+              HapticFeedback.lightImpact();
+              _editServer();
+            },
           ),
           const Divider(height: 1),
           SettingsTile.navigation(
@@ -567,8 +572,8 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => SettingsSubpageScaffold(
+                    CupertinoStyleRoute(
+                      page: SettingsSubpageScaffold(
                         title: s.name,
                         child: McpServerDetailPage(serverId: s.id),
                       ),

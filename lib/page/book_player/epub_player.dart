@@ -36,6 +36,7 @@ import 'package:anx_reader/providers/toc_search.dart';
 import 'package:anx_reader/service/tts/models/tts_sentence.dart';
 import 'package:anx_reader/utils/coordinates_to_part.dart';
 import 'package:anx_reader/utils/js/convert_dart_color_to_js.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/models/book_note.dart';
 import 'package:anx_reader/utils/log/common.dart';
@@ -915,8 +916,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => ImageViewer(
+          CupertinoStyleRoute(
+            page: ImageViewer(
               image: image!,
               bookName: widget.book.title,
               contextText: contextText,

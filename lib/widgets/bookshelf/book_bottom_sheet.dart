@@ -15,6 +15,7 @@ import 'package:anx_reader/service/convert_to_epub/txt/convert_from_txt.dart';
 import 'package:anx_reader/service/md5_service.dart';
 import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/share_file.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
@@ -23,6 +24,7 @@ import 'package:anx_reader/widgets/icon_and_text.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:anx_reader/utils/book_file_types.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -38,6 +40,9 @@ class BookBottomSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      HapticFeedback.lightImpact();
+    });
     Future<void> handleDelete(BuildContext context) async {
       Navigator.pop(context);
       await bookDao.updateBook(Book(
@@ -64,8 +69,8 @@ class BookBottomSheet extends ConsumerWidget {
       Navigator.pop(context);
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => BookDetail(book: book),
+        CupertinoStyleRoute(
+          page: BookDetail(book: book),
         ),
       );
     }

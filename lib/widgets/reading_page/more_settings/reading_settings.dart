@@ -8,6 +8,7 @@ import 'package:anx_reader/enums/code_highlight_theme.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/subpage/fonts.dart';
 import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
 import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
@@ -827,8 +828,8 @@ return null;
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const FontsSettingPage(),
+            CupertinoStyleRoute(
+              page: const FontsSettingPage(),
             ),
           );
         },
