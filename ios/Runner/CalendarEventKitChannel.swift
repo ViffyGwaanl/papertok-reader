@@ -94,13 +94,16 @@ final class CalendarEventKitChannel {
   }
 
   private func buildAlarmsForEvent(startDate: Date, alarmMinutes: [Int]) -> [EKAlarm] {
-    return alarmMinutes
-      .map { $0 }
-      .filter { $0 >= 0 && $0 <= 60 * 24 * 365 }
-      .map { minutes in
-        // For events, relativeOffset is relative to event start.
-        return EKAlarm(relativeOffset: TimeInterval(-minutes * 60))
-      }
+    let maxMinutes: Int = 60 * 24 * 365
+    var result: [EKAlarm] = []
+    result.reserveCapacity(alarmMinutes.count)
+    for minutes in alarmMinutes {
+      guard minutes >= 0 && minutes <= maxMinutes else { continue }
+      // For events, relativeOffset is relative to event start.
+      let offset = TimeInterval(-minutes * 60)
+      result.append(EKAlarm(relativeOffset: offset))
+    }
+    return result
   }
 
   private func alarmMinutesFromEvent(_ event: EKEvent) -> [Int] {
