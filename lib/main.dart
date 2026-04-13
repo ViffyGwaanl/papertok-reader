@@ -25,7 +25,7 @@ import 'package:anx_reader/page/migration_page.dart';
 import 'package:anx_reader/service/book_player/book_player_server.dart';
 import 'package:anx_reader/service/tts/tts_handler.dart';
 import 'package:anx_reader/utils/get_path/macos_migration.dart';
-import 'package:anx_reader/utils/color_scheme.dart';
+import 'package:anx_reader/theme/app_theme.dart';
 import 'package:anx_reader/utils/error/common.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/utils/log/common.dart';
@@ -246,8 +246,15 @@ class _MyAppState extends ConsumerState<MyApp>
             supportedLocales: L10n.supportedLocales,
             onGenerateTitle: (context) => L10n.of(context).appName,
             themeMode: prefsNotifier.themeMode,
-            theme: colorSchema(prefsNotifier, context, Brightness.light),
-            darkTheme: colorSchema(prefsNotifier, context, Brightness.dark),
+            theme: AppTheme.light(
+              seedColor: prefsNotifier.themeColor,
+              eInkMode: prefsNotifier.eInkMode,
+            ),
+            darkTheme: AppTheme.dark(
+              seedColor: prefsNotifier.themeColor,
+              eInkMode: prefsNotifier.eInkMode,
+              trueDarkMode: prefsNotifier.trueDarkMode,
+            ),
             home: _needsMigration
                 ? _MigrationWrapper(
                     migrationCheckResult: _migrationCheckResult!)
