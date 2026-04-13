@@ -4,11 +4,15 @@ import 'package:anx_reader/page/book_notes_page.dart';
 import 'package:anx_reader/providers/notes_page_current_book.dart';
 import 'package:anx_reader/providers/notes_statistics.dart';
 import 'package:anx_reader/utils/date/convert_seconds.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
+import 'package:anx_reader/theme/app_spacing.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
-import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/common/pt_card.dart';
 import 'package:anx_reader/widgets/highlight_digit.dart';
 import 'package:anx_reader/widgets/tips/notes_tips.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class NotesPage extends ConsumerStatefulWidget {
@@ -43,7 +47,11 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                     ],
                   ),
                 ),
-                const VerticalDivider(thickness: 1, width: 1),
+                VerticalDivider(
+                  thickness: 1,
+                  width: 1,
+                  color: MorandiPalette.divider(context),
+                ),
                 const Expanded(
                   flex: 2,
                   child: NotesDetail(),
@@ -149,21 +157,24 @@ class _NotesPageState extends ConsumerState<NotesPage> {
       fontFamily: 'SourceHanSerif',
       fontWeight: FontWeight.bold,
     );
-    TextStyle readingTimeStyle = const TextStyle(
+    TextStyle readingTimeStyle = TextStyle(
       fontSize: 14,
-      color: Colors.grey,
+      color: MorandiPalette.secondaryText(context),
     );
+    final mutedIconColor = MorandiPalette.secondaryText(context);
     return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
         if (isMobile) {
           Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (context) => BookNotesPage(
-                      book: book,
-                      numberOfNotes: numberOfNotes,
-                      isMobile: true,
-                    )),
+            CupertinoStyleRoute(
+              page: BookNotesPage(
+                book: book,
+                numberOfNotes: numberOfNotes,
+                isMobile: true,
+              ),
+            ),
           );
         } else {
           ref
@@ -171,10 +182,16 @@ class _NotesPageState extends ConsumerState<NotesPage> {
               .setData(book, numberOfNotes);
         }
       },
-      child: FilledContainer(
-        margin: const EdgeInsets.only(top: 8, left: 15, right: 15),
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
+      child: Padding(
+        padding: const EdgeInsets.only(
+          top: AppSpacing.sm,
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+        ),
+        child: PTCard(
+          elevation: 1,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
@@ -196,14 +213,14 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        Icon(Icons.access_time, size: 16, color: Colors.grey),
+                        Icon(Icons.access_time, size: 16, color: mutedIconColor),
                         const SizedBox(width: 4),
                         Text(
                           convertSeconds(readingTime),
                           style: readingTimeStyle,
                         ),
                         Text(" | ", style: readingTimeStyle),
-                        Icon(Icons.bar_chart, size: 16, color: Colors.grey),
+                        Icon(Icons.bar_chart, size: 16, color: mutedIconColor),
                         const SizedBox(width: 4),
                         Text(
                           '${(book.readingPercentage * 100).toStringAsFixed(1)}%',
@@ -228,6 +245,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

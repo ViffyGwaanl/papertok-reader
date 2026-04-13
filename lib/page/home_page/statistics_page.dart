@@ -8,15 +8,19 @@ import 'package:anx_reader/page/book_detail.dart';
 import 'package:anx_reader/providers/statistic_data.dart';
 import 'package:anx_reader/utils/date/convert_seconds.dart';
 import 'package:anx_reader/utils/date/week_of_year.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
+import 'package:anx_reader/theme/app_spacing.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
-import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/common/container/outlined_container.dart';
+import 'package:anx_reader/widgets/common/pt_card.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
 import 'package:anx_reader/widgets/statistic/statistic_card.dart';
 import 'package:anx_reader/widgets/statistic/statistics_dashboard_title.dart';
 import 'package:anx_reader/widgets/statistic/statistics_dashboard.dart';
 import 'package:anx_reader/widgets/tips/statistic_tips.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -131,12 +135,14 @@ class DateBooks extends ConsumerStatefulWidget {
 }
 
 class _DateBooksState extends ConsumerState<DateBooks> {
-  final TextStyle titleStyle = const TextStyle(
-    fontSize: 30,
-    fontFamily: 'SourceHanSerif',
-    fontWeight: FontWeight.bold,
-    overflow: TextOverflow.ellipsis,
-  );
+  TextStyle _titleStyle(BuildContext context) =>
+      (Theme.of(context).textTheme.titleLarge ?? const TextStyle()).copyWith(
+        fontSize: 30,
+        fontFamily: 'SourceHanSerif',
+        fontWeight: FontWeight.bold,
+        overflow: TextOverflow.ellipsis,
+        color: MorandiPalette.primaryText(context),
+      );
 
   List<int> deleteBookIds = [];
 
@@ -244,7 +250,7 @@ class _DateBooksState extends ConsumerState<DateBooks> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: titleStyle),
+                  Text(title, style: _titleStyle(context)),
                 ],
               ),
             ),
@@ -300,11 +306,11 @@ class BookStatisticItem extends StatelessWidget {
     fontWeight: FontWeight.bold,
     overflow: TextOverflow.ellipsis,
   );
-  final TextStyle bookAuthorStyle = const TextStyle(
-    fontSize: 12,
-    color: Colors.grey,
-    overflow: TextOverflow.ellipsis,
-  );
+  TextStyle _bookAuthorStyle(BuildContext context) => TextStyle(
+        fontSize: 12,
+        color: MorandiPalette.secondaryText(context),
+        overflow: TextOverflow.ellipsis,
+      );
   final TextStyle bookReadingTimeStyle = const TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.bold,
@@ -318,15 +324,20 @@ class BookStatisticItem extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.done) {
           return GestureDetector(
             onTap: () {
+              HapticFeedback.selectionClick();
               Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => BookDetail(book: snapshot.data!)));
+                context,
+                CupertinoStyleRoute(
+                  page: BookDetail(book: snapshot.data!),
+                ),
+              );
             },
-            child: FilledContainer(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: PTCard(
+                elevation: 1,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
                 children: [
                   Hero(
                       tag: snapshot.data!.coverFullPath,
@@ -348,7 +359,7 @@ class BookStatisticItem extends StatelessWidget {
                               Expanded(
                                 flex: 3,
                                 child: Text(snapshot.data!.author,
-                                    style: bookAuthorStyle),
+                                    style: _bookAuthorStyle(context)),
                               ),
                               Text(
                                   // getReadingTime(context),
@@ -363,9 +374,10 @@ class BookStatisticItem extends StatelessWidget {
                               Expanded(
                                 child: LinearProgressIndicator(
                                   value: snapshot.data!.readingPercentage,
-                                  backgroundColor: Colors.grey[300],
+                                  backgroundColor:
+                                      MorandiPalette.divider(context),
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                      Theme.of(context).colorScheme.primary),
+                                      MorandiPalette.sage(context)),
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -376,6 +388,7 @@ class BookStatisticItem extends StatelessWidget {
                         ]),
                   ),
                 ],
+              ),
               ),
             ),
           );

@@ -5,6 +5,8 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/papers/paper_detail_page.dart';
 import 'package:anx_reader/service/papertok/models.dart';
 import 'package:anx_reader/service/papertok/papertok_api.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
+import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -280,8 +282,8 @@ class _PapersPageState extends State<PapersPage> {
   void _openDetail(PaperTokCard card) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => PaperDetailPage(paperId: card.id),
+      CupertinoStyleRoute(
+        page: PaperDetailPage(paperId: card.id),
       ),
     );
   }
@@ -380,7 +382,7 @@ class _PapersPageState extends State<PapersPage> {
     final images = _imagesForCard(card);
     if (images.isEmpty) {
       return Container(
-        color: Theme.of(context).colorScheme.surfaceContainer,
+        color: MorandiPalette.elevated(context),
         child: const Icon(Icons.article_outlined, size: 60),
       );
     }
@@ -419,10 +421,10 @@ class _PapersPageState extends State<PapersPage> {
             imageUrl: img,
             fit: BoxFit.cover,
             placeholder: (context, _) => Container(
-              color: Theme.of(context).colorScheme.surfaceContainer,
+              color: MorandiPalette.elevated(context),
             ),
             errorWidget: (context, _, __) => Container(
-              color: Theme.of(context).colorScheme.surfaceContainer,
+              color: MorandiPalette.elevated(context),
               child: const Icon(Icons.broken_image_outlined, size: 40),
             ),
           );
