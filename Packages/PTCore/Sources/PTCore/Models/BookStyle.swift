@@ -51,6 +51,10 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         )
     }
 
+    public static func defaultStyle(for locale: Locale = .autoupdatingCurrent) -> BookStyle {
+        `default`(locale: locale)
+    }
+
     public static func preferredDefaultFontFamily(locale: Locale = .autoupdatingCurrent) -> String {
         preferredFontFamilies(locale: locale).first ?? "Arial"
     }

@@ -137,6 +137,8 @@ public final class EPUBReaderAnnotationsViewModel {
         }
 
         let trimmedChapter = chapterTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedChapter.isEmpty ? "Bookmark" : trimmedChapter
+        return trimmedChapter.isEmpty
+            ? AppLocalization.string("reader.bookmark", value: "Bookmark")
+            : trimmedChapter
     }
 }

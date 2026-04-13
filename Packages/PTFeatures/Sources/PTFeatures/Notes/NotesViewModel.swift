@@ -53,7 +53,7 @@ public enum NotesSortOrder: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .dateDescending: return "notes.sort_recent"
         case .dateAscending: return "notes.sort_oldest"
-        case .chapter: return "notes.sort_book"
+        case .chapter: return "notes.sort_chapter"
         }
     }
 
@@ -61,7 +61,7 @@ public enum NotesSortOrder: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .dateDescending: return "Most Recent"
         case .dateAscending: return "Oldest First"
-        case .chapter: return "By Book"
+        case .chapter: return "By Chapter"
         }
     }
 
@@ -205,6 +205,11 @@ public final class NotesViewModel {
                     lastUpdatedAt: latestDate
                 )
             }
-            .sorted { $0.lastUpdatedAt > $1.lastUpdatedAt }
+            .sorted { lhs, rhs in
+                if lhs.lastUpdatedAt == rhs.lastUpdatedAt {
+                    return LocalizedSort.isAscending(lhs.bookTitle, rhs.bookTitle)
+                }
+                return lhs.lastUpdatedAt > rhs.lastUpdatedAt
+            }
     }
 }
