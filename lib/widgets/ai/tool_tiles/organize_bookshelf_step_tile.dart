@@ -110,7 +110,7 @@ class _OrganizeBookshelfStepTileState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statusColor = ToolTileBase.statusColorFor(widget.step.status);
+    final statusColor = ToolTileBase.statusColorFor(widget.step.status, context);
 
     return ToolTileBase(
       title: widget.step.name,

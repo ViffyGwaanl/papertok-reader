@@ -1,3 +1,4 @@
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/container/outlined_container.dart';
 import 'package:flutter/material.dart';
 
@@ -19,14 +20,14 @@ class ToolTileBase extends StatefulWidget {
 
   bool get expandable => contentBuilder != null;
 
-  static Color statusColorFor(String status) {
+  static Color statusColorFor(String status, BuildContext context) {
     switch (status) {
       case 'success':
-        return Colors.green;
+        return MorandiPalette.success(context);
       case 'failed':
-        return Colors.red;
+        return MorandiPalette.error(context);
       default:
-        return Colors.orange;
+        return MorandiPalette.warning(context);
     }
   }
 

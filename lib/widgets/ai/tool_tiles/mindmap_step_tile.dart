@@ -100,7 +100,7 @@ class _MindmapStepTileState extends State<MindmapStepTile> {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = ToolTileBase.statusColorFor(widget.step.status);
+    final statusColor = ToolTileBase.statusColorFor(widget.step.status, context);
 
     return ToolTileBase(
       title: widget.step.name,

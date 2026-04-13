@@ -96,7 +96,7 @@ class _ApplyBookTagsStepTileState extends State<ApplyBookTagsStepTile> {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = ToolTileBase.statusColorFor(widget.step.status);
+    final statusColor = ToolTileBase.statusColorFor(widget.step.status, context);
     return ToolTileBase(
       title: widget.step.name,
       leadingIcon: Icons.label_important,

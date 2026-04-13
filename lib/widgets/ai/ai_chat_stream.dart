@@ -28,6 +28,7 @@ import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:anx_reader/widgets/ai/attachment_picker_dialog.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/service/ai/skills/ai_skill.dart';
 import 'package:anx_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:anx_reader/models/attachment_item.dart';
@@ -685,58 +686,59 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final provider = _currentProvider;
     final supported = _supportedThinkingModes(provider);
 
-    final current = _thinkingModeForProvider(provider.id);
-
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.all(12),
-            children: [
-              ListTile(
-                title: Text(l10n.aiThinkingTitle),
-                subtitle: Text(provider.name),
-              ),
-              if (provider.type == AiProviderType.gemini)
-                SwitchListTile.adaptive(
-                  title:
-                      Text(l10n.settingsAiProviderCenterIncludeThoughtsTitle),
-                  subtitle:
-                      Text(l10n.settingsAiProviderCenterIncludeThoughtsDesc),
-                  value: _includeThoughtsForProvider(provider),
-                  onChanged: (v) {
-                    final next = Map<String, String>.from(
-                      Prefs().getAiConfig(provider.id),
-                    );
-                    next['include_thoughts'] = v ? 'true' : 'false';
-                    Prefs().saveAiConfig(provider.id, next);
-                    setState(() {});
-                  },
-                ),
-              for (final mode in AiThinkingMode.values)
-                RadioListTile<AiThinkingMode>(
-                  value: mode,
-                  groupValue: current,
-                  title: Text(_thinkingModeLabel(mode, l10n)),
-                  secondary: Icon(_thinkingIcon(mode)),
-                  onChanged: supported.contains(mode)
-                      ? (v) {
-                          if (v == null) return;
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.aiThinkingTitle,
+      subtitle: provider.name,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocalState) {
+            final liveCurrent = _thinkingModeForProvider(provider.id);
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (provider.type == AiProviderType.gemini)
+                  SwitchListTile.adaptive(
+                    title: Text(
+                        l10n.settingsAiProviderCenterIncludeThoughtsTitle),
+                    subtitle:
+                        Text(l10n.settingsAiProviderCenterIncludeThoughtsDesc),
+                    value: _includeThoughtsForProvider(provider),
+                    onChanged: (v) {
+                      final next = Map<String, String>.from(
+                        Prefs().getAiConfig(provider.id),
+                      );
+                      next['include_thoughts'] = v ? 'true' : 'false';
+                      Prefs().saveAiConfig(provider.id, next);
+                      setState(() {});
+                      setLocalState(() {});
+                    },
+                  ),
+                for (final mode in AiThinkingMode.values)
+                  Opacity(
+                    opacity: supported.contains(mode) ? 1.0 : 0.4,
+                    child: IgnorePointer(
+                      ignoring: !supported.contains(mode),
+                      child: PTPickerRow<AiThinkingMode>(
+                        value: mode,
+                        groupValue: liveCurrent,
+                        title: _thinkingModeLabel(mode, l10n),
+                        leading: _thinkingIcon(mode),
+                        onChanged: (v) {
                           final next = Map<String, String>.from(
                             Prefs().getAiConfig(provider.id),
                           );
                           next['thinking_mode'] = aiThinkingModeToString(v);
                           Prefs().saveAiConfig(provider.id, next);
                           setState(() {});
-                          Navigator.of(context).pop();
-                        }
-                      : null,
-                ),
-            ],
-          ),
+                          Navigator.of(ctx).pop();
+                        },
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         );
       },
     );
@@ -752,61 +754,72 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final controller = TextEditingController(
       text: (existing['model'] ?? '').trim(),
     );
+    final cached =
+        Prefs().getAiModelsCacheV1(provider.id)?.models ?? const <String>[];
 
     try {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          final cached = Prefs().getAiModelsCacheV1(provider.id)?.models ??
-              const <String>[];
-
-          return AlertDialog(
-            title: Text(l10n.aiChatEditModelTitle),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (cached.isNotEmpty)
-                  DropdownButtonFormField<String>(
-                    value: cached.contains(controller.text.trim())
-                        ? controller.text.trim()
-                        : null,
-                    decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
-                      labelText: l10n.aiChatModelLabel,
+      final ok = await PTBottomSheet.show<bool>(
+        context,
+        title: l10n.aiChatEditModelTitle,
+        subtitle: provider.name,
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setLocalState) {
+              String selected = controller.text.trim();
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (cached.isNotEmpty) ...[
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight:
+                            MediaQuery.of(ctx).size.height * 0.45,
+                      ),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: [
+                          for (final m in cached)
+                            PTPickerRow<String>(
+                              value: m,
+                              groupValue: selected,
+                              title: m,
+                              onChanged: (v) {
+                                controller.text = v;
+                                setLocalState(() {});
+                              },
+                            ),
+                        ],
+                      ),
                     ),
-                    items: cached
-                        .map(
-                          (m) => DropdownMenuItem(
-                            value: m,
-                            child: Text(m, overflow: TextOverflow.ellipsis),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (v) {
-                      if (v == null) return;
-                      controller.text = v;
-                    },
-                  )
-                else
+                    const SizedBox(height: 8),
+                  ],
                   TextField(
                     controller: controller,
                     decoration: InputDecoration(
                       border: const OutlineInputBorder(),
                       labelText: l10n.aiChatModelLabel,
                     ),
+                    onChanged: (_) => setLocalState(() {}),
                   ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(l10n.commonCancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(l10n.commonSave),
-              ),
-            ],
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: Text(l10n.commonCancel),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: Text(l10n.commonSave),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           );
         },
       );
@@ -902,7 +915,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final provider = _providerByIdFromPrefs(entry.serviceId) ??
         _providerById(entry.serviceId);
     final statusColor =
-        entry.completed ? Colors.green : Theme.of(context).colorScheme.tertiary;
+        entry.completed ? MorandiPalette.success(context) : Theme.of(context).colorScheme.tertiary;
     final title = _deriveTitle(entry);
     final subtitle = _buildHistorySubtitle(provider, entry);
 
@@ -1360,9 +1373,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Future<void> _showAttachmentPicker() async {
     if (_isStreaming) return;
 
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (context) {
+    await PTBottomSheet.show<void>(
+      context,
+      builder: (ctx) {
         return AttachmentPickerDialog(
           onPicked: (items) {
             _addAttachments(items);
@@ -2974,9 +2987,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       children.add(
         AiCollapsibleSection(
           title: l10n.aiSectionThinking,
-          leading: const Icon(Icons.lightbulb_outline),
-          preview: thinking.split('\n').first.trim(),
-          copyText: thinking,
+          icon: Icons.psychology_outlined,
+          iconTint: MorandiPalette.taupe(context),
           child: StyledMarkdown(
             data: thinking,
             selectable: true,
@@ -2991,7 +3003,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         AiCollapsibleSection(
           title: l10n.aiSectionTools,
           subtitle: '${toolSteps.length}',
-          leading: const Icon(Icons.build_outlined),
+          icon: Icons.build_outlined,
+          iconTint: MorandiPalette.clay(context),
           child: Column(
             children: [
               for (var i = 0; i < toolSteps.length; i++) ...[

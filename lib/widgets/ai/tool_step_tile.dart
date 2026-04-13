@@ -21,7 +21,7 @@ class ToolStepTile extends StatefulWidget {
 class _ToolStepTileState extends State<ToolStepTile> {
   @override
   Widget build(BuildContext context) {
-    final statusColor = ToolTileBase.statusColorFor(widget.step.status);
+    final statusColor = ToolTileBase.statusColorFor(widget.step.status, context);
     final toolName = AiToolRegistry.displayNameForId(
       widget.step.name,
       l10n: L10n.of(context),
