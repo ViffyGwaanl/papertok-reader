@@ -48,7 +48,14 @@ struct MessageBubbleView: View {
                             .padding(.vertical, 10)
                             .background(Morandi.accent)
                             .foregroundStyle(Color(light: .white, dark: Morandi.cardBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                            .clipShape(
+                                .rect(cornerRadii: RectangleCornerRadii(
+                                    topLeading: 18,
+                                    bottomLeading: 18,
+                                    bottomTrailing: 4,
+                                    topTrailing: 18
+                                ))
+                            )
                             .textSelection(.enabled)
                             .contextMenu { userMenu(text: text) }
                     }
@@ -110,7 +117,14 @@ struct MessageBubbleView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(Morandi.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(
+            .rect(cornerRadii: RectangleCornerRadii(
+                topLeading: 18,
+                bottomLeading: 4,
+                bottomTrailing: 18,
+                topTrailing: 18
+            ))
+        )
         .contextMenu { assistantMenu(text: text) }
     }
 

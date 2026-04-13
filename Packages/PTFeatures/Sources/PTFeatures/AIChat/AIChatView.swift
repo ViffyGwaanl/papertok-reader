@@ -16,11 +16,24 @@ public struct AIChatView: View {
     @State private var showProviderPicker = false
     @State private var showAttachmentPicker = false
     @State private var showChatSettings = false
+    @State private var thinkingEnabled: Bool = false
 
-    private let quickPrompts = [
-        ChatInputView.QuickPrompt(label: "Explain", prompt: "Please explain this content"),
-        ChatInputView.QuickPrompt(label: "Summarize", prompt: "Please summarize the main points"),
-        ChatInputView.QuickPrompt(label: "Analyze", prompt: "Please analyze in depth"),
+    private var currentProviderDisplayName: String {
+        viewModel.providerOptions.first(where: { $0.id == viewModel.selectedProviderId })?.displayName ?? "Model"
+    }
+
+    private var currentModelSupportsThinking: Bool {
+        guard let provider = viewModel.providerOptions.first(where: { $0.id == viewModel.selectedProviderId }) else { return false }
+        return provider.models.first(where: { $0.id == viewModel.selectedModelId })?.supportsThinking ?? false
+    }
+
+    private let quickPrompts: [String] = [
+        "Please explain this content",
+        "Please summarize the main points",
+        "Please analyze in depth",
+        "List the key points",
+        "Translate this",
+        "What questions should I ask?"
     ]
 
     private let suggestedPrompts: [(icon: String, title: String, prompt: String)] = [
@@ -50,19 +63,22 @@ public struct AIChatView: View {
 
             Divider().background(Morandi.divider)
 
-            AttachmentRowView(
-                attachments: viewModel.attachments,
-                onRemove: { id in viewModel.removeAttachment(id: id) }
-            )
-
             ChatInputView(
                 text: $inputText,
                 isStreaming: viewModel.isStreaming,
+                attachments: viewModel.attachments,
                 hasMessages: viewModel.messages.count > 1,
                 quickPrompts: quickPrompts,
                 onSend: handleSend,
+                onStop: { viewModel.stopStreaming() },
                 onAttach: { showAttachmentPicker = true },
-                onStop: { viewModel.stopStreaming() }
+                onRemoveAttachment: { id in viewModel.removeAttachment(id: id) },
+                onProviderTap: { showProviderPicker = true },
+                onModelSettingsTap: { showChatSettings = true },
+                onToggleThinking: { thinkingEnabled.toggle() },
+                thinkingEnabled: thinkingEnabled,
+                supportsThinking: currentModelSupportsThinking,
+                currentProviderName: currentProviderDisplayName
             )
         }
         .background(Morandi.background)
@@ -71,26 +87,6 @@ public struct AIChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Button {
-                    showProviderPicker = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "cpu")
-                        Text(viewModel.selectedModelId.isEmpty ? "Select model" : viewModel.selectedModelId)
-                            .font(AppTypography.caption.weight(.semibold))
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10))
-                    }
-                    .foregroundStyle(Morandi.accent)
-                    .padding(.horizontal, AppSpacing.sm)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule().fill(Morandi.accent.opacity(0.1))
-                    )
-                }
-                .buttonStyle(.plain)
-            }
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: AppSpacing.md) {
                     Button {

@@ -4,180 +4,228 @@ import PTUI
 import UIKit
 #endif
 
-/// Chat input bar with text field, attachment picker, voice input, send button,
-/// quick prompts, paste-image hint, and animated transitions.
+/// Chat input bar redesigned to match Flutter main's polished design.
+///
+/// Layout:
+/// - Optional quick-prompt chip row (only when no messages and no attachments)
+/// - Optional attachment thumbnail strip (80 pt thumbnails)
+/// - A single visual "container" wrapping the text field on top and an
+///   icon action row below (attach, voice, provider chip, thinking toggle,
+///   spacer, char counter, send/stop).
 struct ChatInputView: View {
     @Binding var text: String
     let isStreaming: Bool
-    var hasMessages: Bool = false
-    let quickPrompts: [QuickPrompt]
+    let attachments: [AIChatViewModel.Attachment]
+    let hasMessages: Bool
+    let quickPrompts: [String]
     let onSend: () -> Void
-    let onAttach: () -> Void
     let onStop: () -> Void
+    let onAttach: () -> Void
+    var onRemoveAttachment: (UUID) -> Void
     var onVoice: (() -> Void)? = nil
-    var onPasteImage: (() -> Void)? = nil
+    var onProviderTap: (() -> Void)? = nil
+    var onModelSettingsTap: (() -> Void)? = nil
+    var onToggleThinking: (() -> Void)? = nil
+    var thinkingEnabled: Bool = false
+    var supportsThinking: Bool = false
+    var currentProviderName: String = ""
 
-    struct QuickPrompt: Identifiable {
-        let id = UUID()
-        let label: String
-        let prompt: String
-    }
-
-    @FocusState private var isFocused: Bool
-    @State private var pasteboardHasImage: Bool = false
-
-    private var showQuickPrompts: Bool {
-        text.isEmpty && !isFocused && !hasMessages && !quickPrompts.isEmpty
-    }
+    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
-            if showQuickPrompts {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: AppSpacing.sm) {
-                        ForEach(quickPrompts) { prompt in
-                            Button {
-                                text = prompt.prompt
-                                onSend()
-                            } label: {
-                                Text(prompt.label)
-                                    .font(AppTypography.caption)
-                                    .padding(.horizontal, AppSpacing.md)
-                                    .padding(.vertical, AppSpacing.sm)
-                                    .background(Capsule().fill(Morandi.cardBackground))
-                                    .overlay(Capsule().strokeBorder(Morandi.divider, lineWidth: 0.5))
-                                    .foregroundStyle(Morandi.secondaryText)
-                            }
-                            .buttonStyle(.plain)
-                        }
+            if !hasMessages && attachments.isEmpty && !quickPrompts.isEmpty {
+                quickPromptRow
+            }
+
+            if !attachments.isEmpty {
+                AttachmentThumbnailStrip(
+                    attachments: attachments,
+                    onRemove: onRemoveAttachment
+                )
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.sm)
+            }
+
+            inputContainer
+        }
+        .background(Morandi.background)
+    }
+
+    private var quickPromptRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppSpacing.sm) {
+                ForEach(Array(quickPrompts.prefix(6)), id: \.self) { prompt in
+                    Button {
+                        text = prompt
+                        focused = true
+                    } label: {
+                        Text(prompt)
+                            .font(AppTypography.caption)
+                            .foregroundStyle(Morandi.secondaryText)
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, AppSpacing.sm)
+                            .overlay(
+                                Capsule()
+                                    .stroke(Morandi.divider, lineWidth: 1)
+                            )
                     }
-                    .padding(.horizontal, AppSpacing.lg)
+                    .buttonStyle(.plain)
                 }
-                .padding(.bottom, AppSpacing.sm)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
+            .padding(.horizontal, AppSpacing.md)
+        }
+        .padding(.vertical, AppSpacing.sm)
+    }
 
-            if pasteboardHasImage && text.isEmpty {
-                Button {
-                    onPasteImage?()
-                } label: {
-                    HStack(spacing: AppSpacing.xs) {
-                        Image(systemName: "doc.on.clipboard")
-                        Text("Paste image from clipboard")
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                    }
-                    .font(AppTypography.caption)
-                    .foregroundStyle(Morandi.accent)
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppSpacing.cornerRadiusSmall)
-                            .fill(Morandi.accent.opacity(0.08))
-                    )
-                    .padding(.horizontal, AppSpacing.lg)
-                    .padding(.bottom, AppSpacing.xs)
-                }
-                .buttonStyle(.plain)
-                .transition(.opacity)
-            }
-
-            if text.count > 500 {
-                HStack {
-                    Spacer()
-                    Text("\(text.count) chars")
-                        .font(AppTypography.caption2)
-                        .foregroundStyle(text.count > 4000 ? Morandi.destructive : Morandi.tertiaryText)
-                }
-                .padding(.horizontal, AppSpacing.lg)
-                .padding(.bottom, 2)
-            }
-
+    private var inputContainer: some View {
+        VStack(spacing: AppSpacing.sm) {
+            // Text input row
             HStack(alignment: .bottom, spacing: AppSpacing.sm) {
+                ZStack(alignment: .topLeading) {
+                    if text.isEmpty {
+                        Text("ai.input.placeholder")
+                            .font(AppTypography.body)
+                            .foregroundStyle(Morandi.tertiaryText)
+                            .padding(.horizontal, AppSpacing.md + 4)
+                            .padding(.vertical, AppSpacing.sm + 2)
+                            .allowsHitTesting(false)
+                    }
+                    TextField("", text: $text, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .font(AppTypography.body)
+                        .foregroundStyle(Morandi.primaryText)
+                        .lineLimit(1...5)
+                        .focused($focused)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                }
+            }
+            .padding(.top, AppSpacing.xs)
+
+            // Actions row
+            HStack(spacing: AppSpacing.md) {
                 Button(action: onAttach) {
                     Image(systemName: "paperclip")
-                        .font(.system(size: 20))
+                        .font(.system(size: 18))
                         .foregroundStyle(Morandi.secondaryText)
                 }
                 .buttonStyle(.plain)
+                .disabled(isStreaming)
 
                 if let onVoice {
                     Button(action: onVoice) {
                         Image(systemName: "mic")
-                            .font(.system(size: 20))
+                            .font(.system(size: 18))
+                            .foregroundStyle(Morandi.secondaryText)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isStreaming)
+                }
+
+                if let onProviderTap {
+                    Button(action: onProviderTap) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "cpu")
+                                .font(.system(size: 14))
+                            Text(currentProviderName)
+                                .font(AppTypography.caption)
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(Morandi.secondaryText)
+                        .padding(.horizontal, AppSpacing.sm)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Morandi.elevatedBackground)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if supportsThinking, let onToggleThinking {
+                    Button(action: onToggleThinking) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "brain")
+                                .font(.system(size: 13))
+                            Text(thinkingEnabled ? "On" : "Off")
+                                .font(AppTypography.caption2)
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(thinkingEnabled ? Morandi.accent : Morandi.secondaryText)
+                        .padding(.horizontal, AppSpacing.sm)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(thinkingEnabled ? Morandi.accent.opacity(0.12) : Morandi.elevatedBackground)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if let onModelSettingsTap {
+                    Button(action: onModelSettingsTap) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 16))
                             .foregroundStyle(Morandi.secondaryText)
                     }
                     .buttonStyle(.plain)
                 }
 
-                ZStack(alignment: .leading) {
-                    if text.isEmpty {
-                        Text("reader.ask_ai")
-                            .foregroundStyle(Morandi.tertiaryText)
-                            .font(AppTypography.body)
-                            .padding(.leading, AppSpacing.xs)
-                            .padding(.top, 8)
-                    }
-                    TextEditor(text: $text)
-                        .font(AppTypography.body)
-                        .foregroundStyle(Morandi.primaryText)
-                        .frame(minHeight: 36, maxHeight: 120)
-                        .scrollContentBackground(.hidden)
-                        .focused($isFocused)
-                }
-                .padding(.horizontal, AppSpacing.xs)
-                .padding(.vertical, AppSpacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
-                        .fill(Morandi.cardBackground)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
-                        .strokeBorder(isFocused ? Morandi.accent.opacity(0.5) : Morandi.divider, lineWidth: 0.5)
-                )
-                .animation(.easeInOut(duration: 0.18), value: isFocused)
+                Spacer()
 
-                if isStreaming {
-                    Button(action: onStop) {
-                        Image(systemName: "stop.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(Morandi.destructive)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    Button(action: onSend) {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(text.isEmpty ? Morandi.tertiaryText : Morandi.accent)
-                            .scaleEffect(text.isEmpty ? 0.92 : 1.0)
-                            .opacity(text.isEmpty ? 0.7 : 1.0)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: text.isEmpty)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(text.isEmpty)
+                // Character counter
+                if text.count > 500 {
+                    Text("\(text.count)")
+                        .font(AppTypography.caption2)
+                        .foregroundStyle(text.count > 4000 ? Morandi.destructive : Morandi.tertiaryText)
                 }
+
+                // Send / Stop button
+                sendButton
             }
             .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.sm)
+            .padding(.bottom, AppSpacing.sm)
         }
-        .animation(.easeInOut(duration: 0.2), value: showQuickPrompts)
-        .animation(.easeInOut(duration: 0.2), value: pasteboardHasImage)
-        .background(Morandi.background)
-        .onAppear { updatePasteboard() }
-        #if os(iOS)
-        .onReceive(NotificationCenter.default.publisher(for: UIPasteboard.changedNotification)) { _ in
-            updatePasteboard()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            updatePasteboard()
-        }
-        #endif
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Morandi.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(focused ? Morandi.accent.opacity(0.3) : Morandi.divider, lineWidth: 1)
+                )
+                .ptShadow(level: 1)
+        )
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.bottom, AppSpacing.md)
+        .animation(.easeInOut(duration: 0.2), value: focused)
     }
 
-    private func updatePasteboard() {
-        #if os(iOS)
-        pasteboardHasImage = UIPasteboard.general.hasImages
-        #endif
+    @ViewBuilder
+    private var sendButton: some View {
+        if isStreaming {
+            Button(action: onStop) {
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Morandi.error))
+            }
+            .buttonStyle(.plain)
+            .transition(.scale.combined(with: .opacity))
+        } else {
+            Button(action: onSend) {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle().fill(text.isEmpty ? Morandi.warmGray : Morandi.accent)
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(text.isEmpty)
+            .transition(.scale.combined(with: .opacity))
+        }
     }
 }
