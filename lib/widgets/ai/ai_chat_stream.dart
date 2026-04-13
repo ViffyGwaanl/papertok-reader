@@ -588,12 +588,17 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
+  static const String _noSkillSentinel = '__none__';
+
   Widget _buildSkillButton(BuildContext context) {
     final activeId = Prefs().activeAiSkillId;
     final active = AiSkillRegistry.byId(activeId);
     final isActive = active != null;
 
-    return PopupMenuButton<String?>(
+    // Use a non-null sentinel for the "no skill" item. PopupMenuButton<T?>
+    // treats `value: null` the same as "menu dismissed", so onSelected never
+    // fires — we can't distinguish a tap on "no skill" from tapping outside.
+    return PopupMenuButton<String>(
       icon: Icon(
         isActive ? Icons.auto_fix_high : Icons.auto_fix_high_outlined,
         size: 18,
@@ -602,16 +607,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             : null,
       ),
       tooltip: L10n.of(context).aiSkillsTooltip,
-      onSelected: (id) {
+      onSelected: (value) {
         setState(() {
-          Prefs().activeAiSkillId = id;
+          Prefs().activeAiSkillId = value == _noSkillSentinel ? null : value;
         });
       },
       itemBuilder: (context) {
         final skills = AiSkillRegistry.allSkills();
         return [
-          PopupMenuItem<String?>(
-            value: null,
+          PopupMenuItem<String>(
+            value: _noSkillSentinel,
             child: Row(
               children: [
                 Icon(Icons.block, size: 16,
@@ -631,7 +636,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           const PopupMenuDivider(),
           ...skills.map((skill) {
             final selected = skill.id == activeId;
-            return PopupMenuItem<String?>(
+            return PopupMenuItem<String>(
               value: skill.id,
               child: Row(
                 children: [

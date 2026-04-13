@@ -23,27 +23,40 @@ class _AnimatedPressState extends State<AnimatedPress> {
 
   @override
   Widget build(BuildContext context) {
+    final animated = AnimatedScale(
+      scale: _pressed ? widget.scale : 1.0,
+      duration: AppMotion.fast,
+      curve: AppMotion.easeOut,
+      child: AnimatedOpacity(
+        opacity: _pressed ? 0.85 : 1.0,
+        duration: AppMotion.fast,
+        curve: AppMotion.easeOut,
+        child: widget.child,
+      ),
+    );
+
+    // When no onTap is provided, stay out of the gesture arena so ancestor
+    // GestureDetectors (e.g. BookItem) still receive taps. Listener observes
+    // pointer events without claiming them.
+    if (widget.onTap == null) {
+      return Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => setState(() => _pressed = true),
+        onPointerUp: (_) => setState(() => _pressed = false),
+        onPointerCancel: (_) => setState(() => _pressed = false),
+        child: animated,
+      );
+    }
+
     return GestureDetector(
-      onTap: widget.onTap == null
-          ? null
-          : () {
-              HapticFeedback.lightImpact();
-              widget.onTap!.call();
-            },
+      onTap: () {
+        HapticFeedback.lightImpact();
+        widget.onTap!.call();
+      },
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? widget.scale : 1.0,
-        duration: AppMotion.fast,
-        curve: AppMotion.easeOut,
-        child: AnimatedOpacity(
-          opacity: _pressed ? 0.85 : 1.0,
-          duration: AppMotion.fast,
-          curve: AppMotion.easeOut,
-          child: widget.child,
-        ),
-      ),
+      child: animated,
     );
   }
 }
