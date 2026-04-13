@@ -40,6 +40,17 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
 
     private static let enabledKey = "home_nav_enabled_tabs"
     private static let orderKey = "home_nav_tab_order"
+    private static let versionKey = "home_nav_configuration_version"
+
+    /// A monotonic version token bumped whenever the configuration changes.
+    /// Use this as an `.id()` on tab containers so SwiftUI rebuilds them on change.
+    public static var configurationVersion: Int {
+        let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
+        return defaults.integer(forKey: versionKey)
+    }
+
+    /// Notification posted when the home navigation configuration changes.
+    public static let configurationDidChangeNotification = Notification.Name("AppTab.configurationDidChange")
 
     /// Whether this tab is currently enabled in the home navigation.
     /// Settings is always enabled regardless of user preference.
@@ -79,6 +90,9 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         var enabled = enabled
         enabled.insert(.settings)
         defaults.set(enabled.map { $0.rawValue }, forKey: enabledKey)
+        let version = defaults.integer(forKey: versionKey) + 1
+        defaults.set(version, forKey: versionKey)
+        NotificationCenter.default.post(name: configurationDidChangeNotification, object: nil)
     }
 
     /// Clear the stored configuration (resets to defaults).
@@ -86,5 +100,8 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
         defaults.removeObject(forKey: enabledKey)
         defaults.removeObject(forKey: orderKey)
+        let version = defaults.integer(forKey: versionKey) + 1
+        defaults.set(version, forKey: versionKey)
+        NotificationCenter.default.post(name: configurationDidChangeNotification, object: nil)
     }
 }

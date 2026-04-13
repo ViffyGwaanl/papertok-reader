@@ -441,6 +441,8 @@
 				C09AFDFAA9BAC61F8E7019BF /* PBXTargetDependency */,
 			);
 			name = PaperTokReaderTests;
+			packageProductDependencies = (
+			);
 			productName = PaperTokReaderTests;
 			productReference = 31B3258F79C09DC91F43EC67 /* PaperTokReaderTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -554,12 +556,12 @@
 			mainGroup = D290F9E4B9309C79DBA2342A;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "PTAIServices" */,
-				7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "PTCore" */,
-				A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "PTFeatures" */,
-				9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "PTNetworking" */,
-				D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "PTReader" */,
-				A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "PTUI" */,
+				93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "Packages/PTAIServices" */,
+				7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "Packages/PTCore" */,
+				A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "Packages/PTFeatures" */,
+				9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "Packages/PTNetworking" */,
+				D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "Packages/PTReader" */,
+				A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "Packages/PTUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ACD80EDE6F6FE221193C6115 /* Products */;
@@ -760,8 +762,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -839,8 +839,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/ShareExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Extensions/ShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -882,8 +880,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -968,8 +964,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/ShareExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Extensions/ShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1056,27 +1050,27 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "PTCore" */ = {
+		7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "Packages/PTCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTCore;
 		};
-		93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "PTAIServices" */ = {
+		93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "Packages/PTAIServices" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTAIServices;
 		};
-		9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "PTNetworking" */ = {
+		9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "Packages/PTNetworking" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTNetworking;
 		};
-		A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "PTUI" */ = {
+		A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "Packages/PTUI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTUI;
 		};
-		A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "PTFeatures" */ = {
+		A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "Packages/PTFeatures" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTFeatures;
 		};
-		D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "PTReader" */ = {
+		D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "Packages/PTReader" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTReader;
 		};
