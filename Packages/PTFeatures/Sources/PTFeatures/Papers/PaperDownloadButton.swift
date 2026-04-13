@@ -97,12 +97,12 @@ public struct PaperDownloadButton: View {
         Group {
             switch status {
             case .imported:
-                Label("Imported to Bookshelf", systemImage: "checkmark.circle.fill")
+                Label(String(localized: "bookshelf.imported_to_bookshelf"), systemImage: "checkmark.circle.fill")
                     .font(AppTypography.subheadline.weight(.medium))
                     .foregroundStyle(Morandi.sage)
 
             case .alreadyInBookshelf:
-                Label("Already in Bookshelf", systemImage: "books.vertical.fill")
+                Label(String(localized: "bookshelf.already_in_bookshelf"), systemImage: "books.vertical.fill")
                     .font(AppTypography.subheadline.weight(.medium))
                     .foregroundStyle(Morandi.sage)
 
@@ -134,7 +134,7 @@ public struct PaperDownloadButton: View {
 
             case .failed(let message, let plan):
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                    Label("Import Failed", systemImage: "exclamationmark.triangle.fill")
+                    Label(String(localized: "bookshelf.import_failed"), systemImage: "exclamationmark.triangle.fill")
                         .font(AppTypography.subheadline.weight(.medium))
                         .foregroundStyle(Morandi.destructive)
                     Text(message)
@@ -163,7 +163,7 @@ public struct PaperDownloadButton: View {
 
                     if let urlString = detail.url, let originalURL = URL(string: urlString) {
                         Link(destination: originalURL) {
-                            Label("View Original", systemImage: "safari")
+                            Label(String(localized: "reader.view_original"), systemImage: "safari")
                                 .font(AppTypography.subheadline)
                         }
                         .buttonStyle(.bordered)
@@ -172,7 +172,7 @@ public struct PaperDownloadButton: View {
 
                     if let rawMarkdown = detail.rawMarkdownUrl, let rawURL = URL(string: rawMarkdown) {
                         Link(destination: rawURL) {
-                            Label("Read Markdown", systemImage: "doc.text")
+                            Label(String(localized: "reader.read_markdown"), systemImage: "doc.text")
                                 .font(AppTypography.subheadline)
                         }
                         .buttonStyle(.bordered)

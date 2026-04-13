@@ -49,9 +49,9 @@ public struct AIProviderCenterView: View {
                 }
             }
         } header: {
-            Text("Built-in Providers")
+            Text("ai.providers.builtin")
         } footer: {
-            Text("Configure API keys, models, and endpoints for each provider. Keys are stored securely in the device Keychain.")
+            Text("ai.providers.config_hint")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
@@ -60,7 +60,7 @@ public struct AIProviderCenterView: View {
     @ViewBuilder
     private var customSection: some View {
         if !customProviders.isEmpty {
-            Section("Custom Providers") {
+            Section(String(localized: "ai.providers.custom")) {
                 ForEach(customProviders) { entry in
                     NavigationLink {
                         AIProviderDetailView(
@@ -83,7 +83,7 @@ public struct AIProviderCenterView: View {
                 newCustomName = ""
                 showAddCustom = true
             } label: {
-                Label("Add Custom Provider", systemImage: "plus.circle")
+                Label(String(localized: "ai.providers.add_custom"), systemImage: "plus.circle")
                     .foregroundStyle(Morandi.accent)
             }
         }
@@ -165,7 +165,7 @@ public struct AIProviderCenterView: View {
     private var addCustomSheet: some View {
         NavigationStack {
             Form {
-                Section("Name") {
+                Section(String(localized: "common.name")) {
                     TextField("e.g. MyGateway", text: $newCustomName)
                         #if os(iOS)
                         .textInputAutocapitalization(.words)
@@ -180,10 +180,10 @@ public struct AIProviderCenterView: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showAddCustom = false }
+                    Button(String(localized: "common.cancel")) { showAddCustom = false }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
+                    Button(String(localized: "common.add")) {
                         addCustomProvider()
                         showAddCustom = false
                     }

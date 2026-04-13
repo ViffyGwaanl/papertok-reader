@@ -23,7 +23,7 @@ struct ExcerptMenuSheet: View {
 
                     if let renderedImage {
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                            Text("Image Preview")
+                            Text("reader.image_preview")
                                 .font(AppTypography.caption.weight(.semibold))
                                 .foregroundStyle(Morandi.secondaryText)
 
@@ -47,7 +47,7 @@ struct ExcerptMenuSheet: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", action: onDismiss)
+                    Button(String(localized: "common.close"), action: onDismiss)
                         .foregroundStyle(Morandi.secondaryText)
                 }
             }
@@ -98,14 +98,14 @@ struct ExcerptMenuSheet: View {
             Button {
                 onSaveToNotes()
             } label: {
-                Label("Save to Notes", systemImage: "bookmark")
+                Label(String(localized: "reader.save_to_notes"), systemImage: "bookmark")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(Morandi.accent)
 
             ShareLink(item: shareText) {
-                Label("Share as Text", systemImage: "square.and.arrow.up")
+                Label(String(localized: "reader.share_as_text"), systemImage: "square.and.arrow.up")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -114,7 +114,7 @@ struct ExcerptMenuSheet: View {
             Button {
                 renderImageCard()
             } label: {
-                Label("Generate Image Card", systemImage: "photo")
+                Label(String(localized: "reader.generate_image_card"), systemImage: "photo")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -125,7 +125,7 @@ struct ExcerptMenuSheet: View {
                     item: renderedImage,
                     preview: SharePreview("Excerpt from \(bookTitle)", image: renderedImage)
                 ) {
-                    Label("Share Image Card", systemImage: "photo.on.rectangle.angled")
+                    Label(String(localized: "reader.share_image_card"), systemImage: "photo.on.rectangle.angled")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -135,7 +135,7 @@ struct ExcerptMenuSheet: View {
             Button {
                 copyToClipboard()
             } label: {
-                Label("Copy", systemImage: "doc.on.doc")
+                Label(String(localized: "common.copy"), systemImage: "doc.on.doc")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)

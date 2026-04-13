@@ -90,7 +90,7 @@ struct MessageBubbleView: View {
                     Text(text)
                         .font(AppTypography.caption2)
                 } else {
-                    Text("System")
+                    Text("ai.role.system")
                         .font(AppTypography.caption2)
                 }
             }
@@ -166,12 +166,12 @@ struct MessageBubbleView: View {
             NSPasteboard.general.setString(text, forType: .string)
             #endif
         } label: {
-            Label("Copy", systemImage: "doc.on.doc")
+            Label(String(localized: "common.copy"), systemImage: "doc.on.doc")
         }
 
         #if os(iOS)
         ShareLink(item: text) {
-            Label("Share", systemImage: "square.and.arrow.up")
+            Label(String(localized: "common.share"), systemImage: "square.and.arrow.up")
         }
         #endif
     }

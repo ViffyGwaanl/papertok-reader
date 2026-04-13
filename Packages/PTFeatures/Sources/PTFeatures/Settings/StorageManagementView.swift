@@ -26,7 +26,7 @@ public struct StorageManagementView: View {
                 Section {
                     HStack {
                         ProgressView().scaleEffect(0.8)
-                        Text("Calculating…")
+                        Text("common.calculating")
                             .foregroundStyle(Morandi.secondaryText)
                     }
                 }
@@ -54,7 +54,7 @@ public struct StorageManagementView: View {
     }
 
     private var overviewSection: some View {
-        Section("Usage") {
+        Section(String(localized: "common.usage")) {
             row("Database", sizes.database)
             row("Book Files", sizes.books)
             row("Cover Images", sizes.covers)
@@ -62,7 +62,7 @@ public struct StorageManagementView: View {
             row("Conversation History", sizes.conversations)
             row("Memory Files", sizes.memory)
             HStack {
-                Text("Total")
+                Text("common.total")
                     .font(AppTypography.body.weight(.semibold))
                     .foregroundStyle(Morandi.primaryText)
                 Spacer()
@@ -74,15 +74,15 @@ public struct StorageManagementView: View {
     }
 
     private var actionsSection: some View {
-        Section("Actions") {
+        Section(String(localized: "common.actions")) {
             Button {
                 showClearConversations = true
             } label: {
-                Label("Clear Conversation History", systemImage: "bubble.left.and.bubble.right")
+                Label(String(localized: "settings.storage.clear_history"), systemImage: "bubble.left.and.bubble.right")
                     .foregroundStyle(Morandi.primaryText)
             }
             .confirmationDialog("Clear all conversation history?", isPresented: $showClearConversations) {
-                Button("Clear", role: .destructive) {
+                Button(String(localized: "common.clear"), role: .destructive) {
                     clearDirectory(named: "conversations")
                     showToast("Conversation history cleared")
                 }
@@ -91,11 +91,11 @@ public struct StorageManagementView: View {
             Button {
                 showClearAIIndex = true
             } label: {
-                Label("Clear AI Index", systemImage: "square.stack.3d.up.slash")
+                Label(String(localized: "settings.storage.clear_ai_index"), systemImage: "square.stack.3d.up.slash")
                     .foregroundStyle(Morandi.primaryText)
             }
             .confirmationDialog("Clear AI search index?", isPresented: $showClearAIIndex) {
-                Button("Clear All", role: .destructive) {
+                Button(String(localized: "common.clear_all"), role: .destructive) {
                     clearDirectory(named: "ai_index")
                     showToast("AI index cleared")
                 }
@@ -104,11 +104,11 @@ public struct StorageManagementView: View {
             Button {
                 showClearCache = true
             } label: {
-                Label("Clear Cache", systemImage: "trash")
+                Label(String(localized: "settings.clear_cache"), systemImage: "trash")
                     .foregroundStyle(Morandi.primaryText)
             }
             .confirmationDialog("Clear all cached files?", isPresented: $showClearCache) {
-                Button("Clear Cache", role: .destructive) {
+                Button(String(localized: "settings.clear_cache"), role: .destructive) {
                     viewModel.clearCache()
                     showToast("Cache cleared")
                 }
@@ -117,7 +117,7 @@ public struct StorageManagementView: View {
             Button {
                 exportData()
             } label: {
-                Label("Export Data Bundle", systemImage: "square.and.arrow.up")
+                Label(String(localized: "settings.storage.export_bundle"), systemImage: "square.and.arrow.up")
                     .foregroundStyle(Morandi.accent)
             }
         }

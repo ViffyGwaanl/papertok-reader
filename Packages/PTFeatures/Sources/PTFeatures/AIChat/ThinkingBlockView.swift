@@ -24,7 +24,7 @@ struct ThinkingBlockView: View {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(AppTypography.caption)
                         .foregroundStyle(Morandi.secondaryText)
-                    Text("Thinking...")
+                    Text("common.thinking_ellipsis")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Morandi.secondaryText)
                     if let count = tokenCount {

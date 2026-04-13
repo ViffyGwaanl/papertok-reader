@@ -97,12 +97,12 @@ struct PapersFilterBar: View {
                     .labelsHidden()
 
                     HStack(spacing: AppSpacing.md) {
-                        Button("Cancel") {
+                        Button(String(localized: "common.cancel")) {
                             isShowingDatePicker = false
                         }
                         .buttonStyle(.bordered)
 
-                        Button("Apply") {
+                        Button(String(localized: "common.apply")) {
                             customDate = draftDate
                             isShowingDatePicker = false
                         }

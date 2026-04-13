@@ -165,7 +165,7 @@ public struct ReadingTrendChartView: View {
             )
             .interpolationMethod(.catmullRom)
         }
-        .chartYAxisLabel("Minutes")
+        .chartYAxisLabel(String(localized: "common.minutes"))
     }
 
     private var weekdayChart: some View {
@@ -177,7 +177,7 @@ public struct ReadingTrendChartView: View {
             .foregroundStyle(Morandi.powder)
             .cornerRadius(4)
         }
-        .chartYAxisLabel("Avg Minutes")
+        .chartYAxisLabel(String(localized: "statistics.avg_minutes"))
     }
 
     private var perBookChart: some View {
@@ -190,7 +190,7 @@ public struct ReadingTrendChartView: View {
             .cornerRadius(4)
         }
         .chartForegroundStyleScale(range: morandiPalette)
-        .chartXAxisLabel("Minutes")
+        .chartXAxisLabel(String(localized: "common.minutes"))
     }
 
     private var filteredDaily: [DailyPoint] {

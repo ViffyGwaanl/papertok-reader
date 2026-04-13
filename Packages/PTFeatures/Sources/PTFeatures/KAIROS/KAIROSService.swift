@@ -211,9 +211,9 @@ public struct KAIROSSettingsView: View {
                     .tint(Morandi.accent)
                     .foregroundStyle(Morandi.primaryText)
             } header: {
-                Text("Reading Assistant")
+                Text("settings.reading_assistant")
             } footer: {
-                Text("KAIROS helps you build a consistent reading habit with daily goals and reminders.")
+                Text("kairos.description")
                     .font(AppTypography.caption2)
                     .foregroundStyle(Morandi.tertiaryText)
             }
@@ -231,12 +231,12 @@ public struct KAIROSSettingsView: View {
                     )
                     .foregroundStyle(Morandi.primaryText)
                 } header: {
-                    Text("Reading Goal")
+                    Text("kairos.reading_goal")
                 }
 
                 Section {
                     HStack {
-                        Text("Reminder Time")
+                        Text("kairos.reminder_time")
                             .foregroundStyle(Morandi.primaryText)
                         Spacer()
                         DatePicker(
@@ -250,12 +250,12 @@ public struct KAIROSSettingsView: View {
                         .labelsHidden()
                     }
                 } header: {
-                    Text("Daily Reminder")
+                    Text("kairos.daily_reminder")
                 }
 
                 Section {
                     HStack {
-                        Text("Today")
+                        Text("common.today")
                             .foregroundStyle(Morandi.primaryText)
                         Spacer()
                         Text("\(service.todayReadingMinutes) / \(service.dailyGoalMinutes) min")
@@ -263,7 +263,7 @@ public struct KAIROSSettingsView: View {
                     }
 
                     HStack {
-                        Text("Current Streak")
+                        Text("kairos.current_streak")
                             .foregroundStyle(Morandi.primaryText)
                         Spacer()
                         Text("\(service.currentStreak) days")
@@ -271,14 +271,14 @@ public struct KAIROSSettingsView: View {
                     }
 
                     HStack {
-                        Text("Longest Streak")
+                        Text("kairos.longest_streak")
                             .foregroundStyle(Morandi.primaryText)
                         Spacer()
                         Text("\(service.longestStreak) days")
                             .foregroundStyle(Morandi.secondaryText)
                     }
                 } header: {
-                    Text("Progress")
+                    Text("kairos.progress")
                 }
             }
         }

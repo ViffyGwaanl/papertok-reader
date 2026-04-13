@@ -286,33 +286,33 @@ struct BookshelfScreen: View {
                 Button(role: .destructive) {
                     handleDelete(book)
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(String(localized: "common.delete"), systemImage: "trash")
                 }
             }
             .contextMenu {
                 Button {
                     navigationBook = book
                 } label: {
-                    Label("Open", systemImage: "book")
+                    Label(String(localized: "common.open"), systemImage: "book")
                 }
 
                 Button {
                     presentedSheet = .editBook(book)
                 } label: {
-                    Label("Edit", systemImage: "pencil")
+                    Label(String(localized: "common.edit"), systemImage: "pencil")
                 }
 
                 bookshelfMoveGroupMenu(for: book)
                 bookshelfTagMenu(for: book)
 
                 ShareLink(item: URL(fileURLWithPath: book.filePath)) {
-                    Label("Share", systemImage: "square.and.arrow.up")
+                    Label(String(localized: "common.share"), systemImage: "square.and.arrow.up")
                 }
 
                 Button(role: .destructive) {
                     handleDelete(book)
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(String(localized: "common.delete"), systemImage: "trash")
                 }
             }
             .listRowBackground(Morandi.background)
@@ -354,26 +354,26 @@ struct BookshelfScreen: View {
                         Button {
                             navigationBook = book
                         } label: {
-                            Label("Open", systemImage: "book")
+                            Label(String(localized: "common.open"), systemImage: "book")
                         }
 
                         Button {
                             presentedSheet = .editBook(book)
                         } label: {
-                            Label("Edit", systemImage: "pencil")
+                            Label(String(localized: "common.edit"), systemImage: "pencil")
                         }
 
                         bookshelfMoveGroupMenu(for: book)
                         bookshelfTagMenu(for: book)
 
                         ShareLink(item: URL(fileURLWithPath: book.filePath)) {
-                            Label("Share", systemImage: "square.and.arrow.up")
+                            Label(String(localized: "common.share"), systemImage: "square.and.arrow.up")
                         }
 
                         Button(role: .destructive) {
                             handleDelete(book)
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(String(localized: "common.delete"), systemImage: "trash")
                         }
                     }
                     }
@@ -436,7 +436,7 @@ struct BookshelfScreen: View {
             Button {
                 viewModel.selectAllBooks()
             } label: {
-                Text("Select All")
+                Text("common.select_all")
                     .font(AppTypography.caption.weight(.semibold))
             }
             .buttonStyle(.bordered)
@@ -446,7 +446,7 @@ struct BookshelfScreen: View {
                 Button {
                     showBatchMoveSheet = true
                 } label: {
-                    Label("Move to Group", systemImage: "folder")
+                    Label(String(localized: "bookshelf.move_to_group"), systemImage: "folder")
                 }
 
                 Button(role: .destructive) {
@@ -455,7 +455,7 @@ struct BookshelfScreen: View {
                         viewModel.toggleEditMode()
                     }
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(String(localized: "common.delete"), systemImage: "trash")
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
@@ -478,7 +478,7 @@ struct BookshelfScreen: View {
             ContentUnavailableView(
                 "No Books Yet",
                 systemImage: "books.vertical",
-                description: Text("Tap + to import a PDF or EPUB file.")
+                description: Text("bookshelf.empty.tip")
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -492,7 +492,7 @@ struct BookshelfScreen: View {
                 Button {
                     presentedSheet = .manageTags
                 } label: {
-                    Label("Tags", systemImage: "slider.horizontal.3")
+                    Label(String(localized: "common.tags"), systemImage: "slider.horizontal.3")
                         .font(AppTypography.caption.weight(.semibold))
                         .foregroundStyle(Morandi.primaryText)
                         .padding(.horizontal, AppSpacing.md)
@@ -538,7 +538,7 @@ struct BookshelfScreen: View {
             VStack(spacing: AppSpacing.md) {
                 ProgressView()
                     .tint(Morandi.accent)
-                Text("Importing…")
+                Text("import.importing")
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.secondaryText)
             }
@@ -610,7 +610,7 @@ struct BookshelfScreen: View {
                 isPresented: $showImportError,
                 presenting: viewModel.importError
             ) { _ in
-                Button("OK") { viewModel.importError = nil }
+                Button(String(localized: "common.ok")) { viewModel.importError = nil }
             } message: { error in
                 Text(error.errorDescription ?? "Unknown error")
             }
@@ -641,7 +641,7 @@ struct BookshelfScreen: View {
             ContentUnavailableView(
                 "EPUB Reader Not Yet Available",
                 systemImage: "book.closed",
-                description: Text("The standalone macOS target is compiling ahead of full EPUB reader parity. PDF reading and the shared app shell remain in scope for later waves.")
+                description: Text("dev.macos_beta_notice")
             )
 #endif
         } else {
@@ -711,7 +711,7 @@ struct BookshelfScreen: View {
     @ViewBuilder
     private var normalToolbarItems: some View {
         Menu {
-            Section("View") {
+            Section(String(localized: "common.view")) {
                 ForEach([BookshelfDisplayMode.grid, .list], id: \.rawValue) { mode in
                     Button {
                         displayMode = mode
@@ -721,7 +721,7 @@ struct BookshelfScreen: View {
                 }
             }
 
-            Section("Sort") {
+            Section(String(localized: "common.sort")) {
                 ForEach(Array(BookshelfViewModel.SortOrder.allCases), id: \.rawValue) { sortOrder in
                     Button {
                         viewModel.sortOrder = sortOrder
@@ -732,17 +732,17 @@ struct BookshelfScreen: View {
                 }
             }
 
-            Section("Manage") {
+            Section(String(localized: "common.manage")) {
                 Button {
                     presentedSheet = .manageTags
                 } label: {
-                    Label("Manage Tags", systemImage: "tag")
+                    Label(String(localized: "bookshelf.manage_tags"), systemImage: "tag")
                 }
 
                 Button {
                     presentedSheet = .manageGroups
                 } label: {
-                    Label("Manage Groups", systemImage: "folder.badge.gearshape")
+                    Label(String(localized: "bookshelf.manage_groups"), systemImage: "folder.badge.gearshape")
                 }
             }
 
@@ -751,7 +751,7 @@ struct BookshelfScreen: View {
             Button {
                 viewModel.toggleEditMode()
             } label: {
-                Label("Select", systemImage: "checkmark.circle")
+                Label(String(localized: "common.select"), systemImage: "checkmark.circle")
             }
         } label: {
             Image(systemName: "line.3.horizontal.decrease.circle")
@@ -769,7 +769,7 @@ struct BookshelfScreen: View {
 
     @ViewBuilder
     private var editModeToolbarItems: some View {
-        Button("Done") {
+        Button(String(localized: "common.done")) {
             viewModel.toggleEditMode()
         }
         .fontWeight(.semibold)
@@ -909,7 +909,7 @@ struct BookshelfScreen: View {
     private func undoBanner(for book: Book) -> some View {
         HStack(spacing: AppSpacing.md) {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text("Book deleted")
+                Text("bookshelf.book_deleted")
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
                 Text(book.title)
@@ -920,7 +920,7 @@ struct BookshelfScreen: View {
 
             Spacer()
 
-            Button("Undo") {
+            Button(String(localized: "common.undo")) {
                 undoDismissTask?.cancel()
                 Task { await viewModel.undoLastDelete() }
             }
@@ -960,7 +960,7 @@ struct BookshelfScreen: View {
     private func bookshelfTagMenu(for book: Book) -> some View {
         Menu("Tags") {
             if viewModel.tags.isEmpty {
-                Button("No tags yet") { }
+                Button(String(localized: "bookshelf.no_tags")) { }
                     .disabled(true)
             } else {
                 ForEach(viewModel.tags) { tag in
@@ -983,7 +983,7 @@ struct BookshelfScreen: View {
 
             Divider()
 
-            Button("Manage Tags…") {
+            Button(String(localized: "bookshelf.manage_tags_ellipsis")) {
                 presentedSheet = .manageTags
             }
         }
@@ -996,11 +996,11 @@ struct BookshelfScreen: View {
                 Button {
                     Task { try? await viewModel.moveBook(id: bookID, toGroupId: nil) }
                 } label: {
-                    Label("No Group", systemImage: book.groupId == 0 ? "checkmark" : "folder")
+                    Label(String(localized: "bookshelf.no_group"), systemImage: book.groupId == 0 ? "checkmark" : "folder")
                 }
 
                 if viewModel.groups.isEmpty {
-                    Button("No groups yet") { }
+                    Button(String(localized: "bookshelf.no_groups")) { }
                         .disabled(true)
                 } else {
                     ForEach(viewModel.groups) { group in
@@ -1016,7 +1016,7 @@ struct BookshelfScreen: View {
 
                 Divider()
 
-                Button("Manage Groups…") {
+                Button(String(localized: "bookshelf.manage_groups_ellipsis")) {
                     presentedSheet = .manageGroups
                 }
             }
@@ -1112,7 +1112,7 @@ private struct BookshelfBookEditorSheet: View {
                     TextField("Title", text: $title)
                     TextField("Author", text: $author)
                 } header: {
-                    Text("Metadata")
+                    Text("bookshelf.metadata")
                 }
 
                 Section {
@@ -1121,7 +1121,7 @@ private struct BookshelfBookEditorSheet: View {
                         .foregroundStyle(Morandi.secondaryText)
                         .textSelection(.enabled)
                 } header: {
-                    Text("File")
+                    Text("common.file")
                 }
             }
             .navigationTitle(String(localized: "bookshelf.edit_book"))
@@ -1130,10 +1130,10 @@ private struct BookshelfBookEditorSheet: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(String(localized: "common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(String(localized: "common.save")) {
                         Task { await save() }
                     }
                     .disabled(trimmedTitle.isEmpty || book.id == nil)
@@ -1141,7 +1141,7 @@ private struct BookshelfBookEditorSheet: View {
             }
         }
         .alert("Edit Failed", isPresented: isShowingError) {
-            Button("OK") { errorMessage = nil }
+            Button(String(localized: "common.ok")) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "Unknown error")
         }
@@ -1191,7 +1191,7 @@ private struct BookshelfTagManagerSheet: View {
                         Task { await viewModel.loadBooks() }
                     } label: {
                         HStack {
-                            Text("No Tag")
+                            Text("bookshelf.no_tag")
                             Spacer()
                             if viewModel.includeNoTagFilter {
                                 Image(systemName: "checkmark")
@@ -1202,7 +1202,7 @@ private struct BookshelfTagManagerSheet: View {
                     .foregroundStyle(Morandi.primaryText)
 
                     if viewModel.tags.isEmpty {
-                        Text("No tags yet.")
+                        Text("bookshelf.no_tags_dot")
                             .foregroundStyle(Morandi.secondaryText)
                     } else {
                         ForEach(viewModel.tags) { tag in
@@ -1223,10 +1223,10 @@ private struct BookshelfTagManagerSheet: View {
                                 }
                                 .foregroundStyle(Morandi.primaryText)
                                 .contextMenu {
-                                    Button("Edit") {
+                                    Button(String(localized: "common.edit")) {
                                         beginEditing(tag)
                                     }
-                                    Button("Delete", role: .destructive) {
+                                    Button(String(localized: "common.delete"), role: .destructive) {
                                         Task { await deleteTag(tag) }
                                     }
                                 }
@@ -1234,7 +1234,7 @@ private struct BookshelfTagManagerSheet: View {
                         }
                     }
                 } header: {
-                    Text("Filters")
+                    Text("common.filters")
                 }
 
                 Section {
@@ -1253,7 +1253,7 @@ private struct BookshelfTagManagerSheet: View {
                     .disabled(trimmedDraftName.isEmpty)
 
                     if editingTagID != nil {
-                        Button("Cancel Editing", role: .cancel) {
+                        Button(String(localized: "notes.cancel_editing"), role: .cancel) {
                             resetEditor()
                         }
                     }
@@ -1263,7 +1263,7 @@ private struct BookshelfTagManagerSheet: View {
 
                 Section {
                     if viewModel.tags.isEmpty {
-                        Text("Create your first tag above.")
+                        Text("bookshelf.create_first_tag")
                             .foregroundStyle(Morandi.secondaryText)
                     } else {
                         ForEach(viewModel.tags) { tag in
@@ -1279,7 +1279,7 @@ private struct BookshelfTagManagerSheet: View {
                                     }
                                 }
                                 Spacer()
-                                Button("Edit") {
+                                Button(String(localized: "common.edit")) {
                                     beginEditing(tag)
                                 }
                                 .font(AppTypography.caption.weight(.semibold))
@@ -1288,7 +1288,7 @@ private struct BookshelfTagManagerSheet: View {
                         }
                     }
                 } header: {
-                    Text("Existing Tags")
+                    Text("bookshelf.existing_tags")
                 }
             }
             .navigationTitle(String(localized: "common.tags"))
@@ -1297,7 +1297,7 @@ private struct BookshelfTagManagerSheet: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button(String(localized: "common.done")) { dismiss() }
                 }
             }
             .task {
@@ -1305,7 +1305,7 @@ private struct BookshelfTagManagerSheet: View {
             }
         }
         .alert("Tag Error", isPresented: isShowingError) {
-            Button("OK") { errorMessage = nil }
+            Button(String(localized: "common.ok")) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "Unknown error")
         }
@@ -1410,7 +1410,7 @@ private struct BookshelfGroupManagerSheet: View {
 
                     if editingGroupID == nil {
                         Menu {
-                            Button("Root Group") {
+                            Button(String(localized: "bookshelf.root_group")) {
                                 selectedParentGroupID = nil
                             }
 
@@ -1426,7 +1426,7 @@ private struct BookshelfGroupManagerSheet: View {
                             }
                         } label: {
                             HStack {
-                                Text("Parent")
+                                Text("bookshelf.parent")
                                 Spacer()
                                 Text(selectedParentTitle)
                                     .foregroundStyle(Morandi.secondaryText)
@@ -1440,7 +1440,7 @@ private struct BookshelfGroupManagerSheet: View {
                     .disabled(trimmedDraftName.isEmpty)
 
                     if editingGroupID != nil {
-                        Button("Cancel Editing", role: .cancel) {
+                        Button(String(localized: "notes.cancel_editing"), role: .cancel) {
                             resetEditor()
                         }
                     }
@@ -1450,7 +1450,7 @@ private struct BookshelfGroupManagerSheet: View {
 
                 Section {
                     if flattenedGroups.isEmpty {
-                        Text("No groups yet.")
+                        Text("bookshelf.no_groups_dot")
                             .foregroundStyle(Morandi.secondaryText)
                     } else {
                         ForEach(flattenedGroups) { row in
@@ -1461,19 +1461,19 @@ private struct BookshelfGroupManagerSheet: View {
                                     .padding(.leading, CGFloat(row.depth) * 14)
                                 Spacer()
                                 Menu {
-                                    Button("Rename") {
+                                    Button(String(localized: "common.rename")) {
                                         beginRenaming(row.group)
                                     }
 
-                                    Button("Add Child") {
+                                    Button(String(localized: "bookshelf.add_child")) {
                                         beginCreatingChild(of: row.group)
                                     }
 
-                                    Button("Dissolve Group", role: .destructive) {
+                                    Button(String(localized: "bookshelf.dissolve_group"), role: .destructive) {
                                         Task { await dissolveGroup(row.group) }
                                     }
 
-                                    Button("Delete Group", role: .destructive) {
+                                    Button(String(localized: "bookshelf.delete_group"), role: .destructive) {
                                         Task { await deleteGroup(row.group) }
                                     }
                                 } label: {
@@ -1485,9 +1485,9 @@ private struct BookshelfGroupManagerSheet: View {
                         }
                     }
                 } header: {
-                    Text("Groups")
+                    Text("bookshelf.groups")
                 } footer: {
-                    Text("Move books between groups from each book's context menu.")
+                    Text("bookshelf.no_groups_hint")
                 }
             }
             .navigationTitle(String(localized: "bookshelf.groups"))
@@ -1496,7 +1496,7 @@ private struct BookshelfGroupManagerSheet: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button(String(localized: "common.done")) { dismiss() }
                 }
             }
             .task {
@@ -1504,7 +1504,7 @@ private struct BookshelfGroupManagerSheet: View {
             }
         }
         .alert("Group Error", isPresented: isShowingError) {
-            Button("OK") { errorMessage = nil }
+            Button(String(localized: "common.ok")) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "Unknown error")
         }
@@ -1626,7 +1626,7 @@ private struct BookshelfBatchMoveSheet: View {
                         onDone()
                     }
                 } label: {
-                    Label("No Group (Root)", systemImage: "folder")
+                    Label(String(localized: "bookshelf.no_group_root"), systemImage: "folder")
                 }
 
                 ForEach(viewModel.groups) { group in
@@ -1648,7 +1648,7 @@ private struct BookshelfBatchMoveSheet: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(String(localized: "common.cancel")) { dismiss() }
                 }
             }
         }
@@ -1751,14 +1751,14 @@ struct EPUBBookshelfReaderView: View {
             isAIPanelPresented.toggle()
         }
         .alert("Annotation Error", isPresented: annotationErrorPresentedBinding) {
-            Button("OK") {
+            Button(String(localized: "common.ok")) {
                 annotationErrorMessage = nil
             }
         } message: {
             Text(annotationErrorMessage ?? "")
         }
         .alert("Reader Settings Error", isPresented: readerSettingsErrorPresentedBinding) {
-            Button("OK") {
+            Button(String(localized: "common.ok")) {
                 preferencesViewModel?.clearError()
             }
         } message: {
@@ -1802,7 +1802,7 @@ struct EPUBBookshelfReaderView: View {
                 HStack(spacing: AppSpacing.xs) {
                     Image(systemName: "chevron.left")
 #if os(iOS)
-                    Text("Library")
+                    Text("tab.library")
 #endif
                 }
                 .foregroundStyle(Morandi.accent)
@@ -1816,7 +1816,7 @@ struct EPUBBookshelfReaderView: View {
                 Image(systemName: "bubble.left.and.text.bubble.right")
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel("Open AI Panel")
+            .accessibilityLabel(String(localized: "reader.open_ai_panel"))
 
             Button {
                 readerControlsViewModel?.showSearch = true
@@ -1824,7 +1824,7 @@ struct EPUBBookshelfReaderView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel("Search Book")
+            .accessibilityLabel(String(localized: "reader.search_book"))
             .disabled(readerControlsViewModel == nil)
 
             Button {
@@ -1833,7 +1833,7 @@ struct EPUBBookshelfReaderView: View {
                 Image(systemName: "textformat.size")
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel("Open Reader Settings")
+            .accessibilityLabel(String(localized: "reader.open_settings"))
             .disabled(preferencesViewModel == nil)
 
             Button {
@@ -1842,7 +1842,7 @@ struct EPUBBookshelfReaderView: View {
                 Image(systemName: "bookmark")
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel("Add Bookmark")
+            .accessibilityLabel(String(localized: "bookmark.add"))
             .disabled((coordinator.currentLocator ?? initialLocator) == nil)
 
             Button {
@@ -1851,7 +1851,7 @@ struct EPUBBookshelfReaderView: View {
                 Image(systemName: "list.bullet")
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel("Open Contents")
+            .accessibilityLabel(String(localized: "reader.open_contents"))
             .disabled(readerControlsViewModel == nil)
         }
 
@@ -2021,7 +2021,7 @@ struct EPUBBookshelfReaderView: View {
                         ContentUnavailableView(
                             "No Contents",
                             systemImage: "list.bullet.indent",
-                            description: Text("This EPUB does not expose a table of contents.")
+                            description: Text("reader.no_toc_epub")
                         )
                     } else {
                         List(readerControlsViewModel.tocEntries) { entry in
@@ -2061,7 +2061,7 @@ struct EPUBBookshelfReaderView: View {
             .navigationTitle(String(localized: "reader.contents"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(String(localized: "common.done")) {
                         readerControlsViewModel?.showTOC = false
                     }
                     .foregroundStyle(Morandi.accent)
@@ -2079,7 +2079,7 @@ struct EPUBBookshelfReaderView: View {
                         ContentUnavailableView(
                             "Search This Book",
                             systemImage: "magnifyingglass",
-                            description: Text("Enter a phrase to search across the EPUB contents.")
+                            description: Text("reader.search_epub_prompt")
                         )
                     } else if readerControlsViewModel.isSearching {
                         ProgressView("Searching…")
@@ -2144,7 +2144,7 @@ struct EPUBBookshelfReaderView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Search") {
+                    Button(String(localized: "common.search")) {
                         Task { await readerControlsViewModel?.performSearch() }
                     }
                     .foregroundStyle(Morandi.accent)
@@ -2152,7 +2152,7 @@ struct EPUBBookshelfReaderView: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(String(localized: "common.done")) {
                         readerControlsViewModel?.showSearch = false
                     }
                     .foregroundStyle(Morandi.accent)
@@ -2385,7 +2385,7 @@ struct EPUBBookshelfReaderView: View {
 struct PapersPlaceholderView: View {
     var body: some View {
         NavigationStack {
-            ContentUnavailableView("Papers", systemImage: "doc.text.magnifyingglass", description: Text("Academic paper feed coming soon."))
+            ContentUnavailableView("Papers", systemImage: "doc.text.magnifyingglass", description: Text("papers.coming_soon"))
                 .navigationTitle(String(localized: "papers.title"))
         }
     }
@@ -2440,7 +2440,7 @@ struct NotesScreen: View {
             }
             .task { await viewModel.loadNotes() }
             .alert("Notes Exported", isPresented: $isExportFeedbackPresented) {
-                Button("OK", role: .cancel) { }
+                Button(String(localized: "common.ok"), role: .cancel) { }
             } message: {
                 Text(exportFeedbackMessage)
             }
@@ -2498,7 +2498,7 @@ struct NotesScreen: View {
     @ViewBuilder
     private var notesSortMenu: some View {
         Menu {
-            Section("Sort") {
+            Section(String(localized: "common.sort")) {
                 ForEach(NotesSortOrder.allCases) { order in
                     Button {
                         viewModel.sortOrder = order
@@ -2512,7 +2512,7 @@ struct NotesScreen: View {
                 }
             }
 
-            Section("Filter") {
+            Section(String(localized: "common.filter")) {
                 ForEach(NotesFilterType.allCases) { filterType in
                     Button {
                         viewModel.filterType = filterType
@@ -2530,7 +2530,7 @@ struct NotesScreen: View {
                 .foregroundStyle(Morandi.accent)
                 .symbolVariant(viewModel.filterType != .all || viewModel.sortOrder != .dateDescending ? .fill : .none)
         }
-        .accessibilityLabel("Filter and Sort")
+        .accessibilityLabel(String(localized: "common.filter_and_sort"))
     }
 
     private var notesList: some View {
@@ -2565,7 +2565,7 @@ struct NotesScreen: View {
                                         Task { await viewModel.deleteNote(id: id) }
                                     }
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    Label(String(localized: "common.delete"), systemImage: "trash")
                                 }
                                 .tint(Morandi.destructive)
                             }
@@ -2573,7 +2573,7 @@ struct NotesScreen: View {
                                 Button {
                                     editingNote = note
                                 } label: {
-                                    Label("Edit", systemImage: "pencil")
+                                    Label(String(localized: "common.edit"), systemImage: "pencil")
                                 }
                                 .tint(Morandi.accent)
                             }
@@ -2655,7 +2655,7 @@ struct NotesScreen: View {
             Image(systemName: "square.and.arrow.up")
                 .foregroundStyle(Morandi.accent)
         }
-        .accessibilityLabel("Export Notes")
+        .accessibilityLabel(String(localized: "notes.export"))
     }
 
     private func summaryCard(title: String, value: String, systemImage: String) -> some View {
@@ -2719,31 +2719,31 @@ private struct NoteEditSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Content") {
+                Section(String(localized: "common.content")) {
                     Text(editedNote.content)
                         .font(AppTypography.body)
                         .foregroundStyle(Morandi.primaryText)
                 }
 
                 if !editedNote.chapter.isEmpty {
-                    Section("Chapter") {
+                    Section(String(localized: "reader.chapter")) {
                         Text(editedNote.chapter)
                             .font(AppTypography.body)
                             .foregroundStyle(Morandi.secondaryText)
                     }
                 }
 
-                Section("Note") {
+                Section(String(localized: "common.note")) {
                     TextEditor(text: noteEditReaderNoteBinding)
                         .frame(minHeight: 120)
                         .font(AppTypography.body)
                 }
 
-                Section("Type") {
+                Section(String(localized: "common.type")) {
                     Picker("Type", selection: $editedNote.type) {
-                        Text("Highlight").tag("highlight")
-                        Text("Bookmark").tag("bookmark")
-                        Text("Note").tag("note")
+                        Text("reader.highlight").tag("highlight")
+                        Text("reader.bookmark").tag("bookmark")
+                        Text("common.note").tag("note")
                     }
                     .pickerStyle(.segmented)
                 }
@@ -2756,11 +2756,11 @@ private struct NoteEditSheet: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(String(localized: "common.cancel")) { dismiss() }
                         .foregroundStyle(Morandi.secondaryText)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(String(localized: "common.save")) {
                         editedNote.updateTime = Date()
                         onSave(editedNote)
                         dismiss()
@@ -2843,7 +2843,7 @@ struct StatisticsScreen: View {
                         Image(systemName: "slider.horizontal.3")
                             .foregroundStyle(Morandi.accent)
                     }
-                    .accessibilityLabel("Customize Dashboard")
+                    .accessibilityLabel(String(localized: "dashboard.customize"))
                 }
             }
             .task { await viewModel.loadStats() }
@@ -2967,7 +2967,7 @@ struct StatisticsScreen: View {
 
     private var heatmapSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            Text("Reading Activity")
+            Text("statistics.readingActivity")
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.primaryText)
 
@@ -3006,7 +3006,7 @@ struct StatisticsScreen: View {
     private var dailyHighlightCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack {
-                Label("Daily Highlight", systemImage: "sparkles.rectangle.stack")
+                Label(String(localized: "statistics.daily_highlight"), systemImage: "sparkles.rectangle.stack")
                     .font(AppTypography.headline)
                     .foregroundStyle(Morandi.primaryText)
 
@@ -3038,7 +3038,7 @@ struct StatisticsScreen: View {
                         .lineLimit(2)
                 }
             } else {
-                Text("Create more highlights while reading to surface a daily quote here.")
+                Text("statistics.daily_highlight_empty")
                     .font(AppTypography.body)
                     .foregroundStyle(Morandi.secondaryText)
             }
@@ -3061,7 +3061,7 @@ struct StatisticsScreen: View {
 
     private var heatmapLegend: some View {
         HStack(spacing: AppSpacing.xs) {
-            Text("Less")
+            Text("statistics.less")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.secondaryText)
 
@@ -3071,7 +3071,7 @@ struct StatisticsScreen: View {
                     .frame(width: 14, height: 14)
             }
 
-            Text("More")
+            Text("statistics.more")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.secondaryText)
         }
@@ -3080,7 +3080,7 @@ struct StatisticsScreen: View {
     private var trendSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack {
-                Text("Reading Trends")
+                Text("statistics.reading_trends")
                     .font(AppTypography.headline)
                     .foregroundStyle(Morandi.primaryText)
                 Spacer()
@@ -3126,12 +3126,12 @@ struct StatisticsScreen: View {
                 .overlay(Morandi.divider)
 
             VStack(alignment: .leading, spacing: AppSpacing.md) {
-                Text("By Book")
+                Text("notes.sort_book")
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
 
                 if viewModel.perBookTrendBreakdowns.isEmpty {
-                    Text("Books with reading activity in the selected range will appear here.")
+                    Text("statistics.range_empty")
                         .font(AppTypography.body)
                         .foregroundStyle(Morandi.secondaryText)
                 } else {
@@ -3151,12 +3151,12 @@ struct StatisticsScreen: View {
 
     private var completionSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            Text("Nearly Finished")
+            Text("statistics.nearly_finished")
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.primaryText)
 
             if viewModel.nearlyFinishedBooks.isEmpty {
-                Text("Books between 60% and 93% completion will appear here.")
+                Text("statistics.nearly_finished_hint")
                     .font(AppTypography.body)
                     .foregroundStyle(Morandi.secondaryText)
             } else {
@@ -3252,12 +3252,12 @@ private struct StatisticsTileCustomizationSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Visible Tiles") {
+                Section(String(localized: "settings.home_nav.visible_tiles")) {
                     ForEach(tiles) { tile in
                         HStack {
                             Text(tile.title)
                             Spacer()
-                            Button("Hide") {
+                            Button(String(localized: "common.hide")) {
                                 withAnimation {
                                     tiles.removeAll { $0 == tile }
                                 }
@@ -3271,7 +3271,7 @@ private struct StatisticsTileCustomizationSheet: View {
                 }
 
                 if hiddenTiles.isEmpty == false {
-                    Section("Hidden Tiles") {
+                    Section(String(localized: "settings.home_nav.hidden_tiles")) {
                         ForEach(hiddenTiles) { tile in
                             Button {
                                 withAnimation {
@@ -3288,10 +3288,10 @@ private struct StatisticsTileCustomizationSheet: View {
             .navigationTitle(String(localized: "settings.home_nav.dashboard_tiles"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(String(localized: "common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Save") {
+                    Button(String(localized: "common.save")) {
                         onSave(tiles)
                         dismiss()
                     }
@@ -3377,21 +3377,21 @@ struct SettingsScreen: View {
             NavigationLink {
                 AIProviderCenterView(viewModel: viewModel)
             } label: {
-                Label("Provider Center", systemImage: "server.rack")
+                Label(String(localized: "ai.providers.center"), systemImage: "server.rack")
                     .foregroundStyle(Morandi.primaryText)
             }
 
             NavigationLink {
                 AIToolsConfigView(viewModel: viewModel)
             } label: {
-                Label("AI Tools", systemImage: "hammer")
+                Label(String(localized: "ai.tools.config"), systemImage: "hammer")
                     .foregroundStyle(Morandi.primaryText)
             }
 
             NavigationLink {
                 QuickPromptsEditorView(viewModel: viewModel)
             } label: {
-                Label("Quick Prompts", systemImage: "text.bubble")
+                Label(String(localized: "ai.prompts.quick"), systemImage: "text.bubble")
                     .foregroundStyle(Morandi.primaryText)
             }
 
@@ -3400,7 +3400,7 @@ struct SettingsScreen: View {
             }
             .foregroundStyle(Morandi.primaryText)
         } header: {
-            Text("AI Providers")
+            Text("settings.ai_providers")
         }
     }
 
@@ -3420,7 +3420,7 @@ struct SettingsScreen: View {
                 .foregroundStyle(Morandi.primaryText)
 
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                Text("Accent Color")
+                Text("settings.accent_color")
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
 
@@ -3445,7 +3445,7 @@ struct SettingsScreen: View {
             }
             .padding(.vertical, AppSpacing.xs)
         } header: {
-            Text("Appearance")
+            Text("settings.appearance")
         }
     }
 
@@ -3478,18 +3478,18 @@ struct SettingsScreen: View {
             NavigationLink {
                 ReadingDetailSettingsView(viewModel: viewModel)
             } label: {
-                Label("Advanced Appearance", systemImage: "textformat")
+                Label(String(localized: "reader.appearance.advanced"), systemImage: "textformat")
                     .foregroundStyle(Morandi.primaryText)
             }
 
             NavigationLink {
                 HomeNavigationConfigView()
             } label: {
-                Label("Home Navigation", systemImage: "square.grid.2x2")
+                Label(String(localized: "settings.home_navigation"), systemImage: "square.grid.2x2")
                     .foregroundStyle(Morandi.primaryText)
             }
         } header: {
-            Text("Reading")
+            Text("settings.reading")
         }
     }
 
@@ -3500,11 +3500,11 @@ struct SettingsScreen: View {
             NavigationLink {
                 SyncSettingsView()
             } label: {
-                Label("Sync & Backup", systemImage: "arrow.triangle.2.circlepath")
+                Label(String(localized: "settings.sync_backup"), systemImage: "arrow.triangle.2.circlepath")
                     .foregroundStyle(Morandi.primaryText)
             }
         } header: {
-            Text("Sync")
+            Text("settings.sync")
         }
     }
 
@@ -3516,7 +3516,7 @@ struct SettingsScreen: View {
                 KAIROSSettingsView(service: kairosService)
             } label: {
                 HStack {
-                    Label("KAIROS Reading Goals", systemImage: "flame")
+                    Label(String(localized: "kairos.reading_goals"), systemImage: "flame")
                         .foregroundStyle(Morandi.primaryText)
                     Spacer()
                     if kairosService.isEnabled {
@@ -3527,7 +3527,7 @@ struct SettingsScreen: View {
                 }
             }
         } header: {
-            Text("Reading Assistant")
+            Text("settings.reading_assistant")
         }
     }
 
@@ -3538,12 +3538,12 @@ struct SettingsScreen: View {
             NavigationLink {
                 StorageManagementView(viewModel: viewModel)
             } label: {
-                Label("Storage", systemImage: "internaldrive")
+                Label(String(localized: "settings.storage"), systemImage: "internaldrive")
                     .foregroundStyle(Morandi.primaryText)
             }
 
             HStack {
-                Text("Cache Size")
+                Text("settings.cache_size")
                     .foregroundStyle(Morandi.primaryText)
                 Spacer()
                 Text(viewModel.cacheSize())
@@ -3553,15 +3553,15 @@ struct SettingsScreen: View {
             Button(role: .destructive) {
                 showClearCacheConfirmation = true
             } label: {
-                Text("Clear Cache")
+                Text("settings.clear_cache")
             }
             .confirmationDialog("Clear all cached data?", isPresented: $showClearCacheConfirmation) {
-                Button("Clear Cache", role: .destructive) {
+                Button(String(localized: "settings.clear_cache"), role: .destructive) {
                     viewModel.clearCache()
                 }
             }
         } header: {
-            Text("Data Management")
+            Text("settings.data_management")
         }
     }
 
@@ -3570,7 +3570,7 @@ struct SettingsScreen: View {
     private var aboutSection: some View {
         Section {
             HStack {
-                Text("Version")
+                Text("common.version")
                     .foregroundStyle(Morandi.primaryText)
                 Spacer()
                 Text(appVersion)
@@ -3589,13 +3589,13 @@ struct SettingsScreen: View {
                 NavigationLink {
                     DeveloperOptionsView(viewModel: viewModel)
                 } label: {
-                    Label("Developer Options", systemImage: "ladybug")
+                    Label(String(localized: "settings.developer_options"), systemImage: "ladybug")
                         .foregroundStyle(Morandi.primaryText)
                 }
             }
 
             HStack {
-                Text("Build")
+                Text("settings.build")
                     .foregroundStyle(Morandi.primaryText)
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
@@ -3604,7 +3604,7 @@ struct SettingsScreen: View {
 
             Link(destination: URL(string: "https://github.com/ArcticFoxPro/PaperTok")!) {
                 HStack {
-                    Text("Source Code")
+                    Text("settings.source_code")
                         .foregroundStyle(Morandi.primaryText)
                     Spacer()
                     Image(systemName: "arrow.up.right")
@@ -3616,13 +3616,13 @@ struct SettingsScreen: View {
             NavigationLink {
                 OpenSourceLicensesView()
             } label: {
-                Text("Open Source Licenses")
+                Text("settings.open_source_licenses")
                     .foregroundStyle(Morandi.primaryText)
             }
 
             Link(destination: URL(string: "https://github.com/ArcticFoxPro/PaperTok/blob/main/CHANGELOG.md")!) {
                 HStack {
-                    Text("Changelog")
+                    Text("settings.changelog")
                         .foregroundStyle(Morandi.primaryText)
                     Spacer()
                     Image(systemName: "arrow.up.right")
@@ -3631,7 +3631,7 @@ struct SettingsScreen: View {
                 }
             }
         } header: {
-            Text("About")
+            Text("about.title")
         }
     }
 
@@ -3659,20 +3659,20 @@ struct AIProviderKeyView: View {
             } header: {
                 Text("\(provider.displayName) API Key")
             } footer: {
-                Text("Your API key is stored securely in the device Keychain.")
+                Text("ai.providers.api_key_keychain")
                     .font(AppTypography.caption2)
                     .foregroundStyle(Morandi.tertiaryText)
             }
 
             Section {
-                Button("Save") {
+                Button(String(localized: "common.save")) {
                     viewModel.saveAPIKey(apiKey, for: provider.rawValue)
                     isSaved = true
                 }
                 .foregroundStyle(Morandi.accent)
 
                 if !apiKey.isEmpty {
-                    Button("Remove Key", role: .destructive) {
+                    Button(String(localized: "ai.providers.remove_key"), role: .destructive) {
                         viewModel.saveAPIKey("", for: provider.rawValue)
                         apiKey = ""
                         isSaved = true
@@ -3685,7 +3685,7 @@ struct AIProviderKeyView: View {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Morandi.sage)
-                        Text("Saved")
+                        Text("common.saved")
                             .foregroundStyle(Morandi.sage)
                     }
                 }

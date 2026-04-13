@@ -105,7 +105,7 @@ public struct AIChatView: View {
             Image(systemName: "bubble.left.and.bubble.right")
                 .font(.system(size: 48))
                 .foregroundStyle(Morandi.tertiaryText)
-            Text("Start your AI conversation")
+            Text("ai.start_conversation")
                 .font(AppTypography.title3)
                 .foregroundStyle(Morandi.secondaryText)
             Spacer()

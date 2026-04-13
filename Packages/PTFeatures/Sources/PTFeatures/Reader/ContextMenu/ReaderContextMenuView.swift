@@ -17,7 +17,7 @@ struct ReaderContextMenuView: View {
         VStack(spacing: AppSpacing.sm) {
             // Highlight color row
             VStack(spacing: AppSpacing.xs) {
-                Text("Highlight")
+                Text("reader.highlight")
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -51,7 +51,7 @@ public struct ReaderImageViewer: View {
                 ContentUnavailableView(
                     "Unable to Load Image",
                     systemImage: "photo",
-                    description: Text("This image could not be decoded.")
+                    description: Text("reader.image_not_decoded")
                 )
                 .foregroundStyle(.white)
             }
@@ -66,7 +66,7 @@ public struct ReaderImageViewer: View {
             }
         }
         .alert("Unable to Prepare Image", isPresented: exportErrorPresentedBinding) {
-            Button("OK") { exportError = nil }
+            Button(String(localized: "common.ok")) { exportError = nil }
         } message: {
             Text(exportError ?? "")
         }
@@ -148,7 +148,7 @@ public struct ReaderImageViewer: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.white)
-                    .accessibilityLabel("Share Image")
+                    .accessibilityLabel(String(localized: "common.share_image"))
                 }
             }
             .padding(.horizontal, AppSpacing.lg)
@@ -178,11 +178,11 @@ public struct ReaderImageViewer: View {
                 }
 
                 HStack(spacing: AppSpacing.sm) {
-                    Button("Analyze with AI", action: onAnalyze)
+                    Button(String(localized: "reader.analyze_with_ai"), action: onAnalyze)
                         .buttonStyle(.borderedProminent)
                         .tint(Morandi.accent)
 
-                    Button("Fit Image") {
+                    Button(String(localized: "reader.fit_image")) {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                             resetZoom()
                         }

@@ -88,12 +88,12 @@ public struct EPUBReaderSettingsView: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done", action: onDone)
+                    Button(String(localized: "common.done"), action: onDone)
                         .foregroundStyle(Morandi.accent)
                 }
 
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Reset") {
+                    Button(String(localized: "common.reset")) {
                         Task {
                             await viewModel.resetToDefaults()
                             selectedThemePreset = .light
@@ -107,7 +107,7 @@ public struct EPUBReaderSettingsView: View {
     }
 
     private var typographySection: some View {
-        Section("Typography") {
+        Section(String(localized: "reader.appearance.typography")) {
             sliderRow(
                 title: "Font Size",
                 value: binding(
@@ -138,16 +138,16 @@ public struct EPUBReaderSettingsView: View {
                     set: { viewModel.readingPreferences.textAlignment = $0 }
                 )
             ) {
-                Text("Left").tag(PTReader.TextAlignment.left)
-                Text("Center").tag(PTReader.TextAlignment.center)
-                Text("Right").tag(PTReader.TextAlignment.right)
-                Text("Justify").tag(PTReader.TextAlignment.justify)
+                Text("reader.appearance.left").tag(PTReader.TextAlignment.left)
+                Text("reader.appearance.center").tag(PTReader.TextAlignment.center)
+                Text("reader.appearance.right").tag(PTReader.TextAlignment.right)
+                Text("reader.appearance.justify").tag(PTReader.TextAlignment.justify)
             }
         }
     }
 
     private var spacingSection: some View {
-        Section("Spacing") {
+        Section(String(localized: "reader.appearance.spacing")) {
             sliderRow(
                 title: "Line Height",
                 value: binding(
@@ -203,9 +203,9 @@ public struct EPUBReaderSettingsView: View {
                     set: { viewModel.readingPreferences.pageTurnMode = $0 }
                 )
             ) {
-                Text("Swipe").tag(PageTurnMode.swipe)
-                Text("Tap").tag(PageTurnMode.tap)
-                Text("Scroll").tag(PageTurnMode.scroll)
+                Text("reader.appearance.swipe").tag(PageTurnMode.swipe)
+                Text("reader.appearance.tap").tag(PageTurnMode.tap)
+                Text("reader.appearance.scroll").tag(PageTurnMode.scroll)
             }
 
             sliderRow(
@@ -241,14 +241,14 @@ public struct EPUBReaderSettingsView: View {
                 format: "%.0f pt"
             )
         } header: {
-            Text("Layout")
+            Text("reader.appearance.layout")
         } footer: {
-            Text("Top and bottom margins are applied as reader chrome insets. Center alignment may fall back to leading in the EPUB engine.")
+            Text("reader.appearance.margin_hint")
         }
     }
 
     private var themeSection: some View {
-        Section("Theme") {
+        Section(String(localized: "settings.theme")) {
             Picker("Preset", selection: $selectedThemePreset) {
                 ForEach(EPUBReaderThemePreset.allCases) { preset in
                     Text(preset.title).tag(preset)

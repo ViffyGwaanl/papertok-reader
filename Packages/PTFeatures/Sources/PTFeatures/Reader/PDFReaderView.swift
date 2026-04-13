@@ -519,7 +519,7 @@ public struct PDFReaderView: View {
             isAIPanelPresented.toggle()
         }
         .alert("Annotation Error", isPresented: annotationErrorPresentedBinding) {
-            Button("OK") {
+            Button(String(localized: "common.ok")) {
                 annotationErrorMessage = nil
             }
         } message: {
@@ -552,7 +552,7 @@ public struct PDFReaderView: View {
                 ContentUnavailableView(
                     "Cannot Open",
                     systemImage: "doc.text.slash",
-                    description: Text("The file could not be opened.")
+                    description: Text("bookshelf.file_could_not_be_opened")
                 )
             }
         }
@@ -568,7 +568,7 @@ public struct PDFReaderView: View {
                 HStack(spacing: AppSpacing.xs) {
                     Image(systemName: "chevron.left")
 #if os(iOS)
-                    Text("Library")
+                    Text("tab.library")
 #endif
                 }
                 .foregroundStyle(Morandi.accent)
@@ -592,7 +592,7 @@ public struct PDFReaderView: View {
                 Image(systemName: "bubble.left.and.text.bubble.right")
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel("Open AI Panel")
+            .accessibilityLabel(String(localized: "reader.open_ai_panel"))
 
             Button {
                 readerControlsViewModel?.showSearch = true
@@ -600,7 +600,7 @@ public struct PDFReaderView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel("Search Book")
+            .accessibilityLabel(String(localized: "reader.search_book"))
             .disabled(readerControlsViewModel == nil)
 
             Button {
@@ -609,7 +609,7 @@ public struct PDFReaderView: View {
                 Image(systemName: "bookmark")
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel("Add Bookmark")
+            .accessibilityLabel(String(localized: "bookmark.add"))
             .disabled(viewModel.pdfDocument == nil)
 
             Button {
@@ -725,7 +725,7 @@ public struct PDFReaderView: View {
                     ContentUnavailableView(
                         "No Contents",
                         systemImage: "list.bullet.indent",
-                        description: Text("This PDF has no table of contents.")
+                        description: Text("reader.no_toc_pdf")
                     )
                 } else {
                     List(viewModel.tocEntries) { entry in
@@ -754,7 +754,7 @@ public struct PDFReaderView: View {
             .navigationTitle(String(localized: "reader.contents"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { viewModel.showTOC = false }
+                    Button(String(localized: "common.done")) { viewModel.showTOC = false }
                         .foregroundStyle(Morandi.accent)
                 }
             }
@@ -770,7 +770,7 @@ public struct PDFReaderView: View {
                         ContentUnavailableView(
                             "Search This PDF",
                             systemImage: "magnifyingglass",
-                            description: Text("Enter a phrase to search across the PDF contents.")
+                            description: Text("reader.search_pdf_prompt")
                         )
                     } else if readerControlsViewModel.isSearching {
                         ProgressView("Searching…")
@@ -858,7 +858,7 @@ public struct PDFReaderView: View {
                             .foregroundStyle(Morandi.accent)
                         }
 
-                        Button("Search") {
+                        Button(String(localized: "common.search")) {
                             currentSearchResultIndex = 0
                             Task { await readerControlsViewModel?.performSearch() }
                         }
@@ -868,7 +868,7 @@ public struct PDFReaderView: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(String(localized: "common.done")) {
                         readerControlsViewModel?.showSearch = false
                     }
                     .foregroundStyle(Morandi.accent)

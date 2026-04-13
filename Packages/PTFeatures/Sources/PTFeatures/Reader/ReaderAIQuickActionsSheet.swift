@@ -32,7 +32,7 @@ public struct ReaderAIQuickActionsSheet: View {
                 selectedTextCard
 
                 VStack(spacing: AppSpacing.md) {
-                    Text("Quick Actions")
+                    Text("reader.quick_actions")
                         .font(AppTypography.headline)
                         .foregroundStyle(Morandi.primaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -81,7 +81,7 @@ public struct ReaderAIQuickActionsSheet: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", action: onDismiss)
+                    Button(String(localized: "common.close"), action: onDismiss)
                         .foregroundStyle(Morandi.secondaryText)
                 }
             }

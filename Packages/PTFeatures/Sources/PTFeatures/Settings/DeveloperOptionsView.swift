@@ -41,7 +41,7 @@ public struct DeveloperOptionsView: View {
     // MARK: - Toggles
 
     private var togglesSection: some View {
-        Section("Diagnostics") {
+        Section(String(localized: "common.diagnostics")) {
             Toggle("Verbose Logging", isOn: $viewModel.verboseLogging)
                 .tint(Morandi.accent)
             Toggle("Network Request Logging", isOn: $viewModel.networkRequestLogging)
@@ -56,18 +56,18 @@ public struct DeveloperOptionsView: View {
     // MARK: - Diagnostic actions
 
     private var diagnosticsSection: some View {
-        Section("Tools") {
+        Section(String(localized: "ai.tools")) {
             Button {
                 exportDiagnosticReport()
             } label: {
-                Label("Export Diagnostic Report", systemImage: "square.and.arrow.up.on.square")
+                Label(String(localized: "settings.export_diagnostics"), systemImage: "square.and.arrow.up.on.square")
                     .foregroundStyle(Morandi.accent)
             }
 
             Button {
                 showRecentErrors = true
             } label: {
-                Label("View Recent Errors", systemImage: "exclamationmark.bubble")
+                Label(String(localized: "settings.view_recent_errors"), systemImage: "exclamationmark.bubble")
                     .foregroundStyle(Morandi.accent)
             }
 
@@ -86,7 +86,7 @@ public struct DeveloperOptionsView: View {
     // MARK: - Build info
 
     private var buildInfoSection: some View {
-        Section("Build Info") {
+        Section(String(localized: "common.build_info")) {
             infoRow("Version", Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
             infoRow("Build", Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—")
             infoRow("Commit", commitHash)
@@ -113,9 +113,9 @@ public struct DeveloperOptionsView: View {
     private var recentErrorsSheet: some View {
         NavigationStack {
             List {
-                Section("Errors") {
+                Section(String(localized: "settings.errors")) {
                     if DeveloperLogBuffer.shared.recent.isEmpty {
-                        Text("No recent errors.")
+                        Text("notes.no_recent_errors")
                             .foregroundStyle(Morandi.secondaryText)
                     } else {
                         ForEach(DeveloperLogBuffer.shared.recent, id: \.self) { entry in
@@ -132,7 +132,7 @@ public struct DeveloperOptionsView: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { showRecentErrors = false }
+                    Button(String(localized: "common.done")) { showRecentErrors = false }
                 }
             }
         }

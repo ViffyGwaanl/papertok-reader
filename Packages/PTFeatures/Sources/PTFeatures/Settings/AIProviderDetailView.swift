@@ -65,16 +65,16 @@ public struct AIProviderDetailView: View {
                 #endif
                 .autocorrectionDisabled()
         } header: {
-            Text("Authentication")
+            Text("common.authentication")
         } footer: {
-            Text("Stored securely in the device Keychain.")
+            Text("ai.providers.keychain_short")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
     }
 
     private var endpointSection: some View {
-        Section("Endpoint") {
+        Section(String(localized: "common.endpoint")) {
             TextField("Base URL (optional override)", text: $baseURL)
                 #if os(iOS)
                 .keyboardType(.URL)
@@ -85,7 +85,7 @@ public struct AIProviderDetailView: View {
     }
 
     private var modelSection: some View {
-        Section("Model") {
+        Section(String(localized: "common.model")) {
             let models = ProviderFactory.defaultModels(for: provider)
             if models.isEmpty {
                 TextField("Model ID", text: $selectedModel)
@@ -115,7 +115,7 @@ public struct AIProviderDetailView: View {
     }
 
     private var azureSection: some View {
-        Section("Azure") {
+        Section(String(localized: "ai.providers.azure")) {
             TextField("Deployment Name", text: $deploymentName)
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
@@ -136,16 +136,16 @@ public struct AIProviderDetailView: View {
                 .font(.system(.footnote, design: .monospaced))
                 .foregroundStyle(Morandi.primaryText)
         } header: {
-            Text("Custom Headers")
+            Text("ai.providers.custom_headers")
         } footer: {
-            Text("One header per line, format: Name: Value")
+            Text("ai.providers.headers_hint")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
     }
 
     private var capabilitiesSection: some View {
-        Section("Capabilities") {
+        Section(String(localized: "ai.capabilities")) {
             HStack(spacing: AppSpacing.xs) {
                 ForEach(capabilityBadges, id: \.self) { badge in
                     Text(badge)
@@ -171,7 +171,7 @@ public struct AIProviderDetailView: View {
                     } else {
                         Image(systemName: "bolt.fill")
                     }
-                    Text("Test Connection")
+                    Text("sync.test_connection")
                 }
                 .foregroundStyle(Morandi.accent)
             }
@@ -205,7 +205,7 @@ public struct AIProviderDetailView: View {
             Button {
                 saveValues()
             } label: {
-                Text("Save")
+                Text("common.save")
                     .frame(maxWidth: .infinity)
                     .foregroundStyle(Morandi.accent)
             }
@@ -214,13 +214,13 @@ public struct AIProviderDetailView: View {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Morandi.sage)
-                    Text("Saved")
+                    Text("common.saved")
                         .foregroundStyle(Morandi.sage)
                 }
             }
 
             if !apiKey.isEmpty {
-                Button("Remove API Key", role: .destructive) {
+                Button(String(localized: "ai.providers.remove_api_key"), role: .destructive) {
                     apiKey = ""
                     viewModel.saveAPIKey("", for: storageID)
                 }

@@ -62,7 +62,7 @@ public struct MemoryView: View {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: AppSpacing.sm) {
                     if isEditing {
-                        Button("Save") { saveContent() }
+                        Button(String(localized: "common.save")) { saveContent() }
                             .foregroundStyle(Morandi.accent)
                     }
                     Button {
@@ -92,15 +92,15 @@ public struct MemoryView: View {
             Image(systemName: "brain.head.profile")
                 .font(.system(size: 48))
                 .foregroundStyle(Morandi.tertiaryText)
-            Text("No memories yet")
+            Text("ai.no_memories")
                 .font(AppTypography.title3)
                 .foregroundStyle(Morandi.secondaryText)
-            Text("AI conversations will automatically save notable moments here.")
+            Text("ai.memory_save_hint")
                 .font(AppTypography.caption)
                 .foregroundStyle(Morandi.tertiaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AppSpacing.xl)
-            Button("Create today's memory") {
+            Button(String(localized: "ai.create_today_memory")) {
                 createTodayMemory()
             }
             .buttonStyle(.borderedProminent)
@@ -116,7 +116,7 @@ public struct MemoryView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 36))
                 .foregroundStyle(Morandi.tertiaryText)
-            Text("No matching memories")
+            Text("ai.no_matching_memories")
                 .font(AppTypography.body)
                 .foregroundStyle(Morandi.secondaryText)
             Spacer()

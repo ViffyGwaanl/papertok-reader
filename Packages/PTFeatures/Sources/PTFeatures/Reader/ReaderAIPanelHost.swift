@@ -199,7 +199,7 @@ public struct ReaderAIPanelHost<Content: View>: View {
                             } label: {
                                 Image(systemName: panelSide == .leading ? "sidebar.trailing" : "sidebar.leading")
                             }
-                            .accessibilityLabel("Move AI Panel")
+                            .accessibilityLabel(String(localized: "reader.ai_panel.move"))
                         }
                     }
                 }
@@ -235,7 +235,7 @@ public struct ReaderAIPanelHost<Content: View>: View {
                         persistPreferences()
                     }
             )
-            .accessibilityLabel("Resize AI Panel")
+            .accessibilityLabel(String(localized: "reader.ai_panel.resize"))
     }
 
     private var hasPendingApprovals: Bool {

@@ -37,11 +37,11 @@ public struct SyncSettingsView: View {
             } else {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("WebDAV Server")
+                        Text("sync.webdav_server")
                             .font(AppTypography.body)
                             .foregroundStyle(Morandi.primaryText)
                         if webdavURL.isEmpty {
-                            Text("Not configured")
+                            Text("sync.not_configured")
                                 .font(AppTypography.caption)
                                 .foregroundStyle(Morandi.tertiaryText)
                         } else {
@@ -74,7 +74,7 @@ public struct SyncSettingsView: View {
                 }
             }
         } header: {
-            Text("WebDAV Sync")
+            Text("sync.webdav")
         }
     }
 
@@ -96,7 +96,7 @@ public struct SyncSettingsView: View {
         SecureField("Password", text: $webdavPassword)
 
         HStack {
-            Button("Test Connection") {
+            Button(String(localized: "sync.test_connection")) {
                 Task { await testConnection() }
             }
             .disabled(webdavURL.isEmpty || isTesting)
@@ -104,7 +104,7 @@ public struct SyncSettingsView: View {
 
             Spacer()
 
-            Button("Save") {
+            Button(String(localized: "common.save")) {
                 saveCredentials()
                 showCredentialEditor = false
             }
@@ -121,10 +121,10 @@ public struct SyncSettingsView: View {
                 get: { syncService.conflictStrategy },
                 set: { syncService.conflictStrategy = $0 }
             )) {
-                Text("Last modified wins").tag(ConflictStrategy.lastModifiedWins)
-                Text("Local wins").tag(ConflictStrategy.localWins)
-                Text("Remote wins").tag(ConflictStrategy.remoteWins)
-                Text("Ask me").tag(ConflictStrategy.manual)
+                Text("sync.last_modified_wins").tag(ConflictStrategy.lastModifiedWins)
+                Text("sync.local_wins").tag(ConflictStrategy.localWins)
+                Text("sync.remote_wins").tag(ConflictStrategy.remoteWins)
+                Text("ai.ask_me").tag(ConflictStrategy.manual)
             }
             .foregroundStyle(Morandi.primaryText)
 
@@ -140,7 +140,7 @@ public struct SyncSettingsView: View {
             }
             .foregroundStyle(Morandi.primaryText)
         } header: {
-            Text("Sync Options")
+            Text("sync.sync_options")
         }
     }
 
@@ -152,7 +152,7 @@ public struct SyncSettingsView: View {
                 Task { await syncService.incrementalSync() }
             } label: {
                 HStack {
-                    Label("Sync Now", systemImage: "arrow.triangle.2.circlepath")
+                    Label(String(localized: "sync.sync_now"), systemImage: "arrow.triangle.2.circlepath")
                         .foregroundStyle(Morandi.primaryText)
                     Spacer()
                     if syncService.status == .syncing {
@@ -165,7 +165,7 @@ public struct SyncSettingsView: View {
             Button {
                 Task { await syncService.sync() }
             } label: {
-                Label("Full Sync (Legacy)", systemImage: "arrow.up.arrow.down.circle")
+                Label(String(localized: "sync.full_sync_legacy"), systemImage: "arrow.up.arrow.down.circle")
                     .foregroundStyle(Morandi.secondaryText)
             }
             .disabled(syncService.status == .syncing || webdavURL.isEmpty)
@@ -173,14 +173,14 @@ public struct SyncSettingsView: View {
             Button {
                 Task { await syncService.restore() }
             } label: {
-                Label("Restore from Server", systemImage: "arrow.down.circle")
+                Label(String(localized: "sync.restore_from_server"), systemImage: "arrow.down.circle")
                     .foregroundStyle(Morandi.primaryText)
             }
             .disabled(syncService.status == .syncing || webdavURL.isEmpty)
 
             if let lastSync = syncService.lastSyncDate {
                 HStack {
-                    Text("Last sync")
+                    Text("sync.last_sync")
                         .font(AppTypography.caption)
                         .foregroundStyle(Morandi.secondaryText)
                     Spacer()
@@ -196,7 +196,7 @@ public struct SyncSettingsView: View {
                     .foregroundStyle(Morandi.destructive)
             }
         } header: {
-            Text("Sync")
+            Text("settings.sync")
         }
     }
 
@@ -207,20 +207,20 @@ public struct SyncSettingsView: View {
             Button {
                 Task { await exportBackup() }
             } label: {
-                Label("Export Backup", systemImage: "square.and.arrow.up")
+                Label(String(localized: "settings.export_backup"), systemImage: "square.and.arrow.up")
                     .foregroundStyle(Morandi.primaryText)
             }
 
             Button {
                 // Import handled via document picker
             } label: {
-                Label("Import Backup", systemImage: "square.and.arrow.down")
+                Label(String(localized: "settings.import_backup"), systemImage: "square.and.arrow.down")
                     .foregroundStyle(Morandi.primaryText)
             }
         } header: {
-            Text("Local Backup")
+            Text("sync.local_backup")
         } footer: {
-            Text("Exports the database and all book files as a zip archive.")
+            Text("settings.storage.export_bundle_hint")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }

@@ -151,7 +151,7 @@ public struct RichNoteEditorView: View {
     private var actionBar: some View {
         HStack(spacing: 12) {
             Button(action: onCancel) {
-                Text("Cancel")
+                Text("common.cancel")
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
             }
@@ -161,7 +161,7 @@ public struct RichNoteEditorView: View {
             Button {
                 onSave(text)
             } label: {
-                Text("Save")
+                Text("common.save")
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
             }

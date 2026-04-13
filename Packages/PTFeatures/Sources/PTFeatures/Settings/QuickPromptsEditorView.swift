@@ -20,11 +20,11 @@ public struct QuickPromptsEditorView: View {
         List {
             if prompts.isEmpty {
                 Section {
-                    Text("No quick prompts. Tap + to add one.")
+                    Text("ai.prompts.empty")
                         .foregroundStyle(Morandi.secondaryText)
                 }
             } else {
-                Section("Prompts") {
+                Section(String(localized: "ai.prompts.title")) {
                     ForEach(prompts) { prompt in
                         Button { editingPrompt = prompt } label: {
                             row(prompt)
@@ -40,11 +40,11 @@ public struct QuickPromptsEditorView: View {
                     editingPrompt = nil
                     showAdd = true
                 } label: {
-                    Label("Add Prompt", systemImage: "plus.circle")
+                    Label(String(localized: "ai.prompts.add"), systemImage: "plus.circle")
                         .foregroundStyle(Morandi.accent)
                 }
 
-                Button("Restore Defaults") {
+                Button(String(localized: "common.restore_defaults")) {
                     prompts = QuickPrompt.builtIn
                     persist()
                 }
@@ -152,7 +152,7 @@ struct QuickPromptEditSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Title") {
+                Section(String(localized: "common.title")) {
                     TextField("e.g. Explain", text: $title)
                 }
                 Section {
@@ -160,13 +160,13 @@ struct QuickPromptEditSheet: View {
                         .frame(minHeight: 120)
                         .font(AppTypography.body)
                 } header: {
-                    Text("Prompt Text")
+                    Text("ai.prompts.text")
                 } footer: {
-                    Text("Use {text} as a placeholder for the selected text.")
+                    Text("ai.prompts.placeholder_hint")
                         .font(AppTypography.caption2)
                         .foregroundStyle(Morandi.tertiaryText)
                 }
-                Section("Icon") {
+                Section(String(localized: "common.icon")) {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: AppSpacing.sm) {
                         ForEach(Self.availableIcons, id: \.self) { name in
                             Image(systemName: name)
@@ -191,10 +191,10 @@ struct QuickPromptEditSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(String(localized: "common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(String(localized: "common.save")) {
                         let updated = QuickPrompt(
                             id: prompt?.id ?? UUID(),
                             title: title.trimmingCharacters(in: .whitespaces),

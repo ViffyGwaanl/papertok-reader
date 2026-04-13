@@ -13,7 +13,7 @@ public struct MacMenuCommands: Commands {
     public var body: some Commands {
         // File menu
         CommandGroup(after: .newItem) {
-            Button("Import Book...") {
+            Button(String(localized: "bookshelf.import_book")) {
                 NotificationCenter.default.post(name: .importBook, object: nil)
             }
             .keyboardShortcut("o", modifiers: .command)
@@ -21,19 +21,19 @@ public struct MacMenuCommands: Commands {
 
         // View menu
         CommandGroup(after: .toolbar) {
-            Button("Toggle AI Panel") {
+            Button(String(localized: "reader.toggle_ai_panel")) {
                 NotificationCenter.default.post(name: .toggleAIPanel, object: nil)
             }
             .keyboardShortcut("\\", modifiers: .command)
 
             Divider()
 
-            Button("Previous Chapter") {
+            Button(String(localized: "reader.previous_chapter")) {
                 NotificationCenter.default.post(name: .previousChapter, object: nil)
             }
             .keyboardShortcut(.leftArrow, modifiers: [])
 
-            Button("Next Chapter") {
+            Button(String(localized: "reader.next_chapter")) {
                 NotificationCenter.default.post(name: .nextChapter, object: nil)
             }
             .keyboardShortcut(.rightArrow, modifiers: [])

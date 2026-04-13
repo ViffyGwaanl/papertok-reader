@@ -73,7 +73,7 @@ public struct TTSFloatingActionButton: View {
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("More TTS controls")
+            .accessibilityLabel(String(localized: "reader.tts.more_controls"))
         }
         .padding(.horizontal, AppSpacing.sm)
         .padding(.vertical, AppSpacing.xs)
@@ -163,7 +163,7 @@ struct TTSExpandedControlsSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button(String(localized: "common.done")) { dismiss() }
                 }
             }
             .task { await loadVoices() }
@@ -174,7 +174,7 @@ struct TTSExpandedControlsSheet: View {
 
     private var backendSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text("Voice engine")
+            Text("tts.voice_engine")
                 .font(AppTypography.subheadline)
                 .foregroundStyle(Morandi.primaryText)
 
@@ -192,14 +192,14 @@ struct TTSExpandedControlsSheet: View {
 
     private var voiceSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text("Voice")
+            Text("tts.voice")
                 .font(AppTypography.subheadline)
                 .foregroundStyle(Morandi.primaryText)
 
             if loadingVoices {
                 ProgressView().tint(Morandi.accent)
             } else if voices.isEmpty {
-                Text("No voices available")
+                Text("tts.no_voices")
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.tertiaryText)
             } else {
@@ -222,7 +222,7 @@ struct TTSExpandedControlsSheet: View {
     private var rateSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             HStack {
-                Text("Speed")
+                Text("tts.speed")
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
                 Spacer()
@@ -287,7 +287,7 @@ struct TTSExpandedControlsSheet: View {
                     .foregroundStyle(service.state == .stopped ? Morandi.tertiaryText : Morandi.primaryText)
             }
             .disabled(service.state == .stopped)
-            .accessibilityLabel("Stop")
+            .accessibilityLabel(String(localized: "tts.stop"))
         }
         .padding(.vertical, AppSpacing.md)
     }

@@ -68,7 +68,7 @@ struct PaperDetailView: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button(String(localized: "common.close")) { dismiss() }
                         .foregroundStyle(Morandi.accent)
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -211,7 +211,7 @@ struct PaperDetailView: View {
         let metadataItems = metadataItems(for: detail)
         if metadataItems.isEmpty == false {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
-                Text("Metadata")
+                Text("bookshelf.metadata")
                     .font(AppTypography.caption.weight(.semibold))
                     .foregroundStyle(Morandi.secondaryText)
 

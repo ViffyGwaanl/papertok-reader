@@ -44,17 +44,17 @@ public struct AIToolsConfigView: View {
     private var thresholdSection: some View {
         Section {
             Picker("Approval Threshold", selection: $viewModel.toolApprovalThreshold) {
-                Text("Always Approve").tag("always")
-                Text("Moderate & Dangerous").tag("moderate")
-                Text("Dangerous Only").tag("dangerous")
-                Text("Never (auto-run)").tag("never")
+                Text("ai.always_approve").tag("always")
+                Text("ai.moderate_dangerous").tag("moderate")
+                Text("ai.dangerous_only").tag("dangerous")
+                Text("ai.never_auto_run").tag("never")
             }
             .foregroundStyle(Morandi.primaryText)
             .onChange(of: viewModel.toolApprovalThreshold) { _, _ in viewModel.save() }
         } header: {
-            Text("Approval")
+            Text("ai.approval")
         } footer: {
-            Text("Controls which tools require explicit user approval before being executed by the AI.")
+            Text("ai.approval_hint")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }

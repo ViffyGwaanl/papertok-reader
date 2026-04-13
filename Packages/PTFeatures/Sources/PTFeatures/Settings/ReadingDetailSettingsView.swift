@@ -56,14 +56,14 @@ public struct ReadingDetailSettingsView: View {
     // MARK: - Preview
 
     private var previewSection: some View {
-        Section("Preview") {
+        Section(String(localized: "common.preview")) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(previewBackground)
                     .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
 
                 VStack(alignment: .leading, spacing: viewModel.paragraphSpacing) {
-                    Text("Chapter Title")
+                    Text("reader.chapter_title")
                         .font(.system(size: viewModel.defaultFontSize + 4, weight: .semibold))
                         .foregroundStyle(previewForeground)
 
@@ -73,7 +73,7 @@ public struct ReadingDetailSettingsView: View {
                         .lineSpacing((viewModel.lineHeight - 1.0) * viewModel.defaultFontSize)
                         .tracking(viewModel.letterSpacing)
 
-                    Text("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.")
+                    Text("settings.lorem")
                         .font(.system(size: viewModel.defaultFontSize))
                         .foregroundStyle(previewForeground)
                         .lineSpacing((viewModel.lineHeight - 1.0) * viewModel.defaultFontSize)
@@ -100,7 +100,7 @@ public struct ReadingDetailSettingsView: View {
     // MARK: - Font
 
     private var fontSection: some View {
-        Section("Font") {
+        Section(String(localized: "reader.appearance.font")) {
             Picker("Family", selection: $viewModel.defaultFontFamily) {
                 ForEach(Self.systemFontFamilies, id: \.self) { Text($0).tag($0) }
             }
@@ -121,7 +121,7 @@ public struct ReadingDetailSettingsView: View {
     // MARK: - Layout
 
     private var layoutSection: some View {
-        Section("Layout") {
+        Section(String(localized: "reader.appearance.layout")) {
             sliderRow("Line Height", value: $viewModel.lineHeight, range: 0.8...2.0, step: 0.05, format: "%.2f×")
             sliderRow("Letter Spacing", value: $viewModel.letterSpacing, range: -2...4, step: 0.1, format: "%.1f pt")
             sliderRow("Paragraph Spacing", value: $viewModel.paragraphSpacing, range: 0...24, step: 1, format: "%.0f pt")
@@ -134,7 +134,7 @@ public struct ReadingDetailSettingsView: View {
     // MARK: - Margins
 
     private var marginSection: some View {
-        Section("Margins") {
+        Section(String(localized: "reader.appearance.margins")) {
             sliderRow("Side", value: $viewModel.sideMargin, range: 0...48, step: 1, format: "%.0f pt")
             sliderRow("Top", value: $viewModel.topMargin, range: 0...48, step: 1, format: "%.0f pt")
             sliderRow("Bottom", value: $viewModel.bottomMargin, range: 0...48, step: 1, format: "%.0f pt")
@@ -161,7 +161,7 @@ public struct ReadingDetailSettingsView: View {
     // MARK: - Theme
 
     private var themeSection: some View {
-        Section("Theme") {
+        Section(String(localized: "settings.theme")) {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: AppSpacing.md) {
                 ForEach(Self.themes, id: \.id) { theme in
                     Button {
@@ -179,7 +179,7 @@ public struct ReadingDetailSettingsView: View {
     @ViewBuilder
     private func themeCard(_ id: String, name: String, bg: Color, fg: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Aa")
+            Text("reader.appearance.aa_label")
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(fg)
             Text(name)
@@ -204,9 +204,9 @@ public struct ReadingDetailSettingsView: View {
                 .frame(minHeight: 120)
                 .foregroundStyle(Morandi.primaryText)
         } header: {
-            Text("Custom CSS")
+            Text("reader.appearance.custom_css")
         } footer: {
-            Text("Advanced users can inject CSS overrides for reader content.")
+            Text("reader.appearance.custom_css_hint")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
@@ -219,7 +219,7 @@ public struct ReadingDetailSettingsView: View {
             Button(role: .destructive) {
                 viewModel.resetReadingDetail()
             } label: {
-                Text("Reset to Defaults")
+                Text("common.reset_to_defaults")
             }
         }
     }

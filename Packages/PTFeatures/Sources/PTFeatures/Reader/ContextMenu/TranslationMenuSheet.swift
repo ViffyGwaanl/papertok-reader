@@ -38,7 +38,7 @@ struct TranslationMenuSheet: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done", action: onDismiss)
+                    Button(String(localized: "common.done"), action: onDismiss)
                         .foregroundStyle(Morandi.accent)
                 }
             }
@@ -53,7 +53,7 @@ struct TranslationMenuSheet: View {
 
     private var sourceSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text("Original")
+            Text("reader.original")
                 .font(AppTypography.caption.weight(.semibold))
                 .foregroundStyle(Morandi.secondaryText)
 
@@ -74,7 +74,7 @@ struct TranslationMenuSheet: View {
 
     private var languageGrid: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text("Target Language")
+            Text("reader.target_language")
                 .font(AppTypography.caption.weight(.semibold))
                 .foregroundStyle(Morandi.secondaryText)
 
@@ -121,7 +121,7 @@ struct TranslationMenuSheet: View {
                     ProgressView()
                         .scaleEffect(0.8)
                         .tint(Morandi.accent)
-                    Text("Translating...")
+                    Text("common.translating")
                         .font(AppTypography.caption)
                         .foregroundStyle(Morandi.secondaryText)
                 }
@@ -138,7 +138,7 @@ struct TranslationMenuSheet: View {
             if !translatedText.isEmpty {
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     HStack {
-                        Text("Translation")
+                        Text("reader.translation")
                             .font(AppTypography.caption.weight(.semibold))
                             .foregroundStyle(Morandi.secondaryText)
 
@@ -152,7 +152,7 @@ struct TranslationMenuSheet: View {
                             NSPasteboard.general.setString(translatedText, forType: .string)
                             #endif
                         } label: {
-                            Label("Copy", systemImage: "doc.on.doc")
+                            Label(String(localized: "common.copy"), systemImage: "doc.on.doc")
                                 .font(AppTypography.caption)
                                 .foregroundStyle(Morandi.accent)
                         }

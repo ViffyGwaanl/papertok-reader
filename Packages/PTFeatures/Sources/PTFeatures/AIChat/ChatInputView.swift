@@ -62,7 +62,7 @@ struct ChatInputView: View {
 
                 ZStack(alignment: .leading) {
                     if text.isEmpty {
-                        Text("Ask AI...")
+                        Text("reader.ask_ai")
                             .foregroundStyle(Morandi.tertiaryText)
                             .font(AppTypography.body)
                             .padding(.leading, AppSpacing.xs)

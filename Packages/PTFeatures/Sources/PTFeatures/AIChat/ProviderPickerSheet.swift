@@ -30,12 +30,12 @@ struct ProviderPickerSheet: View {
                                             .foregroundStyle(Morandi.primaryText)
                                         HStack(spacing: AppSpacing.sm) {
                                             if model.supportsThinking {
-                                                Label("Thinking", systemImage: "brain")
+                                                Label(String(localized: "common.thinking"), systemImage: "brain")
                                                     .font(AppTypography.caption2)
                                                     .foregroundStyle(Morandi.secondaryText)
                                             }
                                             if model.supportsVision {
-                                                Label("Vision", systemImage: "eye")
+                                                Label(String(localized: "ai.vision"), systemImage: "eye")
                                                     .font(AppTypography.caption2)
                                                     .foregroundStyle(Morandi.secondaryText)
                                             }
@@ -62,7 +62,7 @@ struct ProviderPickerSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(String(localized: "common.cancel")) { dismiss() }
                         .foregroundStyle(Morandi.accent)
                 }
             }

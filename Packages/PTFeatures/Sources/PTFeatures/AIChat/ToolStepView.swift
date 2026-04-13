@@ -37,11 +37,11 @@ public struct ToolStepView: View {
                         .foregroundStyle(Morandi.primaryText)
 
                     if case .running = state {
-                        Text("Running")
+                        Text("common.running")
                             .font(AppTypography.caption2)
                             .foregroundStyle(Morandi.accent)
                     } else if case .completed = state {
-                        Text("Done")
+                        Text("common.done")
                             .font(AppTypography.caption2)
                             .foregroundStyle(Morandi.sage)
                     }

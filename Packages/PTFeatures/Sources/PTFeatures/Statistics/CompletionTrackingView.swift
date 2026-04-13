@@ -174,7 +174,7 @@ public struct CompletionTrackingView: View {
 
     private var heatmapSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Reading Activity")
+            Text("statistics.readingActivity")
                 .font(.headline)
                 .foregroundStyle(Morandi.primaryText)
             let columns = Array(
@@ -206,7 +206,7 @@ public struct CompletionTrackingView: View {
 
     private var achievementsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Achievements")
+            Text("statistics.achievements")
                 .font(.headline)
                 .foregroundStyle(Morandi.primaryText)
             ForEach(snapshot.achievements) { achievement in

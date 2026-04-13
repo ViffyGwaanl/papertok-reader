@@ -66,7 +66,7 @@ public struct ConnectionTesterView: View {
                     }
                 }
             } header: {
-                Text("Connection Checks")
+                Text("settings.connection_checks")
             } footer: {
                 if let summary {
                     Text(summary)

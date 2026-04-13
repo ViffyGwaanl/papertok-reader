@@ -90,7 +90,7 @@ public struct PapersView: View {
                     VStack(spacing: AppSpacing.sm) {
                         ProgressView()
                             .tint(Morandi.accent)
-                        Text("Loading...")
+                        Text("common.loading")
                             .font(AppTypography.caption)
                             .foregroundStyle(Morandi.secondaryText)
                     }
@@ -122,7 +122,7 @@ public struct PapersView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, AppSpacing.xxl)
             }
-            Button("Retry") { Task { await viewModel.loadMore(reset: true) } }
+            Button(String(localized: "common.retry")) { Task { await viewModel.loadMore(reset: true) } }
                 .buttonStyle(.bordered)
                 .tint(Morandi.accent)
             Spacer()

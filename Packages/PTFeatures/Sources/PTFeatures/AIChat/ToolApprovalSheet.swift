@@ -13,13 +13,13 @@ struct ToolApprovalSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.lg) {
-            Label("Tool Call Approval", systemImage: "exclamationmark.triangle.fill")
+            Label(String(localized: "ai.tool_call_approval"), systemImage: "exclamationmark.triangle.fill")
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.clay)
                 .padding(.top, AppSpacing.sm)
 
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                Text("Tool Name")
+                Text("ai.tool_name")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Morandi.secondaryText)
                 Text(toolName)
@@ -32,7 +32,7 @@ struct ToolApprovalSheet: View {
             }
 
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                Text("Arguments")
+                Text("ai.mcp.arguments")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Morandi.secondaryText)
                 ScrollView {
@@ -47,7 +47,7 @@ struct ToolApprovalSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadiusSmall))
             }
 
-            Text("This tool will write to your device data. Please confirm whether to allow execution.")
+            Text("ai.tool_write_warning")
                 .font(AppTypography.caption)
                 .foregroundStyle(Morandi.secondaryText)
 
@@ -56,7 +56,7 @@ struct ToolApprovalSheet: View {
                     onDeny()
                     dismiss()
                 } label: {
-                    Text("Deny")
+                    Text("common.deny")
                         .font(AppTypography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, AppSpacing.md)
@@ -69,7 +69,7 @@ struct ToolApprovalSheet: View {
                     onApprove()
                     dismiss()
                 } label: {
-                    Text("Allow")
+                    Text("common.allow")
                         .font(AppTypography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, AppSpacing.md)

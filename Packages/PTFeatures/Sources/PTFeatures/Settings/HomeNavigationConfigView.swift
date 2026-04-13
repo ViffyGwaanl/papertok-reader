@@ -42,7 +42,7 @@ public struct HomeNavigationConfigView: View {
     }
 
     private var previewSection: some View {
-        Section("Preview") {
+        Section(String(localized: "common.preview")) {
             HStack(spacing: AppSpacing.md) {
                 ForEach(order.filter { enabled.contains($0) }) { tab in
                     VStack(spacing: 4) {
@@ -61,7 +61,7 @@ public struct HomeNavigationConfigView: View {
     }
 
     private var tabsSection: some View {
-        Section("Tabs") {
+        Section(String(localized: "settings.home_nav.tabs")) {
             ForEach(order) { tab in
                 HStack(spacing: AppSpacing.md) {
                     Image(systemName: tab.icon)
@@ -71,7 +71,7 @@ public struct HomeNavigationConfigView: View {
                         .foregroundStyle(Morandi.primaryText)
                     Spacer()
                     if tab == .settings {
-                        Text("Pinned")
+                        Text("settings.home_nav.pinned")
                             .font(AppTypography.caption2)
                             .foregroundStyle(Morandi.tertiaryText)
                     } else {
@@ -93,7 +93,7 @@ public struct HomeNavigationConfigView: View {
 
     private var resetSection: some View {
         Section {
-            Button("Reset to Defaults") {
+            Button(String(localized: "common.reset_to_defaults")) {
                 AppTab.resetConfiguration()
                 order = AppTab.defaultOrder
                 enabled = Set(AppTab.allCases)

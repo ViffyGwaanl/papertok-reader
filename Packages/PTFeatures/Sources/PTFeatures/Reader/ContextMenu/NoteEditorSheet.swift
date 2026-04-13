@@ -61,7 +61,7 @@ struct NoteEditorSheet: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onDismiss)
+                    Button(String(localized: "common.cancel"), action: onDismiss)
                         .foregroundStyle(Morandi.secondaryText)
                 }
 
@@ -101,7 +101,7 @@ struct NoteEditorSheet: View {
 
     private var colorSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text("Highlight Color")
+            Text("reader.highlight_color")
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.primaryText)
 
@@ -114,7 +114,7 @@ struct NoteEditorSheet: View {
 
     private var noteSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text("Note")
+            Text("common.note")
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.primaryText)
 
@@ -127,7 +127,7 @@ struct NoteEditorSheet: View {
                 )
                 .overlay(alignment: .topLeading) {
                     if noteText.isEmpty {
-                        Text("Write your thoughts...")
+                        Text("notes.write_thoughts")
                             .font(AppTypography.body)
                             .foregroundStyle(Morandi.tertiaryText)
                             .padding(.top, AppSpacing.sm)
@@ -140,7 +140,7 @@ struct NoteEditorSheet: View {
 
     private func deleteSection(_ action: @escaping () -> Void) -> some View {
         Button(role: .destructive, action: action) {
-            Text("Delete Annotation")
+            Text("reader.delete_annotation")
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)

@@ -51,10 +51,10 @@ public struct ConversationListView: View {
             Image(systemName: "bubble.left.and.text.bubble.right")
                 .font(.system(size: 48))
                 .foregroundStyle(Morandi.tertiaryText)
-            Text("No conversations yet")
+            Text("ai.no_conversations")
                 .font(AppTypography.title3)
                 .foregroundStyle(Morandi.secondaryText)
-            Button("Start a new chat") {
+            Button(String(localized: "ai.start_chat")) {
                 onNewChat()
             }
             .buttonStyle(.borderedProminent)

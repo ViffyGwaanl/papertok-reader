@@ -79,7 +79,7 @@ public struct EPUBReaderAnnotationEditorView: View {
                         noteSection
                     }
                     if isSaveDisabled {
-                        Text("Highlights and notes require a text selection.")
+                        Text("reader.text_required")
                             .font(AppTypography.caption)
                             .foregroundStyle(Morandi.secondaryText)
                     }
@@ -96,7 +96,7 @@ public struct EPUBReaderAnnotationEditorView: View {
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+                    Button(String(localized: "common.cancel"), action: onCancel)
                         .foregroundStyle(Morandi.secondaryText)
                 }
 
@@ -117,7 +117,7 @@ public struct EPUBReaderAnnotationEditorView: View {
                 .foregroundStyle(Morandi.primaryText)
 
             if draft.selectedText.isEmpty {
-                Text("This bookmark will be saved for the current reading location.")
+                Text("reader.bookmark_save_hint")
                     .font(AppTypography.body)
                     .foregroundStyle(Morandi.secondaryText)
             } else {
@@ -137,14 +137,14 @@ public struct EPUBReaderAnnotationEditorView: View {
 
     private var typeSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text("Type")
+            Text("common.type")
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.primaryText)
 
             Picker("Type", selection: $draft.type) {
-                Text("Highlight").tag(NoteType.highlight)
-                Text("Bookmark").tag(NoteType.bookmark)
-                Text("Note").tag(NoteType.note)
+                Text("reader.highlight").tag(NoteType.highlight)
+                Text("reader.bookmark").tag(NoteType.bookmark)
+                Text("common.note").tag(NoteType.note)
             }
             .pickerStyle(.segmented)
         }
@@ -152,7 +152,7 @@ public struct EPUBReaderAnnotationEditorView: View {
 
     private var colorSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text("Color")
+            Text("common.color")
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.primaryText)
 
@@ -181,7 +181,7 @@ public struct EPUBReaderAnnotationEditorView: View {
 
     private var noteSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text("Markdown Note")
+            Text("reader.markdown_note")
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.primaryText)
 
@@ -194,7 +194,7 @@ public struct EPUBReaderAnnotationEditorView: View {
                 )
                 .overlay(alignment: .topLeading) {
                     if draft.readerNote.isEmpty {
-                        Text("Capture your insight, summary, or follow-up.")
+                        Text("notes.capture_insight")
                             .font(AppTypography.body)
                             .foregroundStyle(Morandi.secondaryText)
                             .padding(.top, AppSpacing.sm)
@@ -214,7 +214,7 @@ public struct EPUBReaderAnnotationEditorView: View {
     private var deleteSection: some View {
         if let onDelete {
             Button(role: .destructive, action: onDelete) {
-                Text("Delete Annotation")
+                Text("reader.delete_annotation")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)

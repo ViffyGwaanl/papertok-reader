@@ -61,10 +61,10 @@ public struct MCPConfigView: View {
                 Image(systemName: "server.rack")
                     .font(.system(size: 36))
                     .foregroundStyle(Morandi.tertiaryText)
-                Text("No MCP servers configured")
+                Text("ai.mcp.empty")
                     .font(AppTypography.body)
                     .foregroundStyle(Morandi.secondaryText)
-                Text("Add an MCP server to extend your AI assistant with custom tools and capabilities.")
+                Text("ai.mcp.add_hint")
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.tertiaryText)
                     .multilineTextAlignment(.center)
@@ -75,7 +75,7 @@ public struct MCPConfigView: View {
     }
 
     private var serversSection: some View {
-        Section("Servers") {
+        Section(String(localized: "common.servers")) {
             ForEach(configs) { config in
                 MCPServerRow(
                     config: config,
@@ -100,7 +100,7 @@ public struct MCPConfigView: View {
             Button {
                 showAddSheet = true
             } label: {
-                Label("Add MCP Server", systemImage: "plus.circle")
+                Label(String(localized: "ai.mcp.add_server"), systemImage: "plus.circle")
                     .foregroundStyle(Morandi.accent)
             }
         }
@@ -201,12 +201,12 @@ struct MCPServerRow: View {
 
                 Spacer()
 
-                Button("Test") { onTest() }
+                Button(String(localized: "common.test")) { onTest() }
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.accent)
                     .buttonStyle(.plain)
 
-                Button("Edit") { onEdit() }
+                Button(String(localized: "common.edit")) { onEdit() }
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.accent)
                     .buttonStyle(.plain)
@@ -274,7 +274,7 @@ struct MCPServerEditSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Server Details") {
+                Section(String(localized: "ai.mcp.server_details")) {
                     TextField("Name", text: $name)
                     TextField("URL", text: $url)
                         #if os(iOS)
@@ -284,7 +284,7 @@ struct MCPServerEditSheet: View {
                         .autocorrectionDisabled()
                 }
 
-                Section("Authentication") {
+                Section(String(localized: "common.authentication")) {
                     SecureField("API Key (optional)", text: $apiKey)
                 }
             }
@@ -294,10 +294,10 @@ struct MCPServerEditSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(String(localized: "common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(String(localized: "common.save")) {
                         let updated = MCPServerConfig(
                             id: config?.id ?? UUID().uuidString,
                             name: name.trimmingCharacters(in: .whitespacesAndNewlines),

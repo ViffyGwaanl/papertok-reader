@@ -44,7 +44,7 @@ public struct TranslationPopupView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     // Original text
                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("Original")
+                        Text("reader.original")
                             .font(AppTypography.caption.weight(.semibold))
                             .foregroundStyle(Morandi.secondaryText)
 
@@ -62,7 +62,7 @@ public struct TranslationPopupView: View {
 
                     // Language pair
                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("Languages")
+                        Text("common.languages")
                             .font(AppTypography.caption.weight(.semibold))
                             .foregroundStyle(Morandi.secondaryText)
 
@@ -118,7 +118,7 @@ public struct TranslationPopupView: View {
                     if !translatedText.isEmpty {
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
                             HStack {
-                                Text("Translation")
+                                Text("ai.translation_popup")
                                     .font(AppTypography.caption.weight(.semibold))
                                     .foregroundStyle(Morandi.secondaryText)
 
@@ -132,7 +132,7 @@ public struct TranslationPopupView: View {
                                     NSPasteboard.general.setString(translatedText, forType: .string)
                                     #endif
                                 } label: {
-                                    Label("Copy", systemImage: "doc.on.doc")
+                                    Label(String(localized: "common.copy"), systemImage: "doc.on.doc")
                                         .font(AppTypography.caption)
                                         .foregroundStyle(Morandi.accent)
                                 }
@@ -161,7 +161,7 @@ public struct TranslationPopupView: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { onDismiss() }
+                    Button(String(localized: "common.done")) { onDismiss() }
                         .foregroundStyle(Morandi.accent)
                 }
             }
