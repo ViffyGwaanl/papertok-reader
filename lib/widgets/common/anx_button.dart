@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_motion.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/morandi_palette.dart';
+
 enum AnxButtonType { filled, outlined, text }
 
 class AnxButton extends StatelessWidget {
@@ -86,8 +90,70 @@ class AnxButton extends StatelessWidget {
   final bool isLoading;
   final AnxButtonType type;
 
+  /// Build a token-driven default style merged beneath any user-provided [style].
+  ButtonStyle _effectiveStyle(BuildContext context) {
+    final sage = MorandiPalette.sage(context);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppSpacing.cornerRadiusSmall),
+    );
+    final padding = const EdgeInsets.symmetric(
+      horizontal: AppSpacing.lg,
+      vertical: AppSpacing.md,
+    );
+
+    ButtonStyle base;
+    switch (type) {
+      case AnxButtonType.filled:
+        base = FilledButton.styleFrom(
+          backgroundColor: sage,
+          foregroundColor: Colors.white,
+          padding: padding,
+          shape: shape,
+        );
+        break;
+      case AnxButtonType.outlined:
+        base = OutlinedButton.styleFrom(
+          foregroundColor: sage,
+          side: BorderSide(color: sage),
+          padding: padding,
+          shape: shape,
+        );
+        break;
+      case AnxButtonType.text:
+        base = TextButton.styleFrom(
+          foregroundColor: sage,
+          padding: padding,
+          shape: shape,
+        );
+        break;
+    }
+    return style == null ? base : base.merge(style!);
+  }
+
+  Widget _spinner(BuildContext context, {double size = 20}) {
+    final color = type == AnxButtonType.filled
+        ? Colors.white
+        : MorandiPalette.sage(context);
+    return SizedBox(
+      key: const ValueKey('anx-button-spinner'),
+      width: size,
+      height: size,
+      child: CircularProgressIndicator(strokeWidth: 2, color: color),
+    );
+  }
+
+  Widget _fadeSwap({required Widget child}) {
+    return AnimatedSwitcher(
+      duration: AppMotion.fast,
+      switchInCurve: AppMotion.easeInOut,
+      switchOutCurve: AppMotion.easeInOut,
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final ButtonStyle effectiveStyle = _effectiveStyle(context);
     final VoidCallback? effectiveOnPressed =
         (disabled || isLoading) ? null : onPressed;
     final VoidCallback? effectiveOnLongPress =
@@ -96,21 +162,12 @@ class AnxButton extends StatelessWidget {
     Widget buttonContent;
 
     if (isLoading) {
-      buttonContent = SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.0,
-          color: type == AnxButtonType.filled
-              ? Theme.of(context).colorScheme.onPrimary
-              : Theme.of(context).colorScheme.primary,
-        ),
-      );
-      // When loading, if it's an icon button or has child, we essentially want to replace content with spinner
-      // leveraging the button structure.
-      // But for Icon buttons, `icon` param expects a Widget.
+      buttonContent = _spinner(context, size: 24);
     } else {
-      buttonContent = child ?? const SizedBox();
+      buttonContent = KeyedSubtree(
+        key: const ValueKey('anx-button-content'),
+        child: child ?? const SizedBox(),
+      );
     }
 
     // Helper to build the specific button widget
@@ -122,7 +179,7 @@ class AnxButton extends StatelessWidget {
             onLongPress: effectiveOnLongPress,
             onHover: onHover,
             onFocusChange: onFocusChange,
-            style: style,
+            style: effectiveStyle,
             focusNode: focusNode,
             autofocus: autofocus,
             clipBehavior: clipBehavior,
@@ -134,7 +191,7 @@ class AnxButton extends StatelessWidget {
             onLongPress: effectiveOnLongPress,
             onHover: onHover,
             onFocusChange: onFocusChange,
-            style: style,
+            style: effectiveStyle,
             focusNode: focusNode,
             autofocus: autofocus,
             clipBehavior: clipBehavior,
@@ -146,7 +203,7 @@ class AnxButton extends StatelessWidget {
             onLongPress: effectiveOnLongPress,
             onHover: onHover,
             onFocusChange: onFocusChange,
-            style: style,
+            style: effectiveStyle,
             focusNode: focusNode,
             autofocus: autofocus,
             clipBehavior: clipBehavior,
@@ -157,18 +214,14 @@ class AnxButton extends StatelessWidget {
 
     // Handle Icon constructors
     if (icon != null && label != null) {
-      Widget iconToUse = isLoading
-          ? SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.0,
-                color: type == AnxButtonType.filled
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.primary,
+      Widget iconToUse = _fadeSwap(
+        child: isLoading
+            ? _spinner(context, size: 16)
+            : KeyedSubtree(
+                key: const ValueKey('anx-button-icon'),
+                child: icon!,
               ),
-            )
-          : icon!;
+      );
 
       switch (type) {
         case AnxButtonType.filled:
@@ -177,7 +230,7 @@ class AnxButton extends StatelessWidget {
             onLongPress: effectiveOnLongPress,
             onHover: onHover,
             onFocusChange: onFocusChange,
-            style: style,
+            style: effectiveStyle,
             focusNode: focusNode,
             autofocus: autofocus,
             clipBehavior: clipBehavior,
@@ -190,7 +243,7 @@ class AnxButton extends StatelessWidget {
             onLongPress: effectiveOnLongPress,
             onHover: onHover,
             onFocusChange: onFocusChange,
-            style: style,
+            style: effectiveStyle,
             focusNode: focusNode,
             autofocus: autofocus,
             clipBehavior: clipBehavior,
@@ -203,7 +256,7 @@ class AnxButton extends StatelessWidget {
             onLongPress: effectiveOnLongPress,
             onHover: onHover,
             onFocusChange: onFocusChange,
-            style: style,
+            style: effectiveStyle,
             focusNode: focusNode,
             autofocus: autofocus,
             clipBehavior: clipBehavior,
@@ -213,20 +266,8 @@ class AnxButton extends StatelessWidget {
       }
     }
 
-    // Non-icon constructors
-    if (isLoading) {
-      return buildButton(
-          child: SizedBox(
-        height: 20,
-        width: 20,
-        child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: type == AnxButtonType.filled
-                ? Theme.of(context).colorScheme.onPrimary
-                : Theme.of(context).colorScheme.primary),
-      ));
-    }
-
-    return buildButton(child: buttonContent);
+    // Non-icon constructors: wrap content in an AnimatedSwitcher so the
+    // transition between loading spinner and child content fades smoothly.
+    return buildButton(child: _fadeSwap(child: buttonContent));
   }
 }

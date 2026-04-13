@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_elevation.dart';
+import '../../../theme/app_motion.dart';
+import '../../../theme/app_spacing.dart';
+
 abstract class BaseRoundedContainer extends StatelessWidget {
   const BaseRoundedContainer({
     super.key,
@@ -10,11 +14,10 @@ abstract class BaseRoundedContainer extends StatelessWidget {
     this.margin,
     this.radius,
     this.constraints,
-    this.animationDuration = const Duration(milliseconds: 250),
+    this.animationDuration = AppMotion.medium,
     this.animationCurve = Curves.easeInOut,
+    this.elevation,
   });
-
-  static const double _defaultRadius = 30;
 
   final Widget child;
   final double? width;
@@ -26,14 +29,34 @@ abstract class BaseRoundedContainer extends StatelessWidget {
   final Duration animationDuration;
   final Curve animationCurve;
 
+  /// Optional shadow elevation level (1-4). Picks from [AppElevation].
+  /// When null, no drop shadow is applied by the base container.
+  final int? elevation;
+
   BorderRadiusGeometry get _borderRadius =>
-      BorderRadiusGeometry.circular(radius ?? _defaultRadius);
+      BorderRadiusGeometry.circular(radius ?? AppSpacing.cornerRadius);
+
+  List<BoxShadow>? _resolveShadows(BuildContext context) {
+    switch (elevation) {
+      case 1:
+        return AppElevation.level1(context);
+      case 2:
+        return AppElevation.level2(context);
+      case 3:
+        return AppElevation.level3(context);
+      case 4:
+        return AppElevation.level4(context);
+      default:
+        return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final BorderRadiusGeometry borderRadius = _borderRadius;
+    final shadows = _resolveShadows(context);
 
-    return AnimatedContainer(
+    final animated = AnimatedContainer(
       duration: animationDuration,
       curve: animationCurve,
       margin: margin?.add(const EdgeInsets.all(1)) ?? const EdgeInsets.all(1),
@@ -48,6 +71,19 @@ abstract class BaseRoundedContainer extends StatelessWidget {
           child: child,
         ),
       ),
+    );
+
+    if (shadows == null) {
+      return animated;
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius:
+            borderRadius.resolve(Directionality.of(context)),
+        boxShadow: shadows,
+      ),
+      child: animated,
     );
   }
 
