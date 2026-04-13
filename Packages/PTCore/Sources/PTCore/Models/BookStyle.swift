@@ -33,14 +33,14 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
     }
 
     public static var `default`: BookStyle {
-        defaultStyle()
+        `default`(locale: .autoupdatingCurrent)
     }
 
-    public static func defaultStyle(for locale: Locale = .autoupdatingCurrent) -> BookStyle {
+    public static func `default`(locale: Locale) -> BookStyle {
         BookStyle(
             id: nil,
             fontSize: 1.4,
-            fontFamily: defaultFontFamily(for: locale),
+            fontFamily: preferredDefaultFontFamily(locale: locale),
             lineHeight: 1.8,
             letterSpacing: 0.0,
             wordSpacing: 0.0,
@@ -51,45 +51,45 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         )
     }
 
-    public static func defaultFontFamily(for locale: Locale = .autoupdatingCurrent) -> String {
-        if locale.isTraditionalChinese {
-            return "Songti TC"
-        }
-        if locale.isChinese {
-            return "Songti SC"
-        }
-        return "Arial"
+    public static func preferredDefaultFontFamily(locale: Locale = .autoupdatingCurrent) -> String {
+        preferredFontFamilies(locale: locale).first ?? "Arial"
     }
 
-    public static func recommendedFontFamilies(for locale: Locale = .autoupdatingCurrent) -> [String] {
-        let prioritizedChineseFonts: [String]
-        if locale.isTraditionalChinese {
-            prioritizedChineseFonts = ["Songti TC", "PingFang TC"]
-        } else if locale.isChinese {
-            prioritizedChineseFonts = ["Songti SC", "PingFang SC"]
-        } else {
-            prioritizedChineseFonts = []
-        }
-
-        let fallbackFonts = [
+    public static func preferredFontFamilies(locale: Locale = .autoupdatingCurrent) -> [String] {
+        let base = [
             "Arial",
             "Georgia",
             "Palatino",
             "Iowan Old Style",
-            "Source Han Serif SC",
+            "Source Han Serif SC"
         ]
 
-        return Array(NSOrderedSet(array: prioritizedChineseFonts + fallbackFonts)) as? [String] ?? (prioritizedChineseFonts + fallbackFonts)
+        switch chineseScript(for: locale) {
+        case .simplified:
+            return unique(["Songti SC", "PingFang SC"] + base)
+        case .traditional:
+            return unique(["Songti TC", "PingFang TC"] + base)
+        case .none:
+            return unique(base)
+        }
     }
-}
 
-private extension Locale {
-    var isChinese: Bool {
-        identifier.lowercased().hasPrefix("zh")
+    private static func unique(_ values: [String]) -> [String] {
+        var seen = Set<String>()
+        return values.filter { seen.insert($0).inserted }
     }
 
-    var isTraditionalChinese: Bool {
-        let lowered = identifier.lowercased()
-        return lowered.contains("hant") || lowered.hasSuffix("_tw") || lowered.hasSuffix("_hk") || lowered.hasSuffix("_mo")
+    private static func chineseScript(for locale: Locale) -> ChineseScript? {
+        let identifier = locale.identifier.replacingOccurrences(of: "_", with: "-").lowercased()
+        guard identifier.hasPrefix("zh") else { return nil }
+        if identifier.contains("hant") || identifier.contains("tw") || identifier.contains("hk") || identifier.contains("mo") {
+            return .traditional
+        }
+        return .simplified
+    }
+
+    private enum ChineseScript {
+        case simplified
+        case traditional
     }
 }

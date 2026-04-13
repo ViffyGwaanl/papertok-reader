@@ -10,11 +10,24 @@ enum MultiStepShortcutError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingParameter(let key):
-            return "Missing required parameter: \(key)"
+            return AppLocalization.format(
+                "intent.multi_step.error.missing_parameter_format",
+                "Missing required parameter: %@",
+                key
+            )
         case .stepFailed(let intent, let message):
-            return "Step \(intent.rawValue) failed: \(message)"
+            return AppLocalization.format(
+                "intent.multi_step.error.step_failed_format",
+                "Step %@ failed: %@",
+                intent.rawValue,
+                message
+            )
         case .unsupportedIntent(let intent):
-            return "Unsupported intent: \(intent.rawValue)"
+            return AppLocalization.format(
+                "intent.multi_step.error.unsupported_intent_format",
+                "Unsupported intent: %@",
+                intent.rawValue
+            )
         }
     }
 }

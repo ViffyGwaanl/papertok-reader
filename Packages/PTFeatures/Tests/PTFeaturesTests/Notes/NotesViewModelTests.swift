@@ -151,6 +151,30 @@ struct NotesViewModelTests {
         #expect(chapters == ["Chapter A", "Chapter C"])
     }
 
+    @Test("missing book titles use localized fallback format")
+    func missingBookTitlesUseFallbackFormat() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let noteDAO = BookNoteDAO(database: database)
+
+        _ = try await noteDAO.save(
+            BookNote(
+                bookId: 42,
+                content: "Detached note",
+                cfi: "cfi1",
+                chapter: "Appendix",
+                type: "note",
+                color: "green",
+                createTime: makeDate("2026-04-07"),
+                updateTime: makeDate("2026-04-07")
+            )
+        )
+
+        let viewModel = NotesViewModel(database: database)
+        await viewModel.loadNotes()
+
+        #expect(viewModel.groupedNotes.first?.bookTitle == "Book #42")
+    }
+
     @Test("updateNote persists changes")
     func updateNotePersistsChanges() async throws {
         let database = try AppDatabase.makeInMemory()

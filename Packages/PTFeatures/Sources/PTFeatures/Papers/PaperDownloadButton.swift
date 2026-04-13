@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import PTCore
 import PTNetworking
 import PTUI
 
@@ -40,8 +41,10 @@ struct PaperDownloadPlan: Equatable, Sendable {
 
     var buttonTitle: String {
         switch format {
-        case .epub: return "Import EPUB"
-        case .pdf: return "Import PDF"
+        case .epub:
+            return AppLocalization.string("papers.import_epub", value: "Import EPUB")
+        case .pdf:
+            return AppLocalization.string("papers.import_pdf", value: "Import PDF")
         }
     }
 
@@ -186,9 +189,13 @@ public struct PaperDownloadButton: View {
     private func progressText(phase: PaperDownloadPhase, progress: PaperTransferProgress?) -> String {
         switch phase {
         case .downloading:
-            return progress?.statusText ?? "Starting…"
+            return progress?.statusText
+                ?? AppLocalization.string("papers.download.starting", value: "Starting…")
         case .importing:
-            return "Saving to Bookshelf…"
+            return AppLocalization.string(
+                "papers.download.saving_to_bookshelf",
+                value: "Saving to Bookshelf…"
+            )
         }
     }
 }

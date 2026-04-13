@@ -8,26 +8,30 @@ enum CreateNoteIntentError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .bookNotFound(let title):
-            return "No book in your PaperTok library matched \"\(title)\"."
+            return AppLocalization.format(
+                "intent.create_note.error.book_not_found_format",
+                "No book in your PaperTok library matched \"%@\".",
+                title
+            )
         }
     }
 }
 
 /// Siri Shortcut: "Create a note for [book] in PaperTok"
 struct CreateNoteIntent: AppIntent {
-    static let title: LocalizedStringResource = "Create Note"
+    static let title: LocalizedStringResource = "intent.create_note.title"
     static let description = IntentDescription(
-        "Captures a free-form note attached to a book in your PaperTok library."
+        "intent.create_note.description"
     )
     static let openAppWhenRun = false
 
-    @Parameter(title: "Book Title")
+    @Parameter(title: "intent.create_note.parameter.book_title")
     var bookTitle: String
 
-    @Parameter(title: "Note")
+    @Parameter(title: "intent.create_note.parameter.note_text")
     var noteText: String
 
-    @Parameter(title: "Color (optional)")
+    @Parameter(title: "intent.create_note.parameter.color")
     var color: String?
 
     func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<String> {
@@ -52,7 +56,19 @@ struct CreateNoteIntent: AppIntent {
 
         let saved = try await BookNoteDAO(database: database).save(note)
         let savedId = saved.id.map(String.init) ?? "?"
-        let summary = "Added note #\(savedId) to \"\(book.title)\"."
-        return .result(value: summary, dialog: "Saved note to \(book.title).")
+        let summary = AppLocalization.format(
+            "intent.create_note.summary_format",
+            "Added note #%@ to \"%@\".",
+            savedId,
+            book.title
+        )
+        return .result(
+            value: summary,
+            dialog: IntentDialog(stringLiteral: AppLocalization.format(
+                "intent.create_note.dialog_format",
+                "Saved note to %@.",
+                book.title
+            ))
+        )
     }
 }

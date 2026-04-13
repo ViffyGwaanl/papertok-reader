@@ -14,6 +14,10 @@ public struct MCPConfigView: View {
 
     private let store: MCPConfigStore
 
+    private func localized(_ key: String, _ fallback: String) -> String {
+        AppLocalization.string(key, value: fallback)
+    }
+
     public init(store: MCPConfigStore = MCPConfigStore()) {
         self.store = store
         _configs = State(initialValue: store.loadConfigs())
@@ -129,7 +133,9 @@ public struct MCPConfigView: View {
         Task {
             do {
                 guard let url = URL(string: config.url) else {
-                    await MainActor.run { statuses[config.id] = .error("Invalid URL") }
+                    await MainActor.run {
+                        statuses[config.id] = .error(AppLocalization.string("errors.url.invalid", value: "Invalid URL"))
+                    }
                     return
                 }
                 let transport = MCPHTTPSSETransport(serverURL: url, apiKey: config.apiKey)
@@ -226,7 +232,11 @@ struct MCPServerRow: View {
                         .padding(.vertical, 2)
                     }
                 } label: {
-                    Text("\(config.discoveredTools.count) tools")
+                    Text(AppLocalization.format(
+                        "ai.mcp.tool_count_format",
+                        "%d tools",
+                        config.discoveredTools.count
+                    ))
                         .font(AppTypography.caption2)
                         .foregroundStyle(Morandi.secondaryText)
                 }
@@ -271,12 +281,16 @@ struct MCPServerEditSheet: View {
         _apiKey = State(initialValue: config?.apiKey ?? "")
     }
 
+    private func localized(_ key: String, _ fallback: String) -> String {
+        AppLocalization.string(key, value: fallback)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section(String(localized: "ai.mcp.server_details")) {
-                    TextField("Name", text: $name)
-                    TextField("URL", text: $url)
+                    TextField(String(localized: "common.name"), text: $name)
+                    TextField(String(localized: "common.url"), text: $url)
                         #if os(iOS)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
@@ -285,10 +299,14 @@ struct MCPServerEditSheet: View {
                 }
 
                 Section(String(localized: "common.authentication")) {
-                    SecureField("API Key (optional)", text: $apiKey)
+                    SecureField(localized("common.api_key_optional", "API Key (optional)"), text: $apiKey)
                 }
             }
-            .navigationTitle(config == nil ? "Add Server" : "Edit Server")
+            .navigationTitle(
+                config == nil
+                    ? localized("common.add_server", "Add Server")
+                    : localized("common.edit_server", "Edit Server")
+            )
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

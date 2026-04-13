@@ -18,12 +18,19 @@ public struct AIImageAnalysisView: View {
 
     private let defaults = AppConfig.groupDefaults
 
+    private func localized(_ key: String, _ fallback: String) -> String {
+        AppLocalization.string(key, value: fallback)
+    }
+
     public init() {
         let d = AppConfig.groupDefaults
         _providerId = State(initialValue: d.string(forKey: "ai_vision_provider") ?? "openai")
         _modelId = State(initialValue: d.string(forKey: "ai_vision_model") ?? "gpt-4o-mini")
         _defaultPrompt = State(initialValue: d.string(forKey: "ai_vision_prompt")
-            ?? "Describe this image in detail. Highlight any text, diagrams, or notable elements.")
+            ?? AppLocalization.string(
+                "ai.image_analysis.default_prompt_value",
+                value: "Describe this image in detail. Highlight any text, diagrams, or notable elements."
+            ))
         _maxImageSize = State(initialValue: d.object(forKey: "ai_vision_max_size") as? Double ?? 1024)
         _quality = State(initialValue: d.string(forKey: "ai_vision_quality") ?? "medium")
         _enableForReader = State(initialValue: d.bool(forKey: "ai_vision_reader_enabled"))
@@ -34,7 +41,7 @@ public struct AIImageAnalysisView: View {
         formContent
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle("Image Analysis")
+            .navigationTitle(String(localized: "settings.ai_image_analysis"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -53,8 +60,8 @@ public struct AIImageAnalysisView: View {
     // MARK: - Sections
 
     private var providerSection: some View {
-        Section("Vision Provider") {
-            Picker("Provider", selection: $providerId) {
+        Section(String(localized: "ai.vision")) {
+            Picker(String(localized: "common.provider"), selection: $providerId) {
                 ForEach(visionProviders, id: \.0) { (id, name) in
                     Text(name).tag(id)
                 }
@@ -70,8 +77,8 @@ public struct AIImageAnalysisView: View {
     }
 
     private var modelSection: some View {
-        Section("Model") {
-            Picker("Model", selection: $modelId) {
+        Section(String(localized: "common.model")) {
+            Picker(String(localized: "common.model"), selection: $modelId) {
                 ForEach(visionModels(for: providerId), id: \.self) { m in
                     Text(m).tag(m)
                 }
@@ -79,7 +86,7 @@ public struct AIImageAnalysisView: View {
                     Text(modelId).tag(modelId)
                 }
             }
-            TextField("Or enter custom model ID", text: $modelId)
+            TextField(localized("ai.providers.custom_model_id", "Or enter custom model ID"), text: $modelId)
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
                 #endif
@@ -96,9 +103,12 @@ public struct AIImageAnalysisView: View {
                 .font(AppTypography.body)
                 .foregroundStyle(Morandi.primaryText)
         } header: {
-            Text("Default Prompt")
+            Text(localized("ai.image_analysis.default_prompt", "Default Prompt"))
         } footer: {
-            Text("Used as the system prompt when analysing an image without an explicit user prompt.")
+            Text(localized(
+                "ai.image_analysis.prompt_footer",
+                "Used as the system prompt when analysing an image without an explicit user prompt."
+            ))
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
@@ -106,10 +116,10 @@ public struct AIImageAnalysisView: View {
     }
 
     private var qualitySection: some View {
-        Section("Quality") {
+        Section(localized("ai.image_analysis.quality", "Quality")) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Max Image Size")
+                    Text(localized("ai.image_analysis.max_image_size", "Max Image Size"))
                     Spacer()
                     Text("\(Int(maxImageSize)) px")
                         .font(AppTypography.caption.monospacedDigit())
@@ -118,10 +128,10 @@ public struct AIImageAnalysisView: View {
                 Slider(value: $maxImageSize, in: 256...4096, step: 128)
                     .tint(Morandi.accent)
             }
-            Picker("Quality", selection: $quality) {
-                Text("Low").tag("low")
-                Text("Medium").tag("medium")
-                Text("High").tag("high")
+            Picker(localized("ai.image_analysis.quality", "Quality"), selection: $quality) {
+                Text(localized("ai.image_analysis.quality.low", "Low")).tag("low")
+                Text(localized("ai.image_analysis.quality.medium", "Medium")).tag("medium")
+                Text(localized("ai.image_analysis.quality.high", "High")).tag("high")
             }
         }
         .onChange(of: maxImageSize) { _, v in defaults.set(v, forKey: "ai_vision_max_size") }
@@ -129,10 +139,10 @@ public struct AIImageAnalysisView: View {
     }
 
     private var integrationSection: some View {
-        Section("Integrations") {
-            Toggle("Enable for Reader Images", isOn: $enableForReader)
+        Section(localized("ai.image_analysis.integrations", "Integrations")) {
+            Toggle(localized("ai.image_analysis.enable_for_reader_images", "Enable for Reader Images"), isOn: $enableForReader)
                 .tint(Morandi.accent)
-            Toggle("Enable for Highlights", isOn: $enableForHighlights)
+            Toggle(localized("ai.image_analysis.enable_for_highlights", "Enable for Highlights"), isOn: $enableForHighlights)
                 .tint(Morandi.accent)
         }
         .onChange(of: enableForReader) { _, v in defaults.set(v, forKey: "ai_vision_reader_enabled") }
@@ -165,4 +175,3 @@ public struct AIImageAnalysisView: View {
         }
     }
 }
-

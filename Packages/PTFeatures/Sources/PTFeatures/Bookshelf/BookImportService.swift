@@ -18,10 +18,34 @@ public enum BookImportError: Error, LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .unsupportedFormat: return "Only PDF and EPUB files are supported."
-        case .alreadyExists: return "This book is already in your library."
-        case .copyFailed(let e): return "Could not copy file: \(e.localizedDescription)"
-        case .saveFailed(let e): return "Could not save book: \(e.localizedDescription)"
+        case .unsupportedFormat:
+            return AppLocalization.string(
+                "errors.import.unsupported_format",
+                value: "Only PDF and EPUB files are supported."
+            )
+        case .alreadyExists:
+            return AppLocalization.string(
+                "errors.import.already_exists",
+                value: "This book is already in your library."
+            )
+        case .copyFailed(let error):
+            return String(
+                format: AppLocalization.string(
+                    "errors.import.copy_failed_format",
+                    value: "Could not copy file: %@"
+                ),
+                locale: .autoupdatingCurrent,
+                error.localizedDescription
+            )
+        case .saveFailed(let error):
+            return String(
+                format: AppLocalization.string(
+                    "errors.import.save_failed_format",
+                    value: "Could not save book: %@"
+                ),
+                locale: .autoupdatingCurrent,
+                error.localizedDescription
+            )
         }
     }
 }

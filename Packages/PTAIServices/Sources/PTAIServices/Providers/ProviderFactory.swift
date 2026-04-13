@@ -167,7 +167,7 @@ public enum ProviderFactory {
         case .gemini: return "Google Gemini"
         case .azure: return "Azure OpenAI"
         case .volcengine: return "Volcengine (Doubao)"
-        case .custom: return "Custom"
+        case .custom: return AppLocalization.string("settings.custom_provider", value: "Custom")
         }
     }
 }

@@ -1,5 +1,6 @@
 #if canImport(SwiftUI)
 import SwiftUI
+import PTCore
 import PTUI
 
 /// A markdown-aware note editor with live preview.
@@ -14,11 +15,22 @@ public struct RichNoteEditorView: View {
 
         public var id: String { rawValue }
 
-        public var displayName: String {
+        private var displayNameKey: String {
+            switch self {
+            case .edit: return "notes.editor"
+            case .preview: return "notes.preview"
+            }
+        }
+
+        private var fallbackDisplayName: String {
             switch self {
             case .edit: return "Edit"
             case .preview: return "Preview"
             }
+        }
+
+        public var displayName: String {
+            AppLocalization.string(displayNameKey, value: fallbackDisplayName)
         }
     }
 
@@ -32,7 +44,7 @@ public struct RichNoteEditorView: View {
 
     public init(
         text: Binding<String>,
-        title: String = "Edit Note",
+        title: String = AppLocalization.string("notes.edit_note", value: "Edit Note"),
         onSave: @escaping (String) -> Void,
         onCancel: @escaping () -> Void
     ) {
@@ -63,7 +75,7 @@ public struct RichNoteEditorView: View {
     // MARK: - Subviews
 
     private var modeSegmented: some View {
-        Picker("Mode", selection: $mode) {
+        Picker(AppLocalization.string("common.mode", value: "Mode"), selection: $mode) {
             ForEach(Mode.allCases) { option in
                 Text(option.displayName).tag(option)
             }
@@ -74,25 +86,40 @@ public struct RichNoteEditorView: View {
 
     private var toolbar: some View {
         HStack(spacing: 10) {
-            toolbarButton(label: "B", systemImage: "bold") {
+            toolbarButton(
+                label: AppLocalization.string("notes.bold", value: "Bold"),
+                systemImage: "bold"
+            ) {
                 wrapSelection(with: "**")
             }
             .fontWeight(.bold)
 
-            toolbarButton(label: "I", systemImage: "italic") {
+            toolbarButton(
+                label: AppLocalization.string("notes.italic", value: "Italic"),
+                systemImage: "italic"
+            ) {
                 wrapSelection(with: "*")
             }
             .italic()
 
-            toolbarButton(label: "Link", systemImage: "link") {
+            toolbarButton(
+                label: AppLocalization.string("notes.link", value: "Link"),
+                systemImage: "link"
+            ) {
                 insertInline("[text](https://)")
             }
 
-            toolbarButton(label: "List", systemImage: "list.bullet") {
+            toolbarButton(
+                label: AppLocalization.string("notes.bullet_list", value: "Bullet List"),
+                systemImage: "list.bullet"
+            ) {
                 insertLinePrefix("- ")
             }
 
-            toolbarButton(label: "H", systemImage: "textformat.size") {
+            toolbarButton(
+                label: AppLocalization.string("notes.heading", value: "Heading"),
+                systemImage: "textformat.size"
+            ) {
                 insertLinePrefix("# ")
             }
 

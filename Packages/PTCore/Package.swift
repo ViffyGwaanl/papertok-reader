@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "PTCore",
+    defaultLocalization: "en",
     platforms: [
         .iOS(.v17),
         .macOS(.v14)
@@ -22,7 +23,10 @@ let package = Package(
         ),
         .testTarget(
             name: "PTCoreTests",
-            dependencies: ["PTCore"]
+            dependencies: ["PTCore"],
+            resources: [
+                .process("Resources")
+            ]
         )
     ]
 )

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import PTCore
 import PTAIServices
 
 @MainActor @Observable
@@ -118,7 +119,10 @@ public final class AIChatViewModel {
             temperature: 0.7,
             maxTokens: 4096,
             topP: 1.0,
-            systemPrompt: "You are a helpful reading assistant.",
+            systemPrompt: AppLocalization.string(
+                "ai.chat.system_prompt_default",
+                value: "You are a helpful reading assistant."
+            ),
             perConversation: false
         )
     }
@@ -146,10 +150,13 @@ public final class AIChatViewModel {
     /// Identifier of the current conversation for persistence.
     public var conversationId: String?
     /// Title of the current conversation (derived from first user message).
-    public var conversationTitle: String = "New Chat"
+    public var conversationTitle: String = AppLocalization.string("ai.new_conversation", value: "New Chat")
 
     public init(
-        systemPrompt: String = "You are a helpful reading assistant.",
+        systemPrompt: String = AppLocalization.string(
+            "ai.chat.system_prompt_default",
+            value: "You are a helpful reading assistant."
+        ),
         runtime: Runtime = .default,
         persistenceService: ConversationPersistenceService? = nil
     ) {
@@ -176,15 +183,24 @@ public final class AIChatViewModel {
         guard trimmed.isEmpty == false else { return false }
         guard !isStreaming else { return false }
         guard let providerOption = providerOptions.first(where: { $0.id == selectedProviderId }) else {
-            errorMessage = "Selected provider is unavailable."
+            errorMessage = AppLocalization.string(
+                "errors.ai.selected_provider_unavailable",
+                value: "Selected provider is unavailable."
+            )
             return false
         }
         guard providerOption.models.contains(where: { $0.id == selectedModelId }) else {
-            errorMessage = "Selected model is unavailable."
+            errorMessage = AppLocalization.string(
+                "errors.ai.selected_model_unavailable",
+                value: "Selected model is unavailable."
+            )
             return false
         }
         guard pendingApprovals.isEmpty else {
-            errorMessage = "Resolve pending tool approvals before sending another message."
+            errorMessage = AppLocalization.string(
+                "errors.ai.pending_tool_approvals",
+                value: "Resolve pending tool approvals before sending another message."
+            )
             return false
         }
 
@@ -202,10 +218,13 @@ public final class AIChatViewModel {
     }
 
     /// Clear conversation and start fresh.
-    public func clearConversation(systemPrompt: String = "You are a helpful reading assistant.") {
+    public func clearConversation(systemPrompt: String = AppLocalization.string(
+        "ai.chat.system_prompt_default",
+        value: "You are a helpful reading assistant."
+    )) {
         conversationTree = ConversationTree(systemPrompt: systemPrompt)
         conversationId = nil
-        conversationTitle = "New Chat"
+        conversationTitle = AppLocalization.string("ai.new_conversation", value: "New Chat")
         endTurn()
         errorMessage = nil
         pendingApprovals.removeAll()
@@ -221,13 +240,16 @@ public final class AIChatViewModel {
         if conversationId == nil { conversationId = id }
 
         // Derive title from the first user message if still default
-        if conversationTitle == "New Chat" {
+        if conversationTitle == AppLocalization.string("ai.new_conversation", value: "New Chat") {
             if let firstUserMsg = messages.first(where: { $0.role == .user })?.textContent {
                 conversationTitle = String(firstUserMsg.prefix(60))
             }
         }
 
-        let systemPrompt = messages.first(where: { $0.role == .system })?.textContent ?? "You are a helpful reading assistant."
+        let systemPrompt = messages.first(where: { $0.role == .system })?.textContent ?? AppLocalization.string(
+            "ai.chat.system_prompt_default",
+            value: "You are a helpful reading assistant."
+        )
         let persisted = ConversationPersistenceService.PersistedConversation(
             id: id,
             title: conversationTitle,
@@ -363,7 +385,11 @@ public final class AIChatViewModel {
                 return
             }
             guard currentTurnRoundCount < Self.maxToolRoundsPerTurn else {
-                errorMessage = "Stopped after \(Self.maxToolRoundsPerTurn) tool rounds to avoid an infinite loop."
+                errorMessage = AppLocalization.format(
+                    "errors.ai.tool_round_limit_format",
+                    "Stopped after %d tool rounds to avoid an infinite loop.",
+                    Self.maxToolRoundsPerTurn
+                )
                 endTurn()
                 return
             }
@@ -460,7 +486,14 @@ public final class AIChatViewModel {
 
         for toolCall in toolCalls {
             guard let tool = runtime.toolRegistry.tool(named: toolCall.name) else {
-                conversationTree.append(.toolResult(toolCallId: toolCall.id, content: "Error: Unknown tool '\(toolCall.name)'"))
+                conversationTree.append(.toolResult(
+                    toolCallId: toolCall.id,
+                    content: AppLocalization.format(
+                        "errors.ai.unknown_tool_format",
+                        "Error: Unknown tool '%@'",
+                        toolCall.name
+                    )
+                ))
                 continue
             }
 
@@ -491,7 +524,14 @@ public final class AIChatViewModel {
             }
         } catch {
             for toolCall in safeToolCalls {
-                conversationTree.append(.toolResult(toolCallId: toolCall.id, content: "Error: \(error.localizedDescription)"))
+                conversationTree.append(.toolResult(
+                    toolCallId: toolCall.id,
+                    content: AppLocalization.format(
+                        "errors.ai.tool_result_error_format",
+                        "Error: %@",
+                        error.localizedDescription
+                    )
+                ))
             }
         }
 
@@ -509,11 +549,15 @@ public final class AIChatViewModel {
 
         let resultContent: String
         if isApproved == false {
-            resultContent = "Denied by user"
+            resultContent = AppLocalization.string("errors.ai.tool_denied", value: "Denied by user")
         } else if let tool = runtime.toolRegistry.tool(named: approval.toolName) {
             resultContent = await executeToolCall(tool, toolCallId: approval.toolCallId, argumentsJSON: approval.arguments)
         } else {
-            resultContent = "Error: Unknown tool '\(approval.toolName)'"
+            resultContent = AppLocalization.format(
+                "errors.ai.unknown_tool_format",
+                "Error: Unknown tool '%@'",
+                approval.toolName
+            )
         }
 
         if isApproved {
@@ -533,7 +577,11 @@ public final class AIChatViewModel {
             let result = try await tool.execute(arguments: arguments, context: runtime.toolContext)
             return result.content
         } catch {
-            return "Error: \(error.localizedDescription)"
+            return AppLocalization.format(
+                "errors.ai.tool_result_error_format",
+                "Error: %@",
+                error.localizedDescription
+            )
         }
     }
 

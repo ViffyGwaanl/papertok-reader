@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 import GRDB
 @testable import PTCore
@@ -72,5 +73,17 @@ struct TagDAOTests {
 
         let tagIds = try await dao.fetchTagIds(forBookId: 1)
         #expect(tagIds.isEmpty)
+    }
+
+    @Test("fetchAll uses pinyin order for Chinese locales")
+    func fetchAllUsesPinyinOrderForChinese() async throws {
+        let db = try makeDB()
+        let dao = TagDAO(database: db)
+        _ = try await dao.save(Tag(id: nil, name: "李白", colorHex: nil))
+        _ = try await dao.save(Tag(id: nil, name: "杜甫", colorHex: nil))
+        _ = try await dao.save(Tag(id: nil, name: "王维", colorHex: nil))
+
+        let names = try await dao.fetchAll(locale: Locale(identifier: "zh-Hans")).map(\.name)
+        #expect(names == ["杜甫", "李白", "王维"])
     }
 }

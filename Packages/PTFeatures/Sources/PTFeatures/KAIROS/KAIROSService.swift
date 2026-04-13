@@ -67,6 +67,15 @@ public final class KAIROSService {
     private let defaults: UserDefaults
     private let database: AppDatabase?
 
+    private func localized(_ key: String, _ fallback: String) -> String {
+        AppLocalization.string(key, value: fallback)
+    }
+
+    private func format(_ key: String, _ fallback: String, _ arguments: CVarArg...) -> String {
+        let formatString = AppLocalization.string(key, value: fallback)
+        return String(format: formatString, locale: .autoupdatingCurrent, arguments: arguments)
+    }
+
     private enum Keys {
         static let enabled = "kairos_enabled"
         static let dailyGoal = "kairos_daily_goal_minutes"
@@ -121,10 +130,14 @@ public final class KAIROSService {
         center.removePendingNotificationRequests(withIdentifiers: [Self.notificationID])
 
         let content = UNMutableNotificationContent()
-        content.title = "Time to Read"
+        content.title = localized("kairos.time_to_read", "Time to Read")
         content.body = goalReachedToday
-            ? "Great job reaching your goal! Keep the streak going."
-            : "You have \(max(0, dailyGoalMinutes - todayReadingMinutes)) minutes left to reach your daily goal."
+            ? localized("kairos.goal_reached_body", "Great job reaching your goal! Keep the streak going.")
+            : format(
+                "kairos.remaining_minutes_format",
+                "You have %d minutes left to reach your daily goal.",
+                max(0, dailyGoalMinutes - todayReadingMinutes)
+            )
         content.sound = .default
         content.categoryIdentifier = "KAIROS_REMINDER"
 
@@ -204,10 +217,19 @@ public struct KAIROSSettingsView: View {
         self.service = service
     }
 
+    private func localized(_ key: String, _ fallback: String) -> String {
+        AppLocalization.string(key, value: fallback)
+    }
+
+    private func format(_ key: String, _ fallback: String, _ arguments: CVarArg...) -> String {
+        let formatString = AppLocalization.string(key, value: fallback)
+        return String(format: formatString, locale: .autoupdatingCurrent, arguments: arguments)
+    }
+
     public var body: some View {
         Form {
             Section {
-                Toggle("Enable KAIROS", isOn: $service.isEnabled)
+                Toggle(String(localized: "kairos.enable"), isOn: $service.isEnabled)
                     .tint(Morandi.accent)
                     .foregroundStyle(Morandi.primaryText)
             } header: {
@@ -225,7 +247,7 @@ public struct KAIROSSettingsView: View {
                             Text("kairos.daily_goal")
                                 .foregroundStyle(Morandi.primaryText)
                             Spacer()
-                            Text("\(service.dailyGoalMinutes) min")
+                            Text(formattedMinutes(service.dailyGoalMinutes))
                                 .font(.body.weight(.semibold))
                                 .foregroundStyle(Morandi.accent)
                                 .monospacedDigit()
@@ -240,11 +262,11 @@ public struct KAIROSSettingsView: View {
                         )
                         .tint(Morandi.accent)
                         HStack {
-                            Text("5 min")
+                            Text(formattedMinutes(5))
                                 .font(.caption2)
                                 .foregroundStyle(Morandi.tertiaryText)
                             Spacer()
-                            Text("120 min")
+                            Text(formattedMinutes(120))
                                 .font(.caption2)
                                 .foregroundStyle(Morandi.tertiaryText)
                         }
@@ -279,7 +301,12 @@ public struct KAIROSSettingsView: View {
                             Text("common.today")
                                 .foregroundStyle(Morandi.primaryText)
                             Spacer()
-                            Text("\(service.todayReadingMinutes) / \(service.dailyGoalMinutes) min")
+                            Text(format(
+                                "kairos.today_progress_format",
+                                "%d / %d min",
+                                service.todayReadingMinutes,
+                                service.dailyGoalMinutes
+                            ))
                                 .foregroundStyle(service.goalReachedToday ? Morandi.sage : Morandi.secondaryText)
                                 .monospacedDigit()
                         }
@@ -309,7 +336,7 @@ public struct KAIROSSettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("kairos.current_streak")
                                 .foregroundStyle(Morandi.primaryText)
-                            Text("\(service.currentStreak) days")
+                            Text(AppLocalization.format("kairos.day_streak_format", service.currentStreak))
                                 .font(AppTypography.caption)
                                 .foregroundStyle(Morandi.accent)
                         }
@@ -320,7 +347,7 @@ public struct KAIROSSettingsView: View {
                         Text("kairos.longest_streak")
                             .foregroundStyle(Morandi.primaryText)
                         Spacer()
-                        Text("\(service.longestStreak) days")
+                        Text(AppLocalization.format("kairos.day_streak_format", service.longestStreak))
                             .foregroundStyle(Morandi.secondaryText)
                     }
                 } header: {
@@ -329,22 +356,22 @@ public struct KAIROSSettingsView: View {
 
                 Section {
                     achievementRow(
-                        title: "First Steps",
-                        detail: "Reach your daily goal once",
+                        title: localized("kairos.achievement.first_steps.title", "First Steps"),
+                        detail: localized("kairos.achievement.first_steps.detail", "Reach your daily goal once"),
                         unlocked: service.longestStreak >= 1,
                         icon: "star.fill",
                         tint: .yellow
                     )
                     achievementRow(
-                        title: "Week Warrior",
-                        detail: "7-day reading streak",
+                        title: localized("kairos.achievement.week_warrior.title", "Week Warrior"),
+                        detail: localized("kairos.achievement.week_warrior.detail", "7-day reading streak"),
                         unlocked: service.longestStreak >= 7,
                         icon: "flame.fill",
                         tint: .orange
                     )
                     achievementRow(
-                        title: "Unstoppable",
-                        detail: "30-day reading streak",
+                        title: localized("kairos.achievement.unstoppable.title", "Unstoppable"),
+                        detail: localized("kairos.achievement.unstoppable.detail", "30-day reading streak"),
                         unlocked: service.longestStreak >= 30,
                         icon: "crown.fill",
                         tint: Morandi.lavender
@@ -376,6 +403,10 @@ public struct KAIROSSettingsView: View {
         service.reminderMinute = components.minute ?? 0
     }
 
+    private func formattedMinutes(_ minutes: Int) -> String {
+        Self.minuteFormatter.string(from: TimeInterval(minutes * 60)) ?? "\(minutes)"
+    }
+
     @ViewBuilder
     private func achievementRow(title: String, detail: String, unlocked: Bool, icon: String, tint: Color) -> some View {
         HStack(spacing: AppSpacing.md) {
@@ -402,6 +433,16 @@ public struct KAIROSSettingsView: View {
         }
         .opacity(unlocked ? 1.0 : 0.6)
     }
+}
+
+private extension KAIROSSettingsView {
+    static let minuteFormatter: DateComponentsFormatter = {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.minute]
+        formatter.unitsStyle = .abbreviated
+        formatter.maximumUnitCount = 1
+        return formatter
+    }()
 }
 
 // MARK: - Helpers

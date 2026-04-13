@@ -14,8 +14,8 @@ public struct TranslationPopupView: View {
     @State private var translatedText: String = ""
     @State private var isTranslating = false
     @State private var errorMessage: String?
-    @State private var targetLanguage: String = "English"
-    @State private var sourceLanguage: String = "Auto-detect"
+    @State private var targetLanguage = LanguageOption.defaultTargetIdentifier
+    @State private var sourceLanguage = LanguageOption.autoDetect.identifier
 
     public init(
         selectedText: String,
@@ -27,16 +27,64 @@ public struct TranslationPopupView: View {
         self.onDismiss = onDismiss
     }
 
-    private static let languages = [
-        "Auto-detect", "English", "Chinese (Simplified)", "Chinese (Traditional)",
-        "Japanese", "Korean", "French", "German", "Spanish", "Portuguese",
-        "Italian", "Russian", "Arabic", "Hindi", "Thai", "Vietnamese",
-        "Indonesian", "Turkish", "Dutch", "Polish", "Swedish"
-    ]
+    private struct LanguageOption: Identifiable, Hashable {
+        let identifier: String
+        let englishName: String
 
-    private static let targetLanguages: [String] = {
-        languages.filter { $0 != "Auto-detect" }
-    }()
+        var id: String { identifier }
+
+        var localizedName: String {
+            if identifier == Self.autoDetect.identifier {
+                return String(localized: "ai.detect_language")
+            }
+
+            if let localized = Locale.autoupdatingCurrent.localizedString(forIdentifier: identifier),
+               localized.isEmpty == false {
+                return localized
+            }
+
+            return englishName
+        }
+
+        static let autoDetect = LanguageOption(identifier: "auto", englishName: "Auto-detect")
+
+        static let all: [LanguageOption] = [
+            .autoDetect,
+            .init(identifier: "en", englishName: "English"),
+            .init(identifier: "zh-Hans", englishName: "Chinese (Simplified)"),
+            .init(identifier: "zh-Hant", englishName: "Chinese (Traditional)"),
+            .init(identifier: "ja", englishName: "Japanese"),
+            .init(identifier: "ko", englishName: "Korean"),
+            .init(identifier: "fr", englishName: "French"),
+            .init(identifier: "de", englishName: "German"),
+            .init(identifier: "es", englishName: "Spanish"),
+            .init(identifier: "pt", englishName: "Portuguese"),
+            .init(identifier: "it", englishName: "Italian"),
+            .init(identifier: "ru", englishName: "Russian"),
+            .init(identifier: "ar", englishName: "Arabic"),
+            .init(identifier: "hi", englishName: "Hindi"),
+            .init(identifier: "th", englishName: "Thai"),
+            .init(identifier: "vi", englishName: "Vietnamese"),
+            .init(identifier: "id", englishName: "Indonesian"),
+            .init(identifier: "tr", englishName: "Turkish"),
+            .init(identifier: "nl", englishName: "Dutch"),
+            .init(identifier: "pl", englishName: "Polish"),
+            .init(identifier: "sv", englishName: "Swedish")
+        ]
+
+        static let targetLanguages = all.filter { $0.identifier != autoDetect.identifier }
+
+        static var defaultTargetIdentifier: String {
+            let localeIdentifier = Locale.autoupdatingCurrent.identifier.lowercased()
+            if localeIdentifier.contains("hant") || localeIdentifier.contains("zh_tw") || localeIdentifier.contains("zh-hk") {
+                return "zh-Hant"
+            }
+            if localeIdentifier.hasPrefix("zh") {
+                return "zh-Hans"
+            }
+            return "en"
+        }
+    }
 
     public var body: some View {
         NavigationStack {
@@ -67,9 +115,9 @@ public struct TranslationPopupView: View {
                             .foregroundStyle(Morandi.secondaryText)
 
                         HStack(spacing: AppSpacing.md) {
-                            Picker("From", selection: $sourceLanguage) {
-                                ForEach(Self.languages, id: \.self) { lang in
-                                    Text(lang).tag(lang)
+                            Picker(String(localized: "common.from"), selection: $sourceLanguage) {
+                                ForEach(LanguageOption.all) { option in
+                                    Text(option.localizedName).tag(option.identifier)
                                 }
                             }
                             .pickerStyle(.menu)
@@ -78,9 +126,9 @@ public struct TranslationPopupView: View {
                             Image(systemName: "arrow.right")
                                 .foregroundStyle(Morandi.tertiaryText)
 
-                            Picker("To", selection: $targetLanguage) {
-                                ForEach(Self.targetLanguages, id: \.self) { lang in
-                                    Text(lang).tag(lang)
+                            Picker(String(localized: "common.to"), selection: $targetLanguage) {
+                                ForEach(LanguageOption.targetLanguages) { option in
+                                    Text(option.localizedName).tag(option.identifier)
                                 }
                             }
                             .pickerStyle(.menu)
@@ -98,7 +146,7 @@ public struct TranslationPopupView: View {
                                     .scaleEffect(0.8)
                                     .tint(.white)
                             }
-                            Text(isTranslating ? "Translating..." : "Translate")
+                            Text(isTranslating ? String(localized: "common.translating") : String(localized: "reader.translate"))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, AppSpacing.sm)
@@ -177,13 +225,14 @@ public struct TranslationPopupView: View {
         errorMessage = nil
         translatedText = ""
 
-        let source: String? = sourceLanguage == "Auto-detect" ? nil : sourceLanguage
+        let source = LanguageOption.all.first(where: { $0.identifier == sourceLanguage })
+        let target = LanguageOption.targetLanguages.first(where: { $0.identifier == targetLanguage })
 
         do {
             translatedText = try await translationService.translate(
                 selectedText,
-                to: targetLanguage,
-                from: source
+                to: target?.englishName ?? "English",
+                from: source?.identifier == LanguageOption.autoDetect.identifier ? nil : source?.englishName
             )
         } catch {
             errorMessage = error.localizedDescription

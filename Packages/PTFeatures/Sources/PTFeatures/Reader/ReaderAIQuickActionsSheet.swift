@@ -122,7 +122,25 @@ public enum ReaderAIQuickAction: String, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    public var title: String {
+    var titleKey: String {
+        switch self {
+        case .explain: return "reader.quick_action.explain.title"
+        case .translate: return "reader.quick_action.translate.title"
+        case .summarize: return "reader.quick_action.summarize.title"
+        case .defineVocabulary: return "reader.quick_action.define_vocabulary.title"
+        }
+    }
+
+    var subtitleKey: String {
+        switch self {
+        case .explain: return "reader.quick_action.explain.subtitle"
+        case .translate: return "reader.quick_action.translate.subtitle"
+        case .summarize: return "reader.quick_action.summarize.subtitle"
+        case .defineVocabulary: return "reader.quick_action.define_vocabulary.subtitle"
+        }
+    }
+
+    private var fallbackTitle: String {
         switch self {
         case .explain: return "Explain"
         case .translate: return "Translate"
@@ -131,13 +149,21 @@ public enum ReaderAIQuickAction: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    public var subtitle: String {
+    private var fallbackSubtitle: String {
         switch self {
         case .explain: return "Get a clear explanation of this passage"
         case .translate: return "Translate to your preferred language"
         case .summarize: return "Get a concise summary of the key points"
         case .defineVocabulary: return "Look up word definitions and usage"
         }
+    }
+
+    public var title: String {
+        AppLocalization.string(titleKey, value: fallbackTitle)
+    }
+
+    public var subtitle: String {
+        AppLocalization.string(subtitleKey, value: fallbackSubtitle)
     }
 
     public var systemImage: String {
@@ -150,18 +176,61 @@ public enum ReaderAIQuickAction: String, CaseIterable, Identifiable, Sendable {
     }
 
     public func prompt(selectedText: String, bookTitle: String, chapterTitle: String) -> String {
-        let contextLine = chapterTitle.isEmpty
-            ? "from \"\(bookTitle)\""
-            : "from \"\(bookTitle)\", chapter \"\(chapterTitle)\""
-        switch self {
-        case .explain:
-            return "Please explain the following passage \(contextLine):\n\n\"\(selectedText)\""
-        case .translate:
-            return "Please translate the following passage \(contextLine) into English (or the user's preferred language):\n\n\"\(selectedText)\""
-        case .summarize:
-            return "Please summarize the key points of this passage \(contextLine):\n\n\"\(selectedText)\""
-        case .defineVocabulary:
-            return "Please define and explain the vocabulary in this passage \(contextLine):\n\n\"\(selectedText)\""
+        let hasChapter = !chapterTitle.isEmpty
+        let format = AppLocalization.string(
+            promptKey(hasChapter: hasChapter),
+            value: promptFallback(hasChapter: hasChapter)
+        )
+
+        if hasChapter {
+            return String(
+                format: format,
+                locale: .autoupdatingCurrent,
+                bookTitle,
+                chapterTitle,
+                selectedText
+            )
+        }
+
+        return String(
+            format: format,
+            locale: .autoupdatingCurrent,
+            bookTitle,
+            selectedText
+        )
+    }
+
+    private func promptKey(hasChapter: Bool) -> String {
+        switch (self, hasChapter) {
+        case (.explain, true): return "reader.quick_action.explain.prompt.chapter"
+        case (.explain, false): return "reader.quick_action.explain.prompt.book"
+        case (.translate, true): return "reader.quick_action.translate.prompt.chapter"
+        case (.translate, false): return "reader.quick_action.translate.prompt.book"
+        case (.summarize, true): return "reader.quick_action.summarize.prompt.chapter"
+        case (.summarize, false): return "reader.quick_action.summarize.prompt.book"
+        case (.defineVocabulary, true): return "reader.quick_action.define_vocabulary.prompt.chapter"
+        case (.defineVocabulary, false): return "reader.quick_action.define_vocabulary.prompt.book"
+        }
+    }
+
+    private func promptFallback(hasChapter: Bool) -> String {
+        switch (self, hasChapter) {
+        case (.explain, true):
+            return "Please explain the following passage from \"%@\", chapter \"%@\":\n\n\"%@\""
+        case (.explain, false):
+            return "Please explain the following passage from \"%@\":\n\n\"%@\""
+        case (.translate, true):
+            return "Please translate the following passage from \"%@\", chapter \"%@\" into English (or the user's preferred language):\n\n\"%@\""
+        case (.translate, false):
+            return "Please translate the following passage from \"%@\" into English (or the user's preferred language):\n\n\"%@\""
+        case (.summarize, true):
+            return "Please summarize the key points of this passage from \"%@\", chapter \"%@\":\n\n\"%@\""
+        case (.summarize, false):
+            return "Please summarize the key points of this passage from \"%@\":\n\n\"%@\""
+        case (.defineVocabulary, true):
+            return "Please define and explain the vocabulary in this passage from \"%@\", chapter \"%@\":\n\n\"%@\""
+        case (.defineVocabulary, false):
+            return "Please define and explain the vocabulary in this passage from \"%@\":\n\n\"%@\""
         }
     }
 }

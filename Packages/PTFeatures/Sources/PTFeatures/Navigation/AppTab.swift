@@ -1,4 +1,5 @@
 import SwiftUI
+import PTCore
 
 /// The 6 main tabs of the app.
 public enum AppTab: String, CaseIterable, Identifiable, Sendable {
@@ -11,7 +12,18 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    public var title: String {
+    public var titleKey: String {
+        switch self {
+        case .papers: return "tab.papers"
+        case .bookshelf: return "tab.bookshelf"
+        case .notes: return "tab.notes"
+        case .statistics: return "tab.statistics"
+        case .ai: return "tab.ai"
+        case .settings: return "tab.settings"
+        }
+    }
+
+    private var fallbackTitle: String {
         switch self {
         case .papers: return "Papers"
         case .bookshelf: return "Bookshelf"
@@ -20,6 +32,10 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         case .ai: return "AI"
         case .settings: return "Settings"
         }
+    }
+
+    public var title: String {
+        AppLocalization.string(titleKey, value: fallbackTitle)
     }
 
     public var icon: String {

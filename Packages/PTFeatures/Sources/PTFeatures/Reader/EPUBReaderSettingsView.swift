@@ -22,10 +22,14 @@ private enum EPUBReaderThemePreset: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .light: "Light"
-        case .dark: "Dark"
-        case .sepia: "Sepia"
-        case .custom: "Custom"
+        case .light:
+            return AppLocalization.string("reader.appearance.theme_light", value: "Light")
+        case .dark:
+            return AppLocalization.string("reader.appearance.theme_dark", value: "Dark")
+        case .sepia:
+            return AppLocalization.string("reader.appearance.theme_sepia", value: "Sepia")
+        case .custom:
+            return AppLocalization.string("reader.appearance.theme_custom", value: "Custom")
         }
     }
 
@@ -109,7 +113,7 @@ public struct EPUBReaderSettingsView: View {
     private var typographySection: some View {
         Section(String(localized: "reader.appearance.typography")) {
             sliderRow(
-                title: "Font Size",
+                title: AppLocalization.string("reader.appearance.font_size", value: "Font Size"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.fontSize },
                     set: { viewModel.readingPreferences.style.fontSize = $0 }
@@ -120,7 +124,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             Picker(
-                "Font Family",
+                AppLocalization.string("reader.appearance.font_family", value: "Font Family"),
                 selection: binding(
                     get: { viewModel.readingPreferences.style.fontFamily },
                     set: { viewModel.readingPreferences.style.fontFamily = $0 }
@@ -132,7 +136,7 @@ public struct EPUBReaderSettingsView: View {
             }
 
             Picker(
-                "Text Alignment",
+                AppLocalization.string("reader.appearance.text_alignment", value: "Text Alignment"),
                 selection: binding(
                     get: { viewModel.readingPreferences.textAlignment },
                     set: { viewModel.readingPreferences.textAlignment = $0 }
@@ -149,7 +153,7 @@ public struct EPUBReaderSettingsView: View {
     private var spacingSection: some View {
         Section(String(localized: "reader.appearance.spacing")) {
             sliderRow(
-                title: "Line Height",
+                title: AppLocalization.string("reader.appearance.line_height", value: "Line Height"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.lineHeight },
                     set: { viewModel.readingPreferences.style.lineHeight = $0 }
@@ -160,7 +164,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             sliderRow(
-                title: "Letter Spacing",
+                title: AppLocalization.string("reader.appearance.letter_spacing", value: "Letter Spacing"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.letterSpacing },
                     set: { viewModel.readingPreferences.style.letterSpacing = $0 }
@@ -171,7 +175,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             sliderRow(
-                title: "Word Spacing",
+                title: AppLocalization.string("reader.appearance.word_spacing", value: "Word Spacing"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.wordSpacing },
                     set: { viewModel.readingPreferences.style.wordSpacing = $0 }
@@ -182,7 +186,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             sliderRow(
-                title: "Paragraph Spacing",
+                title: AppLocalization.string("reader.appearance.paragraph_spacing", value: "Paragraph Spacing"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.paragraphSpacing },
                     set: { viewModel.readingPreferences.style.paragraphSpacing = $0 }
@@ -197,7 +201,7 @@ public struct EPUBReaderSettingsView: View {
     private var layoutSection: some View {
         Section {
             Picker(
-                "Page Turn",
+                AppLocalization.string("reader.appearance.page_turn", value: "Page Turn"),
                 selection: binding(
                     get: { viewModel.readingPreferences.pageTurnMode },
                     set: { viewModel.readingPreferences.pageTurnMode = $0 }
@@ -209,7 +213,7 @@ public struct EPUBReaderSettingsView: View {
             }
 
             sliderRow(
-                title: "Side Margin",
+                title: AppLocalization.string("reader.appearance.side_margin", value: "Side Margin"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.sideMargin },
                     set: { viewModel.readingPreferences.style.sideMargin = $0 }
@@ -220,7 +224,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             sliderRow(
-                title: "Top Margin",
+                title: AppLocalization.string("reader.appearance.top_margin", value: "Top Margin"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.topMargin },
                     set: { viewModel.readingPreferences.style.topMargin = $0 }
@@ -231,7 +235,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             sliderRow(
-                title: "Bottom Margin",
+                title: AppLocalization.string("reader.appearance.bottom_margin", value: "Bottom Margin"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.bottomMargin },
                     set: { viewModel.readingPreferences.style.bottomMargin = $0 }
@@ -249,7 +253,7 @@ public struct EPUBReaderSettingsView: View {
 
     private var themeSection: some View {
         Section(String(localized: "settings.theme")) {
-            Picker("Preset", selection: $selectedThemePreset) {
+            Picker(AppLocalization.string("reader.appearance.preset", value: "Preset"), selection: $selectedThemePreset) {
                 ForEach(EPUBReaderThemePreset.allCases) { preset in
                     Text(preset.title).tag(preset)
                 }
@@ -261,7 +265,7 @@ public struct EPUBReaderSettingsView: View {
             }
 
             ColorPicker(
-                "Background",
+                AppLocalization.string("reader.appearance.background", value: "Background"),
                 selection: colorBinding(
                     get: { viewModel.readingPreferences.theme.backgroundColor },
                     set: { viewModel.readingPreferences.theme.backgroundColor = $0 }
@@ -269,7 +273,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             ColorPicker(
-                "Text",
+                AppLocalization.string("reader.appearance.text", value: "Text"),
                 selection: colorBinding(
                     get: { viewModel.readingPreferences.theme.textColor },
                     set: { viewModel.readingPreferences.theme.textColor = $0 }
@@ -279,13 +283,7 @@ public struct EPUBReaderSettingsView: View {
     }
 
     private var fontFamilies: [String] {
-        [
-            "Arial",
-            "Georgia",
-            "Palatino",
-            "Iowan Old Style",
-            "Source Han Serif SC"
-        ]
+        BookStyle.preferredFontFamilies()
     }
 
     private func sliderRow(

@@ -36,11 +36,11 @@ public struct TagDAO: Sendable {
         }
     }
 
-    public func fetchAll() async throws -> [Tag] {
+    public func fetchAll(locale: Locale = .autoupdatingCurrent) async throws -> [Tag] {
         try await database.reader.read { db in
             try Tag.fetchAll(db)
                 .sorted {
-                    $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                    LocalizedSort.isAscending($0.name, $1.name, locale: locale)
                 }
         }
     }

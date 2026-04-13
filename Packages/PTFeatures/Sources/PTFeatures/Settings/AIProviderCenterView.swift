@@ -15,6 +15,10 @@ public struct AIProviderCenterView: View {
 
     private static let customProvidersKey = "ai_custom_providers"
 
+    private func localized(_ key: String, _ fallback: String) -> String {
+        AppLocalization.string(key, value: fallback)
+    }
+
     @MainActor
     public init(viewModel: SettingsViewModel? = nil) {
         _viewModel = State(initialValue: viewModel ?? SettingsViewModel())
@@ -37,21 +41,21 @@ public struct AIProviderCenterView: View {
             addCustomSheet
         }
         .confirmationDialog(
-            "Delete this custom provider?",
+            localized("settings.delete_custom_provider.confirm", "Delete this custom provider?"),
             isPresented: Binding(
                 get: { pendingDeleteOffsets != nil },
                 set: { if !$0 { pendingDeleteOffsets = nil } }
             ),
             titleVisibility: .visible
         ) {
-            Button("Delete", role: .destructive) {
+            Button(String(localized: "common.delete"), role: .destructive) {
                 if let offsets = pendingDeleteOffsets {
                     customProviders.remove(atOffsets: offsets)
                     Self.saveCustomProviders(customProviders)
                 }
                 pendingDeleteOffsets = nil
             }
-            Button("Cancel", role: .cancel) { pendingDeleteOffsets = nil }
+            Button(String(localized: "common.cancel"), role: .cancel) { pendingDeleteOffsets = nil }
         }
     }
 
@@ -169,7 +173,7 @@ public struct AIProviderCenterView: View {
                 Text(entry.displayName)
                     .font(AppTypography.body.weight(.medium))
                     .foregroundStyle(Morandi.primaryText)
-                Text(entry.baseURL.isEmpty ? "No base URL" : entry.baseURL)
+                Text(entry.baseURL.isEmpty ? localized("ai.providers.no_base_url", "No base URL") : entry.baseURL)
                     .font(AppTypography.caption2)
                     .foregroundStyle(Morandi.secondaryText)
                     .lineLimit(1)
@@ -184,7 +188,7 @@ public struct AIProviderCenterView: View {
         NavigationStack {
             Form {
                 Section(String(localized: "common.name")) {
-                    TextField("e.g. MyGateway", text: $newCustomName)
+                    TextField(localized("ai.providers.custom_name_hint", "e.g. MyGateway"), text: $newCustomName)
                         #if os(iOS)
                         .textInputAutocapitalization(.words)
                         #endif

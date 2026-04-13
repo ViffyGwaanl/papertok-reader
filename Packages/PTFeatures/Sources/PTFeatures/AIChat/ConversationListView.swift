@@ -1,5 +1,6 @@
 import SwiftUI
 import PTAIServices
+import PTCore
 import PTUI
 
 /// Lists past AI conversations with resume, delete, and new chat actions.
@@ -49,7 +50,14 @@ public struct ConversationListView: View {
                 }
             }
         }
-        .searchable(text: $searchText, placement: .automatic, prompt: "Search conversations")
+        .searchable(
+            text: $searchText,
+            placement: .automatic,
+            prompt: AppLocalization.string(
+                "ai.search_conversations",
+                value: "Search conversations"
+            )
+        )
         .onAppear {
             loadPinned()
             loadSummaries()
@@ -87,7 +95,13 @@ public struct ConversationListView: View {
         let rest = items.filter { !pinnedIds.contains($0.id) }
         var result: [SectionGroup] = []
         if !pinned.isEmpty {
-            result.append(SectionGroup(title: "Pinned", isPinned: true, items: pinned))
+            result.append(
+                SectionGroup(
+                    title: AppLocalization.string("ai.conversations.pinned", value: "Pinned"),
+                    isPinned: true,
+                    items: pinned
+                )
+            )
         }
         let cal = Calendar.current
         let now = Date()
@@ -101,10 +115,18 @@ public struct ConversationListView: View {
             else if let week = cal.dateInterval(of: .weekOfYear, for: now), week.contains(item.updatedAt) { thisWeek.append(item) }
             else { earlier.append(item) }
         }
-        if !today.isEmpty { result.append(SectionGroup(title: "Today", isPinned: false, items: today)) }
-        if !yesterday.isEmpty { result.append(SectionGroup(title: "Yesterday", isPinned: false, items: yesterday)) }
-        if !thisWeek.isEmpty { result.append(SectionGroup(title: "This Week", isPinned: false, items: thisWeek)) }
-        if !earlier.isEmpty { result.append(SectionGroup(title: "Earlier", isPinned: false, items: earlier)) }
+        if !today.isEmpty {
+            result.append(SectionGroup(title: AppLocalization.string("common.today", value: "Today"), isPinned: false, items: today))
+        }
+        if !yesterday.isEmpty {
+            result.append(SectionGroup(title: AppLocalization.string("common.yesterday", value: "Yesterday"), isPinned: false, items: yesterday))
+        }
+        if !thisWeek.isEmpty {
+            result.append(SectionGroup(title: AppLocalization.string("common.this_week", value: "This Week"), isPinned: false, items: thisWeek))
+        }
+        if !earlier.isEmpty {
+            result.append(SectionGroup(title: AppLocalization.string("common.earlier", value: "Earlier"), isPinned: false, items: earlier))
+        }
         return result
     }
 
@@ -112,18 +134,18 @@ public struct ConversationListView: View {
     private func renameSheet(for target: ConversationPersistenceService.ConversationSummary) -> some View {
         NavigationStack {
             Form {
-                TextField("Title", text: $renameText)
+                TextField(AppLocalization.string("common.title", value: "Title"), text: $renameText)
             }
-            .navigationTitle("common.rename")
+            .navigationTitle(AppLocalization.string("common.rename", value: "Rename"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { renameTarget = nil }
+                    Button(AppLocalization.string("common.cancel", value: "Cancel")) { renameTarget = nil }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.save") { performRename(target) }.bold()
+                    Button(AppLocalization.string("common.save", value: "Save")) { performRename(target) }.bold()
                 }
             }
         }
@@ -153,9 +175,12 @@ public struct ConversationListView: View {
         for msg in loaded.tree.activeMessages() {
             guard let text = msg.textContent, !text.isEmpty else { continue }
             switch msg.role {
-            case .system: md += "> _System: \(text)_\n\n"
-            case .user: md += "**You:** \(text)\n\n"
-            case .assistant: md += "**Assistant:** \(text)\n\n"
+            case .system:
+                md += "> _\(AppLocalization.string("ai.role.system", value: "System")): \(text)_\n\n"
+            case .user:
+                md += "**\(AppLocalization.string("ai.role.user", value: "You")):** \(text)\n\n"
+            case .assistant:
+                md += "**\(AppLocalization.string("ai.role.assistant", value: "Assistant")):** \(text)\n\n"
             case .tool: md += "```\n\(text)\n```\n\n"
             }
         }
@@ -214,7 +239,9 @@ public struct ConversationListView: View {
                                 togglePin(summary.id)
                             } label: {
                                 Label(
-                                    pinnedIds.contains(summary.id) ? "Unpin" : "Pin",
+                                    pinnedIds.contains(summary.id)
+                                        ? AppLocalization.string("ai.unpin_conversation", value: "Unpin")
+                                        : AppLocalization.string("ai.pin_conversation", value: "Pin"),
                                     systemImage: pinnedIds.contains(summary.id) ? "pin.slash" : "pin"
                                 )
                             }
@@ -248,7 +275,9 @@ public struct ConversationListView: View {
                                 togglePin(summary.id)
                             } label: {
                                 Label(
-                                    pinnedIds.contains(summary.id) ? "Unpin" : "Pin",
+                                    pinnedIds.contains(summary.id)
+                                        ? AppLocalization.string("ai.unpin_conversation", value: "Unpin")
+                                        : AppLocalization.string("ai.pin_conversation", value: "Pin"),
                                     systemImage: pinnedIds.contains(summary.id) ? "pin.slash" : "pin"
                                 )
                             }

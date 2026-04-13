@@ -45,7 +45,7 @@ public final class PDFReaderAnnotationsViewModel {
     ) async -> BookNote? {
         let trimmedSelection = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard type == .bookmark || trimmedSelection.isEmpty == false else {
-            errorMessage = "Highlights and notes require selected text."
+            errorMessage = AppLocalization.string("errors.reader.selected_text_required", value: "Highlights and notes require selected text.")
             return nil
         }
 
@@ -82,7 +82,7 @@ public final class PDFReaderAnnotationsViewModel {
 
         let existingType = NoteType(rawValue: existing.type) ?? .highlight
         if existingType == .bookmark && type != .bookmark {
-            errorMessage = "Highlights and notes require selected text."
+            errorMessage = AppLocalization.string("errors.reader.selected_text_required", value: "Highlights and notes require selected text.")
             return nil
         }
 

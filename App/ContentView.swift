@@ -218,8 +218,8 @@ struct BookshelfScreen: View {
 
         var title: String {
             switch self {
-            case .grid: "Grid"
-            case .list: "List"
+            case .grid: String(localized: "bookshelf.grid_view")
+            case .list: String(localized: "bookshelf.list_view")
             }
         }
 
@@ -420,7 +420,7 @@ struct BookshelfScreen: View {
         }
         .background(Morandi.background)
         .navigationTitle(String(localized: "bookshelf.title"))
-        .searchable(text: $viewModel.searchQuery, prompt: "Search books")
+        .searchable(text: $viewModel.searchQuery, prompt: String(localized: "bookshelf.search.prompt"))
         .toolbar { toolbarItems }
         .navigationDestination(isPresented: navigationPresentation) {
             if let navigationBook {
@@ -433,7 +433,7 @@ struct BookshelfScreen: View {
 
     private var editModeBanner: some View {
         HStack(spacing: AppSpacing.md) {
-            Text("\(viewModel.selectedBookIDs.count) selected")
+            Text(AppLocalization.format("common.selected_count_format", "%d selected", viewModel.selectedBookIDs.count))
                 .font(AppTypography.subheadline.weight(.medium))
                 .foregroundStyle(Morandi.primaryText)
 
@@ -783,11 +783,11 @@ struct BookshelfScreen: View {
 
     private func sortLabel(for sortOrder: BookshelfViewModel.SortOrder) -> String {
         switch sortOrder {
-        case .dateDesc: "Date Added ↓"
-        case .dateAsc: "Date Added ↑"
-        case .titleAsc: "Title A-Z"
-        case .titleDesc: "Title Z-A"
-        case .authorAsc: "Author A-Z"
+        case .dateDesc: AppLocalization.string("bookshelf.sort.date_desc", value: "Date Added ↓")
+        case .dateAsc: AppLocalization.string("bookshelf.sort.date_asc", value: "Date Added ↑")
+        case .titleAsc: AppLocalization.string("bookshelf.sort.title_asc", value: "Title A-Z")
+        case .titleDesc: AppLocalization.string("bookshelf.sort.title_desc", value: "Title Z-A")
+        case .authorAsc: AppLocalization.string("bookshelf.sort.author_asc", value: "Author A-Z")
         }
     }
 
@@ -1115,8 +1115,8 @@ private struct BookshelfBookEditorSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Title", text: $title)
-                    TextField("Author", text: $author)
+                    TextField(String(localized: "common.title"), text: $title)
+                    TextField(String(localized: "common.author"), text: $author)
                 } header: {
                     Text("bookshelf.metadata")
                 }
@@ -1149,7 +1149,7 @@ private struct BookshelfBookEditorSheet: View {
         .alert("notes.edit_failed", isPresented: isShowingError) {
             Button(String(localized: "common.ok")) { errorMessage = nil }
         } message: {
-            Text(errorMessage ?? "Unknown error")
+            Text(errorMessage ?? String(localized: "errors.unknown"))
         }
     }
 
@@ -1244,16 +1244,18 @@ private struct BookshelfTagManagerSheet: View {
                 }
 
                 Section {
-                    TextField("Tag name", text: $draftName)
+                    TextField(String(localized: "bookshelf.tag_name"), text: $draftName)
 #if os(iOS)
-                    TextField("Color hex", text: $draftColorHex)
+                    TextField(String(localized: "common.color_hex"), text: $draftColorHex)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
 #else
-                    TextField("Color hex", text: $draftColorHex)
+                    TextField(String(localized: "common.color_hex"), text: $draftColorHex)
 #endif
 
-                    Button(editingTagID == nil ? "Create Tag" : "Save Changes") {
+                    Button(editingTagID == nil
+                        ? AppLocalization.string("common.create_tag", value: "Create Tag")
+                        : AppLocalization.string("common.save_changes", value: "Save Changes")) {
                         Task { await saveTag() }
                     }
                     .disabled(trimmedDraftName.isEmpty)
@@ -1264,7 +1266,9 @@ private struct BookshelfTagManagerSheet: View {
                         }
                     }
                 } header: {
-                    Text(editingTagID == nil ? "Create Tag" : "Edit Tag")
+                    Text(editingTagID == nil
+                        ? AppLocalization.string("common.create_tag", value: "Create Tag")
+                        : AppLocalization.string("common.edit_tag", value: "Edit Tag"))
                 }
 
                 Section {
@@ -1313,7 +1317,7 @@ private struct BookshelfTagManagerSheet: View {
         .alert("bookshelf.tag_error", isPresented: isShowingError) {
             Button(String(localized: "common.ok")) { errorMessage = nil }
         } message: {
-            Text(errorMessage ?? "Unknown error")
+            Text(errorMessage ?? String(localized: "errors.unknown"))
         }
     }
 
@@ -1412,7 +1416,7 @@ private struct BookshelfGroupManagerSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Group name", text: $draftName)
+                    TextField(String(localized: "bookshelf.group_name"), text: $draftName)
 
                     if editingGroupID == nil {
                         Menu {
@@ -1440,7 +1444,9 @@ private struct BookshelfGroupManagerSheet: View {
                         }
                     }
 
-                    Button(editingGroupID == nil ? "Create Group" : "Save Changes") {
+                    Button(editingGroupID == nil
+                        ? AppLocalization.string("common.create_group", value: "Create Group")
+                        : AppLocalization.string("common.save_changes", value: "Save Changes")) {
                         Task { await saveGroup() }
                     }
                     .disabled(trimmedDraftName.isEmpty)
@@ -1451,7 +1457,9 @@ private struct BookshelfGroupManagerSheet: View {
                         }
                     }
                 } header: {
-                    Text(editingGroupID == nil ? "Create Group" : "Rename Group")
+                    Text(editingGroupID == nil
+                        ? AppLocalization.string("common.create_group", value: "Create Group")
+                        : AppLocalization.string("common.rename_group", value: "Rename Group"))
                 }
 
                 Section {
@@ -1512,7 +1520,7 @@ private struct BookshelfGroupManagerSheet: View {
         .alert("bookshelf.group_error", isPresented: isShowingError) {
             Button(String(localized: "common.ok")) { errorMessage = nil }
         } message: {
-            Text(errorMessage ?? "Unknown error")
+            Text(errorMessage ?? String(localized: "errors.unknown"))
         }
     }
 
@@ -1538,7 +1546,7 @@ private struct BookshelfGroupManagerSheet: View {
     private var selectedParentTitle: String {
         guard let selectedParentGroupID,
               let row = flattenedGroups.first(where: { $0.group.id == selectedParentGroupID }) else {
-            return "Root Group"
+            return String(localized: "bookshelf.root_group")
         }
         return parentLabel(for: row)
     }
@@ -1552,7 +1560,7 @@ private struct BookshelfGroupManagerSheet: View {
         let normalizedParentID = parentID ?? 0
         let groups = viewModel.groups
             .filter { ($0.parentId ?? 0) == normalizedParentID }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            .sorted { LocalizedSort.isAscending($0.name, $1.name) }
 
         return groups.flatMap { group in
             let current = GroupRow(group: group, depth: depth)
@@ -1648,7 +1656,7 @@ private struct BookshelfBatchMoveSheet: View {
                     }
                 }
             }
-            .navigationTitle(Text(String(format: NSLocalizedString("bookshelf.move_books_format", comment: ""), viewModel.selectedBookIDs.count)))
+            .navigationTitle(Text(AppLocalization.format("bookshelf.move_books_format", viewModel.selectedBookIDs.count)))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
@@ -1821,7 +1829,7 @@ struct EPUBBookshelfReaderView: View {
             Morandi.background.ignoresSafeArea()
 
             if isLoading {
-                ProgressView("Opening…")
+                ProgressView(AppLocalization.string("reader.opening_ellipsis", value: "Opening…"))
                     .tint(Morandi.accent)
             } else if let publication {
                 EPUBReaderView(
@@ -2077,17 +2085,17 @@ struct EPUBBookshelfReaderView: View {
             Group {
                 if let readerControlsViewModel {
                     if readerControlsViewModel.isLoadingTOC {
-                        ProgressView("Loading contents…")
+                        ProgressView(AppLocalization.string("reader.loading_contents_ellipsis", value: "Loading contents…"))
                             .tint(Morandi.accent)
                     } else if let tocErrorMessage = readerControlsViewModel.tocErrorMessage {
                         ContentUnavailableView(
-                            "Couldn’t Load Contents",
+                            AppLocalization.string("reader.toc.load_failed", value: "Couldn’t Load Contents"),
                             systemImage: "exclamationmark.triangle",
                             description: Text(tocErrorMessage)
                         )
                     } else if readerControlsViewModel.tocEntries.isEmpty {
                         ContentUnavailableView(
-                            "No Contents",
+                            AppLocalization.string("reader.toc.empty_title", value: "No Contents"),
                             systemImage: "list.bullet.indent",
                             description: Text("reader.no_toc_epub")
                         )
@@ -2108,7 +2116,11 @@ struct EPUBBookshelfReaderView: View {
                                                 entry.level == 0 ? Morandi.primaryText : Morandi.secondaryText
                                             )
                                         if entry.childCount > 0 {
-                                            Text("\(entry.childCount) sub-sections")
+                                            Text(AppLocalization.format(
+                                                "reader.toc.subsection_count_format",
+                                                "%d sub-sections",
+                                                entry.childCount
+                                            ))
                                                 .font(AppTypography.caption)
                                                 .foregroundStyle(Morandi.secondaryText)
                                         }
@@ -2121,7 +2133,7 @@ struct EPUBBookshelfReaderView: View {
                         .listStyle(.plain)
                     }
                 } else {
-                    ProgressView("Preparing reader controls…")
+                    ProgressView(AppLocalization.string("reader.preparing_controls_ellipsis", value: "Preparing reader controls…"))
                         .tint(Morandi.accent)
                 }
             }
@@ -2145,24 +2157,27 @@ struct EPUBBookshelfReaderView: View {
                 if let readerControlsViewModel {
                     if readerControlsViewModel.searchQuery.isEmpty {
                         ContentUnavailableView(
-                            "Search This Book",
+                            AppLocalization.string("reader.search_this_book", value: "Search This Book"),
                             systemImage: "magnifyingglass",
                             description: Text("reader.search_epub_prompt")
                         )
                     } else if readerControlsViewModel.isSearching {
-                        ProgressView("Searching…")
+                        ProgressView(String(localized: "common.searching"))
                             .tint(Morandi.accent)
                     } else if let searchErrorMessage = readerControlsViewModel.searchErrorMessage {
                         ContentUnavailableView(
-                            "Search Failed",
+                            AppLocalization.string("reader.search_failed_title", value: "Search Failed"),
                             systemImage: "exclamationmark.magnifyingglass",
                             description: Text(searchErrorMessage)
                         )
                     } else if readerControlsViewModel.searchResults.isEmpty {
                         ContentUnavailableView(
-                            "No Results",
+                            AppLocalization.string("reader.search.no_results_title", value: "No Results"),
                             systemImage: "doc.text.magnifyingglass",
-                            description: Text(String(format: NSLocalizedString("reader.search.no_matches_format", comment: ""), readerControlsViewModel.searchQuery))
+                            description: Text(AppLocalization.format(
+                                "reader.search.no_matches_format",
+                                readerControlsViewModel.searchQuery
+                            ))
                         )
                     } else {
                         List(readerControlsViewModel.searchResults) { result in
@@ -2188,7 +2203,10 @@ struct EPUBBookshelfReaderView: View {
                                     .lineLimit(4)
 
                                     if result.progression > 0 {
-                                        Text("\(Int((result.progression * 100).rounded()))% into chapter")
+                                        Text(AppLocalization.format(
+                                            "reader.search.match_at_progress_format",
+                                            Int((result.progression * 100).rounded())
+                                        ))
                                             .font(AppTypography.caption)
                                             .foregroundStyle(Morandi.secondaryText)
                                     }
@@ -2200,13 +2218,13 @@ struct EPUBBookshelfReaderView: View {
                         .listStyle(.plain)
                     }
                 } else {
-                    ProgressView("Preparing search…")
+                    ProgressView(AppLocalization.string("reader.preparing_search_ellipsis", value: "Preparing search…"))
                         .tint(Morandi.accent)
                 }
             }
             .background(Morandi.background)
             .navigationTitle(String(localized: "common.search"))
-            .searchable(text: searchQueryBinding, prompt: "Search in this book")
+            .searchable(text: searchQueryBinding, prompt: String(localized: "reader.search_epub_prompt"))
             .onSubmit(of: .search) {
                 Task { await readerControlsViewModel?.performSearch() }
             }
@@ -2479,7 +2497,11 @@ struct EPUBBookshelfReaderView: View {
 struct PapersPlaceholderView: View {
     var body: some View {
         NavigationStack {
-            ContentUnavailableView("Papers", systemImage: "doc.text.magnifyingglass", description: Text("papers.coming_soon"))
+            ContentUnavailableView(
+                String(localized: "papers.title"),
+                systemImage: "doc.text.magnifyingglass",
+                description: Text("papers.coming_soon")
+            )
                 .navigationTitle(String(localized: "papers.title"))
         }
     }
@@ -2528,7 +2550,7 @@ struct NotesScreen: View {
                     }
                 }
             }
-            .searchable(text: $viewModel.searchQuery, prompt: "Search notes")
+            .searchable(text: $viewModel.searchQuery, prompt: String(localized: "notes.search"))
             .onChange(of: viewModel.searchQuery) { _, _ in
                 Task { await viewModel.loadNotes() }
             }
@@ -2547,9 +2569,18 @@ struct NotesScreen: View {
     }
 
     private var notesEmptyTitle: String {
-        if !viewModel.searchQuery.isEmpty { return "No Results" }
-        if viewModel.filterType != .all { return "No \(viewModel.filterType.displayName)" }
-        return "No Notes Yet"
+        if !viewModel.searchQuery.isEmpty { return String(localized: "common.no_results") }
+        if viewModel.filterType != .all {
+            return String(
+                format: AppLocalization.string(
+                    "notes.empty.filtered_title_format",
+                    value: "No %@"
+                ),
+                locale: .autoupdatingCurrent,
+                viewModel.filterType.displayName
+            )
+        }
+        return String(localized: "notes.empty.title")
     }
 
     private var notesEmptyIcon: String {
@@ -2558,9 +2589,23 @@ struct NotesScreen: View {
     }
 
     private var notesEmptyDescription: String {
-        if !viewModel.searchQuery.isEmpty { return "No notes match your search." }
-        if viewModel.filterType != .all { return "No \(viewModel.filterType.displayName.lowercased()) found." }
-        return "Highlight text while reading to create notes."
+        if !viewModel.searchQuery.isEmpty {
+            return AppLocalization.string(
+                "notes.empty.search_description",
+                value: "No notes match your search."
+            )
+        }
+        if viewModel.filterType != .all {
+            return String(
+                format: AppLocalization.string(
+                    "notes.empty.filtered_description_format",
+                    value: "No %@ found."
+                ),
+                locale: .autoupdatingCurrent,
+                viewModel.filterType.displayName.lowercased()
+            )
+        }
+        return String(localized: "notes.empty.description")
     }
 
     // MARK: - Filter & Sort
@@ -2631,8 +2676,8 @@ struct NotesScreen: View {
         List {
             Section {
                 HStack(spacing: AppSpacing.md) {
-                    summaryCard(title: "Total Notes", value: "\(viewModel.summary.totalNotes)", systemImage: "note.text")
-                    summaryCard(title: "Books", value: "\(viewModel.summary.booksWithNotes)", systemImage: "books.vertical")
+                    summaryCard(title: String(localized: "statistics.total_notes"), value: "\(viewModel.summary.totalNotes)", systemImage: "note.text")
+                    summaryCard(title: String(localized: "statistics.total_books"), value: "\(viewModel.summary.booksWithNotes)", systemImage: "books.vertical")
                 }
                 .listRowInsets(EdgeInsets(top: AppSpacing.sm, leading: 0, bottom: AppSpacing.sm, trailing: 0))
                 .listRowBackground(Morandi.background)
@@ -2677,7 +2722,16 @@ struct NotesScreen: View {
                         Text(group.bookTitle)
                             .font(AppTypography.subheadline)
                             .foregroundStyle(Morandi.primaryText)
-                        Text("\(group.notes.count) note\(group.notes.count == 1 ? "" : "s")")
+                        Text(
+                            String(
+                                format: AppLocalization.string(
+                                    "notes.group_count_format",
+                                    value: "%lld notes"
+                                ),
+                                locale: .autoupdatingCurrent,
+                                group.notes.count
+                            )
+                        )
                             .font(AppTypography.caption)
                             .foregroundStyle(Morandi.secondaryText)
                     }
@@ -2732,14 +2786,31 @@ struct NotesScreen: View {
             ForEach(NotesExportFormat.allCases) { format in
                 ShareLink(
                     item: viewModel.export(format: format),
-                    preview: SharePreview("PaperTok Notes \(format.displayName)", image: Image(systemName: "square.and.arrow.up"))
+                    preview: SharePreview(
+                        String(
+                            format: AppLocalization.string(
+                                "notes.share_preview_format",
+                                value: "PaperTok Notes %@"
+                            ),
+                            locale: .autoupdatingCurrent,
+                            format.displayName
+                        ),
+                        image: Image(systemName: "square.and.arrow.up")
+                    )
                 ) {
                     Label(String(format: NSLocalizedString("notes.share_format", comment: ""), format.displayName), systemImage: "square.and.arrow.up")
                 }
 
                 Button {
                     copyToPasteboard(viewModel.export(format: format))
-                    exportFeedbackMessage = "\(format.displayName) copied to clipboard."
+                    exportFeedbackMessage = String(
+                        format: AppLocalization.string(
+                            "notes.copied_to_clipboard_format",
+                            value: "%@ copied to clipboard."
+                        ),
+                        locale: .autoupdatingCurrent,
+                        format.displayName
+                    )
                     isExportFeedbackPresented = true
                 } label: {
                     Label(String(format: NSLocalizedString("notes.copy_format", comment: ""), format.displayName), systemImage: "doc.on.doc")
@@ -2834,10 +2905,10 @@ private struct NoteEditSheet: View {
                 }
 
                 Section(String(localized: "common.type")) {
-                    Picker("Type", selection: $editedNote.type) {
-                        Text("reader.highlight").tag("highlight")
-                        Text("reader.bookmark").tag("bookmark")
-                        Text("common.note").tag("note")
+            Picker(String(localized: "common.type"), selection: $editedNote.type) {
+                Text("reader.highlight").tag("highlight")
+                Text("reader.bookmark").tag("bookmark")
+                Text("common.note").tag("note")
                     }
                     .pickerStyle(.segmented)
                 }
@@ -3178,7 +3249,7 @@ struct StatisticsScreen: View {
                     .font(AppTypography.headline)
                     .foregroundStyle(Morandi.primaryText)
                 Spacer()
-                Picker("Range", selection: $viewModel.trendRange) {
+                Picker(String(localized: "common.range"), selection: $viewModel.trendRange) {
                     ForEach(StatisticsTrendRange.allCases) { range in
                         Text(range.displayName).tag(range)
                     }
@@ -3411,7 +3482,35 @@ struct SettingsScreen: View {
 
     private let themeModes = ["system", "light", "dark"]
     private let pageTurnModes = ["swipe", "scroll"]
-    private let fontFamilies = ["System", "Georgia", "Palatino", "Times New Roman", "Helvetica Neue"]
+    private var fontFamilies: [String] {
+        BookStyle.preferredFontFamilies()
+    }
+
+    private func pageTurnModeTitle(_ mode: String) -> String {
+        switch mode {
+        case "swipe":
+            return String(localized: "reader.appearance.swipe")
+        case "tap":
+            return String(localized: "reader.appearance.tap")
+        case "scroll":
+            return String(localized: "reader.appearance.scroll")
+        default:
+            return mode.capitalized
+        }
+    }
+
+    private func themeModeTitle(_ mode: String) -> String {
+        switch mode {
+        case "system":
+            return String(localized: "settings.theme.system")
+        case "light":
+            return String(localized: "settings.theme.light")
+        case "dark":
+            return String(localized: "settings.theme.dark")
+        default:
+            return mode.capitalized
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -3454,14 +3553,14 @@ struct SettingsScreen: View {
 
     private var aiProviderSection: some View {
         Section {
-            Picker("Provider", selection: $viewModel.aiProviderID) {
+            Picker(String(localized: "common.provider"), selection: $viewModel.aiProviderID) {
                 ForEach(AIProviderID.allCases) { provider in
                     Text(provider.displayName).tag(provider.rawValue)
                 }
             }
             .foregroundStyle(Morandi.primaryText)
 
-            TextField("Model ID", text: $viewModel.aiModelID)
+            TextField(String(localized: "common.model_id"), text: $viewModel.aiModelID)
                 .foregroundStyle(Morandi.primaryText)
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
@@ -3503,7 +3602,7 @@ struct SettingsScreen: View {
                 MCPConfigView()
             } label: {
                 SettingsIconLabel(
-                    "MCP Servers",
+                    String(localized: "settings.mcp_servers"),
                     systemImage: "network",
                     tint: Morandi.powder
                 )
@@ -3513,7 +3612,7 @@ struct SettingsScreen: View {
                 AILibraryIndexView()
             } label: {
                 SettingsIconLabel(
-                    "AI Library Index",
+                    String(localized: "settings.ai_library_index"),
                     systemImage: "books.vertical.fill",
                     tint: Morandi.sage
                 )
@@ -3523,7 +3622,7 @@ struct SettingsScreen: View {
                 AIImageAnalysisView()
             } label: {
                 SettingsIconLabel(
-                    "AI Image Analysis",
+                    String(localized: "settings.ai_image_analysis"),
                     systemImage: "photo.on.rectangle.angled",
                     tint: Morandi.dustyRose
                 )
@@ -3539,14 +3638,14 @@ struct SettingsScreen: View {
 
     private var appearanceSection: some View {
         Section {
-            Picker("Theme", selection: $viewModel.themeMode) {
+            Picker(String(localized: "settings.theme"), selection: $viewModel.themeMode) {
                 ForEach(themeModes, id: \.self) { mode in
-                    Text(mode.capitalized).tag(mode)
+                    Text(themeModeTitle(mode)).tag(mode)
                 }
             }
             .foregroundStyle(Morandi.primaryText)
 
-            Toggle("OLED Dark Mode", isOn: $viewModel.isOLEDDarkMode)
+            Toggle(String(localized: "settings.oled_dark"), isOn: $viewModel.isOLEDDarkMode)
                 .tint(Morandi.accent)
                 .foregroundStyle(Morandi.primaryText)
 
@@ -3592,16 +3691,16 @@ struct SettingsScreen: View {
                     .tint(Morandi.accent)
             }
 
-            Picker("Font Family", selection: $viewModel.defaultFontFamily) {
+            Picker(String(localized: "settings.font_family"), selection: $viewModel.defaultFontFamily) {
                 ForEach(fontFamilies, id: \.self) { font in
                     Text(font).tag(font)
                 }
             }
             .foregroundStyle(Morandi.primaryText)
 
-            Picker("Page Turn Mode", selection: $viewModel.pageTurnMode) {
+            Picker(String(localized: "reader.appearance.page_turn_mode"), selection: $viewModel.pageTurnMode) {
                 ForEach(pageTurnModes, id: \.self) { mode in
-                    Text(mode.capitalized).tag(mode)
+                    Text(pageTurnModeTitle(mode)).tag(mode)
                 }
             }
             .foregroundStyle(Morandi.primaryText)
@@ -3661,8 +3760,15 @@ struct SettingsScreen: View {
                     systemImage: "flame.fill",
                     tint: .orange,
                     subtitle: kairosService.isEnabled
-                        ? "\(kairosService.currentStreak) day streak"
-                        : "Off"
+                        ? String(
+                            format: AppLocalization.string(
+                                "kairos.day_streak_format",
+                                value: "%d day streak"
+                            ),
+                            locale: .autoupdatingCurrent,
+                            kairosService.currentStreak
+                        )
+                        : String(localized: "common.off")
                 )
             }
         } header: {
@@ -3698,7 +3804,7 @@ struct SettingsScreen: View {
             } label: {
                 Text("settings.clear_cache")
             }
-            .confirmationDialog("Clear all cached data?", isPresented: $showClearCacheConfirmation) {
+            .confirmationDialog(String(localized: "settings.storage.clear_cache_q"), isPresented: $showClearCacheConfirmation) {
                 Button(String(localized: "settings.clear_cache"), role: .destructive) {
                     viewModel.clearCache()
                 }
@@ -3797,13 +3903,22 @@ struct AIProviderKeyView: View {
     var body: some View {
         Form {
             Section {
-                SecureField("API Key", text: $apiKey)
+                SecureField(String(localized: "common.api_key"), text: $apiKey)
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     #endif
                     .autocorrectionDisabled()
             } header: {
-                Text("\(provider.displayName) API Key")
+                Text(
+                    String(
+                        format: AppLocalization.string(
+                            "settings.ai_provider.key_section_format",
+                            value: "%@ API Key"
+                        ),
+                        locale: .autoupdatingCurrent,
+                        provider.displayName
+                    )
+                )
             } footer: {
                 Text("ai.providers.api_key_keychain")
                     .font(AppTypography.caption2)
@@ -3837,7 +3952,16 @@ struct AIProviderKeyView: View {
                 }
             }
         }
-        .navigationTitle("\(provider.displayName) Key")
+        .navigationTitle(
+            String(
+                format: AppLocalization.string(
+                    "settings.ai_provider.key_title_format",
+                    value: "%@ Key"
+                ),
+                locale: .autoupdatingCurrent,
+                provider.displayName
+            )
+        )
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

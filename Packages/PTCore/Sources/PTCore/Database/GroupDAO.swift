@@ -50,7 +50,7 @@ public struct GroupDAO: Sendable {
         }
     }
 
-    public func fetchAll() async throws -> [TbGroup] {
+    public func fetchAll(locale: Locale = .autoupdatingCurrent) async throws -> [TbGroup] {
         try await database.reader.read { db in
             try TbGroup
                 .filter(Column("is_deleted") == false)
@@ -62,17 +62,20 @@ public struct GroupDAO: Sendable {
                     case (.some, nil):
                         return false
                     default:
-                        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                        return LocalizedSort.isAscending(lhs.name, rhs.name, locale: locale)
                     }
                 }
         }
     }
 
-    public func fetchChildren(parentId: Int64) async throws -> [TbGroup] {
+    public func fetchChildren(parentId: Int64, locale: Locale = .autoupdatingCurrent) async throws -> [TbGroup] {
         try await database.reader.read { db in
             try TbGroup
                 .filter(Column("parent_id") == parentId && Column("is_deleted") == false)
                 .fetchAll(db)
+                .sorted {
+                    LocalizedSort.isAscending($0.name, $1.name, locale: locale)
+                }
         }
     }
 

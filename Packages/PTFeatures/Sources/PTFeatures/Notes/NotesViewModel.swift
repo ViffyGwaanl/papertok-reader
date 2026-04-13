@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import PTCore
 
 public enum NotesFilterType: String, CaseIterable, Identifiable, Sendable {
     case all
@@ -9,13 +10,26 @@ public enum NotesFilterType: String, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    public var displayName: String {
+    public var displayNameKey: String {
+        switch self {
+        case .all: return "notes.all"
+        case .highlight: return "notes.highlights"
+        case .bookmark: return "notes.bookmarks"
+        case .note: return "notes.title"
+        }
+    }
+
+    private var fallbackDisplayName: String {
         switch self {
         case .all: return "All"
         case .highlight: return "Highlights"
         case .bookmark: return "Bookmarks"
         case .note: return "Notes"
         }
+    }
+
+    public var displayName: String {
+        AppLocalization.string(displayNameKey, value: fallbackDisplayName)
     }
 
     public var systemImage: String {
@@ -35,12 +49,24 @@ public enum NotesSortOrder: String, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    public var displayName: String {
+    public var displayNameKey: String {
         switch self {
-        case .dateDescending: return "Newest First"
-        case .dateAscending: return "Oldest First"
-        case .chapter: return "By Chapter"
+        case .dateDescending: return "notes.sort_recent"
+        case .dateAscending: return "notes.sort_oldest"
+        case .chapter: return "notes.sort_book"
         }
+    }
+
+    private var fallbackDisplayName: String {
+        switch self {
+        case .dateDescending: return "Most Recent"
+        case .dateAscending: return "Oldest First"
+        case .chapter: return "By Book"
+        }
+    }
+
+    public var displayName: String {
+        AppLocalization.string(displayNameKey, value: fallbackDisplayName)
     }
 }
 
@@ -159,11 +185,19 @@ public final class NotesViewModel {
                     }
                 case .chapter:
                     sortedNotes = bookNotes.sorted { lhs, rhs in
-                        lhs.chapter.localizedCaseInsensitiveCompare(rhs.chapter) == .orderedAscending
+                        LocalizedSort.isAscending(lhs.chapter, rhs.chapter)
                     }
                 }
                 let latestDate = sortedNotes.first.map { $0.createTime ?? $0.updateTime } ?? .distantPast
-                let title = bookTitlesByID[bookId] ?? "Book #\(bookId)"
+                let title = bookTitlesByID[bookId]
+                    ?? String(
+                        format: AppLocalization.string(
+                            "notes.book_fallback_format",
+                            value: "Book #%lld"
+                        ),
+                        locale: .autoupdatingCurrent,
+                        bookId
+                    )
                 return NotesBookGroup(
                     bookId: bookId,
                     bookTitle: title,

@@ -54,4 +54,15 @@ struct GroupDAOTests {
         let all = try await dao.fetchAll()
         #expect(all.isEmpty)
     }
+
+    @Test("fetchAll uses pinyin order for Chinese locales")
+    func fetchAllUsesPinyinOrderForChinese() async throws {
+        let dao = try makeDAO()
+        _ = try await dao.save(makeGroup(name: "李白"))
+        _ = try await dao.save(makeGroup(name: "杜甫"))
+        _ = try await dao.save(makeGroup(name: "王维"))
+
+        let names = try await dao.fetchAll(locale: Locale(identifier: "zh-Hans")).map(\.name)
+        #expect(names == ["杜甫", "李白", "王维"])
+    }
 }

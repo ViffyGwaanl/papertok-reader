@@ -1,6 +1,7 @@
 #if canImport(SwiftUI) && canImport(Charts)
 import SwiftUI
 import Charts
+import PTCore
 import PTUI
 
 /// Displays daily reading time trends, weekday averages, and per-book breakdowns.
@@ -14,9 +15,9 @@ public struct ReadingTrendChartView: View {
 
         public var displayName: String {
             switch self {
-            case .daily: return "Daily"
-            case .weekday: return "Weekday"
-            case .perBook: return "Per Book"
+            case .daily: return AppLocalization.string("statistics.daily", value: "Daily")
+            case .weekday: return AppLocalization.string("statistics.weekday", value: "Weekday")
+            case .perBook: return AppLocalization.string("statistics.by_book", value: "By Book")
             }
         }
     }
@@ -79,8 +80,8 @@ public struct ReadingTrendChartView: View {
 
         public var displayName: String {
             switch self {
-            case .thirtyDays: return "30D"
-            case .ninetyDays: return "90D"
+            case .thirtyDays: return AppLocalization.string("statistics.last_30_days", value: "Last 30 Days")
+            case .ninetyDays: return AppLocalization.string("statistics.last_90_days", value: "Last 90 Days")
             }
         }
     }
@@ -104,7 +105,7 @@ public struct ReadingTrendChartView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Mode", selection: $mode) {
+            Picker(String(localized: "common.mode"), selection: $mode) {
                 ForEach(ChartMode.allCases) { m in
                     Text(m.displayName).tag(m)
                 }
@@ -112,7 +113,7 @@ public struct ReadingTrendChartView: View {
             .pickerStyle(.segmented)
 
             if mode == .daily {
-                Picker("Range", selection: $range) {
+                Picker(String(localized: "common.range"), selection: $range) {
                     ForEach(RangeSelection.allCases) { r in
                         Text(r.displayName).tag(r)
                     }

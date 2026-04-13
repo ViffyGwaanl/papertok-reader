@@ -168,7 +168,11 @@ struct NativePDFView: UIViewRepresentable {
                 if let noteID = renderedAnnotation.noteID {
                     annotation.userName = String(noteID)
                 }
-                annotation.contents = renderedAnnotation.readerNote ?? (renderedAnnotation.type == .bookmark ? "Bookmark" : nil)
+                annotation.contents = renderedAnnotation.readerNote ?? (
+                    renderedAnnotation.type == .bookmark
+                    ? AppLocalization.string("reader.bookmark", value: "Bookmark")
+                    : nil
+                )
                 page.addAnnotation(annotation)
                 nextAppliedAnnotationsByPage[renderedAnnotation.pageIndex, default: []].append(annotation)
             }
@@ -592,7 +596,7 @@ public struct PDFReaderView: View {
             Morandi.background.ignoresSafeArea()
 
             if viewModel.isLoading {
-                ProgressView("Opening…")
+                ProgressView(String(localized: "reader.opening_ellipsis"))
                     .tint(Morandi.accent)
 
             } else if let doc = viewModel.pdfDocument {
@@ -608,7 +612,7 @@ public struct PDFReaderView: View {
 
             } else {
                 ContentUnavailableView(
-                    "Cannot Open",
+                    String(localized: "reader.cannot_open_title"),
                     systemImage: "doc.text.slash",
                     description: Text("bookshelf.file_could_not_be_opened")
                 )
@@ -642,7 +646,7 @@ public struct PDFReaderView: View {
                 Image(systemName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel(isFullScreen ? "Exit Full Screen" : "Full Screen")
+            .accessibilityLabel(String(localized: isFullScreen ? "common.exit_full_screen" : "common.full_screen"))
 
             Button {
                 isAIPanelPresented = true
@@ -679,17 +683,17 @@ public struct PDFReaderView: View {
                 Button {
                     showBookmarkManager = true
                 } label: {
-                    Label("Bookmarks", systemImage: "bookmark.circle")
+                    Label("reader.bookmarks", systemImage: "bookmark.circle")
                 }
                 Button {
                     viewModel.showTOC = true
                 } label: {
-                    Label("Contents", systemImage: "list.bullet")
+                    Label("reader.contents", systemImage: "list.bullet")
                 }
                 Button {
                     showBrightnessControl.toggle()
                 } label: {
-                    Label("Brightness", systemImage: "sun.max")
+                    Label("reader.brightness", systemImage: "sun.max")
                 }
                 Toggle(isOn: Binding(
                     get: { volumeKeysEnabled },
@@ -699,7 +703,7 @@ public struct PDFReaderView: View {
                         applyVolumeKeyHandler()
                     }
                 )) {
-                    Label("Volume keys turn pages", systemImage: "speaker.wave.2")
+                    Label("reader.volume_keys_turn_pages", systemImage: "speaker.wave.2")
                 }
             } label: {
                 Image(systemName: "list.bullet")
@@ -810,7 +814,7 @@ public struct PDFReaderView: View {
             Group {
                 if viewModel.tocEntries.isEmpty {
                     ContentUnavailableView(
-                        "No Contents",
+                        String(localized: "reader.toc.empty_title"),
                         systemImage: "list.bullet.indent",
                         description: Text("reader.no_toc_pdf")
                     )
@@ -819,7 +823,11 @@ public struct PDFReaderView: View {
                     VStack(spacing: 0) {
                         if !tocSearchQuery.isEmpty {
                             HStack {
-                                Text("\(entries.count) match\(entries.count == 1 ? "" : "es")")
+                                Text(AppLocalization.format(
+                                    "reader.toc.match_count_format",
+                                    "%d matches",
+                                    entries.count
+                                ))
                                     .font(AppTypography.caption)
                                     .foregroundStyle(Morandi.secondaryText)
                                 Spacer()
@@ -846,7 +854,7 @@ public struct PDFReaderView: View {
                         }
                         .listStyle(.plain)
                     }
-                    .searchable(text: $tocSearchQuery, prompt: "Search contents")
+                    .searchable(text: $tocSearchQuery, prompt: String(localized: "reader.search_contents"))
                 }
             }
             .background(Morandi.background)
@@ -867,22 +875,22 @@ public struct PDFReaderView: View {
                 if let readerControlsViewModel {
                     if readerControlsViewModel.searchQuery.isEmpty {
                         ContentUnavailableView(
-                            "Search This PDF",
+                            String(localized: "reader.search_this_pdf"),
                             systemImage: "magnifyingglass",
                             description: Text("reader.search_pdf_prompt")
                         )
                     } else if readerControlsViewModel.isSearching {
-                        ProgressView("Searching…")
+                        ProgressView(String(localized: "common.searching"))
                             .tint(Morandi.accent)
                     } else if let searchErrorMessage = readerControlsViewModel.searchErrorMessage {
                         ContentUnavailableView(
-                            "Search Failed",
+                            String(localized: "reader.search_failed_title"),
                             systemImage: "exclamationmark.magnifyingglass",
                             description: Text(searchErrorMessage)
                         )
                     } else if readerControlsViewModel.searchResults.isEmpty {
                         ContentUnavailableView(
-                            "No Results",
+                            String(localized: "reader.search.no_results_title"),
                             systemImage: "doc.text.magnifyingglass",
                             description: Text(String(format: NSLocalizedString("reader.search.no_matches_format", comment: ""), readerControlsViewModel.searchQuery))
                         )
@@ -920,13 +928,13 @@ public struct PDFReaderView: View {
                         .listStyle(.plain)
                     }
                 } else {
-                    ProgressView("Preparing search…")
+                    ProgressView(String(localized: "reader.preparing_search_ellipsis"))
                         .tint(Morandi.accent)
                 }
             }
             .background(Morandi.background)
             .navigationTitle(String(localized: "common.search"))
-            .searchable(text: searchQueryBinding, prompt: "Search in this PDF")
+            .searchable(text: searchQueryBinding, prompt: String(localized: "reader.search_this_pdf"))
             .onSubmit(of: .search) {
                 Task { await readerControlsViewModel?.performSearch() }
             }

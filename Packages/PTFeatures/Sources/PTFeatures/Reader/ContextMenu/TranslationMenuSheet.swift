@@ -1,5 +1,6 @@
 import SwiftUI
 import PTAIServices
+import PTCore
 import PTUI
 
 /// In-reader translation sheet with source text, language grid, and result display.
@@ -8,18 +9,60 @@ struct TranslationMenuSheet: View {
     let translationService: AITranslationService?
     let onDismiss: () -> Void
 
-    @State private var targetLanguage: String = "English"
+    @State private var targetLanguage = LanguageOption.defaultTargetIdentifier
     @State private var translatedText: String = ""
     @State private var isTranslating = false
     @State private var errorMessage: String?
 
-    private static let languages = [
-        "English", "Chinese (Simplified)", "Chinese (Traditional)",
-        "Japanese", "Korean", "French", "German", "Spanish",
-        "Portuguese", "Italian", "Russian", "Arabic", "Hindi",
-        "Thai", "Vietnamese", "Indonesian", "Turkish", "Dutch",
-        "Polish", "Swedish", "Danish"
-    ]
+    private struct LanguageOption: Identifiable, Hashable {
+        let identifier: String
+        let englishName: String
+
+        var id: String { identifier }
+
+        var localizedName: String {
+            if let localized = Locale.autoupdatingCurrent.localizedString(forIdentifier: identifier),
+               localized.isEmpty == false {
+                return localized
+            }
+            return englishName
+        }
+
+        static let all: [LanguageOption] = [
+            .init(identifier: "en", englishName: "English"),
+            .init(identifier: "zh-Hans", englishName: "Chinese (Simplified)"),
+            .init(identifier: "zh-Hant", englishName: "Chinese (Traditional)"),
+            .init(identifier: "ja", englishName: "Japanese"),
+            .init(identifier: "ko", englishName: "Korean"),
+            .init(identifier: "fr", englishName: "French"),
+            .init(identifier: "de", englishName: "German"),
+            .init(identifier: "es", englishName: "Spanish"),
+            .init(identifier: "pt", englishName: "Portuguese"),
+            .init(identifier: "it", englishName: "Italian"),
+            .init(identifier: "ru", englishName: "Russian"),
+            .init(identifier: "ar", englishName: "Arabic"),
+            .init(identifier: "hi", englishName: "Hindi"),
+            .init(identifier: "th", englishName: "Thai"),
+            .init(identifier: "vi", englishName: "Vietnamese"),
+            .init(identifier: "id", englishName: "Indonesian"),
+            .init(identifier: "tr", englishName: "Turkish"),
+            .init(identifier: "nl", englishName: "Dutch"),
+            .init(identifier: "pl", englishName: "Polish"),
+            .init(identifier: "sv", englishName: "Swedish"),
+            .init(identifier: "da", englishName: "Danish")
+        ]
+
+        static var defaultTargetIdentifier: String {
+            let localeIdentifier = Locale.autoupdatingCurrent.identifier.lowercased()
+            if localeIdentifier.contains("hant") || localeIdentifier.contains("zh_tw") || localeIdentifier.contains("zh-hk") {
+                return "zh-Hant"
+            }
+            if localeIdentifier.hasPrefix("zh") {
+                return "zh-Hans"
+            }
+            return "en"
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -82,15 +125,15 @@ struct TranslationMenuSheet: View {
                 columns: Array(repeating: GridItem(.flexible(), spacing: AppSpacing.sm), count: 3),
                 spacing: AppSpacing.sm
             ) {
-                ForEach(Self.languages, id: \.self) { lang in
+                ForEach(LanguageOption.all) { option in
                     Button {
-                        targetLanguage = lang
+                        targetLanguage = option.identifier
                         Task { await translate() }
                     } label: {
-                        Text(lang)
+                        Text(option.localizedName)
                             .font(AppTypography.caption)
                             .foregroundStyle(
-                                lang == targetLanguage ? .white : Morandi.primaryText
+                                option.identifier == targetLanguage ? .white : Morandi.primaryText
                             )
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
@@ -100,7 +143,7 @@ struct TranslationMenuSheet: View {
                             .background(
                                 RoundedRectangle(cornerRadius: AppSpacing.cornerRadiusSmall)
                                     .fill(
-                                        lang == targetLanguage
+                                        option.identifier == targetLanguage
                                             ? Morandi.accent
                                             : Morandi.cardBackground
                                     )
@@ -178,7 +221,10 @@ struct TranslationMenuSheet: View {
 
     private func translate() async {
         guard let translationService else {
-            errorMessage = "Translation service is not configured."
+            errorMessage = AppLocalization.string(
+                "errors.translation.not_configured",
+                value: "Translation service is not configured."
+            )
             return
         }
         guard !isTranslating else { return }
@@ -188,9 +234,10 @@ struct TranslationMenuSheet: View {
         translatedText = ""
 
         do {
+            let target = LanguageOption.all.first(where: { $0.identifier == targetLanguage })
             translatedText = try await translationService.translate(
                 selectedText,
-                to: targetLanguage
+                to: target?.englishName ?? "English"
             )
         } catch {
             errorMessage = error.localizedDescription

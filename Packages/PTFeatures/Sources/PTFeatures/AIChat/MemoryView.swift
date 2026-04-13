@@ -26,7 +26,7 @@ public struct MemoryView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Morandi.tertiaryText)
-                TextField("Search memories...", text: $searchText)
+                TextField(String(localized: "ai.search_memories"), text: $searchText)
                     .font(AppTypography.body)
                     .textFieldStyle(.plain)
                 if !searchText.isEmpty {

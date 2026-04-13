@@ -1,5 +1,6 @@
 #if canImport(SwiftUI)
 import SwiftUI
+import PTCore
 import PTUI
 
 /// Summarises completion stats, streaks, goal progress, and achievements.
@@ -72,6 +73,15 @@ public struct CompletionTrackingView: View {
 
     private let snapshot: Snapshot
 
+    private func localized(_ key: String, _ fallback: String) -> String {
+        AppLocalization.string(key, value: fallback)
+    }
+
+    private func format(_ key: String, _ fallback: String, _ arguments: CVarArg...) -> String {
+        let formatString = AppLocalization.string(key, value: fallback)
+        return String(format: formatString, locale: .autoupdatingCurrent, arguments: arguments)
+    }
+
     public init(snapshot: Snapshot) {
         self.snapshot = snapshot
     }
@@ -91,10 +101,26 @@ public struct CompletionTrackingView: View {
 
     private var statsGrid: some View {
         let items: [(String, String, Color)] = [
-            ("This Month", "\(snapshot.booksThisMonth) books", Morandi.sage),
-            ("This Year", "\(snapshot.booksThisYear) books", Morandi.dustyRose),
-            ("Avg Completion", String(format: "%.1f days", snapshot.averageCompletionDays), Morandi.clay),
-            ("Longest Streak", "\(snapshot.longestStreak) days", Morandi.lavender)
+            (
+                localized("statistics.this_month", "This Month"),
+                format("statistics.books_count_format", "%d books", snapshot.booksThisMonth),
+                Morandi.sage
+            ),
+            (
+                localized("statistics.this_year", "This Year"),
+                format("statistics.books_count_format", "%d books", snapshot.booksThisYear),
+                Morandi.dustyRose
+            ),
+            (
+                localized("statistics.average_completion", "Avg Completion"),
+                format("statistics.average_completion_days_format", "%.1f days", snapshot.averageCompletionDays),
+                Morandi.clay
+            ),
+            (
+                localized("statistics.best_streak", "Longest Streak"),
+                format("statistics.day_count_format", "%d days", snapshot.longestStreak),
+                Morandi.lavender
+            )
         ]
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             ForEach(items, id: \.0) { item in
@@ -126,20 +152,25 @@ public struct CompletionTrackingView: View {
         HStack(spacing: 16) {
             goalRing(
                 progress: dailyGoalProgress,
-                label: "Daily",
-                caption: "\(snapshot.todayMinutes)/\(snapshot.dailyGoalMinutes)m",
+                label: localized("statistics.daily_goal", "Daily"),
+                caption: format(
+                    "statistics.goal_progress_minutes_format",
+                    "%d/%dm",
+                    snapshot.todayMinutes,
+                    snapshot.dailyGoalMinutes
+                ),
                 color: Morandi.sage
             )
             goalRing(
                 progress: yearlyGoalProgress,
-                label: "Yearly",
+                label: localized("statistics.yearly_goal", "Yearly"),
                 caption: "\(snapshot.booksThisYear)/\(snapshot.yearlyGoalBooks)",
                 color: Morandi.powder
             )
             goalRing(
                 progress: min(Double(snapshot.currentStreak) / 30, 1),
-                label: "Streak",
-                caption: "\(snapshot.currentStreak)d",
+                label: localized("statistics.streak", "Streak"),
+                caption: format("statistics.streak_short_format", "%dd", snapshot.currentStreak),
                 color: Morandi.clay
             )
         }

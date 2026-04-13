@@ -182,15 +182,27 @@ struct MessageBubbleView: View {
     }
 
     private func relativeTimeString(_ date: Date) -> String {
-        let cal = Calendar.current
-        let diff = Date().timeIntervalSince(date)
-        if diff < 60 { return "just now" }
-        if diff < 3600 { return "\(Int(diff / 60))m ago" }
-        let f = DateFormatter()
-        if cal.isDateInToday(date) { f.dateFormat = "HH:mm"; return "Today \(f.string(from: date))" }
-        if cal.isDateInYesterday(date) { f.dateFormat = "HH:mm"; return "Yesterday \(f.string(from: date))" }
-        f.dateFormat = "MMM d, HH:mm"
-        return f.string(from: date)
+        let calendar = Calendar.current
+        if calendar.isDate(date, equalTo: Date(), toGranularity: .day) || calendar.isDateInYesterday(date) {
+            let formatter = DateFormatter()
+            formatter.locale = .autoupdatingCurrent
+            formatter.doesRelativeDateFormatting = true
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            return formatter.string(from: date)
+        }
+
+        let relativeFormatter = RelativeDateTimeFormatter()
+        relativeFormatter.unitsStyle = .short
+        let relative = relativeFormatter.localizedString(for: date, relativeTo: Date())
+        if !relative.isEmpty, relative != date.description {
+            return relative
+        }
+
+        return date.formatted(
+            Date.FormatStyle(date: .abbreviated, time: .shortened)
+                .locale(.autoupdatingCurrent)
+        )
     }
 
     @ViewBuilder

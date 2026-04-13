@@ -1,4 +1,5 @@
 import SwiftUI
+import PTCore
 import PTReader
 import PTUI
 
@@ -50,7 +51,7 @@ public struct TTSFloatingActionButton: View {
                     .background(Morandi.accent, in: Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(service.state == .speaking ? "Pause" : "Play")
+            .accessibilityLabel(String(localized: service.state == .speaking ? "tts.pause" : "tts.play"))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -127,7 +128,7 @@ struct TTSExpandedControlsSheet: View {
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .system: return "System"
+            case .system: return String(localized: "tts.backend.system")
             case .openai: return "OpenAI"
             case .azure: return "Azure"
             }
@@ -180,7 +181,7 @@ struct TTSExpandedControlsSheet: View {
                 .font(AppTypography.subheadline)
                 .foregroundStyle(Morandi.primaryText)
 
-            Picker("Engine", selection: $selectedBackend) {
+            Picker(String(localized: "tts.voice_engine"), selection: $selectedBackend) {
                 ForEach(BackendKind.allCases) { kind in
                     Text(kind.label).tag(kind)
                 }
@@ -205,7 +206,7 @@ struct TTSExpandedControlsSheet: View {
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.tertiaryText)
             } else {
-                Picker("Voice", selection: $selectedVoiceID) {
+                Picker(String(localized: "tts.voice"), selection: $selectedVoiceID) {
                     ForEach(voices) { v in
                         Text("\(v.name) — \(v.language)").tag(v.id)
                     }
@@ -255,7 +256,7 @@ struct TTSExpandedControlsSheet: View {
     private var pitchSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             HStack {
-                Text("Pitch")
+                Text("tts.pitch")
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
                 Spacer()
@@ -286,7 +287,7 @@ struct TTSExpandedControlsSheet: View {
     private var volumeSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             HStack {
-                Text("Volume")
+                Text("tts.volume")
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
                 Spacer()
@@ -332,7 +333,7 @@ struct TTSExpandedControlsSheet: View {
                     .font(.system(size: 44))
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel(service.state == .speaking ? "Pause" : "Play")
+            .accessibilityLabel(String(localized: service.state == .speaking ? "tts.pause" : "tts.play"))
 
             Button {
                 service.orchestrator.skipForward()
@@ -396,7 +397,11 @@ struct TTSExpandedControlsSheet: View {
             }
         } catch {
             voices = []
-            errorMessage = "Failed to load voices: \(error.localizedDescription)"
+            errorMessage = AppLocalization.format(
+                "errors.tts.load_voices_failed_format",
+                "Failed to load voices: %@",
+                error.localizedDescription
+            )
         }
     }
 }

@@ -12,10 +12,25 @@ public struct AIToolsConfigView: View {
 
     private let registry: ToolRegistry
 
+    private func localized(_ key: String, _ fallback: String) -> String {
+        AppLocalization.string(key, value: fallback)
+    }
+
     public enum Filter: String, CaseIterable, Identifiable {
         case all, safe, moderate, dangerous
         public var id: String { rawValue }
-        public var displayName: String { rawValue.capitalized }
+        public var displayName: String {
+            switch self {
+            case .all:
+                AppLocalization.string("common.all", value: "All")
+            case .safe:
+                AppLocalization.string("ai.tool_filter.safe", value: "Safe")
+            case .moderate:
+                AppLocalization.string("ai.tool_filter.moderate", value: "Moderate")
+            case .dangerous:
+                AppLocalization.string("ai.tool_filter.dangerous", value: "Dangerous")
+            }
+        }
     }
 
     @MainActor
@@ -43,7 +58,7 @@ public struct AIToolsConfigView: View {
 
     private var thresholdSection: some View {
         Section {
-            Picker("Approval Threshold", selection: $viewModel.toolApprovalThreshold) {
+            Picker(String(localized: "ai.approval_threshold"), selection: $viewModel.toolApprovalThreshold) {
                 Text("ai.always_approve").tag("always")
                 Text("ai.moderate_dangerous").tag("moderate")
                 Text("ai.dangerous_only").tag("dangerous")
@@ -62,7 +77,7 @@ public struct AIToolsConfigView: View {
 
     private var filterSection: some View {
         Section {
-            Picker("Filter", selection: $filter) {
+            Picker(localized("common.filter", "Filter"), selection: $filter) {
                 ForEach(Filter.allCases) { f in
                     Text(f.displayName).tag(f)
                 }
@@ -167,9 +182,36 @@ public struct AIToolsConfigView: View {
         return ToolCategory.allCases.compactMap { cat in
             guard let tools = byCategory[cat], !tools.isEmpty else { return nil }
             return ToolGroup(
-                category: cat.rawValue.capitalized,
+                category: localizedCategoryName(for: cat),
                 tools: tools.sorted { $0.name < $1.name }
             )
+        }
+    }
+
+    private func localizedCategoryName(for category: ToolCategory) -> String {
+        switch category {
+        case .bookLibrary:
+            localized("ai.tool_category.book_library", "Book Library")
+        case .bookContent:
+            localized("ai.tool_category.book_content", "Book Content")
+        case .annotation:
+            localized("ai.tool_category.annotation", "Annotation")
+        case .search:
+            localized("common.search", "Search")
+        case .readingHistory:
+            localized("ai.tool_category.reading_history", "Reading History")
+        case .calendar:
+            localized("ai.tool_category.calendar", "Calendar")
+        case .reminders:
+            localized("ai.tool_category.reminders", "Reminders")
+        case .utility:
+            localized("ai.tool_category.utility", "Utility")
+        case .agent:
+            localized("ai.tool_category.agent", "Agent")
+        case .memory:
+            localized("ai.memory", "Memory")
+        case .mindmap:
+            localized("ai.tool_category.mindmap", "Mind Map")
         }
     }
 }

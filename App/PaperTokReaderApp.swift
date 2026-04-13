@@ -75,7 +75,7 @@ struct PaperTokReaderApp: App {
                     showMigration = await migrationService.isMigrationAvailable()
                 }
         } else {
-            ProgressView("Loading...")
+            ProgressView(String(localized: "common.loading_ellipsis"))
                 .task { await initializeDatabase() }
         }
     }

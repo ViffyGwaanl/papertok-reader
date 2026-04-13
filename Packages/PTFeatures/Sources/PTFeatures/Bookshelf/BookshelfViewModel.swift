@@ -281,9 +281,12 @@ public final class BookshelfViewModel {
         switch sortOrder {
         case .dateDesc: books.sort { $0.createTime > $1.createTime }
         case .dateAsc: books.sort { $0.createTime < $1.createTime }
-        case .titleAsc: books.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-        case .titleDesc: books.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedDescending }
-        case .authorAsc: books.sort { $0.author.localizedCaseInsensitiveCompare($1.author) == .orderedAscending }
+        case .titleAsc:
+            books.sort { LocalizedSort.isAscending($0.title, $1.title) }
+        case .titleDesc:
+            books.sort { LocalizedSort.compare($0.title, $1.title) == .orderedDescending }
+        case .authorAsc:
+            books.sort { LocalizedSort.isAscending($0.author, $1.author) }
         }
     }
 

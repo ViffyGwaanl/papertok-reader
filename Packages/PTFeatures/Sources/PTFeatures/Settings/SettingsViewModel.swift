@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import PTCore
 
 @MainActor @Observable
 public final class SettingsViewModel {
@@ -43,14 +44,18 @@ public final class SettingsViewModel {
 
     private let defaults: UserDefaults
 
-    public init(defaults: UserDefaults = AppConfig.groupDefaults) {
+    public init(
+        defaults: UserDefaults = AppConfig.groupDefaults,
+        locale: Locale = .autoupdatingCurrent
+    ) {
         self.defaults = defaults
         self.themeMode = defaults.string(forKey: "theme_mode") ?? AppConfig.Defaults.defaultThemeMode
         self.accentColorIndex = defaults.integer(forKey: "accent_color_index")
         self.isOLEDDarkMode = defaults.bool(forKey: "oled_dark_mode")
         self.defaultFontSize = defaults.double(forKey: "default_font_size").nonZero ?? AppConfig.Defaults.defaultFontSize
         self.pageTurnMode = defaults.string(forKey: "page_turn_mode") ?? AppConfig.Defaults.defaultPageTurnMode
-        self.defaultFontFamily = defaults.string(forKey: "default_font_family") ?? "System"
+        self.defaultFontFamily = defaults.string(forKey: "default_font_family")
+            ?? BookStyle.preferredDefaultFontFamily(locale: locale)
         self.aiProviderID = defaults.string(forKey: AppConfig.Keys.aiProviderID) ?? AppConfig.Defaults.defaultAIProviderID
         self.aiModelID = defaults.string(forKey: AppConfig.Keys.aiModelID) ?? AppConfig.Defaults.defaultOpenAIModelID
 

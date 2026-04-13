@@ -65,15 +65,15 @@ public struct QuickPromptsEditorView: View {
             }
         }
         .confirmationDialog(
-            "Restore default prompts? Your custom prompts will be removed.",
+            String(localized: "prompts.reset_confirmation"),
             isPresented: $showResetConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Restore Defaults", role: .destructive) {
+            Button("common.restore_defaults", role: .destructive) {
                 prompts = QuickPrompt.builtIn
                 persist()
             }
-            Button("Cancel", role: .cancel) {}
+            Button("common.cancel", role: .cancel) {}
         }
         .scrollContentBackground(.hidden)
         .background(Morandi.background)
@@ -130,7 +130,11 @@ public struct QuickPromptsEditorView: View {
     private func duplicate(_ prompt: QuickPrompt) {
         let copy = QuickPrompt(
             id: UUID(),
-            title: prompt.title + " Copy",
+            title: AppLocalization.format(
+                "prompts.duplicate_title_format",
+                "%@ Copy",
+                prompt.title
+            ),
             promptText: prompt.promptText,
             iconName: prompt.iconName,
             sortOrder: prompts.count
@@ -193,7 +197,7 @@ struct QuickPromptEditSheet: View {
         NavigationStack {
             Form {
                 Section(String(localized: "common.title")) {
-                    TextField("e.g. Explain", text: $title)
+                    TextField(String(localized: "prompts.title_placeholder"), text: $title)
                 }
                 Section {
                     TextEditor(text: $promptText)
@@ -222,7 +226,7 @@ struct QuickPromptEditSheet: View {
                     }
                     .padding(.vertical, AppSpacing.xs)
 
-                    TextField("Or paste an emoji", text: $iconName)
+                    TextField(String(localized: "prompts.icon_emoji_placeholder"), text: $iconName)
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         #endif
@@ -246,10 +250,10 @@ struct QuickPromptEditSheet: View {
                         .background(RoundedRectangle(cornerRadius: 8).fill(Morandi.sage.opacity(0.15)))
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(title.isEmpty ? "Untitled" : title)
+                            Text(title.isEmpty ? String(localized: "prompts.untitled") : title)
                                 .font(AppTypography.body.weight(.medium))
                                 .foregroundStyle(Morandi.primaryText)
-                            Text(promptText.isEmpty ? "Tap to edit prompt text…" : promptText)
+                            Text(promptText.isEmpty ? String(localized: "prompts.tap_to_edit") : promptText)
                                 .font(AppTypography.caption2)
                                 .foregroundStyle(Morandi.secondaryText)
                                 .lineLimit(2)
@@ -261,7 +265,7 @@ struct QuickPromptEditSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle(prompt == nil ? "New Prompt" : "Edit Prompt")
+            .navigationTitle(String(localized: prompt == nil ? "prompts.new" : "prompts.edit"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

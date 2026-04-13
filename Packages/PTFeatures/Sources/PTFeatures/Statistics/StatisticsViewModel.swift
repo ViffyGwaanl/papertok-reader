@@ -177,7 +177,7 @@ public final class StatisticsViewModel {
         }
         .sorted { lhs, rhs in
             if lhs.totalMinutes == rhs.totalMinutes {
-                return lhs.bookTitle.localizedCaseInsensitiveCompare(rhs.bookTitle) == .orderedAscending
+                return LocalizedSort.isAscending(lhs.bookTitle, rhs.bookTitle)
             }
             return lhs.totalMinutes > rhs.totalMinutes
         }

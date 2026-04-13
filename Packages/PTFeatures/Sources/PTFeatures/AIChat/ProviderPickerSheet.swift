@@ -1,5 +1,6 @@
 import SwiftUI
 import PTAIServices
+import PTCore
 import PTUI
 
 /// Bottom sheet for selecting LLM provider and model.
@@ -11,6 +12,10 @@ struct ProviderPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let providers: [AIChatViewModel.ProviderOption]
+
+    private func localized(_ key: String, _ fallback: String) -> String {
+        AppLocalization.string(key, value: fallback)
+    }
 
     var body: some View {
         NavigationStack {
@@ -82,13 +87,13 @@ struct ProviderPickerSheet: View {
                         .foregroundStyle(Morandi.secondaryText)
                         .lineLimit(2)
                     HStack(spacing: 6) {
-                        capabilityPill("Streaming", color: Morandi.powder)
-                        capabilityPill("Tools", color: Morandi.moss)
+                        capabilityPill(String(localized: "ai.streaming"), color: Morandi.powder)
+                        capabilityPill(String(localized: "ai.tools"), color: Morandi.moss)
                         if model.supportsVision {
-                            capabilityPill("Vision", color: Morandi.lavender)
+                            capabilityPill(String(localized: "ai.vision"), color: Morandi.lavender)
                         }
                         if model.supportsThinking {
-                            capabilityPill("Thinking", color: Morandi.dustyRose)
+                            capabilityPill(String(localized: "ai.thinking"), color: Morandi.dustyRose)
                         }
                     }
                 }
@@ -139,12 +144,12 @@ struct ProviderPickerSheet: View {
 
     private func description(for modelId: String) -> String {
         let m = modelId.lowercased()
-        if m.contains("mini") { return "Fast, cost-efficient everyday model." }
-        if m.contains("haiku") { return "Claude's fastest model for quick tasks." }
-        if m.contains("sonnet") { return "Balanced intelligence and speed." }
-        if m.contains("opus") { return "Most capable, best for complex reasoning." }
-        if m.contains("gpt-4.1") { return "OpenAI's flagship reasoning model." }
-        if m.contains("gpt-4o") { return "Multimodal with strong vision skills." }
-        return "General-purpose chat model."
+        if m.contains("mini") { return localized("ai.provider_picker.description.mini", "Fast, cost-efficient everyday model.") }
+        if m.contains("haiku") { return localized("ai.provider_picker.description.haiku", "Claude's fastest model for quick tasks.") }
+        if m.contains("sonnet") { return localized("ai.provider_picker.description.sonnet", "Balanced intelligence and speed.") }
+        if m.contains("opus") { return localized("ai.provider_picker.description.opus", "Most capable, best for complex reasoning.") }
+        if m.contains("gpt-4.1") { return localized("ai.provider_picker.description.gpt41", "OpenAI's flagship reasoning model.") }
+        if m.contains("gpt-4o") { return localized("ai.provider_picker.description.gpt4o", "Multimodal with strong vision skills.") }
+        return localized("ai.provider_picker.description.default", "General-purpose chat model.")
     }
 }
