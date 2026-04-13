@@ -18,6 +18,8 @@ import 'package:anx_reader/page/settings_page/translate.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
+import 'package:anx_reader/widgets/settings/settings_icon_label.dart';
+import 'package:anx_reader/widgets/settings/settings_section_card.dart';
 import 'package:anx_reader/page/home_page/home_bottom_inset_scope.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -35,11 +37,71 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   late final ScrollController _scrollController =
       widget.controller ?? ScrollController();
+
+  void _pushSubpage(BuildContext context, String title, Widget child) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => SettingsSubpageScaffold(
+          title: title,
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  void _push(BuildContext context, Widget page) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(builder: (context) => page),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Prefs(),
       builder: (context, _) {
+        final l10n = L10n.of(context);
+        final bottomInset = MediaQuery.of(context).size.width <= 600
+            ? (HomeBottomInsetScope.of(context) + 12)
+            : (MediaQuery.of(context).padding.bottom + 12);
+
+        final aiTiles = <Widget>[
+          SettingsNavRow(
+            icon: Icons.hub_outlined,
+            tint: SettingsIconTints.network,
+            title: l10n.settingsAiProviderCenterTitle,
+            onTap: () => _push(context, const AiProviderCenterPage()),
+          ),
+          SettingsNavRow(
+            icon: Icons.auto_awesome,
+            tint: SettingsIconTints.sparkles,
+            title: l10n.settingsAi,
+            onTap: () => _pushSubpage(context, l10n.settingsAi, const AISettings()),
+          ),
+          SettingsNavRow(
+            icon: Icons.handyman_outlined,
+            tint: SettingsIconTints.tools,
+            title: l10n.settingsAiTools,
+            onTap: () => _pushSubpage(
+                context, l10n.settingsAiTools, const AiToolsSettingsPage()),
+          ),
+          SettingsNavRow(
+            icon: Icons.storage_outlined,
+            tint: SettingsIconTints.prompt,
+            title: l10n.settingsAiLibraryIndexTitle,
+            onTap: () => _push(context, const AiLibraryIndexPage()),
+          ),
+          SettingsNavRow(
+            icon: Icons.image_outlined,
+            tint: SettingsIconTints.prompt,
+            title: l10n.settingsAiImageAnalysisTitle,
+            onTap: () => _pushSubpage(context, l10n.settingsAiImageAnalysisTitle,
+                const AiImageAnalysisSettingsPage()),
+          ),
+        ];
+
         return Scaffold(
           body: SafeArea(
             bottom: false,
@@ -48,310 +110,129 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: SingleChildScrollView(
                 controller: _scrollController,
                 child: Padding(
-                  padding: EdgeInsets.only(
-                    // HomePage uses a floating overlay tab bar on phones.
-                    // Reserve enough space here so the last settings items are
-                    // not covered by the tab bar.
-                    bottom: MediaQuery.of(context).size.width <= 600
-                        ? (HomeBottomInsetScope.of(context) + 12)
-                        : (MediaQuery.of(context).padding.bottom + 12),
-                  ),
+                  padding: EdgeInsets.only(bottom: bottomInset),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 12),
-                      const Divider(),
-                      // Main settings entries (flattened; previously lived under
-                      // “More Settings”).
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.home_outlined),
-                              title:
-                                  Text(L10n.of(context).settingsHomeNavigation),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        const HomeNavigationSettingsPage(),
-                                  ),
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.color_lens_outlined),
-                              title: Text(L10n.of(context).settingsAppearance),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        SettingsSubpageScaffold(
-                                      title:
-                                          L10n.of(context).settingsAppearance,
-                                      child: const AppearanceSetting(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.book_rounded),
-                              title: Text(L10n.of(context).settingsReading),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        SettingsSubpageScaffold(
-                                      title: L10n.of(context).settingsReading,
-                                      child: const ReadingSettings(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.sync_outlined),
-                              title: Text(L10n.of(context).settingsSync),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        SettingsSubpageScaffold(
-                                      title: L10n.of(context).settingsSync,
-                                      child: const SyncSetting(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.headphones),
-                              title: Text(L10n.of(context).settingsNarrate),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        SettingsSubpageScaffold(
-                                      title: L10n.of(context).settingsNarrate,
-                                      child: const NarrateSettings(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            if (EnvVar.enableAIFeature) ...[
-                              const Divider(height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.auto_awesome),
-                                title: Text(L10n.of(context).settingsAi),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    CupertinoPageRoute(
-                                      builder: (context) =>
-                                          SettingsSubpageScaffold(
-                                        title: L10n.of(context).settingsAi,
-                                        child: const AISettings(),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const Divider(height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.hub_outlined),
-                                title: Text(
-                                  L10n.of(context)
-                                      .settingsAiProviderCenterTitle,
-                                ),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    CupertinoPageRoute(
-                                      builder: (context) =>
-                                          const AiProviderCenterPage(),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const Divider(height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.translate_outlined),
-                                title: Text(L10n.of(context).settingsTranslate),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    CupertinoPageRoute(
-                                      builder: (context) =>
-                                          SettingsSubpageScaffold(
-                                        title:
-                                            L10n.of(context).settingsTranslate,
-                                        child: const TranslateSetting(),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const Divider(height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.handyman_outlined),
-                                title: Text(L10n.of(context).settingsAiTools),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    CupertinoPageRoute(
-                                      builder: (context) =>
-                                          SettingsSubpageScaffold(
-                                        title: L10n.of(context).settingsAiTools,
-                                        child: const AiToolsSettingsPage(),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const Divider(height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.psychology_outlined),
-                                title: Text(L10n.of(context).settingsMemory),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    CupertinoPageRoute(
-                                      builder: (context) =>
-                                          const MemorySettingsPage(),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const Divider(height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.storage_outlined),
-                                title: Text(
-                                  L10n.of(context).settingsAiLibraryIndexTitle,
-                                ),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    CupertinoPageRoute(
-                                      builder: (context) =>
-                                          const AiLibraryIndexPage(),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const Divider(height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.image_outlined),
-                                title: Text(
-                                  L10n.of(context).settingsAiImageAnalysisTitle,
-                                ),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    CupertinoPageRoute(
-                                      builder: (context) =>
-                                          SettingsSubpageScaffold(
-                                        title: L10n.of(context)
-                                            .settingsAiImageAnalysisTitle,
-                                        child:
-                                            const AiImageAnalysisSettingsPage(),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                            const Divider(height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.storage_outlined),
-                              title: Text(L10n.of(context).storage),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        SettingsSubpageScaffold(
-                                      title: L10n.of(context).storage,
-                                      child: const StorageSettings(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.shield_outlined),
-                              title: Text(L10n.of(context).settingsAdvanced),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        SettingsSubpageScaffold(
-                                      title: L10n.of(context).settingsAdvanced,
-                                      child: const AdvancedSetting(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            // Developer Options tile is rendered below (with onTap).
-                          ],
-                        ),
-                      ),
-                      if (Prefs().developerOptionsEnabled)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: ListTile(
-                            leading: const Icon(Icons.developer_mode),
-                            title: const Text('Developer Options'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                CupertinoPageRoute(
-                                  builder: (context) =>
-                                      const DeveloperOptionsPage(),
-                                ),
-                              );
-                            },
+                      // Reading
+                      SettingsSectionCard(
+                        title: l10n.settingsReading,
+                        tiles: [
+                          SettingsNavRow(
+                            icon: Icons.book_rounded,
+                            tint: SettingsIconTints.reading,
+                            title: l10n.settingsReading,
+                            onTap: () => _pushSubpage(
+                                context, l10n.settingsReading, const ReadingSettings()),
                           ),
+                          if (EnvVar.enableAIFeature)
+                            SettingsNavRow(
+                              icon: Icons.translate_outlined,
+                              tint: SettingsIconTints.translate,
+                              title: l10n.settingsTranslate,
+                              onTap: () => _pushSubpage(context,
+                                  l10n.settingsTranslate, const TranslateSetting()),
+                            ),
+                          SettingsNavRow(
+                            icon: Icons.headphones,
+                            tint: SettingsIconTints.tts,
+                            title: l10n.settingsNarrate,
+                            onTap: () => _pushSubpage(
+                                context, l10n.settingsNarrate, const NarrateSettings()),
+                          ),
+                          if (EnvVar.enableAIFeature)
+                            SettingsNavRow(
+                              icon: Icons.psychology_outlined,
+                              tint: SettingsIconTints.memory,
+                              title: l10n.settingsMemory,
+                              onTap: () => _push(context, const MemorySettingsPage()),
+                            ),
+                        ],
+                      ),
+
+                      // AI & Assistant
+                      if (EnvVar.enableAIFeature)
+                        SettingsSectionCard(
+                          title: l10n.settingsAi,
+                          tiles: aiTiles,
                         ),
-                      const Divider(height: 1),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: ListTile(
-                          leading: const Icon(Icons.info_outline),
-                          title: Text(L10n.of(context).appAbout),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            openAboutDialog();
-                          },
-                        ),
+
+                      // Sync & Data
+                      SettingsSectionCard(
+                        title: l10n.settingsSync,
+                        tiles: [
+                          SettingsNavRow(
+                            icon: Icons.sync_outlined,
+                            tint: SettingsIconTints.sync,
+                            title: l10n.settingsSync,
+                            onTap: () => _pushSubpage(
+                                context, l10n.settingsSync, const SyncSetting()),
+                          ),
+                          SettingsNavRow(
+                            icon: Icons.storage_outlined,
+                            tint: SettingsIconTints.storage,
+                            title: l10n.storage,
+                            onTap: () => _pushSubpage(
+                                context, l10n.storage, const StorageSettings()),
+                          ),
+                        ],
+                      ),
+
+                      // Customization
+                      SettingsSectionCard(
+                        title: l10n.settingsAppearance,
+                        tiles: [
+                          SettingsNavRow(
+                            icon: Icons.color_lens_outlined,
+                            tint: SettingsIconTints.appearance,
+                            title: l10n.settingsAppearance,
+                            onTap: () => _pushSubpage(context,
+                                l10n.settingsAppearance, const AppearanceSetting()),
+                          ),
+                          SettingsNavRow(
+                            icon: Icons.home_outlined,
+                            tint: SettingsIconTints.homeNav,
+                            title: l10n.settingsHomeNavigation,
+                            onTap: () =>
+                                _push(context, const HomeNavigationSettingsPage()),
+                          ),
+                        ],
+                      ),
+
+                      // Advanced
+                      SettingsSectionCard(
+                        title: l10n.settingsAdvanced,
+                        tiles: [
+                          SettingsNavRow(
+                            icon: Icons.shield_outlined,
+                            tint: SettingsIconTints.advanced,
+                            title: l10n.settingsAdvanced,
+                            onTap: () => _pushSubpage(context,
+                                l10n.settingsAdvanced, const AdvancedSetting()),
+                          ),
+                          if (Prefs().developerOptionsEnabled)
+                            SettingsNavRow(
+                              icon: Icons.developer_mode,
+                              tint: SettingsIconTints.advanced,
+                              title: 'Developer Options',
+                              onTap: () =>
+                                  _push(context, const DeveloperOptionsPage()),
+                            ),
+                        ],
+                      ),
+
+                      // About
+                      SettingsSectionCard(
+                        title: l10n.appAbout,
+                        margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                        tiles: [
+                          SettingsNavRow(
+                            icon: Icons.info_outline,
+                            tint: SettingsIconTints.about,
+                            title: l10n.appAbout,
+                            onTap: () => openAboutDialog(),
+                          ),
+                        ],
                       ),
                     ],
                   ),
