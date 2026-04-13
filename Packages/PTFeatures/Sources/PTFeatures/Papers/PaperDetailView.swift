@@ -47,7 +47,7 @@ struct PaperDetailView: View {
         NavigationStack {
             ScrollView {
                 if isLoading {
-                    ProgressView("Loading...")
+                    ProgressView(String(localized: "common.loading_ellipsis"))
                         .tint(Morandi.accent)
                         .padding(AppSpacing.xxxl)
                         .frame(maxWidth: .infinity)
@@ -55,7 +55,7 @@ struct PaperDetailView: View {
                     detailContent(detail)
                 } else {
                     ContentUnavailableView(
-                        "Failed to load",
+                        String(localized: "common.failed_to_load"),
                         systemImage: "exclamationmark.triangle"
                     )
                     .padding(AppSpacing.xxxl)
@@ -150,7 +150,7 @@ struct PaperDetailView: View {
         if let detail {
             downloadStatus = .idle(plan: PaperDownloadPlan(detail: detail))
         } else {
-            downloadStatus = .failed(message: "Paper details could not be loaded.", plan: nil)
+            downloadStatus = .failed(message: String(localized: "errors.papers.detail_unavailable"), plan: nil)
         }
         isLoading = false
     }
@@ -173,7 +173,7 @@ struct PaperDetailView: View {
 
     private func startDownload(_ detail: PaperTokDetail, downloadID: UUID) async {
         guard let plan = PaperDownloadPlan(detail: detail) else {
-            downloadStatus = .failed(message: "No downloadable EPUB or PDF is available.", plan: nil)
+            downloadStatus = .failed(message: String(localized: "errors.papers.no_downloadable_file"), plan: nil)
             return
         }
 
@@ -239,11 +239,11 @@ struct PaperDetailView: View {
     @ViewBuilder
     private func detailNarrative(_ detail: PaperTokDetail) -> some View {
         if let explain = detail.preferredExplanation(language: language) {
-            detailTextSection(title: "Explanation", content: explain)
+            detailTextSection(title: String(localized: "papers.explanation"), content: explain)
         }
 
         if let dialogue = detail.preferredDialogue(language: language) {
-            detailTextSection(title: "Dialogue", content: dialogue)
+            detailTextSection(title: String(localized: "papers.dialogue"), content: dialogue)
         }
     }
 
@@ -266,16 +266,16 @@ struct PaperDetailView: View {
         var items: [(label: String, value: String)] = []
 
         if let day = detail.day, day.isEmpty == false {
-            items.append(("Date", day))
+            items.append((String(localized: "papers.metadata.date"), day))
         }
         if let source = detail.source, source.isEmpty == false {
-            items.append(("Source", source))
+            items.append((String(localized: "papers.metadata.source"), source))
         }
         if let externalId = detail.externalId, externalId.isEmpty == false {
-            items.append(("External ID", externalId))
+            items.append((String(localized: "papers.metadata.external_id"), externalId))
         }
         if let updatedAt = detail.updatedAt {
-            items.append(("Updated", updatedAt.formatted(date: .abbreviated, time: .omitted)))
+            items.append((String(localized: "papers.metadata.updated"), updatedAt.formatted(date: .abbreviated, time: .omitted)))
         }
 
         return items

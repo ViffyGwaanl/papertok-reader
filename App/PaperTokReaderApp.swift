@@ -41,6 +41,7 @@ struct PaperTokReaderApp: App {
         WindowGroup {
             rootContent
                 .preferredColorScheme(preferredColorScheme)
+                .onAppear { APIKeyMigrationService.migrateIfNeeded() }
                 .onOpenURL { url in
                     _ = router.handle(url: url)
                 }
@@ -53,6 +54,7 @@ struct PaperTokReaderApp: App {
         MacRootScene {
             rootContent
                 .preferredColorScheme(preferredColorScheme)
+                .onAppear { APIKeyMigrationService.migrateIfNeeded() }
                 .onOpenURL { url in
                     _ = router.handle(url: url)
                 }

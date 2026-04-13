@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 import PTNetworking
 
 // MARK: - Transport Protocol
@@ -154,13 +155,28 @@ public enum MCPTransportError: Error, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notConnected:
-            return "MCP transport is not connected"
+            return AppLocalization.string(
+                "errors.mcp.transport_not_connected",
+                value: "MCP transport is not connected"
+            )
         case .invalidResponse:
-            return "Invalid response from MCP server"
+            return AppLocalization.string(
+                "errors.mcp.invalid_response",
+                value: "Invalid response from MCP server"
+            )
         case .httpError(let code, let body):
-            return "MCP HTTP error \(code)\(body.map { ": \($0)" } ?? "")"
+            return AppLocalization.format(
+                "errors.mcp.http_error_format",
+                "MCP HTTP error %d%@",
+                code,
+                body.map { ": \($0)" } ?? ""
+            )
         case .connectionFailed(let reason):
-            return "MCP connection failed: \(reason)"
+            return AppLocalization.format(
+                "errors.mcp.connection_failed_format",
+                "MCP connection failed: %@",
+                reason
+            )
         }
     }
 }

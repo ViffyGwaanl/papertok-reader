@@ -32,14 +32,27 @@ public actor AIOrganizeService {
         case noProviderResponse
         case invalidResponse(String)
 
-        public var errorDescription: String? {
-            switch self {
-            case .noBooks: return "No books available to organize."
-            case .noProviderResponse: return "The AI provider returned an empty response."
-            case .invalidResponse(let detail): return "Could not parse AI response: \(detail)"
-            }
+    public var errorDescription: String? {
+        switch self {
+        case .noBooks:
+            return AppLocalization.string(
+                "errors.organize.no_books",
+                value: "No books available to organize."
+            )
+        case .noProviderResponse:
+            return AppLocalization.string(
+                "errors.organize.empty_response",
+                value: "The AI provider returned an empty response."
+            )
+        case .invalidResponse(let detail):
+            return AppLocalization.format(
+                "errors.organize.invalid_response_format",
+                "Could not parse AI response: %@",
+                detail
+            )
         }
     }
+}
 
     private let model: String
 

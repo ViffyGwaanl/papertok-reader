@@ -14,6 +14,7 @@ public struct CustomProvider: ChatModelProvider {
     let endpointPath: String
     let apiKeyKeychainKey: String?
     let overrideAPIKey: String?
+    let keyResolver: (@Sendable () -> String?)?
     let customHeaders: [String: String]
     let networkClient: NetworkClient
     let availableModels: [String]
@@ -25,6 +26,7 @@ public struct CustomProvider: ChatModelProvider {
         endpointPath: String = "/v1/chat/completions",
         apiKeyKeychainKey: String? = "custom_api_key",
         overrideAPIKey: String? = nil,
+        keyResolver: (@Sendable () -> String?)? = nil,
         customHeaders: [String: String] = [:],
         availableModels: [String] = [],
         networkClient: NetworkClient = NetworkClient()
@@ -35,6 +37,7 @@ public struct CustomProvider: ChatModelProvider {
         self.endpointPath = endpointPath
         self.apiKeyKeychainKey = apiKeyKeychainKey
         self.overrideAPIKey = overrideAPIKey
+        self.keyResolver = keyResolver
         self.customHeaders = customHeaders
         self.availableModels = availableModels
         self.networkClient = networkClient
@@ -194,7 +197,10 @@ public struct CustomProvider: ChatModelProvider {
     }
 
     private func resolveAPIKey() throws -> String? {
-        if let key = overrideAPIKey { return key }
+        if let resolver = keyResolver, let key = resolver(), !key.isEmpty {
+            return key
+        }
+        if let key = overrideAPIKey, !key.isEmpty { return key }
         guard let keychainKey = apiKeyKeychainKey else { return nil }
         do {
             return try KeychainService.load(key: keychainKey)

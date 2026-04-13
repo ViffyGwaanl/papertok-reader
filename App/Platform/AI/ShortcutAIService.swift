@@ -2,6 +2,7 @@ import AppIntents
 import Foundation
 import PTCore
 import PTAIServices
+import PTFeatures
 
 #if canImport(UIKit)
 import UIKit
@@ -17,11 +18,21 @@ enum ShortcutAIServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unsupportedProvider(let providerID):
-            return "Unsupported AI provider: \(providerID)"
+            return AppLocalization.format(
+                "errors.ai.shortcut_unsupported_provider_format",
+                "Unsupported AI provider: %@",
+                providerID
+            )
         case .emptyResponse:
-            return "The AI service returned an empty response."
+            return AppLocalization.string(
+                "errors.ai.shortcut_empty_response",
+                value: "The AI service returned an empty response."
+            )
         case .invalidImageData:
-            return "One of the selected images could not be processed."
+            return AppLocalization.string(
+                "errors.ai.shortcut_invalid_image",
+                value: "One of the selected images could not be processed."
+            )
         }
     }
 }
@@ -87,9 +98,13 @@ actor ShortcutAIService {
     private func makeProvider(id: String) throws -> any ChatModelProvider {
         switch id {
         case "openai":
-            return OpenAIProvider()
+            return OpenAIProvider(
+                keyResolver: { APIKeyStore.nextEnabledSecret(providerId: "openai") }
+            )
         case "anthropic":
-            return AnthropicProvider()
+            return AnthropicProvider(
+                keyResolver: { APIKeyStore.nextEnabledSecret(providerId: "anthropic") }
+            )
         default:
             throw ShortcutAIServiceError.unsupportedProvider(id)
         }

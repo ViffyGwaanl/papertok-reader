@@ -35,7 +35,7 @@ public struct AILibraryIndexView: View {
         formContent
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle("Library Index")
+            .navigationTitle(String(localized: "settings.ai_library.title"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -63,20 +63,20 @@ public struct AILibraryIndexView: View {
     // MARK: - Sections
 
     private var providerSection: some View {
-        Section("Embedding Provider") {
-            Picker("Provider", selection: $providerId) {
-                Text("OpenAI").tag("openai")
-                Text("Google Gemini").tag("gemini")
-                Text("Azure OpenAI").tag("azure")
-                Text("Custom").tag("custom")
+        Section(String(localized: "settings.ai_library.embedding_provider")) {
+            Picker(String(localized: "settings.ai_library.provider"), selection: $providerId) {
+                Text(ProviderFactory.displayName(for: .openai)).tag("openai")
+                Text(ProviderFactory.displayName(for: .gemini)).tag("gemini")
+                Text(ProviderFactory.displayName(for: .azure)).tag("azure")
+                Text(String(localized: "settings.custom_provider")).tag("custom")
             }
         }
         .onChange(of: providerId) { _, v in defaults.set(v, forKey: "rag_embedding_provider") }
     }
 
     private var modelSection: some View {
-        Section("Embedding Model") {
-            Picker("Model", selection: $modelId) {
+        Section(String(localized: "settings.ai_library.embedding_model")) {
+            Picker(String(localized: "settings.ai_library.model"), selection: $modelId) {
                 ForEach(modelsForCurrentProvider, id: \.self) { m in
                     Text(m).tag(m)
                 }
@@ -84,7 +84,7 @@ public struct AILibraryIndexView: View {
                     Text(modelId).tag(modelId)
                 }
             }
-            TextField("Or enter custom model ID", text: $modelId)
+            TextField(String(localized: "settings.ai_library.custom_model_placeholder"), text: $modelId)
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
                 #endif
@@ -95,12 +95,12 @@ public struct AILibraryIndexView: View {
     }
 
     private var chunkingSection: some View {
-        Section("Chunking") {
+        Section(String(localized: "settings.ai_library.chunking")) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Chunk Size")
+                    Text(String(localized: "settings.ai_library.chunk_size"))
                     Spacer()
-                    Text("\(Int(chunkSize)) tokens")
+                    Text(AppLocalization.format("settings.ai_library.tokens_format", "%d tokens", Int(chunkSize)))
                         .font(AppTypography.caption.monospacedDigit())
                         .foregroundStyle(Morandi.secondaryText)
                 }
@@ -109,9 +109,9 @@ public struct AILibraryIndexView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Overlap")
+                    Text(String(localized: "settings.ai_library.overlap"))
                     Spacer()
-                    Text("\(Int(overlap)) tokens")
+                    Text(AppLocalization.format("settings.ai_library.tokens_format", "%d tokens", Int(overlap)))
                         .font(AppTypography.caption.monospacedDigit())
                         .foregroundStyle(Morandi.secondaryText)
                 }
@@ -120,7 +120,7 @@ public struct AILibraryIndexView: View {
             }
             Stepper(value: $batchSize, in: 1...100) {
                 HStack {
-                    Text("Batch Size")
+                    Text(String(localized: "settings.ai_library.batch_size"))
                     Spacer()
                     Text("\(batchSize)")
                         .foregroundStyle(Morandi.secondaryText)
@@ -137,14 +137,18 @@ public struct AILibraryIndexView: View {
             HStack {
                 Image(systemName: "books.vertical")
                     .foregroundStyle(Morandi.sage)
-                Text(indexStatusText.isEmpty ? "No index data" : indexStatusText)
+                Text(indexStatusText.isEmpty ? String(localized: "settings.ai_library.no_index_data") : indexStatusText)
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.secondaryText)
             }
             HStack {
                 Image(systemName: "internaldrive")
                     .foregroundStyle(Morandi.powder)
-                Text("Storage: \(storageUsedText.isEmpty ? "0 KB" : storageUsedText)")
+                Text(AppLocalization.format(
+                    "settings.ai_library.storage_format",
+                    "Storage: %@",
+                    storageUsedText.isEmpty ? "0 KB" : storageUsedText
+                ))
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.secondaryText)
             }
@@ -158,7 +162,7 @@ public struct AILibraryIndexView: View {
                 }
             }
         } header: {
-            Text("Status")
+            Text("settings.ai_library.status")
         }
     }
 
@@ -167,7 +171,7 @@ public struct AILibraryIndexView: View {
             Button {
                 Task { await indexAllBooks() }
             } label: {
-                Label("Index All Books", systemImage: "wand.and.stars")
+                Label("settings.ai_library.index_all_books", systemImage: "wand.and.stars")
                     .foregroundStyle(Morandi.accent)
             }
             .disabled(isWorking)
@@ -175,7 +179,7 @@ public struct AILibraryIndexView: View {
             Button {
                 Task { await clearAllIndexes() }
             } label: {
-                Label("Clear All Indexes", systemImage: "trash")
+                Label("settings.ai_library.clear_all_indexes", systemImage: "trash")
                     .foregroundStyle(Morandi.destructive)
             }
             .disabled(isWorking)
@@ -183,7 +187,7 @@ public struct AILibraryIndexView: View {
             Button {
                 refreshStatus()
             } label: {
-                Label("Refresh Status", systemImage: "arrow.clockwise")
+                Label("settings.ai_library.refresh_status", systemImage: "arrow.clockwise")
                     .foregroundStyle(Morandi.secondaryText)
             }
         }
@@ -207,7 +211,11 @@ public struct AILibraryIndexView: View {
     private func refreshStatus() {
         let dir = AppConfig.appGroupContainerURL().appendingPathComponent("rag")
         let count = chunkCount(in: dir)
-        indexStatusText = "Indexed chunks: \(count)"
+        indexStatusText = AppLocalization.format(
+            "settings.ai_library.indexed_chunks_format",
+            "Indexed chunks: %d",
+            count
+        )
         storageUsedText = directorySizeFormatted(dir)
     }
 
@@ -236,7 +244,7 @@ public struct AILibraryIndexView: View {
         // reset progress and instruct the user. A future PR can wire to the
         // full library service.
         isWorking = true
-        workingMessage = "Indexing not yet wired to library service."
+        workingMessage = String(localized: "settings.ai_library.indexing_not_wired")
         workingProgress = 1.0
         defer {
             isWorking = false
@@ -247,7 +255,7 @@ public struct AILibraryIndexView: View {
 
     private func clearAllIndexes() async {
         isWorking = true
-        workingMessage = "Clearing index…"
+        workingMessage = String(localized: "settings.ai_library.clearing_index")
         workingProgress = 0.5
         defer { isWorking = false }
         let dir = AppConfig.appGroupContainerURL().appendingPathComponent("rag")

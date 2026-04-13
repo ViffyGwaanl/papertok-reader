@@ -13,7 +13,6 @@ public struct AIProviderDetailView: View {
     let customProviderID: String?
     let viewModel: SettingsViewModel
 
-    @State private var apiKey: String = ""
     @State private var baseURL: String = ""
     @State private var selectedModel: String = ""
     @State private var deploymentName: String = ""
@@ -21,8 +20,6 @@ public struct AIProviderDetailView: View {
     @State private var customHeadersText: String = ""
     @State private var testStatus: TestStatus = .idle
     @State private var isSaved = false
-    @State private var showAPIKey = false
-    @State private var originalApiKey: String = ""
     @State private var originalBaseURL: String = ""
     @State private var originalModel: String = ""
     @State private var showDeleteConfirmation = false
@@ -67,7 +64,6 @@ public struct AIProviderDetailView: View {
 
     public var body: some View {
         Form {
-            apiKeySection
             multiKeySection
             endpointSection
             modelSection
@@ -114,55 +110,9 @@ public struct AIProviderDetailView: View {
         var entries = AIProviderCenterView.loadCustomProviders()
         entries.removeAll { $0.id == id }
         AIProviderCenterView.saveCustomProviders(entries)
-        viewModel.saveAPIKey("", for: storageID)
     }
 
     // MARK: - Sections
-
-    private var apiKeySection: some View {
-        Section {
-            HStack(spacing: AppSpacing.sm) {
-                Group {
-                    if showAPIKey {
-                        TextField("API Key", text: $apiKey)
-                    } else {
-                        SecureField("API Key", text: $apiKey)
-                    }
-                }
-                #if os(iOS)
-                .textInputAutocapitalization(.never)
-                #endif
-                .autocorrectionDisabled()
-
-                Button {
-                    showAPIKey.toggle()
-                } label: {
-                    Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                        .foregroundStyle(Morandi.secondaryText)
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(showAPIKey ? "Hide API key" : "Show API key")
-            }
-
-            if let url = getApiKeyURL {
-                Link(destination: url) {
-                    HStack(spacing: 4) {
-                        Text("settings.ai_provider.get_api_key")
-                            .font(AppTypography.caption)
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(Morandi.accent)
-                }
-            }
-        } header: {
-            Text("common.authentication")
-        } footer: {
-            Text("ai.providers.keychain_short")
-                .font(AppTypography.caption2)
-                .foregroundStyle(Morandi.tertiaryText)
-        }
-    }
 
     private var getApiKeyURL: URL? {
         switch provider {
@@ -176,14 +126,14 @@ public struct AIProviderDetailView: View {
     }
 
     private var hasUnsavedChanges: Bool {
-        apiKey != originalApiKey || baseURL != originalBaseURL || selectedModel != originalModel
+        baseURL != originalBaseURL || selectedModel != originalModel
     }
 
     private var isValid: Bool {
         if provider == .custom {
             return !baseURL.trimmingCharacters(in: .whitespaces).isEmpty
         }
-        return !apiKey.trimmingCharacters(in: .whitespaces).isEmpty
+        return true
     }
 
     private var endpointSection: some View {
@@ -333,14 +283,6 @@ public struct AIProviderDetailView: View {
                 }
             }
 
-            if !apiKey.isEmpty {
-                Button(String(localized: "ai.providers.remove_api_key"), role: .destructive) {
-                    apiKey = ""
-                    originalApiKey = ""
-                    viewModel.saveAPIKey("", for: storageID)
-                }
-            }
-
             if provider == .custom, customProviderID != nil {
                 Button("Delete Provider", role: .destructive) {
                     showDeleteConfirmation = true
@@ -387,7 +329,7 @@ public struct AIProviderDetailView: View {
                         .foregroundStyle(Morandi.lavender)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Manage API Keys")
-                            .font(AppTypography.body)
+                            .font(AppTypography.body.weight(.semibold))
                             .foregroundStyle(Morandi.primaryText)
                         Text("\(apiKeyCount) key\(apiKeyCount == 1 ? "" : "s") configured")
                             .font(AppTypography.caption2)
@@ -396,8 +338,22 @@ public struct AIProviderDetailView: View {
                     Spacer()
                 }
             }
+
+            if let url = getApiKeyURL {
+                Link(destination: url) {
+                    HStack(spacing: 4) {
+                        Text("settings.ai_provider.get_api_key")
+                            .font(AppTypography.caption)
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(Morandi.accent)
+                }
+            }
+        } header: {
+            Text("API Keys")
         } footer: {
-            Text("Add multiple API keys for round-robin rotation, automatic failover and per-key cooldowns.")
+            Text("Add multiple API keys for round-robin rotation, automatic failover and per-key cooldowns. Secrets are stored in the Keychain.")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
@@ -461,6 +417,7 @@ public struct AIProviderDetailView: View {
                     }
                     Button {
                         resetGenerationDefaults()
+                        saveGenerationDefaults()
                     } label: {
                         Label("Reset to Defaults", systemImage: "arrow.counterclockwise")
                             .font(AppTypography.caption)
@@ -469,6 +426,12 @@ public struct AIProviderDetailView: View {
                     .buttonStyle(.borderless)
                 }
                 .padding(.vertical, 4)
+                .onChange(of: temperature) { _, _ in saveGenerationDefaults() }
+                .onChange(of: topP) { _, _ in saveGenerationDefaults() }
+                .onChange(of: maxTokensText) { _, _ in saveGenerationDefaults() }
+                .onChange(of: presencePenalty) { _, _ in saveGenerationDefaults() }
+                .onChange(of: frequencyPenalty) { _, _ in saveGenerationDefaults() }
+                .onChange(of: stopSequencesText) { _, _ in saveGenerationDefaults() }
             } label: {
                 Label("Advanced", systemImage: "slider.horizontal.3")
                     .foregroundStyle(Morandi.primaryText)
@@ -592,7 +555,6 @@ public struct AIProviderDetailView: View {
 
     private func loadValues() {
         let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
-        apiKey = viewModel.loadAPIKey(for: storageID)
         baseURL = defaults.string(forKey: "ai_base_url_\(storageID)") ?? ""
         selectedModel = defaults.string(forKey: "ai_model_for_\(storageID)")
             ?? ProviderFactory.defaultModels(for: provider).first
@@ -600,7 +562,6 @@ public struct AIProviderDetailView: View {
         deploymentName = defaults.string(forKey: "ai_azure_deployment_\(storageID)") ?? ""
         apiVersion = defaults.string(forKey: "ai_azure_api_version_\(storageID)") ?? "2024-02-15-preview"
         customHeadersText = defaults.string(forKey: "ai_custom_headers_\(storageID)") ?? ""
-        originalApiKey = apiKey
         originalBaseURL = baseURL
         originalModel = selectedModel
 
@@ -649,7 +610,6 @@ public struct AIProviderDetailView: View {
 
     private func saveValues() {
         let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
-        viewModel.saveAPIKey(apiKey, for: storageID)
         defaults.set(baseURL, forKey: "ai_base_url_\(storageID)")
         defaults.set(selectedModel, forKey: "ai_model_for_\(storageID)")
         defaults.set(deploymentName, forKey: "ai_azure_deployment_\(storageID)")
@@ -684,9 +644,19 @@ public struct AIProviderDetailView: View {
         defaults.set(serviceCooldownSeconds, forKey: "ai_cooldown_service_\(id)")
 
         isSaved = true
-        originalApiKey = apiKey
         originalBaseURL = baseURL
         originalModel = selectedModel
+    }
+
+    private func saveGenerationDefaults() {
+        let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
+        let id = storageID
+        defaults.set(temperature, forKey: "ai_temperature_\(id)")
+        defaults.set(topP, forKey: "ai_top_p_\(id)")
+        defaults.set(maxTokensText, forKey: "ai_max_tokens_\(id)")
+        defaults.set(presencePenalty, forKey: "ai_presence_penalty_\(id)")
+        defaults.set(frequencyPenalty, forKey: "ai_frequency_penalty_\(id)")
+        defaults.set(stopSequencesText, forKey: "ai_stop_sequences_\(id)")
     }
 
     private func parseCustomHeaders() -> [String: String] {
@@ -704,7 +674,6 @@ public struct AIProviderDetailView: View {
 
     private func testConnection() {
         testStatus = .testing
-        let key = apiKey
         let base = URL(string: baseURL)
         let deploy = deploymentName
         let ver = apiVersion
@@ -713,15 +682,17 @@ public struct AIProviderDetailView: View {
             ? (ProviderFactory.defaultModels(for: provider).first ?? "gpt-4o-mini")
             : selectedModel
         let kind = provider
+        let providerId = storageID
 
         Task {
             do {
                 let config = ProviderConfig(
-                    apiKey: key.isEmpty ? nil : key,
+                    apiKey: nil,
                     baseURL: base,
                     customHeaders: headers,
                     deploymentName: deploy.isEmpty ? nil : deploy,
-                    apiVersion: ver.isEmpty ? nil : ver
+                    apiVersion: ver.isEmpty ? nil : ver,
+                    keyResolver: { APIKeyStore.nextEnabledSecret(providerId: providerId) }
                 )
                 let client = try ProviderFactory.makeProvider(kind: kind, config: config)
                 let request = ChatRequest(

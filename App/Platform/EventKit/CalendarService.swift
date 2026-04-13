@@ -1,5 +1,6 @@
 import EventKit
 import Foundation
+import PTCore
 import PTAIServices
 
 /// Wraps EKEventStore for calendar CRUD operations.
@@ -54,7 +55,7 @@ public final class CalendarService: CalendarServiceProtocol, @unchecked Sendable
     public func createEvent(_ params: [String: Any]) async throws -> [String: Any] {
         guard await requestAccess() else { throw CalendarError.accessDenied }
         let event = EKEvent(eventStore: store)
-        event.title = stringValue(["title"], from: params) ?? "Untitled"
+        event.title = stringValue(["title"], from: params) ?? AppLocalization.string("common.untitled", value: "Untitled")
         event.startDate = dateValue(["start_date", "startDate"], from: params) ?? Date()
         event.endDate = dateValue(["end_date", "endDate"], from: params) ?? Date().addingTimeInterval(3600)
         event.notes = stringValue(["notes"], from: params)
@@ -154,9 +155,16 @@ public enum CalendarError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .accessDenied:
-            return "Calendar access denied. Please grant permission in Settings."
+            return AppLocalization.string(
+                "errors.calendar.access_denied",
+                value: "Calendar access denied. Please grant permission in Settings."
+            )
         case .eventNotFound(let id):
-            return "Event not found: \(id)"
+            return AppLocalization.format(
+                "errors.calendar.event_not_found_format",
+                "Event not found: %@",
+                id
+            )
         }
     }
 }

@@ -186,7 +186,7 @@ public struct ReaderAIPanelHost<Content: View>: View {
             AIChatView(viewModel: aiChatViewModel)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(isCompact ? "Close" : "Minimize") {
+                        Button(String(localized: isCompact ? "common.close" : "common.minimize")) {
                             isPresented = false
                         }
                     }
@@ -313,8 +313,15 @@ public struct ReaderAIMinimizedBar: View {
     private var statusText: String {
         if hasPendingApprovals {
             let count = aiChatViewModel.pendingApprovals.filter { $0.isApproved == nil }.count
-            return count == 1 ? "AI needs approval" : "AI needs \(count) approvals"
+            if count == 1 {
+                return String(localized: "reader.ai_panel.pending_approval")
+            }
+            return AppLocalization.format(
+                "reader.ai_panel.pending_approvals_format",
+                "AI needs %d approvals",
+                count
+            )
         }
-        return "AI is still responding"
+        return String(localized: "reader.ai_panel.responding")
     }
 }

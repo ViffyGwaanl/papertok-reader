@@ -259,6 +259,7 @@ public struct GeminiProvider: ChatModelProvider {
     let baseURL: URL
     let apiKeyKeychainKey: String
     let overrideAPIKey: String?
+    let keyResolver: (@Sendable () -> String?)?
     let networkClient: NetworkClient
 
     public init(
@@ -267,6 +268,7 @@ public struct GeminiProvider: ChatModelProvider {
         baseURL: URL = URL(string: "https://generativelanguage.googleapis.com")!,
         apiKeyKeychainKey: String = "gemini_api_key",
         overrideAPIKey: String? = nil,
+        keyResolver: (@Sendable () -> String?)? = nil,
         networkClient: NetworkClient = NetworkClient()
     ) {
         self.id = id
@@ -274,6 +276,7 @@ public struct GeminiProvider: ChatModelProvider {
         self.baseURL = baseURL
         self.apiKeyKeychainKey = apiKeyKeychainKey
         self.overrideAPIKey = overrideAPIKey
+        self.keyResolver = keyResolver
         self.networkClient = networkClient
     }
 
@@ -418,7 +421,10 @@ public struct GeminiProvider: ChatModelProvider {
     // MARK: - Helpers
 
     private func resolveAPIKey() throws -> String {
-        if let key = overrideAPIKey { return key }
+        if let resolver = keyResolver, let key = resolver(), !key.isEmpty {
+            return key
+        }
+        if let key = overrideAPIKey, !key.isEmpty { return key }
         do {
             if let key = try KeychainService.load(key: apiKeyKeychainKey) {
                 return key

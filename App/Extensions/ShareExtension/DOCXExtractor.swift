@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 #if canImport(Compression)
 import Compression
@@ -19,12 +20,32 @@ public enum DOCXExtractor {
 
         public var errorDescription: String? {
             switch self {
-            case .cannotReadFile: return "Could not read DOCX file."
-            case .notAZipFile: return "File is not a valid ZIP archive."
-            case .documentXMLNotFound: return "word/document.xml was not found in the DOCX archive."
-            case .inflateFailed: return "Failed to decompress word/document.xml."
+            case .cannotReadFile:
+                return AppLocalization.string(
+                    "errors.share.docx.read_failed",
+                    value: "Could not read DOCX file."
+                )
+            case .notAZipFile:
+                return AppLocalization.string(
+                    "errors.share.docx.invalid_zip",
+                    value: "File is not a valid ZIP archive."
+                )
+            case .documentXMLNotFound:
+                return AppLocalization.string(
+                    "errors.share.docx.document_xml_missing",
+                    value: "word/document.xml was not found in the DOCX archive."
+                )
+            case .inflateFailed:
+                return AppLocalization.string(
+                    "errors.share.docx.inflate_failed",
+                    value: "Failed to decompress word/document.xml."
+                )
             case .xmlParseFailed(let error):
-                return "Failed to parse word/document.xml: \(error?.localizedDescription ?? "unknown")"
+                return AppLocalization.format(
+                    "errors.share.docx.parse_failed_format",
+                    "Failed to parse word/document.xml: %@",
+                    error?.localizedDescription ?? AppLocalization.string("common.unknown", value: "unknown")
+                )
             }
         }
     }

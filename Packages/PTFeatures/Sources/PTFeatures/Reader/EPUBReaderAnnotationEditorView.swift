@@ -90,7 +90,7 @@ public struct EPUBReaderAnnotationEditorView: View {
                 .padding(AppSpacing.lg)
             }
             .background(Morandi.background)
-            .navigationTitle(draft.isEditing ? "Edit Annotation" : "Add Annotation")
+            .navigationTitle(String(localized: draft.isEditing ? "reader.annotation.edit" : "reader.annotation.add"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
@@ -101,7 +101,7 @@ public struct EPUBReaderAnnotationEditorView: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(draft.isEditing ? "Save" : "Add", action: onSave)
+                    Button(draft.isEditing ? String(localized: "common.save") : String(localized: "common.add"), action: onSave)
                         .foregroundStyle(Morandi.accent)
                         .disabled(isSaveDisabled)
                 }
@@ -112,7 +112,7 @@ public struct EPUBReaderAnnotationEditorView: View {
 
     private var selectionCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text(draft.chapterTitle.isEmpty ? "Current Location" : draft.chapterTitle)
+            Text(draft.chapterTitle.isEmpty ? String(localized: "reader.current_location") : draft.chapterTitle)
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.primaryText)
 
@@ -141,7 +141,7 @@ public struct EPUBReaderAnnotationEditorView: View {
                 .font(AppTypography.headline)
                 .foregroundStyle(Morandi.primaryText)
 
-            Picker("Type", selection: $draft.type) {
+            Picker(String(localized: "common.type"), selection: $draft.type) {
                 Text("reader.highlight").tag(NoteType.highlight)
                 Text("reader.bookmark").tag(NoteType.bookmark)
                 Text("common.note").tag(NoteType.note)
@@ -225,11 +225,11 @@ public struct EPUBReaderAnnotationEditorView: View {
 private extension HighlightColor {
     var accessibilityTitle: String {
         switch self {
-        case .yellow: "Yellow"
-        case .red: "Red"
-        case .blue: "Blue"
-        case .green: "Green"
-        case .purple: "Purple"
+        case .yellow: String(localized: "common.color.yellow")
+        case .red: String(localized: "common.color.red")
+        case .blue: String(localized: "common.color.blue")
+        case .green: String(localized: "common.color.green")
+        case .purple: String(localized: "common.color.purple")
         }
     }
 

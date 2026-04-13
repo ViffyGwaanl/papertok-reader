@@ -1,5 +1,6 @@
 import EventKit
 import Foundation
+import PTCore
 import PTAIServices
 
 /// Wraps EKEventStore for reminders CRUD operations.
@@ -93,7 +94,7 @@ public final class RemindersService: RemindersServiceProtocol, @unchecked Sendab
     public func createReminder(_ params: [String: Any]) async throws -> [String: Any] {
         guard await requestAccess() else { throw RemindersError.accessDenied }
         let reminder = EKReminder(eventStore: store)
-        reminder.title = stringValue(["title"], from: params) ?? "Untitled"
+        reminder.title = stringValue(["title"], from: params) ?? AppLocalization.string("common.untitled", value: "Untitled")
         if let notes = stringValue(["notes"], from: params) { reminder.notes = notes }
         if let due = dateValue(["due_date", "dueDate"], from: params) {
             reminder.dueDateComponents = Calendar.current.dateComponents(
@@ -233,9 +234,16 @@ public enum RemindersError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .accessDenied:
-            return "Reminders access denied. Please grant permission in Settings."
+            return AppLocalization.string(
+                "errors.reminders.access_denied",
+                value: "Reminders access denied. Please grant permission in Settings."
+            )
         case .reminderNotFound(let id):
-            return "Reminder not found: \(id)"
+            return AppLocalization.format(
+                "errors.reminders.not_found_format",
+                "Reminder not found: %@",
+                id
+            )
         }
     }
 }

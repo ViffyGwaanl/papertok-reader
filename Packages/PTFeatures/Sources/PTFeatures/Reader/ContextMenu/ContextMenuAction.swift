@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 /// Actions available in the reader context menu when text is selected.
 public enum ContextMenuAction: String, CaseIterable, Identifiable, Sendable {
@@ -16,15 +17,15 @@ public enum ContextMenuAction: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
-        case .highlight:  return "Highlight"
-        case .note:       return "Note"
-        case .copy:       return "Copy"
-        case .translate:  return "Translate"
-        case .explain:    return "Explain"
-        case .summarize:  return "Summarize"
-        case .define:     return "Define"
-        case .search:     return "Search"
-        case .share:      return "Share"
+        case .highlight:  return AppLocalization.string("reader.highlight", value: "Highlight")
+        case .note:       return AppLocalization.string("common.note", value: "Note")
+        case .copy:       return AppLocalization.string("common.copy", value: "Copy")
+        case .translate:  return AppLocalization.string("reader.quick_action.translate.title", value: "Translate")
+        case .explain:    return AppLocalization.string("reader.quick_action.explain.title", value: "Explain")
+        case .summarize:  return AppLocalization.string("reader.quick_action.summarize.title", value: "Summarize")
+        case .define:     return AppLocalization.string("reader.quick_action.define_vocabulary.title", value: "Define")
+        case .search:     return AppLocalization.string("common.search", value: "Search")
+        case .share:      return AppLocalization.string("common.share", value: "Share")
         }
     }
 

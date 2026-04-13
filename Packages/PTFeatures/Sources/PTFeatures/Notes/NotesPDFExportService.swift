@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 #if canImport(UIKit)
 import UIKit
 #elseif canImport(AppKit)
@@ -22,10 +23,27 @@ public actor NotesPDFExportService {
 
         public var errorDescription: String? {
             switch self {
-            case .noData: return "No notes to export."
-            case .renderingFailed: return "Failed to render PDF."
-            case .writeFailed(let e): return "Failed to write PDF: \(e.localizedDescription)"
-            case .unsupportedPlatform: return "PDF export is not supported on this platform."
+            case .noData:
+                return AppLocalization.string(
+                    "errors.notes.pdf.no_data",
+                    value: "No notes to export."
+                )
+            case .renderingFailed:
+                return AppLocalization.string(
+                    "errors.notes.pdf.render_failed",
+                    value: "Failed to render PDF."
+                )
+            case .writeFailed(let e):
+                return AppLocalization.format(
+                    "errors.notes.pdf.write_failed_format",
+                    "Failed to write PDF: %@",
+                    e.localizedDescription
+                )
+            case .unsupportedPlatform:
+                return AppLocalization.string(
+                    "errors.notes.pdf.unsupported_platform",
+                    value: "PDF export is not supported on this platform."
+                )
             }
         }
     }

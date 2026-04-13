@@ -25,6 +25,23 @@ public final class WebDAVSyncService {
     public private(set) var errorMessage: String?
     public private(set) var progress: Double = 0
 
+    public var autoSyncEnabled: Bool {
+        didSet { defaults.set(autoSyncEnabled, forKey: Self.autoSyncKey) }
+    }
+
+    public var conflictStrategy: ConflictStrategy {
+        didSet { defaults.set(conflictStrategy.rawValue, forKey: Self.conflictStrategyKey) }
+    }
+
+    public var aiSettingsSyncEnabled: Bool {
+        didSet { defaults.set(aiSettingsSyncEnabled, forKey: Self.aiSettingsSyncKey) }
+    }
+
+    public var remoteFolder: String {
+        didSet { defaults.set(remoteFolder, forKey: Self.remoteFolderKey) }
+    }
+
+    @ObservationIgnored
     private let defaults: UserDefaults
 
     private static let lastSyncKey = "webdav_last_sync"
@@ -33,34 +50,17 @@ public final class WebDAVSyncService {
     private static let conflictStrategyKey = "webdav_conflict_strategy"
     private static let aiSettingsSyncKey = "webdav_ai_settings_sync"
 
-    public var conflictStrategy: ConflictStrategy {
-        get {
-            if let raw = defaults.string(forKey: Self.conflictStrategyKey),
-               let value = ConflictStrategy(rawValue: raw) {
-                return value
-            }
-            return .lastModifiedWins
-        }
-        set { defaults.set(newValue.rawValue, forKey: Self.conflictStrategyKey) }
-    }
-
-    public var aiSettingsSyncEnabled: Bool {
-        get { defaults.bool(forKey: Self.aiSettingsSyncKey) }
-        set { defaults.set(newValue, forKey: Self.aiSettingsSyncKey) }
-    }
-
-    public var autoSyncEnabled: Bool {
-        get { defaults.bool(forKey: Self.autoSyncKey) }
-        set { defaults.set(newValue, forKey: Self.autoSyncKey) }
-    }
-
-    public var remoteFolder: String {
-        get { defaults.string(forKey: Self.remoteFolderKey) ?? "/PaperTok" }
-        set { defaults.set(newValue, forKey: Self.remoteFolderKey) }
-    }
-
     public init(defaults: UserDefaults = AppConfig.groupDefaults) {
         self.defaults = defaults
+        self.autoSyncEnabled = defaults.bool(forKey: Self.autoSyncKey)
+        self.aiSettingsSyncEnabled = defaults.bool(forKey: Self.aiSettingsSyncKey)
+        self.remoteFolder = defaults.string(forKey: Self.remoteFolderKey) ?? "/PaperTok"
+        if let raw = defaults.string(forKey: Self.conflictStrategyKey),
+           let value = ConflictStrategy(rawValue: raw) {
+            self.conflictStrategy = value
+        } else {
+            self.conflictStrategy = .lastModifiedWins
+        }
         if let ts = defaults.object(forKey: Self.lastSyncKey) as? Date {
             self.lastSyncDate = ts
         }
@@ -105,7 +105,10 @@ public final class WebDAVSyncService {
     /// Perform a full sync cycle: upload local DB, sync book files.
     public func sync() async {
         guard let client = makeClient() else {
-            errorMessage = "WebDAV not configured"
+            errorMessage = AppLocalization.string(
+                "sync.connection_detail.configure_webdav_first",
+                value: "Configure WebDAV first."
+            )
             status = .error
             return
         }
@@ -174,7 +177,10 @@ public final class WebDAVSyncService {
     /// Download database and files from the remote server to restore locally.
     public func restore() async {
         guard let client = makeClient() else {
-            errorMessage = "WebDAV not configured"
+            errorMessage = AppLocalization.string(
+                "sync.connection_detail.configure_webdav_first",
+                value: "Configure WebDAV first."
+            )
             status = .error
             return
         }
@@ -228,7 +234,10 @@ public final class WebDAVSyncService {
     /// legacy full-sync fallback.
     public func incrementalSync() async {
         guard let client = makeClient() else {
-            errorMessage = "WebDAV not configured"
+            errorMessage = AppLocalization.string(
+                "sync.connection_detail.configure_webdav_first",
+                value: "Configure WebDAV first."
+            )
             status = .error
             return
         }

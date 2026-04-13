@@ -29,9 +29,9 @@ struct BookmarkManagerView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if bookmarks.isEmpty {
                     ContentUnavailableView(
-                        "No Bookmarks",
+                        String(localized: "reader.bookmarks_empty_title"),
                         systemImage: "bookmark",
-                        description: Text("Tap the bookmark icon while reading to save the current page.")
+                        description: Text("reader.bookmarks_empty_description")
                     )
                 } else {
                     List {
@@ -50,13 +50,13 @@ struct BookmarkManagerView: View {
                 }
             }
             .background(Morandi.background)
-            .navigationTitle("Bookmarks")
+            .navigationTitle(String(localized: "reader.bookmarks"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button("common.done") { dismiss() }
                         .foregroundStyle(Morandi.accent)
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -66,13 +66,13 @@ struct BookmarkManagerView: View {
                         Image(systemName: "bookmark.fill")
                     }
                     .foregroundStyle(Morandi.accent)
-                    .accessibilityLabel("Add bookmark")
+                    .accessibilityLabel(String(localized: "reader.add_bookmark"))
                 }
                 ToolbarItem(placement: .secondaryAction) {
                     Button {
                         Task { await exportHighlights() }
                     } label: {
-                        Label("Export Highlights", systemImage: "square.and.arrow.up")
+                        Label("reader.export_highlights", systemImage: "square.and.arrow.up")
                     }
                 }
             }
@@ -117,9 +117,11 @@ struct BookmarkManagerView: View {
 
     private func displayLocation(for note: BookNote) -> String {
         if let anchor = PDFAnnotationBridge.anchor(fromStoredString: note.cfi) {
-            return anchor.pageLabel.isEmpty ? "Page \(anchor.pageIndex + 1)" : anchor.pageLabel
+            return anchor.pageLabel.isEmpty
+                ? AppLocalization.format("reader.page_number_format", "Page %d", anchor.pageIndex + 1)
+                : anchor.pageLabel
         }
-        return note.content.isEmpty ? "Bookmark" : note.content
+        return note.content.isEmpty ? AppLocalization.string("reader.bookmark", value: "Bookmark") : note.content
     }
 
     private func reload() async {
@@ -155,7 +157,11 @@ struct BookmarkManagerView: View {
             )
             showExportSheet = true
         } catch {
-            exportedText = "Failed to export: \(error.localizedDescription)"
+            exportedText = AppLocalization.format(
+                "errors.reader.export_highlights_failed_format",
+                "Failed to export: %@",
+                error.localizedDescription
+            )
             showExportSheet = true
         }
     }
@@ -170,13 +176,13 @@ struct BookmarkManagerView: View {
                     .textSelection(.enabled)
             }
             .background(Morandi.background)
-            .navigationTitle("Exported")
+            .navigationTitle(String(localized: "reader.exported"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { showExportSheet = false }
+                    Button("common.done") { showExportSheet = false }
                         .foregroundStyle(Morandi.accent)
                 }
                 ToolbarItem(placement: .primaryAction) {

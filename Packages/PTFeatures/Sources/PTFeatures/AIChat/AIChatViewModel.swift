@@ -62,7 +62,11 @@ public final class AIChatViewModel {
                         ModelOption(id: "gpt-4.1", displayName: "GPT-4.1", supportsThinking: false, supportsVision: true),
                         ModelOption(id: "gpt-4o", displayName: "GPT-4o", supportsThinking: false, supportsVision: true)
                     ],
-                    makeProvider: { OpenAIProvider() }
+                    makeProvider: {
+                        OpenAIProvider(
+                            keyResolver: { APIKeyStore.nextEnabledSecret(providerId: "openai") }
+                        )
+                    }
                 ),
                 ProviderOption(
                     id: "anthropic",
@@ -70,7 +74,11 @@ public final class AIChatViewModel {
                     models: [
                         ModelOption(id: "claude-sonnet-4-20250514", displayName: "Claude Sonnet 4", supportsThinking: true, supportsVision: true)
                     ],
-                    makeProvider: { AnthropicProvider() }
+                    makeProvider: {
+                        AnthropicProvider(
+                            keyResolver: { APIKeyStore.nextEnabledSecret(providerId: "anthropic") }
+                        )
+                    }
                 )
             ]
         )

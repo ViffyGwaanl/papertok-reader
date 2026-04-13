@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 /// MCP (Model Context Protocol) client for communicating with MCP servers.
 ///
@@ -314,13 +315,28 @@ public enum MCPClientError: Error, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notInitialized:
-            return "MCP client has not been initialized. Call initialize() first."
+            return AppLocalization.string(
+                "errors.mcp.client_not_initialized",
+                value: "MCP client has not been initialized. Call initialize() first."
+            )
         case .initializeFailed(let reason):
-            return "MCP initialization failed: \(reason)"
+            return AppLocalization.format(
+                "errors.mcp.initialize_failed_format",
+                "MCP initialization failed: %@",
+                reason
+            )
         case .resourceReadFailed(let uri):
-            return "Failed to read MCP resource: \(uri)"
+            return AppLocalization.format(
+                "errors.mcp.resource_read_failed_format",
+                "Failed to read MCP resource: %@",
+                uri
+            )
         case .toolCallFailed(let reason):
-            return "MCP tool call failed: \(reason)"
+            return AppLocalization.format(
+                "errors.mcp.tool_call_failed_format",
+                "MCP tool call failed: %@",
+                reason
+            )
         }
     }
 }

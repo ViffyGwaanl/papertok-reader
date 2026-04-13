@@ -13,10 +13,12 @@ struct PapersFilterBar: View {
     @State private var isShowingDatePicker = false
     @State private var draftDate = Date()
 
-    private let dayOptions: [(label: String, value: String)] = [
-        ("Latest", "latest"),
-        ("All", "all"),
-    ]
+    private var dayOptions: [(label: String, value: String)] {
+        [
+            (String(localized: "papers.filter.latest"), "latest"),
+            (String(localized: "papers.filter.all"), "all"),
+        ]
+    }
 
     private let languageOptions: [(label: String, value: String)] = [
         ("ZH", "zh"),
@@ -28,13 +30,13 @@ struct PapersFilterBar: View {
     }
 
     private var customDateLabel: String {
-        guard let customDate else { return "Pick a date" }
+        guard let customDate else { return String(localized: "papers.pick_a_date") }
         return customDate.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
     }
 
     var body: some View {
         VStack(spacing: AppSpacing.sm) {
-            PTSearchBar(text: $searchQuery, placeholder: "Search papers...")
+            PTSearchBar(text: $searchQuery, placeholder: String(localized: "papers.search_placeholder"))
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: AppSpacing.sm) {
@@ -48,7 +50,7 @@ struct PapersFilterBar: View {
                     Divider().frame(height: 20)
 
                     FilterChip(
-                        label: "Liked",
+                        label: String(localized: "papers.filter.liked"),
                         icon: "heart.fill",
                         isSelected: likedOnly
                     ) { likedOnly.toggle() }
@@ -89,7 +91,7 @@ struct PapersFilterBar: View {
             NavigationStack {
                 VStack(spacing: AppSpacing.lg) {
                     DatePicker(
-                        "Paper date",
+                        String(localized: "papers.date_label"),
                         selection: $draftDate,
                         displayedComponents: .date
                     )

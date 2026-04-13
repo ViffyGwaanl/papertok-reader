@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 /// Transport mechanism for MCP server communication.
 public enum MCPTransportType: String, Codable, Sendable, CaseIterable {
@@ -62,10 +63,14 @@ public enum MCPConnectionStatus: Sendable, Equatable {
 
     public var displayText: String {
         switch self {
-        case .disconnected: return "Disconnected"
-        case .connecting: return "Connecting..."
-        case .connected(let count): return "Connected (\(count) tools)"
-        case .error(let msg): return "Error: \(msg)"
+        case .disconnected:
+            return AppLocalization.string("common.disconnected", value: "Disconnected")
+        case .connecting:
+            return AppLocalization.string("common.connecting_ellipsis", value: "Connecting...")
+        case .connected(let count):
+            return AppLocalization.format("common.connected_tool_count_format", "Connected (%d tools)", count)
+        case .error(let msg):
+            return AppLocalization.format("common.error_detail_format", "Error: %@", msg)
         }
     }
 

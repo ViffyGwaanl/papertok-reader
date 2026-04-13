@@ -105,6 +105,14 @@ public enum APIKeyStore {
         return usable[next].element
     }
 
+    /// Convenience wrapper that returns the secret string of the next
+    /// round-robin enabled key, or nil if none are usable.
+    public static func nextEnabledSecret(providerId: String) -> String? {
+        guard let entry = nextEnabled(providerId: providerId) else { return nil }
+        let secret = loadSecret(providerId: providerId, entryId: entry.id)
+        return secret.isEmpty ? nil : secret
+    }
+
     public static func isInCooldown(_ entry: APIKeyEntry) -> Bool {
         if let until = entry.cooldownUntil { return until > Date() }
         return false
@@ -142,7 +150,7 @@ public struct APIKeyListView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Morandi.background)
-        .navigationTitle("API Keys")
+        .navigationTitle(String(localized: "settings.api_keys.title"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -176,7 +184,7 @@ public struct APIKeyListView: View {
     private var keysSection: some View {
         Section {
             if entries.isEmpty {
-                Text("No keys configured. Tap + to add one.")
+                Text("settings.api_keys.empty")
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.tertiaryText)
             } else {
@@ -194,7 +202,7 @@ public struct APIKeyListView: View {
                 .onDelete(perform: deleteKeys)
             }
         } header: {
-            Text("Keys (\(entries.count))")
+            Text(AppLocalization.format("settings.api_keys.count_format", "Keys (%d)", entries.count))
         }
     }
 
@@ -203,7 +211,7 @@ public struct APIKeyListView: View {
             Button {
                 Task { await testAll() }
             } label: {
-                Label("Test All Keys", systemImage: "checkmark.circle")
+                Label("settings.api_keys.test_all", systemImage: "checkmark.circle")
                     .foregroundStyle(Morandi.accent)
             }
             .disabled(testingAll || entries.isEmpty)
@@ -211,7 +219,7 @@ public struct APIKeyListView: View {
             Button {
                 clearCooldowns()
             } label: {
-                Label("Clear All Cooldowns", systemImage: "snowflake")
+                Label("settings.api_keys.clear_cooldowns", systemImage: "snowflake")
                     .foregroundStyle(Morandi.powder)
             }
             .disabled(entries.isEmpty)
@@ -219,7 +227,7 @@ public struct APIKeyListView: View {
             Button {
                 resetStats()
             } label: {
-                Label("Reset Statistics", systemImage: "arrow.counterclockwise")
+                Label("settings.api_keys.reset_statistics", systemImage: "arrow.counterclockwise")
                     .foregroundStyle(Morandi.clay)
             }
             .disabled(entries.isEmpty)
@@ -227,7 +235,7 @@ public struct APIKeyListView: View {
             Button {
                 showingBulkImport = true
             } label: {
-                Label("Bulk Import…", systemImage: "tray.and.arrow.down")
+                Label("settings.api_keys.bulk_import", systemImage: "tray.and.arrow.down")
                     .foregroundStyle(Morandi.lavender)
             }
         }
@@ -271,7 +279,7 @@ public struct APIKeyListView: View {
             }
         }
         APIKeyStore.save(entries, providerId: providerId)
-        globalMessage = "Cooldowns cleared."
+        globalMessage = String(localized: "settings.api_keys.cooldowns_cleared")
     }
 
     private func resetStats() {
@@ -282,7 +290,7 @@ public struct APIKeyListView: View {
             entries[i].cooldownUntil = nil
         }
         APIKeyStore.save(entries, providerId: providerId)
-        globalMessage = "Statistics reset."
+        globalMessage = String(localized: "settings.api_keys.statistics_reset")
     }
 
     private func testAll() async {
@@ -291,7 +299,7 @@ public struct APIKeyListView: View {
         for entry in entries {
             await testKey(entry)
         }
-        globalMessage = "Test complete."
+        globalMessage = String(localized: "settings.api_keys.test_complete")
     }
 
     private func testKey(_ entry: APIKeyEntry) async {
@@ -388,19 +396,32 @@ struct APIKeyRow: View {
 
     private var statusText: String {
         switch entry.lastTestStatus {
-        case .untested: return "Untested"
+        case .untested:
+            return String(localized: "settings.api_keys.status.untested")
         case .success:
             if let d = entry.lastTestedAt {
-                return "OK • \(Self.relativeFormatter.localizedString(for: d, relativeTo: Date()))"
+                return AppLocalization.format(
+                    "settings.api_keys.status.ok_relative_format",
+                    "OK • %@",
+                    Self.relativeFormatter.localizedString(for: d, relativeTo: Date())
+                )
             }
-            return "OK"
+            return String(localized: "settings.api_keys.status.ok")
         case .failed:
-            return "Failed (\(entry.failureCount))"
+            return AppLocalization.format(
+                "settings.api_keys.status.failed_count_format",
+                "Failed (%d)",
+                entry.failureCount
+            )
         case .cooldown:
             if let until = entry.cooldownUntil {
-                return "Cooldown until \(Self.timeFormatter.string(from: until))"
+                return AppLocalization.format(
+                    "settings.api_keys.status.cooldown_until_format",
+                    "Cooldown until %@",
+                    Self.timeFormatter.string(from: until)
+                )
             }
-            return "Cooldown"
+            return String(localized: "settings.api_keys.status.cooldown")
         }
     }
 
@@ -414,6 +435,7 @@ struct APIKeyRow: View {
         let f = DateFormatter()
         f.dateStyle = .none
         f.timeStyle = .short
+        f.locale = .autoupdatingCurrent
         return f
     }()
 }
@@ -435,19 +457,19 @@ struct APIKeyEditSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Name") {
-                    TextField("e.g. Personal", text: $name)
+                Section(String(localized: "common.name")) {
+                    TextField(String(localized: "settings.api_keys.name_placeholder"), text: $name)
                         #if os(iOS)
                         .textInputAutocapitalization(.words)
                         #endif
                 }
-                Section("API Key") {
+                Section(String(localized: "settings.api_keys.secret_section")) {
                     HStack {
                         Group {
                             if showSecret {
-                                TextField("sk-…", text: $secret)
+                                TextField(String(localized: "settings.api_keys.secret_placeholder"), text: $secret)
                             } else {
-                                SecureField("sk-…", text: $secret)
+                                SecureField(String(localized: "settings.api_keys.secret_placeholder"), text: $secret)
                             }
                         }
                         #if os(iOS)
@@ -464,22 +486,22 @@ struct APIKeyEditSheet: View {
                     }
                 }
                 Section {
-                    Toggle("Enabled", isOn: $enabled)
+                    Toggle("common.enabled", isOn: $enabled)
                         .tint(Morandi.accent)
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle(existing == nil ? "Add API Key" : "Edit API Key")
+            .navigationTitle(String(localized: existing == nil ? "settings.api_keys.add_title" : "settings.api_keys.edit_title"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("common.cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
+                    Button("common.save") { save() }
                         .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
@@ -527,25 +549,25 @@ struct BulkImportSheet: View {
                         .frame(minHeight: 220)
                         .font(.system(.footnote, design: .monospaced))
                 } header: {
-                    Text("Paste keys")
+                    Text("settings.api_keys.bulk_import_header")
                 } footer: {
-                    Text("One key per line. CSV form 'name,key' is also supported. Imported keys are enabled by default.")
+                    Text("settings.api_keys.bulk_import_footer")
                         .font(AppTypography.caption2)
                         .foregroundStyle(Morandi.tertiaryText)
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
-            .navigationTitle("Bulk Import")
+            .navigationTitle(String(localized: "settings.api_keys.bulk_import_title"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("common.cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Import") { performImport() }
+                    Button("common.import") { performImport() }
                         .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
@@ -564,7 +586,11 @@ struct BulkImportSheet: View {
                 name = parts[0]
                 secret = parts[1]
             } else {
-                name = "Key \(i + 1)"
+                name = AppLocalization.format(
+                    "settings.api_keys.bulk_import_generated_name_format",
+                    "Key %d",
+                    i + 1
+                )
                 secret = parts[0]
             }
             let entry = APIKeyEntry(name: name)

@@ -67,6 +67,7 @@
 		A48A1D4DFCFED89409741A9B /* ReaderLocatorResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A62992279C66EB020EB6D1F /* ReaderLocatorResolver.swift */; };
 		AC30C6E530916E861FC2C529 /* PendingAIRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F41C91CE13FFC7FCD99BDD7B /* PendingAIRequestStore.swift */; };
 		AEA843D224796020DF34C9F4 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59DD85ACEA3715614B91646A /* CalendarService.swift */; };
+		B51962A8A48A84996A00C907 /* APIKeyMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C34172A3A09A5F7C29320D3 /* APIKeyMigrationService.swift */; };
 		B6CF97DCEA333578A81831EB /* SharedInboxImportProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C90F323C19C9E5544390796 /* SharedInboxImportProcessor.swift */; };
 		B7D803D87C070530946D808E /* DeepLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7FABF2B84D350F5A63C0294 /* DeepLinkHandler.swift */; };
 		BB0F72E63D2AB05C8E9A28E8 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59DD85ACEA3715614B91646A /* CalendarService.swift */; };
@@ -79,12 +80,14 @@
 		C95E351F7400DBDD0AC854B2 /* ShortcutsCallbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD010CB82800CD591F6A0D8 /* ShortcutsCallbackService.swift */; };
 		CACE6E07DBADD3D4AFC654C4 /* PendingAIRequestStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */; };
 		CB66BCFC24B2225513FEF061 /* PTFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = 6490B3DAD3DCE4DA661D2073 /* PTFeatures */; };
+		CBE61F990E203A0E4A4D1EA4 /* APIKeyMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C34172A3A09A5F7C29320D3 /* APIKeyMigrationService.swift */; };
 		CC0E4BD722A7720DCCBFF474 /* SharedInboxImportProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */; };
 		D174551E5B0C43D707D1499C /* AppDatabaseToolContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AB1088870E1CE5C05BA455B /* AppDatabaseToolContext.swift */; };
 		D37C3D2F58589EB71A68CDF5 /* PaperTokReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */; };
 		D4A6F01E2782F86D6A82FDE2 /* ShareExtensionInfoPlistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000149E4483078E18005783 /* ShareExtensionInfoPlistTests.swift */; };
 		D50DA2C45D28AEC7F8A87F98 /* AskAIIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */; };
 		D8C42A5C3B426F4EC9C08B6E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */; };
+		D9491E98E77F122790D3EB3A /* HardcodedEnglishAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDCE10A37CE481EAF449C2E /* HardcodedEnglishAuditTests.swift */; };
 		E0BD0C8965C2FC139407BD03 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */; };
 		E4B864DE42AF2E4D43265F94 /* PendingAIRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F41C91CE13FFC7FCD99BDD7B /* PendingAIRequestStore.swift */; };
 		EACA1559B18E83166994FFAE /* SearchBooksIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3CFE493D1829B44151BABC8 /* SearchBooksIntent.swift */; };
@@ -119,6 +122,7 @@
 		2010F60CC1F5766BE1D25ED1 /* FlutterMigrationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationServiceTests.swift; sourceTree = "<group>"; };
 		26308E8B6FC711A4671FB64A /* PendingShortcutQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShortcutQueue.swift; sourceTree = "<group>"; };
 		2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationProgressView.swift; sourceTree = "<group>"; };
+		2C34172A3A09A5F7C29320D3 /* APIKeyMigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyMigrationService.swift; sourceTree = "<group>"; };
 		2FD010CB82800CD591F6A0D8 /* ShortcutsCallbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutsCallbackService.swift; sourceTree = "<group>"; };
 		31B3258F79C09DC91F43EC67 /* PaperTokReaderTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PaperTokReaderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C90F323C19C9E5544390796 /* SharedInboxImportProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInboxImportProcessor.swift; sourceTree = "<group>"; };
@@ -135,6 +139,7 @@
 		62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskAIIntent.swift; sourceTree = "<group>"; };
 		6932166FAF1D7324853A45F6 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		6CE4520CF97A9EDE5785D2E7 /* ShareHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareHandler.swift; sourceTree = "<group>"; };
+		6FDCE10A37CE481EAF449C2E /* HardcodedEnglishAuditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardcodedEnglishAuditTests.swift; sourceTree = "<group>"; };
 		70D02DF88F155D7FA350EC22 /* iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iOS.entitlements; sourceTree = "<group>"; };
 		736F6CAB2377109D7FFEEC2D /* AppAIToolContextFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAIToolContextFactoryTests.swift; sourceTree = "<group>"; };
 		7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInboxImportProcessorTests.swift; sourceTree = "<group>"; };
@@ -314,6 +319,7 @@
 		87DA46438456ABB3EF75C2A1 /* Migration */ = {
 			isa = PBXGroup;
 			children = (
+				2C34172A3A09A5F7C29320D3 /* APIKeyMigrationService.swift */,
 				9F2BFF3926E7F060EE92CEA7 /* FlutterMigrationPlanner.swift */,
 				3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */,
 				2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */,
@@ -328,6 +334,7 @@
 				F021FFA36AAA92466D6B0408 /* DeepLinkRouterTests.swift */,
 				ADEB537F9D7A1064ED1F84F5 /* FlutterMigrationPlannerTests.swift */,
 				2010F60CC1F5766BE1D25ED1 /* FlutterMigrationServiceTests.swift */,
+				6FDCE10A37CE481EAF449C2E /* HardcodedEnglishAuditTests.swift */,
 				7AD25A8251359DEFBB2F5C62 /* MigrationLocalizationCatalogTests.swift */,
 				D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */,
 				7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */,
@@ -441,6 +448,8 @@
 				C09AFDFAA9BAC61F8E7019BF /* PBXTargetDependency */,
 			);
 			name = PaperTokReaderTests;
+			packageProductDependencies = (
+			);
 			productName = PaperTokReaderTests;
 			productReference = 31B3258F79C09DC91F43EC67 /* PaperTokReaderTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -554,12 +563,12 @@
 			mainGroup = D290F9E4B9309C79DBA2342A;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "PTAIServices" */,
-				7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "PTCore" */,
-				A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "PTFeatures" */,
-				9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "PTNetworking" */,
-				D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "PTReader" */,
-				A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "PTUI" */,
+				93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "Packages/PTAIServices" */,
+				7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "Packages/PTCore" */,
+				A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "Packages/PTFeatures" */,
+				9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "Packages/PTNetworking" */,
+				D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "Packages/PTReader" */,
+				A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "Packages/PTUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ACD80EDE6F6FE221193C6115 /* Products */;
@@ -604,6 +613,7 @@
 				0E6A0DAEF7490EC3BF00FF17 /* DeepLinkRouterTests.swift in Sources */,
 				772AE087FFC3C26E95AA2854 /* FlutterMigrationPlannerTests.swift in Sources */,
 				9F13B45058E94526B5F9A918 /* FlutterMigrationServiceTests.swift in Sources */,
+				D9491E98E77F122790D3EB3A /* HardcodedEnglishAuditTests.swift in Sources */,
 				C3F6F2794B9026030D94FE55 /* MigrationLocalizationCatalogTests.swift in Sources */,
 				CACE6E07DBADD3D4AFC654C4 /* PendingAIRequestStoreTests.swift in Sources */,
 				D4A6F01E2782F86D6A82FDE2 /* ShareExtensionInfoPlistTests.swift in Sources */,
@@ -617,6 +627,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B51962A8A48A84996A00C907 /* APIKeyMigrationService.swift in Sources */,
 				7A0636431A419D80975222B0 /* AppAIToolContextFactory.swift in Sources */,
 				A29481DDFB0E9C571C3DE7D5 /* AppDatabaseToolContext.swift in Sources */,
 				C5BCA1B395631D3F3CE8E185 /* AppEnvironment.swift in Sources */,
@@ -668,6 +679,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CBE61F990E203A0E4A4D1EA4 /* APIKeyMigrationService.swift in Sources */,
 				66E1054DFAF978CADB78399E /* AppAIToolContextFactory.swift in Sources */,
 				D174551E5B0C43D707D1499C /* AppDatabaseToolContext.swift in Sources */,
 				04C28DF5D496918DF8A990CD /* AppEnvironment.swift in Sources */,
@@ -760,8 +772,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -839,8 +849,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/ShareExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Extensions/ShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -882,8 +890,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -968,8 +974,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = App/Entitlements/ShareExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3LJ45MFB74;
 				INFOPLIST_FILE = App/Extensions/ShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1056,27 +1060,27 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "PTCore" */ = {
+		7984AF03C1595BBC60EFE700 /* XCLocalSwiftPackageReference "Packages/PTCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTCore;
 		};
-		93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "PTAIServices" */ = {
+		93FF1878E145CF979EF7FB50 /* XCLocalSwiftPackageReference "Packages/PTAIServices" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTAIServices;
 		};
-		9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "PTNetworking" */ = {
+		9D95085071B92EA17AC20937 /* XCLocalSwiftPackageReference "Packages/PTNetworking" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTNetworking;
 		};
-		A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "PTUI" */ = {
+		A4A3259CC71E2F6D89469A2D /* XCLocalSwiftPackageReference "Packages/PTUI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTUI;
 		};
-		A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "PTFeatures" */ = {
+		A63A707DED685C9E8C684FB5 /* XCLocalSwiftPackageReference "Packages/PTFeatures" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTFeatures;
 		};
-		D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "PTReader" */ = {
+		D026C2D1FF0AD550E774A0AC /* XCLocalSwiftPackageReference "Packages/PTReader" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PTReader;
 		};

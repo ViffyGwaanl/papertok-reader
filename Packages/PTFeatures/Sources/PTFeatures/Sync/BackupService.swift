@@ -175,9 +175,16 @@ public enum BackupError: Error, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .zipFailed: return "Failed to create backup archive"
-        case .unzipFailed: return "Failed to extract backup archive"
+        case .zipFailed:
+            return AppLocalization.string(
+                "errors.backup.zip_failed",
+                value: "Failed to create backup archive"
+            )
+        case .unzipFailed:
+            return AppLocalization.string(
+                "errors.backup.unzip_failed",
+                value: "Failed to extract backup archive"
+            )
         }
     }
 }
-

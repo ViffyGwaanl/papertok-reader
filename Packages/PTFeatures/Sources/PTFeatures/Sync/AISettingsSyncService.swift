@@ -59,9 +59,21 @@ public enum AISettingsSyncError: Error, LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .encryptionFailed: return "Failed to encrypt AI settings"
-        case .decryptionFailed: return "Failed to decrypt AI settings"
-        case .invalidPassphrase: return "Invalid passphrase"
+        case .encryptionFailed:
+            return AppLocalization.string(
+                "errors.sync.ai_settings_encryption_failed",
+                value: "Failed to encrypt AI settings"
+            )
+        case .decryptionFailed:
+            return AppLocalization.string(
+                "errors.sync.ai_settings_decryption_failed",
+                value: "Failed to decrypt AI settings"
+            )
+        case .invalidPassphrase:
+            return AppLocalization.string(
+                "errors.sync.ai_settings_invalid_passphrase",
+                value: "Invalid passphrase"
+            )
         }
     }
 }

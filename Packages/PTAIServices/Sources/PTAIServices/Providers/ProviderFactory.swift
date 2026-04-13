@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 import PTNetworking
 
 public enum SupportedProvider: String, CaseIterable, Sendable {
@@ -19,6 +20,10 @@ public struct ProviderConfig: Sendable {
     public let endpointPath: String?
     public let availableModels: [String]
     public let networkClient: NetworkClient
+    /// Optional resolver that returns the next API key to use (for rotation).
+    /// If provided and it returns a non-empty string, it takes precedence over
+    /// ``apiKey`` and any Keychain fallback.
+    public let keyResolver: (@Sendable () -> String?)?
 
     public init(
         apiKey: String? = nil,
@@ -28,7 +33,8 @@ public struct ProviderConfig: Sendable {
         apiVersion: String? = nil,
         endpointPath: String? = nil,
         availableModels: [String] = [],
-        networkClient: NetworkClient = NetworkClient()
+        networkClient: NetworkClient = NetworkClient(),
+        keyResolver: (@Sendable () -> String?)? = nil
     ) {
         self.apiKey = apiKey
         self.baseURL = baseURL
@@ -38,6 +44,7 @@ public struct ProviderConfig: Sendable {
         self.endpointPath = endpointPath
         self.availableModels = availableModels
         self.networkClient = networkClient
+        self.keyResolver = keyResolver
     }
 }
 
@@ -47,8 +54,17 @@ public enum ProviderFactoryError: Error, LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .missingBaseURL(let p): return "Base URL required for provider: \(p.rawValue)"
-        case .missingDeploymentName: return "Deployment name required for Azure OpenAI"
+        case .missingBaseURL(let p):
+            return AppLocalization.format(
+                "errors.ai.provider_base_url_required_format",
+                "Base URL required for provider: %@",
+                p.rawValue
+            )
+        case .missingDeploymentName:
+            return AppLocalization.string(
+                "errors.ai.missing_deployment_name",
+                value: "Deployment name required for Azure OpenAI"
+            )
         }
     }
 }
@@ -64,6 +80,7 @@ public enum ProviderFactory {
             return OpenAIProvider(
                 baseURL: base,
                 overrideAPIKey: config.apiKey,
+                keyResolver: config.keyResolver,
                 networkClient: config.networkClient
             )
 
@@ -72,6 +89,7 @@ public enum ProviderFactory {
             return AnthropicProvider(
                 baseURL: base,
                 overrideAPIKey: config.apiKey,
+                keyResolver: config.keyResolver,
                 networkClient: config.networkClient
             )
 
@@ -80,6 +98,7 @@ public enum ProviderFactory {
             return GeminiProvider(
                 baseURL: base,
                 overrideAPIKey: config.apiKey,
+                keyResolver: config.keyResolver,
                 networkClient: config.networkClient
             )
 
@@ -95,6 +114,7 @@ public enum ProviderFactory {
                 deploymentName: deployment,
                 apiVersion: config.apiVersion ?? "2024-02-15-preview",
                 overrideAPIKey: config.apiKey,
+                keyResolver: config.keyResolver,
                 networkClient: config.networkClient
             )
 
@@ -103,6 +123,7 @@ public enum ProviderFactory {
             return VolcengineProvider(
                 baseURL: base,
                 overrideAPIKey: config.apiKey,
+                keyResolver: config.keyResolver,
                 networkClient: config.networkClient
             )
 
@@ -114,6 +135,7 @@ public enum ProviderFactory {
                 baseURL: base,
                 endpointPath: config.endpointPath ?? "/v1/chat/completions",
                 overrideAPIKey: config.apiKey,
+                keyResolver: config.keyResolver,
                 customHeaders: config.customHeaders,
                 availableModels: config.availableModels,
                 networkClient: config.networkClient

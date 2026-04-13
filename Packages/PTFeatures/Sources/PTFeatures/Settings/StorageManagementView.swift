@@ -69,12 +69,12 @@ public struct StorageManagementView: View {
             }
             .padding(.vertical, 4)
 
-            legendRow("Database", sizes.database, color: Morandi.accent)
-            legendRow("Book Files", sizes.books, color: Morandi.sage)
-            legendRow("Cover Images", sizes.covers, color: Morandi.dustyRose)
-            legendRow("AI Index", sizes.aiIndex, color: Morandi.lavender)
-            legendRow("Conversation History", sizes.conversations, color: Morandi.clay)
-            legendRow("Memory Files", sizes.memory, color: Morandi.powder)
+            legendRow(String(localized: "settings.storage.database"), sizes.database, color: Morandi.accent)
+            legendRow(String(localized: "settings.storage.book_files"), sizes.books, color: Morandi.sage)
+            legendRow(String(localized: "settings.storage.cover_images"), sizes.covers, color: Morandi.dustyRose)
+            legendRow(String(localized: "settings.storage.ai_index_label"), sizes.aiIndex, color: Morandi.lavender)
+            legendRow(String(localized: "settings.storage.conversation_history"), sizes.conversations, color: Morandi.clay)
+            legendRow(String(localized: "settings.storage.memory_files"), sizes.memory, color: Morandi.powder)
         }
     }
 
@@ -126,10 +126,10 @@ public struct StorageManagementView: View {
                 Label(String(localized: "settings.storage.clear_history"), systemImage: "bubble.left.and.bubble.right")
                     .foregroundStyle(Morandi.primaryText)
             }
-            .confirmationDialog("Clear all conversation history?", isPresented: $showClearConversations) {
+            .confirmationDialog(String(localized: "settings.storage.clear_history_q"), isPresented: $showClearConversations) {
                 Button(String(localized: "common.clear"), role: .destructive) {
                     clearDirectory(named: "conversations")
-                    showToast("Conversation history cleared")
+                    showToast(String(localized: "settings.storage.history_cleared"))
                 }
             }
 
@@ -139,10 +139,10 @@ public struct StorageManagementView: View {
                 Label(String(localized: "settings.storage.clear_ai_index"), systemImage: "square.stack.3d.up.slash")
                     .foregroundStyle(Morandi.primaryText)
             }
-            .confirmationDialog("Clear AI search index?", isPresented: $showClearAIIndex) {
+            .confirmationDialog(String(localized: "settings.storage.clear_ai_index_q"), isPresented: $showClearAIIndex) {
                 Button(String(localized: "common.clear_all"), role: .destructive) {
                     clearDirectory(named: "ai_index")
-                    showToast("AI index cleared")
+                    showToast(String(localized: "settings.storage.ai_index_cleared"))
                 }
             }
 
@@ -152,10 +152,10 @@ public struct StorageManagementView: View {
                 Label(String(localized: "settings.clear_cache"), systemImage: "trash")
                     .foregroundStyle(Morandi.primaryText)
             }
-            .confirmationDialog("Clear all cached files?", isPresented: $showClearCache) {
+            .confirmationDialog(String(localized: "settings.storage.clear_cache_q"), isPresented: $showClearCache) {
                 Button(String(localized: "settings.clear_cache"), role: .destructive) {
                     viewModel.clearCache()
-                    showToast("Cache cleared")
+                    showToast(String(localized: "settings.storage.cache_cleared"))
                 }
             }
 
@@ -261,7 +261,7 @@ public struct StorageManagementView: View {
     private func exportData() {
         // Placeholder: marks the request for export. Real export happens in
         // the platform-specific share sheet hooked up from the app layer.
-        showToast("Export prepared")
+        showToast(String(localized: "settings.storage.export_prepared"))
     }
 
     private func showToast(_ message: String) {

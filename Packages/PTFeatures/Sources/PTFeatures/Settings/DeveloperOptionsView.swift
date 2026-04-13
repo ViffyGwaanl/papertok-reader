@@ -42,13 +42,13 @@ public struct DeveloperOptionsView: View {
 
     private var togglesSection: some View {
         Section(String(localized: "common.diagnostics")) {
-            Toggle("Verbose Logging", isOn: $viewModel.verboseLogging)
+            Toggle("settings.developer.verbose_logging", isOn: $viewModel.verboseLogging)
                 .tint(Morandi.accent)
-            Toggle("Network Request Logging", isOn: $viewModel.networkRequestLogging)
+            Toggle("settings.developer.network_logging", isOn: $viewModel.networkRequestLogging)
                 .tint(Morandi.accent)
-            Toggle("Slow Animations", isOn: $viewModel.slowAnimations)
+            Toggle("settings.developer.slow_animations", isOn: $viewModel.slowAnimations)
                 .tint(Morandi.accent)
-            Toggle("Show Debug Overlay", isOn: $viewModel.showDebugOverlay)
+            Toggle("settings.developer.debug_overlay", isOn: $viewModel.showDebugOverlay)
                 .tint(Morandi.accent)
         }
     }
@@ -87,11 +87,11 @@ public struct DeveloperOptionsView: View {
 
     private var buildInfoSection: some View {
         Section(String(localized: "common.build_info")) {
-            infoRow("Version", Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
-            infoRow("Build", Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—")
-            infoRow("Commit", commitHash)
-            infoRow("Device", deviceDescription)
-            infoRow("OS", osDescription)
+            infoRow(String(localized: "common.version"), Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
+            infoRow(String(localized: "common.build"), Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—")
+            infoRow(String(localized: "common.commit"), commitHash)
+            infoRow(String(localized: "common.device"), deviceDescription)
+            infoRow(String(localized: "common.operating_system"), osDescription)
         }
     }
 
@@ -156,16 +156,16 @@ public struct DeveloperOptionsView: View {
             let url = AppConfig.appGroupContainerURL()
                 .appendingPathComponent("diagnostic_report.json")
             try? data.write(to: url)
-            exportMessage = "Wrote report to app group"
+            exportMessage = String(localized: "settings.developer.export_report_success")
         } else {
-            exportMessage = "Failed to encode report"
+            exportMessage = String(localized: "settings.developer.export_report_failed")
         }
     }
 
     // MARK: - Device info
 
     private var commitHash: String {
-        Bundle.main.infoDictionary?["GitCommitHash"] as? String ?? "unknown"
+        Bundle.main.infoDictionary?["GitCommitHash"] as? String ?? String(localized: "common.unknown")
     }
 
     private var deviceDescription: String {

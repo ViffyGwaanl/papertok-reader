@@ -4,9 +4,9 @@ import Foundation
 
 @Suite("BookStyle")
 struct BookStyleTests {
-    @Test("Default values are correct")
+    @Test("Default values are correct for English locales")
     func defaultValues() {
-        let style = BookStyle.default
+        let style = BookStyle.defaultStyle(for: Locale(identifier: "en-US"))
         #expect(style.fontSize == 1.4)
         #expect(style.fontFamily == "Arial")
         #expect(style.lineHeight == 1.8)
@@ -16,6 +16,20 @@ struct BookStyleTests {
         #expect(style.sideMargin == 6.0)
         #expect(style.topMargin == 90.0)
         #expect(style.bottomMargin == 50.0)
+    }
+
+    @Test("Default font family prefers Chinese serif fonts for Simplified Chinese locales")
+    func defaultValuesForSimplifiedChinese() {
+        let style = BookStyle.defaultStyle(for: Locale(identifier: "zh-Hans"))
+
+        #expect(style.fontFamily == "Songti SC")
+    }
+
+    @Test("Default font family prefers Chinese serif fonts for Traditional Chinese locales")
+    func defaultValuesForTraditionalChinese() {
+        let style = BookStyle.defaultStyle(for: Locale(identifier: "zh-Hant"))
+
+        #expect(style.fontFamily == "Songti TC")
     }
 
     @Test("Roundtrips through database")

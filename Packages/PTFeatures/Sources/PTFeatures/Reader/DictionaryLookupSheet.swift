@@ -1,4 +1,5 @@
 import SwiftUI
+import PTCore
 import PTUI
 
 #if canImport(UIKit)
@@ -31,9 +32,13 @@ struct DictionaryLookupSheet: View {
                         .ignoresSafeArea()
                 } else {
                     ContentUnavailableView(
-                        "No Definition",
+                        String(localized: "reader.dictionary.no_definition_title"),
                         systemImage: "book.closed",
-                        description: Text("No installed dictionary contains a definition for \"\(term)\".")
+                        description: Text(AppLocalization.format(
+                            "reader.dictionary.no_definition_description_format",
+                            "No installed dictionary contains a definition for \"%@\".",
+                            term
+                        ))
                     )
                 }
             }
@@ -41,7 +46,7 @@ struct DictionaryLookupSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done", action: onDismiss)
+                    Button("common.done", action: onDismiss)
                         .foregroundStyle(Morandi.accent)
                 }
             }
@@ -56,13 +61,13 @@ struct DictionaryLookupSheet: View {
     var body: some View {
         NavigationStack {
             ContentUnavailableView(
-                "Unavailable",
+                String(localized: "reader.dictionary.unavailable_title"),
                 systemImage: "book.closed",
-                description: Text("Dictionary lookup is only supported on iOS.")
+                description: Text("reader.dictionary.unavailable_description")
             )
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done", action: onDismiss)
+                    Button("common.done", action: onDismiss)
                 }
             }
         }

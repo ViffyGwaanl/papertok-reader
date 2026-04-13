@@ -123,16 +123,16 @@ public struct HomeNavigationConfigView: View {
             }
         }
         .confirmationDialog(
-            "Reset home navigation to defaults?",
+            String(localized: "settings.home_nav.reset_confirmation"),
             isPresented: $showResetConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Reset", role: .destructive) {
+            Button("common.reset", role: .destructive) {
                 AppTab.resetConfiguration()
                 order = AppTab.defaultOrder
                 enabled = Set(AppTab.allCases)
             }
-            Button("Cancel", role: .cancel) {}
+            Button("common.cancel", role: .cancel) {}
         }
     }
 

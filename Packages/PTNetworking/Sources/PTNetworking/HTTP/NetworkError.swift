@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 public enum NetworkError: Error, Sendable, LocalizedError {
     case invalidURL(String)
@@ -13,21 +14,37 @@ public enum NetworkError: Error, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .invalidURL(let path):
-            return "Invalid URL: \(path)"
+            return AppLocalization.format(
+                "errors.network.invalid_url_format",
+                "Invalid URL: %@",
+                path
+            )
         case .httpError(let statusCode, _):
-            return "HTTP error \(statusCode)"
+            return AppLocalization.format(
+                "errors.network.http_error_format",
+                "HTTP error %d",
+                statusCode
+            )
         case .decodingFailed(let error):
-            return "Decoding failed: \(error.localizedDescription)"
+            return AppLocalization.format(
+                "errors.network.decoding_failed_format",
+                "Decoding failed: %@",
+                error.localizedDescription
+            )
         case .noData:
-            return "No data received"
+            return AppLocalization.string("errors.network.no_data", value: "No data received")
         case .timeout:
-            return "Request timed out"
+            return AppLocalization.string("errors.network.timeout", value: "Request timed out")
         case .cancelled:
-            return "Request was cancelled"
+            return AppLocalization.string("errors.network.cancelled", value: "Request was cancelled")
         case .connectionLost:
-            return "Network connection lost"
+            return AppLocalization.string("errors.network.connection_lost", value: "Network connection lost")
         case .unknown(let error):
-            return "Unknown error: \(error.localizedDescription)"
+            return AppLocalization.format(
+                "errors.network.unknown_format",
+                "Unknown error: %@",
+                error.localizedDescription
+            )
         }
     }
 

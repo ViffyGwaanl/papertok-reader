@@ -80,8 +80,18 @@ public enum IncrementalSyncError: Error, LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .unknownEntity(let key): return "Unknown sync entity: \(key)"
-        case .conflictRequiresUserInput(let key): return "Conflict needs manual resolution: \(key)"
+        case .unknownEntity(let key):
+            return AppLocalization.format(
+                "errors.sync.unknown_entity_format",
+                "Unknown sync entity: %@",
+                key
+            )
+        case .conflictRequiresUserInput(let key):
+            return AppLocalization.format(
+                "errors.sync.manual_conflict_required_format",
+                "Conflict needs manual resolution: %@",
+                key
+            )
         }
     }
 }

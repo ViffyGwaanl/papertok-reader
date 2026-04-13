@@ -102,10 +102,7 @@ public struct SyncSettingsView: View {
 
     private var syncOptionsSection: some View {
         Section {
-            Picker("Conflict strategy", selection: Binding(
-                get: { syncService.conflictStrategy },
-                set: { syncService.conflictStrategy = $0 }
-            )) {
+            Picker("Conflict strategy", selection: $syncService.conflictStrategy) {
                 Text("sync.last_modified_wins").tag(ConflictStrategy.lastModifiedWins)
                 Text("sync.local_wins").tag(ConflictStrategy.localWins)
                 Text("sync.remote_wins").tag(ConflictStrategy.remoteWins)
@@ -117,12 +114,9 @@ public struct SyncSettingsView: View {
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
 
-            Toggle("Sync AI settings", isOn: Binding(
-                get: { syncService.aiSettingsSyncEnabled },
-                set: { syncService.aiSettingsSyncEnabled = $0 }
-            ))
-            .tint(Morandi.accent)
-            .foregroundStyle(Morandi.primaryText)
+            Toggle("Sync AI settings", isOn: $syncService.aiSettingsSyncEnabled)
+                .tint(Morandi.accent)
+                .foregroundStyle(Morandi.primaryText)
 
             NavigationLink("Connection tester") {
                 ConnectionTesterView(syncService: syncService)

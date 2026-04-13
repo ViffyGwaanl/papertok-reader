@@ -33,10 +33,29 @@ public struct ReaderLocatorResolver: Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .missingBookId: return "Missing bookId in deep link."
-            case .invalidBookId(let raw): return "Invalid bookId: \(raw)"
-            case .bookNotFound(let id): return "Book #\(id) not found."
-            case .invalidLocator(let raw): return "Invalid locator: \(raw)"
+            case .missingBookId:
+                return AppLocalization.string(
+                    "errors.deeplink.missing_book_id",
+                    value: "Missing bookId in deep link."
+                )
+            case .invalidBookId(let raw):
+                return AppLocalization.format(
+                    "errors.deeplink.invalid_book_id_format",
+                    "Invalid bookId: %@",
+                    raw
+                )
+            case .bookNotFound(let id):
+                return AppLocalization.format(
+                    "errors.deeplink.book_not_found_format",
+                    "Book #%lld not found.",
+                    id
+                )
+            case .invalidLocator(let raw):
+                return AppLocalization.format(
+                    "errors.deeplink.invalid_locator_format",
+                    "Invalid locator: %@",
+                    raw
+                )
             }
         }
     }
