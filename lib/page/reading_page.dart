@@ -39,6 +39,7 @@ import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:anx_reader/widgets/reading_page/toc_widget.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/more_settings.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
+import 'package:anx_reader/theme/app_spacing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // import 'package:flutter/foundation.dart'
@@ -1056,33 +1057,53 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                                   Expanded(
                                     child: _currentPage,
                                   ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.toc),
-                                      onPressed: tocHandler,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(EvaIcons.edit),
-                                      onPressed: noteHandler,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.data_usage),
-                                      onPressed: progressHandler,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.color_lens),
-                                      onPressed: () {
-                                        styleHandler(setState);
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(EvaIcons.headphones),
-                                      onPressed: ttsHandler,
-                                    ),
-                                  ],
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.md,
+                                      vertical: AppSpacing.sm),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.toc,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface),
+                                        onPressed: tocHandler,
+                                      ),
+                                      IconButton(
+                                        icon: Icon(EvaIcons.edit,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface),
+                                        onPressed: noteHandler,
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.data_usage,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface),
+                                        onPressed: progressHandler,
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.color_lens,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface),
+                                        onPressed: () {
+                                          styleHandler(setState);
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: Icon(EvaIcons.headphones,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface),
+                                        onPressed: ttsHandler,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),

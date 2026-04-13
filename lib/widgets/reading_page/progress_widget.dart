@@ -4,6 +4,9 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
+import 'package:anx_reader/theme/app_spacing.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
+import 'package:anx_reader/widgets/common/pt_card.dart';
 import 'package:flutter/material.dart';
 
 class ProgressWidget extends StatefulWidget {
@@ -33,15 +36,15 @@ class _ProgressWidgetState extends State<ProgressWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
           const SizedBox(height: 10),
           Text(
             widget.epubPlayerKey.currentState!.chapterTitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 20,
+            style: TextStyle(
+              fontSize: Theme.of(context).textTheme.titleLarge?.fontSize,
               fontFamily: 'SourceHanSerif',
               fontWeight: FontWeight.bold,
             ),
@@ -60,7 +63,8 @@ class _ProgressWidgetState extends State<ProgressWidget> {
               ),
               Expanded(
                 child: Slider(
-                  inactiveColor: Colors.grey.shade300,
+                  inactiveColor:
+                      MorandiPalette.divider(context).withValues(alpha: 0.6),
                   value: _readProgress,
                   onChanged: (value) {
                     setState(() {
@@ -90,24 +94,30 @@ class _ProgressWidgetState extends State<ProgressWidget> {
               ),
             ],
           ),
-          Row(
-            children: [
-              ProgressDisplay(
-                mainText: widget.epubPlayerKey.currentState!.chapterCurrentPage
-                    .toString(),
-                subText: L10n.of(context).readingPageCurrentPage,
-              ),
-              ProgressDisplay(
-                mainText: widget.epubPlayerKey.currentState!.chapterTotalPages
-                    .toString(),
-                subText: L10n.of(context).readingPageChapterPages,
-              ),
-              ProgressDisplay(
-                mainText: (widget.epubPlayerKey.currentState!.percentage * 100)
-                    .toStringAsFixed(2),
-                subText: '%',
-              ),
-            ],
+          PTCard(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            elevation: 1,
+            child: Row(
+              children: [
+                ProgressDisplay(
+                  mainText: widget
+                      .epubPlayerKey.currentState!.chapterCurrentPage
+                      .toString(),
+                  subText: L10n.of(context).readingPageCurrentPage,
+                ),
+                ProgressDisplay(
+                  mainText: widget.epubPlayerKey.currentState!.chapterTotalPages
+                      .toString(),
+                  subText: L10n.of(context).readingPageChapterPages,
+                ),
+                ProgressDisplay(
+                  mainText:
+                      (widget.epubPlayerKey.currentState!.percentage * 100)
+                          .toStringAsFixed(2),
+                  subText: '%',
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
         ],

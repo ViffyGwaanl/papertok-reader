@@ -12,7 +12,10 @@ import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
 import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
 import 'package:anx_reader/service/translate/inline_fulltext_translation_status.dart';
+import 'package:anx_reader/theme/app_spacing.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
+import 'package:anx_reader/widgets/common/pt_card.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
@@ -41,46 +44,61 @@ class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
             children: [
               Text(L10n.of(context).readingPageConvertChinese,
                   style: Theme.of(context).textTheme.titleMedium),
-              Row(
-                children: [
-                  Expanded(
-                    child: AnxSegmentedButton<ConvertChineseMode>(
-                      segments: [
-                        SegmentButtonItem(
-                          label: L10n.of(context).readingPageOriginal,
-                          value: ConvertChineseMode.none,
-                          icon: const Text("原", style: iconStyle),
-                        ),
-                        SegmentButtonItem(
-                          label: L10n.of(context).readingPageSimplified,
-                          value: ConvertChineseMode.t2s,
-                          icon: const Text("简", style: iconStyle),
-                        ),
-                        SegmentButtonItem(
-                          label: L10n.of(context).readingPageTraditional,
-                          value: ConvertChineseMode.s2t,
-                          icon: const Text("繁", style: iconStyle),
-                        ),
-                      ],
-                      selected: {Prefs().readingRules.convertChineseMode},
-                      onSelectionChanged: (value) {
-                        setState(() {
-                          // Prefs().readingRules.convertChineseMode =
-                          //     ConvertChineseMode.values.byName(value.first);
-                          Prefs().readingRules = Prefs()
-                              .readingRules
-                              .copyWith(convertChineseMode: value.first);
-                          epubPlayerKey.currentState
-                              ?.changeReadingRules(Prefs().readingRules);
-                        });
-                      },
+              const SizedBox(height: AppSpacing.sm),
+              PTCard(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                elevation: 1,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AnxSegmentedButton<ConvertChineseMode>(
+                        segments: [
+                          SegmentButtonItem(
+                            label: L10n.of(context).readingPageOriginal,
+                            value: ConvertChineseMode.none,
+                            icon: const Text("原", style: iconStyle),
+                          ),
+                          SegmentButtonItem(
+                            label: L10n.of(context).readingPageSimplified,
+                            value: ConvertChineseMode.t2s,
+                            icon: const Text("简", style: iconStyle),
+                          ),
+                          SegmentButtonItem(
+                            label: L10n.of(context).readingPageTraditional,
+                            value: ConvertChineseMode.s2t,
+                            icon: const Text("繁", style: iconStyle),
+                          ),
+                        ],
+                        selected: {Prefs().readingRules.convertChineseMode},
+                        onSelectionChanged: (value) {
+                          setState(() {
+                            Prefs().readingRules = Prefs()
+                                .readingRules
+                                .copyWith(convertChineseMode: value.first);
+                            epubPlayerKey.currentState
+                                ?.changeReadingRules(Prefs().readingRules);
+                          });
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
-                  const Icon(Icons.error_outline),
+                  Container(
+                    width: AppSpacing.settingsIconBox,
+                    height: AppSpacing.settingsIconBox,
+                    decoration: BoxDecoration(
+                      color: MorandiPalette.warning(context),
+                      borderRadius: BorderRadius.circular(
+                          AppSpacing.settingsIconBoxRadius),
+                    ),
+                    child: const Icon(Icons.warning,
+                        color: Colors.white, size: 16),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       L10n.of(context).readingPageConvertChineseTips,
@@ -142,6 +160,7 @@ class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
           children: [
             Text(L10n.of(context).readingPageColumnCount,
                 style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 Expanded(
@@ -203,7 +222,7 @@ class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
               Text(
                 L10n.of(context).readingPageColumnThresholdTip,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey,
+                      color: MorandiPalette.secondaryText(context),
                     ),
               ),
             Slider(
