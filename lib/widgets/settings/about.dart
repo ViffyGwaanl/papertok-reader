@@ -5,6 +5,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/page/settings_page/developer/developer_options_page.dart';
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/settings/link_icon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -93,16 +94,14 @@ Future<void> openAboutDialog() async {
   final pubspec = Pubspec.parse(pubspecContent);
   final version = pubspec.version.toString();
 
-  showDialog(
-    context: navigatorKey.currentContext!,
-    builder: (BuildContext context) {
-      return AlertDialog(
-          content: ConstrainedBox(
+  PTDialog.show(
+    navigatorKey.currentContext!,
+    content: ConstrainedBox(
         constraints: const BoxConstraints(
           maxWidth: 500,
           minWidth: 300,
         ),
-        child: SingleChildScrollView(
+        child: Builder(builder: (context) => SingleChildScrollView(
           child: SizedBox(
             width: MediaQuery.of(context).size.width * 0.8,
             child: Column(
@@ -184,8 +183,7 @@ Future<void> openAboutDialog() async {
               ],
             ),
           ),
-        ),
-      ));
-    },
+        )),
+      ),
   );
 }

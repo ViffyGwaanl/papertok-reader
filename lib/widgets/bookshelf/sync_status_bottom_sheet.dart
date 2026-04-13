@@ -12,6 +12,7 @@ import 'package:anx_reader/providers/sync_status.dart';
 import 'package:anx_reader/utils/get_path/databases_path.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/bookshelf/book_sync_status_icon.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/widgets/linear_proportion_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,11 +21,10 @@ import 'package:path/path.dart';
 
 Future<void> showSyncStatusBottomSheet(BuildContext context) async {
   final dbPath = await getAnxDataBasesPath();
-  showModalBottomSheet(
-    useSafeArea: true,
-    context: navigatorKey.currentContext!,
-    showDragHandle: true,
-    isScrollControlled: true,
+  final rootContext = navigatorKey.currentContext!;
+  PTBottomSheet.show(
+    rootContext,
+    title: 'Sync status',
     builder: (context) => SyncStatusBottomSheet(dbPath: dbPath),
   );
 }
@@ -61,9 +61,7 @@ class SyncStatusBottomSheet extends ConsumerWidget {
 
     final DateTime? lastUploadTime = Prefs().lastUploadBookDate;
 
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      child: SingleChildScrollView(
+    return SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -71,8 +69,8 @@ class SyncStatusBottomSheet extends ConsumerWidget {
             const SizedBox(height: 10),
             _buildUpdateTimeInfo(localUpdateTime, lastUploadTime, theme, l10n),
             const SizedBox(height: 30),
-            _buildBookDistributionChart(localOnlyBooks, remoteOnlyBooks,
-                bothBooks, nonExistentBooks, theme),
+            _buildBookDistributionChart(context, localOnlyBooks,
+                remoteOnlyBooks, bothBooks, nonExistentBooks, theme),
             _buildBookStats(localOnlyBooks, remoteOnlyBooks, bothBooks,
                 nonExistentBooks, theme, l10n),
             const SizedBox(height: 10),
@@ -81,8 +79,7 @@ class SyncStatusBottomSheet extends ConsumerWidget {
             _buildActionButtons(context, ref, l10n),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildNonExistentTip(ThemeData theme, L10n l10n) {
@@ -200,13 +197,14 @@ class SyncStatusBottomSheet extends ConsumerWidget {
     ];
   }
 
-  List<Color> _getBookDistributionColors() {
+  List<Color> _getBookDistributionColors(BuildContext context) {
     return _getBookDistributionStatus(false, false)
-        .map((e) => BookSyncStatusIcon(syncStatus: e).color)
+        .map((e) => BookSyncStatusIcon.colorFor(context, e))
         .toList();
   }
 
   Widget _buildBookDistributionChart(
+    BuildContext context,
     int localOnly,
     int remoteOnly,
     int both,
@@ -214,26 +212,27 @@ class SyncStatusBottomSheet extends ConsumerWidget {
     ThemeData theme,
   ) {
     final total = localOnly + remoteOnly + both + nonExistent;
+    final colors = _getBookDistributionColors(context);
 
     return LinearProportionBar(segments: [
       SegmentData(
         proportion: total > 0 ? localOnly / total : 0,
-        color: _getBookDistributionColors()[0],
+        color: colors[0],
         showLabel: true,
       ),
       SegmentData(
         proportion: total > 0 ? remoteOnly / total : 0,
-        color: _getBookDistributionColors()[1],
+        color: colors[1],
         showLabel: true,
       ),
       SegmentData(
         proportion: total > 0 ? both / total : 0,
-        color: _getBookDistributionColors()[2],
+        color: colors[2],
         showLabel: true,
       ),
       SegmentData(
         proportion: total > 0 ? nonExistent / total : 0,
-        color: _getBookDistributionColors()[3],
+        color: colors[3],
         showLabel: true,
       ),
     ]);

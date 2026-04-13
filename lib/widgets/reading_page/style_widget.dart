@@ -11,6 +11,7 @@ import 'package:anx_reader/service/font.dart';
 import 'package:anx_reader/utils/font_parser.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/icon_and_text.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/more_settings.dart';
 import 'package:anx_reader/widgets/reading_page/widget_title.dart';
@@ -509,36 +510,33 @@ class _ThemeChangeWidgetState extends State<ThemeChangeWidget> {
   Future<String?> showColorPickerDialog(String currColor) async {
     Color pickedColor = Color(int.parse('0x$currColor'));
 
-    await showDialog<void>(
-      context: navigatorKey.currentState!.overlay!.context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          content: SingleChildScrollView(
-            child: ColorPicker(
-              hexInputBar: true,
-              pickerColor: pickedColor,
-              onColorChanged: (Color color) {
-                pickedColor = color;
-              },
-              pickerAreaHeightPercent: 0.8,
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop(pickedColor.value.toRadixString(16));
-              },
-            ),
-          ],
-        );
-      },
+    await PTDialog.show<void>(
+      navigatorKey.currentState!.overlay!.context,
+      content: SingleChildScrollView(
+        child: ColorPicker(
+          hexInputBar: true,
+          pickerColor: pickedColor,
+          onColorChanged: (Color color) {
+            pickedColor = color;
+          },
+          pickerAreaHeightPercent: 0.8,
+        ),
+      ),
+      actions: [
+        PTDialogAction(
+          label: 'Cancel',
+          onPressed: () => Navigator.of(
+                  navigatorKey.currentState!.overlay!.context)
+              .pop(),
+        ),
+        PTDialogAction(
+          label: 'OK',
+          isDefault: true,
+          onPressed: () => Navigator.of(
+                  navigatorKey.currentState!.overlay!.context)
+              .pop(pickedColor.value.toRadixString(16)),
+        ),
+      ],
     );
 
     return pickedColor.value.toRadixString(16);

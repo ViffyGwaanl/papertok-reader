@@ -24,6 +24,7 @@ import 'package:anx_reader/widgets/bookshelf/book_bottom_sheet.dart';
 import 'package:anx_reader/widgets/bookshelf/book_folder.dart';
 import 'package:anx_reader/widgets/bookshelf/sync_button.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/widgets/common/pt_chip.dart';
 import 'package:anx_reader/widgets/common/tag_chip.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
@@ -572,58 +573,48 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
         IconButton(
             icon: const Icon(Icons.sort),
             onPressed: () {
-              showMenu(
-                context: context,
-                position: RelativeRect.fromLTRB(
-                  MediaQuery.of(context).size.width,
-                  MediaQuery.of(context).padding.top + kToolbarHeight,
-                  0.0,
-                  0.0,
-                ),
-                items: [
-                  for (var sortField in SortFieldEnum.values)
-                    PopupMenuItem(
-                        child: Text(
-                          sortField.getL10n(context),
-                          style: TextStyle(
-                            color: sortField == Prefs().sortField
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface,
+              PTBottomSheet.show(
+                context,
+                title: 'Sort',
+                builder: (sheetContext) {
+                  return StatefulBuilder(builder: (sheetContext, setSheet) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var sortField in SortFieldEnum.values)
+                          PTPickerRow<SortFieldEnum>(
+                            value: sortField,
+                            groupValue: Prefs().sortField,
+                            title: sortField.getL10n(sheetContext),
+                            onChanged: (v) {
+                              Prefs().sortField = v;
+                              ref.read(bookListProvider.notifier).refresh();
+                              setSheet(() {});
+                            },
                           ),
+                        const SizedBox(height: 8),
+                        AnxSegmentedButton<SortOrderEnum>(
+                          onSelectionChanged: (value) {
+                            Prefs().sortOrder = value.first;
+                            ref.read(bookListProvider.notifier).refresh();
+                            setSheet(() {});
+                          },
+                          segments: SortOrderEnum.values
+                              .map(
+                                (e) => SegmentButtonItem(
+                                  value: e,
+                                  label: e.getL10n(
+                                      navigatorKey.currentContext!),
+                                ),
+                              )
+                              .toList(),
+                          selected: {Prefs().sortOrder},
                         ),
-                        onTap: () {
-                          Prefs().sortField = sortField;
-                          ref.read(bookListProvider.notifier).refresh();
-                        }),
-                  PopupMenuItem(
-                    enabled: false,
-                    child: StatefulBuilder(builder: (_, setState) {
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: AnxSegmentedButton<SortOrderEnum>(
-                              onSelectionChanged: (value) {
-                                Prefs().sortOrder = value.first;
-                                ref.read(bookListProvider.notifier).refresh();
-                                setState(() {});
-                              },
-                              segments: SortOrderEnum.values
-                                  .map(
-                                    (e) => SegmentButtonItem(
-                                      value: e,
-                                      label: e.getL10n(
-                                          navigatorKey.currentContext!),
-                                    ),
-                                  )
-                                  .toList(),
-                              selected: {Prefs().sortOrder},
-                            ),
-                          ),
-                        ],
-                      );
-                    }),
-                  )
-                ],
+                      ],
+                    );
+                  });
+                },
               );
             }),
       ],

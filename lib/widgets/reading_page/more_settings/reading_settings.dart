@@ -16,6 +16,7 @@ import 'package:anx_reader/service/translate/inline_fulltext_translation_status.
 import 'package:anx_reader/theme/app_spacing.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/widgets/common/pt_card.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
@@ -562,24 +563,22 @@ return null;
                     ? () async {
 
                   final current = Prefs().inlineFullTextTranslateConcurrency;
-                  final selected = await showModalBottomSheet<int>(
-                    context: context,
-                    builder: (context) {
-                      return SafeArea(
-                        child: ListView(
-                          children: [
-                            for (var i = 1; i <= 8; i++)
-                              ListTile(
-                                title: Text(
-                                  L10n.of(context)
-                                      .readingPageTranslateConcurrencyValue(i),
-                                ),
-                                trailing:
-                                    i == current ? const Icon(Icons.check) : null,
-                                onTap: () => Navigator.pop(context, i),
-                              ),
-                          ],
-                        ),
+                  final selected = await PTBottomSheet.show<int>(
+                    context,
+                    builder: (ctx) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var i = 1; i <= 8; i++)
+                            PTPickerRow<int>(
+                              value: i,
+                              groupValue: current,
+                              title: L10n.of(ctx)
+                                  .readingPageTranslateConcurrencyValue(i),
+                              onChanged: (v) => Navigator.pop(ctx, v),
+                            ),
+                        ],
                       );
                     },
                   );

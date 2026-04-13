@@ -19,6 +19,7 @@ import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/share_file.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/icon_and_text.dart';
 import 'package:file_picker/file_picker.dart';
@@ -26,7 +27,6 @@ import 'package:anx_reader/utils/book_file_types.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:path/path.dart' as p;
 
@@ -82,47 +82,50 @@ class BookBottomSheet extends ConsumerWidget {
       }
 
       if (Prefs().shouldShowHint(HintKey.releaseLocalSpace)) {
-        SmartDialog.show(
-          builder: (context) => AlertDialog(
-            title: Text(L10n.of(context).bookSyncStatusReleaseSpaceDialogTitle),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(L10n.of(context).bookSyncStatusReleaseSpaceDialogContent),
-                Row(
-                  children: [
-                    StatefulBuilder(builder: (context, setState) {
-                      return Checkbox(
-                          value: !Prefs()
-                              .shouldShowHint(HintKey.releaseLocalSpace),
-                          onChanged: (value) {
-                            value = !(value ?? false);
-                            Prefs()
-                                .setShowHint(HintKey.releaseLocalSpace, value);
-                            setState(() {});
-                          });
-                    }),
-                    Text(L10n.of(context).bookSyncStatusDoNotShowAgain),
-                  ],
-                )
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  SmartDialog.dismiss();
-                },
-                child: Text(L10n.of(context).commonCancel),
+        PTDialog.show(
+          context,
+          title: L10n.of(context).bookSyncStatusReleaseSpaceDialogTitle,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                L10n.of(context).bookSyncStatusReleaseSpaceDialogContent,
+                textAlign: TextAlign.center,
               ),
-              TextButton(
-                onPressed: () {
-                  SmartDialog.dismiss();
-                  core();
-                },
-                child: Text(L10n.of(context).commonConfirm),
-              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  StatefulBuilder(builder: (context, setState) {
+                    return Checkbox(
+                        value: !Prefs()
+                            .shouldShowHint(HintKey.releaseLocalSpace),
+                        onChanged: (value) {
+                          value = !(value ?? false);
+                          Prefs()
+                              .setShowHint(HintKey.releaseLocalSpace, value);
+                          setState(() {});
+                        });
+                  }),
+                  Text(L10n.of(context).bookSyncStatusDoNotShowAgain),
+                ],
+              )
             ],
           ),
+          actions: [
+            PTDialogAction(
+              label: L10n.of(context).commonCancel,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            PTDialogAction(
+              label: L10n.of(context).commonConfirm,
+              isDefault: true,
+              onPressed: () {
+                Navigator.of(context).pop();
+                core();
+              },
+            ),
+          ],
         );
       } else {
         ref.read(syncProvider.notifier).releaseBook(book);
@@ -176,39 +179,36 @@ class BookBottomSheet extends ConsumerWidget {
         oldSize = await File(book.fileFullPath).length();
       }
 
-      bool? confirm = await SmartDialog.show(
-        builder: (context) => AlertDialog(
-          title: Text(L10n.of(context).commonAttention),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(L10n.of(context)
-                  .bookBottomSheetOriginalFileSize(formatSize(oldSize))),
-              Text(L10n.of(context)
-                  .bookBottomSheetNewFileSize(formatSize(newSize))),
-              const SizedBox(height: 10),
-              Text(
-                L10n.of(context).bookBottomSheetReplaceWarning,
-                style: const TextStyle(color: Colors.red),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                SmartDialog.dismiss(result: false);
-              },
-              child: Text(L10n.of(context).commonCancel),
-            ),
-            TextButton(
-              onPressed: () {
-                SmartDialog.dismiss(result: true);
-              },
-              child: Text(L10n.of(context).commonConfirm),
+      bool? confirm = await PTDialog.show<bool>(
+        context,
+        title: L10n.of(context).commonAttention,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(L10n.of(context)
+                .bookBottomSheetOriginalFileSize(formatSize(oldSize))),
+            Text(L10n.of(context)
+                .bookBottomSheetNewFileSize(formatSize(newSize))),
+            const SizedBox(height: 10),
+            Text(
+              L10n.of(context).bookBottomSheetReplaceWarning,
+              style: const TextStyle(color: Colors.red),
             ),
           ],
         ),
+        actions: [
+          PTDialogAction(
+            label: L10n.of(context).commonCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          PTDialogAction(
+            label: L10n.of(context).commonConfirm,
+            isDefault: true,
+            destructive: true,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
       );
 
       if (confirm != true) return;

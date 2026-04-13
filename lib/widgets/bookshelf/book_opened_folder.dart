@@ -3,7 +3,9 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/providers/book_list.dart';
 import 'package:anx_reader/providers/tb_groups.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/bookshelf/book_item.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -68,8 +70,7 @@ class _BookOpenedFolderState extends ConsumerState<BookOpenedFolder> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: isEditingName
+    final titleWidget = isEditingName
           ? Row(
               children: [
                 Expanded(
@@ -106,11 +107,12 @@ class _BookOpenedFolderState extends ConsumerState<BookOpenedFolder> {
                 currentGroupName,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
+                  color: MorandiPalette.primaryText(context),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
-            ),
-      content: SizedBox(
+            );
+    final contentWidget = SizedBox(
         width: MediaQuery.of(context).size.width * 0.7,
         child: GridView.builder(
             shrinkWrap: true,
@@ -149,22 +151,35 @@ class _BookOpenedFolderState extends ConsumerState<BookOpenedFolder> {
                         : Container(),
                   ],
                 )),
+      );
+    return PTDialog(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          titleWidget,
+          const SizedBox(height: 8),
+          contentWidget,
+        ],
       ),
       actions: [
-        TextButton(
-            onPressed: () {
-              ref.read(bookListProvider.notifier).dissolveGroup(books);
-              Navigator.pop(context);
-            },
-            child: Text(L10n.of(context).commonDissolve)),
-        TextButton(
-            onPressed: () {
-              isEditing = !isEditing;
-              setState(() {});
-            },
-            child: Text(isEditing
-                ? L10n.of(context).commonCancel
-                : L10n.of(context).commonEdit)),
+        PTDialogAction(
+          label: L10n.of(context).commonDissolve,
+          destructive: true,
+          onPressed: () {
+            ref.read(bookListProvider.notifier).dissolveGroup(books);
+            Navigator.pop(context);
+          },
+        ),
+        PTDialogAction(
+          label: isEditing
+              ? L10n.of(context).commonCancel
+              : L10n.of(context).commonEdit,
+          onPressed: () {
+            isEditing = !isEditing;
+            setState(() {});
+          },
+        ),
       ],
     );
   }

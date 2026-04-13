@@ -1,4 +1,5 @@
 import 'package:anx_reader/enums/book_sync_status.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/bookshelf/spining_sync_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -13,27 +14,30 @@ class BookSyncStatusIcon extends StatelessWidget {
   final BookSyncStatusEnum syncStatus;
   final double iconSize;
 
-  Color get color {
-    switch (syncStatus) {
+  /// Morandi-adaptive color for a given sync status. Requires a
+  /// [BuildContext] so light/dark variants resolve correctly.
+  static Color colorFor(BuildContext context, BookSyncStatusEnum status) {
+    switch (status) {
       case BookSyncStatusEnum.localOnly:
-        return Colors.orangeAccent;
+        return MorandiPalette.warning(context);
       case BookSyncStatusEnum.remoteOnly:
-        return Colors.grey;
+        return MorandiPalette.warmGray(context);
       case BookSyncStatusEnum.both:
-        return Colors.green;
+        return MorandiPalette.success(context);
       case BookSyncStatusEnum.nonExistent:
-        return Colors.red;
+        return MorandiPalette.error(context);
       case BookSyncStatusEnum.downloading:
-        return Colors.blue;
+        return MorandiPalette.info(context);
       case BookSyncStatusEnum.uploading:
-        return Colors.blue;
+        return MorandiPalette.info(context);
       case BookSyncStatusEnum.checking:
-        return Colors.grey;
+        return MorandiPalette.warmGray(context);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final color = colorFor(context, syncStatus);
     Widget child = switch (syncStatus) {
       BookSyncStatusEnum.localOnly => Stack(
           children: [
@@ -115,7 +119,7 @@ class BookSyncStatusIcon extends StatelessWidget {
             ),
           ],
         ),
-      BookSyncStatusEnum.checking => CircularProgressIndicator.adaptive(
+      BookSyncStatusEnum.checking => const CircularProgressIndicator.adaptive(
           strokeWidth: 2,
         ),
     };
