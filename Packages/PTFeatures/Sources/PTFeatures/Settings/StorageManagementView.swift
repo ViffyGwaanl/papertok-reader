@@ -55,21 +55,66 @@ public struct StorageManagementView: View {
 
     private var overviewSection: some View {
         Section(String(localized: "common.usage")) {
-            row("Database", sizes.database)
-            row("Book Files", sizes.books)
-            row("Cover Images", sizes.covers)
-            row("AI Index", sizes.aiIndex)
-            row("Conversation History", sizes.conversations)
-            row("Memory Files", sizes.memory)
-            HStack {
-                Text("common.total")
-                    .font(AppTypography.body.weight(.semibold))
-                    .foregroundStyle(Morandi.primaryText)
-                Spacer()
-                Text(format(sizes.total))
-                    .font(AppTypography.body.weight(.semibold))
-                    .foregroundStyle(Morandi.accent)
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                storageBar
+                HStack {
+                    Text("common.total")
+                        .font(AppTypography.body.weight(.semibold))
+                        .foregroundStyle(Morandi.primaryText)
+                    Spacer()
+                    Text(format(sizes.total))
+                        .font(AppTypography.body.weight(.semibold))
+                        .foregroundStyle(Morandi.accent)
+                }
             }
+            .padding(.vertical, 4)
+
+            legendRow("Database", sizes.database, color: Morandi.accent)
+            legendRow("Book Files", sizes.books, color: Morandi.sage)
+            legendRow("Cover Images", sizes.covers, color: Morandi.dustyRose)
+            legendRow("AI Index", sizes.aiIndex, color: Morandi.lavender)
+            legendRow("Conversation History", sizes.conversations, color: Morandi.clay)
+            legendRow("Memory Files", sizes.memory, color: Morandi.powder)
+        }
+    }
+
+    private func barWidth(_ value: UInt64, totalWidth: CGFloat) -> CGFloat {
+        let total = max(1, sizes.total)
+        return CGFloat(value) / CGFloat(total) * totalWidth
+    }
+
+    private var storageBar: some View {
+        GeometryReader { geo in
+            HStack(spacing: 2) {
+                if sizes.total == 0 {
+                    Rectangle().fill(Morandi.divider).frame(maxWidth: .infinity)
+                } else {
+                    Rectangle().fill(Morandi.accent).frame(width: barWidth(sizes.database, totalWidth: geo.size.width))
+                    Rectangle().fill(Morandi.sage).frame(width: barWidth(sizes.books, totalWidth: geo.size.width))
+                    Rectangle().fill(Morandi.dustyRose).frame(width: barWidth(sizes.covers, totalWidth: geo.size.width))
+                    Rectangle().fill(Morandi.lavender).frame(width: barWidth(sizes.aiIndex, totalWidth: geo.size.width))
+                    Rectangle().fill(Morandi.clay).frame(width: barWidth(sizes.conversations, totalWidth: geo.size.width))
+                    Rectangle().fill(Morandi.powder).frame(width: barWidth(sizes.memory, totalWidth: geo.size.width))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .frame(height: 20)
+    }
+
+    @ViewBuilder
+    private func legendRow(_ label: String, _ size: UInt64, color: Color) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            Circle()
+                .fill(color)
+                .frame(width: 10, height: 10)
+            Text(label)
+                .foregroundStyle(Morandi.primaryText)
+            Spacer()
+            Text(format(size))
+                .foregroundStyle(Morandi.secondaryText)
+                .font(AppTypography.caption)
+                .monospacedDigit()
         }
     }
 

@@ -98,6 +98,29 @@ public final class AIChatViewModel {
         }
     }
 
+    /// Generation settings tunable via ChatSettingsSheet.
+    public struct ChatGenerationSettings: Sendable, Equatable {
+        public var temperature: Double
+        public var maxTokens: Int
+        public var topP: Double
+        public var systemPrompt: String
+        public var perConversation: Bool
+
+        public static let `default` = ChatGenerationSettings(
+            temperature: 0.7,
+            maxTokens: 4096,
+            topP: 1.0,
+            systemPrompt: "You are a helpful reading assistant.",
+            perConversation: false
+        )
+    }
+
+    public var settings: ChatGenerationSettings = .default
+
+    /// Per-message transient status used for delivery indicators.
+    public enum MessageStatus: Sendable, Equatable { case sending, sent, failed }
+    public var messageStatuses: [String: MessageStatus] = [:]
+
     public var conversationTree: ConversationTree
     public var isStreaming: Bool = false
     public var currentStreamText: String = ""
@@ -528,6 +551,53 @@ public final class AIChatViewModel {
         }
 
         return parts
+    }
+
+    // MARK: - Message Helpers
+
+    /// Returns the createdAt timestamp for a message in the current tree, if any.
+    public func timestamp(for messageId: String) -> Date? {
+        conversationTree.nodes.values.first(where: { $0.message.id == messageId })?.createdAt
+    }
+
+    /// Cancels current streaming generation.
+    public func stopStreaming() {
+        if currentStreamText.isEmpty == false {
+            addAssistantMessage(currentStreamText)
+        }
+        currentStreamText = ""
+        streamingTokens.removeAll()
+        isStreaming = false
+        endTurn()
+    }
+
+    /// Regenerate the last assistant message by dropping it and retrying.
+    public func regenerateLastAssistant() async {
+        let leafId = conversationTree.activeLeafId()
+        guard let leaf = conversationTree.nodes[leafId],
+              leaf.role == .assistant,
+              let parentId = leaf.parentId else { return }
+        conversationTree.nodes[parentId]?.childIds.removeAll { $0 == leafId }
+        conversationTree.nodes.removeValue(forKey: leafId)
+        let count = conversationTree.nodes[parentId]?.childIds.count ?? 0
+        conversationTree.nodes[parentId]?.activeChildIndex = max(0, count - 1)
+        beginTurn(providerId: selectedProviderId, modelId: selectedModelId)
+        await continueCurrentTurn()
+    }
+
+    /// Retry the last failed user message by re-running the turn.
+    public func retryLastUserMessage() async {
+        guard let lastUser = messages.last(where: { $0.role == .user }),
+              let text = lastUser.textContent else { return }
+        messageStatuses[lastUser.id] = .sending
+        let leafId = conversationTree.activeLeafId()
+        if let leaf = conversationTree.nodes[leafId],
+           leaf.role == .assistant,
+           let parentId = leaf.parentId {
+            conversationTree.nodes[parentId]?.childIds.removeAll { $0 == leafId }
+            conversationTree.nodes.removeValue(forKey: leafId)
+        }
+        _ = await sendMessage(text)
     }
 
     private static func mediaType(for filename: String) -> String {

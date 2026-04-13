@@ -7,7 +7,14 @@ import PTUI
 /// Each row shows title, date, message count, and a preview of the last message.
 public struct ConversationListView: View {
     @State private var summaries: [ConversationPersistenceService.ConversationSummary] = []
+    @State private var pinnedIds: Set<String> = []
+    @State private var searchText: String = ""
     @State private var errorMessage: String?
+    @State private var renameTarget: ConversationPersistenceService.ConversationSummary?
+    @State private var renameText: String = ""
+    @State private var exportItem: ExportItem?
+
+    private let pinnedKey = "papertok.ai.pinnedConversations"
 
     let persistenceService: ConversationPersistenceService
     let onSelect: (String) -> Void
@@ -42,7 +49,131 @@ public struct ConversationListView: View {
                 }
             }
         }
-        .onAppear { loadSummaries() }
+        .searchable(text: $searchText, placement: .automatic, prompt: "Search conversations")
+        .onAppear {
+            loadPinned()
+            loadSummaries()
+        }
+        .sheet(item: $renameTarget) { target in
+            renameSheet(for: target)
+        }
+        #if os(iOS)
+        .sheet(item: $exportItem) { item in
+            ShareSheet(items: [item.url])
+        }
+        #endif
+    }
+
+    // MARK: - Sections (date grouping + pinned)
+
+    private struct SectionGroup {
+        let title: String
+        let isPinned: Bool
+        let items: [ConversationPersistenceService.ConversationSummary]
+    }
+
+    private var filteredSummaries: [ConversationPersistenceService.ConversationSummary] {
+        guard searchText.isEmpty == false else { return summaries }
+        let query = searchText.lowercased()
+        return summaries.filter {
+            $0.title.lowercased().contains(query) ||
+            $0.lastMessagePreview.lowercased().contains(query)
+        }
+    }
+
+    private var sections: [SectionGroup] {
+        let items = filteredSummaries
+        let pinned = items.filter { pinnedIds.contains($0.id) }
+        let rest = items.filter { !pinnedIds.contains($0.id) }
+        var result: [SectionGroup] = []
+        if !pinned.isEmpty {
+            result.append(SectionGroup(title: "Pinned", isPinned: true, items: pinned))
+        }
+        let cal = Calendar.current
+        let now = Date()
+        var today: [ConversationPersistenceService.ConversationSummary] = []
+        var yesterday: [ConversationPersistenceService.ConversationSummary] = []
+        var thisWeek: [ConversationPersistenceService.ConversationSummary] = []
+        var earlier: [ConversationPersistenceService.ConversationSummary] = []
+        for item in rest {
+            if cal.isDateInToday(item.updatedAt) { today.append(item) }
+            else if cal.isDateInYesterday(item.updatedAt) { yesterday.append(item) }
+            else if let week = cal.dateInterval(of: .weekOfYear, for: now), week.contains(item.updatedAt) { thisWeek.append(item) }
+            else { earlier.append(item) }
+        }
+        if !today.isEmpty { result.append(SectionGroup(title: "Today", isPinned: false, items: today)) }
+        if !yesterday.isEmpty { result.append(SectionGroup(title: "Yesterday", isPinned: false, items: yesterday)) }
+        if !thisWeek.isEmpty { result.append(SectionGroup(title: "This Week", isPinned: false, items: thisWeek)) }
+        if !earlier.isEmpty { result.append(SectionGroup(title: "Earlier", isPinned: false, items: earlier)) }
+        return result
+    }
+
+    @ViewBuilder
+    private func renameSheet(for target: ConversationPersistenceService.ConversationSummary) -> some View {
+        NavigationStack {
+            Form {
+                TextField("Title", text: $renameText)
+            }
+            .navigationTitle("Rename")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { renameTarget = nil }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { performRename(target) }.bold()
+                }
+            }
+        }
+        .presentationDetents([.height(200)])
+    }
+
+    private func togglePin(_ id: String) {
+        if pinnedIds.contains(id) { pinnedIds.remove(id) } else { pinnedIds.insert(id) }
+        savePinned()
+    }
+
+    private func performRename(_ target: ConversationPersistenceService.ConversationSummary) {
+        defer { renameTarget = nil }
+        let newTitle = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newTitle.isEmpty else { return }
+        if var loaded = try? persistenceService.load(id: target.id) {
+            loaded.title = newTitle
+            loaded.updatedAt = Date()
+            try? persistenceService.save(loaded)
+            loadSummaries()
+        }
+    }
+
+    private func export(_ summary: ConversationPersistenceService.ConversationSummary) {
+        guard let loaded = try? persistenceService.load(id: summary.id) else { return }
+        var md = "# \(loaded.title)\n\n"
+        for msg in loaded.tree.activeMessages() {
+            guard let text = msg.textContent, !text.isEmpty else { continue }
+            switch msg.role {
+            case .system: md += "> _System: \(text)_\n\n"
+            case .user: md += "**You:** \(text)\n\n"
+            case .assistant: md += "**Assistant:** \(text)\n\n"
+            case .tool: md += "```\n\(text)\n```\n\n"
+            }
+        }
+        let safeName = loaded.title.replacingOccurrences(of: "/", with: "_")
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(safeName).md")
+        try? md.write(to: tmp, atomically: true, encoding: .utf8)
+        exportItem = ExportItem(url: tmp)
+    }
+
+    private func loadPinned() {
+        if let data = UserDefaults.standard.array(forKey: pinnedKey) as? [String] {
+            pinnedIds = Set(data)
+        }
+    }
+
+    private func savePinned() {
+        UserDefaults.standard.set(Array(pinnedIds), forKey: pinnedKey)
     }
 
     private var emptyState: some View {
@@ -66,17 +197,90 @@ public struct ConversationListView: View {
 
     private var conversationList: some View {
         List {
-            ForEach(summaries) { summary in
-                Button {
-                    onSelect(summary.id)
-                } label: {
-                    ConversationRowView(summary: summary)
+            ForEach(sections, id: \.title) { section in
+                Section {
+                    ForEach(section.items) { summary in
+                        Button {
+                            onSelect(summary.id)
+                        } label: {
+                            ConversationRowView(
+                                summary: summary,
+                                isPinned: pinnedIds.contains(summary.id)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button {
+                                togglePin(summary.id)
+                            } label: {
+                                Label(
+                                    pinnedIds.contains(summary.id) ? "Unpin" : "Pin",
+                                    systemImage: pinnedIds.contains(summary.id) ? "pin.slash" : "pin"
+                                )
+                            }
+                            .tint(Morandi.accent)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                try? persistenceService.delete(id: summary.id)
+                                summaries.removeAll { $0.id == summary.id }
+                                pinnedIds.remove(summary.id)
+                                savePinned()
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            Button {
+                                renameText = summary.title
+                                renameTarget = summary
+                            } label: {
+                                Label("Rename", systemImage: "pencil")
+                            }
+                            .tint(Morandi.clay)
+                            Button {
+                                export(summary)
+                            } label: {
+                                Label("Export", systemImage: "square.and.arrow.up")
+                            }
+                            .tint(Morandi.powder)
+                        }
+                        .contextMenu {
+                            Button {
+                                togglePin(summary.id)
+                            } label: {
+                                Label(
+                                    pinnedIds.contains(summary.id) ? "Unpin" : "Pin",
+                                    systemImage: pinnedIds.contains(summary.id) ? "pin.slash" : "pin"
+                                )
+                            }
+                            Button {
+                                renameText = summary.title
+                                renameTarget = summary
+                            } label: {
+                                Label("Rename", systemImage: "pencil")
+                            }
+                            Button {
+                                export(summary)
+                            } label: {
+                                Label("Export markdown", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                    }
+                } header: {
+                    HStack(spacing: 6) {
+                        if section.isPinned {
+                            Image(systemName: "pin.fill").font(.caption2)
+                        }
+                        Text(section.title)
+                    }
+                    .foregroundStyle(Morandi.secondaryText)
                 }
-                .buttonStyle(.plain)
             }
-            .onDelete(perform: deleteSummaries)
         }
+        #if os(iOS)
+        .listStyle(.insetGrouped)
+        #else
         .listStyle(.plain)
+        #endif
     }
 
     private func loadSummaries() {
@@ -99,17 +303,21 @@ public struct ConversationListView: View {
 /// A single row in the conversation list.
 struct ConversationRowView: View {
     let summary: ConversationPersistenceService.ConversationSummary
+    var isPinned: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            HStack {
+            HStack(spacing: 4) {
+                if isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.caption2)
+                        .foregroundStyle(Morandi.accent)
+                }
                 Text(summary.title)
                     .font(AppTypography.body.weight(.medium))
                     .foregroundStyle(Morandi.primaryText)
                     .lineLimit(1)
-
                 Spacer()
-
                 Text(formattedDate)
                     .font(AppTypography.caption2)
                     .foregroundStyle(Morandi.tertiaryText)
@@ -122,9 +330,13 @@ struct ConversationRowView: View {
                     .lineLimit(2)
             }
 
-            Text("\(summary.messageCount) messages")
-                .font(AppTypography.caption2)
-                .foregroundStyle(Morandi.tertiaryText)
+            HStack(spacing: 4) {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 9))
+                Text("\(summary.messageCount)")
+                    .font(AppTypography.caption2)
+            }
+            .foregroundStyle(Morandi.tertiaryText)
         }
         .padding(.vertical, AppSpacing.xs)
     }
@@ -135,3 +347,20 @@ struct ConversationRowView: View {
         return formatter.localizedString(for: summary.updatedAt, relativeTo: Date())
     }
 }
+
+// MARK: - Export Helpers
+
+struct ExportItem: Identifiable {
+    var id: String { url.path }
+    let url: URL
+}
+
+#if os(iOS)
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+#endif

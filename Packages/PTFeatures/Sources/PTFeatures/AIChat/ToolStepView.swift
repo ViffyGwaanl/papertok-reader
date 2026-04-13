@@ -17,22 +17,54 @@ public struct ToolStepView: View {
     let toolName: String
     let arguments: String
     let state: ToolStepState
+    var duration: TimeInterval? = nil
     @State private var showDetails = false
 
-    public init(toolName: String, arguments: String, state: ToolStepState) {
+    public init(toolName: String, arguments: String, state: ToolStepState, duration: TimeInterval? = nil) {
         self.toolName = toolName
         self.arguments = arguments
         self.state = state
+        self.duration = duration
+    }
+
+    /// Maps tool names to semantic SF Symbols.
+    private var semanticIcon: String {
+        let n = toolName.lowercased()
+        if n.contains("web_search") || n.contains("fetch_url") || n.contains("url") || n.contains("browser") { return "globe" }
+        if n.contains("search") { return "magnifyingglass" }
+        if n.contains("calendar") { return "calendar" }
+        if n.contains("reminder") { return "checklist" }
+        if n.contains("calculator") || n.contains("calc") || n.contains("math") { return "plus.slash.minus" }
+        if n.contains("highlight") { return "highlighter" }
+        if n.contains("note") { return "note.text" }
+        if n.contains("memory") || n.contains("memor") { return "brain" }
+        if n.contains("file") { return "doc.text" }
+        if n.contains("write") || n.contains("create") { return "square.and.pencil" }
+        if n.contains("time") || n.contains("date") { return "clock" }
+        if n.contains("weather") { return "cloud.sun" }
+        if n.contains("image") || n.contains("photo") { return "photo" }
+        if n.contains("code") || n.contains("exec") { return "chevron.left.forwardslash.chevron.right" }
+        if n.contains("translate") { return "character.bubble" }
+        return "checkmark.circle.fill"
+    }
+
+    private var humanReadableName: String {
+        toolName.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+
+    private func formatDuration(_ d: TimeInterval) -> String {
+        if d < 1 { return String(format: "%.0fms", d * 1000) }
+        return String(format: "%.1fs", d)
     }
 
     public var body: some View {
         HStack(alignment: .top, spacing: AppSpacing.sm) {
-            stateIcon
-                .frame(width: 18, height: 18)
+            stateIconWithBackground
+                .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                 HStack(spacing: AppSpacing.xs) {
-                    Text(toolName)
+                    Text(humanReadableName)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Morandi.primaryText)
 
@@ -44,6 +76,19 @@ public struct ToolStepView: View {
                         Text("common.done")
                             .font(AppTypography.caption2)
                             .foregroundStyle(Morandi.sage)
+                    } else if case .failed = state {
+                        Text("Failed")
+                            .font(AppTypography.caption2)
+                            .foregroundStyle(Morandi.destructive)
+                    }
+
+                    if let duration {
+                        Text(formatDuration(duration))
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(Morandi.tertiaryText)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Morandi.divider.opacity(0.4)))
                     }
                 }
 
@@ -179,23 +224,50 @@ public struct ToolStepView: View {
 
     // MARK: - State Icon
 
+    private var iconTint: Color {
+        switch state {
+        case .pending: return Morandi.tertiaryText
+        case .running: return Morandi.accent
+        case .completed: return Morandi.sage
+        case .failed: return Morandi.destructive
+        }
+    }
+
+    private var stateKey: String {
+        switch state {
+        case .pending: return "pending"
+        case .running: return "running"
+        case .completed: return "completed"
+        case .failed: return "failed"
+        }
+    }
+
+    private var stateIconWithBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 7)
+                .fill(iconTint.opacity(0.15))
+            Group {
+                switch state {
+                case .pending:
+                    Image(systemName: "clock")
+                case .running:
+                    ProgressView().scaleEffect(0.7).tint(iconTint)
+                case .completed:
+                    Image(systemName: semanticIcon)
+                case .failed:
+                    Image(systemName: "xmark.circle.fill")
+                }
+            }
+            .foregroundStyle(iconTint)
+            .font(.system(size: 14, weight: .semibold))
+            .transition(.scale.combined(with: .opacity))
+            .animation(.spring(response: 0.35, dampingFraction: 0.7), value: stateKey)
+        }
+    }
+
     @ViewBuilder
     private var stateIcon: some View {
-        switch state {
-        case .pending:
-            Image(systemName: "clock")
-                .foregroundStyle(Morandi.tertiaryText)
-        case .running:
-            ProgressView()
-                .scaleEffect(0.7)
-                .tint(Morandi.accent)
-        case .completed:
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(Morandi.sage)
-        case .failed:
-            Image(systemName: "xmark.circle.fill")
-                .foregroundStyle(Morandi.destructive)
-        }
+        stateIconWithBackground
     }
 
     // MARK: - Formatting Helpers

@@ -30,52 +30,168 @@ struct MessageBubbleView: View {
     // MARK: User bubble
 
     private var userBubble: some View {
-        HStack {
+        HStack(alignment: .top, spacing: AppSpacing.sm) {
             Spacer(minLength: 48)
-            VStack(alignment: .trailing, spacing: AppSpacing.xs) {
-                attachmentViews
-                if let text = message.textContent, !text.isEmpty {
-                    Text(text)
-                        .font(AppTypography.body)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(Morandi.accent)
-                        .foregroundStyle(Color(light: .white, dark: Morandi.cardBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
-                        .textSelection(.enabled)
-                        .contextMenu { messageCopyMenu(text: text) }
+            VStack(alignment: .trailing, spacing: AppSpacing.xxs) {
+                if let ts = timestamp {
+                    Text(relativeTimeString(ts))
+                        .font(AppTypography.caption2)
+                        .foregroundStyle(Morandi.tertiaryText)
+                        .padding(.trailing, 4)
                 }
+                VStack(alignment: .trailing, spacing: AppSpacing.xs) {
+                    attachmentViews
+                    if let text = message.textContent, !text.isEmpty {
+                        Text(text)
+                            .font(AppTypography.body)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(Morandi.accent)
+                            .foregroundStyle(Color(light: .white, dark: Morandi.cardBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                            .textSelection(.enabled)
+                            .contextMenu { userMenu(text: text) }
+                    }
+                }
+                statusBadge
             }
+            userAvatar
         }
     }
 
     // MARK: Assistant bubble
 
     private var assistantBubble: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                if let text = message.textContent, !text.isEmpty {
-                    Text(markdownAttributedString(text))
-                        .font(AppTypography.body)
-                        .foregroundStyle(Morandi.primaryText)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(Morandi.cardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
-                        .textSelection(.enabled)
-                        .contextMenu { messageCopyMenu(text: text) }
+        HStack(alignment: .top, spacing: AppSpacing.sm) {
+            assistantAvatar
+            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                if let ts = timestamp {
+                    Text(relativeTimeString(ts))
+                        .font(AppTypography.caption2)
+                        .foregroundStyle(Morandi.tertiaryText)
+                        .padding(.leading, 4)
                 }
-                if let toolCalls = message.toolCalls, !toolCalls.isEmpty {
-                    ForEach(toolCalls) { call in
-                        ToolStepView(
-                            toolName: call.name,
-                            arguments: call.arguments,
-                            state: .completed(output: "")
-                        )
+                VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                    if let text = message.textContent, !text.isEmpty {
+                        assistantContent(text)
+                    }
+                    if let toolCalls = message.toolCalls, !toolCalls.isEmpty {
+                        ForEach(toolCalls) { call in
+                            ToolStepView(
+                                toolName: call.name,
+                                arguments: call.arguments,
+                                state: .completed(output: "")
+                            )
+                        }
                     }
                 }
             }
             Spacer(minLength: 48)
+        }
+    }
+
+    @ViewBuilder
+    private func assistantContent(_ text: String) -> some View {
+        let blocks = MarkdownBlockParser.parse(text)
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            ForEach(blocks.indices, id: \.self) { i in
+                switch blocks[i] {
+                case .text(let t):
+                    Text(markdownAttributedString(t))
+                        .font(AppTypography.body)
+                        .foregroundStyle(Morandi.primaryText)
+                        .textSelection(.enabled)
+                        .tint(Morandi.accent)
+                case .codeBlock(let language, let code):
+                    CodeBlockView(language: language, code: code)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Morandi.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .contextMenu { assistantMenu(text: text) }
+    }
+
+    // MARK: - Avatars & Status
+
+    private var assistantAvatar: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(
+                    LinearGradient(
+                        colors: [Morandi.accent, Morandi.lavender],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 32, height: 32)
+            Image(systemName: "sparkles")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+    }
+
+    private var userAvatar: some View {
+        Circle()
+            .fill(Morandi.stone)
+            .frame(width: 32, height: 32)
+            .overlay(
+                Image(systemName: "person.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+            )
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        if let status {
+            HStack(spacing: 4) {
+                switch status {
+                case .sending:
+                    ProgressView().scaleEffect(0.6).tint(Morandi.secondaryText)
+                    Text("Sending").font(AppTypography.caption2).foregroundStyle(Morandi.tertiaryText)
+                case .sent:
+                    Image(systemName: "checkmark").font(.system(size: 10)).foregroundStyle(Morandi.sage)
+                case .failed:
+                    Image(systemName: "exclamationmark.circle.fill").font(.system(size: 10)).foregroundStyle(Morandi.destructive)
+                    Text("Failed").font(AppTypography.caption2).foregroundStyle(Morandi.destructive)
+                    if let onRetry {
+                        Button("Retry", action: onRetry)
+                            .font(AppTypography.caption2)
+                            .foregroundStyle(Morandi.accent)
+                    }
+                }
+            }
+            .padding(.trailing, 4)
+        }
+    }
+
+    private func relativeTimeString(_ date: Date) -> String {
+        let cal = Calendar.current
+        let diff = Date().timeIntervalSince(date)
+        if diff < 60 { return "just now" }
+        if diff < 3600 { return "\(Int(diff / 60))m ago" }
+        let f = DateFormatter()
+        if cal.isDateInToday(date) { f.dateFormat = "HH:mm"; return "Today \(f.string(from: date))" }
+        if cal.isDateInYesterday(date) { f.dateFormat = "HH:mm"; return "Yesterday \(f.string(from: date))" }
+        f.dateFormat = "MMM d, HH:mm"
+        return f.string(from: date)
+    }
+
+    @ViewBuilder
+    private func userMenu(text: String) -> some View {
+        messageCopyMenu(text: text)
+        if status == .failed, let onRetry {
+            Button { onRetry() } label: { Label("Retry", systemImage: "arrow.clockwise") }
+        }
+    }
+
+    @ViewBuilder
+    private func assistantMenu(text: String) -> some View {
+        messageCopyMenu(text: text)
+        if let onRegenerate {
+            Button { onRegenerate() } label: { Label("Regenerate", systemImage: "arrow.clockwise") }
         }
     }
 
@@ -180,11 +296,58 @@ struct MessageBubbleView: View {
 
     // MARK: - Markdown Helpers
 
-    /// Converts basic markdown text to an AttributedString for rendering.
+    /// Converts markdown text to an AttributedString with full option set.
     private func markdownAttributedString(_ text: String) -> AttributedString {
-        if let attributed = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+        if let attributed = try? AttributedString(
+            markdown: text,
+            options: .init(
+                allowsExtendedAttributes: true,
+                interpretedSyntax: .inlineOnlyPreservingWhitespace,
+                failurePolicy: .returnPartiallyParsedIfPossible
+            )
+        ) {
             return attributed
         }
         return AttributedString(text)
+    }
+}
+
+// MARK: - Markdown Block Parser
+
+enum MarkdownBlockParser {
+    enum Block {
+        case text(String)
+        case codeBlock(language: String, code: String)
+    }
+
+    static func parse(_ text: String) -> [Block] {
+        var blocks: [Block] = []
+        var currentText = ""
+        let lines = text.components(separatedBy: "\n")
+        var i = 0
+        while i < lines.count {
+            let line = lines[i]
+            if line.hasPrefix("```") {
+                if !currentText.isEmpty {
+                    blocks.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
+                    currentText = ""
+                }
+                let language = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                var codeLines: [String] = []
+                i += 1
+                while i < lines.count && !lines[i].hasPrefix("```") {
+                    codeLines.append(lines[i])
+                    i += 1
+                }
+                blocks.append(.codeBlock(language: language, code: codeLines.joined(separator: "\n")))
+                i += 1
+                continue
+            }
+            currentText += line + "\n"
+            i += 1
+        }
+        let trimmed = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { blocks.append(.text(trimmed)) }
+        return blocks
     }
 }
