@@ -3,6 +3,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/home_navigation.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:anx_reader/widgets/settings/simple_dialog.dart';
 import 'package:anx_reader/widgets/settings/theme_mode.dart';
@@ -265,38 +266,33 @@ Future<void> showColorPickerDialog(BuildContext context) async {
 
   Color pickedColor = currentColor;
 
-  await showDialog<void>(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(L10n.of(context).settingsAppearanceThemeColor),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            pickerColor: pickedColor,
-            onColorChanged: (color) {
-              pickedColor = color;
-            },
-            enableAlpha: false,
-            displayThumbColor: true,
-            pickerAreaHeightPercent: 0.8,
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: Text(L10n.of(context).commonCancel),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-          TextButton(
-            child: Text(L10n.of(context).commonOk),
-            onPressed: () {
-              prefsProvider.saveThemeToPrefs(pickedColor.value);
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      );
-    },
+  await PTDialog.show<void>(
+    context,
+    title: L10n.of(context).settingsAppearanceThemeColor,
+    content: SingleChildScrollView(
+      child: ColorPicker(
+        pickerColor: pickedColor,
+        onColorChanged: (color) {
+          pickedColor = color;
+        },
+        enableAlpha: false,
+        displayThumbColor: true,
+        pickerAreaHeightPercent: 0.8,
+      ),
+    ),
+    actions: [
+      PTDialogAction(
+        label: L10n.of(context).commonCancel,
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      PTDialogAction(
+        label: L10n.of(context).commonOk,
+        isDefault: true,
+        onPressed: () {
+          prefsProvider.saveThemeToPrefs(pickedColor.value);
+          Navigator.of(context).pop();
+        },
+      ),
+    ],
   );
 }

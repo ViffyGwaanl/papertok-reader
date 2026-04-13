@@ -2,6 +2,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/ai_models_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
@@ -109,35 +110,35 @@ class _AiTitleGenerationSettingsPageState
       return;
     }
 
-    await showModalBottomSheet(
-      context: context,
+    final currentId = Prefs().aiTitleProviderId.trim().isEmpty
+        ? ''
+        : Prefs().aiTitleProviderIdEffective;
+
+    await PTBottomSheet.show(
+      context,
+      title: 'Title provider',
       builder: (context) {
-        return ListView(
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              title: const Text('Follow current chat provider'),
-              subtitle: const Text(
-                'Use the same provider as the active chat session.',
-              ),
-              trailing: Prefs().aiTitleProviderId.trim().isEmpty
-                  ? const Icon(Icons.check)
-                  : null,
-              onTap: () {
+            PTPickerRow<String>(
+              value: '',
+              groupValue: currentId,
+              title: 'Follow current chat provider',
+              subtitle: 'Use the same provider as the active chat session.',
+              onChanged: (_) {
                 Prefs().aiTitleProviderId = '';
                 Navigator.pop(context);
                 setState(() {});
               },
             ),
-            const Divider(height: 1),
             for (final p in enabledProviders)
-              ListTile(
-                title: Text(p.name),
-                subtitle: Text(_providerTypeLabel(context, p.type)),
-                trailing: (Prefs().aiTitleProviderIdEffective == p.id &&
-                        Prefs().aiTitleProviderId.trim().isNotEmpty)
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
+              PTPickerRow<String>(
+                value: p.id,
+                groupValue: currentId,
+                title: p.name,
+                subtitle: _providerTypeLabel(context, p.type),
+                onChanged: (_) {
                   Prefs().aiTitleProviderId = p.id;
                   Navigator.pop(context);
                   setState(() {});
@@ -174,8 +175,9 @@ class _AiTitleGenerationSettingsPageState
       return 'Capability unknown';
     }
 
-    await showModalBottomSheet(
-      context: context,
+    await PTBottomSheet.show(
+      context,
+      title: 'Title model',
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -216,7 +218,8 @@ class _AiTitleGenerationSettingsPageState
               }
             }
 
-            return SafeArea(
+            return SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
               child: ListView(
                 children: [
                   ListTile(

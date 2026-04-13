@@ -5,6 +5,7 @@ import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/ai_models_service.dart';
 // Inline full-text translation status is shown in Reading Settings.
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
@@ -22,37 +23,46 @@ class _TranslateSettingState extends State<TranslateSetting> {
     required bool isFrom,
     required bool isFullText,
   }) async {
-    await showModalBottomSheet(
-      context: context,
+    final l10n = L10n.of(context);
+    final current = isFullText
+        ? (isFrom ? Prefs().fullTextTranslateFrom : Prefs().fullTextTranslateTo)
+        : (isFrom ? Prefs().translateFrom : Prefs().translateTo);
+
+    await PTBottomSheet.show(
+      context,
+      title: isFrom ? l10n.settingsTranslateFrom : l10n.settingsTranslateTo,
       builder: (context) {
-        return ListView.builder(
-          itemCount: LangListEnum.values.length,
-          itemBuilder: (context, index) {
-            final lang = LangListEnum.values[index];
-            return ListTile(
-              title: Text(lang.getNative(context)),
-              subtitle: Text(
-                lang.name[0].toUpperCase() + lang.name.substring(1),
-              ),
-              onTap: () {
-                if (isFullText) {
-                  if (isFrom) {
-                    Prefs().fullTextTranslateFrom = lang;
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: ListView.builder(
+            itemCount: LangListEnum.values.length,
+            itemBuilder: (context, index) {
+              final lang = LangListEnum.values[index];
+              return PTPickerRow<LangListEnum>(
+                value: lang,
+                groupValue: current,
+                title: lang.getNative(context),
+                subtitle: lang.name[0].toUpperCase() + lang.name.substring(1),
+                onChanged: (picked) {
+                  if (isFullText) {
+                    if (isFrom) {
+                      Prefs().fullTextTranslateFrom = picked;
+                    } else {
+                      Prefs().fullTextTranslateTo = picked;
+                    }
                   } else {
-                    Prefs().fullTextTranslateTo = lang;
+                    if (isFrom) {
+                      Prefs().translateFrom = picked;
+                    } else {
+                      Prefs().translateTo = picked;
+                    }
                   }
-                } else {
-                  if (isFrom) {
-                    Prefs().translateFrom = lang;
-                  } else {
-                    Prefs().translateTo = lang;
-                  }
-                }
-                Navigator.pop(context);
-                setState(() {});
-              },
-            );
-          },
+                  Navigator.pop(context);
+                  setState(() {});
+                },
+              );
+            },
+          ),
         );
       },
     );
@@ -69,30 +79,36 @@ class _TranslateSettingState extends State<TranslateSetting> {
       return;
     }
 
-    await showModalBottomSheet(
-      context: context,
+    final l10n = L10n.of(context);
+    final currentId = Prefs().aiTranslateProviderId.trim().isEmpty
+        ? ''
+        : Prefs().aiTranslateProviderIdEffective;
+
+    await PTBottomSheet.show(
+      context,
+      title: l10n.settingsTranslateAiProvider,
       builder: (context) {
-        return ListView(
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              title: Text(L10n.of(context).settingsTranslateAiFollowChatProvider),
-              subtitle: Text(L10n.of(context)
-                  .settingsTranslateAiFollowChatProviderDesc),
-              onTap: () {
+            PTPickerRow<String>(
+              value: '',
+              groupValue: currentId,
+              title: l10n.settingsTranslateAiFollowChatProvider,
+              subtitle: l10n.settingsTranslateAiFollowChatProviderDesc,
+              onChanged: (_) {
                 Prefs().aiTranslateProviderId = '';
                 Navigator.pop(context);
                 setState(() {});
               },
             ),
-            const Divider(height: 1),
             for (final p in enabledProviders)
-              ListTile(
-                title: Text(p.name),
-                subtitle: Text(_providerTypeLabel(context, p.type)),
-                trailing: (Prefs().aiTranslateProviderIdEffective == p.id)
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
+              PTPickerRow<String>(
+                value: p.id,
+                groupValue: currentId,
+                title: p.name,
+                subtitle: _providerTypeLabel(context, p.type),
+                onChanged: (_) {
                   Prefs().aiTranslateProviderId = p.id;
                   Navigator.pop(context);
                   setState(() {});
@@ -129,8 +145,9 @@ class _TranslateSettingState extends State<TranslateSetting> {
     var models = Prefs().getAiModelsCacheV1(providerId)?.models ?? const [];
     var loading = false;
 
-    await showModalBottomSheet(
-      context: context,
+    await PTBottomSheet.show(
+      context,
+      title: L10n.of(context).settingsTranslateAiModel,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -166,7 +183,8 @@ class _TranslateSettingState extends State<TranslateSetting> {
               }
             }
 
-            return SafeArea(
+            return SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
               child: ListView(
                 children: [
                   ListTile(

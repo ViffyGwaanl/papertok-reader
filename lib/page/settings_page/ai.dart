@@ -11,6 +11,7 @@ import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_cen
 import 'package:anx_reader/page/settings_page/ai_title_generation.dart';
 import 'package:anx_reader/page/settings_page/ai_tools.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/page/settings_page/ai_quick_prompts_editor.dart';
@@ -871,7 +872,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.withAlpha(100)),
+          border: Border.all(color: MorandiPalette.divider(context)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(

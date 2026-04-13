@@ -7,6 +7,7 @@ import 'package:anx_reader/models/mcp_transport_mode.dart';
 import 'package:anx_reader/service/mcp/mcp_client_service.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/page/settings_page/mcp_server_detail_page.dart';
@@ -407,22 +408,24 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
 
       if (!mounted) return;
 
-      await showModalBottomSheet<void>(
-        context: context,
+      await PTBottomSheet.show<void>(
+        context,
+        title: l10n.settingsMcpToolsTitle(server.name),
+        subtitle: server.endpoint,
         builder: (context) {
-          return SafeArea(
+          return SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
             child: ListView(
               children: [
-                ListTile(
-                  title: Text(l10n.settingsMcpToolsTitle(server.name)),
-                  subtitle: Text(server.endpoint),
-                ),
-                const Divider(height: 1),
                 for (final t in tools)
-                  ListTile(
-                    title: Text(
-                        t.title?.trim().isNotEmpty == true ? t.title! : t.name),
-                    subtitle: Text(t.description ?? ''),
+                  PTPickerRow<String>(
+                    value: t.name,
+                    groupValue: null,
+                    title: t.title?.trim().isNotEmpty == true
+                        ? t.title!
+                        : t.name,
+                    subtitle: t.description ?? '',
+                    onChanged: (_) {},
                   ),
               ],
             ),

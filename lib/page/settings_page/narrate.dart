@@ -9,6 +9,7 @@ import 'package:anx_reader/service/tts/tts_handler.dart';
 import 'package:anx_reader/service/tts/tts_service.dart' as tts_svc;
 import 'package:anx_reader/utils/get_current_language_code.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/settings/service_config_form.dart';
@@ -554,10 +555,10 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                   children: [
                     Text(
                       L10n.of(context).settingsNarrateVoiceModelCurrentModel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey,
+                        color: MorandiPalette.secondaryText(context),
                       ),
                     ),
                     Icon(
@@ -596,7 +597,7 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
                             _getCurrentModelLanguageName(),
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: MorandiPalette.secondaryText(context),
                             ),
                           ),
                         ],

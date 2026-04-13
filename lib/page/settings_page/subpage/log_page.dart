@@ -1,4 +1,5 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/get_path/log_file.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/save_file_to_download.dart';
@@ -366,7 +367,7 @@ Widget _logItem(_LogEntry entry, BuildContext context) {
               Container(
                 padding: const EdgeInsets.fromLTRB(8, 1, 8, 1),
                 decoration: BoxDecoration(
-                  color: Colors.blueGrey.shade100,
+                  color: MorandiPalette.elevated(context),
                   borderRadius: BorderRadius.circular(100),
                 ),
                 child: Text(entry.source),

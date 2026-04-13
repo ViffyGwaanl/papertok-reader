@@ -6,9 +6,11 @@ import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/page/settings_page/mcp_servers.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/page/settings_page/subpage/share_and_shortcuts_panel_page.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:flutter/material.dart';
@@ -42,53 +44,41 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     final current = Prefs().aiToolApprovalPolicy;
     final l10n = L10n.of(context);
 
-    await showModalBottomSheet<void>(
-      context: context,
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.settingsAiToolApprovalPolicy,
       builder: (context) {
-        return SafeArea(
-          child: ListView(
-            children: [
-              ListTile(
-                title: Text(l10n.settingsAiToolApprovalPolicyAlways),
-                subtitle: Text(l10n.settingsAiToolApprovalPolicyAlwaysDesc),
-                trailing: current == AiToolApprovalPolicy.always
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
-                  Prefs().aiToolApprovalPolicy = AiToolApprovalPolicy.always;
-                  Navigator.pop(context);
-                  setState(() {});
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                title: Text(l10n.settingsAiToolApprovalPolicyWritesOnly),
-                subtitle: Text(l10n.settingsAiToolApprovalPolicyWritesOnlyDesc),
-                trailing: current == AiToolApprovalPolicy.writesOnly
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
-                  Prefs().aiToolApprovalPolicy =
-                      AiToolApprovalPolicy.writesOnly;
-                  Navigator.pop(context);
-                  setState(() {});
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                title: Text(l10n.settingsAiToolApprovalPolicyNever),
-                subtitle: Text(l10n.settingsAiToolApprovalPolicyNeverDesc),
-                trailing: current == AiToolApprovalPolicy.never
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
-                  Prefs().aiToolApprovalPolicy = AiToolApprovalPolicy.never;
-                  Navigator.pop(context);
-                  setState(() {});
-                },
-              ),
-            ],
-          ),
+        void pick(AiToolApprovalPolicy p) {
+          Prefs().aiToolApprovalPolicy = p;
+          Navigator.pop(context);
+          setState(() {});
+        }
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PTPickerRow<AiToolApprovalPolicy>(
+              value: AiToolApprovalPolicy.always,
+              groupValue: current,
+              title: l10n.settingsAiToolApprovalPolicyAlways,
+              subtitle: l10n.settingsAiToolApprovalPolicyAlwaysDesc,
+              onChanged: pick,
+            ),
+            PTPickerRow<AiToolApprovalPolicy>(
+              value: AiToolApprovalPolicy.writesOnly,
+              groupValue: current,
+              title: l10n.settingsAiToolApprovalPolicyWritesOnly,
+              subtitle: l10n.settingsAiToolApprovalPolicyWritesOnlyDesc,
+              onChanged: pick,
+            ),
+            PTPickerRow<AiToolApprovalPolicy>(
+              value: AiToolApprovalPolicy.never,
+              groupValue: current,
+              title: l10n.settingsAiToolApprovalPolicyNever,
+              subtitle: l10n.settingsAiToolApprovalPolicyNeverDesc,
+              onChanged: pick,
+            ),
+          ],
         );
       },
     );
@@ -100,71 +90,56 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     final l10n = L10n.of(context);
     var value = Prefs().shortcutsCallbackMaxCharsV1.toDouble();
 
-    await showModalBottomSheet<void>(
-      context: context,
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.settingsShortcutsCallbackMaxChars,
+      subtitle: l10n.settingsShortcutsCallbackMaxCharsDesc,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${value.toInt()} chars',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: MorandiPalette.primaryText(context),
+                  ),
+                ),
+                Slider(
+                  min: 500,
+                  max: 20000,
+                  divisions: ((20000 - 500) ~/ 500),
+                  value: value.clamp(500, 20000),
+                  label: value.toInt().toString(),
+                  onChanged: (v) {
+                    final snapped = (v / 500).round() * 500;
+                    setModalState(() => value = snapped.toDouble());
+                  },
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      l10n.settingsShortcutsCallbackMaxChars,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(l10n.commonCancel),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      l10n.settingsShortcutsCallbackMaxCharsDesc,
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${value.toInt()} chars',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Slider(
-                      min: 500,
-                      max: 20000,
-                      divisions: ((20000 - 500) ~/ 500),
-                      value: value.clamp(500, 20000),
-                      label: value.toInt().toString(),
-                      onChanged: (v) {
-                        final snapped = (v / 500).round() * 500;
-                        setModalState(() => value = snapped.toDouble());
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        Prefs().shortcutsCallbackMaxCharsV1 = value.toInt();
+                        Navigator.pop(context);
+                        setState(() {});
                       },
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(l10n.commonCancel),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: () {
-                            Prefs().shortcutsCallbackMaxCharsV1 = value.toInt();
-                            Navigator.pop(context);
-                            setState(() {});
-                          },
-                          child: Text(l10n.commonSave),
-                        ),
-                      ],
+                      child: Text(l10n.commonSave),
                     ),
                   ],
                 ),
-              ),
+              ],
             );
           },
         );
