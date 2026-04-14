@@ -6,6 +6,7 @@
 > - **产品开发（含 PaperTok + AI + 翻译 + 多模态）**：在 `ViffyGwaanl/papertok-reader`（private）完成
 > - **默认不做上游 PR**：上游贡献（Anx Reader）不是当前交付必需项
 > - 如未来要上游化：再单独建立/维护 contrib track，并保持“无 PaperTok/无产品专属 UX”
+> - `swift-native` 是并行原生迁移工程轨，用于原生实现与验证，不替代 `product/main` 的默认发布口径；最新状态见 `docs/engineering/SWIFT_NATIVE_STATUS_zh.md`
 
 ---
 

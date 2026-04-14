@@ -2,7 +2,7 @@
 
 > 口径：以 `product/main` 为准；以可审计（commit + 测试）为标准。
 >
-> 更新时间：2026-03-22
+> 更新时间：2026-04-13
 
 ## 0. 当前结论
 
@@ -25,6 +25,8 @@
 - 当前主线已从“补核心缺口”转入“后续增强 / 发布回归 / 下一阶段规划”。
 - 上游吸收（`Anxcye/anx-reader` `v1.12.0..v1.14.0` 范围内）**Phase A + Phase B** 已完成落地与可回滚拆分，并已产出 TestFlight 包用于回归：`1.68.5 (6376)`。
   - PR：`https://github.com/ViffyGwaanl/papertok-reader/pull/7`
+- 并行工程轨 `swift-native` 已进入“可持续收口”阶段；截至 2026-04-13，中文增强闭环与审计防回归已完成一轮工程化收口，但仍不应对外宣称为全量产品对齐完成。
+  - 详见：`docs/engineering/SWIFT_NATIVE_STATUS_zh.md`
 
 ## 1. 已完成交付（Done）
 
@@ -133,6 +135,15 @@
 - TestFlight：`1.68.5 (6376)`
 
 ## 2. 当前未完成任务（Remaining）
+
+### 2.0 Swift Native 工程轨（P1）
+
+- `swift-native` 当前最值得保留的成果不是“又多了一批代码”，而是：
+  - 用户可见中文残留的审计面已经建立
+  - catalog / 错误映射 / 硬编码英文审计已经形成闭环
+  - 后续新增功能若漏本地化，更容易第一时间被测试打红
+- 下一步重点不应只是继续堆功能，而应继续把“已实现但未重新验证”的区域逐步转成有证据的完成状态。
+- 独立状态文档见：`docs/engineering/SWIFT_NATIVE_STATUS_zh.md`
 
 ### 2.1 Memory 工作流后续阶段（P1）
 

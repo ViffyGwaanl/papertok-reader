@@ -2,6 +2,8 @@
 
 本文档以工程交付为中心，记录已完成内容与下一阶段计划。
 
+> 备注：`product/main` 与 `swift-native` 目前是两条不同节奏的工程轨。若你关心原生迁移分支的最新真实进展，请优先看 `docs/engineering/SWIFT_NATIVE_STATUS_zh.md`。
+
 ## 测试覆盖现状
 
 - ✅ iOS（iPhone / iPad）已做真机验证
@@ -110,6 +112,21 @@
 
 ## 2. 下一阶段
 
+### 2.0 Swift Native 工程轨（并行 P1）
+
+- 已完成：
+  - `swift-native` 用户可见中文增强闭环（已审计范围）
+  - catalog 完整性测试
+  - helper-based key extraction 覆盖
+  - 硬编码英文审计
+  - 用户可见错误映射回归
+- 接下来建议：
+  - 扩大验证面到更多 package / app surfaces
+  - 做 iPhone / iPad / macOS 的人工本地化 walkthrough
+  - 继续把高频 tool error 从 UI 兜底推进到源头本地化
+  - 在 full-spec closure 语境下，重新核对 parity / verification truth source
+- 详见：`docs/engineering/SWIFT_NATIVE_STATUS_zh.md`
+
 ### 2.1 Memory 工作流后续增强
 
 - session-end candidate digest
@@ -158,6 +175,7 @@
 - Memory M1.5：digest / 策略开关 / Inbox 体验增强
 - Android 真机回归
 - 错误提示与日志继续增强，减少“黑盒报错”
+- Swift Native：扩大验证面并继续推进源头级错误本地化
 
 ### P2（能力扩展）
 

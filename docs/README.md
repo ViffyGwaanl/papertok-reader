@@ -5,6 +5,7 @@
 ## 当前状态（先看这里）
 
 - [项目状态与完整计划（中文）](./engineering/PROJECT_STATUS_AND_PLAN_zh.md) - 当前真实交付状态、剩余事项与下一阶段计划
+- [Swift Native 分支状态（中文）](./engineering/SWIFT_NATIVE_STATUS_zh.md) - `swift-native` 中文增强闭环、验证证据与下一阶段建议
 - [路线图（工程视角）](./engineering/ROADMAP_zh.md) - 已完成能力与后续优先级
 - [平台测试状态](./engineering/PLATFORM_TEST_STATUS_zh.md) - 已验证平台范围与回归建议
 
@@ -35,6 +36,7 @@
 
 ### 开发工作流
 - [工程工作流：Product + Upstream](./engineering/WORKFLOW_zh.md) - 仓库职责、分支策略、同步方式
+- [Swift Native 分支状态（中文）](./engineering/SWIFT_NATIVE_STATUS_zh.md) - 原生迁移工程轨的完成度、边界与下一步
 - [Identifiers 总表（真值源）](./engineering/IDENTIFIERS_zh.md) - Display Name / Bundle ID / applicationId / App Group
 - [命名收口计划（中文）](./engineering/NAMING_CLEANUP_PLAN_zh.md) - 已完成边界与下一阶段命名计划
 - [上游贡献指南（Anx Reader）](./engineering/UPSTREAM_CONTRIB_zh.md) - 如何向上游提交 PR

@@ -2,6 +2,8 @@
 
 本文档记录本仓库的“实际验证过的平台范围”，用于对外说明与内部 QA 规划。
 
+> 注：本文档描述的是仓库主线的对外平台验证口径。`swift-native` 分支的专项验证进展请看 `docs/engineering/SWIFT_NATIVE_STATUS_zh.md`。
+
 ## 当前结论
 
 - ✅ 已验证：iOS（iPhone） / iPadOS（iPad）
