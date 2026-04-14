@@ -1,3 +1,5 @@
+import 'memory_source_kind.dart';
+
 enum MemoryDocTarget { daily, longTerm }
 
 enum MemoryCandidateStatus { pending, applied, dismissed }
@@ -24,6 +26,13 @@ class MemoryCandidate {
     this.dismissedAtMs,
     this.decisionSource,
     this.triggerKind,
+    // v2 fields — all optional / defaulted for v1 back-compat
+    this.bookId,
+    this.cfi,
+    this.chapter,
+    this.sourceKind = MemorySourceKind.chat,
+    this.tags = const [],
+    this.rationale,
   });
 
   final String id;
@@ -51,6 +60,14 @@ class MemoryCandidate {
   final String? displayText;
   final String? sourcePointer;
   final String? rawContextRef;
+
+  // === v2 source reference + organization fields ===
+  final int? bookId;
+  final String? cfi;
+  final String? chapter;
+  final MemorySourceKind sourceKind;
+  final List<String> tags;
+  final String? rationale;
 
   MemoryDocTarget get effectiveTargetDoc => appliedTargetDoc ?? targetDoc;
 
@@ -104,6 +121,12 @@ class MemoryCandidate {
       'displayText': displayText,
       'sourcePointer': sourcePointer,
       'rawContextRef': rawContextRef,
+      if (bookId != null) 'bookId': bookId,
+      if (cfi != null) 'cfi': cfi,
+      if (chapter != null) 'chapter': chapter,
+      'sourceKind': sourceKind.asString,
+      'tags': tags,
+      if (rationale != null) 'rationale': rationale,
     };
   }
 
@@ -143,6 +166,15 @@ class MemoryCandidate {
       displayText: json['displayText']?.toString(),
       sourcePointer: json['sourcePointer']?.toString(),
       rawContextRef: json['rawContextRef']?.toString(),
+      bookId: (json['bookId'] as num?)?.toInt(),
+      cfi: json['cfi']?.toString(),
+      chapter: json['chapter']?.toString(),
+      sourceKind: MemorySourceKind.fromString(json['sourceKind']?.toString()),
+      tags: (json['tags'] as List?)
+              ?.map((e) => e.toString())
+              .toList(growable: false) ??
+          const <String>[],
+      rationale: json['rationale']?.toString(),
     );
   }
 
@@ -167,6 +199,12 @@ class MemoryCandidate {
     String? displayText,
     String? sourcePointer,
     String? rawContextRef,
+    int? bookId,
+    String? cfi,
+    String? chapter,
+    MemorySourceKind? sourceKind,
+    List<String>? tags,
+    String? rationale,
   }) {
     return MemoryCandidate(
       id: id ?? this.id,
@@ -189,6 +227,12 @@ class MemoryCandidate {
       displayText: displayText ?? this.displayText,
       sourcePointer: sourcePointer ?? this.sourcePointer,
       rawContextRef: rawContextRef ?? this.rawContextRef,
+      bookId: bookId ?? this.bookId,
+      cfi: cfi ?? this.cfi,
+      chapter: chapter ?? this.chapter,
+      sourceKind: sourceKind ?? this.sourceKind,
+      tags: tags ?? this.tags,
+      rationale: rationale ?? this.rationale,
     );
   }
 }
