@@ -57,20 +57,25 @@ abstract class StatisticsDashboardTileBase {
           ),
           Container(
             color: Colors.transparent,
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (title.isNotEmpty)
+                if (title.isNotEmpty) ...[
                   Text(
-                    title,
-                    style:
-                        Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: ClaudePalette.fg(context),
-                              fontWeight: FontWeight.w500,
-                            ),
+                    title.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.4,
+                      color: ClaudePalette.secondary(context),
+                    ),
                   ),
+                  const SizedBox(height: 4),
+                ],
                 Expanded(
                   child: buildContent(context, ref),
                 ),

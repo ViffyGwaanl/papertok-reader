@@ -65,62 +65,90 @@ class _StatisticPageState extends State<StatisticPage> {
       // ),
       body: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Column(
-            children: [
-              StatisticsDashboardTitle(),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth > 600) {
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  StatisticsDashboard(),
-                                  const StatisticCard(),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 20),
-                          Expanded(
-                            child: ListView(
-                              controller: _scrollController,
+        child: Column(
+          children: [
+            const StatisticsDashboardTitle(),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth > 600) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 8, 24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: const [
-                                DateBooks(),
+                                _SectionHeader(label: 'DASHBOARD'),
+                                SizedBox(height: AppSpacing.sm),
+                                StatisticsDashboard(),
+                                SizedBox(height: AppSpacing.lg),
+                                _SectionHeader(label: 'INSIGHTS'),
+                                SizedBox(height: AppSpacing.sm),
+                                StatisticCard(),
                               ],
                             ),
                           ),
-                        ],
-                      );
-                    } else {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: ListView(
-                                padding: const EdgeInsets.only(bottom: 80),
-                                controller: _scrollController,
-                                children: const [
-                                  StatisticsDashboard(),
-                                  StatisticCard(),
-                                  SizedBox(height: 20),
-                                  DateBooks(),
-                                ]),
+                        ),
+                        Expanded(
+                          child: ListView(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.fromLTRB(8, 0, 16, 24),
+                            children: const [
+                              _SectionHeader(label: 'LIBRARY'),
+                              SizedBox(height: AppSpacing.sm),
+                              DateBooks(),
+                            ],
                           ),
-                        ],
-                      );
-                    }
-                  },
-                ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                      controller: _scrollController,
+                      children: const [
+                        _SectionHeader(label: 'DASHBOARD'),
+                        SizedBox(height: AppSpacing.sm),
+                        StatisticsDashboard(),
+                        SizedBox(height: AppSpacing.lg),
+                        _SectionHeader(label: 'INSIGHTS'),
+                        SizedBox(height: AppSpacing.sm),
+                        StatisticCard(),
+                        SizedBox(height: AppSpacing.lg),
+                        _SectionHeader(label: 'LIBRARY'),
+                        SizedBox(height: AppSpacing.sm),
+                        DateBooks(),
+                      ],
+                    );
+                  }
+                },
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.6,
+          color: ClaudePalette.secondary(context),
         ),
       ),
     );
@@ -135,13 +163,13 @@ class DateBooks extends ConsumerStatefulWidget {
 }
 
 class _DateBooksState extends ConsumerState<DateBooks> {
-  TextStyle _titleStyle(BuildContext context) =>
-      (Theme.of(context).textTheme.titleLarge ?? const TextStyle()).copyWith(
-        fontSize: 30,
+  TextStyle _titleStyle(BuildContext context) => TextStyle(
+        fontSize: 22,
         fontFamily: 'SourceHanSerif',
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w700,
         overflow: TextOverflow.ellipsis,
         color: ClaudePalette.fg(context),
+        letterSpacing: -0.3,
       );
 
   List<int> deleteBookIds = [];
@@ -244,19 +272,15 @@ class _DateBooksState extends ConsumerState<DateBooks> {
 
         final books = data.bookReadingTime;
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: 10, top: 10, right: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: _titleStyle(context)),
-                ],
-              ),
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: Text(title, style: _titleStyle(context)),
             ),
             if (books.isEmpty)
               const Padding(
-                padding: EdgeInsets.only(top: 50),
+                padding: EdgeInsets.only(top: 40, bottom: 40),
                 child: StatisticsTips(),
               )
             else
@@ -265,7 +289,7 @@ class _DateBooksState extends ConsumerState<DateBooks> {
                   HintBanner(
                     icon: const Icon(Icons.swipe_left),
                     hintKey: HintKey.statisticsSwipeToDelete,
-                    margin: const EdgeInsets.only(bottom: 10),
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: Text(L10n.of(context).statisticsSwipeToDeleteHint),
                   ),
                   ...books.map((bookMap) {
@@ -300,19 +324,23 @@ class BookStatisticItem extends StatelessWidget {
 
   final int bookId;
   final int readingTime;
-  final TextStyle bookTitleStyle = const TextStyle(
-    fontSize: 20,
-    fontFamily: 'SourceHanSerif',
-    fontWeight: FontWeight.bold,
-    overflow: TextOverflow.ellipsis,
-  );
+
+  TextStyle _bookTitleStyle(BuildContext context) => TextStyle(
+        fontSize: 15,
+        fontFamily: 'SourceHanSerif',
+        fontWeight: FontWeight.w600,
+        height: 1.25,
+        color: ClaudePalette.fg(context),
+        overflow: TextOverflow.ellipsis,
+      );
   TextStyle _bookAuthorStyle(BuildContext context) => TextStyle(
         fontSize: 12,
+        fontWeight: FontWeight.w400,
         color: ClaudePalette.secondary(context),
         overflow: TextOverflow.ellipsis,
       );
   TextStyle _bookReadingTimeStyle(BuildContext context) => TextStyle(
-        fontSize: 18,
+        fontSize: 13,
         fontWeight: FontWeight.w500,
         color: ClaudePalette.fg(context),
       );
@@ -337,64 +365,82 @@ class BookStatisticItem extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: AppSpacing.md),
               child: PTCard(
                 elevation: 1,
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Row(
-                children: [
-                  Hero(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Hero(
                       tag: snapshot.data!.coverFullPath,
                       child: BookCover(
                         book: snapshot.data!,
-                        height: 130,
-                        width: 90,
-                        radius: 20,
-                      )),
-                  const SizedBox(width: 15),
-                  Flexible(
-                    child: Column(
+                        height: 80,
+                        width: 56,
+                        radius: 6,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(snapshot.data!.title, style: bookTitleStyle),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Text(snapshot.data!.author,
-                                    style: _bookAuthorStyle(context)),
-                              ),
-                              Text(
-                                  // getReadingTime(context),
-                                  convertSeconds(readingTime),
-                                  textAlign: TextAlign.end,
-                                  style: _bookReadingTimeStyle(context)),
-                            ],
+                          Text(
+                            snapshot.data!.title,
+                            style: _bookTitleStyle(context),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
                               Expanded(
-                                child: LinearProgressIndicator(
-                                  value: snapshot.data!.readingPercentage,
-                                  backgroundColor:
-                                      ClaudePalette.divider(context),
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      ClaudePalette.accent(context)),
+                                child: Text(
+                                  snapshot.data!.author,
+                                  style: _bookAuthorStyle(context),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: AppSpacing.sm),
                               Text(
-                                '${(snapshot.data!.readingPercentage * 100).toInt()} %',
+                                convertSeconds(readingTime),
+                                textAlign: TextAlign.end,
+                                style: _bookReadingTimeStyle(context),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: LinearProgressIndicator(
+                                    value: snapshot.data!.readingPercentage,
+                                    minHeight: 4,
+                                    backgroundColor:
+                                        ClaudePalette.divider(context),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        ClaudePalette.accent(context)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Text(
+                                '${(snapshot.data!.readingPercentage * 100).toInt()}%',
                                 style: TextStyle(
+                                  fontSize: 14,
                                   color: ClaudePalette.accent(context),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
                           ),
-                        ]),
-                  ),
-                ],
-              ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );

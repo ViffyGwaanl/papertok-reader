@@ -151,16 +151,14 @@ class StatisticCard extends ConsumerWidget {
       curve: Curves.easeOutBack,
       alignment: Alignment.topCenter,
       child: FilledContainer(
-        padding: const EdgeInsets.fromLTRB(10, 0, 10, 5),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
         child: statisticData.when(
             data: (data) => Column(
                   children: [
-                    const SizedBox(height: 10),
                     segmentButton(data),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     if (data.mode == ChartMode.heatmap) const HeatmapChart(),
                     if (data.mode != ChartMode.heatmap) barChart(data),
-                    // HeatmapChart(),
                   ],
                 ),
             loading: () => const Center(

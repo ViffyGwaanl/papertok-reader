@@ -19,34 +19,49 @@ class DashboardMiniMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Extract leading non-digit label (e.g. "天") and number from localized strings.
+    final rawLabel = label;
+    final numericPart = rawLabel.replaceAll(RegExp(r'[^0-9]'), '');
+    final unitPart = rawLabel.replaceAll(RegExp(r'[0-9\s]'), '').trim();
+    final hasEmbeddedNumber = numericPart.isNotEmpty;
+    final displayNumber = hasEmbeddedNumber ? numericPart : value.toString();
+    final displayUnit = hasEmbeddedNumber ? unitPart : rawLabel;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Row(
           children: [
-            Icon(icon, size: 16, color: ClaudePalette.secondary(context)),
+            Icon(icon, size: 14, color: ClaudePalette.secondary(context)),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: ClaudePalette.secondary(context),
+            Expanded(
+              child: Text(
+                displayUnit.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.4,
+                  color: ClaudePalette.secondary(context),
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              value.toString(),
+              displayNumber,
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
                 color: ClaudePalette.fg(context),
-                height: 1.1,
+                height: 1.05,
+                letterSpacing: -0.3,
               ),
             ),
             if (trailingBadge != null) ...[

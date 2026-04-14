@@ -91,19 +91,20 @@ class _ContinueReadingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final subtitle = lastReadDate == null
         ? L10n.of(context).tileContinueReadingNoTimestamp
         : RelativeTimeFormatter.format(lastReadDate!);
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Hero(
           tag: heroTag,
           child: BookCover(
             book: book,
-            width: 60,
-            radius: 8,
+            width: 56,
+            height: 80,
+            radius: 6,
           ),
         ),
         const SizedBox(width: 12),
@@ -111,14 +112,17 @@ class _ContinueReadingContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 book.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: ClaudePalette.fg(context),
+                style: TextStyle(
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
+                  color: ClaudePalette.fg(context),
+                  height: 1.3,
                 ),
               ),
               const SizedBox(height: 4),
@@ -126,23 +130,30 @@ class _ContinueReadingContent extends StatelessWidget {
                 book.author,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
                   color: ClaudePalette.secondary(context),
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: theme.textTheme.labelSmall?.copyWith(
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
                   color: ClaudePalette.tertiary(context),
                 ),
               ),
-              const SizedBox(height: 6),
-              LinearProgressIndicator(
-                value: book.readingPercentage.clamp(0, 1),
-                minHeight: 6,
-                color: ClaudePalette.accent(context),
-                backgroundColor: ClaudePalette.divider(context),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: book.readingPercentage.clamp(0, 1),
+                  minHeight: 4,
+                  color: ClaudePalette.accent(context),
+                  backgroundColor: ClaudePalette.divider(context),
+                ),
               ),
             ],
           ),
@@ -165,20 +176,22 @@ class _EmptyState extends StatelessWidget {
       children: [
         Icon(
           Icons.menu_book_outlined,
-          size: 24,
+          size: 28,
           color: ClaudePalette.tertiary(context),
         ),
         const SizedBox(height: 8),
         Text(
           l10n.tileContinueReadingEmptyState,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: ClaudePalette.secondary(context),
-              ),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            color: ClaudePalette.secondary(context),
+          ),
           textAlign: TextAlign.center,
         ),
         TextButton.icon(
           onPressed: onRefresh,
-          icon: const Icon(Icons.refresh),
+          icon: const Icon(Icons.refresh, size: 16),
           label: Text(l10n.commonRefresh),
         ),
       ],

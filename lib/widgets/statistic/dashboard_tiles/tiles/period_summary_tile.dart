@@ -55,8 +55,6 @@ class PeriodSummaryTile extends StatisticsDashboardTileBase {
     BuildContext context,
     WidgetRef ref,
   ) {
-    final theme = Theme.of(context);
-
     return AsyncSkeletonWrapper(
         asyncValue: combineAsyncValues([
           ref.watch(statisticDataProvider),
@@ -75,31 +73,51 @@ class PeriodSummaryTile extends StatisticsDashboardTileBase {
               : statisticData.readingTime
                   .fold<int>(0, (sum, seconds) => sum + seconds);
           final formatted = convertSeconds(periodSeconds);
+          final percentText = totalSeconds == 0
+              ? '0.0%'
+              : '${(periodSeconds / totalSeconds * 100).toStringAsFixed(1)}%';
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                formatted,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: ClaudePalette.fg(context),
-                  fontWeight: FontWeight.w600,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatted,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: ClaudePalette.fg(context),
+                      letterSpacing: -0.3,
+                      height: 1.05,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
+                    child: Text(
+                      percentText,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: ClaudePalette.accent(context),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '${(periodSeconds / totalSeconds * 100).toStringAsFixed(1)}%',
-                style: theme.textTheme.labelMedium?.copyWith(
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: periodSeconds == 0 || totalSeconds == 0
+                      ? 0
+                      : (periodSeconds / totalSeconds).clamp(0, 1).toDouble(),
+                  minHeight: 4,
                   color: ClaudePalette.accent(context),
-                  fontWeight: FontWeight.w500,
+                  backgroundColor: ClaudePalette.divider(context),
                 ),
-              ),
-              const Spacer(),
-              LinearProgressIndicator(
-                value: periodSeconds == 0
-                    ? 0
-                    : (periodSeconds / totalSeconds).clamp(0, 1).toDouble(),
-                minHeight: 6,
-                color: ClaudePalette.accent(context),
-                backgroundColor: ClaudePalette.divider(context),
               ),
             ],
           );

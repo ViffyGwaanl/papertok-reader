@@ -46,7 +46,6 @@ class _CompletionContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = L10n.of(context);
     final average = books.isEmpty
         ? 0.0
@@ -56,65 +55,101 @@ class _CompletionContent extends StatelessWidget {
     return Row(
       children: [
         _CompletionRing(percentage: average),
-        const SizedBox(width: 12),
+        const SizedBox(width: 16),
         Expanded(
           child: books.isEmpty
               ? Center(
-                  child: Text(
-                    l10n.tileCompletionProgressEmptyState,
-                    style: theme.textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.menu_book_outlined,
+                        size: 28,
+                        color: ClaudePalette.tertiary(context),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.tileCompletionProgressEmptyState,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: ClaudePalette.secondary(context),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: SingleChildScrollView(
-                        child: ListView.separated(
-                          padding: EdgeInsets.zero,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: books.length,
-                          itemBuilder: (context, index) {
-                            final book = books[index];
-                            final percent = (book.readingPercentage * 100)
-                                .clamp(0, 100)
-                                .toStringAsFixed(0);
-                            return Row(
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: books.length,
+                        itemBuilder: (context, index) {
+                          final book = books[index];
+                          final percent = (book.readingPercentage * 100)
+                              .clamp(0, 100)
+                              .toStringAsFixed(0);
+                          return Padding(
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 6),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    book.title,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w500,
-                                      color: ClaudePalette.fg(context),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        book.title,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: ClaudePalette.fg(context),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '$percent%',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: ClaudePalette.accent(context),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  '$percent%',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
+                                const SizedBox(height: 4),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: LinearProgressIndicator(
+                                    value:
+                                        book.readingPercentage.clamp(0, 1),
+                                    minHeight: 4,
                                     color: ClaudePalette.accent(context),
+                                    backgroundColor:
+                                        ClaudePalette.divider(context),
                                   ),
                                 ),
                               ],
-                            );
-                          },
-                          separatorBuilder: (_, __) => Divider(
-                            height: 12,
-                            thickness: 0.5,
-                            color: ClaudePalette.divider(context),
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
                       l10n.tileCompletionProgressMotivation,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                        color: ClaudePalette.tertiary(context),
                       ),
                     ),
                   ],
@@ -133,17 +168,16 @@ class _CompletionRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalized = percentage.clamp(0, 1);
-    final theme = Theme.of(context);
     return SizedBox(
-      width: 120,
-      height: 120,
+      width: 108,
+      height: 108,
       child: Stack(
         alignment: Alignment.center,
         children: [
           SizedBox.expand(
             child: CircularProgressIndicator(
               value: normalized as double,
-              strokeWidth: 10,
+              strokeWidth: 8,
               color: ClaudePalette.accent(context),
               backgroundColor: ClaudePalette.divider(context),
             ),
@@ -153,14 +187,23 @@ class _CompletionRing extends StatelessWidget {
             children: [
               Text(
                 '${(normalized * 100).toStringAsFixed(0)}%',
-                style: theme.textTheme.headlineSmall?.copyWith(
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
                   color: ClaudePalette.fg(context),
-                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.3,
+                  height: 1.0,
                 ),
               ),
+              const SizedBox(height: 2),
               Text(
-                L10n.of(context).tileCompletionProgressAverageLabel,
-                style: theme.textTheme.labelSmall?.copyWith(
+                L10n.of(context)
+                    .tileCompletionProgressAverageLabel
+                    .toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.4,
                   color: ClaudePalette.secondary(context),
                 ),
               ),

@@ -47,7 +47,6 @@ class _ReadingStreakContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final hasReadToday = _isSameDay(data.lastReadingDay, DateTime.now());
     final fireColor = hasReadToday
         ? MorandiPalette.clay(context)
@@ -56,55 +55,49 @@ class _ReadingStreakContent extends StatelessWidget {
     final encouragement = hasReadToday
         ? l10n.tileReadingStreakEncouragementActive
         : l10n.tileReadingStreakEncouragementInactive;
-    final subtitle = hasReadToday
-        ? l10n.tileReadingStreakSubtitleActive
-        : l10n.tileReadingStreakSubtitleInactive;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.local_fire_department, color: fireColor),
-            const SizedBox(width: 8),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.tileReadingStreakCurrent(data.currentStreak),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: ClaudePalette.fg(context),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: ClaudePalette.secondary(context),
-                    ),
-                  ),
-                ],
+              child: _StreakColumn(
+                icon: Icons.local_fire_department,
+                iconColor: fireColor,
+                value: data.currentStreak,
+                label: l10n.tileReadingStreakBestLabel.isEmpty
+                    ? 'CURRENT'
+                    : 'CURRENT',
               ),
-            )
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _StatPill(
-              label: l10n.tileReadingStreakBestLabel,
-              value: l10n.tileReadingStreakCurrent(data.longestStreak),
+            ),
+            Container(
+              width: 1,
+              height: 40,
+              color: ClaudePalette.divider(context),
+            ),
+            Expanded(
+              child: _StreakColumn(
+                icon: Icons.emoji_events_outlined,
+                iconColor: ClaudePalette.accent(context),
+                value: data.longestStreak,
+                label: 'BEST',
+              ),
             ),
           ],
         ),
-        const Spacer(),
+        const SizedBox(height: 12),
         Text(
           encouragement,
-          style: theme.textTheme.bodyMedium?.copyWith(
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
             color: ClaudePalette.secondary(context),
+            height: 1.35,
           ),
         ),
       ],
@@ -119,35 +112,47 @@ class _ReadingStreakContent extends StatelessWidget {
   }
 }
 
-class _StatPill extends StatelessWidget {
-  const _StatPill({required this.label, required this.value});
+class _StreakColumn extends StatelessWidget {
+  const _StreakColumn({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+  });
 
+  final IconData icon;
+  final Color iconColor;
+  final int value;
   final String label;
-  final String value;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: ClaudePalette.elevated(context),
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          Icon(icon, size: 20, color: iconColor),
+          const SizedBox(height: 4),
           Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: ClaudePalette.secondary(context),
+            value.toString(),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
+              letterSpacing: -0.3,
+              color: ClaudePalette.fg(context),
             ),
           ),
+          const SizedBox(height: 2),
           Text(
-            value,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: ClaudePalette.fg(context),
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.4,
+              color: ClaudePalette.secondary(context),
             ),
           ),
         ],

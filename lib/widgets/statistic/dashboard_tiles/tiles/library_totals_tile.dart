@@ -47,22 +47,25 @@ class LibraryTotalsTile extends StatisticsDashboardTileBase {
             children: [
               Expanded(
                 child: _NumberTile(
-                  icon: Icons.auto_stories,
-                  label: l10n.statisticBooksRead(booksRead),
+                  icon: Icons.auto_stories_outlined,
+                  value: booksRead,
+                  rawLabel: l10n.statisticBooksRead(booksRead),
                 ),
               ),
-              const SizedBox(width: 8),
+              _VerticalDivider(),
               Expanded(
                 child: _NumberTile(
-                  icon: Icons.calendar_today,
-                  label: l10n.statisticDaysOfReading(daysOfReading),
+                  icon: Icons.calendar_today_outlined,
+                  value: daysOfReading,
+                  rawLabel: l10n.statisticDaysOfReading(daysOfReading),
                 ),
               ),
-              const SizedBox(width: 8),
+              _VerticalDivider(),
               Expanded(
                 child: _NumberTile(
                   icon: Icons.note_alt_outlined,
-                  label: l10n.statisticNotes(notesCount),
+                  value: notesCount,
+                  rawLabel: l10n.statisticNotes(notesCount),
                 ),
               ),
             ],
@@ -71,31 +74,62 @@ class LibraryTotalsTile extends StatisticsDashboardTileBase {
   }
 }
 
-class _NumberTile extends StatelessWidget {
-  const _NumberTile({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
+class _VerticalDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: ClaudePalette.elevated(context),
-      ),
+      width: 1,
+      height: 36,
+      color: ClaudePalette.divider(context),
+    );
+  }
+}
+
+class _NumberTile extends StatelessWidget {
+  const _NumberTile({
+    required this.icon,
+    required this.value,
+    required this.rawLabel,
+  });
+
+  final IconData icon;
+  final int value;
+  final String rawLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    // Strip numbers to isolate the unit part of the localized label.
+    final unit = rawLabel.replaceAll(RegExp(r'[0-9\s]'), '').trim();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 28, color: ClaudePalette.accent(context)),
-          const SizedBox(height: 4),
+          Icon(icon, size: 16, color: ClaudePalette.secondary(context)),
+          const SizedBox(height: 6),
           Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: ClaudePalette.fg(context),
-                  fontWeight: FontWeight.w500,
-                ),
+            value.toString(),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: ClaudePalette.fg(context),
+              letterSpacing: -0.3,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            unit.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.4,
+              color: ClaudePalette.secondary(context),
+            ),
           ),
         ],
       ),

@@ -6,7 +6,6 @@ import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
-import 'package:anx_reader/widgets/highlight_digit.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,33 +43,31 @@ class _StatisticDashboardTitleState
       );
     }
 
-    return Row(
-      children: [
-        TotalReadTime(),
-        const Spacer(),
-        if (tilesState.isEditing)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: availableTiles.isEmpty ? null : showAddTileSheet,
-                icon: const Icon(Icons.add),
-                tooltip: l10n.statisticsDashboardAddCard,
-              ),
-              // IconButton(
-              //   onPressed: notifier.discardChanges,
-              //   icon: const Icon(Icons.close),
-              //   tooltip: 'Discard',
-              // ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: notifier.saveLayout,
-                icon: const Icon(Icons.save),
-                tooltip: l10n.commonSave,
-              ),
-            ],
-          ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Expanded(child: TotalReadTime()),
+          if (tilesState.isEditing)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: availableTiles.isEmpty ? null : showAddTileSheet,
+                  icon: const Icon(Icons.add),
+                  tooltip: l10n.statisticsDashboardAddCard,
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  onPressed: notifier.saveLayout,
+                  icon: const Icon(Icons.save),
+                  tooltip: l10n.commonSave,
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }
@@ -225,45 +222,57 @@ class TotalReadTime extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    TextStyle textStyle = const TextStyle(
-      fontSize: 30,
-      fontWeight: FontWeight.bold,
-    );
-
-    TextStyle digitStyle = const TextStyle(
-      fontSize: 24,
-      fontWeight: FontWeight.bold,
-    );
-
     return AsyncSkeletonWrapper<int>(
         asyncValue: ref.watch(totalReadingTimeProvider),
         builder: (seconds, _) {
           final hours = seconds ~/ 3600;
           final minutes = (seconds % 3600) ~/ 60;
 
+          final numberStyle = TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            color: ClaudePalette.fg(context),
+            letterSpacing: -0.5,
+            height: 1.05,
+          );
+          final unitStyle = TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: ClaudePalette.secondary(context),
+            letterSpacing: -0.2,
+            height: 1.05,
+          );
+
+          String hourLabel = L10n.of(context).commonHours(hours);
+          String minuteLabel = L10n.of(context).commonMinutes(minutes);
+          // Split into number + unit so unit sits on the baseline at 18/w500.
+          final hourSuffix = hourLabel.replaceAll(RegExp(r'[0-9]'), '').trim();
+          final minuteSuffix =
+              minuteLabel.replaceAll(RegExp(r'[0-9]'), '').trim();
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  highlightDigit(
-                    context,
-                    L10n.of(context).commonHours(hours),
-                    digitStyle,
-                    textStyle,
-                  ),
-                  highlightDigit(
-                    context,
-                    L10n.of(context).commonMinutes(minutes),
-                    digitStyle,
-                    textStyle,
-                  ),
-                ],
+              Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: hours.toString(), style: numberStyle),
+                  if (hourSuffix.isNotEmpty)
+                    TextSpan(text: hourSuffix, style: unitStyle),
+                  const TextSpan(text: ' '),
+                  TextSpan(text: minutes.toString(), style: numberStyle),
+                  if (minuteSuffix.isNotEmpty)
+                    TextSpan(text: minuteSuffix, style: unitStyle),
+                ]),
+                textHeightBehavior: const TextHeightBehavior(
+                  applyHeightToFirstAscent: false,
+                ),
               ),
+              const SizedBox(height: 4),
               Text(
                 '${Prefs().beginDate.toString().substring(0, 10)} ${L10n.of(context).statisticToPresent}',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
                   color: ClaudePalette.secondary(context),
                 ),
               )

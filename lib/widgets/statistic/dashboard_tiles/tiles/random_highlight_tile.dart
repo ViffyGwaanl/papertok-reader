@@ -75,7 +75,6 @@ class _HighlightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final quote = data.note.content.trim();
     final timestamp = RelativeTimeFormatter.format(data.note.updateTime);
 
@@ -86,35 +85,50 @@ class _HighlightCard extends StatelessWidget {
           child: SingleChildScrollView(
             child: Text(
               quote,
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                height: 1.5,
                 color: ClaudePalette.fg(context),
               ),
             ),
           ),
         ),
-        Divider(height: 2, color: ClaudePalette.divider(context)),
+        const SizedBox(height: 8),
+        Divider(height: 1, color: ClaudePalette.divider(context)),
+        const SizedBox(height: 6),
         Text(
           data.book?.title ?? L10n.of(context).randomHighlightUnknownBook,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: ClaudePalette.fg(context),
-            fontWeight: FontWeight.w500,
-          ),
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: ClaudePalette.fg(context),
+          ),
         ),
         if (data.note.chapter.isNotEmpty)
-          Text(
-            data.note.chapter,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: ClaudePalette.secondary(context),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              data.note.chapter,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                color: ClaudePalette.secondary(context),
+              ),
             ),
-            overflow: TextOverflow.ellipsis,
           ),
         Row(
           children: [
             Expanded(
               child: Text(
                 timestamp,
-                style: theme.textTheme.bodySmall?.copyWith(
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
                   color: ClaudePalette.tertiary(context),
                 ),
               ),
@@ -122,7 +136,7 @@ class _HighlightCard extends StatelessWidget {
             IconButton(
               tooltip: L10n.of(context).commonRefresh,
               onPressed: onRefresh,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh, size: 16),
               visualDensity: VisualDensity.compact,
             ),
           ],
@@ -139,25 +153,27 @@ class _EmptyHighlight extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           Icons.sticky_note_2_outlined,
-          size: 24,
+          size: 28,
           color: ClaudePalette.tertiary(context),
         ),
         const SizedBox(height: 8),
         Text(
           L10n.of(context).randomHighlightEmptyState,
-          style: theme.textTheme.bodyMedium?.copyWith(
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
             color: ClaudePalette.secondary(context),
           ),
         ),
         TextButton.icon(
           onPressed: onRefresh,
-          icon: const Icon(Icons.refresh),
+          icon: const Icon(Icons.refresh, size: 16),
           label: Text(L10n.of(context).commonRefresh),
         ),
       ],

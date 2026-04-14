@@ -1,5 +1,6 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/reading_duration_trend_provider.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/date/convert_seconds.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/statistic/book_reading_chart.dart';
@@ -85,7 +86,6 @@ class _ReadingDurationTileBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final totalLabel = convertSeconds(series.totalSeconds);
 
     return Column(
@@ -93,7 +93,13 @@ class _ReadingDurationTileBody extends StatelessWidget {
       children: [
         Text(
           totalLabel,
-          style: theme.textTheme.bodyMedium,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: ClaudePalette.fg(context),
+            letterSpacing: -0.3,
+            height: 1.05,
+          ),
         ),
         const SizedBox(height: 8),
         Expanded(

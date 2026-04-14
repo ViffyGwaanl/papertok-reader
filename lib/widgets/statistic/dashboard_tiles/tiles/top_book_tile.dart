@@ -47,50 +47,59 @@ class TopBookTile extends StatisticsDashboardTileBase {
         final book = entry.keys.first;
         final seconds = entry.values.first;
 
-        final TextStyle bookTitleStyle = const TextStyle(
-          fontSize: 20,
+        final bookTitleStyle = TextStyle(
+          fontSize: 15,
           fontFamily: 'SourceHanSerif',
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
+          color: ClaudePalette.fg(context),
+          height: 1.25,
           overflow: TextOverflow.ellipsis,
         );
-        final TextStyle bookAuthorStyle = TextStyle(
+        final bookAuthorStyle = TextStyle(
           fontSize: 12,
+          fontWeight: FontWeight.w400,
           color: ClaudePalette.secondary(context),
           overflow: TextOverflow.ellipsis,
         );
-        final TextStyle bookReadingTimeStyle = const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
+        final bookReadingTimeStyle = TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: ClaudePalette.accent(context),
         );
 
         return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             BookCover(
               book: book,
-              width: 120,
-              radius: 10,
+              width: 80,
+              height: 120,
+              radius: 6,
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: 14),
             Flexible(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(book.title, style: bookTitleStyle),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Text(book.author, style: bookAuthorStyle),
-                        ),
-                        Text(
-                            // getReadingTime(context),
-                            convertSeconds(seconds),
-                            textAlign: TextAlign.end,
-                            style: bookReadingTimeStyle),
-                      ],
+                    Text(
+                      book.title,
+                      style: bookTitleStyle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 4),
+                    Text(
+                      book.author,
+                      style: bookAuthorStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      convertSeconds(seconds),
+                      style: bookReadingTimeStyle,
+                    ),
+                    const SizedBox(height: 8),
                     AsyncSkeletonWrapper(
                         asyncValue: ref.watch(
                           bookDailyReadingProvider(bookId: book.id),
@@ -100,7 +109,7 @@ class TopBookTile extends StatisticsDashboardTileBase {
                           return ready
                               ? Expanded(
                                   child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
+                                    padding: const EdgeInsets.only(top: 4),
                                     child: BookReadingChart(
                                       cumulativeValues:
                                           bookReadingData.readingTimes,
