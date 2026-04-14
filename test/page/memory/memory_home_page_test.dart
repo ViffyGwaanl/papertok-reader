@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/memory/memory_home_page.dart';
+import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_pending_count_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +11,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('renders INBOX / TODAY / LONG-TERM section headers',
       (tester) async {
+    // Use a fresh temp directory so no real filesystem paths are touched.
+    final tempDir = Directory.systemTemp.createTempSync('memory_home_test_');
+    addTearDown(() => tempDir.deleteSync(recursive: true));
+    final testStore = MarkdownMemoryStore(rootDir: tempDir);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -18,7 +26,7 @@ void main() {
           locale: const Locale('en'),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: const MemoryHomePage(),
+          home: MemoryHomePage(store: testStore),
         ),
       ),
     );

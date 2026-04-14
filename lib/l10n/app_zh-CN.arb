@@ -1537,5 +1537,7 @@
   "memoryTabTitle": "记忆",
   "memoryInboxSectionTitle": "收件箱",
   "memoryTodaySectionTitle": "今天",
-  "memoryLongTermSectionTitle": "长期记忆"
+  "memoryLongTermSectionTitle": "长期记忆",
+  "memoryHomeTodayEmpty": "今天还没有日记。开始阅读会话后会自动生成。",
+  "memoryHomeLongTermEmpty": "长期记忆为空。从收件箱批准一条记忆即可开始。"
 }

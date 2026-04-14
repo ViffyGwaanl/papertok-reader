@@ -803,5 +803,7 @@
   "memoryTabTitle": "記憶",
   "memoryInboxSectionTitle": "收件匣",
   "memoryTodaySectionTitle": "今天",
-  "memoryLongTermSectionTitle": "長期記憶"
+  "memoryLongTermSectionTitle": "長期記憶",
+  "memoryHomeTodayEmpty": "今天還沒有日記。開始閱讀會話後會自動生成。",
+  "memoryHomeLongTermEmpty": "長期記憶為空。從收件匣批准一條記憶即可開始。"
 }

@@ -1537,5 +1537,7 @@
   "memoryTabTitle": "Memory",
   "memoryInboxSectionTitle": "Inbox",
   "memoryTodaySectionTitle": "Today",
-  "memoryLongTermSectionTitle": "Long-term"
+  "memoryLongTermSectionTitle": "Long-term",
+  "memoryHomeTodayEmpty": "No daily notes yet. Start a reading session to generate one.",
+  "memoryHomeLongTermEmpty": "Long-term memory is empty. Approve a candidate from the Inbox to start filling it."
 }

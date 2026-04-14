@@ -1,17 +1,22 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/page/memory/widgets/memory_row.dart';
+import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_pending_count_provider.dart';
 import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class MemoryHomePage extends ConsumerWidget {
-  const MemoryHomePage({super.key});
+  final MarkdownMemoryStore? store;
+
+  const MemoryHomePage({super.key, this.store});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pendingCount =
         ref.watch(memoryPendingCountProvider).valueOrNull ?? 0;
     final l10n = L10n.of(context);
+    final effectiveStore = store ?? MarkdownMemoryStore();
 
     return Scaffold(
       appBar: AppBar(
@@ -23,11 +28,15 @@ class MemoryHomePage extends ConsumerWidget {
           _SectionHeader(title: l10n.memoryInboxSectionTitle),
           _InboxSummaryCard(pendingCount: pendingCount),
           _SectionHeader(title: l10n.memoryTodaySectionTitle),
-          const SizedBox(height: 4),
-          // Task 8 will replace this with a card wrapping MemoryRow list.
+          _MemoryEntriesCard(
+            future: effectiveStore.listRecentDailyNotes(count: 14),
+            emptyMessage: l10n.memoryHomeTodayEmpty,
+          ),
           _SectionHeader(title: l10n.memoryLongTermSectionTitle),
-          const SizedBox(height: 4),
-          // Task 8 will replace this with a card wrapping MemoryRow list.
+          _MemoryEntriesCard(
+            future: effectiveStore.listLongTermEntries(),
+            emptyMessage: l10n.memoryHomeLongTermEmpty,
+          ),
         ],
       ),
     );
@@ -51,6 +60,82 @@ class _SectionHeader extends StatelessWidget {
           color: ClaudePalette.secondary(context),
         ),
       ),
+    );
+  }
+}
+
+class _MemoryEntriesCard extends StatelessWidget {
+  final Future<List<MemoryEntryRef>> future;
+  final String emptyMessage;
+
+  const _MemoryEntriesCard({
+    required this.future,
+    required this.emptyMessage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<MemoryEntryRef>>(
+      future: future,
+      builder: (context, snapshot) {
+        final entries = snapshot.data ?? const <MemoryEntryRef>[];
+        final loading = snapshot.connectionState != ConnectionState.done;
+
+        if (loading) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: ClaudePalette.tertiary(context),
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (entries.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Text(
+              emptyMessage,
+              style: TextStyle(
+                fontSize: 13,
+                color: ClaudePalette.tertiary(context),
+              ),
+            ),
+          );
+        }
+
+        return Material(
+          color: ClaudePalette.card(context),
+          borderRadius: BorderRadius.circular(14),
+          child: Column(
+            children: [
+              for (var i = 0; i < entries.length; i++) ...[
+                MemoryRow(
+                  entry: entries[i],
+                  onTap: () {
+                    // Task 10 wires this to MemoryDetailPage navigation.
+                  },
+                ),
+                if (i < entries.length - 1)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Divider(
+                      height: 0.5,
+                      thickness: 0.5,
+                      color: ClaudePalette.divider(context),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
