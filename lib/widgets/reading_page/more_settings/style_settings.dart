@@ -4,8 +4,11 @@ import 'package:anx_reader/enums/writing_mode.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book_style.dart';
 import 'package:anx_reader/page/reading_page.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/icon_and_text.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/custom_css_editor.dart';
+import 'package:anx_reader/widgets/reading_page/more_settings/reading_settings.dart'
+    show ClaudeSettingsSection;
 import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -286,14 +289,21 @@ class _StyleSettingsState extends State<StyleSettings> {
         builder: (context, setState) => Row(
           children: [
             Icon(Icons.format_align_left,
-                color: Theme.of(context).colorScheme.onSurfaceVariant),
+                color: ClaudePalette.secondary(context)),
             const SizedBox(width: 12),
-            Text(L10n.of(context).textAlignment),
+            Text(
+              L10n.of(context).textAlignment,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: ClaudePalette.fg(context),
+              ),
+            ),
             const Spacer(),
             DropdownMenu<TextAlignmentEnum>(
               width: 140,
               initialSelection: Prefs().textAlignment,
-              inputDecorationTheme: InputDecorationTheme(
+              inputDecorationTheme: const InputDecorationTheme(
                 isDense: false,
                 border: InputBorder.none,
               ),
@@ -335,16 +345,25 @@ class _StyleSettingsState extends State<StyleSettings> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          useBookStylesSwitch(),
-          const Divider(),
-          sliders(),
-          const SizedBox(height: 16),
-          const Divider(),
-          textAlignment(),
-          CustomCSSEditor(),
+          ClaudeSettingsSection(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: [useBookStylesSwitch()],
+          ),
+          ClaudeSettingsSection(
+            children: [sliders()],
+          ),
+          ClaudeSettingsSection(
+            children: [
+              textAlignment(),
+            ],
+          ),
+          ClaudeSettingsSection(
+            children: [const CustomCSSEditor()],
+          ),
         ],
       ),
     );

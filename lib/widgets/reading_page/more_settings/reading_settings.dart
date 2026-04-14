@@ -14,10 +14,10 @@ import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
 import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
 import 'package:anx_reader/service/translate/inline_fulltext_translation_status.dart';
 import 'package:anx_reader/theme/app_spacing.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
-import 'package:anx_reader/widgets/common/pt_card.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +28,60 @@ class ReadingMoreSettings extends StatefulWidget {
 
   @override
   State<ReadingMoreSettings> createState() => _ReadingMoreSettingsState();
+}
+
+/// Claude-styled section wrapper used across in-reader settings panels.
+/// Renders a title row (small uppercase secondary) followed by a flat card
+/// (14 radius, no shadow, no border) hosting the children.
+class ClaudeSettingsSection extends StatelessWidget {
+  const ClaudeSettingsSection({
+    super.key,
+    this.title,
+    required this.children,
+    this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  });
+
+  final String? title;
+  final List<Widget> children;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+              child: Text(
+                title!.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.6,
+                  color: ClaudePalette.secondary(context),
+                ),
+              ),
+            ),
+          Container(
+            width: double.infinity,
+            padding: padding,
+            decoration: BoxDecoration(
+              color: ClaudePalette.card(context),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: children,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
@@ -45,46 +99,39 @@ class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(L10n.of(context).readingPageConvertChinese,
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: ClaudePalette.fg(context),
+                        fontWeight: FontWeight.w600,
+                      )),
               const SizedBox(height: AppSpacing.sm),
-              PTCard(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                elevation: 1,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: AnxSegmentedButton<ConvertChineseMode>(
-                        segments: [
-                          SegmentButtonItem(
-                            label: L10n.of(context).readingPageOriginal,
-                            value: ConvertChineseMode.none,
-                            icon: const Text("原", style: iconStyle),
-                          ),
-                          SegmentButtonItem(
-                            label: L10n.of(context).readingPageSimplified,
-                            value: ConvertChineseMode.t2s,
-                            icon: const Text("简", style: iconStyle),
-                          ),
-                          SegmentButtonItem(
-                            label: L10n.of(context).readingPageTraditional,
-                            value: ConvertChineseMode.s2t,
-                            icon: const Text("繁", style: iconStyle),
-                          ),
-                        ],
-                        selected: {Prefs().readingRules.convertChineseMode},
-                        onSelectionChanged: (value) {
-                          setState(() {
-                            Prefs().readingRules = Prefs()
-                                .readingRules
-                                .copyWith(convertChineseMode: value.first);
-                            epubPlayerKey.currentState
-                                ?.changeReadingRules(Prefs().readingRules);
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+              AnxSegmentedButton<ConvertChineseMode>(
+                segments: [
+                  SegmentButtonItem(
+                    label: L10n.of(context).readingPageOriginal,
+                    value: ConvertChineseMode.none,
+                    icon: const Text("原", style: iconStyle),
+                  ),
+                  SegmentButtonItem(
+                    label: L10n.of(context).readingPageSimplified,
+                    value: ConvertChineseMode.t2s,
+                    icon: const Text("简", style: iconStyle),
+                  ),
+                  SegmentButtonItem(
+                    label: L10n.of(context).readingPageTraditional,
+                    value: ConvertChineseMode.s2t,
+                    icon: const Text("繁", style: iconStyle),
+                  ),
+                ],
+                selected: {Prefs().readingRules.convertChineseMode},
+                onSelectionChanged: (value) {
+                  setState(() {
+                    Prefs().readingRules = Prefs()
+                        .readingRules
+                        .copyWith(convertChineseMode: value.first);
+                    epubPlayerKey.currentState
+                        ?.changeReadingRules(Prefs().readingRules);
+                  });
+                },
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(
@@ -312,7 +359,7 @@ class _ReadingMoreSettingsState extends State<ReadingMoreSettings> {
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
-                      ?.copyWith(color: Colors.grey)),
+                      ?.copyWith(color: ClaudePalette.tertiary(context))),
             Row(
               children: [
                 Expanded(
@@ -524,7 +571,7 @@ return null;
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
-                                  ?.copyWith(color: Colors.grey),
+                                  ?.copyWith(color: ClaudePalette.tertiary(context)),
                             ),
                             if (reasonText != null)
                               Padding(
@@ -534,7 +581,7 @@ return null;
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
-                                      ?.copyWith(color: Colors.grey),
+                                      ?.copyWith(color: ClaudePalette.tertiary(context)),
                                 ),
                               ),
                             if (retryText != null)
@@ -545,7 +592,7 @@ return null;
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
-                                      ?.copyWith(color: Colors.grey),
+                                      ?.copyWith(color: ClaudePalette.tertiary(context)),
                                 ),
                               ),
                           ],
@@ -972,22 +1019,36 @@ return null;
     }
 
     return Container(
-      padding: const EdgeInsets.all(18.0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          downloadFonts(),
-          const Divider(height: 20),
-          writingMode(),
-          translationMode(),
-          columnCount(),
-          columnThreshold(),
-          convertChinese(),
-          const Divider(height: 15),
-          codeHighlightTheme(),
-          const Divider(height: 15),
-          readingInfo(),
-          // const Divider(height: 8),
-          // bionicReading(),
+          ClaudeSettingsSection(
+            children: [downloadFonts()],
+          ),
+          ClaudeSettingsSection(
+            children: [
+              writingMode(),
+              const SizedBox(height: 12),
+              translationMode(),
+            ],
+          ),
+          ClaudeSettingsSection(
+            children: [
+              columnCount(),
+              const SizedBox(height: 12),
+              columnThreshold(),
+            ],
+          ),
+          ClaudeSettingsSection(
+            children: [convertChinese()],
+          ),
+          ClaudeSettingsSection(
+            children: [codeHighlightTheme()],
+          ),
+          ClaudeSettingsSection(
+            children: [readingInfo()],
+          ),
         ],
       ),
     );

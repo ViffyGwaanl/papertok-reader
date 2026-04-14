@@ -9,6 +9,8 @@ import 'package:anx_reader/models/bgimg.dart';
 import 'package:anx_reader/providers/bgimg.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,7 +109,7 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
           onTap: onTap,
           child: Container(
             height: _itemHeight,
-            color: Theme.of(context).colorScheme.surfaceContainer,
+            color: ClaudePalette.elevated(context),
             child: child,
           ),
         ),
@@ -135,7 +137,7 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
         borderRadius: BorderRadius.circular(20),
         child: Container(
           height: _itemHeight,
-          color: Theme.of(context).colorScheme.surfaceContainer,
+          color: ClaudePalette.elevated(context),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -167,7 +169,7 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
                           child: nightImage,
                         )
                       : Container(
-                          color: Theme.of(context).colorScheme.surfaceContainer,
+                          color: ClaudePalette.elevated(context),
                         ),
                 ),
               ),
@@ -291,23 +293,21 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withAlpha(220),
+                          color: ClaudePalette.accent(context)
+                              .withValues(alpha: 0.86),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black26,
+                              color: Colors.black.withValues(alpha: 0.18),
                               blurRadius: 4,
-                              offset: Offset(0, 2),
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.swap_horiz,
                           size: 20,
-                          color: Theme.of(context).colorScheme.onPrimary,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -328,8 +328,9 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
           },
           icon: Icons.delete,
           label: L10n.of(context).commonDelete,
-          backgroundColor: Theme.of(context).colorScheme.errorContainer,
-          foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+          backgroundColor:
+              MorandiPalette.error(context).withValues(alpha: 0.18),
+          foregroundColor: MorandiPalette.error(context),
         ),
       ];
 
@@ -343,8 +344,8 @@ class _BgimgSelectorState extends ConsumerState<BgimgSelector> {
             },
             icon: Icons.nightlight_outlined,
             label: L10n.of(context).readingPageStyleDeleteNightImage,
-            backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-            foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+            backgroundColor: ClaudePalette.elevated(context),
+            foregroundColor: ClaudePalette.fg(context),
           ),
         );
       }

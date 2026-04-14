@@ -6,12 +6,15 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/providers/ai_book_index.dart';
 import 'package:anx_reader/providers/current_reading.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/utils/ui/status_bar.dart';
 import 'package:anx_reader/widgets/common/anx_segmented_button.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/page_turning/diagram.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/page_turning/page_turn_dropdown.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/page_turning/types_and_icons.dart';
+import 'package:anx_reader/widgets/reading_page/more_settings/reading_settings.dart'
+    show ClaudeSettingsSection;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -335,14 +338,16 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
       }
 
       return Padding(
-        padding: const EdgeInsets.only(top: 8),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Divider(height: 24),
             Text(
               'AI Semantic Index (Current Book)',
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: ClaudePalette.fg(context),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             if (!isReading)
               Padding(
@@ -351,7 +356,7 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
                   'Open a book to build a semantic index.',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
               ),
             if (isReading)
@@ -361,7 +366,7 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
                   'Book: ${book!.title}',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
               ),
             Padding(
@@ -379,20 +384,20 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
                     'Indexed chunks: $chunks (updated: $updatedText)',
                     style: Theme.of(
                       context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
                   );
                 },
                 loading: () => Text(
                   'Loading index status…',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
                 error: (e, _) => Text(
                   'Index status unavailable: $e',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
               ),
             ),
@@ -403,7 +408,7 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
                   '${statusText(idxState)} · ${idxState.message}',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
               ),
             if (idxState.isBusy)
@@ -458,20 +463,38 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          fullScreen(),
-          if (AnxPlatform.isAndroid) keyboardTurnPage(),
-          swapPageTurnArea(),
-          showMenuOnHover(),
-          autoAdjustReadingTheme(),
-          autoTranslateSelection(),
-          autoMarkSelection(),
-          autoSummaryPreviousContent(),
-          aiIndexSection(),
-          screenTimeout(),
-          pageTurningControl(),
+          ClaudeSettingsSection(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: [
+              fullScreen(),
+              if (AnxPlatform.isAndroid) keyboardTurnPage(),
+              swapPageTurnArea(),
+              showMenuOnHover(),
+            ],
+          ),
+          ClaudeSettingsSection(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: [
+              autoAdjustReadingTheme(),
+              autoTranslateSelection(),
+              autoMarkSelection(),
+              autoSummaryPreviousContent(),
+            ],
+          ),
+          ClaudeSettingsSection(
+            children: [aiIndexSection()],
+          ),
+          ClaudeSettingsSection(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: [screenTimeout()],
+          ),
+          ClaudeSettingsSection(
+            children: [pageTurningControl()],
+          ),
         ],
       ),
     );
