@@ -1277,38 +1277,840 @@ git commit -m "feat(memory): add Memory tab to bottom navigation (B2)"
 
 ## Task 10: Memory detail + tag editor + bulk ops
 
+This task is the biggest in the plan; it's decomposed into five strictly-ordered sub-tasks, each a full TDD cycle (write test, fail, implement, pass, commit). Sub-tasks 10a–10e MUST be executed in order because each depends on the previous one.
+
+---
+
+### Sub-task 10a: YAML front-matter tag parser/serializer
+
 **Files:**
-- Create: `lib/page/memory/memory_detail_page.dart`
-- Create: `lib/page/memory/widgets/tag_editor.dart`
-- Create: `lib/page/memory/memory_bulk_selection_controller.dart`
-- Test: `test/page/memory/tag_editor_test.dart`
+- Modify: `lib/service/memory/markdown_memory_store.dart`
+- Test: `test/service/memory/markdown_memory_store_tags_test.dart`
 
-*(This task has the biggest surface area. Break into sub-steps: tag storage → tag editor widget → detail page → bulk selection controller → multi-select toolbar. Each sub-step follows the same TDD rhythm: write test, run fail, implement, run pass, commit.)*
+- [ ] **Step 10a.1: Write the failing test**
 
-- [ ] **Sub-step 10a: YAML front-matter tag parser/serializer in MarkdownMemoryStore**
+```dart
+// test/service/memory/markdown_memory_store_tags_test.dart
+import 'dart:io';
+import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
-Add methods `readEntryTags(String path)` and `writeEntryTags(String path, List<String> tags)`. They parse/write a `---\ntags: [a, b]\n---\n` prefix. Write unit tests.
+void main() {
+  late Directory tempRoot;
 
-- [ ] **Sub-step 10b: `TagEditor` widget**
+  setUp(() async {
+    tempRoot = await Directory.systemTemp.createTemp('mms_tags_');
+  });
 
-Chip-based editor, autocomplete from existing tags, accent-tinted when selected. Widget test.
+  tearDown(() async {
+    if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+  });
 
-- [ ] **Sub-step 10c: `MemoryDetailPage`**
+  test('reads tags from front matter', () async {
+    final f = File(p.join(tempRoot.path, '2026-04-14.md'));
+    f.writeAsStringSync('---\ntags: [insight, biology]\n---\n# Note\nbody\n');
+    final store = MarkdownMemoryStore(root: tempRoot.path);
+    final tags = await store.readEntryTags(f.path);
+    expect(tags, ['insight', 'biology']);
+  });
 
-Renders markdown body via existing `StyledMarkdown`, shows `TagEditor` at the top, and reuses `_SourceActionButton` from Task 5 for Open-in-reader / Open-conversation buttons.
+  test('returns empty list when no front matter', () async {
+    final f = File(p.join(tempRoot.path, 'plain.md'));
+    f.writeAsStringSync('# Just a note\nbody\n');
+    final store = MarkdownMemoryStore(root: tempRoot.path);
+    final tags = await store.readEntryTags(f.path);
+    expect(tags, isEmpty);
+  });
 
-- [ ] **Sub-step 10d: `MemoryBulkSelectionController`**
+  test('write creates front matter and preserves body', () async {
+    final f = File(p.join(tempRoot.path, 'plain.md'));
+    f.writeAsStringSync('# Just a note\nbody\n');
+    final store = MarkdownMemoryStore(root: tempRoot.path);
+    await store.writeEntryTags(f.path, ['new']);
+    final content = f.readAsStringSync();
+    expect(content, startsWith('---\ntags: [new]\n---\n'));
+    expect(content, contains('# Just a note'));
+    expect(content, contains('body'));
+  });
 
-`ChangeNotifier` tracking selected ids + a boolean `inSelectionMode`. Methods `toggle(String id)`, `clear()`, `selectAll(List<String>)`. Unit test.
+  test('write replaces existing front matter', () async {
+    final f = File(p.join(tempRoot.path, 'has.md'));
+    f.writeAsStringSync('---\ntags: [old]\n---\n# Note\nbody\n');
+    final store = MarkdownMemoryStore(root: tempRoot.path);
+    await store.writeEntryTags(f.path, ['updated', 'second']);
+    final content = f.readAsStringSync();
+    expect(content, startsWith('---\ntags: [updated, second]\n---\n'));
+    expect(content.contains('tags: [old]'), isFalse);
+    expect(content, contains('# Note'));
+  });
+}
+```
 
-- [ ] **Sub-step 10e: Long-press on `MemoryRow` enters selection mode**
+- [ ] **Step 10a.2: Run test (expect fail)**
 
-Wrap row in a `GestureDetector` that calls `controller.enter()` on long-press. Multi-select toolbar (AppBar overlay) with Delete / Move to long-term / Move to daily / Add tag / Export actions.
+```
+flutter test test/service/memory/markdown_memory_store_tags_test.dart
+```
+Expected: FAIL — `readEntryTags` / `writeEntryTags` not defined.
 
-- [ ] **Commit after each sub-step:**
+- [ ] **Step 10a.3: Implement the helpers**
+
+Extend the existing `MarkdownMemoryStoreBrowse` extension in `lib/service/memory/markdown_memory_store.dart`:
+
+```dart
+extension MarkdownMemoryStoreTags on MarkdownMemoryStore {
+  /// Extracts a `tags: [a, b, c]` line from a YAML front-matter block.
+  /// Returns empty if there is no front matter or the tags line is missing.
+  Future<List<String>> readEntryTags(String path) async {
+    final file = File(path);
+    if (!file.existsSync()) return const [];
+    final content = await file.readAsString();
+    final fm = _extractFrontMatter(content);
+    if (fm == null) return const [];
+    final tagMatch = RegExp(r'^tags:\s*\[(.*)\]\s*$', multiLine: true)
+        .firstMatch(fm);
+    if (tagMatch == null) return const [];
+    return tagMatch
+        .group(1)!
+        .split(',')
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+  }
+
+  /// Writes the given tag list as a front matter block. Replaces any
+  /// existing front matter; preserves the rest of the file verbatim.
+  Future<void> writeEntryTags(String path, List<String> tags) async {
+    final file = File(path);
+    final original = file.existsSync() ? await file.readAsString() : '';
+    final body = _stripFrontMatter(original);
+    final fm = '---\ntags: [${tags.join(', ')}]\n---\n';
+    await file.writeAsString('$fm$body');
+  }
+
+  String? _extractFrontMatter(String content) {
+    if (!content.startsWith('---\n')) return null;
+    final endIdx = content.indexOf('\n---\n', 4);
+    if (endIdx == -1) return null;
+    return content.substring(4, endIdx);
+  }
+
+  String _stripFrontMatter(String content) {
+    if (!content.startsWith('---\n')) return content;
+    final endIdx = content.indexOf('\n---\n', 4);
+    if (endIdx == -1) return content;
+    return content.substring(endIdx + 5);
+  }
+}
+```
+
+- [ ] **Step 10a.4: Run test (expect pass)**
+
+```
+flutter test test/service/memory/markdown_memory_store_tags_test.dart
+```
+Expected: PASS — 4 tests.
+
+- [ ] **Step 10a.5: Commit**
 
 ```bash
-git commit -m "feat(memory): <sub-step description> (B2)"
+git add lib/service/memory/markdown_memory_store.dart test/service/memory/markdown_memory_store_tags_test.dart
+git commit -m "feat(memory): YAML front-matter tag read/write on markdown store (B2)"
+```
+
+---
+
+### Sub-task 10b: `TagEditor` widget
+
+**Files:**
+- Create: `lib/page/memory/widgets/tag_editor.dart`
+- Test: `test/page/memory/tag_editor_test.dart`
+
+- [ ] **Step 10b.1: Write the failing widget test**
+
+```dart
+// test/page/memory/tag_editor_test.dart
+import 'package:anx_reader/page/memory/widgets/tag_editor.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  testWidgets('renders existing tags and calls onChanged on add', (tester) async {
+    final updates = <List<String>>[];
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: TagEditor(
+          initial: const ['alpha'],
+          suggestions: const ['alpha', 'beta', 'gamma'],
+          onChanged: updates.add,
+        ),
+      ),
+    ));
+    expect(find.text('alpha'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'beta');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(updates.last, containsAll(['alpha', 'beta']));
+    expect(find.text('beta'), findsOneWidget);
+  });
+
+  testWidgets('tapping a chip removes it', (tester) async {
+    final updates = <List<String>>[];
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: TagEditor(
+          initial: const ['remove-me', 'keep'],
+          suggestions: const [],
+          onChanged: updates.add,
+        ),
+      ),
+    ));
+    await tester.tap(find.text('remove-me'));
+    await tester.pump();
+    expect(updates.last, equals(['keep']));
+  });
+}
+```
+
+- [ ] **Step 10b.2: Run test (expect fail)**
+
+```
+flutter test test/page/memory/tag_editor_test.dart
+```
+Expected: FAIL — `TagEditor` not found.
+
+- [ ] **Step 10b.3: Implement `TagEditor`**
+
+```dart
+// lib/page/memory/widgets/tag_editor.dart
+import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+class TagEditor extends StatefulWidget {
+  final List<String> initial;
+  final List<String> suggestions;
+  final ValueChanged<List<String>> onChanged;
+
+  const TagEditor({
+    super.key,
+    required this.initial,
+    required this.suggestions,
+    required this.onChanged,
+  });
+
+  @override
+  State<TagEditor> createState() => _TagEditorState();
+}
+
+class _TagEditorState extends State<TagEditor> {
+  late List<String> _tags = List<String>.from(widget.initial);
+  final _controller = TextEditingController();
+
+  void _add(String raw) {
+    final tag = raw.trim();
+    if (tag.isEmpty || _tags.contains(tag)) {
+      _controller.clear();
+      return;
+    }
+    setState(() {
+      _tags = [..._tags, tag];
+      _controller.clear();
+    });
+    widget.onChanged(_tags);
+  }
+
+  void _remove(String tag) {
+    setState(() {
+      _tags = _tags.where((t) => t != tag).toList();
+    });
+    widget.onChanged(_tags);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final missingSuggestions = widget.suggestions
+        .where((s) => !_tags.contains(s))
+        .take(6)
+        .toList();
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final tag in _tags) _chip(context, tag, selected: true),
+        SizedBox(
+          width: 140,
+          child: TextField(
+            controller: _controller,
+            textInputAction: TextInputAction.done,
+            onSubmitted: _add,
+            style: TextStyle(
+              fontSize: 13,
+              color: ClaudePalette.fg(context),
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: 'Add tag…',
+              hintStyle: TextStyle(
+                fontSize: 13,
+                color: ClaudePalette.tertiary(context),
+              ),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+            ),
+          ),
+        ),
+        for (final suggestion in missingSuggestions)
+          _chip(context, suggestion, selected: false),
+      ],
+    );
+  }
+
+  Widget _chip(BuildContext context, String tag, {required bool selected}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          if (selected) {
+            _remove(tag);
+          } else {
+            _add(tag);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: selected
+                ? ClaudePalette.accentTint(context)
+                : ClaudePalette.bg(context).withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected
+                  ? ClaudePalette.accent(context).withValues(alpha: 0.35)
+                  : ClaudePalette.divider(context),
+              width: 0.5,
+            ),
+          ),
+          child: Text(
+            tag,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: selected
+                  ? ClaudePalette.accent(context)
+                  : ClaudePalette.secondary(context),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+- [ ] **Step 10b.4: Run test (expect pass)**
+
+```
+flutter test test/page/memory/tag_editor_test.dart
+```
+Expected: PASS — 2 tests.
+
+- [ ] **Step 10b.5: Commit**
+
+```bash
+git add lib/page/memory/widgets/tag_editor.dart test/page/memory/tag_editor_test.dart
+git commit -m "feat(memory): TagEditor widget with inline autocomplete (B2)"
+```
+
+---
+
+### Sub-task 10c: `MemoryBulkSelectionController`
+
+**Files:**
+- Create: `lib/page/memory/memory_bulk_selection_controller.dart`
+- Test: `test/page/memory/memory_bulk_selection_controller_test.dart`
+
+- [ ] **Step 10c.1: Write the failing test**
+
+```dart
+// test/page/memory/memory_bulk_selection_controller_test.dart
+import 'package:anx_reader/page/memory/memory_bulk_selection_controller.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('starts out of selection mode and empty', () {
+    final c = MemoryBulkSelectionController();
+    expect(c.inSelectionMode, isFalse);
+    expect(c.selected, isEmpty);
+  });
+
+  test('enter + toggle tracks ids and fires notifications', () {
+    final c = MemoryBulkSelectionController();
+    var notifications = 0;
+    c.addListener(() => notifications++);
+
+    c.enter(seedId: 'a');
+    expect(c.inSelectionMode, isTrue);
+    expect(c.selected, {'a'});
+
+    c.toggle('b');
+    expect(c.selected, {'a', 'b'});
+
+    c.toggle('a');
+    expect(c.selected, {'b'});
+    expect(c.inSelectionMode, isTrue);
+    expect(notifications, greaterThanOrEqualTo(3));
+  });
+
+  test('clearing exits selection mode', () {
+    final c = MemoryBulkSelectionController();
+    c.enter(seedId: 'a');
+    c.clear();
+    expect(c.inSelectionMode, isFalse);
+    expect(c.selected, isEmpty);
+  });
+
+  test('selectAll merges ids', () {
+    final c = MemoryBulkSelectionController();
+    c.enter(seedId: 'a');
+    c.selectAll(['b', 'c']);
+    expect(c.selected, {'a', 'b', 'c'});
+  });
+}
+```
+
+- [ ] **Step 10c.2: Run test (expect fail)**
+
+```
+flutter test test/page/memory/memory_bulk_selection_controller_test.dart
+```
+Expected: FAIL — `MemoryBulkSelectionController` not found.
+
+- [ ] **Step 10c.3: Implement the controller**
+
+```dart
+// lib/page/memory/memory_bulk_selection_controller.dart
+import 'package:flutter/foundation.dart';
+
+/// Small state holder for multi-select mode on the Memory browse/inbox
+/// surfaces. Kept as a plain ChangeNotifier so it can be scoped to any
+/// State or Riverpod provider without committing to one pattern.
+class MemoryBulkSelectionController extends ChangeNotifier {
+  final Set<String> _selected = <String>{};
+  bool _inSelectionMode = false;
+
+  bool get inSelectionMode => _inSelectionMode;
+  Set<String> get selected => Set.unmodifiable(_selected);
+  int get selectionCount => _selected.length;
+
+  /// Enters selection mode. If [seedId] is provided, it is added as the
+  /// first selected item (used by long-press gestures).
+  void enter({String? seedId}) {
+    _inSelectionMode = true;
+    if (seedId != null) {
+      _selected.add(seedId);
+    }
+    notifyListeners();
+  }
+
+  void toggle(String id) {
+    if (_selected.contains(id)) {
+      _selected.remove(id);
+    } else {
+      _selected.add(id);
+    }
+    if (_selected.isEmpty) {
+      // Keep selection mode active — the caller is responsible for
+      // calling clear() when the user is done. This matches iOS mail.
+    }
+    notifyListeners();
+  }
+
+  void selectAll(Iterable<String> ids) {
+    _selected.addAll(ids);
+    _inSelectionMode = true;
+    notifyListeners();
+  }
+
+  void clear() {
+    _selected.clear();
+    _inSelectionMode = false;
+    notifyListeners();
+  }
+}
+```
+
+- [ ] **Step 10c.4: Run test (expect pass)**
+
+```
+flutter test test/page/memory/memory_bulk_selection_controller_test.dart
+```
+Expected: PASS — 4 tests.
+
+- [ ] **Step 10c.5: Commit**
+
+```bash
+git add lib/page/memory/memory_bulk_selection_controller.dart test/page/memory/memory_bulk_selection_controller_test.dart
+git commit -m "feat(memory): MemoryBulkSelectionController for multi-select mode (B2)"
+```
+
+---
+
+### Sub-task 10d: `MemoryDetailPage`
+
+**Files:**
+- Create: `lib/page/memory/memory_detail_page.dart`
+- Modify: `lib/page/memory/memory_home_page.dart` (wire tap → detail push)
+
+- [ ] **Step 10d.1: Implement the detail page**
+
+```dart
+// lib/page/memory/memory_detail_page.dart
+import 'dart:io';
+
+import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/page/memory/widgets/tag_editor.dart';
+import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+
+class MemoryDetailPage extends StatefulWidget {
+  final MemoryEntryRef entry;
+  final MarkdownMemoryStore store;
+  final List<String> allKnownTags;
+
+  const MemoryDetailPage({
+    super.key,
+    required this.entry,
+    required this.store,
+    required this.allKnownTags,
+  });
+
+  @override
+  State<MemoryDetailPage> createState() => _MemoryDetailPageState();
+}
+
+class _MemoryDetailPageState extends State<MemoryDetailPage> {
+  late Future<_DetailState> _loader;
+
+  @override
+  void initState() {
+    super.initState();
+    _loader = _load();
+  }
+
+  Future<_DetailState> _load() async {
+    final file = File(widget.entry.path);
+    final raw = file.existsSync() ? await file.readAsString() : '';
+    final body = _stripFrontMatter(raw);
+    final tags = await widget.store.readEntryTags(widget.entry.path);
+    return _DetailState(body: body, tags: tags);
+  }
+
+  String _stripFrontMatter(String content) {
+    if (!content.startsWith('---\n')) return content;
+    final endIdx = content.indexOf('\n---\n', 4);
+    if (endIdx == -1) return content;
+    return content.substring(endIdx + 5);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.entry.title)),
+      body: FutureBuilder<_DetailState>(
+        future: _loader,
+        builder: (context, snap) {
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final data = snap.data!;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TagEditor(
+                  initial: data.tags,
+                  suggestions: widget.allKnownTags,
+                  onChanged: (updated) async {
+                    await widget.store.writeEntryTags(widget.entry.path, updated);
+                  },
+                ),
+              ),
+              Divider(
+                color: ClaudePalette.divider(context),
+                thickness: 0.5,
+                height: 24,
+              ),
+              MarkdownBody(
+                data: data.body,
+                selectable: true,
+                styleSheet: MarkdownStyleSheet(
+                  p: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: ClaudePalette.fg(context),
+                  ),
+                  h1: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: ClaudePalette.fg(context),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DetailState {
+  final String body;
+  final List<String> tags;
+  const _DetailState({required this.body, required this.tags});
+}
+```
+
+(If the codebase already has a styled-markdown widget, replace `MarkdownBody` with it — grep `StyledMarkdown` first.)
+
+- [ ] **Step 10d.2: Wire `MemoryHomePage` row taps to push the detail page**
+
+In `lib/page/memory/memory_home_page.dart`, inside the `FutureBuilder<List<MemoryEntryRef>>` section callbacks (Task 8), replace the `onTap` no-op with:
+
+```dart
+onTap: () {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => MemoryDetailPage(
+        entry: entry,
+        store: store,
+        allKnownTags: allKnownTags,
+      ),
+    ),
+  );
+},
+```
+
+Where `store` is the singleton `MarkdownMemoryStore` and `allKnownTags` is the union of tags across all currently-loaded entries (compute inside `FutureBuilder`).
+
+- [ ] **Step 10d.3: Run analyzer**
+
+```
+FLUTTER_NO_PUB=1 flutter analyze --no-pub lib/page/memory/
+```
+Expected: 0 new errors.
+
+- [ ] **Step 10d.4: Commit**
+
+```bash
+git add lib/page/memory/memory_detail_page.dart lib/page/memory/memory_home_page.dart
+git commit -m "feat(memory): MemoryDetailPage with inline tag editor (B2)"
+```
+
+---
+
+### Sub-task 10e: Long-press → selection mode + multi-select toolbar
+
+**Files:**
+- Modify: `lib/page/memory/widgets/memory_row.dart`
+- Modify: `lib/page/memory/memory_home_page.dart`
+
+- [ ] **Step 10e.1: Extend `MemoryRow` with selection semantics**
+
+Add optional selection props to `MemoryRow`:
+
+```dart
+class MemoryRow extends StatelessWidget {
+  final MemoryEntryRef entry;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool selectionMode;
+  final bool selected;
+
+  const MemoryRow({
+    super.key,
+    required this.entry,
+    required this.onTap,
+    this.onLongPress,
+    this.selectionMode = false,
+    this.selected = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? ClaudePalette.accentTint(context)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              if (selectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked,
+                    size: 20,
+                    color: selected
+                        ? ClaudePalette.accent(context)
+                        : ClaudePalette.tertiary(context),
+                  ),
+                ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: ClaudePalette.fg(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      entry.preview,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: ClaudePalette.secondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+- [ ] **Step 10e.2: Wire the controller into `MemoryHomePage`**
+
+Convert `MemoryHomePage` to a `ConsumerStatefulWidget` (if not already). Hold a `MemoryBulkSelectionController` in state:
+
+```dart
+class _MemoryHomePageState extends ConsumerState<MemoryHomePage> {
+  final _bulk = MemoryBulkSelectionController();
+
+  @override
+  void initState() {
+    super.initState();
+    _bulk.addListener(_onBulkChange);
+  }
+
+  @override
+  void dispose() {
+    _bulk.removeListener(_onBulkChange);
+    _bulk.dispose();
+    super.dispose();
+  }
+
+  void _onBulkChange() => setState(() {});
+```
+
+In the AppBar, swap the title for a selection-aware variant:
+
+```dart
+appBar: AppBar(
+  title: Text(_bulk.inSelectionMode
+      ? '${_bulk.selectionCount} selected'
+      : L10n.of(context).memoryTabTitle),
+  leading: _bulk.inSelectionMode
+      ? IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: _bulk.clear,
+        )
+      : null,
+  actions: _bulk.inSelectionMode
+      ? [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: _bulk.selectionCount == 0
+                ? null
+                : () => _confirmDelete(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.label_outline),
+            onPressed: _bulk.selectionCount == 0
+                ? null
+                : () => _showAddTagSheet(context),
+          ),
+        ]
+      : [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {/* search hookup */},
+          ),
+        ],
+),
+```
+
+In each rendered row, pass the selection state and long-press handler:
+
+```dart
+MemoryRow(
+  entry: entry,
+  selectionMode: _bulk.inSelectionMode,
+  selected: _bulk.selected.contains(entry.path),
+  onTap: () {
+    if (_bulk.inSelectionMode) {
+      _bulk.toggle(entry.path);
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => MemoryDetailPage(
+          entry: entry,
+          store: store,
+          allKnownTags: allKnownTags,
+        ),
+      ));
+    }
+  },
+  onLongPress: () {
+    HapticFeedback.mediumImpact();
+    _bulk.enter(seedId: entry.path);
+  },
+),
+```
+
+Define `_confirmDelete` using `PTDialog.show` with `destructive: true`, and `_showAddTagSheet` using `PTBottomSheet.show` with a single `TagEditor` bound to the selected ids.
+
+- [ ] **Step 10e.3: Smoke test manually**
+
+```
+flutter run -d <device>
+```
+Expected: long-press on a memory row → AppBar flips to "N selected" with close + delete + label actions. Tapping row adds/removes from selection. Close button exits selection mode.
+
+- [ ] **Step 10e.4: Commit**
+
+```bash
+git add lib/page/memory/widgets/memory_row.dart lib/page/memory/memory_home_page.dart
+git commit -m "feat(memory): long-press multi-select + bulk toolbar (B2)"
 ```
 
 ---
