@@ -281,6 +281,28 @@ class MemorySessionDigestService {
     final normalized = ((score + 1.0) / 4.0).clamp(0.2, 0.95);
     return (normalized * 100).roundToDouble() / 100;
   }
+
+  /// Produces a short English rationale sentence explaining why a memory
+  /// candidate was captured. Shown under the inbox row title in the Review
+  /// Inbox UI so users understand the auto-capture decision.
+  static String buildRationale({
+    required int messageCount,
+    required String triggerKind,
+    required double? confidence,
+  }) {
+    switch (triggerKind) {
+      case 'provider_switch':
+        return 'Captured after you switched providers mid-conversation '
+            '($messageCount messages so far).';
+      case 'session_digest':
+        final confLabel = confidence == null
+            ? ''
+            : ' (confidence ${(confidence).toStringAsFixed(2)})';
+        return 'Session-end digest of $messageCount messages$confLabel.';
+      default:
+        return 'Auto-captured from $messageCount messages.';
+    }
+  }
 }
 
 class _DigestTurn {

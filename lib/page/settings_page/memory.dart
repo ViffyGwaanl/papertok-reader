@@ -2,6 +2,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
@@ -176,6 +177,32 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
               candidate.effectiveDisplayText,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 4),
+              child: Row(
+                children: [
+                  _TriggerBadge(kind: candidate.triggerKind ?? 'manual'),
+                  const SizedBox(width: 6),
+                  _ConfidenceDot(value: candidate.confidence),
+                  if (candidate.rationale != null &&
+                      candidate.rationale!.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        candidate.rationale!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: ClaudePalette.tertiary(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             if ((candidate.effectiveSourcePointer).isNotEmpty)
@@ -1119,6 +1146,74 @@ class _SourceActionButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TriggerBadge extends StatelessWidget {
+  final String kind;
+  const _TriggerBadge({required this.kind});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _labelFor(kind);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: ClaudePalette.bg(context).withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: ClaudePalette.divider(context),
+          width: 0.5,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: ClaudePalette.secondary(context),
+        ),
+      ),
+    );
+  }
+
+  String _labelFor(String kind) {
+    switch (kind) {
+      case 'session_digest':
+        return 'Session';
+      case 'provider_switch':
+        return 'Provider';
+      case 'manual':
+        return 'Manual';
+      default:
+        return kind;
+    }
+  }
+}
+
+class _ConfidenceDot extends StatelessWidget {
+  final double? value;
+  const _ConfidenceDot({required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final v = value ?? 0;
+    Color color;
+    if (v >= 0.8) {
+      color = MorandiPalette.success(context);
+    } else if (v >= 0.5) {
+      color = MorandiPalette.warning(context);
+    } else {
+      color = ClaudePalette.tertiary(context);
+    }
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
       ),
     );
   }

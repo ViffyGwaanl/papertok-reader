@@ -62,6 +62,7 @@ class MemoryWorkflowService {
     String? cfi,
     String? chapter,
     MemorySourceKind sourceKind = MemorySourceKind.chat,
+    String? rationale,
   }) async {
     final normalized = _normalizeText(text);
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -86,6 +87,7 @@ class MemoryWorkflowService {
       cfi: cfi,
       chapter: chapter,
       sourceKind: sourceKind,
+      rationale: rationale,
     );
     return _candidateStore.upsert(candidate);
   }
@@ -107,6 +109,7 @@ class MemoryWorkflowService {
     String? cfi,
     String? chapter,
     MemorySourceKind sourceKind = MemorySourceKind.chat,
+    String? rationale,
   }) {
     return _saveDirect(
       text: text,
@@ -126,6 +129,7 @@ class MemoryWorkflowService {
       cfi: cfi,
       chapter: chapter,
       sourceKind: sourceKind,
+      rationale: rationale,
     );
   }
 
@@ -145,6 +149,7 @@ class MemoryWorkflowService {
     String? cfi,
     String? chapter,
     MemorySourceKind sourceKind = MemorySourceKind.chat,
+    String? rationale,
   }) {
     return _saveDirect(
       text: text,
@@ -163,6 +168,7 @@ class MemoryWorkflowService {
       cfi: cfi,
       chapter: chapter,
       sourceKind: sourceKind,
+      rationale: rationale,
     );
   }
 
@@ -186,6 +192,11 @@ class MemoryWorkflowService {
 
     final created = <MemoryCandidate>[];
     for (final draft in drafts) {
+      final rationale = MemorySessionDigestService.buildRationale(
+        messageCount: messages.length,
+        triggerKind: triggerKind,
+        confidence: draft.confidence,
+      );
       final candidate = dailyStrategy.writesDailyDirectly
           ? await saveToDaily(
               text: draft.text,
@@ -202,6 +213,7 @@ class MemoryWorkflowService {
               cfi: cfi,
               chapter: chapter,
               sourceKind: sourceKind,
+              rationale: rationale,
             )
           : await addToReviewInbox(
               text: draft.text,
@@ -219,6 +231,7 @@ class MemoryWorkflowService {
               cfi: cfi,
               chapter: chapter,
               sourceKind: sourceKind,
+              rationale: rationale,
             );
       created.add(candidate);
     }
@@ -269,6 +282,7 @@ class MemoryWorkflowService {
     String? cfi,
     String? chapter,
     MemorySourceKind sourceKind = MemorySourceKind.chat,
+    String? rationale,
   }) async {
     final normalized = _normalizeText(text);
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -300,6 +314,7 @@ class MemoryWorkflowService {
       cfi: cfi,
       chapter: chapter,
       sourceKind: sourceKind,
+      rationale: rationale,
     );
     return _candidateStore.upsert(candidate);
   }
