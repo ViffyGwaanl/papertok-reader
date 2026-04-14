@@ -1,30 +1,39 @@
 import 'package:flutter/material.dart';
 
-/// Morandi color palette - muted, soothing earth tones.
-/// Each token has a light and dark variant for adaptive theming.
-/// Ported from swift-native MorandiPalette.swift.
+/// Claude design palette — warm cream + warm dark, terracotta accent.
+/// This class is named `MorandiPalette` for backwards compatibility but the
+/// hex values are the Claude app tokens:
+///   light: bg #F9F9F7  fg #2D2D2B
+///   dark:  bg #2D2D2B  fg #F9F9F7
+///   accent #CC7D5E (Claude terracotta)
+/// Adaptive helpers below resolve light/dark per BuildContext.
 class MorandiPalette {
   MorandiPalette._();
 
   // === Surfaces ===
-  static const Color backgroundLight = Color(0xFFFAF8F5);
-  static const Color backgroundDark = Color(0xFF1A1A2E);
+  // Light: F9F9F7 base, FFFFFF cards, F3F2EE grouped/elevated.
+  static const Color backgroundLight = Color(0xFFF9F9F7);
   static const Color cardLight = Color(0xFFFFFFFF);
-  static const Color cardDark = Color(0xFF2C2C3F);
-  static const Color elevatedLight = Color(0xFFF2EEE8);
-  static const Color elevatedDark = Color(0xFF252538);
+  static const Color elevatedLight = Color(0xFFF3F2EE);
+  // Dark: 2D2D2B base, 363633 cards, 333331 elevated. Warm near-black.
+  static const Color backgroundDark = Color(0xFF2D2D2B);
+  static const Color cardDark = Color(0xFF363633);
+  static const Color elevatedDark = Color(0xFF333331);
 
   // === Text ===
-  static const Color primaryTextLight = Color(0xFF343434);
-  static const Color primaryTextDark = Color(0xFFF0EDE5);
-  static const Color secondaryTextLight = Color(0xFF8A8A8E);
-  static const Color secondaryTextDark = Color(0xFFA8A8B8);
-  static const Color tertiaryTextLight = Color(0xFFB0B0B4);
-  static const Color tertiaryTextDark = Color(0xFF70707E);
+  static const Color primaryTextLight = Color(0xFF2D2D2B);
+  static const Color primaryTextDark = Color(0xFFF9F9F7);
+  static const Color secondaryTextLight = Color(0xFF6E6E6A);
+  static const Color secondaryTextDark = Color(0xFFB8B6AE);
+  static const Color tertiaryTextLight = Color(0xFF9A9994);
+  static const Color tertiaryTextDark = Color(0xFF8A8881);
 
   // === Accent palette ===
-  static const Color sageLight = Color(0xFF8FA68A);
-  static const Color sageDark = Color(0xFFA8C2A2);
+  // sage helper now resolves to Claude terracotta so existing call sites
+  // (which use MorandiPalette.sage(context) as the brand accent) inherit
+  // the new color without touching every caller.
+  static const Color sageLight = Color(0xFFCC7D5E);
+  static const Color sageDark = Color(0xFFD68E70);
   static const Color dustyRoseLight = Color(0xFFC4A4A0);
   static const Color dustyRoseDark = Color(0xFFD4B8AE);
   static const Color warmGrayLight = Color(0xFFA8A098);
@@ -49,8 +58,8 @@ class MorandiPalette {
   static const Color mistDark = Color(0xFF6C7A82);
 
   // === Semantic ===
-  static const Color dividerLight = Color(0xFFE8E4E0);
-  static const Color dividerDark = Color(0xFF3A3A52);
+  static const Color dividerLight = Color(0xFFE8E5DF);
+  static const Color dividerDark = Color(0xFF45443F);
   static const Color successLight = Color(0xFF7FA88A);
   static const Color successDark = Color(0xFF96C2A2);
   static const Color warningLight = Color(0xFFD4A574);

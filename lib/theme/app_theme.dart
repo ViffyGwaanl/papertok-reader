@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chinese_font_library/chinese_font_library.dart';
 import 'morandi_palette.dart';
+import 'claude_palette.dart';
 import 'app_typography.dart';
 import 'app_spacing.dart';
 
@@ -8,13 +9,13 @@ class AppTheme {
   AppTheme._();
 
   /// Build light theme.
-  /// [seedColor] overrides the default sage accent (user-selected accent).
+  /// [seedColor] overrides the default Claude terracotta accent.
   /// [eInkMode] forces a hardcoded black/white/grey palette.
   static ThemeData light({
     Color? seedColor,
     bool eInkMode = false,
   }) {
-    final effectiveSeed = seedColor ?? MorandiPalette.sageLight;
+    final effectiveSeed = seedColor ?? ClaudePalette.accentLight;
     final colorScheme = eInkMode
         ? const ColorScheme(
             brightness: Brightness.light,
@@ -55,11 +56,37 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
         ),
       ),
-      sliderTheme: const SliderThemeData(
+      sliderTheme: SliderThemeData(
         year2023: false,
+        activeTrackColor: colorScheme.primary,
+        thumbColor: colorScheme.primary,
+        overlayColor: colorScheme.primary.withValues(alpha: 0.12),
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
+      progressIndicatorTheme: ProgressIndicatorThemeData(
         year2023: false,
+        color: colorScheme.primary,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Colors.white;
+          return null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          return null;
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          return null;
+        }),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          return null;
+        }),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: groupedBg,
@@ -89,7 +116,7 @@ class AppTheme {
     bool eInkMode = false,
     bool trueDarkMode = false,
   }) {
-    final effectiveSeed = seedColor ?? MorandiPalette.sageDark;
+    final effectiveSeed = seedColor ?? ClaudePalette.accentDark;
     final colorScheme = eInkMode
         ? const ColorScheme(
             brightness: Brightness.dark,
@@ -133,11 +160,37 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
         ),
       ),
-      sliderTheme: const SliderThemeData(
+      sliderTheme: SliderThemeData(
         year2023: false,
+        activeTrackColor: colorScheme.primary,
+        thumbColor: colorScheme.primary,
+        overlayColor: colorScheme.primary.withValues(alpha: 0.12),
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
+      progressIndicatorTheme: ProgressIndicatorThemeData(
         year2023: false,
+        color: colorScheme.primary,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Colors.white;
+          return null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          return null;
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          return null;
+        }),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          return null;
+        }),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: groupedBg,
