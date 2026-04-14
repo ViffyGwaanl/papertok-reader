@@ -24,7 +24,7 @@ class _StatisticChartState extends ConsumerState<StatisticChart> {
   final Color topColor = Theme.of(navigatorKey.currentState!.context)
       .colorScheme
       .primary
-      .withOpacity(0.5);
+      .withValues(alpha: 0.5);
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,7 @@ class _StatisticChartState extends ConsumerState<StatisticChart> {
       enabled: true,
       touchTooltipData: BarTouchTooltipData(
         getTooltipColor: (BarChartGroupData group) {
-          return Colors.white.withAlpha(0);
+          return Colors.transparent;
         },
         getTooltipItem: (group, groupIndex, rod, rodIndex) {
           if (touchedIndex != null && group.x.toInt() == touchedIndex) {

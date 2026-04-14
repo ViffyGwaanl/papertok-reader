@@ -2,6 +2,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/providers/total_reading_time.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
@@ -181,7 +182,7 @@ class _AddTileSheetContentState extends ConsumerState<AddTileSheetContent> {
                 size: const Size.square(10.0),
                 activeSize: const Size(20.0, 10.0),
                 activeColor: Theme.of(context).primaryColor,
-                color: Colors.black26,
+                color: ClaudePalette.divider(context),
                 spacing: const EdgeInsets.symmetric(horizontal: 3.0),
                 activeShape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(25.0),
@@ -263,7 +264,7 @@ class TotalReadTime extends ConsumerWidget {
                 '${Prefs().beginDate.toString().substring(0, 10)} ${L10n.of(context).statisticToPresent}',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey[600],
+                  color: ClaudePalette.secondary(context),
                 ),
               )
             ],

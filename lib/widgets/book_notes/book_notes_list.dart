@@ -7,6 +7,8 @@ import 'package:anx_reader/models/book_notes_state.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/providers/book_notes.dart';
 import 'package:anx_reader/service/book.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/book_notes/book_note_tile.dart';
 import 'package:anx_reader/widgets/book_share/excerpt_share_service.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
@@ -123,7 +125,8 @@ class BookNotesList extends ConsumerWidget {
               }
             },
             deleteIcon: Icon(EvaIcons.trash_2, color: buttonColor),
-            confirmIcon: const Icon(EvaIcons.close_circle, color: Colors.red),
+            confirmIcon:
+                Icon(EvaIcons.close_circle, color: MorandiPalette.error(context)),
           ),
           if (!reading && exportNotes != null)
             IconButton(
@@ -324,8 +327,10 @@ class BookNotesList extends ConsumerWidget {
     BookNote bookNote,
   ) {
     final notifier = ref.read(bookNotesControllerProvider(book).notifier);
+    final isSelected = state.selectedNoteIds.contains(bookNote.id);
     return BookNoteTile(
       note: bookNote,
+      backgroundColor: isSelected ? ClaudePalette.accentTint(context) : null,
       onTap: () {
         if (state.isSelecting) {
           notifier.toggleSelection(bookNote);
@@ -455,7 +460,7 @@ class BookNotesList extends ConsumerWidget {
                                   type.icon,
                                   color: currentType == type.type
                                       ? Theme.of(context).colorScheme.primary
-                                      : Colors.grey,
+                                      : ClaudePalette.secondary(context),
                                 ),
                                 onPressed: () {
                                   setState(() {

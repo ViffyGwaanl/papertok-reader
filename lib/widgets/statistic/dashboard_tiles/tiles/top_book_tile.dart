@@ -8,6 +8,7 @@ import 'package:anx_reader/widgets/statistic/book_reading_chart.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/tips/statistic_tips.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,9 +53,9 @@ class TopBookTile extends StatisticsDashboardTileBase {
           fontWeight: FontWeight.bold,
           overflow: TextOverflow.ellipsis,
         );
-        final TextStyle bookAuthorStyle = const TextStyle(
+        final TextStyle bookAuthorStyle = TextStyle(
           fontSize: 12,
-          color: Colors.grey,
+          color: ClaudePalette.secondary(context),
           overflow: TextOverflow.ellipsis,
         );
         final TextStyle bookReadingTimeStyle = const TextStyle(

@@ -1,5 +1,6 @@
 import 'package:anx_reader/providers/heatmap_data.dart';
 import 'package:anx_reader/providers/statistic_data.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +15,7 @@ class HeatmapChart extends ConsumerWidget {
     return HeatMap(
       showColorTip: false,
       blockBorder: Border.all(
-        color: Colors.black12,
+        color: ClaudePalette.divider(context),
         style: BorderStyle.solid,
         width: 0.25,
         strokeAlign: BorderSide.strokeAlignOutside,

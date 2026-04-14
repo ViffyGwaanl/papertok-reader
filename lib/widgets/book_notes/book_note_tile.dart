@@ -1,5 +1,6 @@
 import 'package:anx_reader/constants/note_annotations.dart';
 import 'package:anx_reader/models/book_note.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/time_to_human.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:flutter/material.dart';
@@ -33,9 +34,9 @@ class BookNoteTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconColor = Color(int.tryParse('0xaa${note.color}') ?? 0xaa555555);
-    final infoStyle = const TextStyle(
+    final infoStyle = TextStyle(
       fontSize: 14,
-      color: Colors.grey,
+      color: ClaudePalette.secondary(context),
     );
 
     return GestureDetector(
@@ -80,7 +81,7 @@ class BookNoteTile extends StatelessWidget {
                                 child: Text(
                                   note.readerNote!,
                                   style: infoStyle.copyWith(
-                                    color: Colors.grey.shade600,
+                                    color: ClaudePalette.tertiary(context),
                                   ),
                                 ),
                               ),
@@ -93,7 +94,7 @@ class BookNoteTile extends StatelessWidget {
                   Divider(
                     indent: 4,
                     height: 3,
-                    color: Colors.grey.shade300,
+                    color: ClaudePalette.divider(context),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

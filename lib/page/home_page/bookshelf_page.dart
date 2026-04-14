@@ -15,6 +15,7 @@ import 'package:anx_reader/providers/book_filters.dart';
 import 'package:anx_reader/providers/tags.dart';
 import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/page/search/search_page.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
 import 'package:anx_reader/utils/color/hash_color.dart';
@@ -550,7 +551,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
               color: Theme.of(context).colorScheme.surface.withAlpha(80),
               child: Row(
                 children: [
-                  const Icon(Icons.search, color: Colors.grey),
+                  Icon(Icons.search, color: ClaudePalette.secondary(context)),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(L10n.of(context).searchBooksOrNotes,
