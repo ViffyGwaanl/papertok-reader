@@ -2,6 +2,7 @@ import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
 import 'package:anx_reader/service/memory/memory_candidate_store.dart';
 import 'package:anx_reader/service/memory/memory_session_digest_service.dart';
+import 'package:anx_reader/service/memory/memory_source_kind.dart';
 import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
 import 'package:uuid/uuid.dart';
@@ -49,6 +50,10 @@ class MemoryWorkflowService {
     String? sourcePointer,
     String? rawContextRef,
     String? triggerKind,
+    int? bookId,
+    String? cfi,
+    String? chapter,
+    MemorySourceKind sourceKind = MemorySourceKind.chat,
   }) async {
     final normalized = _normalizeText(text);
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -69,6 +74,10 @@ class MemoryWorkflowService {
           sourcePointer ?? _buildSourcePointer(conversationId, messageNodeId),
       rawContextRef: rawContextRef,
       triggerKind: triggerKind,
+      bookId: bookId,
+      cfi: cfi,
+      chapter: chapter,
+      sourceKind: sourceKind,
     );
     return _candidateStore.upsert(candidate);
   }
@@ -86,6 +95,10 @@ class MemoryWorkflowService {
     String? sourcePointer,
     String? rawContextRef,
     String? triggerKind,
+    int? bookId,
+    String? cfi,
+    String? chapter,
+    MemorySourceKind sourceKind = MemorySourceKind.chat,
   }) {
     return _saveDirect(
       text: text,
@@ -101,6 +114,10 @@ class MemoryWorkflowService {
       sourcePointer: sourcePointer,
       rawContextRef: rawContextRef,
       triggerKind: triggerKind,
+      bookId: bookId,
+      cfi: cfi,
+      chapter: chapter,
+      sourceKind: sourceKind,
     );
   }
 
@@ -116,6 +133,10 @@ class MemoryWorkflowService {
     String? sourcePointer,
     String? rawContextRef,
     String? triggerKind,
+    int? bookId,
+    String? cfi,
+    String? chapter,
+    MemorySourceKind sourceKind = MemorySourceKind.chat,
   }) {
     return _saveDirect(
       text: text,
@@ -130,6 +151,10 @@ class MemoryWorkflowService {
       sourcePointer: sourcePointer,
       rawContextRef: rawContextRef,
       triggerKind: triggerKind,
+      bookId: bookId,
+      cfi: cfi,
+      chapter: chapter,
+      sourceKind: sourceKind,
     );
   }
 
@@ -141,6 +166,10 @@ class MemoryWorkflowService {
     String triggerKind = 'session_digest',
     String? conversationId,
     int maxCandidates = MemorySessionDigestService.defaultMaxCandidates,
+    int? bookId,
+    String? cfi,
+    String? chapter,
+    MemorySourceKind sourceKind = MemorySourceKind.chat,
   }) async {
     final drafts = _sessionDigestService.buildCandidates(
       messages,
@@ -161,6 +190,10 @@ class MemoryWorkflowService {
                   ? null
                   : 'conversation:$conversationId',
               triggerKind: triggerKind,
+              bookId: bookId,
+              cfi: cfi,
+              chapter: chapter,
+              sourceKind: sourceKind,
             )
           : await addToReviewInbox(
               text: draft.text,
@@ -174,6 +207,10 @@ class MemoryWorkflowService {
                   ? null
                   : 'conversation:$conversationId',
               triggerKind: triggerKind,
+              bookId: bookId,
+              cfi: cfi,
+              chapter: chapter,
+              sourceKind: sourceKind,
             );
       created.add(candidate);
     }
@@ -220,6 +257,10 @@ class MemoryWorkflowService {
     String? sourcePointer,
     String? rawContextRef,
     String? triggerKind,
+    int? bookId,
+    String? cfi,
+    String? chapter,
+    MemorySourceKind sourceKind = MemorySourceKind.chat,
   }) async {
     final normalized = _normalizeText(text);
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -247,6 +288,10 @@ class MemoryWorkflowService {
           sourcePointer ?? _buildSourcePointer(conversationId, messageNodeId),
       rawContextRef: rawContextRef,
       triggerKind: triggerKind,
+      bookId: bookId,
+      cfi: cfi,
+      chapter: chapter,
+      sourceKind: sourceKind,
     );
     return _candidateStore.upsert(candidate);
   }
