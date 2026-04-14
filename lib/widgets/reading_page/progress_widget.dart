@@ -5,7 +5,7 @@ import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:anx_reader/theme/app_spacing.dart';
-import 'package:anx_reader/theme/morandi_palette.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/common/pt_card.dart';
 import 'package:flutter/material.dart';
 
@@ -63,8 +63,9 @@ class _ProgressWidgetState extends State<ProgressWidget> {
               ),
               Expanded(
                 child: Slider(
+                  activeColor: ClaudePalette.accent(context),
                   inactiveColor:
-                      MorandiPalette.divider(context).withValues(alpha: 0.6),
+                      ClaudePalette.divider(context).withValues(alpha: 0.6),
                   value: _readProgress,
                   onChanged: (value) {
                     setState(() {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../theme/claude_palette.dart';
 import '../../theme/morandi_palette.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_motion.dart';
@@ -40,10 +41,10 @@ class _PTCollapsibleCardState extends State<PTCollapsibleCard>
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: MorandiPalette.elevated(context),
+        color: ClaudePalette.elevated(context),
         borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
         border: Border.all(
-          color: MorandiPalette.divider(context),
+          color: ClaudePalette.divider(context),
           width: 0.5,
         ),
       ),
@@ -84,7 +85,7 @@ class _PTCollapsibleCardState extends State<PTCollapsibleCard>
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: MorandiPalette.primaryText(context),
+                              color: ClaudePalette.fg(context),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -97,7 +98,7 @@ class _PTCollapsibleCardState extends State<PTCollapsibleCard>
                                 widget.subtitle!,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: MorandiPalette.secondaryText(context),
+                                  color: ClaudePalette.secondary(context),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -113,7 +114,7 @@ class _PTCollapsibleCardState extends State<PTCollapsibleCard>
                       child: Icon(
                         Icons.chevron_right_rounded,
                         size: 18,
-                        color: MorandiPalette.secondaryText(context),
+                        color: ClaudePalette.secondary(context),
                       ),
                     ),
                   ],
@@ -135,7 +136,7 @@ class _PTCollapsibleCardState extends State<PTCollapsibleCard>
                     fontSize: 12.5,
                     height: 1.45,
                     fontFamily: 'monospace',
-                    color: MorandiPalette.secondaryText(context),
+                    color: ClaudePalette.secondary(context),
                   ),
                   child: widget.body,
                 ),

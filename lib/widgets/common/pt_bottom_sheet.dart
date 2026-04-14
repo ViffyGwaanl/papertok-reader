@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../theme/morandi_palette.dart';
+import '../../theme/claude_palette.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_motion.dart';
 
@@ -60,7 +60,7 @@ class PTBottomSheet extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm)
             .copyWith(bottom: AppSpacing.sm),
         decoration: BoxDecoration(
-          color: MorandiPalette.card(context),
+          color: ClaudePalette.card(context),
           borderRadius: BorderRadius.circular(AppSpacing.cornerRadiusLarge),
         ),
         child: Column(
@@ -71,7 +71,7 @@ class PTBottomSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: MorandiPalette.divider(context),
+                color: ClaudePalette.divider(context),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -86,7 +86,7 @@ class PTBottomSheet extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
-                      color: MorandiPalette.primaryText(context),
+                      color: ClaudePalette.fg(context),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -99,7 +99,7 @@ class PTBottomSheet extends StatelessWidget {
                     subtitle!,
                     style: TextStyle(
                       fontSize: 13,
-                      color: MorandiPalette.secondaryText(context),
+                      color: ClaudePalette.secondary(context),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -152,7 +152,7 @@ class PTPickerRow<T> extends StatelessWidget {
               horizontal: AppSpacing.md, vertical: 12),
           decoration: BoxDecoration(
             color: selected
-                ? MorandiPalette.sage(context).withValues(alpha: 0.12)
+                ? ClaudePalette.accentTint(context)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
           ),
@@ -163,8 +163,8 @@ class PTPickerRow<T> extends StatelessWidget {
                   leading,
                   size: 20,
                   color: selected
-                      ? MorandiPalette.sage(context)
-                      : MorandiPalette.secondaryText(context),
+                      ? ClaudePalette.accent(context)
+                      : ClaudePalette.secondary(context),
                 ),
                 const SizedBox(width: 12),
               ],
@@ -179,7 +179,7 @@ class PTPickerRow<T> extends StatelessWidget {
                         fontSize: 16,
                         fontWeight:
                             selected ? FontWeight.w600 : FontWeight.w400,
-                        color: MorandiPalette.primaryText(context),
+                        color: ClaudePalette.fg(context),
                       ),
                     ),
                     if (subtitle != null && subtitle!.isNotEmpty)
@@ -189,7 +189,7 @@ class PTPickerRow<T> extends StatelessWidget {
                           subtitle!,
                           style: TextStyle(
                             fontSize: 12,
-                            color: MorandiPalette.secondaryText(context),
+                            color: ClaudePalette.secondary(context),
                           ),
                         ),
                       ),
@@ -200,7 +200,7 @@ class PTPickerRow<T> extends StatelessWidget {
                 Icon(
                   Icons.check_rounded,
                   size: 20,
-                  color: MorandiPalette.sage(context),
+                  color: ClaudePalette.accent(context),
                 ),
             ],
           ),

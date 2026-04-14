@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/claude_palette.dart';
 import '../../theme/morandi_palette.dart';
 import '../../theme/app_spacing.dart';
 
@@ -45,7 +46,7 @@ class PTDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: MorandiPalette.card(context),
+      backgroundColor: ClaudePalette.card(context),
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 40),
       shape: RoundedRectangleBorder(
@@ -66,7 +67,7 @@ class PTDialog extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
-                    color: MorandiPalette.primaryText(context),
+                    color: ClaudePalette.fg(context),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -78,7 +79,7 @@ class PTDialog extends StatelessWidget {
                   message!,
                   style: TextStyle(
                     fontSize: 14,
-                    color: MorandiPalette.secondaryText(context),
+                    color: ClaudePalette.secondary(context),
                     height: 1.35,
                   ),
                   textAlign: TextAlign.center,
@@ -129,7 +130,7 @@ class PTDialogAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = destructive
         ? MorandiPalette.destructive(context)
-        : MorandiPalette.sage(context);
+        : ClaudePalette.accent(context);
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(

@@ -9,6 +9,7 @@ import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/page/settings_page/narrate.dart';
 import 'package:anx_reader/widgets/reading_page/more_settings/more_settings.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'dart:async';
@@ -158,7 +159,7 @@ class _TtsWidgetState extends State<TtsWidget> {
                                   ? L10n.of(context).ttsTypeSystem
                                   : 'Microsoft Azure', // Or map generic ID to name
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
+                                color: ClaudePalette.accent(context),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -166,7 +167,7 @@ class _TtsWidgetState extends State<TtsWidget> {
                             Icon(
                               Icons.arrow_forward_ios,
                               size: 14,
-                              color: Theme.of(context).colorScheme.primary,
+                              color: ClaudePalette.accent(context),
                             ),
                           ],
                         ),

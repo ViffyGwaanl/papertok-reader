@@ -1,3 +1,5 @@
+import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:flutter/material.dart';
 
 enum PageTurningType {
@@ -22,8 +24,9 @@ Widget getPageTurningDiagram(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color:
-              selected ? Theme.of(context).colorScheme.primary : Colors.black26,
+          color: selected
+              ? ClaudePalette.accent(context)
+              : ClaudePalette.divider(context),
           width: 1,
         ),
       ),
@@ -34,14 +37,14 @@ Widget getPageTurningDiagram(
         itemBuilder: (context, index) {
           return Container(
             color: types[index] == PageTurningType.next
-                ? Colors.red.withAlpha(100)
+                ? MorandiPalette.error(context).withValues(alpha: 0.4)
                 : types[index] == PageTurningType.prev
-                    ? Colors.blue.withAlpha(100)
+                    ? MorandiPalette.info(context).withValues(alpha: 0.4)
                     : types[index] == PageTurningType.menu
-                        ? Colors.green.withAlpha(100)
+                        ? MorandiPalette.success(context).withValues(alpha: 0.4)
                         : types[index] == PageTurningType.none
-                            ? Colors.grey.withAlpha(100)
-                            : Colors.white,
+                            ? ClaudePalette.divider(context)
+                            : ClaudePalette.card(context),
             child: Center(
               child: iconPosition.contains(index)
                   ? Icon(

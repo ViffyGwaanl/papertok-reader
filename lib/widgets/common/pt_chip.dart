@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../theme/morandi_palette.dart';
+import '../../theme/claude_palette.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_motion.dart';
 
@@ -21,9 +21,9 @@ class PTChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = selected
-        ? MorandiPalette.sage(context)
-        : MorandiPalette.divider(context).withValues(alpha: 0.5);
-    final fg = selected ? Colors.white : MorandiPalette.secondaryText(context);
+        ? ClaudePalette.accent(context)
+        : ClaudePalette.divider(context).withValues(alpha: 0.5);
+    final fg = selected ? Colors.white : ClaudePalette.secondary(context);
 
     return AnimatedContainer(
       duration: AppMotion.fast,

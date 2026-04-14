@@ -4,6 +4,7 @@ import 'package:anx_reader/models/toc_item.dart';
 import 'package:anx_reader/page/book_player/epub_player.dart';
 import 'package:anx_reader/providers/book_toc.dart';
 import 'package:anx_reader/providers/toc_search.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
@@ -427,11 +428,11 @@ Widget searchResultWidget({
 }) {
   bool isExpanded = true;
   TextStyle matchStyle = TextStyle(
-    color: Theme.of(navigatorKey.currentContext!).colorScheme.primary,
+    color: ClaudePalette.accent(navigatorKey.currentContext!),
     fontWeight: FontWeight.bold,
   );
-  TextStyle prePostStyle = const TextStyle(
-    color: Colors.grey,
+  TextStyle prePostStyle = TextStyle(
+    color: ClaudePalette.tertiary(navigatorKey.currentContext!),
   );
   return StatefulBuilder(
     builder: (context, setState) {
@@ -453,7 +454,7 @@ Widget searchResultWidget({
                 // const Spacer(),
                 Text(
                   searchResult.subitems.length.toString(),
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: ClaudePalette.tertiary(context)),
                 ),
               ],
             ),
@@ -517,7 +518,7 @@ class TocItemWidget extends StatelessWidget {
 
   TextStyle _selectedStyle(BuildContext context) => TextStyle(
         fontSize: 16,
-        color: Theme.of(context).colorScheme.primary,
+        color: ClaudePalette.accent(context),
         fontWeight: FontWeight.bold,
       );
 
@@ -599,7 +600,7 @@ class TocItemWidget extends StatelessWidget {
           indent: 10,
           endIndent: 20,
           thickness: 1,
-          color: Colors.grey.withAlpha(110),
+          color: ClaudePalette.divider(context),
         ),
       ],
     );

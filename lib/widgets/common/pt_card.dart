@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_elevation.dart';
-import '../../theme/morandi_palette.dart';
+import '../../theme/claude_palette.dart';
 
 /// PaperTok card container — Morandi-themed elevated surface.
 class PTCard extends StatelessWidget {
@@ -31,7 +31,7 @@ class PTCard extends StatelessWidget {
     final container = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: MorandiPalette.card(context),
+        color: ClaudePalette.card(context),
         borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
         boxShadow: shadows,
       ),

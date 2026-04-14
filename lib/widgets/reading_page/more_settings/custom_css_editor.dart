@@ -3,6 +3,8 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:flutter/material.dart';
 
 class CustomCSSEditor extends StatefulWidget {
@@ -138,18 +140,21 @@ class _CustomCSSEditorState extends State<CustomCSSEditor> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withAlpha(30),
+                color: MorandiPalette.error(context).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.red, width: 1),
+                border:
+                    Border.all(color: MorandiPalette.error(context), width: 1),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                  Icon(Icons.error_outline,
+                      color: MorandiPalette.error(context), size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _validationMessage,
-                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                      style: TextStyle(
+                          color: MorandiPalette.error(context), fontSize: 12),
                     ),
                   ),
                 ],
@@ -158,7 +163,7 @@ class _CustomCSSEditorState extends State<CustomCSSEditor> {
           Container(
             height: 200,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.withAlpha(80)),
+              border: Border.all(color: ClaudePalette.divider(context)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: TextField(
