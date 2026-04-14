@@ -1,3 +1,4 @@
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 
 abstract class AbstractSettingsTile extends StatelessWidget {
@@ -99,7 +100,6 @@ class SettingsTile extends AbstractSettingsTile {
               Switch.adaptive(
                 value: v,
                 onChanged: enabled ? onToggle : null,
-                activeColor: activeSwitchColor,
               ),
             ],
           ),
@@ -112,7 +112,11 @@ class SettingsTile extends AbstractSettingsTile {
           title: title,
           subtitle: subtitle,
           enabled: enabled,
-          trailing: trailing ?? const Icon(Icons.chevron_right),
+          trailing: trailing ??
+              Icon(
+                Icons.chevron_right,
+                color: ClaudePalette.secondary(context),
+              ),
           onTap: enabled ? () => onPressed?.call(context) : null,
         );
 

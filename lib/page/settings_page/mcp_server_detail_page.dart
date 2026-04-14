@@ -7,6 +7,7 @@ import 'package:anx_reader/models/mcp_tool_meta.dart';
 import 'package:anx_reader/models/mcp_transport_mode.dart';
 import 'package:anx_reader/page/settings_page/mcp_auth_editor.dart';
 import 'package:anx_reader/service/mcp/mcp_client_service.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
@@ -381,7 +382,7 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
                     const SizedBox(height: 6),
                     Text(
                       desc,
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(color: ClaudePalette.secondary(context)),
                     ),
                     const SizedBox(height: 12),
                     Text(

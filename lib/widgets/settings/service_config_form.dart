@@ -1,5 +1,6 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/service/config/config_item.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -75,7 +76,6 @@ class _ServiceConfigFormState extends State<ServiceConfigForm> {
           decoration: InputDecoration(
             labelText: item.label,
             helperText: item.description,
-            border: const OutlineInputBorder(),
           ),
           controller: TextEditingController(
             text: _currentConfig[item.key]?.toString() ??
@@ -93,10 +93,10 @@ class _ServiceConfigFormState extends State<ServiceConfigForm> {
           decoration: InputDecoration(
             labelText: item.label,
             helperText: item.description,
-            border: const OutlineInputBorder(),
             suffixIcon: IconButton(
               icon: Icon(
                 isVisible ? Icons.visibility_off : Icons.visibility,
+                color: ClaudePalette.secondary(context),
               ),
               onPressed: () => _togglePasswordVisibility(item.key),
             ),
@@ -115,7 +115,6 @@ class _ServiceConfigFormState extends State<ServiceConfigForm> {
           decoration: InputDecoration(
             labelText: item.label,
             helperText: item.description,
-            border: const OutlineInputBorder(),
           ),
           keyboardType: TextInputType.number,
           controller: TextEditingController(
@@ -150,7 +149,6 @@ class _ServiceConfigFormState extends State<ServiceConfigForm> {
           decoration: InputDecoration(
             labelText: item.label,
             helperText: item.description,
-            border: const OutlineInputBorder(),
           ),
           value: currentValue,
           items: item.options!.map((option) {
@@ -180,13 +178,22 @@ class _ServiceConfigFormState extends State<ServiceConfigForm> {
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Text(
                 item.label,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: ClaudePalette.fg(context),
+                ),
               ),
             ),
             if (item.description != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text(item.description!),
+                child: Text(
+                  item.description!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: ClaudePalette.secondary(context),
+                  ),
+                ),
               ),
             ...item.options!.map((option) {
               return RadioListTile<dynamic>(
@@ -220,19 +227,26 @@ class _ServiceConfigFormState extends State<ServiceConfigForm> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline, size: 20),
+                  Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: ClaudePalette.secondary(context),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       item.defaultValue?.toString() ?? '',
-                      style: const TextStyle(fontSize: 14),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: ClaudePalette.secondary(context),
+                      ),
                     ),
                   ),
                 ],
               ),
               if (item.link != null)
                 Padding(
-                  padding: const EdgeInsets.only(left: 28.0, top: 4.0),
+                  padding: const EdgeInsets.only(left: 26.0, top: 4.0),
                   child: GestureDetector(
                     onTap: () => launchUrl(
                       Uri.parse(item.link!),
@@ -241,9 +255,9 @@ class _ServiceConfigFormState extends State<ServiceConfigForm> {
                     child: Text(
                       L10n.of(context).settingsNarrateClickForHelp,
                       style: TextStyle(
-                        color: Theme.of(context).primaryColor,
+                        color: ClaudePalette.accent(context),
                         decoration: TextDecoration.underline,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ),

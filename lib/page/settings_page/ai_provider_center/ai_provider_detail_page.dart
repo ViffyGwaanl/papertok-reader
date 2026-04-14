@@ -9,6 +9,7 @@ import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/ai_models_service.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/service/ai/langchain_ai_config.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
@@ -1371,7 +1372,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(color: Colors.grey),
+            style: TextStyle(color: ClaudePalette.secondary(context)),
           ),
         ),
       ],

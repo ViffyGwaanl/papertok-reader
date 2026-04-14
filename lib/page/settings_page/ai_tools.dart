@@ -10,6 +10,7 @@ import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
@@ -175,7 +176,7 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
                     const SizedBox(height: 6),
                     Text(
                       l10n.settingsShortcutsCallbackTimeoutDesc,
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(color: ClaudePalette.secondary(context)),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -254,7 +255,7 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
                     const SizedBox(height: 6),
                     Text(
                       l10n.settingsShortcutsSendMessageTimeoutDesc,
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(color: ClaudePalette.secondary(context)),
                     ),
                     const SizedBox(height: 12),
                     Text(

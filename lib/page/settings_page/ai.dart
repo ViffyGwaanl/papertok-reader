@@ -11,6 +11,7 @@ import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_cen
 import 'package:anx_reader/page/settings_page/ai_title_generation.dart';
 import 'package:anx_reader/page/settings_page/ai_tools.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
@@ -795,15 +796,15 @@ class _AISettingsState extends ConsumerState<AISettings> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.info_outline,
-                        size: 16, color: Colors.grey),
+                    Icon(Icons.info_outline,
+                        size: 16, color: ClaudePalette.secondary(context)),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         L10n.of(context).settingsAiUserPromptsHint,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey[600],
+                          color: ClaudePalette.secondary(context),
                         ),
                       ),
                     ),
@@ -820,7 +821,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
               child: Center(
                 child: Text(
                   L10n.of(context).settingsAiUserPromptsEmpty,
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: TextStyle(color: ClaudePalette.secondary(context)),
                 ),
               ),
             )

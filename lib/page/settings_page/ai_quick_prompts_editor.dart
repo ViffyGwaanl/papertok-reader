@@ -1,6 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/ai_input_quick_prompt.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
@@ -262,8 +263,8 @@ class _AiQuickPromptsEditorState extends State<AiQuickPromptsEditor> {
                       _prompts[i].label,
                       style: _prompts[i].enabled
                           ? null
-                          : const TextStyle(
-                              color: Colors.grey,
+                          : TextStyle(
+                              color: ClaudePalette.tertiary(context),
                               decoration: TextDecoration.lineThrough,
                             ),
                     ),

@@ -1,3 +1,4 @@
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -196,7 +197,7 @@ class FontsSettingPage extends ConsumerWidget {
             children: [
               Text(
                   '${L10n.of(context).commonDownloadFailed}: ${downloadState.error}',
-                  style: const TextStyle(color: Colors.red)),
+                  style: TextStyle(color: MorandiPalette.error(context))),
               const SizedBox(height: 8),
               ElevatedButton.icon(
                 onPressed: () => ref

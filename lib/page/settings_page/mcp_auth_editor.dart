@@ -4,6 +4,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart';
 import 'package:anx_reader/models/mcp_server_meta.dart' show McpServerSecret;
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
 
@@ -272,7 +273,7 @@ class McpAuthEditor {
                 const SizedBox(height: 4),
                 Text(
                   l10n.settingsMcpAuthDesc,
-                  style: TextStyle(color: Colors.grey.shade600),
+                  style: TextStyle(color: ClaudePalette.secondary(context)),
                 ),
                 const SizedBox(height: 12),
                 modeTile(McpAuthMode.none, l10n.settingsMcpAuthModeNone),
