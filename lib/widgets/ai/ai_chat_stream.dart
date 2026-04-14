@@ -24,7 +24,6 @@ import 'package:anx_reader/widgets/ai/tool_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/organize_bookshelf_step_tile.dart';
-import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:anx_reader/widgets/ai/attachment_picker_dialog.dart';
@@ -872,99 +871,162 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   Widget _buildHistoryDrawer(BuildContext context) {
     final historyState = ref.watch(aiHistoryProvider);
-    return SafeArea(
-      child: Column(
-        children: [
-          ListTile(
-            title: Text(L10n.of(context).conversationHistory),
-            trailing: DeleteConfirm(
-              delete: () => _confirmClearHistory(context),
-              deleteIcon: Icon(Icons.delete_sweep),
-            ),
-          ),
-          Expanded(
-            child: historyState.when(
-              data: (items) {
-                if (items.isEmpty) {
-                  return Center(
-                    child: Text(L10n.of(context).noConversationTip),
-                  );
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
-                  itemBuilder: (context, index) {
-                    final entry = items[index];
-                    return _buildHistoryTile(context, entry);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text(L10n.of(context).failedToLoadHistoryTip),
+    return Container(
+      color: ClaudePalette.bg(context),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      L10n.of(context).conversationHistory,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: ClaudePalette.fg(context),
+                      ),
+                    ),
+                  ),
+                  DeleteConfirm(
+                    delete: () => _confirmClearHistory(context),
+                    deleteIcon: Icon(
+                      Icons.delete_sweep_outlined,
+                      size: 22,
+                      color: ClaudePalette.secondary(context),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: historyState.when(
+                data: (items) {
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Text(
+                        L10n.of(context).noConversationTip,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: ClaudePalette.secondary(context),
+                        ),
+                      ),
+                    );
+                  }
+                  final currentSessionId =
+                      ref.watch(aiChatProvider.notifier).currentSessionId;
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) => Padding(
+                      padding: const EdgeInsets.only(left: 16),
+                      child: Divider(
+                        height: 0.5,
+                        thickness: 0.5,
+                        color: ClaudePalette.divider(context),
+                      ),
+                    ),
+                    itemBuilder: (context, index) {
+                      final entry = items[index];
+                      return _buildHistoryTile(
+                        context,
+                        entry,
+                        isSelected: entry.id == currentSessionId,
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Text(
+                    L10n.of(context).failedToLoadHistoryTip,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: ClaudePalette.secondary(context),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHistoryTile(BuildContext context, AiChatHistoryEntry entry) {
+  Widget _buildHistoryTile(
+    BuildContext context,
+    AiChatHistoryEntry entry, {
+    bool isSelected = false,
+  }) {
     final provider = _providerByIdFromPrefs(entry.serviceId) ??
         _providerById(entry.serviceId);
-    final statusColor =
-        entry.completed ? MorandiPalette.success(context) : Theme.of(context).colorScheme.tertiary;
     final title = _deriveTitle(entry);
     final subtitle = _buildHistorySubtitle(provider, entry);
 
-    return FilledContainer(
-      margin: EdgeInsets.symmetric(horizontal: 8),
-      padding: EdgeInsets.all(8),
-      radius: 15,
-      child: GestureDetector(
-        onTap: () => _handleHistoryTap(context, entry),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Row(
+    return Dismissible(
+      key: ValueKey('history-${entry.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: ClaudePalette.accent(context),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: const Icon(
+          Icons.delete_outline,
+          color: Colors.white,
+          size: 22,
+        ),
+      ),
+      confirmDismiss: (_) async {
+        await _confirmDeleteHistory(context, entry);
+        return true;
+      },
+      child: Material(
+        color: isSelected
+            ? ClaudePalette.accentTint(context)
+            : Colors.transparent,
+        child: InkWell(
+          onTap: () => _handleHistoryTap(context, entry),
+          onLongPress: () => _renameHistoryEntry(context, entry),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
-                      Text(
-                        _formatTimestamp(entry.updatedAt),
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                    ],
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: ClaudePalette.fg(context),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Icon(Icons.circle, size: 10, color: statusColor),
-                IconButton(
-                  tooltip: 'Rename',
-                  onPressed: () => _renameHistoryEntry(context, entry),
-                  icon: const Icon(Icons.edit_outlined, size: 18),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: ClaudePalette.secondary(context),
+                  ),
                 ),
-                DeleteConfirm(
-                  delete: () => _confirmDeleteHistory(context, entry),
+                const SizedBox(height: 4),
+                Text(
+                  _formatTimestamp(entry.updatedAt),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: ClaudePalette.tertiary(context),
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -2736,20 +2798,44 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
       appBar: AppBar(
-        title: Text(L10n.of(context).aiChat),
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        title: Text(
+          L10n.of(context).aiChat,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: ClaudePalette.fg(context),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.insert_drive_file),
+          icon: Icon(
+            Icons.chevron_left_rounded,
+            size: 28,
+            color: ClaudePalette.fg(context),
+          ),
           tooltip: L10n.of(context).history,
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.text_fields),
+            icon: Icon(
+              Icons.text_fields,
+              size: 22,
+              color: ClaudePalette.fg(context),
+            ),
             tooltip: L10n.of(context).font,
             onPressed: _showFontScaleSheet,
           ),
           IconButton(
-            icon: const Icon(Icons.edit_document),
+            icon: Icon(
+              Icons.edit_document,
+              size: 22,
+              color: ClaudePalette.fg(context),
+            ),
             tooltip: L10n.of(context).aiChatEndSessionAction,
             onPressed: _clearMessage,
           ),
