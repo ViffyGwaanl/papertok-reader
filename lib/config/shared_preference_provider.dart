@@ -50,6 +50,7 @@ import 'package:anx_reader/utils/get_current_language_code.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String prefsBackupVersionKey = '__prefsBackupVersion';
@@ -160,7 +161,24 @@ class Prefs extends ChangeNotifier {
     saveBeginDate();
     _migrateHomeTabsIfNeeded();
     _normalizeAndPersistHomeTabsConfig();
+    _migrateLegacyAccentColorIfNeeded();
     notifyListeners();
+  }
+
+  /// One-time migration: earlier builds defaulted `themeColor` to
+  /// `Colors.blue` (0xFF2196F3). The Claude design system pins the brand
+  /// accent to terracotta (#CC7D5E). For users whose stored value is the
+  /// legacy blue default (i.e. they never picked a custom color), silently
+  /// upgrade it to the Claude accent so every Material control that keys
+  /// off `colorScheme.primary` (FilledButton, Slider, Switch, TabBar
+  /// indicator, BottomNav selected, etc.) renders in terracotta.
+  void _migrateLegacyAccentColorIfNeeded() {
+    const legacyBlueArgb = 0xFF2196F3; // Colors.blue
+    const claudeAccentArgb = 0xFFCC7D5E;
+    final stored = prefs.getInt('themeColor');
+    if (stored == null || stored == legacyBlueArgb) {
+      prefs.setInt('themeColor', claudeAccentArgb);
+    }
   }
 
   Future<Map<String, dynamic>> buildPrefsBackupMap() async {
@@ -319,7 +337,7 @@ class Prefs extends ChangeNotifier {
   }
 
   Color get themeColor {
-    final colorValue = prefs.getInt('themeColor') ?? Colors.blue.toARGB32();
+    final colorValue = prefs.getInt('themeColor') ?? ClaudePalette.accentLight.toARGB32();
     return Color(colorValue);
   }
 
