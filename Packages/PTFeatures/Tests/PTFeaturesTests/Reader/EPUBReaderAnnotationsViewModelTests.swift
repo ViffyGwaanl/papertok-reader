@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import PTFeatures
+import PTCore
 import PTReader
 
 @Suite("EPUBReaderAnnotationsViewModel")
@@ -139,7 +140,13 @@ struct EPUBReaderAnnotationsViewModelTests {
         let persisted = try await noteDAO.fetchByBookId(bookID)
         #expect(saved == nil)
         #expect(persisted.isEmpty)
-        #expect(viewModel.errorMessage == "Highlights and notes require selected text.")
+        #expect(
+            viewModel.errorMessage
+                == AppLocalization.string(
+                    "errors.reader.selected_text_required",
+                    value: "Highlights and notes require selected text."
+                )
+        )
     }
 
     @Test("updateAnnotation changes type color and reader note while preserving selection fields")
@@ -217,7 +224,13 @@ struct EPUBReaderAnnotationsViewModelTests {
         #expect(persisted.count == 1)
         #expect(persisted[0].type == NoteType.bookmark.rawValue)
         #expect(persisted[0].readerNote == nil)
-        #expect(viewModel.errorMessage == "Highlights and notes require selected text.")
+        #expect(
+            viewModel.errorMessage
+                == AppLocalization.string(
+                    "errors.reader.selected_text_required",
+                    value: "Highlights and notes require selected text."
+                )
+        )
     }
 
     @Test("bookmark drafts do not treat chapter-title fallback text as a selected excerpt")

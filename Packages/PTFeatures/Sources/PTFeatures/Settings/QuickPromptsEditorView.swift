@@ -130,9 +130,7 @@ public struct QuickPromptsEditorView: View {
     private func duplicate(_ prompt: QuickPrompt) {
         let copy = QuickPrompt(
             id: UUID(),
-            title: AppLocalization.format(
-                "prompts.duplicate_title_format",
-                "%@ Copy",
+            title: AppLocalization.format("prompts.duplicate_title_format", locale: .autoupdatingCurrent,
                 prompt.title
             ),
             promptText: prompt.promptText,

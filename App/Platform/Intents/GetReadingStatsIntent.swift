@@ -8,26 +8,29 @@ enum ReadingStatsScope: String, AppEnum {
     case month
     case all
 
-    static var typeDisplayRepresentation: TypeDisplayRepresentation { "Reading Stats Scope" }
+    static var typeDisplayRepresentation: TypeDisplayRepresentation {
+        "intent.get_stats.scope.type"
+    }
+
     static var caseDisplayRepresentations: [ReadingStatsScope: DisplayRepresentation] {
         [
-            .today: "Today",
-            .week: "This Week",
-            .month: "This Month",
-            .all: "All Time",
+            .today: "common.today",
+            .week: "common.this_week",
+            .month: "statistics.this_month",
+            .all: "statistics.all_time",
         ]
     }
 }
 
 /// Siri Shortcut: "Get reading stats for [scope] in PaperTok"
 struct GetReadingStatsIntent: AppIntent {
-    static let title: LocalizedStringResource = "Get Reading Stats"
+    static let title: LocalizedStringResource = "intent.get_stats.title"
     static let description = IntentDescription(
-        "Returns reading time, books read, notes captured, and current streak."
+        "intent.get_stats.description"
     )
     static let openAppWhenRun = false
 
-    @Parameter(title: "Scope", default: .today)
+    @Parameter(title: "intent.parameter.range", default: .today)
     var scope: ReadingStatsScope
 
     func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<String> {
@@ -60,25 +63,37 @@ struct GetReadingStatsIntent: AppIntent {
         }
 
         let streak = currentStreak(dailyTotals: dailyTotals, formatter: formatter, calendar: calendar, today: today)
-        let hours = Double(secondsInScope) / 3600.0
-        let formattedHours = String(format: "%.1f", hours)
-        let scopeWord: String = {
+        let formattedHours = localizedDecimal(Double(secondsInScope) / 3600.0)
+        let readingTimeLineKey: String = {
             switch scope {
-            case .today: return "today"
-            case .week: return "this week"
-            case .month: return "this month"
-            case .all: return "in total"
+            case .today: return "intent.get_stats.summary.reading_time.today_format"
+            case .week: return "intent.get_stats.summary.reading_time.week_format"
+            case .month: return "intent.get_stats.summary.reading_time.month_format"
+            case .all: return "intent.get_stats.summary.reading_time.all_format"
+            }
+        }()
+        let dialogKey: String = {
+            switch scope {
+            case .today: return "intent.get_stats.dialog.today_format"
+            case .week: return "intent.get_stats.dialog.week_format"
+            case .month: return "intent.get_stats.dialog.month_format"
+            case .all: return "intent.get_stats.dialog.all_format"
             }
         }()
 
-        let summary = """
-        Reading time: \(formattedHours) hours \(scopeWord)
-        Books in library: \(booksCount)
-        Notes captured: \(notesCount)
-        Current streak: \(streak) day\(streak == 1 ? "" : "s")
-        """
+        let summaryLines = [
+            AppLocalization.format(readingTimeLineKey, locale: .autoupdatingCurrent, formattedHours),
+            AppLocalization.format("intent.get_stats.summary.books_count_format", locale: .autoupdatingCurrent, booksCount),
+            AppLocalization.format("intent.get_stats.summary.notes_count_format", locale: .autoupdatingCurrent, notesCount),
+            AppLocalization.format("intent.get_stats.summary.streak_format", locale: .autoupdatingCurrent, streak),
+        ]
+        let summary = summaryLines.joined(separator: "\n")
 
-        let dialog: IntentDialog = "You've read \(formattedHours) hours \(scopeWord)."
+        let dialog = IntentDialog(stringLiteral: AppLocalization.format(
+            dialogKey,
+            locale: .autoupdatingCurrent,
+            formattedHours
+        ))
         return .result(value: summary, dialog: dialog)
     }
 
@@ -113,5 +128,14 @@ struct GetReadingStatsIntent: AppIntent {
             }
         }
         return streak
+    }
+
+    private func localizedDecimal(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 1
+        formatter.maximumFractionDigits = 1
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.1f", value)
     }
 }

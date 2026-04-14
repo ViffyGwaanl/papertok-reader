@@ -10,7 +10,7 @@ struct MigrationProgressView: View {
 
     private var statusText: String {
         migrationService.statusMessage.isEmpty
-            ? NSLocalizedString("migration.status.preparing", comment: "")
+            ? String(localized: "migration.status.preparing")
             : migrationService.statusMessage
     }
 

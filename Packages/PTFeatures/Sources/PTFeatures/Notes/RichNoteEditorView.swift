@@ -17,20 +17,13 @@ public struct RichNoteEditorView: View {
 
         private var displayNameKey: String {
             switch self {
-            case .edit: return "notes.editor"
+            case .edit: return "common.edit"
             case .preview: return "notes.preview"
             }
         }
 
-        private var fallbackDisplayName: String {
-            switch self {
-            case .edit: return "Edit"
-            case .preview: return "Preview"
-            }
-        }
-
         public var displayName: String {
-            AppLocalization.string(displayNameKey, value: fallbackDisplayName)
+            AppLocalization.string(displayNameKey)
         }
     }
 
@@ -44,7 +37,7 @@ public struct RichNoteEditorView: View {
 
     public init(
         text: Binding<String>,
-        title: String = AppLocalization.string("notes.edit_note", value: "Edit Note"),
+        title: String = AppLocalization.string("notes.edit_note"),
         onSave: @escaping (String) -> Void,
         onCancel: @escaping () -> Void
     ) {
@@ -75,7 +68,7 @@ public struct RichNoteEditorView: View {
     // MARK: - Subviews
 
     private var modeSegmented: some View {
-        Picker(AppLocalization.string("common.mode", value: "Mode"), selection: $mode) {
+        Picker(AppLocalization.string("common.mode"), selection: $mode) {
             ForEach(Mode.allCases) { option in
                 Text(option.displayName).tag(option)
             }
@@ -87,7 +80,7 @@ public struct RichNoteEditorView: View {
     private var toolbar: some View {
         HStack(spacing: 10) {
             toolbarButton(
-                label: AppLocalization.string("notes.bold", value: "Bold"),
+                label: AppLocalization.string("notes.bold"),
                 systemImage: "bold"
             ) {
                 wrapSelection(with: "**")
@@ -95,7 +88,7 @@ public struct RichNoteEditorView: View {
             .fontWeight(.bold)
 
             toolbarButton(
-                label: AppLocalization.string("notes.italic", value: "Italic"),
+                label: AppLocalization.string("notes.italic"),
                 systemImage: "italic"
             ) {
                 wrapSelection(with: "*")
@@ -103,21 +96,21 @@ public struct RichNoteEditorView: View {
             .italic()
 
             toolbarButton(
-                label: AppLocalization.string("notes.link", value: "Link"),
+                label: AppLocalization.string("notes.link"),
                 systemImage: "link"
             ) {
-                insertInline("[text](https://)")
+                insertInline("[\(inlinePlaceholderText)](https://)")
             }
 
             toolbarButton(
-                label: AppLocalization.string("notes.bullet_list", value: "Bullet List"),
+                label: AppLocalization.string("notes.bullet_list"),
                 systemImage: "list.bullet"
             ) {
                 insertLinePrefix("- ")
             }
 
             toolbarButton(
-                label: AppLocalization.string("notes.heading", value: "Heading"),
+                label: AppLocalization.string("notes.heading"),
                 systemImage: "textformat.size"
             ) {
                 insertLinePrefix("# ")
@@ -230,8 +223,12 @@ public struct RichNoteEditorView: View {
 
     // MARK: - Editing helpers
 
+    private var inlinePlaceholderText: String {
+        AppLocalization.string("notes.inline_placeholder_text")
+    }
+
     private func wrapSelection(with delimiter: String) {
-        text.append("\(delimiter)text\(delimiter)")
+        text.append("\(delimiter)\(inlinePlaceholderText)\(delimiter)")
     }
 
     private func insertInline(_ snippet: String) {

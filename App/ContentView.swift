@@ -208,6 +208,7 @@ struct BookshelfScreen: View {
     @State private var navigationBook: Book?
     @State private var showImporter = false
     @State private var showImportError = false
+    @State private var sharedInboxImportErrorMessage: String?
     @State private var undoDismissTask: Task<Void, Never>?
     @State private var presentedSheet: BookshelfSheet?
     @State private var showBatchMoveSheet = false
@@ -433,7 +434,7 @@ struct BookshelfScreen: View {
 
     private var editModeBanner: some View {
         HStack(spacing: AppSpacing.md) {
-            Text(AppLocalization.format("common.selected_count_format", "%d selected", viewModel.selectedBookIDs.count))
+            Text(AppLocalization.format("common.selected_count_format", locale: .autoupdatingCurrent, viewModel.selectedBookIDs.count))
                 .font(AppTypography.subheadline.weight(.medium))
                 .foregroundStyle(Morandi.primaryText)
 
@@ -482,7 +483,7 @@ struct BookshelfScreen: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if viewModel.books.isEmpty {
             ContentUnavailableView(
-                "No Books Yet",
+                String(localized: "bookshelf.empty.title"),
                 systemImage: "books.vertical",
                 description: Text("bookshelf.empty.tip")
             )
@@ -518,7 +519,7 @@ struct BookshelfScreen: View {
                 Divider()
                     .frame(height: 18)
 
-                PTChip("No Tag", isSelected: viewModel.includeNoTagFilter) {
+                PTChip(String(localized: "bookshelf.no_tag"), isSelected: viewModel.includeNoTagFilter) {
                     viewModel.toggleNoTagFilter()
                     Task { await viewModel.loadBooks() }
                 }
@@ -612,13 +613,15 @@ struct BookshelfScreen: View {
                 })
             }
             .alert(
-                "Import Failed",
-                isPresented: $showImportError,
-                presenting: viewModel.importError
-            ) { _ in
-                Button(String(localized: "common.ok")) { viewModel.importError = nil }
-            } message: { error in
-                Text(error.errorDescription ?? "Unknown error")
+                String(localized: "bookshelf.import_failed"),
+                isPresented: $showImportError
+            ) {
+                Button(String(localized: "common.ok")) {
+                    viewModel.importError = nil
+                    sharedInboxImportErrorMessage = nil
+                }
+            } message: {
+                Text(importAlertMessage)
             }
             .overlay {
                 if viewModel.isImporting {
@@ -645,7 +648,7 @@ struct BookshelfScreen: View {
                 .navigationBarBackButtonHidden(true)
 #else
             ContentUnavailableView(
-                "EPUB Reader Not Yet Available",
+                String(localized: "reader.epub_unavailable_title"),
                 systemImage: "book.closed",
                 description: Text("dev.macos_beta_notice")
             )
@@ -783,11 +786,11 @@ struct BookshelfScreen: View {
 
     private func sortLabel(for sortOrder: BookshelfViewModel.SortOrder) -> String {
         switch sortOrder {
-        case .dateDesc: AppLocalization.string("bookshelf.sort.date_desc", value: "Date Added ↓")
-        case .dateAsc: AppLocalization.string("bookshelf.sort.date_asc", value: "Date Added ↑")
-        case .titleAsc: AppLocalization.string("bookshelf.sort.title_asc", value: "Title A-Z")
-        case .titleDesc: AppLocalization.string("bookshelf.sort.title_desc", value: "Title Z-A")
-        case .authorAsc: AppLocalization.string("bookshelf.sort.author_asc", value: "Author A-Z")
+        case .dateDesc: AppLocalization.string("bookshelf.sort.date_desc")
+        case .dateAsc: AppLocalization.string("bookshelf.sort.date_asc")
+        case .titleAsc: AppLocalization.string("bookshelf.sort.title_asc")
+        case .titleDesc: AppLocalization.string("bookshelf.sort.title_desc")
+        case .authorAsc: AppLocalization.string("bookshelf.sort.author_asc")
         }
     }
 
@@ -964,7 +967,7 @@ struct BookshelfScreen: View {
 
     @ViewBuilder
     private func bookshelfTagMenu(for book: Book) -> some View {
-        Menu("Tags") {
+        Menu(String(localized: "common.tags")) {
             if viewModel.tags.isEmpty {
                 Button(String(localized: "bookshelf.no_tags")) { }
                     .disabled(true)
@@ -997,7 +1000,7 @@ struct BookshelfScreen: View {
 
     @ViewBuilder
     private func bookshelfMoveGroupMenu(for book: Book) -> some View {
-        Menu("Move to Group") {
+        Menu(String(localized: "bookshelf.move_to_group")) {
             if let bookID = book.id {
                 Button {
                     Task { try? await viewModel.moveBook(id: bookID, toGroupId: nil) }
@@ -1074,6 +1077,7 @@ struct BookshelfScreen: View {
             return await viewModel.importError
         }).process(eventID: request.eventID)
 
+        sharedInboxImportErrorMessage = result.errorMessage
         showImportError = result.shouldShowError
         await viewModel.loadBooks()
     }
@@ -1087,11 +1091,23 @@ struct BookshelfScreen: View {
                     url.stopAccessingSecurityScopedResource()
                 }
             }
+            sharedInboxImportErrorMessage = nil
             await viewModel.importBook(url: url)
             if viewModel.importError != nil {
                 showImportError = true
             }
         }
+    }
+
+    private var importAlertMessage: String {
+        if let importError = viewModel.importError {
+            return importError.errorDescription ?? String(localized: "errors.unknown")
+        }
+        if let sharedInboxImportErrorMessage,
+           sharedInboxImportErrorMessage.isEmpty == false {
+            return sharedInboxImportErrorMessage
+        }
+        return String(localized: "errors.unknown")
     }
 }
 
@@ -1174,7 +1190,10 @@ private struct BookshelfBookEditorSheet: View {
             try await viewModel.updateBookMetadata(id: bookID, title: title, author: author)
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "bookshelf.edit.operation_failed"
+            )
         }
     }
 }
@@ -1254,8 +1273,8 @@ private struct BookshelfTagManagerSheet: View {
 #endif
 
                     Button(editingTagID == nil
-                        ? AppLocalization.string("common.create_tag", value: "Create Tag")
-                        : AppLocalization.string("common.save_changes", value: "Save Changes")) {
+                        ? AppLocalization.string("common.create_tag")
+                        : AppLocalization.string("common.save_changes")) {
                         Task { await saveTag() }
                     }
                     .disabled(trimmedDraftName.isEmpty)
@@ -1267,8 +1286,8 @@ private struct BookshelfTagManagerSheet: View {
                     }
                 } header: {
                     Text(editingTagID == nil
-                        ? AppLocalization.string("common.create_tag", value: "Create Tag")
-                        : AppLocalization.string("common.edit_tag", value: "Edit Tag"))
+                        ? AppLocalization.string("common.create_tag")
+                        : AppLocalization.string("common.edit_tag"))
                 }
 
                 Section {
@@ -1377,7 +1396,10 @@ private struct BookshelfTagManagerSheet: View {
             }
             resetEditor()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "bookshelf.tag.operation_failed"
+            )
         }
     }
 
@@ -1389,7 +1411,10 @@ private struct BookshelfTagManagerSheet: View {
                 resetEditor()
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "bookshelf.tag.operation_failed"
+            )
         }
     }
 }
@@ -1445,8 +1470,8 @@ private struct BookshelfGroupManagerSheet: View {
                     }
 
                     Button(editingGroupID == nil
-                        ? AppLocalization.string("common.create_group", value: "Create Group")
-                        : AppLocalization.string("common.save_changes", value: "Save Changes")) {
+                        ? AppLocalization.string("common.create_group")
+                        : AppLocalization.string("common.save_changes")) {
                         Task { await saveGroup() }
                     }
                     .disabled(trimmedDraftName.isEmpty)
@@ -1458,8 +1483,8 @@ private struct BookshelfGroupManagerSheet: View {
                     }
                 } header: {
                     Text(editingGroupID == nil
-                        ? AppLocalization.string("common.create_group", value: "Create Group")
-                        : AppLocalization.string("common.rename_group", value: "Rename Group"))
+                        ? AppLocalization.string("common.create_group")
+                        : AppLocalization.string("common.rename_group"))
                 }
 
                 Section {
@@ -1596,7 +1621,10 @@ private struct BookshelfGroupManagerSheet: View {
             }
             resetEditor()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "bookshelf.group.operation_failed"
+            )
         }
     }
 
@@ -1608,7 +1636,10 @@ private struct BookshelfGroupManagerSheet: View {
                 resetEditor()
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "bookshelf.group.operation_failed"
+            )
         }
     }
 
@@ -1620,7 +1651,10 @@ private struct BookshelfGroupManagerSheet: View {
                 resetEditor()
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "bookshelf.group.operation_failed"
+            )
         }
     }
 }
@@ -1829,7 +1863,7 @@ struct EPUBBookshelfReaderView: View {
             Morandi.background.ignoresSafeArea()
 
             if isLoading {
-                ProgressView(AppLocalization.string("reader.opening_ellipsis", value: "Opening…"))
+                ProgressView(AppLocalization.string("reader.opening_ellipsis"))
                     .tint(Morandi.accent)
             } else if let publication {
                 EPUBReaderView(
@@ -1841,9 +1875,9 @@ struct EPUBBookshelfReaderView: View {
                 .ignoresSafeArea(edges: .bottom)
             } else {
                 ContentUnavailableView(
-                    "Cannot Open",
+                    String(localized: "reader.cannot_open_title"),
                     systemImage: "book.closed",
-                    description: Text(loadError ?? "The EPUB could not be opened.")
+                    description: Text(loadError ?? String(localized: "errors.reader.cannot_open"))
                 )
             }
         }
@@ -1906,13 +1940,13 @@ struct EPUBBookshelfReaderView: View {
                 Button {
                     readerControlsViewModel?.showTOC = true
                 } label: {
-                    Label("Contents", systemImage: "list.bullet")
+                    Label(String(localized: "reader.contents"), systemImage: "list.bullet")
                 }
                 .disabled(readerControlsViewModel == nil)
                 Button {
                     withAnimation { showBrightnessControl.toggle() }
                 } label: {
-                    Label("Brightness", systemImage: "sun.max")
+                    Label(String(localized: "reader.brightness"), systemImage: "sun.max")
                 }
                 Toggle(isOn: Binding(
                     get: { volumeKeysEnabled },
@@ -1922,7 +1956,7 @@ struct EPUBBookshelfReaderView: View {
                         applyVolumeKeyHandler()
                     }
                 )) {
-                    Label("Volume keys turn pages", systemImage: "speaker.wave.2")
+                    Label(String(localized: "reader.volume_keys_turn_pages"), systemImage: "speaker.wave.2")
                 }
             } label: {
                 Image(systemName: "list.bullet")
@@ -1992,7 +2026,11 @@ struct EPUBBookshelfReaderView: View {
             annotationsViewModel = nil
             preferencesViewModel = nil
             readerSessionStore?.clear()
-            loadError = error.localizedDescription
+            loadError = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.reader.cannot_open",
+                priority: .preferFallback
+            )
         }
     }
 
@@ -2085,17 +2123,17 @@ struct EPUBBookshelfReaderView: View {
             Group {
                 if let readerControlsViewModel {
                     if readerControlsViewModel.isLoadingTOC {
-                        ProgressView(AppLocalization.string("reader.loading_contents_ellipsis", value: "Loading contents…"))
+                        ProgressView(AppLocalization.string("reader.loading_contents_ellipsis"))
                             .tint(Morandi.accent)
                     } else if let tocErrorMessage = readerControlsViewModel.tocErrorMessage {
                         ContentUnavailableView(
-                            AppLocalization.string("reader.toc.load_failed", value: "Couldn’t Load Contents"),
+                            AppLocalization.string("reader.toc.load_failed"),
                             systemImage: "exclamationmark.triangle",
                             description: Text(tocErrorMessage)
                         )
                     } else if readerControlsViewModel.tocEntries.isEmpty {
                         ContentUnavailableView(
-                            AppLocalization.string("reader.toc.empty_title", value: "No Contents"),
+                            AppLocalization.string("reader.toc.empty_title"),
                             systemImage: "list.bullet.indent",
                             description: Text("reader.no_toc_epub")
                         )
@@ -2116,9 +2154,7 @@ struct EPUBBookshelfReaderView: View {
                                                 entry.level == 0 ? Morandi.primaryText : Morandi.secondaryText
                                             )
                                         if entry.childCount > 0 {
-                                            Text(AppLocalization.format(
-                                                "reader.toc.subsection_count_format",
-                                                "%d sub-sections",
+                                            Text(AppLocalization.format("reader.toc.subsection_count_format", locale: .autoupdatingCurrent,
                                                 entry.childCount
                                             ))
                                                 .font(AppTypography.caption)
@@ -2133,7 +2169,7 @@ struct EPUBBookshelfReaderView: View {
                         .listStyle(.plain)
                     }
                 } else {
-                    ProgressView(AppLocalization.string("reader.preparing_controls_ellipsis", value: "Preparing reader controls…"))
+                    ProgressView(AppLocalization.string("reader.preparing_controls_ellipsis"))
                         .tint(Morandi.accent)
                 }
             }
@@ -2157,7 +2193,7 @@ struct EPUBBookshelfReaderView: View {
                 if let readerControlsViewModel {
                     if readerControlsViewModel.searchQuery.isEmpty {
                         ContentUnavailableView(
-                            AppLocalization.string("reader.search_this_book", value: "Search This Book"),
+                            AppLocalization.string("reader.search_this_book"),
                             systemImage: "magnifyingglass",
                             description: Text("reader.search_epub_prompt")
                         )
@@ -2166,13 +2202,13 @@ struct EPUBBookshelfReaderView: View {
                             .tint(Morandi.accent)
                     } else if let searchErrorMessage = readerControlsViewModel.searchErrorMessage {
                         ContentUnavailableView(
-                            AppLocalization.string("reader.search_failed_title", value: "Search Failed"),
+                            AppLocalization.string("reader.search_failed_title"),
                             systemImage: "exclamationmark.magnifyingglass",
                             description: Text(searchErrorMessage)
                         )
                     } else if readerControlsViewModel.searchResults.isEmpty {
                         ContentUnavailableView(
-                            AppLocalization.string("reader.search.no_results_title", value: "No Results"),
+                            AppLocalization.string("reader.search.no_results_title"),
                             systemImage: "doc.text.magnifyingglass",
                             description: Text(AppLocalization.format(
                                 "reader.search.no_matches_format",
@@ -2218,7 +2254,7 @@ struct EPUBBookshelfReaderView: View {
                         .listStyle(.plain)
                     }
                 } else {
-                    ProgressView(AppLocalization.string("reader.preparing_search_ellipsis", value: "Preparing search…"))
+                    ProgressView(AppLocalization.string("reader.preparing_search_ellipsis"))
                         .tint(Morandi.accent)
                 }
             }
@@ -2412,7 +2448,7 @@ struct EPUBBookshelfReaderView: View {
         }
 
         guard savedNote != nil else {
-            annotationErrorMessage = annotationsViewModel.errorMessage ?? "The annotation could not be saved."
+            annotationErrorMessage = annotationsViewModel.errorMessage ?? String(localized: "errors.reader.annotation_save_failed")
             return
         }
 
@@ -2429,7 +2465,7 @@ struct EPUBBookshelfReaderView: View {
 
         await annotationsViewModel.deleteAnnotation(id: noteID)
         guard annotationsViewModel.errorMessage == nil else {
-            annotationErrorMessage = annotationsViewModel.errorMessage ?? "The annotation could not be deleted."
+            annotationErrorMessage = annotationsViewModel.errorMessage ?? String(localized: "errors.reader.annotation_delete_failed")
             return
         }
 
@@ -2571,11 +2607,8 @@ struct NotesScreen: View {
     private var notesEmptyTitle: String {
         if !viewModel.searchQuery.isEmpty { return String(localized: "common.no_results") }
         if viewModel.filterType != .all {
-            return String(
-                format: AppLocalization.string(
-                    "notes.empty.filtered_title_format",
-                    value: "No %@"
-                ),
+            return AppLocalization.format(
+                "notes.empty.filtered_title_format",
                 locale: .autoupdatingCurrent,
                 viewModel.filterType.displayName
             )
@@ -2590,17 +2623,11 @@ struct NotesScreen: View {
 
     private var notesEmptyDescription: String {
         if !viewModel.searchQuery.isEmpty {
-            return AppLocalization.string(
-                "notes.empty.search_description",
-                value: "No notes match your search."
-            )
+            return AppLocalization.string("notes.empty.search_description")
         }
         if viewModel.filterType != .all {
-            return String(
-                format: AppLocalization.string(
-                    "notes.empty.filtered_description_format",
-                    value: "No %@ found."
-                ),
+            return AppLocalization.format(
+                "notes.empty.filtered_description_format",
                 locale: .autoupdatingCurrent,
                 viewModel.filterType.displayName.lowercased()
             )
@@ -2723,11 +2750,8 @@ struct NotesScreen: View {
                             .font(AppTypography.subheadline)
                             .foregroundStyle(Morandi.primaryText)
                         Text(
-                            String(
-                                format: AppLocalization.string(
-                                    "notes.group_count_format",
-                                    value: "%lld notes"
-                                ),
+                            AppLocalization.format(
+                                "notes.group_count_format",
                                 locale: .autoupdatingCurrent,
                                 group.notes.count
                             )
@@ -2787,33 +2811,33 @@ struct NotesScreen: View {
                 ShareLink(
                     item: viewModel.export(format: format),
                     preview: SharePreview(
-                        String(
-                            format: AppLocalization.string(
-                                "notes.share_preview_format",
-                                value: "PaperTok Notes %@"
-                            ),
+                        AppLocalization.format(
+                            "notes.share_preview_format",
                             locale: .autoupdatingCurrent,
                             format.displayName
                         ),
                         image: Image(systemName: "square.and.arrow.up")
                     )
                 ) {
-                    Label(String(format: NSLocalizedString("notes.share_format", comment: ""), format.displayName), systemImage: "square.and.arrow.up")
+                    Label(
+                        AppLocalization.format("notes.share_format", locale: .autoupdatingCurrent, format.displayName),
+                        systemImage: "square.and.arrow.up"
+                    )
                 }
 
                 Button {
                     copyToPasteboard(viewModel.export(format: format))
-                    exportFeedbackMessage = String(
-                        format: AppLocalization.string(
-                            "notes.copied_to_clipboard_format",
-                            value: "%@ copied to clipboard."
-                        ),
+                    exportFeedbackMessage = AppLocalization.format(
+                        "notes.copied_to_clipboard_format",
                         locale: .autoupdatingCurrent,
                         format.displayName
                     )
                     isExportFeedbackPresented = true
                 } label: {
-                    Label(String(format: NSLocalizedString("notes.copy_format", comment: ""), format.displayName), systemImage: "doc.on.doc")
+                    Label(
+                        AppLocalization.format("notes.copy_format", locale: .autoupdatingCurrent, format.displayName),
+                        systemImage: "doc.on.doc"
+                    )
                 }
             }
         } label: {
@@ -2959,7 +2983,15 @@ struct StatisticsScreen: View {
 
     private let heatmapColumns = Array(repeating: GridItem(.flexible(), spacing: 3), count: 7)
     private let dashboardColumns = Array(repeating: GridItem(.flexible(), spacing: AppSpacing.md), count: 2)
-    private static let weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    private var weekdayLabels: [String] {
+        let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
+        let symbols = formatter.shortStandaloneWeekdaySymbols
+            ?? formatter.shortWeekdaySymbols
+            ?? []
+        guard symbols.count == 7 else { return symbols }
+        return Array(symbols.dropFirst()) + [symbols[0]]
+    }
 
     /// Generate the 91-day date list for the heatmap, aligned to start on Monday.
     private var heatmapDates: [String] {
@@ -3039,9 +3071,9 @@ struct StatisticsScreen: View {
         case .totalNotes:
             statCard(title: tile.title, value: "\(viewModel.totalNotes)", icon: "note.text")
         case .currentStreak:
-            statCard(title: tile.title, value: "\(viewModel.currentStreakDays)d", icon: "flame.fill")
+            statCard(title: tile.title, value: shortDayCount(viewModel.currentStreakDays), icon: "flame.fill")
         case .longestStreak:
-            statCard(title: tile.title, value: "\(viewModel.longestStreakDays)d", icon: "flame")
+            statCard(title: tile.title, value: shortDayCount(viewModel.longestStreakDays), icon: "flame")
         case .dailyHighlight:
             dailyHighlightCard
         }
@@ -3075,8 +3107,8 @@ struct StatisticsScreen: View {
     private var periodSummarySection: some View {
         VStack(spacing: AppSpacing.md) {
             HStack(spacing: AppSpacing.md) {
-                periodSummaryCard(title: "This Week", summary: viewModel.weeklySummary)
-                periodSummaryCard(title: "This Month", summary: viewModel.monthlySummary)
+                periodSummaryCard(title: String(localized: "statistics.this_week"), summary: viewModel.weeklySummary)
+                periodSummaryCard(title: String(localized: "statistics.this_month"), summary: viewModel.monthlySummary)
             }
         }
     }
@@ -3094,19 +3126,19 @@ struct StatisticsScreen: View {
                     .foregroundStyle(Morandi.accent)
                     .monospacedDigit()
 
-                Text("total")
+                Text(String(localized: "common.total"))
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.secondaryText)
             }
 
             HStack(spacing: AppSpacing.lg) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(summary.dailyAverageMinutes)m")
+                    Text(shortMinutes(summary.dailyAverageMinutes))
                         .font(AppTypography.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(Morandi.primaryText)
                         .monospacedDigit()
-                    Text("avg/day")
+                    Text(String(localized: "statistics.daily_average"))
                         .font(AppTypography.caption2)
                         .foregroundStyle(Morandi.secondaryText)
                 }
@@ -3117,7 +3149,7 @@ struct StatisticsScreen: View {
                         .fontWeight(.medium)
                         .foregroundStyle(Morandi.primaryText)
                         .monospacedDigit()
-                    Text("active days")
+                    Text(String(localized: "statistics.active_days"))
                         .font(AppTypography.caption2)
                         .foregroundStyle(Morandi.secondaryText)
                 }
@@ -3139,7 +3171,7 @@ struct StatisticsScreen: View {
             HStack(alignment: .top, spacing: AppSpacing.sm) {
                 // Weekday labels
                 VStack(spacing: 3) {
-                    ForEach(Self.weekdayLabels, id: \.self) { label in
+                    ForEach(weekdayLabels, id: \.self) { label in
                         Text(label)
                             .font(AppTypography.caption2)
                             .foregroundStyle(Morandi.secondaryText)
@@ -3154,7 +3186,10 @@ struct StatisticsScreen: View {
                         RoundedRectangle(cornerRadius: 2)
                             .fill(heatmapColor(minutes: minutes))
                             .frame(height: 14)
-                            .help("\(date): \(minutes)m")
+                            .help(AppLocalization.format("statistics.heatmap_value_format", locale: .autoupdatingCurrent,
+                                date,
+                                shortMinutes(minutes)
+                            ))
                     }
                 }
             }
@@ -3277,7 +3312,7 @@ struct StatisticsScreen: View {
                         }
                         .frame(height: 10)
 
-                        Text("\(point.minutes)m")
+                        Text(shortMinutes(point.minutes))
                             .font(AppTypography.caption)
                             .foregroundStyle(Morandi.primaryText)
                             .monospacedDigit()
@@ -3367,7 +3402,7 @@ struct StatisticsScreen: View {
 
                 Spacer()
 
-                Text("\(breakdown.totalMinutes)m")
+                Text(shortMinutes(breakdown.totalMinutes))
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.secondaryText)
                     .monospacedDigit()
@@ -3379,7 +3414,10 @@ struct StatisticsScreen: View {
                         .fill(Morandi.accent.opacity(point.minutes > 0 ? 0.85 : 0.18))
                         .frame(maxWidth: .infinity)
                         .frame(height: perBookTrendBarHeight(point.minutes, in: breakdown))
-                        .help("\(point.label): \(point.minutes)m")
+                        .help(AppLocalization.format("statistics.heatmap_value_format", locale: .autoupdatingCurrent,
+                            point.label,
+                            shortMinutes(point.minutes)
+                        ))
                 }
             }
             .frame(height: 36, alignment: .bottom)
@@ -3393,6 +3431,14 @@ struct StatisticsScreen: View {
         let maximum = max(breakdown.points.map(\.minutes).max() ?? 1, 1)
         guard minutes > 0 else { return 6 }
         return max(8, 28 * CGFloat(minutes) / CGFloat(maximum))
+    }
+
+    private func shortDayCount(_ days: Int) -> String {
+        AppLocalization.format("statistics.day_count_short_format", locale: .autoupdatingCurrent, days)
+    }
+
+    private func shortMinutes(_ minutes: Int) -> String {
+        AppLocalization.format("statistics.minutes_short_format", locale: .autoupdatingCurrent, minutes)
     }
 }
 
@@ -3684,7 +3730,7 @@ struct SettingsScreen: View {
     private var readingSection: some View {
         Section {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text(String(format: NSLocalizedString("reader.default_font_size_format", comment: ""), Int(viewModel.defaultFontSize)))
+                Text(AppLocalization.format("reader.default_font_size_format", locale: .autoupdatingCurrent, Int(viewModel.defaultFontSize)))
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
                 Slider(value: $viewModel.defaultFontSize, in: 12...32, step: 1)
@@ -3761,10 +3807,7 @@ struct SettingsScreen: View {
                     tint: .orange,
                     subtitle: kairosService.isEnabled
                         ? String(
-                            format: AppLocalization.string(
-                                "kairos.day_streak_format",
-                                value: "%d day streak"
-                            ),
+                            format: AppLocalization.string("kairos.day_streak_format"),
                             locale: .autoupdatingCurrent,
                             kairosService.currentStreak
                         )
@@ -3911,10 +3954,7 @@ struct AIProviderKeyView: View {
             } header: {
                 Text(
                     String(
-                        format: AppLocalization.string(
-                            "settings.ai_provider.key_section_format",
-                            value: "%@ API Key"
-                        ),
+                        format: AppLocalization.string("settings.ai_provider.key_section_format"),
                         locale: .autoupdatingCurrent,
                         provider.displayName
                     )
@@ -3954,10 +3994,7 @@ struct AIProviderKeyView: View {
         }
         .navigationTitle(
             String(
-                format: AppLocalization.string(
-                    "settings.ai_provider.key_title_format",
-                    value: "%@ Key"
-                ),
+                format: AppLocalization.string("settings.ai_provider.key_title_format"),
                 locale: .autoupdatingCurrent,
                 provider.displayName
             )

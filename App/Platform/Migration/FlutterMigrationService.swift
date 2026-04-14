@@ -305,14 +305,14 @@ public final class FlutterMigrationService {
     }
 
     private func localized(_ key: String) -> String {
-        NSLocalizedString(key, bundle: .main, comment: "")
+        AppLocalization.string(key, bundle: .main)
     }
 
     private func localizedFormat(_ key: String, _ args: CVarArg...) -> String {
         String(format: localized(key), locale: Locale.current, arguments: args)
     }
 
-    private func migrationErrorMessage(for error: Error) -> String {
+    func migrationErrorMessage(for error: Error) -> String {
         switch error {
         case LegacyDatabasePreflightError.unsupportedSchema(let version):
             return localizedFormat(
@@ -326,7 +326,10 @@ public final class FlutterMigrationService {
                 missingTables.sorted().joined(separator: ", ")
             )
         default:
-            return localizedFormat("migration.error.failed_with_detail", error.localizedDescription)
+            if let detail = AppLocalization.localizedErrorDescription(error) {
+                return localizedFormat("migration.error.failed_with_detail", detail)
+            }
+            return localized("migration.error.failed")
         }
     }
 

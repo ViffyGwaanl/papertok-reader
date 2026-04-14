@@ -197,7 +197,7 @@ struct PaperDetailView: View {
             downloadStatus = .idle(plan: plan)
         } catch {
             guard activeDownloadID == downloadID else { return }
-            downloadStatus = .failed(message: error.localizedDescription, plan: plan)
+            downloadStatus = .failed(message: downloadFailureMessage(for: error), plan: plan)
         }
 
         if activeDownloadID == downloadID {
@@ -279,5 +279,10 @@ struct PaperDetailView: View {
         }
 
         return items
+    }
+
+    private func downloadFailureMessage(for error: Error) -> String {
+        AppLocalization.localizedErrorDescription(error)
+            ?? AppLocalization.string("errors.import.failed")
     }
 }

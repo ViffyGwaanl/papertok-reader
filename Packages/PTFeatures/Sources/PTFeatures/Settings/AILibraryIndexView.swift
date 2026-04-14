@@ -100,7 +100,7 @@ public struct AILibraryIndexView: View {
                 HStack {
                     Text(String(localized: "settings.ai_library.chunk_size"))
                     Spacer()
-                    Text(AppLocalization.format("settings.ai_library.tokens_format", "%d tokens", Int(chunkSize)))
+                    Text(AppLocalization.format("settings.ai_library.tokens_format", locale: .autoupdatingCurrent, Int(chunkSize)))
                         .font(AppTypography.caption.monospacedDigit())
                         .foregroundStyle(Morandi.secondaryText)
                 }
@@ -111,7 +111,7 @@ public struct AILibraryIndexView: View {
                 HStack {
                     Text(String(localized: "settings.ai_library.overlap"))
                     Spacer()
-                    Text(AppLocalization.format("settings.ai_library.tokens_format", "%d tokens", Int(overlap)))
+                    Text(AppLocalization.format("settings.ai_library.tokens_format", locale: .autoupdatingCurrent, Int(overlap)))
                         .font(AppTypography.caption.monospacedDigit())
                         .foregroundStyle(Morandi.secondaryText)
                 }
@@ -146,7 +146,7 @@ public struct AILibraryIndexView: View {
                     .foregroundStyle(Morandi.powder)
                 Text(AppLocalization.format(
                     "settings.ai_library.storage_format",
-                    "Storage: %@",
+                    locale: .autoupdatingCurrent,
                     storageUsedText.isEmpty ? "0 KB" : storageUsedText
                 ))
                     .font(AppTypography.caption)
@@ -213,7 +213,7 @@ public struct AILibraryIndexView: View {
         let count = chunkCount(in: dir)
         indexStatusText = AppLocalization.format(
             "settings.ai_library.indexed_chunks_format",
-            "Indexed chunks: %d",
+            locale: .autoupdatingCurrent,
             count
         )
         storageUsedText = directorySizeFormatted(dir)

@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import PTFeatures
 import PTAIServices
+import PTCore
 
 @Suite("AIChatViewModel Extensions")
 struct AIChatViewModelExtTests {
@@ -82,6 +83,36 @@ struct AIChatViewModelExtTests {
         }
     }
 
+    enum MockToolExecutionError: LocalizedError {
+        case exploded
+
+        var errorDescription: String? {
+            "Mock tool exploded"
+        }
+    }
+
+    struct MockThrowingSafeTool: AITool {
+        static let name = "mock_throwing_tool"
+        static let description = "A safe mock tool that throws."
+        static let category = ToolCategory.utility
+        static let riskLevel = ToolRiskLevel.safe
+
+        func execute(arguments: [String : Any], context: ToolContext) async throws -> ToolResult {
+            throw MockToolExecutionError.exploded
+        }
+    }
+
+    struct MockJSONErrorTool: AITool {
+        static let name = "mock_json_error_tool"
+        static let description = "A safe mock tool that returns JSON errors."
+        static let category = ToolCategory.utility
+        static let riskLevel = ToolRiskLevel.safe
+
+        func execute(arguments: [String : Any], context: ToolContext) async throws -> ToolResult {
+            ToolResult(content: #"{"error":"missing query"}"#, isError: true)
+        }
+    }
+
     enum MockStreamError: LocalizedError {
         case failed
 
@@ -91,17 +122,22 @@ struct AIChatViewModelExtTests {
     }
 
     struct MockFailingStreamProvider: ChatModelProvider {
+        let error: Error
         let id: String = "mock-failing"
         let displayName: String = "Mock Failing Provider"
         let supportedCapabilities: Set<ModelCapability> = [.chat, .streaming]
 
+        init(error: Error = MockStreamError.failed) {
+            self.error = error
+        }
+
         func complete(_ request: ChatRequest) async throws -> ChatResponse {
-            throw MockStreamError.failed
+            throw error
         }
 
         func stream(_ request: ChatRequest) -> AsyncThrowingStream<ChatStreamChunk, Error> {
             AsyncThrowingStream { continuation in
-                continuation.finish(throwing: MockStreamError.failed)
+                continuation.finish(throwing: error)
             }
         }
     }
@@ -301,8 +337,41 @@ struct AIChatViewModelExtTests {
         let success = await vm.sendMessage("Hi")
 
         #expect(success == false)
-        #expect(vm.errorMessage == "Mock stream failure")
+        #expect(vm.errorMessage == localizedCatalogString("errors.ai.streaming_interrupted"))
         #expect(vm.messages.filter { $0.role == .user }.count == 1)
+        #expect(vm.messages.contains(where: { $0.role == .assistant }) == false)
+    }
+
+    @MainActor
+    @Test("sendMessage preserves localized provider failures when the provider supplies them")
+    func sendMessagePreservesLocalizedProviderFailure() async {
+        let runtime = AIChatViewModel.Runtime(
+            providers: [
+                .init(
+                    id: "mock-provider-error",
+                    displayName: "Mock Provider Error",
+                    models: [
+                        .init(
+                            id: "mock-model",
+                            displayName: "Mock Model",
+                            supportsThinking: false,
+                            supportsVision: false
+                        )
+                    ],
+                    makeProvider: {
+                        MockFailingStreamProvider(
+                            error: ProviderError.authenticationFailed("missing api key")
+                        )
+                    }
+                )
+            ]
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+
+        let success = await vm.sendMessage("Hi")
+
+        #expect(success == false)
+        #expect(vm.errorMessage == AppLocalization.string("errors.ai.no_api_key"))
         #expect(vm.messages.contains(where: { $0.role == .assistant }) == false)
     }
 
@@ -333,6 +402,34 @@ struct AIChatViewModelExtTests {
     }
 
     @MainActor
+    @Test("sendMessage includes file attachment placeholders using localized formatting")
+    func sendMessageIncludesFileAttachments() async throws {
+        let recorder = RequestRecorder()
+        let runtime = makeRuntime(
+            chunks: [
+                .init(delta: .text("done"), finishReason: .stop)
+            ],
+            requestObserver: { request in
+                Task { await recorder.record(request) }
+            }
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+        vm.addAttachment(.init(type: .file, name: "notes.pdf", data: Data()))
+
+        await vm.sendMessage("Analyze this")
+
+        let request = try #require(await recorder.lastRequest)
+        let userMessage = try #require(request.messages.last(where: { $0.role == .user }))
+        let localizedPlaceholder = localizedCatalogFormat("ai.chat.attachment_file_format", "notes.pdf")
+
+        #expect(userMessage.content.contains(where: {
+            guard case .text(let text) = $0 else { return false }
+            return text == localizedPlaceholder
+        }))
+        #expect(vm.attachments.isEmpty)
+    }
+
+    @MainActor
     @Test("safe tool calls execute through tool registry")
     func safeToolCallsExecute() async {
         let runtime = makeRuntime(
@@ -354,6 +451,56 @@ struct AIChatViewModelExtTests {
         #expect(toolMessages.first?.textContent?.contains("\"status\":\"ok\"") == true)
         #expect(vm.messages.last?.role == .assistant)
         #expect(vm.messages.last?.textContent == "Tool finished")
+    }
+
+    @MainActor
+    @Test("safe tool failures show only the localized summary")
+    func safeToolFailuresShowOnlyLocalizedSummary() async {
+        let runtime = makeRuntime(
+            chunks: [
+                .init(delta: .toolCall(index: 0, id: "tool-3", name: "mock_throwing_tool", arguments: "{\"value\":7}"), finishReason: .toolCalls)
+            ],
+            followupChunks: [
+                .init(delta: .text("Handled"), finishReason: .stop)
+            ],
+            extras: [MockThrowingSafeTool()]
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+
+        await vm.sendMessage("Use a failing tool")
+
+        let toolMessages = vm.messages.filter { $0.role == .tool }
+        #expect(toolMessages.count == 1)
+        let toolText = toolMessages.first?.textContent ?? ""
+        #expect(toolText == localizedCatalogString("errors.ai.tool_failed"))
+        #expect(toolText.contains("Mock tool exploded") == false)
+        #expect(vm.messages.last?.role == .assistant)
+        #expect(vm.messages.last?.textContent == "Handled")
+    }
+
+    @MainActor
+    @Test("JSON-shaped tool failures are hidden behind the localized summary")
+    func jsonToolFailuresHideMachinePayloads() async {
+        let runtime = makeRuntime(
+            chunks: [
+                .init(delta: .toolCall(index: 0, id: "tool-4", name: "mock_json_error_tool", arguments: "{\"query\":\"\"}"), finishReason: .toolCalls)
+            ],
+            followupChunks: [
+                .init(delta: .text("Handled"), finishReason: .stop)
+            ],
+            extras: [MockJSONErrorTool()]
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+
+        await vm.sendMessage("Use a failing tool")
+
+        let toolMessages = vm.messages.filter { $0.role == .tool }
+        #expect(toolMessages.count == 1)
+        let toolText = toolMessages.first?.textContent ?? ""
+        #expect(toolText == localizedCatalogString("errors.ai.tool_failed"))
+        #expect(toolText.contains("missing query") == false)
+        #expect(vm.messages.last?.role == .assistant)
+        #expect(vm.messages.last?.textContent == "Handled")
     }
 
     @MainActor
@@ -430,4 +577,39 @@ struct AIChatViewModelExtTests {
         #expect(toolNames.contains("resolve_cfi") == false)
         #expect(toolNames.contains("semantic_search_current_book") == false)
     }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: localizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

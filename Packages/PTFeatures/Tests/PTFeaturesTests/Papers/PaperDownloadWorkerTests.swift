@@ -91,6 +91,62 @@ struct PaperDownloadWorkerTests {
         #expect(statuses.last == .alreadyInBookshelf("Existing Paper"))
     }
 
+    @Test("maps generic download failures to a localized import fallback")
+    func mapsGenericDownloadFailure() async throws {
+        let plan = try #require(PaperDownloadPlan(detail: makeDetail()))
+        let worker = PaperDownloadWorker(
+            downloader: FailingPaperFileDownloader(error: PlainDownloadFailure.failed),
+            importer: RecordingPaperLibraryImporter(
+                result: .success(.placeholder(title: "Imported Paper", filePath: "/tmp/paper.pdf"))
+            )
+        )
+        let sink = DownloadStatusSink()
+
+        try await worker.run(plan: plan) { status in
+            await sink.append(status)
+        }
+
+        let statuses = await sink.snapshot()
+        let failedStatus = try #require(statuses.last)
+        if case let .failed(message, returnedPlan) = failedStatus {
+            #expect(message == AppLocalization.string("errors.import.failed"))
+            #expect(returnedPlan == plan)
+        } else {
+            Issue.record("Expected the worker to emit a localized failure state")
+        }
+    }
+
+    @Test("maps generic import failures to a localized import fallback")
+    func mapsGenericImportFailure() async throws {
+        let plan = try #require(PaperDownloadPlan(detail: makeDetail()))
+        let tempRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+
+        let downloadedFile = tempRoot.appendingPathComponent(plan.suggestedFilename)
+        try Data("paper".utf8).write(to: downloadedFile)
+
+        let worker = PaperDownloadWorker(
+            downloader: RecordingPaperFileDownloader(fileURL: downloadedFile, progressEvents: []),
+            importer: FailingPaperLibraryImporter(error: PlainImportFailure.failed)
+        )
+        let sink = DownloadStatusSink()
+
+        try await worker.run(plan: plan) { status in
+            await sink.append(status)
+        }
+
+        let statuses = await sink.snapshot()
+        let failedStatus = try #require(statuses.last)
+        if case let .failed(message, returnedPlan) = failedStatus {
+            #expect(message == AppLocalization.string("errors.import.failed"))
+            #expect(returnedPlan == plan)
+        } else {
+            Issue.record("Expected the worker to emit a localized import failure state")
+        }
+    }
+
     private func makeDetail() throws -> PaperTokDetail {
         let json = """
         {
@@ -147,5 +203,41 @@ private actor RecordingPaperLibraryImporter: PaperLibraryImporting {
 
     func importFile(from url: URL) async throws -> Book {
         try result.get()
+    }
+}
+
+private enum PlainDownloadFailure: Error {
+    case failed
+}
+
+private enum PlainImportFailure: Error {
+    case failed
+}
+
+private actor FailingPaperFileDownloader: PaperFileDownloading {
+    let error: Error
+
+    init(error: Error) {
+        self.error = error
+    }
+
+    func download(
+        from url: URL,
+        suggestedFilename: String,
+        onProgress: @escaping @Sendable (PaperTransferProgress) async -> Void
+    ) async throws -> URL {
+        throw error
+    }
+}
+
+private actor FailingPaperLibraryImporter: PaperLibraryImporting {
+    let error: Error
+
+    init(error: Error) {
+        self.error = error
+    }
+
+    func importFile(from url: URL) async throws -> Book {
+        throw error
     }
 }

@@ -202,7 +202,7 @@ public struct APIKeyListView: View {
                 .onDelete(perform: deleteKeys)
             }
         } header: {
-            Text(AppLocalization.format("settings.api_keys.count_format", "Keys (%d)", entries.count))
+            Text(AppLocalization.format("settings.api_keys.count_format", locale: .autoupdatingCurrent, entries.count))
         }
     }
 
@@ -402,7 +402,7 @@ struct APIKeyRow: View {
             if let d = entry.lastTestedAt {
                 return AppLocalization.format(
                     "settings.api_keys.status.ok_relative_format",
-                    "OK • %@",
+                    locale: .autoupdatingCurrent,
                     Self.relativeFormatter.localizedString(for: d, relativeTo: Date())
                 )
             }
@@ -410,14 +410,14 @@ struct APIKeyRow: View {
         case .failed:
             return AppLocalization.format(
                 "settings.api_keys.status.failed_count_format",
-                "Failed (%d)",
+                locale: .autoupdatingCurrent,
                 entry.failureCount
             )
         case .cooldown:
             if let until = entry.cooldownUntil {
                 return AppLocalization.format(
                     "settings.api_keys.status.cooldown_until_format",
-                    "Cooldown until %@",
+                    locale: .autoupdatingCurrent,
                     Self.timeFormatter.string(from: until)
                 )
             }
@@ -588,7 +588,7 @@ struct BulkImportSheet: View {
             } else {
                 name = AppLocalization.format(
                     "settings.api_keys.bulk_import_generated_name_format",
-                    "Key %d",
+                    locale: .autoupdatingCurrent,
                     i + 1
                 )
                 secret = parts[0]

@@ -1,5 +1,6 @@
 #if canImport(ReadiumShared) && canImport(ReadiumStreamer)
 import Foundation
+import PTCore
 import ReadiumShared
 import ReadiumStreamer
 
@@ -93,15 +94,30 @@ public enum EPUBOpenError: Error, LocalizedError {
     case invalidURL(String)
     case assetError(String)
     case streamerError(String)
+    case searchFailed(String)
 
     public var errorDescription: String? {
         switch self {
-        case .invalidURL(let url):
-            return "Invalid file URL: \(url)"
-        case .assetError(let msg):
-            return "EPUB asset retrieval failed: \(msg)"
-        case .streamerError(let msg):
-            return "EPUB open failed: \(msg)"
+        case .invalidURL, .assetError, .streamerError:
+            return AppLocalization.string(
+                "errors.reader.cannot_open",
+                value: "Couldn't open this book."
+            )
+        case .searchFailed:
+            return AppLocalization.string(
+                "errors.reader.search_failed",
+                value: "Couldn't search this book."
+            )
+        }
+    }
+
+    public var failureReason: String? {
+        switch self {
+        case .invalidURL(let detail),
+             .assetError(let detail),
+             .streamerError(let detail),
+             .searchFailed(let detail):
+            return detail
         }
     }
 }

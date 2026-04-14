@@ -20,19 +20,22 @@ enum IntentDatabaseAccess {
 
 /// Siri Shortcut: "Search books for [query] in PaperTok"
 struct SearchBooksIntent: AppIntent {
-    static let title: LocalizedStringResource = "Search Books in PaperTok"
+    static let title: LocalizedStringResource = "intent.search_books.title"
     static let description = IntentDescription(
-        "Searches the PaperTok library by title or author."
+        "intent.search_books.description"
     )
     static let openAppWhenRun = false
 
-    @Parameter(title: "Query")
+    @Parameter(title: "intent.parameter.query")
     var query: String
 
     func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<String> {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else {
-            return .result(value: "", dialog: "Please provide a search query.")
+            return .result(
+                value: "",
+                dialog: IntentDialog(stringLiteral: AppLocalization.string("intent.search_books.error.empty_query"))
+            )
         }
 
         let database = try IntentDatabaseAccess.open()
@@ -42,18 +45,27 @@ struct SearchBooksIntent: AppIntent {
         if books.isEmpty {
             return .result(
                 value: "",
-                dialog: "No books matched \"\(trimmed)\"."
+                dialog: IntentDialog(stringLiteral: AppLocalization.format(
+                    "intent.search_books.no_matches_format",
+                    locale: .autoupdatingCurrent,
+                    trimmed
+                ))
             )
         }
 
         let lines = books.prefix(10).map { book -> String in
             let id = book.id.map(String.init) ?? "?"
-            let author = book.author.isEmpty ? "Unknown" : book.author
+            let author = book.author.isEmpty ? AppLocalization.string("common.unknown") : book.author
             return "\(book.title) — \(author) [#\(id)]"
         }
         let summary = lines.joined(separator: "\n")
         let count = books.count
-        let dialog: IntentDialog = "Found \(count) book\(count == 1 ? "" : "s") matching \"\(trimmed)\"."
+        let dialog = IntentDialog(stringLiteral: AppLocalization.format(
+            "intent.search_books.dialog.results_format",
+            locale: .autoupdatingCurrent,
+            count,
+            trimmed
+        ))
         return .result(value: summary, dialog: dialog)
     }
 }

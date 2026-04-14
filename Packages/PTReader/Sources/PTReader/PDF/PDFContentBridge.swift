@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 #if canImport(PDFKit)
 import PDFKit
@@ -95,7 +96,7 @@ public final class PDFContentBridge: BookContentBridge {
                     limitedBy: text.endIndex
                 ) ?? text.endIndex
 
-                let pageLabel = document.page(at: pageIndex)?.label ?? "Page \(pageIndex + 1)"
+                let pageLabel = localizedPageLabel(for: pageIndex)
                 results.append(
                     ContentSearchResult(
                         text: String(text[range]),
@@ -215,7 +216,7 @@ public final class PDFContentBridge: BookContentBridge {
     private func collectOutline(_ outline: PDFOutline, level: Int, into chapters: inout [PDFChapter]) {
         for i in 0..<outline.numberOfChildren {
             guard let child = outline.child(at: i) else { continue }
-            let title = child.label ?? "Section \(i + 1)"
+            let title = child.label ?? localizedSectionTitle(for: i)
             let page = child.destination?.page
             let pageIndex = page.flatMap { document.index(for: $0) } ?? 0
             chapters.append(PDFChapter(title: title, startPage: pageIndex, endPage: pageIndex, level: level))
@@ -233,13 +234,46 @@ public final class PDFContentBridge: BookContentBridge {
         while start < pageCount {
             let end = min(start + pagesPerChapter - 1, pageCount - 1)
             chapters.append(PDFChapter(
-                title: "Pages \(start + 1)–\(end + 1)",
+                title: localizedPageRangeTitle(startPage: start, endPage: end),
                 startPage: start,
                 endPage: end
             ))
             start = end + 1
         }
         return chapters
+    }
+
+    private func localizedPageLabel(for pageIndex: Int) -> String {
+        if let label = document.page(at: pageIndex)?.label,
+           label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return label
+        }
+
+        return AppLocalization.format(
+            "reader.page_number_format",
+            fallback: "Page %d",
+            locale: .autoupdatingCurrent,
+            pageIndex + 1
+        )
+    }
+
+    private func localizedSectionTitle(for index: Int) -> String {
+        AppLocalization.format(
+            "reader.section_number_format",
+            fallback: "Section %d",
+            locale: .autoupdatingCurrent,
+            index + 1
+        )
+    }
+
+    private func localizedPageRangeTitle(startPage: Int, endPage: Int) -> String {
+        AppLocalization.format(
+            "reader.pages_range_format",
+            fallback: "Pages %d–%d",
+            locale: .autoupdatingCurrent,
+            startPage + 1,
+            endPage + 1
+        )
     }
 }
 #endif

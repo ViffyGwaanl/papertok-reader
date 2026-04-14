@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import PTFeatures
+import PTCore
 import PTReader
 
 @Suite("PDFReaderControlsViewModel")
@@ -89,8 +90,32 @@ struct PDFReaderControlsViewModelTests {
         await viewModel.performSearch()
 
         #expect(viewModel.searchResults.isEmpty)
-        #expect(viewModel.searchErrorMessage == MockPDFError.searchFailed.localizedDescription)
+        #expect(
+            viewModel.searchErrorMessage
+                == AppLocalization.string(
+                    "errors.reader.search_failed",
+                    value: "Couldn't search this book."
+                )
+        )
         #expect(bridge.recordedQueries == ["result", "broken"])
+    }
+
+    @Test("loadTableOfContents maps failures to a localized reader message")
+    func loadTableOfContentsCapturesFailures() async {
+        let bridge = MockPDFBookContentBridge()
+        bridge.tocError = MockPDFError.searchFailed
+        let viewModel = PDFReaderControlsViewModel(bridge: bridge)
+
+        await viewModel.loadTableOfContents()
+
+        #expect(viewModel.tocEntries.isEmpty)
+        #expect(
+            viewModel.tocErrorMessage
+                == AppLocalization.string(
+                    "reader.toc.load_failed",
+                    value: "Couldn't load the table of contents."
+                )
+        )
     }
 }
 
@@ -102,6 +127,7 @@ private final class MockPDFBookContentBridge: BookContentBridge, @unchecked Send
     let title: String = "Stub PDF"
     let tocEntries: [ChapterEntry]
     let stubSearchResults: [ContentSearchResult]
+    var tocError: Error?
     var searchError: Error?
     private(set) var recordedQueries: [String] = []
 
@@ -114,7 +140,12 @@ private final class MockPDFBookContentBridge: BookContentBridge, @unchecked Send
     }
 
     var tableOfContents: [ChapterEntry] {
-        get async throws { tocEntries }
+        get async throws {
+            if let tocError {
+                throw tocError
+            }
+            return tocEntries
+        }
     }
 
     func extractChapterContent(href: String) async throws -> String {

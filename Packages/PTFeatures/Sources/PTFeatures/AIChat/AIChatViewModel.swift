@@ -119,10 +119,7 @@ public final class AIChatViewModel {
             temperature: 0.7,
             maxTokens: 4096,
             topP: 1.0,
-            systemPrompt: AppLocalization.string(
-                "ai.chat.system_prompt_default",
-                value: "You are a helpful reading assistant."
-            ),
+            systemPrompt: aiChatLocalizedCatalogString("ai.chat.system_prompt_default"),
             perConversation: false
         )
     }
@@ -150,17 +147,16 @@ public final class AIChatViewModel {
     /// Identifier of the current conversation for persistence.
     public var conversationId: String?
     /// Title of the current conversation (derived from first user message).
-    public var conversationTitle: String = AppLocalization.string("ai.new_conversation", value: "New Chat")
+    public var conversationTitle: String = aiChatLocalizedCatalogString("ai.new_conversation")
 
     public init(
-        systemPrompt: String = AppLocalization.string(
-            "ai.chat.system_prompt_default",
-            value: "You are a helpful reading assistant."
-        ),
+        systemPrompt: String? = nil,
         runtime: Runtime = .default,
         persistenceService: ConversationPersistenceService? = nil
     ) {
-        self.conversationTree = ConversationTree(systemPrompt: systemPrompt)
+        self.conversationTree = ConversationTree(
+            systemPrompt: systemPrompt ?? aiChatLocalizedCatalogString("ai.chat.system_prompt_default")
+        )
         self.runtime = runtime
         self.persistenceService = persistenceService
         self.selectedProviderId = runtime.providers.first?.id ?? ""
@@ -183,24 +179,15 @@ public final class AIChatViewModel {
         guard trimmed.isEmpty == false else { return false }
         guard !isStreaming else { return false }
         guard let providerOption = providerOptions.first(where: { $0.id == selectedProviderId }) else {
-            errorMessage = AppLocalization.string(
-                "errors.ai.selected_provider_unavailable",
-                value: "Selected provider is unavailable."
-            )
+            errorMessage = aiChatLocalizedCatalogString("errors.ai.selected_provider_unavailable")
             return false
         }
         guard providerOption.models.contains(where: { $0.id == selectedModelId }) else {
-            errorMessage = AppLocalization.string(
-                "errors.ai.selected_model_unavailable",
-                value: "Selected model is unavailable."
-            )
+            errorMessage = aiChatLocalizedCatalogString("errors.ai.selected_model_unavailable")
             return false
         }
         guard pendingApprovals.isEmpty else {
-            errorMessage = AppLocalization.string(
-                "errors.ai.pending_tool_approvals",
-                value: "Resolve pending tool approvals before sending another message."
-            )
+            errorMessage = aiChatLocalizedCatalogString("errors.ai.pending_tool_approvals")
             return false
         }
 
@@ -218,13 +205,12 @@ public final class AIChatViewModel {
     }
 
     /// Clear conversation and start fresh.
-    public func clearConversation(systemPrompt: String = AppLocalization.string(
-        "ai.chat.system_prompt_default",
-        value: "You are a helpful reading assistant."
-    )) {
-        conversationTree = ConversationTree(systemPrompt: systemPrompt)
+    public func clearConversation(systemPrompt: String? = nil) {
+        conversationTree = ConversationTree(
+            systemPrompt: systemPrompt ?? aiChatLocalizedCatalogString("ai.chat.system_prompt_default")
+        )
         conversationId = nil
-        conversationTitle = AppLocalization.string("ai.new_conversation", value: "New Chat")
+        conversationTitle = aiChatLocalizedCatalogString("ai.new_conversation")
         endTurn()
         errorMessage = nil
         pendingApprovals.removeAll()
@@ -240,16 +226,13 @@ public final class AIChatViewModel {
         if conversationId == nil { conversationId = id }
 
         // Derive title from the first user message if still default
-        if conversationTitle == AppLocalization.string("ai.new_conversation", value: "New Chat") {
+        if conversationTitle == aiChatLocalizedCatalogString("ai.new_conversation") {
             if let firstUserMsg = messages.first(where: { $0.role == .user })?.textContent {
                 conversationTitle = String(firstUserMsg.prefix(60))
             }
         }
 
-        let systemPrompt = messages.first(where: { $0.role == .system })?.textContent ?? AppLocalization.string(
-            "ai.chat.system_prompt_default",
-            value: "You are a helpful reading assistant."
-        )
+        let systemPrompt = messages.first(where: { $0.role == .system })?.textContent ?? aiChatLocalizedCatalogString("ai.chat.system_prompt_default")
         let persisted = ConversationPersistenceService.PersistedConversation(
             id: id,
             title: conversationTitle,
@@ -385,10 +368,9 @@ public final class AIChatViewModel {
                 return
             }
             guard currentTurnRoundCount < Self.maxToolRoundsPerTurn else {
-                errorMessage = AppLocalization.format(
+                errorMessage = aiChatLocalizedCatalogFormat(
                     "errors.ai.tool_round_limit_format",
-                    "Stopped after %d tool rounds to avoid an infinite loop.",
-                    Self.maxToolRoundsPerTurn
+                    Int64(Self.maxToolRoundsPerTurn)
                 )
                 endTurn()
                 return
@@ -423,7 +405,14 @@ public final class AIChatViewModel {
                 }
             } catch {
                 endTurn()
-                errorMessage = error.localizedDescription
+                if error is ProviderError {
+                    errorMessage = AppLocalization.userFacingErrorMessage(
+                        for: error,
+                        fallbackKey: "errors.ai.streaming_interrupted"
+                    )
+                } else {
+                    errorMessage = aiChatLocalizedCatalogString("errors.ai.streaming_interrupted")
+                }
                 return
             }
 
@@ -488,9 +477,8 @@ public final class AIChatViewModel {
             guard let tool = runtime.toolRegistry.tool(named: toolCall.name) else {
                 conversationTree.append(.toolResult(
                     toolCallId: toolCall.id,
-                    content: AppLocalization.format(
+                    content: aiChatLocalizedCatalogFormat(
                         "errors.ai.unknown_tool_format",
-                        "Error: Unknown tool '%@'",
                         toolCall.name
                     )
                 ))
@@ -520,17 +508,18 @@ public final class AIChatViewModel {
         do {
             let results = try await orchestrator.execute(calls: safeToolCalls, context: runtime.toolContext)
             for result in results {
-                conversationTree.append(.toolResult(toolCallId: result.toolCallId, content: result.content))
+                conversationTree.append(
+                    .toolResult(
+                        toolCallId: result.toolCallId,
+                        content: userFacingToolResultContent(for: result)
+                    )
+                )
             }
         } catch {
             for toolCall in safeToolCalls {
                 conversationTree.append(.toolResult(
                     toolCallId: toolCall.id,
-                    content: AppLocalization.format(
-                        "errors.ai.tool_result_error_format",
-                        "Error: %@",
-                        error.localizedDescription
-                    )
+                    content: toolFailureContent(detail: AppLocalization.errorDetail(error))
                 ))
             }
         }
@@ -549,13 +538,13 @@ public final class AIChatViewModel {
 
         let resultContent: String
         if isApproved == false {
-            resultContent = AppLocalization.string("errors.ai.tool_denied", value: "Denied by user")
+            resultContent = aiChatLocalizedCatalogString("errors.ai.tool_denied")
         } else if let tool = runtime.toolRegistry.tool(named: approval.toolName) {
-            resultContent = await executeToolCall(tool, toolCallId: approval.toolCallId, argumentsJSON: approval.arguments)
+            let result = await executeToolCall(tool, toolCallId: approval.toolCallId, argumentsJSON: approval.arguments)
+            resultContent = userFacingToolResultContent(for: result)
         } else {
-            resultContent = AppLocalization.format(
+            resultContent = aiChatLocalizedCatalogFormat(
                 "errors.ai.unknown_tool_format",
-                "Error: Unknown tool '%@'",
                 approval.toolName
             )
         }
@@ -571,18 +560,32 @@ public final class AIChatViewModel {
         }
     }
 
-    private func executeToolCall(_ tool: any AITool, toolCallId: String, argumentsJSON: String) async -> String {
+    private func executeToolCall(_ tool: any AITool, toolCallId: String, argumentsJSON: String) async -> ToolResult {
         let arguments = Self.parseArguments(argumentsJSON)
         do {
             let result = try await tool.execute(arguments: arguments, context: runtime.toolContext)
-            return result.content
+            return ToolResult(toolCallId: toolCallId, content: result.content, isError: result.isError)
         } catch {
-            return AppLocalization.format(
-                "errors.ai.tool_result_error_format",
-                "Error: %@",
-                error.localizedDescription
+            return ToolResult(
+                toolCallId: toolCallId,
+                content: AppLocalization.errorDetail(error),
+                isError: true
             )
         }
+    }
+
+    private func userFacingToolResultContent(for result: ToolResult) -> String {
+        guard result.isError else { return result.content }
+        return toolFailureContent(detail: result.content)
+    }
+
+    private func toolFailureContent(detail: String?) -> String {
+        let summary = aiChatLocalizedCatalogString("errors.ai.tool_failed")
+        // Tool execution layers still emit raw English strings and machine-oriented
+        // JSON payloads. Until we have an explicit "safe to show" contract for tool
+        // error details, keep the user-visible bubble summary-only.
+        _ = detail
+        return summary
     }
 
     private static func parseArguments(_ json: String) -> [String: Any] {
@@ -602,7 +605,7 @@ public final class AIChatViewModel {
                 let mediaType = Self.mediaType(for: attachment.name)
                 parts.append(.imageBase64(data: attachment.data.base64EncodedString(), mediaType: mediaType))
             case .file:
-                parts.append(.text("[Attached file: \(attachment.name)]"))
+                parts.append(.text(aiChatLocalizedCatalogFormat("ai.chat.attachment_file_format", attachment.name)))
             }
         }
 
@@ -670,4 +673,39 @@ public final class AIChatViewModel {
             return "image/png"
         }
     }
+}
+
+private func aiChatLocalizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: aiChatLocalizedCatalogBundle(), locale: locale)
+}
+
+private func aiChatLocalizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: aiChatLocalizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func aiChatLocalizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

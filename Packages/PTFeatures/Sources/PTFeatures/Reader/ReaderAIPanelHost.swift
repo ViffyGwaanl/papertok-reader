@@ -318,7 +318,7 @@ public struct ReaderAIMinimizedBar: View {
             }
             return AppLocalization.format(
                 "reader.ai_panel.pending_approvals_format",
-                "AI needs %d approvals",
+                locale: .autoupdatingCurrent,
                 count
             )
         }

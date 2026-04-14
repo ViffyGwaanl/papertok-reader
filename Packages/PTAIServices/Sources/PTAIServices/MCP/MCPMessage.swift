@@ -185,9 +185,34 @@ public struct AnyCodable: Codable, Sendable, Equatable {
     }
 
     public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
-        // Best-effort equality via JSON round-trip
-        guard let lData = try? JSONEncoder().encode(lhs),
-              let rData = try? JSONEncoder().encode(rhs) else { return false }
-        return lData == rData
+        areEqual(lhs.value, rhs.value)
+    }
+
+    private static func areEqual(_ lhs: Any, _ rhs: Any) -> Bool {
+        switch (lhs, rhs) {
+        case (_ as NSNull, _ as NSNull):
+            return true
+        case let (lhs as Bool, rhs as Bool):
+            return lhs == rhs
+        case let (lhs as Int, rhs as Int):
+            return lhs == rhs
+        case let (lhs as Double, rhs as Double):
+            return lhs == rhs
+        case let (lhs as String, rhs as String):
+            return lhs == rhs
+        case let (lhs as [Any], rhs as [Any]):
+            guard lhs.count == rhs.count else { return false }
+            return zip(lhs, rhs).allSatisfy(areEqual)
+        case let (lhs as [String: Any], rhs as [String: Any]):
+            guard lhs.count == rhs.count else { return false }
+            for (key, lhsValue) in lhs {
+                guard let rhsValue = rhs[key], areEqual(lhsValue, rhsValue) else {
+                    return false
+                }
+            }
+            return true
+        default:
+            return false
+        }
     }
 }

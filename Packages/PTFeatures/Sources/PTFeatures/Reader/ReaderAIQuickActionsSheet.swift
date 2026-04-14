@@ -140,30 +140,12 @@ public enum ReaderAIQuickAction: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    private var fallbackTitle: String {
-        switch self {
-        case .explain: return "Explain"
-        case .translate: return "Translate"
-        case .summarize: return "Summarize"
-        case .defineVocabulary: return "Define"
-        }
-    }
-
-    private var fallbackSubtitle: String {
-        switch self {
-        case .explain: return "Get a clear explanation of this passage"
-        case .translate: return "Translate to your preferred language"
-        case .summarize: return "Get a concise summary of the key points"
-        case .defineVocabulary: return "Look up word definitions and usage"
-        }
-    }
-
     public var title: String {
-        AppLocalization.string(titleKey, value: fallbackTitle)
+        localizedCatalogString(titleKey)
     }
 
     public var subtitle: String {
-        AppLocalization.string(subtitleKey, value: fallbackSubtitle)
+        localizedCatalogString(subtitleKey)
     }
 
     public var systemImage: String {
@@ -177,24 +159,17 @@ public enum ReaderAIQuickAction: String, CaseIterable, Identifiable, Sendable {
 
     public func prompt(selectedText: String, bookTitle: String, chapterTitle: String) -> String {
         let hasChapter = !chapterTitle.isEmpty
-        let format = AppLocalization.string(
-            promptKey(hasChapter: hasChapter),
-            value: promptFallback(hasChapter: hasChapter)
-        )
-
         if hasChapter {
-            return String(
-                format: format,
-                locale: .autoupdatingCurrent,
+            return localizedCatalogFormat(
+                promptKey(hasChapter: true),
                 bookTitle,
                 chapterTitle,
                 selectedText
             )
         }
 
-        return String(
-            format: format,
-            locale: .autoupdatingCurrent,
+        return localizedCatalogFormat(
+            promptKey(hasChapter: false),
             bookTitle,
             selectedText
         )
@@ -213,24 +188,39 @@ public enum ReaderAIQuickAction: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    private func promptFallback(hasChapter: Bool) -> String {
-        switch (self, hasChapter) {
-        case (.explain, true):
-            return "Please explain the following passage from \"%@\", chapter \"%@\":\n\n\"%@\""
-        case (.explain, false):
-            return "Please explain the following passage from \"%@\":\n\n\"%@\""
-        case (.translate, true):
-            return "Please translate the following passage from \"%@\", chapter \"%@\" into English (or the user's preferred language):\n\n\"%@\""
-        case (.translate, false):
-            return "Please translate the following passage from \"%@\" into English (or the user's preferred language):\n\n\"%@\""
-        case (.summarize, true):
-            return "Please summarize the key points of this passage from \"%@\", chapter \"%@\":\n\n\"%@\""
-        case (.summarize, false):
-            return "Please summarize the key points of this passage from \"%@\":\n\n\"%@\""
-        case (.defineVocabulary, true):
-            return "Please define and explain the vocabulary in this passage from \"%@\", chapter \"%@\":\n\n\"%@\""
-        case (.defineVocabulary, false):
-            return "Please define and explain the vocabulary in this passage from \"%@\":\n\n\"%@\""
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: localizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
         }
     }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

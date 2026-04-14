@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import PTFeatures
+import PTCore
 import PTReader
 
 @Suite("EPUBReaderControlsViewModel")
@@ -89,8 +90,67 @@ struct EPUBReaderControlsViewModelTests {
         await viewModel.performSearch()
 
         #expect(viewModel.searchResults.isEmpty)
-        #expect(viewModel.searchErrorMessage == MockError.searchFailed.localizedDescription)
+        #expect(
+            viewModel.searchErrorMessage
+                == AppLocalization.string(
+                    "errors.reader.search_failed",
+                    value: "Couldn't search this book."
+                )
+        )
         #expect(bridge.recordedQueries == ["result", "broken"])
+    }
+
+    @Test("performSearch prefers the localized fallback over raw bridge diagnostics")
+    func performSearchPrefersFallbackOverLocalizedBridgeError() async {
+        let bridge = MockBookContentBridge()
+        bridge.searchError = LocalizedBridgeMockError.failed
+        let viewModel = EPUBReaderControlsViewModel(bridge: bridge)
+        viewModel.searchQuery = "broken"
+
+        await viewModel.performSearch()
+
+        #expect(
+            viewModel.searchErrorMessage
+                == AppLocalization.string(
+                    "errors.reader.search_failed",
+                    value: "Couldn't search this book."
+                )
+        )
+    }
+
+    @Test("loadTableOfContents maps failures to a localized reader message")
+    func loadTableOfContentsCapturesFailures() async {
+        let bridge = MockBookContentBridge()
+        bridge.tocError = MockError.searchFailed
+        let viewModel = EPUBReaderControlsViewModel(bridge: bridge)
+
+        await viewModel.loadTableOfContents()
+
+        #expect(viewModel.tocEntries.isEmpty)
+        #expect(
+            viewModel.tocErrorMessage
+                == AppLocalization.string(
+                    "reader.toc.load_failed",
+                    value: "Couldn't load the table of contents."
+                )
+        )
+    }
+
+    @Test("loadTableOfContents prefers the localized fallback over raw bridge diagnostics")
+    func loadTableOfContentsPrefersFallbackOverLocalizedBridgeError() async {
+        let bridge = MockBookContentBridge()
+        bridge.tocError = LocalizedBridgeMockError.failed
+        let viewModel = EPUBReaderControlsViewModel(bridge: bridge)
+
+        await viewModel.loadTableOfContents()
+
+        #expect(
+            viewModel.tocErrorMessage
+                == AppLocalization.string(
+                    "reader.toc.load_failed",
+                    value: "Couldn't load the table of contents."
+                )
+        )
     }
 }
 
@@ -98,10 +158,19 @@ private enum MockError: Error {
     case searchFailed
 }
 
+private enum LocalizedBridgeMockError: LocalizedError {
+    case failed
+
+    var errorDescription: String? {
+        "Search failed: underlying English diagnostics"
+    }
+}
+
 private final class MockBookContentBridge: BookContentBridge, @unchecked Sendable {
     let title: String = "Stub EPUB"
     let tocEntries: [ChapterEntry]
     let stubSearchResults: [ContentSearchResult]
+    var tocError: Error?
     var searchError: Error?
     private(set) var recordedQueries: [String] = []
 
@@ -114,7 +183,12 @@ private final class MockBookContentBridge: BookContentBridge, @unchecked Sendabl
     }
 
     var tableOfContents: [ChapterEntry] {
-        get async throws { tocEntries }
+        get async throws {
+            if let tocError {
+                throw tocError
+            }
+            return tocEntries
+        }
     }
 
     func extractChapterContent(href: String) async throws -> String {

@@ -112,7 +112,7 @@ public struct PapersView: View {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 52))
                 .foregroundStyle(Morandi.tertiaryText)
-            Text(viewModel.error != nil ? "Failed to Load" : "No Papers")
+            Text(viewModel.error != nil ? "papers.empty.failed_to_load" : "papers.empty.no_papers")
                 .font(AppTypography.title3)
                 .foregroundStyle(Morandi.secondaryText)
             if let error = viewModel.error {

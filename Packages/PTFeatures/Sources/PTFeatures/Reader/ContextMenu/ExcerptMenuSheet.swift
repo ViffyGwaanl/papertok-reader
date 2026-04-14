@@ -77,7 +77,7 @@ struct ExcerptMenuSheet: View {
                     .font(AppTypography.caption.italic())
                     .foregroundStyle(Morandi.secondaryText)
                 if !author.isEmpty {
-                    Text("by \(author)")
+                    Text(authorByline)
                         .font(AppTypography.caption)
                         .foregroundStyle(Morandi.secondaryText)
                 }
@@ -123,7 +123,14 @@ struct ExcerptMenuSheet: View {
             if let renderedImage {
                 ShareLink(
                     item: renderedImage,
-                    preview: SharePreview("Excerpt from \(bookTitle)", image: renderedImage)
+                    preview: SharePreview(
+                        AppLocalization.format(
+                            "reader.excerpt_share_preview_format",
+                            locale: .autoupdatingCurrent,
+                            bookTitle
+                        ),
+                        image: renderedImage
+                    )
                 ) {
                     Label(String(localized: "reader.share_image_card"), systemImage: "photo.on.rectangle.angled")
                         .frame(maxWidth: .infinity)
@@ -154,6 +161,10 @@ struct ExcerptMenuSheet: View {
             text += ", \(author)"
         }
         return text
+    }
+
+    private var authorByline: String {
+        AppLocalization.format("reader.author_byline_format", locale: .autoupdatingCurrent, author)
     }
 
     private func copyToClipboard() {
@@ -217,7 +228,7 @@ private struct ExcerptImageCard: View {
                     .foregroundStyle(Color(hex: "8A8A8E"))
 
                 if !author.isEmpty {
-                    Text("by \(author)")
+                    Text(AppLocalization.format("reader.author_byline_format", locale: .autoupdatingCurrent, author))
                         .font(.system(size: 14, design: .serif))
                         .foregroundStyle(Color(hex: "B0B0B4"))
                 }

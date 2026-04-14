@@ -1,10 +1,32 @@
 import Foundation
 import GRDB
 import Testing
+import PTCore
 @testable import PaperTokReader
 
 @Suite("FlutterMigrationService")
 struct FlutterMigrationServiceTests {
+    @MainActor
+    @Test("generic migration failures fall back to the localized summary message")
+    func genericMigrationFailuresUseFallbackSummary() {
+        let service = FlutterMigrationService()
+
+        let message = service.migrationErrorMessage(for: PlainMigrationError.failed)
+
+        #expect(message == AppLocalization.string("migration.error.failed", bundle: .main))
+    }
+
+    @MainActor
+    @Test("localized migration failures preserve user-facing detail in the catalog format")
+    func localizedMigrationFailuresPreserveDetail() {
+        let service = FlutterMigrationService()
+
+        let message = service.migrationErrorMessage(for: LocalizedMigrationError.failed)
+
+        #expect(message.contains("Readable migration detail"))
+        #expect(message != AppLocalization.string("migration.error.failed", bundle: .main))
+    }
+
     @Test("legacy migration accepts older schema versions when required tables are present")
     func acceptsOlderSchemaVersions() throws {
         let databaseURL = try makeLegacyDatabase(
@@ -76,5 +98,17 @@ struct FlutterMigrationServiceTests {
         }
 
         return databaseURL
+    }
+}
+
+private enum PlainMigrationError: Error {
+    case failed
+}
+
+private enum LocalizedMigrationError: LocalizedError {
+    case failed
+
+    var errorDescription: String? {
+        "Readable migration detail"
     }
 }

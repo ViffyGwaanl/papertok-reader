@@ -15,8 +15,8 @@ public struct AIProviderCenterView: View {
 
     private static let customProvidersKey = "ai_custom_providers"
 
-    private func localized(_ key: String, _ fallback: String) -> String {
-        AppLocalization.string(key, value: fallback)
+    private func localized(_ key: String) -> String {
+        AppLocalization.string(key)
     }
 
     @MainActor
@@ -41,7 +41,7 @@ public struct AIProviderCenterView: View {
             addCustomSheet
         }
         .confirmationDialog(
-            localized("settings.delete_custom_provider.confirm", "Delete this custom provider?"),
+            localized("settings.ai_provider.delete_confirmation"),
             isPresented: Binding(
                 get: { pendingDeleteOffsets != nil },
                 set: { if !$0 { pendingDeleteOffsets = nil } }
@@ -173,7 +173,7 @@ public struct AIProviderCenterView: View {
                 Text(entry.displayName)
                     .font(AppTypography.body.weight(.medium))
                     .foregroundStyle(Morandi.primaryText)
-                Text(entry.baseURL.isEmpty ? localized("ai.providers.no_base_url", "No base URL") : entry.baseURL)
+                Text(entry.baseURL.isEmpty ? localized("ai.providers.no_base_url") : entry.baseURL)
                     .font(AppTypography.caption2)
                     .foregroundStyle(Morandi.secondaryText)
                     .lineLimit(1)
@@ -188,7 +188,7 @@ public struct AIProviderCenterView: View {
         NavigationStack {
             Form {
                 Section(String(localized: "common.name")) {
-                    TextField(localized("ai.providers.custom_name_hint", "e.g. MyGateway"), text: $newCustomName)
+                    TextField(localized("ai.providers.custom_name_placeholder"), text: $newCustomName)
                         #if os(iOS)
                         .textInputAutocapitalization(.words)
                         #endif
@@ -225,17 +225,38 @@ public struct AIProviderCenterView: View {
         let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
         let key = "ai_model_for_\(provider.rawValue)"
         if let saved = defaults.string(forKey: key), !saved.isEmpty { return saved }
-        return ProviderFactory.defaultModels(for: provider).first ?? "(default)"
+        return ProviderFactory.defaultModels(for: provider).first ?? "(\(localized("common.default")))"
     }
 
     private func capabilityBadges(for provider: SupportedProvider) -> [String] {
         switch provider {
-        case .openai: return ["CHAT", "TOOLS", "VISION", "STREAM"]
-        case .anthropic: return ["CHAT", "TOOLS", "VISION", "THINK"]
-        case .gemini: return ["CHAT", "TOOLS", "VISION"]
-        case .azure: return ["CHAT", "TOOLS"]
-        case .volcengine: return ["CHAT", "TOOLS"]
-        case .custom: return ["CHAT"]
+        case .openai:
+            return [
+                localized("settings.ai_provider.capability.chat"),
+                localized("settings.ai_provider.capability.tools"),
+                localized("settings.ai_provider.capability.vision"),
+                localized("settings.ai_provider.capability.stream"),
+            ]
+        case .anthropic:
+            return [
+                localized("settings.ai_provider.capability.chat"),
+                localized("settings.ai_provider.capability.tools"),
+                localized("settings.ai_provider.capability.vision"),
+                localized("settings.ai_provider.capability.think"),
+            ]
+        case .gemini:
+            return [
+                localized("settings.ai_provider.capability.chat"),
+                localized("settings.ai_provider.capability.tools"),
+                localized("settings.ai_provider.capability.vision"),
+            ]
+        case .azure, .volcengine:
+            return [
+                localized("settings.ai_provider.capability.chat"),
+                localized("settings.ai_provider.capability.tools"),
+            ]
+        case .custom:
+            return [localized("settings.ai_provider.capability.chat")]
         }
     }
 

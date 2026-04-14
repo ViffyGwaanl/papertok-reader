@@ -42,9 +42,9 @@ struct PaperDownloadPlan: Equatable, Sendable {
     var buttonTitle: String {
         switch format {
         case .epub:
-            return AppLocalization.string("papers.import_epub", value: "Import EPUB")
+            return AppLocalization.string("papers.import_epub")
         case .pdf:
-            return AppLocalization.string("papers.import_pdf", value: "Import PDF")
+            return AppLocalization.string("papers.import_pdf")
         }
     }
 
@@ -190,12 +190,9 @@ public struct PaperDownloadButton: View {
         switch phase {
         case .downloading:
             return progress?.statusText
-                ?? AppLocalization.string("papers.download.starting", value: "Starting…")
+                ?? AppLocalization.string("papers.download.starting")
         case .importing:
-            return AppLocalization.string(
-                "papers.download.saving_to_bookshelf",
-                value: "Saving to Bookshelf…"
-            )
+            return AppLocalization.string("papers.download.saving_to_bookshelf")
         }
     }
 }

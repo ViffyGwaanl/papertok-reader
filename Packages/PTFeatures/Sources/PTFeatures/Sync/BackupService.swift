@@ -67,7 +67,10 @@ public final class BackupService {
                 try FileManager.default.copyItem(at: zippedURL, to: zipURL)
                 zipResult = zipURL
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = AppLocalization.userFacingErrorMessage(
+                    for: error,
+                    fallbackKey: "errors.backup.zip_failed"
+                )
             }
         }
 
@@ -176,15 +179,9 @@ public enum BackupError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .zipFailed:
-            return AppLocalization.string(
-                "errors.backup.zip_failed",
-                value: "Failed to create backup archive"
-            )
+            return AppLocalization.string("errors.backup.zip_failed")
         case .unzipFailed:
-            return AppLocalization.string(
-                "errors.backup.unzip_failed",
-                value: "Failed to extract backup archive"
-            )
+            return AppLocalization.string("errors.backup.unzip_failed")
         }
     }
 }

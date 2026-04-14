@@ -55,12 +55,14 @@
 		7BCF59D568B04176DFC5DD4B /* SharedInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F0E1E59821837D32715C07 /* SharedInbox.swift */; };
 		7EA342E5303FADA47A061F4A /* SharedInboxImportProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C90F323C19C9E5544390796 /* SharedInboxImportProcessor.swift */; };
 		86B5467224AE355C90C36FAD /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */; };
+		A1B2C3D4E5F60718293A4B5C /* AppShortcuts.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5E /* AppShortcuts.xcstrings */; };
 		8B60761111A8FF95C6D6E335 /* OpenBookIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */; };
 		8E6CD2F23869E4732291A5D8 /* IntentsDonationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 470BE643524099D5A9B2EF19 /* IntentsDonationService.swift */; };
 		949D6456087846D96E750C0F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 49A45489E1D974DD57F2F390 /* Assets.xcassets */; };
 		9AD344AB187D655D555AA241 /* ShortcutsCallbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD010CB82800CD591F6A0D8 /* ShortcutsCallbackService.swift */; };
 		9B942382483B33E11E5593E5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */; };
 		9F13B45058E94526B5F9A918 /* FlutterMigrationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2010F60CC1F5766BE1D25ED1 /* FlutterMigrationServiceTests.swift */; };
+		A2F4D860C1A64D6AA1234BCD /* UserFacingLocalizationMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F4D860C1A64D6AA1234BCC /* UserFacingLocalizationMappingTests.swift */; };
 		A03AB264843586B50A52AE4E /* CreateNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FF96121EA2D98AA565F0D8F /* CreateNoteIntent.swift */; };
 		A195F1431284E06DFB467E0E /* SharedInboxImportProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C90F323C19C9E5544390796 /* SharedInboxImportProcessor.swift */; };
 		A29481DDFB0E9C571C3DE7D5 /* AppDatabaseToolContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AB1088870E1CE5C05BA455B /* AppDatabaseToolContext.swift */; };
@@ -88,6 +90,7 @@
 		D50DA2C45D28AEC7F8A87F98 /* AskAIIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */; };
 		D8C42A5C3B426F4EC9C08B6E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */; };
 		D9491E98E77F122790D3EB3A /* HardcodedEnglishAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDCE10A37CE481EAF449C2E /* HardcodedEnglishAuditTests.swift */; };
+		A1B2C3D4E5F60718293A4B5D /* AppShortcuts.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5E /* AppShortcuts.xcstrings */; };
 		E0BD0C8965C2FC139407BD03 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */; };
 		E4B864DE42AF2E4D43265F94 /* PendingAIRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F41C91CE13FFC7FCD99BDD7B /* PendingAIRequestStore.swift */; };
 		EACA1559B18E83166994FFAE /* SearchBooksIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3CFE493D1829B44151BABC8 /* SearchBooksIntent.swift */; };
@@ -116,10 +119,12 @@
 		03E036FB3ECF195A23BBE74B /* macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = macOS.entitlements; sourceTree = "<group>"; };
 		06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperTokReaderApp.swift; sourceTree = "<group>"; };
 		07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5E /* AppShortcuts.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppShortcuts.xcstrings; sourceTree = "<group>"; };
 		1318196DCF4395B32822A498 /* SharedInboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInboxTests.swift; sourceTree = "<group>"; };
 		14C563F1A2ACF9DF6A869C6D /* SendMessageIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendMessageIntent.swift; sourceTree = "<group>"; };
 		1AB1088870E1CE5C05BA455B /* AppDatabaseToolContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabaseToolContext.swift; sourceTree = "<group>"; };
 		2010F60CC1F5766BE1D25ED1 /* FlutterMigrationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationServiceTests.swift; sourceTree = "<group>"; };
+		A2F4D860C1A64D6AA1234BCC /* UserFacingLocalizationMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingLocalizationMappingTests.swift; sourceTree = "<group>"; };
 		26308E8B6FC711A4671FB64A /* PendingShortcutQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShortcutQueue.swift; sourceTree = "<group>"; };
 		2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationProgressView.swift; sourceTree = "<group>"; };
 		2C34172A3A09A5F7C29320D3 /* APIKeyMigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyMigrationService.swift; sourceTree = "<group>"; };
@@ -237,6 +242,7 @@
 			isa = PBXGroup;
 			children = (
 				49A45489E1D974DD57F2F390 /* Assets.xcassets */,
+				A1B2C3D4E5F60718293A4B5E /* AppShortcuts.xcstrings */,
 				07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */,
 			);
 			path = Resources;
@@ -336,6 +342,7 @@
 				2010F60CC1F5766BE1D25ED1 /* FlutterMigrationServiceTests.swift */,
 				6FDCE10A37CE481EAF449C2E /* HardcodedEnglishAuditTests.swift */,
 				7AD25A8251359DEFBB2F5C62 /* MigrationLocalizationCatalogTests.swift */,
+				A2F4D860C1A64D6AA1234BCC /* UserFacingLocalizationMappingTests.swift */,
 				D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */,
 				7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */,
 				1318196DCF4395B32822A498 /* SharedInboxTests.swift */,
@@ -587,6 +594,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				949D6456087846D96E750C0F /* Assets.xcassets in Resources */,
+				A1B2C3D4E5F60718293A4B5D /* AppShortcuts.xcstrings in Resources */,
 				E0BD0C8965C2FC139407BD03 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -596,6 +604,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F05D22F0737E20049C96F4EB /* Assets.xcassets in Resources */,
+				A1B2C3D4E5F60718293A4B5C /* AppShortcuts.xcstrings in Resources */,
 				86B5467224AE355C90C36FAD /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -613,6 +622,7 @@
 				9F13B45058E94526B5F9A918 /* FlutterMigrationServiceTests.swift in Sources */,
 				D9491E98E77F122790D3EB3A /* HardcodedEnglishAuditTests.swift in Sources */,
 				C3F6F2794B9026030D94FE55 /* MigrationLocalizationCatalogTests.swift in Sources */,
+				A2F4D860C1A64D6AA1234BCD /* UserFacingLocalizationMappingTests.swift in Sources */,
 				CACE6E07DBADD3D4AFC654C4 /* PendingAIRequestStoreTests.swift in Sources */,
 				D4A6F01E2782F86D6A82FDE2 /* ShareExtensionInfoPlistTests.swift in Sources */,
 				2A37EB434D4F9559725B039F /* ShareHandlerTests.swift in Sources */,

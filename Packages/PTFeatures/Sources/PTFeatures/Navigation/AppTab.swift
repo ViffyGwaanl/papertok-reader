@@ -23,19 +23,8 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    private var fallbackTitle: String {
-        switch self {
-        case .papers: return "Papers"
-        case .bookshelf: return "Bookshelf"
-        case .notes: return "Notes"
-        case .statistics: return "Statistics"
-        case .ai: return "AI"
-        case .settings: return "Settings"
-        }
-    }
-
     public var title: String {
-        AppLocalization.string(titleKey, value: fallbackTitle)
+        AppLocalization.string(titleKey)
     }
 
     public var icon: String {

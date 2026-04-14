@@ -18,25 +18,25 @@ public struct ReadingDetailSettingsView: View {
     private static let themes: [ThemeOption] = [
         ThemeOption(
             id: "light",
-            name: AppLocalization.string("reader.appearance.theme_light", value: "Light"),
+            name: AppLocalization.string("reader.appearance.theme_light"),
             bg: Color(hex: "FAF8F5"),
             fg: Color(hex: "343434")
         ),
         ThemeOption(
             id: "sepia",
-            name: AppLocalization.string("reader.appearance.theme_sepia", value: "Sepia"),
+            name: AppLocalization.string("reader.appearance.theme_sepia"),
             bg: Color(hex: "F4ECD8"),
             fg: Color(hex: "5B4636")
         ),
         ThemeOption(
             id: "dark",
-            name: AppLocalization.string("reader.appearance.theme_dark", value: "Dark"),
+            name: AppLocalization.string("reader.appearance.theme_dark"),
             bg: Color(hex: "1A1A2E"),
             fg: Color(hex: "E8E4E0")
         ),
         ThemeOption(
             id: "custom",
-            name: AppLocalization.string("reader.appearance.theme_custom", value: "Custom"),
+            name: AppLocalization.string("reader.appearance.theme_custom"),
             bg: Color(hex: "EFEFF4"),
             fg: Color(hex: "343434")
         ),
@@ -130,14 +130,11 @@ public struct ReadingDetailSettingsView: View {
             "Menlo",
             "Courier New",
         ]
-        return unique(BookStyle.preferredFontFamilies() + extras)
+        return unique(BookStyle.preferredFontFamilies(locale: .autoupdatingCurrent) + extras)
     }
 
     private var previewSentence: String {
-        AppLocalization.string(
-            "reader.appearance.preview_sentence",
-            value: "The quick brown fox jumps over the lazy dog."
-        )
+        AppLocalization.string("reader.appearance.preview_sentence")
     }
 
     private var indentedPreviewSentence: String {
@@ -148,14 +145,14 @@ public struct ReadingDetailSettingsView: View {
 
     private var fontSection: some View {
         Section(String(localized: "reader.appearance.font")) {
-            Picker(AppLocalization.string("reader.appearance.family", value: "Family"), selection: $viewModel.defaultFontFamily) {
+            Picker(AppLocalization.string("reader.appearance.family"), selection: $viewModel.defaultFontFamily) {
                 ForEach(systemFontFamilies, id: \.self) { Text($0).tag($0) }
             }
             .foregroundStyle(Morandi.primaryText)
             .onChange(of: viewModel.defaultFontFamily) { _, _ in viewModel.save() }
 
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text(String(format: NSLocalizedString("reader.font_size_pt_format", comment: ""), Int(viewModel.defaultFontSize)))
+                Text(AppLocalization.format("reader.font_size_pt_format", locale: .autoupdatingCurrent, Int(viewModel.defaultFontSize)))
                     .font(AppTypography.subheadline)
                     .foregroundStyle(Morandi.primaryText)
                 Slider(value: $viewModel.defaultFontSize, in: 12...32, step: 1)
@@ -170,27 +167,27 @@ public struct ReadingDetailSettingsView: View {
     private var layoutSection: some View {
         Section(String(localized: "reader.appearance.layout")) {
             sliderRow(
-                AppLocalization.string("reader.appearance.line_height", value: "Line Height"),
+                AppLocalization.string("reader.appearance.line_height"),
                 value: $viewModel.lineHeight,
                 range: 0.8...2.0,
                 step: 0.05,
                 format: "%.2f×"
             )
             sliderRow(
-                AppLocalization.string("reader.appearance.letter_spacing", value: "Letter Spacing"),
+                AppLocalization.string("reader.appearance.letter_spacing"),
                 value: $viewModel.letterSpacing,
                 range: -2...4,
                 step: 0.1,
                 format: "%.1f pt"
             )
             sliderRow(
-                AppLocalization.string("reader.appearance.paragraph_spacing", value: "Paragraph Spacing"),
+                AppLocalization.string("reader.appearance.paragraph_spacing"),
                 value: $viewModel.paragraphSpacing,
                 range: 0...24,
                 step: 1,
                 format: "%.0f pt"
             )
-            Toggle(AppLocalization.string("reader.appearance.first_line_indent", value: "First-line Indent"), isOn: $viewModel.textIndent)
+            Toggle(AppLocalization.string("reader.appearance.first_line_indent"), isOn: $viewModel.textIndent)
                 .tint(Morandi.accent)
                 .foregroundStyle(Morandi.primaryText)
         }
@@ -200,9 +197,9 @@ public struct ReadingDetailSettingsView: View {
 
     private var marginSection: some View {
         Section(String(localized: "reader.appearance.margins")) {
-            sliderRow(AppLocalization.string("reader.appearance.side_margin", value: "Side Margin"), value: $viewModel.sideMargin, range: 0...48, step: 1, format: "%.0f pt")
-            sliderRow(AppLocalization.string("reader.appearance.top_margin", value: "Top Margin"), value: $viewModel.topMargin, range: 0...48, step: 1, format: "%.0f pt")
-            sliderRow(AppLocalization.string("reader.appearance.bottom_margin", value: "Bottom Margin"), value: $viewModel.bottomMargin, range: 0...48, step: 1, format: "%.0f pt")
+            sliderRow(AppLocalization.string("reader.appearance.side_margin"), value: $viewModel.sideMargin, range: 0...48, step: 1, format: "%.0f pt")
+            sliderRow(AppLocalization.string("reader.appearance.top_margin"), value: $viewModel.topMargin, range: 0...48, step: 1, format: "%.0f pt")
+            sliderRow(AppLocalization.string("reader.appearance.bottom_margin"), value: $viewModel.bottomMargin, range: 0...48, step: 1, format: "%.0f pt")
         }
     }
 

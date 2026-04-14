@@ -13,8 +13,8 @@ struct ProviderPickerSheet: View {
 
     let providers: [AIChatViewModel.ProviderOption]
 
-    private func localized(_ key: String, _ fallback: String) -> String {
-        AppLocalization.string(key, value: fallback)
+    private func localized(_ key: String) -> String {
+        AppLocalization.string(key)
     }
 
     var body: some View {
@@ -87,13 +87,13 @@ struct ProviderPickerSheet: View {
                         .foregroundStyle(Morandi.secondaryText)
                         .lineLimit(2)
                     HStack(spacing: 6) {
-                        capabilityPill(String(localized: "ai.streaming"), color: Morandi.powder)
-                        capabilityPill(String(localized: "ai.tools"), color: Morandi.moss)
+                        capabilityPill(localized("settings.ai_provider.capability.stream"), color: Morandi.powder)
+                        capabilityPill(localized("settings.ai_provider.capability.tools"), color: Morandi.moss)
                         if model.supportsVision {
-                            capabilityPill(String(localized: "ai.vision"), color: Morandi.lavender)
+                            capabilityPill(localized("settings.ai_provider.capability.vision"), color: Morandi.lavender)
                         }
                         if model.supportsThinking {
-                            capabilityPill(String(localized: "ai.thinking"), color: Morandi.dustyRose)
+                            capabilityPill(localized("settings.ai_provider.capability.think"), color: Morandi.dustyRose)
                         }
                     }
                 }
@@ -144,12 +144,12 @@ struct ProviderPickerSheet: View {
 
     private func description(for modelId: String) -> String {
         let m = modelId.lowercased()
-        if m.contains("mini") { return localized("ai.provider_picker.description.mini", "Fast, cost-efficient everyday model.") }
-        if m.contains("haiku") { return localized("ai.provider_picker.description.haiku", "Claude's fastest model for quick tasks.") }
-        if m.contains("sonnet") { return localized("ai.provider_picker.description.sonnet", "Balanced intelligence and speed.") }
-        if m.contains("opus") { return localized("ai.provider_picker.description.opus", "Most capable, best for complex reasoning.") }
-        if m.contains("gpt-4.1") { return localized("ai.provider_picker.description.gpt41", "OpenAI's flagship reasoning model.") }
-        if m.contains("gpt-4o") { return localized("ai.provider_picker.description.gpt4o", "Multimodal with strong vision skills.") }
-        return localized("ai.provider_picker.description.default", "General-purpose chat model.")
+        if m.contains("mini") { return localized("ai.provider_picker.description.mini") }
+        if m.contains("haiku") { return localized("ai.provider_picker.description.haiku") }
+        if m.contains("sonnet") { return localized("ai.provider_picker.description.sonnet") }
+        if m.contains("opus") { return localized("ai.provider_picker.description.opus") }
+        if m.contains("gpt-4.1") { return localized("ai.provider_picker.description.gpt41") }
+        if m.contains("gpt-4o") { return localized("ai.provider_picker.description.gpt4o") }
+        return localized("ai.provider_picker.description.default")
     }
 }

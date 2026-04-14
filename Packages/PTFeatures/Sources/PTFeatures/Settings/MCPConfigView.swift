@@ -14,10 +14,6 @@ public struct MCPConfigView: View {
 
     private let store: MCPConfigStore
 
-    private func localized(_ key: String, _ fallback: String) -> String {
-        AppLocalization.string(key, value: fallback)
-    }
-
     public init(store: MCPConfigStore = MCPConfigStore()) {
         self.store = store
         _configs = State(initialValue: store.loadConfigs())
@@ -134,7 +130,7 @@ public struct MCPConfigView: View {
             do {
                 guard let url = URL(string: config.url) else {
                     await MainActor.run {
-                        statuses[config.id] = .error(AppLocalization.string("errors.url.invalid", value: "Invalid URL"))
+                        statuses[config.id] = .error(AppLocalization.string("errors.url.invalid"))
                     }
                     return
                 }
@@ -156,10 +152,15 @@ public struct MCPConfigView: View {
                 try await client.shutdown()
             } catch {
                 await MainActor.run {
-                    statuses[config.id] = .error(error.localizedDescription)
+                    statuses[config.id] = .error(connectionFailureMessage(for: error))
                 }
             }
         }
+    }
+
+    private func connectionFailureMessage(for error: Error) -> String {
+        AppLocalization.localizedErrorDescription(error)
+            ?? AppLocalization.string("sync.connection_status.failure")
     }
 
     private func save() {
@@ -232,9 +233,7 @@ struct MCPServerRow: View {
                         .padding(.vertical, 2)
                     }
                 } label: {
-                    Text(AppLocalization.format(
-                        "ai.mcp.tool_count_format",
-                        "%d tools",
+                    Text(AppLocalization.format("ai.mcp.tool_count_format", locale: .autoupdatingCurrent,
                         config.discoveredTools.count
                     ))
                         .font(AppTypography.caption2)
@@ -281,10 +280,6 @@ struct MCPServerEditSheet: View {
         _apiKey = State(initialValue: config?.apiKey ?? "")
     }
 
-    private func localized(_ key: String, _ fallback: String) -> String {
-        AppLocalization.string(key, value: fallback)
-    }
-
     var body: some View {
         NavigationStack {
             Form {
@@ -299,13 +294,13 @@ struct MCPServerEditSheet: View {
                 }
 
                 Section(String(localized: "common.authentication")) {
-                    SecureField(localized("common.api_key_optional", "API Key (optional)"), text: $apiKey)
+                    SecureField(String(localized: "common.api_key_optional"), text: $apiKey)
                 }
             }
             .navigationTitle(
                 config == nil
-                    ? localized("common.add_server", "Add Server")
-                    : localized("common.edit_server", "Edit Server")
+                    ? String(localized: "ai.mcp.add_server")
+                    : String(localized: "ai.mcp.edit_server")
             )
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

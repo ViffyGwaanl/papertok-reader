@@ -170,7 +170,7 @@ struct NativePDFView: UIViewRepresentable {
                 }
                 annotation.contents = renderedAnnotation.readerNote ?? (
                     renderedAnnotation.type == .bookmark
-                    ? AppLocalization.string("reader.bookmark", value: "Bookmark")
+                    ? AppLocalization.string("reader.bookmark")
                     : nil
                 )
                 page.addAnnotation(annotation)
@@ -371,7 +371,11 @@ struct NativePDFView: NSViewRepresentable {
                 if let noteID = renderedAnnotation.noteID {
                     annotation.userName = String(noteID)
                 }
-                annotation.contents = renderedAnnotation.readerNote ?? (renderedAnnotation.type == .bookmark ? "Bookmark" : nil)
+                annotation.contents = renderedAnnotation.readerNote ?? (
+                    renderedAnnotation.type == .bookmark
+                    ? AppLocalization.string("reader.bookmark")
+                    : nil
+                )
                 page.addAnnotation(annotation)
                 nextAppliedAnnotationsByPage[renderedAnnotation.pageIndex, default: []].append(annotation)
             }
@@ -823,9 +827,7 @@ public struct PDFReaderView: View {
                     VStack(spacing: 0) {
                         if !tocSearchQuery.isEmpty {
                             HStack {
-                                Text(AppLocalization.format(
-                                    "reader.toc.match_count_format",
-                                    "%d matches",
+                                Text(AppLocalization.format("reader.toc.match_count_format", locale: .autoupdatingCurrent,
                                     entries.count
                                 ))
                                     .font(AppTypography.caption)
@@ -892,7 +894,11 @@ public struct PDFReaderView: View {
                         ContentUnavailableView(
                             String(localized: "reader.search.no_results_title"),
                             systemImage: "doc.text.magnifyingglass",
-                            description: Text(String(format: NSLocalizedString("reader.search.no_matches_format", comment: ""), readerControlsViewModel.searchQuery))
+                            description: Text(AppLocalization.format(
+                                "reader.search.no_matches_format",
+                                locale: .autoupdatingCurrent,
+                                readerControlsViewModel.searchQuery
+                            ))
                         )
                     } else {
                         List(readerControlsViewModel.searchResults) { result in
@@ -917,7 +923,11 @@ public struct PDFReaderView: View {
                                     .font(AppTypography.body)
                                     .lineLimit(4)
 
-                                    Text(String(format: NSLocalizedString("reader.search.match_at_progress_format", comment: ""), Int((result.progression * 100).rounded())))
+                                    Text(AppLocalization.format(
+                                        "reader.search.match_at_progress_format",
+                                        locale: .autoupdatingCurrent,
+                                        Int((result.progression * 100).rounded())
+                                    ))
                                         .font(AppTypography.caption)
                                         .foregroundStyle(Morandi.secondaryText)
                                 }
@@ -1029,7 +1039,8 @@ public struct PDFReaderView: View {
 
     private func presentBookmarkDraft() {
         let pageIndex = viewModel.currentPage
-        let pageLabel = viewModel.pdfDocument?.page(at: pageIndex)?.label ?? "Page \(pageIndex + 1)"
+        let pageLabel = viewModel.pdfDocument?.page(at: pageIndex)?.label
+            ?? AppLocalization.format("reader.page_number_format", locale: .autoupdatingCurrent, pageIndex + 1)
         annotationDraft = EPUBReaderAnnotationDraft(
             locatorString: PDFAnnotationBridge.storedString(from: .bookmark(pageIndex: pageIndex, pageLabel: pageLabel)),
             selectedText: "",
@@ -1069,7 +1080,8 @@ public struct PDFReaderView: View {
         }
 
         guard savedNote != nil else {
-            annotationErrorMessage = annotationsViewModel.errorMessage ?? "The annotation could not be saved."
+            annotationErrorMessage = annotationsViewModel.errorMessage
+                ?? AppLocalization.string("errors.reader.annotation_failed")
             return
         }
 
@@ -1085,7 +1097,8 @@ public struct PDFReaderView: View {
 
         await annotationsViewModel.deleteAnnotation(id: noteID)
         guard annotationsViewModel.errorMessage == nil else {
-            annotationErrorMessage = annotationsViewModel.errorMessage ?? "The annotation could not be deleted."
+            annotationErrorMessage = annotationsViewModel.errorMessage
+                ?? AppLocalization.string("errors.reader.annotation_delete_failed")
             return
         }
 

@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import PTFeatures
+import PTCore
 
 @Suite("NotesViewModel")
 @MainActor
@@ -78,6 +79,11 @@ struct NotesViewModelTests {
         await viewModel.loadNotes()
 
         let markdown = viewModel.export(format: .markdown)
+        #expect(markdown.contains(localizedCatalogString("notes.export.title")))
+        #expect(markdown.contains(localizedCatalogFormat("notes.export.total_notes_format", 1)))
+        #expect(markdown.contains(localizedCatalogFormat("notes.export.chapter_format", "Conclusion")))
+        #expect(markdown.contains(localizedCatalogFormat("notes.export.note_format", "**Follow up** on this argument.")))
+        #expect(markdown.contains(localizedCatalogString("common.note")))
         #expect(markdown.contains("Exported Book"))
         #expect(markdown.contains("Important paragraph"))
         #expect(markdown.contains("Follow up"))
@@ -86,6 +92,10 @@ struct NotesViewModelTests {
         #expect(csv.contains("book_title,note_type"))
         #expect(csv.contains("Exported Book"))
         #expect(csv.contains("Important paragraph"))
+
+        let text = viewModel.export(format: .txt)
+        #expect(text.contains(localizedCatalogString("notes.export.title")))
+        #expect(text.contains(localizedCatalogFormat("notes.export.chapter_format", "Conclusion")))
     }
 
     @Test("filterType filters notes by type")
@@ -112,18 +122,17 @@ struct NotesViewModelTests {
         #expect(viewModel.notes.count == 3)
 
         viewModel.filterType = .highlight
-        // filterType setter triggers loadNotes, but we need to wait
-        try? await Task.sleep(for: .milliseconds(100))
+        await waitUntil { viewModel.notes.count == 1 }
         #expect(viewModel.notes.count == 1)
         #expect(viewModel.notes.first?.type == "highlight")
 
         viewModel.filterType = .bookmark
-        try? await Task.sleep(for: .milliseconds(100))
+        await waitUntil { viewModel.notes.count == 1 && viewModel.notes.first?.type == "bookmark" }
         #expect(viewModel.notes.count == 1)
         #expect(viewModel.notes.first?.type == "bookmark")
 
         viewModel.filterType = .all
-        try? await Task.sleep(for: .milliseconds(100))
+        await waitUntil { viewModel.notes.count == 3 }
         #expect(viewModel.notes.count == 3)
     }
 
@@ -154,11 +163,14 @@ struct NotesViewModelTests {
     @Test("missing book titles use localized fallback format")
     func missingBookTitlesUseFallbackFormat() async throws {
         let database = try AppDatabase.makeInMemory()
+        let bookDAO = BookDAO(database: database)
         let noteDAO = BookNoteDAO(database: database)
+        let book = try await bookDAO.save(Book.placeholder(title: "Soft Deleted Book", filePath: "/deleted.epub"))
+        let bookID = try #require(book.id)
 
         _ = try await noteDAO.save(
             BookNote(
-                bookId: 42,
+                bookId: bookID,
                 content: "Detached note",
                 cfi: "cfi1",
                 chapter: "Appendix",
@@ -168,11 +180,33 @@ struct NotesViewModelTests {
                 updateTime: makeDate("2026-04-07")
             )
         )
+        try await bookDAO.softDelete(id: bookID)
 
         let viewModel = NotesViewModel(database: database)
         await viewModel.loadNotes()
 
-        #expect(viewModel.groupedNotes.first?.bookTitle == "Book #42")
+        #expect(
+            viewModel.groupedNotes.first?.bookTitle
+                == localizedCatalogFormat("notes.book_fallback_format", bookID)
+        )
+    }
+
+    @Test("filter and sort options expose localized display names")
+    func filterAndSortDisplayNames() {
+        for filter in NotesFilterType.allCases {
+            #expect(!filter.displayNameKey.isEmpty)
+            #expect(!filter.displayName.isEmpty)
+            #expect(!filter.systemImage.isEmpty)
+        }
+
+        for sortOrder in NotesSortOrder.allCases {
+            #expect(!sortOrder.displayNameKey.isEmpty)
+            #expect(!sortOrder.displayName.isEmpty)
+        }
+
+        for format in NotesExportFormat.allCases {
+            #expect(!format.displayName.isEmpty)
+        }
     }
 
     @Test("updateNote persists changes")
@@ -212,4 +246,49 @@ struct NotesViewModelTests {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: raw)!
     }
+
+    private func waitUntil(
+        timeout: Duration = .seconds(1),
+        _ condition: @escaping @MainActor () -> Bool
+    ) async {
+        let deadline = ContinuousClock.now + timeout
+        while condition() == false && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+    }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: localizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

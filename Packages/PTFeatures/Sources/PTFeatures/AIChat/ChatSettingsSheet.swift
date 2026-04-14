@@ -17,28 +17,28 @@ struct ChatSettingsSheet: View {
             Form {
                 Section {
                     slider(
-                        title: "Temperature",
+                        title: String(localized: "ai.temperature"),
                         value: $temperature,
                         range: 0...2,
                         step: 0.05,
                         format: "%.2f",
-                        hint: "Higher = more creative, lower = more deterministic"
+                        hint: String(localized: "ai.chat_settings.temperature_hint")
                     )
                     slider(
-                        title: "Max tokens",
+                        title: String(localized: "ai.max_tokens"),
                         value: $maxTokens,
                         range: 100...8192,
                         step: 64,
                         format: "%.0f",
-                        hint: "Maximum response length"
+                        hint: String(localized: "ai.chat_settings.max_tokens_hint")
                     )
                     slider(
-                        title: "Top-p",
+                        title: String(localized: "ai.top_p"),
                         value: $topP,
                         range: 0...1,
                         step: 0.01,
                         format: "%.2f",
-                        hint: "Nucleus sampling cutoff"
+                        hint: String(localized: "ai.chat_settings.top_p_hint")
                     )
                 } header: {
                     Text("settings.generation")
@@ -57,12 +57,14 @@ struct ChatSettingsSheet: View {
                 }
 
                 Section {
-                    Toggle("Apply only to this conversation", isOn: $perConversation)
+                    Toggle("ai.chat_settings.per_conversation", isOn: $perConversation)
                         .tint(Morandi.accent)
                 } footer: {
-                    Text(perConversation
-                        ? "These settings affect the active chat only."
-                        : "These settings apply globally to all new chats.")
+                    Text(
+                        perConversation
+                            ? String(localized: "ai.chat_settings.per_conversation_footer")
+                            : String(localized: "ai.chat_settings.global_footer")
+                    )
                         .font(AppTypography.caption2)
                         .foregroundStyle(Morandi.tertiaryText)
                 }

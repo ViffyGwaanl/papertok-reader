@@ -94,7 +94,7 @@ public final class RemindersService: RemindersServiceProtocol, @unchecked Sendab
     public func createReminder(_ params: [String: Any]) async throws -> [String: Any] {
         guard await requestAccess() else { throw RemindersError.accessDenied }
         let reminder = EKReminder(eventStore: store)
-        reminder.title = stringValue(["title"], from: params) ?? AppLocalization.string("common.untitled", value: "Untitled")
+        reminder.title = stringValue(["title"], from: params) ?? AppLocalization.string("common.untitled")
         if let notes = stringValue(["notes"], from: params) { reminder.notes = notes }
         if let due = dateValue(["due_date", "dueDate"], from: params) {
             reminder.dueDateComponents = Calendar.current.dateComponents(
@@ -234,14 +234,11 @@ public enum RemindersError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .accessDenied:
-            return AppLocalization.string(
-                "errors.reminders.access_denied",
-                value: "Reminders access denied. Please grant permission in Settings."
-            )
+            return AppLocalization.string("errors.reminders.access_denied")
         case .reminderNotFound(let id):
             return AppLocalization.format(
                 "errors.reminders.not_found_format",
-                "Reminder not found: %@",
+                locale: .autoupdatingCurrent,
                 id
             )
         }

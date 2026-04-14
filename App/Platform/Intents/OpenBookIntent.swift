@@ -13,6 +13,10 @@ struct OpenBookIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         DeepLinkRouter.shared.route(to: .openBook(title: bookTitle))
-        return .result(dialog: "Opening \"\(bookTitle)\"")
+        return .result(dialog: IntentDialog(stringLiteral: AppLocalization.format(
+            "intent.open_book.dialog_format",
+            locale: .autoupdatingCurrent,
+            bookTitle
+        )))
     }
 }

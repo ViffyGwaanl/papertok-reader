@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import PTCore
 import PTReader
 
 @MainActor @Observable
@@ -30,7 +31,11 @@ public final class ReaderControlsViewModel {
             tocErrorMessage = nil
         } catch {
             tocEntries = []
-            tocErrorMessage = error.localizedDescription
+            tocErrorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "reader.toc.load_failed",
+                priority: .preferFallback
+            )
         }
     }
 
@@ -52,7 +57,11 @@ public final class ReaderControlsViewModel {
             searchErrorMessage = nil
         } catch {
             searchResults = []
-            searchErrorMessage = error.localizedDescription
+            searchErrorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.reader.search_failed",
+                priority: .preferFallback
+            )
         }
     }
 }

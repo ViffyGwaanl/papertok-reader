@@ -35,19 +35,11 @@ public actor AIOrganizeService {
     public var errorDescription: String? {
         switch self {
         case .noBooks:
-            return AppLocalization.string(
-                "errors.organize.no_books",
-                value: "No books available to organize."
-            )
+            return AppLocalization.string("errors.organize.no_books")
         case .noProviderResponse:
-            return AppLocalization.string(
-                "errors.organize.empty_response",
-                value: "The AI provider returned an empty response."
-            )
+            return AppLocalization.string("errors.organize.empty_response")
         case .invalidResponse(let detail):
-            return AppLocalization.format(
-                "errors.organize.invalid_response_format",
-                "Could not parse AI response: %@",
+            return AppLocalization.format("errors.organize.invalid_response_format", locale: .autoupdatingCurrent,
                 detail
             )
         }

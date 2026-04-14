@@ -19,34 +19,33 @@ public enum BookImportError: Error, LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .unsupportedFormat:
-            return AppLocalization.string(
-                "errors.import.unsupported_format",
-                value: "Only PDF and EPUB files are supported."
-            )
+            return AppLocalization.string("errors.import.invalid_format")
         case .alreadyExists:
-            return AppLocalization.string(
-                "errors.import.already_exists",
-                value: "This book is already in your library."
-            )
+            return AppLocalization.string("errors.import.duplicate")
         case .copyFailed(let error):
-            return String(
-                format: AppLocalization.string(
-                    "errors.import.copy_failed_format",
-                    value: "Could not copy file: %@"
-                ),
-                locale: .autoupdatingCurrent,
-                error.localizedDescription
-            )
+            return localizedFailureMessage(for: error)
         case .saveFailed(let error):
-            return String(
-                format: AppLocalization.string(
-                    "errors.import.save_failed_format",
-                    value: "Could not save book: %@"
-                ),
-                locale: .autoupdatingCurrent,
-                error.localizedDescription
-            )
+            return localizedFailureMessage(for: error)
         }
+    }
+
+    private func localizedFailureMessage(for error: Error) -> String {
+        let nsError = error as NSError
+
+        if nsError.domain == NSCocoaErrorDomain {
+            switch CocoaError.Code(rawValue: nsError.code) {
+            case .fileWriteNoPermission, .fileReadNoPermission:
+                return AppLocalization.string("errors.import.no_permission")
+            case .fileWriteOutOfSpace:
+                return AppLocalization.string("errors.import.disk_full")
+            case .fileReadCorruptFile:
+                return AppLocalization.string("errors.import.corrupt")
+            default:
+                break
+            }
+        }
+
+        return AppLocalization.string("errors.import.failed")
     }
 }
 

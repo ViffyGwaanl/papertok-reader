@@ -13,38 +13,22 @@ public enum NetworkError: Error, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidURL(let path):
-            return AppLocalization.format(
-                "errors.network.invalid_url_format",
-                "Invalid URL: %@",
-                path
-            )
+        case .invalidURL:
+            return AppLocalization.string("errors.network.invalid_url")
         case .httpError(let statusCode, _):
-            return AppLocalization.format(
-                "errors.network.http_error_format",
-                "HTTP error %d",
-                statusCode
-            )
-        case .decodingFailed(let error):
-            return AppLocalization.format(
-                "errors.network.decoding_failed_format",
-                "Decoding failed: %@",
-                error.localizedDescription
-            )
+            return localizedHTTPErrorMessage(for: statusCode)
+        case .decodingFailed:
+            return AppLocalization.string("errors.network.decoding_failed")
         case .noData:
-            return AppLocalization.string("errors.network.no_data", value: "No data received")
+            return AppLocalization.string("errors.network.no_data")
         case .timeout:
-            return AppLocalization.string("errors.network.timeout", value: "Request timed out")
+            return AppLocalization.string("errors.network.timeout")
         case .cancelled:
-            return AppLocalization.string("errors.network.cancelled", value: "Request was cancelled")
+            return AppLocalization.string("errors.network.cancelled")
         case .connectionLost:
-            return AppLocalization.string("errors.network.connection_lost", value: "Network connection lost")
+            return AppLocalization.string("errors.network.connection_lost")
         case .unknown(let error):
-            return AppLocalization.format(
-                "errors.network.unknown_format",
-                "Unknown error: %@",
-                error.localizedDescription
-            )
+            return localizedUnknownMessage(for: error)
         }
     }
 
@@ -56,12 +40,48 @@ public enum NetworkError: Error, Sendable, LocalizedError {
                 return .timeout
             case .cancelled:
                 return .cancelled
-            case .networkConnectionLost, .notConnectedToInternet:
+            case .networkConnectionLost:
                 return .connectionLost
             default:
                 return .unknown(urlError)
             }
         }
         return .unknown(error)
+    }
+
+    private func localizedHTTPErrorMessage(for statusCode: Int) -> String {
+        switch statusCode {
+        case 401:
+            AppLocalization.string("errors.network.unauthorized")
+        case 403:
+            AppLocalization.string("errors.network.forbidden")
+        case 404:
+            AppLocalization.string("errors.network.not_found")
+        default:
+            AppLocalization.string("errors.network.server")
+        }
+    }
+
+    private func localizedUnknownMessage(for error: Error) -> String {
+        guard let urlError = error as? URLError else {
+            return AppLocalization.string("errors.network.server")
+        }
+
+        switch urlError.code {
+        case .notConnectedToInternet:
+            return AppLocalization.string("errors.network.offline")
+        case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
+            return AppLocalization.string("errors.network.dns")
+        case .secureConnectionFailed,
+             .serverCertificateHasBadDate,
+             .serverCertificateNotYetValid,
+             .serverCertificateHasUnknownRoot,
+             .serverCertificateUntrusted,
+             .clientCertificateRejected,
+             .clientCertificateRequired:
+            return AppLocalization.string("errors.network.tls")
+        default:
+            return AppLocalization.string("errors.network.server")
+        }
     }
 }

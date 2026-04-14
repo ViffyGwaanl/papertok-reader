@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 public actor ToolOrchestrator {
     private var tools: [String: any AITool] = [:]
@@ -21,14 +22,27 @@ public actor ToolOrchestrator {
 
     private static func executeSingle(call: ToolCall, context: ToolContext, tools: [String: any AITool]) async -> ToolResult {
         guard let tool = tools[call.name] else {
-            return ToolResult(toolCallId: call.id, content: "Error: Unknown tool '\(call.name)'", isError: true)
+            return ToolResult(
+                toolCallId: call.id,
+                content: AppLocalization.format(
+                    "errors.ai.unknown_tool_format",
+                    fallback: "The AI requested an unavailable tool: %@.",
+                    locale: .autoupdatingCurrent,
+                    call.name
+                ),
+                isError: true
+            )
         }
         do {
             let args = parseArguments(call.arguments)
             let result = try await tool.execute(arguments: args, context: context)
             return ToolResult(toolCallId: call.id, content: result.content, isError: result.isError)
         } catch {
-            return ToolResult(toolCallId: call.id, content: "Error: \(error.localizedDescription)", isError: true)
+            return ToolResult(
+                toolCallId: call.id,
+                content: AppLocalization.errorDetail(error),
+                isError: true
+            )
         }
     }
 

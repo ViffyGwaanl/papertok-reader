@@ -36,7 +36,7 @@ struct DictionaryLookupSheet: View {
                         systemImage: "book.closed",
                         description: Text(AppLocalization.format(
                             "reader.dictionary.no_definition_description_format",
-                            "No installed dictionary contains a definition for \"%@\".",
+                            locale: .autoupdatingCurrent,
                             term
                         ))
                     )

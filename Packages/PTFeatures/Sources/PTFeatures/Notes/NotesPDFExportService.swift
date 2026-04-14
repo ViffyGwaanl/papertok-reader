@@ -24,26 +24,15 @@ public actor NotesPDFExportService {
         public var errorDescription: String? {
             switch self {
             case .noData:
-                return AppLocalization.string(
-                    "errors.notes.pdf.no_data",
-                    value: "No notes to export."
-                )
+                return AppLocalization.string("errors.notes.pdf.no_data")
             case .renderingFailed:
-                return AppLocalization.string(
-                    "errors.notes.pdf.render_failed",
-                    value: "Failed to render PDF."
-                )
+                return AppLocalization.string("errors.notes.pdf.render_failed")
             case .writeFailed(let e):
-                return AppLocalization.format(
-                    "errors.notes.pdf.write_failed_format",
-                    "Failed to write PDF: %@",
+                return AppLocalization.format("errors.notes.pdf.write_failed_format", locale: .autoupdatingCurrent,
                     e.localizedDescription
                 )
             case .unsupportedPlatform:
-                return AppLocalization.string(
-                    "errors.notes.pdf.unsupported_platform",
-                    value: "PDF export is not supported on this platform."
-                )
+                return AppLocalization.string("errors.notes.pdf.unsupported_platform")
             }
         }
     }
@@ -175,10 +164,18 @@ public actor NotesPDFExportService {
         let titleRect = CGRect(x: layout.margin, y: y, width: contentWidth, height: 30)
         title.draw(in: titleRect)
 
-        let author = book.author.isEmpty ? "" : "by \(book.author)  ·  "
         let dateString = DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .short)
+        var subtitleParts: [String] = []
+        if !book.author.isEmpty {
+            subtitleParts.append(
+                AppLocalization.format("notes.pdf.header.author_format", locale: .autoupdatingCurrent, book.author)
+            )
+        }
+        subtitleParts.append(
+            AppLocalization.format("notes.pdf.header.exported_at_format", locale: .autoupdatingCurrent, dateString)
+        )
         let subtitle = NSAttributedString(
-            string: "\(author)Exported \(dateString)",
+            string: subtitleParts.joined(separator: "  ·  "),
             attributes: subtitleAttrs
         )
         let subtitleRect = CGRect(x: layout.margin, y: y + 30, width: contentWidth, height: 20)
@@ -254,7 +251,10 @@ public actor NotesPDFExportService {
                 .font: UIFont.italicSystemFont(ofSize: layout.bodyFontSize),
                 .foregroundColor: UIColor.darkGray
             ]
-            let noteString = NSAttributedString(string: "Note: \(readerNote)", attributes: noteAttrs)
+            let noteString = NSAttributedString(
+                string: AppLocalization.format("reader.export.note_format", locale: .autoupdatingCurrent, readerNote),
+                attributes: noteAttrs
+            )
             let noteBoundingSize = noteString.boundingRect(
                 with: CGSize(width: contentWidth, height: .greatestFiniteMagnitude),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
@@ -277,7 +277,10 @@ public actor NotesPDFExportService {
             .font: UIFont.systemFont(ofSize: layout.captionFontSize),
             .foregroundColor: UIColor.gray
         ]
-        let string = NSAttributedString(string: "Page \(pageNumber)", attributes: attrs)
+        let string = NSAttributedString(
+            string: AppLocalization.format("notes.pdf.footer.page_format", locale: .autoupdatingCurrent, pageNumber),
+            attributes: attrs
+        )
         let size = string.size()
         let rect = CGRect(
             x: (bounds.width - size.width) / 2,

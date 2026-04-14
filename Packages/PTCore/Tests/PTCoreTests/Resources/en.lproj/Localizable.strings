@@ -1,2 +1,3 @@
 "test.greeting" = "Hello";
 "test.items" = "%lld items";
+"test.detail" = "Detail: %@";

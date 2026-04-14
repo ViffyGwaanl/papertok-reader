@@ -23,4 +23,12 @@ struct LocalizedSortTests {
 
         #expect(sorted == ["Alpha", "beta", "charlie"])
     }
+
+    @Test("sort keys fold pinyin tone marks and casing")
+    func sortKeysAreStable() {
+        let key = LocalizedSort.sortKey(for: "重庆", locale: Locale(identifier: "zh-Hans"))
+
+        #expect(key.contains("chong"))
+        #expect(key == key.lowercased())
+    }
 }

@@ -15,9 +15,9 @@ public struct ReadingTrendChartView: View {
 
         public var displayName: String {
             switch self {
-            case .daily: return AppLocalization.string("statistics.daily", value: "Daily")
-            case .weekday: return AppLocalization.string("statistics.weekday", value: "Weekday")
-            case .perBook: return AppLocalization.string("statistics.by_book", value: "By Book")
+            case .daily: return AppLocalization.string("statistics.daily")
+            case .weekday: return AppLocalization.string("statistics.weekday")
+            case .perBook: return AppLocalization.string("statistics.by_book")
             }
         }
     }
@@ -80,8 +80,8 @@ public struct ReadingTrendChartView: View {
 
         public var displayName: String {
             switch self {
-            case .thirtyDays: return AppLocalization.string("statistics.last_30_days", value: "Last 30 Days")
-            case .ninetyDays: return AppLocalization.string("statistics.last_90_days", value: "Last 90 Days")
+            case .thirtyDays: return AppLocalization.string("statistics.last_30_days")
+            case .ninetyDays: return AppLocalization.string("statistics.last_90_days")
             }
         }
     }

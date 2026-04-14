@@ -8,7 +8,10 @@ struct ReadingPreferencesTests {
     func defaultInit() {
         let prefs = ReadingPreferences()
         #expect(prefs.style.fontSize == 1.4)
-        #expect(prefs.style.fontFamily == "Arial")
+        #expect(
+            prefs.style.fontFamily
+                == BookStyle.preferredDefaultFontFamily(locale: .autoupdatingCurrent)
+        )
         #expect(prefs.theme.backgroundColor == "FFFBFBF3")
     }
 

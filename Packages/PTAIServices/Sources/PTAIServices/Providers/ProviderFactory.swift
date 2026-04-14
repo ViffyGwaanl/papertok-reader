@@ -55,16 +55,11 @@ public enum ProviderFactoryError: Error, LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .missingBaseURL(let p):
-            return AppLocalization.format(
-                "errors.ai.provider_base_url_required_format",
-                "Base URL required for provider: %@",
+            return AppLocalization.format("errors.ai.provider_base_url_required_format", locale: .autoupdatingCurrent,
                 p.rawValue
             )
         case .missingDeploymentName:
-            return AppLocalization.string(
-                "errors.ai.missing_deployment_name",
-                value: "Deployment name required for Azure OpenAI"
-            )
+            return AppLocalization.string("errors.ai.missing_deployment_name")
         }
     }
 }
@@ -167,7 +162,7 @@ public enum ProviderFactory {
         case .gemini: return "Google Gemini"
         case .azure: return "Azure OpenAI"
         case .volcengine: return "Volcengine (Doubao)"
-        case .custom: return AppLocalization.string("settings.custom_provider", value: "Custom")
+        case .custom: return AppLocalization.string("settings.custom_provider")
         }
     }
 }

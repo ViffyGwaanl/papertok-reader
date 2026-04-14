@@ -3,6 +3,7 @@ import Foundation
 import PDFKit
 @testable import PTFeatures
 import PTAIServices
+import PTCore
 
 private func makeMinimalPDF(at url: URL) throws {
     let pdfDoc = PDFDocument()
@@ -142,4 +143,47 @@ struct ReaderViewModelTests {
         let toc = try await bridge.tableOfContents
         #expect(toc.isEmpty == false)
     }
+
+    @Test("localizedPageLabel uses the catalog-backed page format")
+    func localizedPageLabelUsesCatalogFormat() {
+        #expect(
+            ReaderViewModel.localizedPageLabel(for: 2)
+                == localizedCatalogFormat("reader.page_number_format", 3)
+        )
+    }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: localizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

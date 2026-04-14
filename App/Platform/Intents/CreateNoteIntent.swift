@@ -10,7 +10,7 @@ enum CreateNoteIntentError: LocalizedError {
         case .bookNotFound(let title):
             return AppLocalization.format(
                 "intent.create_note.error.book_not_found_format",
-                "No book in your PaperTok library matched \"%@\".",
+                locale: .autoupdatingCurrent,
                 title
             )
         }
@@ -58,7 +58,7 @@ struct CreateNoteIntent: AppIntent {
         let savedId = saved.id.map(String.init) ?? "?"
         let summary = AppLocalization.format(
             "intent.create_note.summary_format",
-            "Added note #%@ to \"%@\".",
+            locale: .autoupdatingCurrent,
             savedId,
             book.title
         )
@@ -66,7 +66,7 @@ struct CreateNoteIntent: AppIntent {
             value: summary,
             dialog: IntentDialog(stringLiteral: AppLocalization.format(
                 "intent.create_note.dialog_format",
-                "Saved note to %@.",
+                locale: .autoupdatingCurrent,
                 book.title
             ))
         )

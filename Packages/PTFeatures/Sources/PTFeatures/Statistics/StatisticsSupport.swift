@@ -10,9 +10,9 @@ public enum StatisticsTrendRange: String, CaseIterable, Identifiable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .week: return AppLocalization.string("statistics.this_week", value: "This Week")
-        case .month: return AppLocalization.string("statistics.this_month", value: "This Month")
-        case .year: return AppLocalization.string("statistics.this_year", value: "This Year")
+        case .week: return AppLocalization.string("statistics.this_week")
+        case .month: return AppLocalization.string("statistics.this_month")
+        case .year: return AppLocalization.string("statistics.this_year")
         }
     }
 }
@@ -81,7 +81,7 @@ public struct StatisticsPeriodSummary: Equatable, Sendable {
         formatter.allowedUnits = [.hour, .minute]
         formatter.unitsStyle = .abbreviated
         formatter.maximumUnitCount = 2
-        formatter.zeroFormattingBehavior = [.dropLeading]
+        formatter.zeroFormattingBehavior = [.dropLeading, .dropTrailing]
         return formatter
     }()
 }
@@ -98,12 +98,12 @@ public enum StatisticsDashboardTile: String, CaseIterable, Identifiable, Sendabl
 
     public var title: String {
         switch self {
-        case .readingTime: return AppLocalization.string("statistics.reading_time_total", value: "Reading Time")
-        case .totalBooks: return AppLocalization.string("statistics.total_books", value: "Books")
-        case .totalNotes: return AppLocalization.string("statistics.total_notes", value: "Notes")
-        case .currentStreak: return AppLocalization.string("statistics.streak", value: "Current Streak")
-        case .longestStreak: return AppLocalization.string("statistics.best_streak", value: "Longest Streak")
-        case .dailyHighlight: return AppLocalization.string("statistics.daily_highlight", value: "Daily Highlight")
+        case .readingTime: return AppLocalization.string("statistics.reading_time_total")
+        case .totalBooks: return AppLocalization.string("statistics.total_books")
+        case .totalNotes: return AppLocalization.string("statistics.total_notes")
+        case .currentStreak: return AppLocalization.string("statistics.streak")
+        case .longestStreak: return AppLocalization.string("statistics.best_streak")
+        case .dailyHighlight: return AppLocalization.string("statistics.daily_highlight")
         }
     }
 }

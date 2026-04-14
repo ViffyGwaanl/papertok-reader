@@ -95,12 +95,14 @@ public struct AIProviderDetailView: View {
             }
         }
         .confirmationDialog(
-            "Delete this custom provider?",
+            String(localized: "settings.ai_provider.delete_confirmation"),
             isPresented: $showDeleteConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Delete Provider", role: .destructive) { deleteCustomProvider() }
-            Button("Cancel", role: .cancel) {}
+            Button(String(localized: "settings.ai_provider.delete_provider"), role: .destructive) {
+                deleteCustomProvider()
+            }
+            Button(String(localized: "common.cancel"), role: .cancel) {}
         }
         .onAppear(perform: loadValues)
     }
@@ -138,7 +140,7 @@ public struct AIProviderDetailView: View {
 
     private var endpointSection: some View {
         Section(String(localized: "common.endpoint")) {
-            TextField("Base URL (optional override)", text: $baseURL)
+            TextField(String(localized: "ai.providers.base_url_override"), text: $baseURL)
                 #if os(iOS)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
@@ -151,13 +153,13 @@ public struct AIProviderDetailView: View {
         Section(String(localized: "common.model")) {
             let models = ProviderFactory.defaultModels(for: provider)
             if models.isEmpty {
-                TextField("Model ID", text: $selectedModel)
+                TextField(String(localized: "common.model_id"), text: $selectedModel)
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     #endif
                     .autocorrectionDisabled()
             } else {
-                Picker("Model", selection: $selectedModel) {
+                Picker(String(localized: "common.model"), selection: $selectedModel) {
                     ForEach(models, id: \.self) { model in
                         Text(model).tag(model)
                     }
@@ -167,7 +169,7 @@ public struct AIProviderDetailView: View {
                 }
                 .foregroundStyle(Morandi.primaryText)
 
-                TextField("Or enter custom model ID", text: $selectedModel)
+                TextField(String(localized: "ai.providers.custom_model_id"), text: $selectedModel)
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     #endif
@@ -179,12 +181,12 @@ public struct AIProviderDetailView: View {
 
     private var azureSection: some View {
         Section(String(localized: "ai.providers.azure")) {
-            TextField("Deployment Name", text: $deploymentName)
+            TextField(String(localized: "settings.ai_provider.azure_deployment_name"), text: $deploymentName)
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
                 #endif
                 .autocorrectionDisabled()
-            TextField("API Version", text: $apiVersion)
+            TextField(String(localized: "settings.ai_provider.azure_api_version"), text: $apiVersion)
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
                 #endif
@@ -284,7 +286,7 @@ public struct AIProviderDetailView: View {
             }
 
             if provider == .custom, customProviderID != nil {
-                Button("Delete Provider", role: .destructive) {
+                Button(String(localized: "settings.ai_provider.delete_provider"), role: .destructive) {
                     showDeleteConfirmation = true
                 }
             }
@@ -296,7 +298,8 @@ public struct AIProviderDetailView: View {
     private var titleText: String {
         if provider == .custom, let id = customProviderID {
             let entries = AIProviderCenterView.loadCustomProviders()
-            return entries.first(where: { $0.id == id })?.displayName ?? "Custom Provider"
+            return entries.first(where: { $0.id == id })?.displayName
+                ?? AppLocalization.string("ai.providers.custom")
         }
         return ProviderFactory.displayName(for: provider)
     }
@@ -308,12 +311,41 @@ public struct AIProviderDetailView: View {
 
     private var capabilityBadges: [String] {
         switch provider {
-        case .openai: return ["CHAT", "TOOLS", "VISION", "STREAM"]
-        case .anthropic: return ["CHAT", "TOOLS", "VISION", "THINK"]
-        case .gemini: return ["CHAT", "TOOLS", "VISION"]
-        case .azure: return ["CHAT", "TOOLS"]
-        case .volcengine: return ["CHAT", "TOOLS"]
-        case .custom: return ["CHAT"]
+        case .openai:
+            return [CapabilityBadge.chat.label, CapabilityBadge.tools.label, CapabilityBadge.vision.label, CapabilityBadge.stream.label]
+        case .anthropic:
+            return [CapabilityBadge.chat.label, CapabilityBadge.tools.label, CapabilityBadge.vision.label, CapabilityBadge.think.label]
+        case .gemini:
+            return [CapabilityBadge.chat.label, CapabilityBadge.tools.label, CapabilityBadge.vision.label]
+        case .azure:
+            return [CapabilityBadge.chat.label, CapabilityBadge.tools.label]
+        case .volcengine:
+            return [CapabilityBadge.chat.label, CapabilityBadge.tools.label]
+        case .custom:
+            return [CapabilityBadge.chat.label]
+        }
+    }
+
+    private enum CapabilityBadge: String {
+        case chat
+        case tools
+        case vision
+        case stream
+        case think
+
+        var label: String {
+            switch self {
+            case .chat:
+                return String(localized: "settings.ai_provider.capability.chat")
+            case .tools:
+                return String(localized: "settings.ai_provider.capability.tools")
+            case .vision:
+                return String(localized: "settings.ai_provider.capability.vision")
+            case .stream:
+                return String(localized: "settings.ai_provider.capability.stream")
+            case .think:
+                return String(localized: "settings.ai_provider.capability.think")
+            }
         }
     }
 
@@ -328,10 +360,10 @@ public struct AIProviderDetailView: View {
                     Image(systemName: "key.horizontal.fill")
                         .foregroundStyle(Morandi.lavender)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Manage API Keys")
+                        Text("settings.ai_provider.manage_api_keys")
                             .font(AppTypography.body.weight(.semibold))
                             .foregroundStyle(Morandi.primaryText)
-                        Text("\(apiKeyCount) key\(apiKeyCount == 1 ? "" : "s") configured")
+                        Text(AppLocalization.format("settings.ai_provider.api_keys_count_format", locale: .autoupdatingCurrent, apiKeyCount))
                             .font(AppTypography.caption2)
                             .foregroundStyle(Morandi.secondaryText)
                     }
@@ -351,9 +383,9 @@ public struct AIProviderDetailView: View {
                 }
             }
         } header: {
-            Text("API Keys")
+            Text("settings.ai_provider.api_keys")
         } footer: {
-            Text("Add multiple API keys for round-robin rotation, automatic failover and per-key cooldowns. Secrets are stored in the Keychain.")
+            Text("settings.ai_provider.api_keys_footer")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
@@ -366,21 +398,21 @@ public struct AIProviderDetailView: View {
             DisclosureGroup(isExpanded: $advancedExpanded) {
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     sliderRow(
-                        title: "Temperature",
+                        title: String(localized: "settings.ai_provider.temperature"),
                         value: $temperature,
                         range: 0.0...2.0,
                         step: 0.05,
                         format: "%.2f"
                     )
                     sliderRow(
-                        title: "Top P",
+                        title: String(localized: "settings.ai_provider.top_p"),
                         value: $topP,
                         range: 0.0...1.0,
                         step: 0.01,
                         format: "%.2f"
                     )
                     HStack {
-                        Text("Max Tokens")
+                        Text("settings.ai_provider.max_tokens")
                             .foregroundStyle(Morandi.primaryText)
                         Spacer()
                         TextField("4096", text: $maxTokensText)
@@ -391,24 +423,24 @@ public struct AIProviderDetailView: View {
                             #endif
                     }
                     sliderRow(
-                        title: "Presence Penalty",
+                        title: String(localized: "settings.ai_provider.presence_penalty"),
                         value: $presencePenalty,
                         range: -2.0...2.0,
                         step: 0.1,
                         format: "%.1f"
                     )
                     sliderRow(
-                        title: "Frequency Penalty",
+                        title: String(localized: "settings.ai_provider.frequency_penalty"),
                         value: $frequencyPenalty,
                         range: -2.0...2.0,
                         step: 0.1,
                         format: "%.1f"
                     )
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Stop Sequences")
+                        Text("settings.ai_provider.stop_sequences")
                             .font(AppTypography.subheadline)
                             .foregroundStyle(Morandi.primaryText)
-                        TextField("comma,separated,sequences", text: $stopSequencesText)
+                        TextField(String(localized: "ai.stop_sequences_placeholder"), text: $stopSequencesText)
                             #if os(iOS)
                             .textInputAutocapitalization(.never)
                             #endif
@@ -419,7 +451,7 @@ public struct AIProviderDetailView: View {
                         resetGenerationDefaults()
                         saveGenerationDefaults()
                     } label: {
-                        Label("Reset to Defaults", systemImage: "arrow.counterclockwise")
+                        Label(String(localized: "common.restore_defaults"), systemImage: "arrow.counterclockwise")
                             .font(AppTypography.caption)
                             .foregroundStyle(Morandi.clay)
                     }
@@ -433,13 +465,13 @@ public struct AIProviderDetailView: View {
                 .onChange(of: frequencyPenalty) { _, _ in saveGenerationDefaults() }
                 .onChange(of: stopSequencesText) { _, _ in saveGenerationDefaults() }
             } label: {
-                Label("Advanced", systemImage: "slider.horizontal.3")
+                Label(String(localized: "settings.advanced"), systemImage: "slider.horizontal.3")
                     .foregroundStyle(Morandi.primaryText)
             }
         } header: {
-            Text("Generation Defaults")
+            Text("settings.ai_provider.generation_defaults")
         } footer: {
-            Text("These values are sent with every chat request unless overridden by a tool or prompt.")
+            Text("settings.ai_provider.generation_defaults_footer")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
@@ -483,27 +515,27 @@ public struct AIProviderDetailView: View {
     private var providerSpecificSection: some View {
         switch provider {
         case .gemini:
-            Section("Gemini Options") {
-                Toggle("Include Thinking Steps", isOn: $includeThoughts)
+            Section(String(localized: "settings.ai_provider.gemini_options")) {
+                Toggle(String(localized: "settings.ai_provider.include_thinking_steps"), isOn: $includeThoughts)
                     .tint(Morandi.accent)
-                Picker("Safety Settings", selection: $safetySettings) {
-                    Text("Default").tag("default")
-                    Text("Strict").tag("strict")
-                    Text("Relaxed").tag("relaxed")
+                Picker(String(localized: "settings.ai_provider.safety_settings"), selection: $safetySettings) {
+                    Text("common.default").tag("default")
+                    Text("common.strict").tag("strict")
+                    Text("common.relaxed").tag("relaxed")
                 }
             }
         case .openai, .anthropic:
-            Section("Reasoning") {
-                Picker("Reasoning Effort", selection: $reasoningEffort) {
-                    Text("Minimal").tag("minimal")
-                    Text("Low").tag("low")
-                    Text("Medium").tag("medium")
-                    Text("High").tag("high")
+            Section(String(localized: "settings.ai_provider.reasoning")) {
+                Picker(String(localized: "settings.ai_provider.reasoning_effort"), selection: $reasoningEffort) {
+                    Text("common.minimal").tag("minimal")
+                    Text("common.low").tag("low")
+                    Text("common.medium").tag("medium")
+                    Text("common.high").tag("high")
                 }
-                Toggle("Return Reasoning Summary", isOn: $returnReasoningSummary)
+                Toggle(String(localized: "settings.ai_provider.return_reasoning_summary"), isOn: $returnReasoningSummary)
                     .tint(Morandi.accent)
                 if provider == .openai {
-                    Toggle("Use Previous Response ID", isOn: $usePreviousResponseId)
+                    Toggle(String(localized: "settings.ai_provider.use_previous_response_id"), isOn: $usePreviousResponseId)
                         .tint(Morandi.accent)
                 }
             }
@@ -516,39 +548,44 @@ public struct AIProviderDetailView: View {
 
     private var failoverPolicySection: some View {
         Section {
-            Picker("Failure Threshold", selection: $failureThreshold) {
+            Picker(String(localized: "settings.ai_provider.failure_threshold"), selection: $failureThreshold) {
                 ForEach(1...10, id: \.self) { n in
                     Text("\(n)").tag(n)
                 }
             }
-            cooldownPicker(title: "Auth Cooldown (401)", selection: $authCooldownSeconds)
-            cooldownPicker(title: "Rate Limit Cooldown (429)", selection: $rateLimitCooldownSeconds)
-            cooldownPicker(title: "Service Cooldown (5xx)", selection: $serviceCooldownSeconds)
+            cooldownPicker(title: String(localized: "settings.ai_provider.auth_cooldown"), selection: $authCooldownSeconds)
+            cooldownPicker(title: String(localized: "settings.ai_provider.rate_limit_cooldown"), selection: $rateLimitCooldownSeconds)
+            cooldownPicker(title: String(localized: "settings.ai_provider.service_cooldown"), selection: $serviceCooldownSeconds)
         } header: {
-            Text("Failover Policy")
+            Text("settings.ai_provider.failover_policy")
         } footer: {
-            Text("After N consecutive failures the key is marked failed; cooldowns control how long until it is retried.")
+            Text("settings.ai_provider.failover_policy_footer")
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
     }
 
-    private static let cooldownOptions: [(Int, String)] = [
-        (60, "1 min"),
-        (300, "5 min"),
-        (900, "15 min"),
-        (3600, "1 hour"),
-        (21600, "6 hours"),
-        (86400, "24 hours")
-    ]
+    private static let cooldownOptions = [60, 300, 900, 3600, 21600, 86400]
+    private static let cooldownFormatter: DateComponentsFormatter = {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.day, .hour, .minute]
+        formatter.unitsStyle = .abbreviated
+        formatter.maximumUnitCount = 2
+        formatter.zeroFormattingBehavior = [.dropLeading, .dropTrailing]
+        return formatter
+    }()
 
     @ViewBuilder
     private func cooldownPicker(title: String, selection: Binding<Int>) -> some View {
         Picker(title, selection: selection) {
-            ForEach(Self.cooldownOptions, id: \.0) { (seconds, label) in
-                Text(label).tag(seconds)
+            ForEach(Self.cooldownOptions, id: \.self) { seconds in
+                Text(cooldownLabel(for: seconds)).tag(seconds)
             }
         }
+    }
+
+    private func cooldownLabel(for seconds: Int) -> String {
+        Self.cooldownFormatter.string(from: TimeInterval(seconds)) ?? "\(seconds)"
     }
 
     // MARK: - Persistence
@@ -702,13 +739,18 @@ public struct AIProviderDetailView: View {
                 )
                 _ = try await client.complete(request)
                 await MainActor.run {
-                    testStatus = .success("Connected")
+                    testStatus = .success(String(localized: "sync.connection_status.success"))
                 }
             } catch {
                 await MainActor.run {
-                    testStatus = .failure(error.localizedDescription)
+                    testStatus = .failure(connectionFailureMessage(for: error))
                 }
             }
         }
+    }
+
+    private func connectionFailureMessage(for error: Error) -> String {
+        AppLocalization.localizedErrorDescription(error)
+            ?? AppLocalization.string("sync.connection_status.failure")
     }
 }

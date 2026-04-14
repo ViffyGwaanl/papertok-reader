@@ -251,7 +251,7 @@ struct MessageBubbleView: View {
 
     private var toolResultView: some View {
         ToolStepView(
-            toolName: "Tool Result",
+            toolName: String(localized: "ai.tool.result_title"),
             arguments: "",
             state: .completed(output: message.textContent ?? "")
         )

@@ -25,9 +25,12 @@ final class MCPConfigurationTests: XCTestCase {
     }
 
     func testConnectionStatusDisplay() {
-        XCTAssertEqual(MCPConnectionStatus.disconnected.displayText, "Disconnected")
-        XCTAssertEqual(MCPConnectionStatus.connecting.displayText, "Connecting...")
-        XCTAssertEqual(MCPConnectionStatus.connected(toolCount: 5).displayText, "Connected (5 tools)")
+        XCTAssertEqual(MCPConnectionStatus.disconnected.displayText, AppLocalization.string("common.disconnected"))
+        XCTAssertEqual(MCPConnectionStatus.connecting.displayText, AppLocalization.string("common.connecting_ellipsis"))
+        XCTAssertEqual(
+            MCPConnectionStatus.connected(toolCount: 5).displayText,
+            AppLocalization.format("common.connected_tool_count_format", locale: .autoupdatingCurrent, 5)
+        )
         XCTAssertTrue(MCPConnectionStatus.error("fail").displayText.contains("fail"))
     }
 

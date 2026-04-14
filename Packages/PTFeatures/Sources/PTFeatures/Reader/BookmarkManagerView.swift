@@ -118,10 +118,10 @@ struct BookmarkManagerView: View {
     private func displayLocation(for note: BookNote) -> String {
         if let anchor = PDFAnnotationBridge.anchor(fromStoredString: note.cfi) {
             return anchor.pageLabel.isEmpty
-                ? AppLocalization.format("reader.page_number_format", "Page %d", anchor.pageIndex + 1)
+                ? AppLocalization.format("reader.page_number_format", locale: .autoupdatingCurrent, anchor.pageIndex + 1)
                 : anchor.pageLabel
         }
-        return note.content.isEmpty ? AppLocalization.string("reader.bookmark", value: "Bookmark") : note.content
+        return note.content.isEmpty ? AppLocalization.string("reader.bookmark") : note.content
     }
 
     private func reload() async {
@@ -159,7 +159,7 @@ struct BookmarkManagerView: View {
         } catch {
             exportedText = AppLocalization.format(
                 "errors.reader.export_highlights_failed_format",
-                "Failed to export: %@",
+                locale: .autoupdatingCurrent,
                 error.localizedDescription
             )
             showExportSheet = true

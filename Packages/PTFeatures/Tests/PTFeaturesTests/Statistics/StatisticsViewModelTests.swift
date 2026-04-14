@@ -204,13 +204,13 @@ struct StatisticsViewModelTests {
     @Test("period summary formattedTotal formats hours and minutes")
     func periodSummaryFormattedTotal() {
         let shortSummary = StatisticsPeriodSummary(periodDays: 7, totalMinutes: 45, activeDays: 3, dailyAverageMinutes: 6)
-        #expect(shortSummary.formattedTotal == "45m")
+        #expect(shortSummary.formattedTotal == localizedDuration(minutes: 45))
 
         let longSummary = StatisticsPeriodSummary(periodDays: 30, totalMinutes: 150, activeDays: 10, dailyAverageMinutes: 5)
-        #expect(longSummary.formattedTotal == "2h 30m")
+        #expect(longSummary.formattedTotal == localizedDuration(minutes: 150))
 
         let exactHours = StatisticsPeriodSummary(periodDays: 7, totalMinutes: 120, activeDays: 5, dailyAverageMinutes: 17)
-        #expect(exactHours.formattedTotal == "2h")
+        #expect(exactHours.formattedTotal == localizedDuration(minutes: 120))
     }
 
     private func makeDate(_ raw: String) -> Date {
@@ -234,5 +234,14 @@ struct StatisticsViewModelTests {
             nowProvider: { self.makeDate("2026-04-07") },
             randomIndexProvider: { upperBound in max(upperBound - 1, 0) }
         )
+    }
+
+    private func localizedDuration(minutes: Int) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.hour, .minute]
+        formatter.unitsStyle = .abbreviated
+        formatter.maximumUnitCount = 2
+        formatter.zeroFormattingBehavior = [.dropLeading, .dropTrailing]
+        return formatter.string(from: TimeInterval(minutes * 60)) ?? "\(minutes)"
     }
 }

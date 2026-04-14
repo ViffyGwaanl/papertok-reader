@@ -12,8 +12,8 @@ public struct AIToolsConfigView: View {
 
     private let registry: ToolRegistry
 
-    private func localized(_ key: String, _ fallback: String) -> String {
-        AppLocalization.string(key, value: fallback)
+    private func localized(_ key: String) -> String {
+        AppLocalization.string(key)
     }
 
     public enum Filter: String, CaseIterable, Identifiable {
@@ -22,13 +22,13 @@ public struct AIToolsConfigView: View {
         public var displayName: String {
             switch self {
             case .all:
-                AppLocalization.string("common.all", value: "All")
+                AppLocalization.string("papers.filter.all")
             case .safe:
-                AppLocalization.string("ai.tool_filter.safe", value: "Safe")
+                AppLocalization.string("ai.tool_filter.safe")
             case .moderate:
-                AppLocalization.string("ai.tool_filter.moderate", value: "Moderate")
+                AppLocalization.string("ai.tool_filter.moderate")
             case .dangerous:
-                AppLocalization.string("ai.tool_filter.dangerous", value: "Dangerous")
+                AppLocalization.string("ai.tool_filter.dangerous")
             }
         }
     }
@@ -77,7 +77,7 @@ public struct AIToolsConfigView: View {
 
     private var filterSection: some View {
         Section {
-            Picker(localized("common.filter", "Filter"), selection: $filter) {
+            Picker(localized("common.filter"), selection: $filter) {
                 ForEach(Filter.allCases) { f in
                     Text(f.displayName).tag(f)
                 }
@@ -89,7 +89,7 @@ public struct AIToolsConfigView: View {
     private var toolsSection: some View {
         ForEach(groupedTools, id: \.category) { group in
             Section(group.category) {
-                ForEach(group.tools, id: \.name) { entry in
+                ForEach(group.tools, id: \.rawName) { entry in
                     toolRow(entry)
                 }
             }
@@ -101,7 +101,7 @@ public struct AIToolsConfigView: View {
         HStack(spacing: AppSpacing.md) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: AppSpacing.xs) {
-                    Text(entry.name)
+                    Text(entry.displayName)
                         .font(AppTypography.subheadline.weight(.medium))
                         .foregroundStyle(Morandi.primaryText)
                     riskBadge(entry.risk)
@@ -113,7 +113,7 @@ public struct AIToolsConfigView: View {
             }
             Spacer()
             Toggle("", isOn: Binding(
-                get: { viewModel.enabledToolNames.isEmpty || viewModel.enabledToolNames.contains(entry.name) },
+                get: { viewModel.enabledToolNames.isEmpty || viewModel.enabledToolNames.contains(entry.rawName) },
                 set: { newValue in
                     var set = viewModel.enabledToolNames
                     if set.isEmpty {
@@ -121,9 +121,9 @@ public struct AIToolsConfigView: View {
                         set = Set(registry.allTools.map { type(of: $0).name })
                     }
                     if newValue {
-                        set.insert(entry.name)
+                        set.insert(entry.rawName)
                     } else {
-                        set.remove(entry.name)
+                        set.remove(entry.rawName)
                     }
                     viewModel.enabledToolNames = set
                     viewModel.save()
@@ -144,7 +144,7 @@ public struct AIToolsConfigView: View {
             case .dangerous: return Morandi.destructive
             }
         }()
-        Text(risk.rawValue.uppercased())
+        Text(localizedRiskLabel(for: risk))
             .font(.system(size: 9, weight: .bold))
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
@@ -155,7 +155,8 @@ public struct AIToolsConfigView: View {
     // MARK: - Data
 
     private struct ToolEntry {
-        let name: String
+        let rawName: String
+        let displayName: String
         let description: String
         let risk: ToolRiskLevel
         let category: ToolCategory
@@ -169,7 +170,13 @@ public struct AIToolsConfigView: View {
     private var groupedTools: [ToolGroup] {
         let all = registry.allTools.map { tool -> ToolEntry in
             let t = type(of: tool)
-            return ToolEntry(name: t.name, description: t.description, risk: t.riskLevel, category: t.category)
+            return ToolEntry(
+                rawName: t.name,
+                displayName: AIToolPresentation.displayName(for: t.name),
+                description: AIToolPresentation.displayDescription(for: t.name, fallback: t.description),
+                risk: t.riskLevel,
+                category: t.category
+            )
         }
         let filtered: [ToolEntry]
         switch filter {
@@ -183,7 +190,7 @@ public struct AIToolsConfigView: View {
             guard let tools = byCategory[cat], !tools.isEmpty else { return nil }
             return ToolGroup(
                 category: localizedCategoryName(for: cat),
-                tools: tools.sorted { $0.name < $1.name }
+                tools: tools.sorted { LocalizedSort.isAscending($0.displayName, $1.displayName) }
             )
         }
     }
@@ -191,27 +198,38 @@ public struct AIToolsConfigView: View {
     private func localizedCategoryName(for category: ToolCategory) -> String {
         switch category {
         case .bookLibrary:
-            localized("ai.tool_category.book_library", "Book Library")
+            localized("ai.tool_category.book_library")
         case .bookContent:
-            localized("ai.tool_category.book_content", "Book Content")
+            localized("ai.tool_category.book_content")
         case .annotation:
-            localized("ai.tool_category.annotation", "Annotation")
+            localized("ai.tool_category.annotation")
         case .search:
-            localized("common.search", "Search")
+            localized("common.search")
         case .readingHistory:
-            localized("ai.tool_category.reading_history", "Reading History")
+            localized("ai.tool_category.reading_history")
         case .calendar:
-            localized("ai.tool_category.calendar", "Calendar")
+            localized("ai.tool_category.calendar")
         case .reminders:
-            localized("ai.tool_category.reminders", "Reminders")
+            localized("ai.tool_category.reminders")
         case .utility:
-            localized("ai.tool_category.utility", "Utility")
+            localized("ai.tool_category.utility")
         case .agent:
-            localized("ai.tool_category.agent", "Agent")
+            localized("ai.tool_category.agent")
         case .memory:
-            localized("ai.memory", "Memory")
+            localized("ai.memory")
         case .mindmap:
-            localized("ai.tool_category.mindmap", "Mind Map")
+            localized("ai.tool_category.mindmap")
+        }
+    }
+
+    private func localizedRiskLabel(for risk: ToolRiskLevel) -> String {
+        switch risk {
+        case .safe:
+            localized("ai.tool_filter.safe")
+        case .moderate:
+            localized("ai.tool_filter.moderate")
+        case .dangerous:
+            localized("ai.tool_filter.dangerous")
         }
     }
 }

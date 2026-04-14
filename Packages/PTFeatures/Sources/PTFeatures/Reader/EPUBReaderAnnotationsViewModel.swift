@@ -22,7 +22,10 @@ public final class EPUBReaderAnnotationsViewModel {
             errorMessage = nil
         } catch {
             notes = []
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.reader.annotation_load_failed"
+            )
         }
     }
 
@@ -37,7 +40,10 @@ public final class EPUBReaderAnnotationsViewModel {
     ) async -> BookNote? {
         let trimmedSelection = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard type == .bookmark || trimmedSelection.isEmpty == false else {
-            errorMessage = AppLocalization.string("errors.reader.selected_text_required", value: "Highlights and notes require selected text.")
+            errorMessage = AppLocalization.string(
+                "errors.reader.selected_text_required",
+                value: "Highlights and notes require selected text."
+            )
             return nil
         }
 
@@ -74,7 +80,10 @@ public final class EPUBReaderAnnotationsViewModel {
 
         let existingType = NoteType(rawValue: existing.type) ?? .highlight
         if existingType == .bookmark && type != .bookmark {
-            errorMessage = AppLocalization.string("errors.reader.selected_text_required", value: "Highlights and notes require selected text.")
+            errorMessage = AppLocalization.string(
+                "errors.reader.selected_text_required",
+                value: "Highlights and notes require selected text."
+            )
             return nil
         }
 
@@ -91,7 +100,10 @@ public final class EPUBReaderAnnotationsViewModel {
             notes.removeAll { $0.id == id }
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.reader.annotation_delete_failed"
+            )
         }
     }
 
@@ -108,7 +120,10 @@ public final class EPUBReaderAnnotationsViewModel {
             await loadAnnotations()
             return saved
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.reader.annotation_save_failed"
+            )
             return nil
         }
     }

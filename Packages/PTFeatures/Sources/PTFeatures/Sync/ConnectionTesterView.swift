@@ -82,8 +82,8 @@ public struct ConnectionTesterView: View {
                     HStack {
                         Label(
                             isRunning
-                                ? AppLocalization.string("common.running", value: "Running")
-                                : AppLocalization.string("sync.run_test", value: "Run Test"),
+                                ? AppLocalization.string("common.running")
+                                : AppLocalization.string("sync.run_test"),
                             systemImage: "play.circle"
                         )
                             .foregroundStyle(Morandi.accent)
@@ -112,16 +112,10 @@ public struct ConnectionTesterView: View {
         guard let client = syncService.makeClient() else {
             for index in checks.indices {
                 checks[index].status = .failure(
-                    AppLocalization.string(
-                        "sync.connection_detail.not_configured",
-                        value: "WebDAV not configured"
-                    )
+                    AppLocalization.string("sync.connection_detail.not_configured")
                 )
             }
-            summary = AppLocalization.string(
-                "sync.connection_detail.configure_webdav_first",
-                value: "Configure a WebDAV server in Sync Settings first."
-            )
+            summary = AppLocalization.string("sync.connection_detail.configure_webdav_first")
             isRunning = false
             return
         }
@@ -134,12 +128,9 @@ public struct ConnectionTesterView: View {
 
         let failed = checks.filter { if case .failure = $0.status { return true } else { return false } }
         summary = failed.isEmpty
-            ? AppLocalization.string("sync.connection_detail.all_passed", value: "All checks passed.")
+            ? AppLocalization.string("sync.connection_detail.all_passed")
             : String(
-                format: AppLocalization.string(
-                    "sync.connection_detail.summary_failed",
-                    value: "%d of %d checks failed."
-                ),
+                format: AppLocalization.string("sync.connection_detail.summary_failed"),
                 locale: .autoupdatingCurrent,
                 failed.count,
                 checks.count
@@ -160,17 +151,14 @@ public struct ConnectionTesterView: View {
         do {
             try await client.ping()
             return .success(
-                AppLocalization.string("sync.connection_detail.server_reachable", value: "Server reachable")
+                AppLocalization.string("sync.connection_detail.server_reachable")
             )
         } catch {
             return .failure(
                 String(
-                    format: AppLocalization.string(
-                        "sync.connection_detail.reachability_failed_format",
-                        value: "Reachability failed: %@"
-                    ),
+                    format: AppLocalization.string("sync.connection_detail.reachability_failed_format"),
                     locale: .autoupdatingCurrent,
-                    error.localizedDescription
+                    connectionFailureDetail(for: error)
                 )
             )
         }
@@ -180,17 +168,14 @@ public struct ConnectionTesterView: View {
         do {
             _ = try await client.listDirectory("/")
             return .success(
-                AppLocalization.string("sync.connection_detail.credentials_accepted", value: "Credentials accepted")
+                AppLocalization.string("sync.connection_detail.credentials_accepted")
             )
         } catch {
             return .failure(
                 String(
-                    format: AppLocalization.string(
-                        "sync.connection_detail.auth_failed_format",
-                        value: "Authentication failed: %@"
-                    ),
+                    format: AppLocalization.string("sync.connection_detail.auth_failed_format"),
                     locale: .autoupdatingCurrent,
-                    error.localizedDescription
+                    connectionFailureDetail(for: error)
                 )
             )
         }
@@ -204,17 +189,14 @@ public struct ConnectionTesterView: View {
             try await client.put(path, data: Data("ok".utf8))
             try? await client.delete(path)
             return .success(
-                AppLocalization.string("sync.connection_detail.write_ok", value: "Write OK")
+                AppLocalization.string("sync.connection_detail.write_ok")
             )
         } catch {
             return .failure(
                 String(
-                    format: AppLocalization.string(
-                        "sync.connection_detail.cannot_write_format",
-                        value: "Cannot write: %@"
-                    ),
+                    format: AppLocalization.string("sync.connection_detail.cannot_write_format"),
                     locale: .autoupdatingCurrent,
-                    error.localizedDescription
+                    connectionFailureDetail(for: error)
                 )
             )
         }
@@ -229,20 +211,14 @@ public struct ConnectionTesterView: View {
                 samples.append(Date().timeIntervalSince(start) * 1000)
             } catch {
                 return .failure(
-                    AppLocalization.string(
-                        "sync.connection_detail.latency_probe_failed",
-                        value: "Latency probe failed"
-                    )
+                    AppLocalization.string("sync.connection_detail.latency_probe_failed")
                 )
             }
         }
         let avg = samples.reduce(0, +) / Double(samples.count)
         return .success(
             String(
-                format: AppLocalization.string(
-                    "sync.connection_detail.latency_average",
-                    value: "Avg %.0f ms (%d samples)"
-                ),
+                format: AppLocalization.string("sync.connection_detail.latency_average"),
                 locale: .autoupdatingCurrent,
                 avg,
                 samples.count
@@ -257,23 +233,22 @@ public struct ConnectionTesterView: View {
         do {
             _ = try await client.listDirectory("/")
             return .success(
-                AppLocalization.string(
-                    "sync.connection_detail.quota_unavailable",
-                    value: "Quota info unavailable"
-                )
+                AppLocalization.string("sync.connection_detail.quota_unavailable")
             )
         } catch {
             return .failure(
                 String(
-                    format: AppLocalization.string(
-                        "sync.connection_detail.quota_failed_format",
-                        value: "Quota check failed: %@"
-                    ),
+                    format: AppLocalization.string("sync.connection_detail.quota_failed_format"),
                     locale: .autoupdatingCurrent,
-                    error.localizedDescription
+                    connectionFailureDetail(for: error)
                 )
             )
         }
+    }
+
+    private func connectionFailureDetail(for error: Error) -> String {
+        AppLocalization.localizedErrorDescription(error)
+            ?? AppLocalization.string("sync.connection_status.failure")
     }
 
     // MARK: - Styling
@@ -298,27 +273,27 @@ public struct ConnectionTesterView: View {
         [
             CheckRow(
                 id: "reach",
-                title: AppLocalization.string("sync.connection_check.reachability", value: "Reachability"),
+                title: AppLocalization.string("sync.connection_check.reachability"),
                 status: .pending
             ),
             CheckRow(
                 id: "auth",
-                title: AppLocalization.string("sync.connection_check.authentication", value: "Authentication"),
+                title: AppLocalization.string("sync.connection_check.authentication"),
                 status: .pending
             ),
             CheckRow(
                 id: "write",
-                title: AppLocalization.string("sync.connection_check.write_permission", value: "Write permission"),
+                title: AppLocalization.string("sync.connection_check.write_permission"),
                 status: .pending
             ),
             CheckRow(
                 id: "latency",
-                title: AppLocalization.string("sync.connection_check.latency", value: "Latency (3 samples)"),
+                title: AppLocalization.string("sync.connection_check.latency"),
                 status: .pending
             ),
             CheckRow(
                 id: "quota",
-                title: AppLocalization.string("sync.connection_check.quota", value: "Storage quota"),
+                title: AppLocalization.string("sync.connection_check.quota"),
                 status: .pending
             ),
         ]

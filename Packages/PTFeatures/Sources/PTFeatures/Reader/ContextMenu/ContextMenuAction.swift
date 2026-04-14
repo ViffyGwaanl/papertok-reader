@@ -17,15 +17,15 @@ public enum ContextMenuAction: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
-        case .highlight:  return AppLocalization.string("reader.highlight", value: "Highlight")
-        case .note:       return AppLocalization.string("common.note", value: "Note")
-        case .copy:       return AppLocalization.string("common.copy", value: "Copy")
-        case .translate:  return AppLocalization.string("reader.quick_action.translate.title", value: "Translate")
-        case .explain:    return AppLocalization.string("reader.quick_action.explain.title", value: "Explain")
-        case .summarize:  return AppLocalization.string("reader.quick_action.summarize.title", value: "Summarize")
-        case .define:     return AppLocalization.string("reader.quick_action.define_vocabulary.title", value: "Define")
-        case .search:     return AppLocalization.string("common.search", value: "Search")
-        case .share:      return AppLocalization.string("common.share", value: "Share")
+        case .highlight:  return AppLocalization.string("reader.highlight")
+        case .note:       return AppLocalization.string("common.note")
+        case .copy:       return AppLocalization.string("common.copy")
+        case .translate:  return AppLocalization.string("reader.quick_action.translate.title")
+        case .explain:    return AppLocalization.string("reader.quick_action.explain.title")
+        case .summarize:  return AppLocalization.string("reader.quick_action.summarize.title")
+        case .define:     return AppLocalization.string("reader.quick_action.define_vocabulary.title")
+        case .search:     return AppLocalization.string("common.search")
+        case .share:      return AppLocalization.string("common.share")
         }
     }
 

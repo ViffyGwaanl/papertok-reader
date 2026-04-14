@@ -14,64 +14,45 @@ public enum ProviderError: Error, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .authenticationFailed(let msg):
-            return String(
-                format: AppLocalization.string(
-                    "errors.ai.authentication_failed_format",
-                    value: "Authentication failed: %@"
-                ),
-                locale: .autoupdatingCurrent,
-                msg
-            )
+            return localizedAuthenticationMessage(detail: msg)
         case .rateLimited:
-            return AppLocalization.string("errors.ai.rate_limited", value: "Rate limit reached")
-        case .modelNotFound(let model):
-            return String(
-                format: AppLocalization.string(
-                    "errors.ai.model_not_found_format",
-                    value: "Model not found: %@"
-                ),
-                locale: .autoupdatingCurrent,
-                model
-            )
-        case .contextLengthExceeded(let maxTokens):
-            return String(
-                format: AppLocalization.string(
-                    "errors.ai.context_length_exceeded_format",
-                    value: "Context length exceeded (%d)"
-                ),
-                locale: .autoupdatingCurrent,
-                maxTokens
-            )
+            return AppLocalization.string("errors.ai.rate_limited")
+        case .modelNotFound:
+            return AppLocalization.string("errors.ai.model_unavailable")
+        case .contextLengthExceeded:
+            return AppLocalization.string("errors.ai.context_too_long")
         case .contentFiltered:
-            return AppLocalization.string("errors.ai.content_filtered", value: "Content filtered")
+            return AppLocalization.string("errors.ai.content_filtered")
         case .serverError(let statusCode, let message):
-            return String(
-                format: AppLocalization.string(
-                    "errors.ai.server_error_format",
-                    value: "Server error %d: %@"
-                ),
-                locale: .autoupdatingCurrent,
-                statusCode,
-                message ?? ""
-            )
-        case .streamingFailed(let error):
-            return String(
-                format: AppLocalization.string(
-                    "errors.ai.streaming_failed_format",
-                    value: "Streaming failed: %@"
-                ),
-                locale: .autoupdatingCurrent,
-                error.localizedDescription
-            )
-        case .unsupportedCapability(let capability):
-            return String(
-                format: AppLocalization.string(
-                    "errors.ai.unsupported_capability_format",
-                    value: "Unsupported: %@"
-                ),
-                locale: .autoupdatingCurrent,
-                capability.rawValue
-            )
+            return localizedServerMessage(statusCode: statusCode, message: message)
+        case .streamingFailed:
+            return AppLocalization.string("errors.ai.streaming_interrupted")
+        case .unsupportedCapability:
+            return AppLocalization.string("errors.ai.unsupported_capability")
+        }
+    }
+
+    private func localizedAuthenticationMessage(detail: String) -> String {
+        let normalized = detail.lowercased()
+        if normalized.contains("missing") || normalized.contains("not found") || normalized.contains("no api key") {
+            return AppLocalization.string("errors.ai.no_api_key")
+        }
+        return AppLocalization.string("errors.ai.invalid_api_key")
+    }
+
+    private func localizedServerMessage(statusCode: Int, message: String?) -> String {
+        switch statusCode {
+        case 401, 403:
+            return AppLocalization.string("errors.ai.invalid_api_key")
+        case 404:
+            return AppLocalization.string("errors.ai.model_unavailable")
+        case 429:
+            return AppLocalization.string("errors.ai.rate_limited")
+        default:
+            if let message, message.isEmpty == false {
+                return AppLocalization.string("errors.ai.service_unavailable")
+            }
+            return AppLocalization.string("errors.ai.no_response")
         }
     }
 }

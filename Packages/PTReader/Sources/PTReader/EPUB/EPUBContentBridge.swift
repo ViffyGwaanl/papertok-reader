@@ -32,7 +32,7 @@ public final class EPUBContentBridge: BookContentBridge, @unchecked Sendable {
 
     public func extractChapterContent(href: String) async throws -> String {
         guard let resource = publication.get(Link(href: href)) else {
-            throw EPUBOpenError.streamerError("Chapter not found: \(href)")
+            throw EPUBOpenError.streamerError(href)
         }
         let readResult = await resource.read()
         switch readResult {
@@ -40,7 +40,7 @@ public final class EPUBContentBridge: BookContentBridge, @unchecked Sendable {
             let html = String(data: data, encoding: .utf8) ?? ""
             return stripHTML(html)
         case .failure(let error):
-            throw EPUBOpenError.streamerError("Failed to read chapter \(href): \(String(describing: error))")
+            throw EPUBOpenError.streamerError("\(href): \(String(describing: error))")
         }
     }
 
@@ -70,11 +70,11 @@ public final class EPUBContentBridge: BookContentBridge, @unchecked Sendable {
             case .success:
                 return results
             case .failure(let error):
-                throw EPUBOpenError.streamerError("Search failed: \(error)")
+                throw EPUBOpenError.searchFailed(String(describing: error))
             }
 
         case .failure(let error):
-            throw EPUBOpenError.streamerError("Search failed: \(error)")
+            throw EPUBOpenError.searchFailed(String(describing: error))
         }
     }
 

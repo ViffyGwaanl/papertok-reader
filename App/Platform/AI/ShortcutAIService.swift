@@ -20,19 +20,14 @@ enum ShortcutAIServiceError: LocalizedError {
         case .unsupportedProvider(let providerID):
             return AppLocalization.format(
                 "errors.ai.shortcut_unsupported_provider_format",
-                "Unsupported AI provider: %@",
+                bundle: .main,
+                locale: .autoupdatingCurrent,
                 providerID
             )
         case .emptyResponse:
-            return AppLocalization.string(
-                "errors.ai.shortcut_empty_response",
-                value: "The AI service returned an empty response."
-            )
+            return AppLocalization.string("errors.ai.shortcut_empty_response")
         case .invalidImageData:
-            return AppLocalization.string(
-                "errors.ai.shortcut_invalid_image",
-                value: "One of the selected images could not be processed."
-            )
+            return AppLocalization.string("errors.ai.shortcut_invalid_image")
         }
     }
 }

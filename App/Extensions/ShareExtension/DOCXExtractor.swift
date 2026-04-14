@@ -21,30 +21,17 @@ public enum DOCXExtractor {
         public var errorDescription: String? {
             switch self {
             case .cannotReadFile:
-                return AppLocalization.string(
-                    "errors.share.docx.read_failed",
-                    value: "Could not read DOCX file."
-                )
+                return AppLocalization.string("errors.share.docx.read_failed")
             case .notAZipFile:
-                return AppLocalization.string(
-                    "errors.share.docx.invalid_zip",
-                    value: "File is not a valid ZIP archive."
-                )
+                return AppLocalization.string("errors.share.docx.invalid_zip")
             case .documentXMLNotFound:
-                return AppLocalization.string(
-                    "errors.share.docx.document_xml_missing",
-                    value: "word/document.xml was not found in the DOCX archive."
-                )
+                return AppLocalization.string("errors.share.docx.document_xml_missing")
             case .inflateFailed:
-                return AppLocalization.string(
-                    "errors.share.docx.inflate_failed",
-                    value: "Failed to decompress word/document.xml."
-                )
+                return AppLocalization.string("errors.share.docx.inflate_failed")
             case .xmlParseFailed(let error):
                 return AppLocalization.format(
                     "errors.share.docx.parse_failed_format",
-                    "Failed to parse word/document.xml: %@",
-                    error?.localizedDescription ?? AppLocalization.string("common.unknown", value: "unknown")
+                    error?.localizedDescription ?? AppLocalization.string("common.unknown")
                 )
             }
         }

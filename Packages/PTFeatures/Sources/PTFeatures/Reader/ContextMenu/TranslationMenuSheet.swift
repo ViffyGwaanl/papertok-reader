@@ -221,10 +221,7 @@ struct TranslationMenuSheet: View {
 
     private func translate() async {
         guard let translationService else {
-            errorMessage = AppLocalization.string(
-                "errors.translation.not_configured",
-                value: "Translation service is not configured."
-            )
+            errorMessage = AppLocalization.string("errors.translation.not_configured")
             return
         }
         guard !isTranslating else { return }
@@ -240,7 +237,10 @@ struct TranslationMenuSheet: View {
                 to: target?.englishName ?? "English"
             )
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.translation.failed"
+            )
         }
 
         isTranslating = false

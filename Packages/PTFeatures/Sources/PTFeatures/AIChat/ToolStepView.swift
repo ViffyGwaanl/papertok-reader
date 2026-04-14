@@ -49,7 +49,7 @@ public struct ToolStepView: View {
     }
 
     private var humanReadableName: String {
-        toolName.replacingOccurrences(of: "_", with: " ").capitalized
+        AIToolPresentation.displayName(for: toolName)
     }
 
     private func formatDuration(_ d: TimeInterval) -> String {

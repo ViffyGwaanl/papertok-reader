@@ -1,4 +1,5 @@
 import SwiftUI
+import PTAIServices
 import PTUI
 
 /// Modal sheet asking user to approve or deny a dangerous tool call.
@@ -22,7 +23,7 @@ struct ToolApprovalSheet: View {
                 Text("ai.tool_name")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Morandi.secondaryText)
-                Text(toolName)
+                Text(AIToolPresentation.displayName(for: toolName))
                     .font(AppTypography.mono)
                     .foregroundStyle(Morandi.primaryText)
                     .padding(AppSpacing.sm)

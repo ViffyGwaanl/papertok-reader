@@ -6,55 +6,55 @@ struct PaperTokShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: OpenBookIntent(),
             phrases: [
-                "Open a book in \(.applicationName)",
-                "Read with \(.applicationName)",
+                AppShortcutPhrase<OpenBookIntent>("Open a book in \(.applicationName)"),
+                AppShortcutPhrase<OpenBookIntent>("Read with \(.applicationName)"),
             ],
-            shortTitle: "Open Book",
+            shortTitle: "intent.open_book.title",
             systemImageName: "book"
         )
         AppShortcut(
             intent: AskAIIntent(),
             phrases: [
-                "Ask \(.applicationName) a question",
-                "Chat with \(.applicationName)",
+                AppShortcutPhrase<AskAIIntent>("Ask \(.applicationName) a question"),
+                AppShortcutPhrase<AskAIIntent>("Chat with \(.applicationName)"),
             ],
-            shortTitle: "Ask AI",
+            shortTitle: "intent.ask_ai.title",
             systemImageName: "brain"
         )
         AppShortcut(
             intent: SendMessageIntent(),
             phrases: [
-                "Send a message to \(.applicationName)",
-                "Send images to \(.applicationName)",
+                AppShortcutPhrase<SendMessageIntent>("Send a message to \(.applicationName)"),
+                AppShortcutPhrase<SendMessageIntent>("Send images to \(.applicationName)"),
             ],
-            shortTitle: "Send Message",
+            shortTitle: "intent.send_message.title",
             systemImageName: "message.badge"
         )
         AppShortcut(
             intent: SearchBooksIntent(),
             phrases: [
-                "Search books in \(.applicationName)",
-                "Find a book in \(.applicationName)",
+                AppShortcutPhrase<SearchBooksIntent>("Search books in \(.applicationName)"),
+                AppShortcutPhrase<SearchBooksIntent>("Find a book in \(.applicationName)"),
             ],
-            shortTitle: "Search Books",
+            shortTitle: "intent.search_books.title",
             systemImageName: "magnifyingglass"
         )
         AppShortcut(
             intent: GetReadingStatsIntent(),
             phrases: [
-                "Get my reading stats from \(.applicationName)",
-                "Show reading time in \(.applicationName)",
+                AppShortcutPhrase<GetReadingStatsIntent>("Get my reading stats from \(.applicationName)"),
+                AppShortcutPhrase<GetReadingStatsIntent>("Show reading time in \(.applicationName)"),
             ],
-            shortTitle: "Reading Stats",
+            shortTitle: "intent.get_stats.title",
             systemImageName: "chart.bar"
         )
         AppShortcut(
             intent: CreateNoteIntent(),
             phrases: [
-                "Create a note in \(.applicationName)",
-                "Add a book note to \(.applicationName)",
+                AppShortcutPhrase<CreateNoteIntent>("Create a note in \(.applicationName)"),
+                AppShortcutPhrase<CreateNoteIntent>("Add a book note to \(.applicationName)"),
             ],
-            shortTitle: "Create Note",
+            shortTitle: "intent.create_note.title",
             systemImageName: "note.text.badge.plus"
         )
     }

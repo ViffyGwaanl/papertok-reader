@@ -1,2 +1,3 @@
 "test.greeting" = "你好";
 "test.items" = "%lld 项";
+"test.detail" = "详情：%@";

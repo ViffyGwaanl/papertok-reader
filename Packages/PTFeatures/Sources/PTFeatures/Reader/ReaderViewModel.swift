@@ -137,7 +137,7 @@ public final class ReaderViewModel {
         guard let readerSessionStore, let pdfContentBridge else { return }
         let adapter = ReaderSessionToolBridgeAdapter(bridge: pdfContentBridge)
         let chapter = currentChapterEntry ?? ChapterEntry(
-            title: "Page \(currentPage + 1)",
+            title: Self.localizedPageLabel(for: currentPage),
             href: "pages:\(currentPage)-\(currentPage)"
         )
         readerSessionStore.update(
@@ -177,7 +177,7 @@ public final class ReaderViewModel {
     public func toggleBookmark() async {
         guard let bookId = book.id else { return }
         let pageIndex = currentPage
-        let pageLabel = pdfDocument?.page(at: pageIndex)?.label ?? "Page \(pageIndex + 1)"
+        let pageLabel = pdfDocument?.page(at: pageIndex)?.label ?? Self.localizedPageLabel(for: pageIndex)
 
         if let existing = bookmark(forPage: pageIndex), let id = existing.id {
             try? await noteDAO.delete(id: id)
@@ -241,4 +241,43 @@ public final class ReaderViewModel {
     public var currentChapterTitle: String {
         currentChapterEntry?.title ?? book.title
     }
+
+    static func localizedPageLabel(for pageIndex: Int) -> String {
+        localizedCatalogFormat("reader.page_number_format", pageIndex + 1)
+    }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: localizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

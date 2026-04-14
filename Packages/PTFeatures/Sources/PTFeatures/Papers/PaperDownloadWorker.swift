@@ -7,8 +7,8 @@ enum PaperDownloadPhase: Equatable, Sendable {
 
     var title: String {
         switch self {
-        case .downloading: "Downloading"
-        case .importing: "Importing"
+        case .downloading: AppLocalization.string("papers.download.phase.downloading")
+        case .importing: AppLocalization.string("papers.download.phase.importing")
         }
     }
 }
@@ -81,7 +81,7 @@ struct PaperDownloadWorker {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            await onStatus(.failed(message: error.localizedDescription, plan: plan))
+            await onStatus(.failed(message: userFacingImportFailureMessage(for: error), plan: plan))
             return
         }
 
@@ -101,11 +101,16 @@ struct PaperDownloadWorker {
             case .alreadyExists(let book):
                 await onStatus(.alreadyInBookshelf(book.title))
             default:
-                await onStatus(.failed(message: error.errorDescription ?? "Import failed.", plan: plan))
+                await onStatus(.failed(message: error.errorDescription ?? AppLocalization.string("errors.import.failed"), plan: plan))
             }
         } catch {
-            await onStatus(.failed(message: error.localizedDescription, plan: plan))
+            await onStatus(.failed(message: userFacingImportFailureMessage(for: error), plan: plan))
         }
+    }
+
+    private func userFacingImportFailureMessage(for error: Error) -> String {
+        AppLocalization.localizedErrorDescription(error)
+            ?? AppLocalization.string("errors.import.failed")
     }
 }
 

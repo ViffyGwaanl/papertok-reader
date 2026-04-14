@@ -18,8 +18,8 @@ public struct AIImageAnalysisView: View {
 
     private let defaults = AppConfig.groupDefaults
 
-    private func localized(_ key: String, _ fallback: String) -> String {
-        AppLocalization.string(key, value: fallback)
+    private func localized(_ key: String) -> String {
+        AppLocalization.string(key)
     }
 
     public init() {
@@ -27,10 +27,7 @@ public struct AIImageAnalysisView: View {
         _providerId = State(initialValue: d.string(forKey: "ai_vision_provider") ?? "openai")
         _modelId = State(initialValue: d.string(forKey: "ai_vision_model") ?? "gpt-4o-mini")
         _defaultPrompt = State(initialValue: d.string(forKey: "ai_vision_prompt")
-            ?? AppLocalization.string(
-                "ai.image_analysis.default_prompt_value",
-                value: "Describe this image in detail. Highlight any text, diagrams, or notable elements."
-            ))
+            ?? AppLocalization.string("ai.image_analysis.default_prompt_value"))
         _maxImageSize = State(initialValue: d.object(forKey: "ai_vision_max_size") as? Double ?? 1024)
         _quality = State(initialValue: d.string(forKey: "ai_vision_quality") ?? "medium")
         _enableForReader = State(initialValue: d.bool(forKey: "ai_vision_reader_enabled"))
@@ -86,7 +83,7 @@ public struct AIImageAnalysisView: View {
                     Text(modelId).tag(modelId)
                 }
             }
-            TextField(localized("ai.providers.custom_model_id", "Or enter custom model ID"), text: $modelId)
+            TextField(localized("ai.providers.custom_model_id"), text: $modelId)
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
                 #endif
@@ -103,12 +100,9 @@ public struct AIImageAnalysisView: View {
                 .font(AppTypography.body)
                 .foregroundStyle(Morandi.primaryText)
         } header: {
-            Text(localized("ai.image_analysis.default_prompt", "Default Prompt"))
+            Text(localized("ai.image_analysis.default_prompt"))
         } footer: {
-            Text(localized(
-                "ai.image_analysis.prompt_footer",
-                "Used as the system prompt when analysing an image without an explicit user prompt."
-            ))
+            Text(localized("ai.image_analysis.prompt_footer"))
                 .font(AppTypography.caption2)
                 .foregroundStyle(Morandi.tertiaryText)
         }
@@ -116,10 +110,10 @@ public struct AIImageAnalysisView: View {
     }
 
     private var qualitySection: some View {
-        Section(localized("ai.image_analysis.quality", "Quality")) {
+        Section(localized("ai.image_analysis.quality")) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(localized("ai.image_analysis.max_image_size", "Max Image Size"))
+                    Text(localized("ai.image_analysis.max_image_size"))
                     Spacer()
                     Text("\(Int(maxImageSize)) px")
                         .font(AppTypography.caption.monospacedDigit())
@@ -128,10 +122,10 @@ public struct AIImageAnalysisView: View {
                 Slider(value: $maxImageSize, in: 256...4096, step: 128)
                     .tint(Morandi.accent)
             }
-            Picker(localized("ai.image_analysis.quality", "Quality"), selection: $quality) {
-                Text(localized("ai.image_analysis.quality.low", "Low")).tag("low")
-                Text(localized("ai.image_analysis.quality.medium", "Medium")).tag("medium")
-                Text(localized("ai.image_analysis.quality.high", "High")).tag("high")
+            Picker(localized("ai.image_analysis.quality"), selection: $quality) {
+                Text(localized("common.low")).tag("low")
+                Text(localized("common.medium")).tag("medium")
+                Text(localized("common.high")).tag("high")
             }
         }
         .onChange(of: maxImageSize) { _, v in defaults.set(v, forKey: "ai_vision_max_size") }
@@ -139,10 +133,10 @@ public struct AIImageAnalysisView: View {
     }
 
     private var integrationSection: some View {
-        Section(localized("ai.image_analysis.integrations", "Integrations")) {
-            Toggle(localized("ai.image_analysis.enable_for_reader_images", "Enable for Reader Images"), isOn: $enableForReader)
+        Section(localized("ai.image_analysis.integrations")) {
+            Toggle(localized("ai.image_analysis.enable_for_reader_images"), isOn: $enableForReader)
                 .tint(Morandi.accent)
-            Toggle(localized("ai.image_analysis.enable_for_highlights", "Enable for Highlights"), isOn: $enableForHighlights)
+            Toggle(localized("ai.image_analysis.enable_for_highlights"), isOn: $enableForHighlights)
                 .tint(Morandi.accent)
         }
         .onChange(of: enableForReader) { _, v in defaults.set(v, forKey: "ai_vision_reader_enabled") }

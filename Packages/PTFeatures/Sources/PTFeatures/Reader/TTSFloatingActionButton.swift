@@ -399,7 +399,7 @@ struct TTSExpandedControlsSheet: View {
             voices = []
             errorMessage = AppLocalization.format(
                 "errors.tts.load_voices_failed_format",
-                "Failed to load voices: %@",
+                locale: .autoupdatingCurrent,
                 error.localizedDescription
             )
         }

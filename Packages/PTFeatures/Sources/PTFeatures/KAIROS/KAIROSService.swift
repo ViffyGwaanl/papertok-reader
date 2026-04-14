@@ -67,12 +67,12 @@ public final class KAIROSService {
     private let defaults: UserDefaults
     private let database: AppDatabase?
 
-    private func localized(_ key: String, _ fallback: String) -> String {
-        AppLocalization.string(key, value: fallback)
+    private func localized(_ key: String) -> String {
+        AppLocalization.string(key)
     }
 
-    private func format(_ key: String, _ fallback: String, _ arguments: CVarArg...) -> String {
-        let formatString = AppLocalization.string(key, value: fallback)
+    private func format(_ key: String, _ arguments: CVarArg...) -> String {
+        let formatString = AppLocalization.string(key)
         return String(format: formatString, locale: .autoupdatingCurrent, arguments: arguments)
     }
 
@@ -130,12 +130,11 @@ public final class KAIROSService {
         center.removePendingNotificationRequests(withIdentifiers: [Self.notificationID])
 
         let content = UNMutableNotificationContent()
-        content.title = localized("kairos.time_to_read", "Time to Read")
+        content.title = localized("kairos.time_to_read")
         content.body = goalReachedToday
-            ? localized("kairos.goal_reached_body", "Great job reaching your goal! Keep the streak going.")
+            ? localized("kairos.goal_reached_body")
             : format(
                 "kairos.remaining_minutes_format",
-                "You have %d minutes left to reach your daily goal.",
                 max(0, dailyGoalMinutes - todayReadingMinutes)
             )
         content.sound = .default
@@ -217,12 +216,12 @@ public struct KAIROSSettingsView: View {
         self.service = service
     }
 
-    private func localized(_ key: String, _ fallback: String) -> String {
-        AppLocalization.string(key, value: fallback)
+    private func localized(_ key: String) -> String {
+        AppLocalization.string(key)
     }
 
-    private func format(_ key: String, _ fallback: String, _ arguments: CVarArg...) -> String {
-        let formatString = AppLocalization.string(key, value: fallback)
+    private func format(_ key: String, _ arguments: CVarArg...) -> String {
+        let formatString = AppLocalization.string(key)
         return String(format: formatString, locale: .autoupdatingCurrent, arguments: arguments)
     }
 
@@ -303,7 +302,6 @@ public struct KAIROSSettingsView: View {
                             Spacer()
                             Text(format(
                                 "kairos.today_progress_format",
-                                "%d / %d min",
                                 service.todayReadingMinutes,
                                 service.dailyGoalMinutes
                             ))
@@ -356,22 +354,22 @@ public struct KAIROSSettingsView: View {
 
                 Section {
                     achievementRow(
-                        title: localized("kairos.achievement.first_steps.title", "First Steps"),
-                        detail: localized("kairos.achievement.first_steps.detail", "Reach your daily goal once"),
+                        title: localized("kairos.achievement.first_steps.title"),
+                        detail: localized("kairos.achievement.first_steps.detail"),
                         unlocked: service.longestStreak >= 1,
                         icon: "star.fill",
                         tint: .yellow
                     )
                     achievementRow(
-                        title: localized("kairos.achievement.week_warrior.title", "Week Warrior"),
-                        detail: localized("kairos.achievement.week_warrior.detail", "7-day reading streak"),
+                        title: localized("kairos.achievement.week_warrior.title"),
+                        detail: localized("kairos.achievement.week_warrior.detail"),
                         unlocked: service.longestStreak >= 7,
                         icon: "flame.fill",
                         tint: .orange
                     )
                     achievementRow(
-                        title: localized("kairos.achievement.unstoppable.title", "Unstoppable"),
-                        detail: localized("kairos.achievement.unstoppable.detail", "30-day reading streak"),
+                        title: localized("kairos.achievement.unstoppable.title"),
+                        detail: localized("kairos.achievement.unstoppable.detail"),
                         unlocked: service.longestStreak >= 30,
                         icon: "crown.fill",
                         tint: Morandi.lavender

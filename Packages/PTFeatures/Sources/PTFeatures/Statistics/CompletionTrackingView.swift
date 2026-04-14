@@ -73,12 +73,12 @@ public struct CompletionTrackingView: View {
 
     private let snapshot: Snapshot
 
-    private func localized(_ key: String, _ fallback: String) -> String {
-        AppLocalization.string(key, value: fallback)
+    private func localized(_ key: String) -> String {
+        AppLocalization.string(key)
     }
 
-    private func format(_ key: String, _ fallback: String, _ arguments: CVarArg...) -> String {
-        let formatString = AppLocalization.string(key, value: fallback)
+    private func format(_ key: String, _ arguments: CVarArg...) -> String {
+        let formatString = AppLocalization.string(key)
         return String(format: formatString, locale: .autoupdatingCurrent, arguments: arguments)
     }
 
@@ -102,23 +102,23 @@ public struct CompletionTrackingView: View {
     private var statsGrid: some View {
         let items: [(String, String, Color)] = [
             (
-                localized("statistics.this_month", "This Month"),
-                format("statistics.books_count_format", "%d books", snapshot.booksThisMonth),
+                localized("statistics.this_month"),
+                format("statistics.books_count_format", snapshot.booksThisMonth),
                 Morandi.sage
             ),
             (
-                localized("statistics.this_year", "This Year"),
-                format("statistics.books_count_format", "%d books", snapshot.booksThisYear),
+                localized("statistics.this_year"),
+                format("statistics.books_count_format", snapshot.booksThisYear),
                 Morandi.dustyRose
             ),
             (
-                localized("statistics.average_completion", "Avg Completion"),
-                format("statistics.average_completion_days_format", "%.1f days", snapshot.averageCompletionDays),
+                localized("statistics.average_completion"),
+                format("statistics.average_completion_days_format", snapshot.averageCompletionDays),
                 Morandi.clay
             ),
             (
-                localized("statistics.best_streak", "Longest Streak"),
-                format("statistics.day_count_format", "%d days", snapshot.longestStreak),
+                localized("statistics.best_streak"),
+                format("statistics.day_count_format", snapshot.longestStreak),
                 Morandi.lavender
             )
         ]
@@ -152,25 +152,20 @@ public struct CompletionTrackingView: View {
         HStack(spacing: 16) {
             goalRing(
                 progress: dailyGoalProgress,
-                label: localized("statistics.daily_goal", "Daily"),
-                caption: format(
-                    "statistics.goal_progress_minutes_format",
-                    "%d/%dm",
-                    snapshot.todayMinutes,
-                    snapshot.dailyGoalMinutes
-                ),
+                label: localized("statistics.daily_goal"),
+                caption: format("statistics.goal_progress_minutes_format", snapshot.todayMinutes, snapshot.dailyGoalMinutes),
                 color: Morandi.sage
             )
             goalRing(
                 progress: yearlyGoalProgress,
-                label: localized("statistics.yearly_goal", "Yearly"),
+                label: localized("statistics.yearly_goal"),
                 caption: "\(snapshot.booksThisYear)/\(snapshot.yearlyGoalBooks)",
                 color: Morandi.powder
             )
             goalRing(
                 progress: min(Double(snapshot.currentStreak) / 30, 1),
-                label: localized("statistics.streak", "Streak"),
-                caption: format("statistics.streak_short_format", "%dd", snapshot.currentStreak),
+                label: localized("statistics.streak"),
+                caption: format("statistics.day_count_short_format", snapshot.currentStreak),
                 color: Morandi.clay
             )
         }

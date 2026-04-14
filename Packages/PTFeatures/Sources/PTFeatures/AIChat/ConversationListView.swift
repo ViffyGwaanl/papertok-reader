@@ -53,10 +53,7 @@ public struct ConversationListView: View {
         .searchable(
             text: $searchText,
             placement: .automatic,
-            prompt: AppLocalization.string(
-                "ai.search_conversations",
-                value: "Search conversations"
-            )
+            prompt: AppLocalization.string("ai.search_conversations")
         )
         .onAppear {
             loadPinned()
@@ -97,7 +94,7 @@ public struct ConversationListView: View {
         if !pinned.isEmpty {
             result.append(
                 SectionGroup(
-                    title: AppLocalization.string("ai.conversations.pinned", value: "Pinned"),
+                    title: AppLocalization.string("ai.conversations.pinned"),
                     isPinned: true,
                     items: pinned
                 )
@@ -116,16 +113,16 @@ public struct ConversationListView: View {
             else { earlier.append(item) }
         }
         if !today.isEmpty {
-            result.append(SectionGroup(title: AppLocalization.string("common.today", value: "Today"), isPinned: false, items: today))
+            result.append(SectionGroup(title: AppLocalization.string("common.today"), isPinned: false, items: today))
         }
         if !yesterday.isEmpty {
-            result.append(SectionGroup(title: AppLocalization.string("common.yesterday", value: "Yesterday"), isPinned: false, items: yesterday))
+            result.append(SectionGroup(title: AppLocalization.string("common.yesterday"), isPinned: false, items: yesterday))
         }
         if !thisWeek.isEmpty {
-            result.append(SectionGroup(title: AppLocalization.string("common.this_week", value: "This Week"), isPinned: false, items: thisWeek))
+            result.append(SectionGroup(title: AppLocalization.string("common.this_week"), isPinned: false, items: thisWeek))
         }
         if !earlier.isEmpty {
-            result.append(SectionGroup(title: AppLocalization.string("common.earlier", value: "Earlier"), isPinned: false, items: earlier))
+            result.append(SectionGroup(title: AppLocalization.string("common.earlier"), isPinned: false, items: earlier))
         }
         return result
     }
@@ -134,18 +131,18 @@ public struct ConversationListView: View {
     private func renameSheet(for target: ConversationPersistenceService.ConversationSummary) -> some View {
         NavigationStack {
             Form {
-                TextField(AppLocalization.string("common.title", value: "Title"), text: $renameText)
+                TextField(AppLocalization.string("common.title"), text: $renameText)
             }
-            .navigationTitle(AppLocalization.string("common.rename", value: "Rename"))
+            .navigationTitle(AppLocalization.string("common.rename"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(AppLocalization.string("common.cancel", value: "Cancel")) { renameTarget = nil }
+                    Button(AppLocalization.string("common.cancel")) { renameTarget = nil }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(AppLocalization.string("common.save", value: "Save")) { performRename(target) }.bold()
+                    Button(AppLocalization.string("common.save")) { performRename(target) }.bold()
                 }
             }
         }
@@ -176,11 +173,11 @@ public struct ConversationListView: View {
             guard let text = msg.textContent, !text.isEmpty else { continue }
             switch msg.role {
             case .system:
-                md += "> _\(AppLocalization.string("ai.role.system", value: "System")): \(text)_\n\n"
+                md += "> _\(AppLocalization.string("ai.role.system")): \(text)_\n\n"
             case .user:
-                md += "**\(AppLocalization.string("ai.role.user", value: "You")):** \(text)\n\n"
+                md += "**\(AppLocalization.string("ai.role.user")):** \(text)\n\n"
             case .assistant:
-                md += "**\(AppLocalization.string("ai.role.assistant", value: "Assistant")):** \(text)\n\n"
+                md += "**\(AppLocalization.string("ai.role.assistant")):** \(text)\n\n"
             case .tool: md += "```\n\(text)\n```\n\n"
             }
         }
@@ -240,8 +237,8 @@ public struct ConversationListView: View {
                             } label: {
                                 Label(
                                     pinnedIds.contains(summary.id)
-                                        ? AppLocalization.string("ai.unpin_conversation", value: "Unpin")
-                                        : AppLocalization.string("ai.pin_conversation", value: "Pin"),
+                                        ? AppLocalization.string("ai.unpin_conversation")
+                                        : AppLocalization.string("ai.pin_conversation"),
                                     systemImage: pinnedIds.contains(summary.id) ? "pin.slash" : "pin"
                                 )
                             }
@@ -276,8 +273,8 @@ public struct ConversationListView: View {
                             } label: {
                                 Label(
                                     pinnedIds.contains(summary.id)
-                                        ? AppLocalization.string("ai.unpin_conversation", value: "Unpin")
-                                        : AppLocalization.string("ai.pin_conversation", value: "Pin"),
+                                        ? AppLocalization.string("ai.unpin_conversation")
+                                        : AppLocalization.string("ai.pin_conversation"),
                                     systemImage: pinnedIds.contains(summary.id) ? "pin.slash" : "pin"
                                 )
                             }
@@ -316,7 +313,8 @@ public struct ConversationListView: View {
         do {
             summaries = try persistenceService.listSummaries()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.localizedErrorDescription(error)
+                ?? AppLocalization.string("common.failed_to_load")
         }
     }
 

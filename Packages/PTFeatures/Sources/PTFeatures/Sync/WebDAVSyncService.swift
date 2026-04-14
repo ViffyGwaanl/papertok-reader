@@ -105,10 +105,7 @@ public final class WebDAVSyncService {
     /// Perform a full sync cycle: upload local DB, sync book files.
     public func sync() async {
         guard let client = makeClient() else {
-            errorMessage = AppLocalization.string(
-                "sync.connection_detail.configure_webdav_first",
-                value: "Configure WebDAV first."
-            )
+            errorMessage = AppLocalization.string("sync.connection_detail.configure_webdav_first")
             status = .error
             return
         }
@@ -169,7 +166,10 @@ public final class WebDAVSyncService {
             defaults.set(lastSyncDate, forKey: Self.lastSyncKey)
             status = .success
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.sync.upload_failed"
+            )
             status = .error
         }
     }
@@ -177,10 +177,7 @@ public final class WebDAVSyncService {
     /// Download database and files from the remote server to restore locally.
     public func restore() async {
         guard let client = makeClient() else {
-            errorMessage = AppLocalization.string(
-                "sync.connection_detail.configure_webdav_first",
-                value: "Configure WebDAV first."
-            )
+            errorMessage = AppLocalization.string("sync.connection_detail.configure_webdav_first")
             status = .error
             return
         }
@@ -222,7 +219,10 @@ public final class WebDAVSyncService {
             defaults.set(lastSyncDate, forKey: Self.lastSyncKey)
             status = .success
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.sync.download_failed"
+            )
             status = .error
         }
     }
@@ -234,10 +234,7 @@ public final class WebDAVSyncService {
     /// legacy full-sync fallback.
     public func incrementalSync() async {
         guard let client = makeClient() else {
-            errorMessage = AppLocalization.string(
-                "sync.connection_detail.configure_webdav_first",
-                value: "Configure WebDAV first."
-            )
+            errorMessage = AppLocalization.string("sync.connection_detail.configure_webdav_first")
             status = .error
             return
         }
@@ -293,7 +290,10 @@ public final class WebDAVSyncService {
             defaults.set(lastSyncDate, forKey: Self.lastSyncKey)
             status = .success
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "sync.sync_failed"
+            )
             status = .error
         }
     }

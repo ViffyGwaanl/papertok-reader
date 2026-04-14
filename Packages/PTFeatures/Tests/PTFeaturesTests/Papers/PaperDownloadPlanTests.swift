@@ -15,7 +15,7 @@ struct PaperDownloadPlanTests {
         let plan = try #require(PaperDownloadPlan(detail: detail))
 
         #expect(plan.format == .epub)
-        #expect(plan.buttonTitle == "Import EPUB")
+        #expect(plan.buttonTitle == AppLocalization.string("papers.import_epub"))
         #expect(plan.downloadURL.absoluteString == "https://papertok.ai/epub/paper.epub")
         #expect(plan.suggestedFilename.hasSuffix(".epub"))
     }
@@ -30,7 +30,7 @@ struct PaperDownloadPlanTests {
         let plan = try #require(PaperDownloadPlan(detail: detail))
 
         #expect(plan.format == .pdf)
-        #expect(plan.buttonTitle == "Import PDF")
+        #expect(plan.buttonTitle == AppLocalization.string("papers.import_pdf"))
         #expect(plan.downloadURL.absoluteString == "https://papertok.ai/pdf/paper.pdf")
         #expect(plan.suggestedFilename.hasSuffix(".pdf"))
     }

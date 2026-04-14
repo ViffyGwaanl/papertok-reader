@@ -155,26 +155,16 @@ public enum MCPTransportError: Error, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notConnected:
-            return AppLocalization.string(
-                "errors.mcp.transport_not_connected",
-                value: "MCP transport is not connected"
-            )
+            return AppLocalization.string("errors.mcp.transport_not_connected")
         case .invalidResponse:
-            return AppLocalization.string(
-                "errors.mcp.invalid_response",
-                value: "Invalid response from MCP server"
-            )
+            return AppLocalization.string("errors.mcp.invalid_response")
         case .httpError(let code, let body):
-            return AppLocalization.format(
-                "errors.mcp.http_error_format",
-                "MCP HTTP error %d%@",
+            return AppLocalization.format("errors.mcp.http_error_format", locale: .autoupdatingCurrent,
                 code,
                 body.map { ": \($0)" } ?? ""
             )
         case .connectionFailed(let reason):
-            return AppLocalization.format(
-                "errors.mcp.connection_failed_format",
-                "MCP connection failed: %@",
+            return AppLocalization.format("errors.mcp.connection_failed_format", locale: .autoupdatingCurrent,
                 reason
             )
         }

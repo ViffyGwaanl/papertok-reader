@@ -1,6 +1,11 @@
 import Foundation
 
 public enum AppLocalization {
+    public enum UserFacingErrorPriority {
+        case preferLocalizedError
+        case preferFallback
+    }
+
     public static func string(
         _ key: String,
         bundle: Bundle = .main,
@@ -35,7 +40,7 @@ public enum AppLocalization {
 
     public static func format(
         _ key: String,
-        _ fallback: String,
+        fallback: String,
         bundle: Bundle = .main,
         locale: Locale? = nil,
         table: String? = nil,
@@ -49,6 +54,72 @@ public enum AppLocalization {
             value: fallback
         )
         return String(format: format, locale: locale ?? .autoupdatingCurrent, arguments: arguments)
+    }
+
+    public static func localizedErrorDescription(_ error: Error) -> String? {
+        guard let localizedError = error as? LocalizedError,
+              let errorDescription = localizedError.errorDescription,
+              errorDescription.isEmpty == false else {
+            return nil
+        }
+
+        return errorDescription
+    }
+
+    public static func errorDetail(_ error: Error) -> String {
+        localizedErrorDescription(error) ?? error.localizedDescription
+    }
+
+    public static func userFacingErrorMessage(
+        for error: Error,
+        fallbackKey: String,
+        bundle: Bundle = .main,
+        locale: Locale? = nil,
+        table: String? = nil,
+        priority: UserFacingErrorPriority = .preferLocalizedError
+    ) -> String {
+        switch priority {
+        case .preferLocalizedError:
+            if let description = localizedErrorDescription(error) {
+                return description
+            }
+        case .preferFallback:
+            break
+        }
+
+        return string(
+            fallbackKey,
+            bundle: bundle,
+            locale: locale,
+            table: table
+        )
+    }
+
+    public static func userFacingErrorMessage(
+        for error: Error,
+        fallbackKey: String,
+        fallback: String,
+        bundle: Bundle = .main,
+        locale: Locale? = nil,
+        table: String? = nil,
+        priority: UserFacingErrorPriority = .preferLocalizedError
+    ) -> String {
+        switch priority {
+        case .preferLocalizedError:
+            if let description = localizedErrorDescription(error) {
+                return description
+            }
+        case .preferFallback:
+            break
+        }
+
+        return string(
+            fallbackKey,
+            bundle: bundle,
+            locale: locale,
+            table: table,
+            value: fallback
+        )
     }
 
     private static func localizedBundle(for locale: Locale?, in bundle: Bundle) -> Bundle? {

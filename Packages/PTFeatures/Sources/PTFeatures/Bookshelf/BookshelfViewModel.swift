@@ -9,9 +9,9 @@ public enum BookshelfEditError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .emptyTitle:
-            "A book title is required."
+            localizedCatalogString("bookshelf.edit.empty_title_required")
         case .bookNotFound:
-            "The selected book could not be found."
+            localizedCatalogString("bookshelf.edit.book_not_found")
         }
     }
 }
@@ -50,9 +50,12 @@ public final class BookshelfViewModel {
 
         public var title: String {
             switch self {
-            case .finished: "Finished"
-            case .reading: "Reading"
-            case .notStarted: "Not Started"
+            case .finished:
+                localizedCatalogString("bookshelf.completed")
+            case .reading:
+                localizedCatalogString("bookshelf.in_progress")
+            case .notStarted:
+                localizedCatalogString("bookshelf.unread")
             }
         }
     }
@@ -383,4 +386,35 @@ public final class BookshelfViewModel {
         let trimmed = colorHex.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

@@ -5,6 +5,7 @@ import Foundation
 #if canImport(AVFoundation)
 import AVFoundation
 
+@MainActor
 @Suite("TTSService")
 struct TTSServiceTests {
     @Test("Initializes in stopped state")

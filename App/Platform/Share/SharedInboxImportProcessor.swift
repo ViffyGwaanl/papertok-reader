@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 struct SharedInboxImportProcessor {
     struct Result: Equatable {
@@ -111,7 +112,10 @@ struct SharedInboxImportProcessor {
 
             if let error = await dependencies.importBook(url) {
                 remainingBookItems.append(item)
-                errorMessage = error.localizedDescription
+                errorMessage = AppLocalization.userFacingErrorMessage(
+                    for: error,
+                    fallbackKey: "share.error.cannot_process"
+                )
             } else {
                 importedCount += 1
             }
@@ -144,7 +148,10 @@ struct SharedInboxImportProcessor {
                 remainingCount: remainingBookItems.count,
                 discardedCount: discardedCount,
                 didConsumeEvent: false,
-                errorMessage: error.localizedDescription
+                errorMessage: AppLocalization.userFacingErrorMessage(
+                    for: error,
+                    fallbackKey: "share.error.cannot_process"
+                )
             )
         }
 

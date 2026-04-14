@@ -7,40 +7,125 @@ struct HardcodedEnglishAuditTests {
     func auditedUIFilesAvoidBareEnglish() throws {
         let violations = try scan(
             files: [
+                "App/ContentView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Navigation/AppTab.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Notes/NotesViewModel.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Notes/RichNoteEditorView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/AILibraryIndexView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/APIKeyListView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/DeveloperOptionsView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Sync/SyncSettingsView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/QuickPromptsEditorView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/StorageManagementView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/HomeNavigationConfigView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/AIProviderDetailView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Settings/MCPConfigView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Settings/ReadingDetailSettingsView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/ChatSettingsSheet.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/ConversationListView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/MessageBubbleView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/PDFReaderView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/EPUBReaderSettingsView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/BookmarkManagerView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ContextMenuAction.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ExcerptMenuSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/TTSFloatingActionButton.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/DictionaryLookupSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderAIPanelHost.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderAIQuickActionsSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/EPUBReaderAnnotationEditorView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperDetailView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PapersFilterBar.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Papers/PapersView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Sync/ConnectionTesterView.swift",
+                "App/Platform/Intents/OpenBookIntent.swift",
+                "App/Platform/Intents/SearchBooksIntent.swift",
+                "App/Platform/Intents/GetReadingStatsIntent.swift",
+                "App/Platform/Intents/CreateNoteIntent.swift",
+                "App/Platform/Intents/IntentsDonationService.swift",
             ],
             rules: [
                 RegexRule(
                     description: "bare English UI literal",
-                    pattern: #"(?:TextField|SecureField|Picker|Toggle|Section|Label|Button|ContentUnavailableView|navigationTitle|confirmationDialog|alert|ProgressView|accessibilityLabel)\(\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"(?:TextField|SecureField|Picker|Toggle|Section|Label|Button|ContentUnavailableView|Menu|PTChip|SharePreview|navigationTitle|confirmationDialog|alert|ProgressView|accessibilityLabel)\(\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English placeholder literal",
                     pattern: #"placeholder:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
+                RegexRule(
+                    description: "bare English helper title literal",
+                    pattern: #"\btitle:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English helper hint literal",
+                    pattern: #"\bhint:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English help literal",
+                    pattern: #"\.help\(\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English fallback literal",
+                    pattern: #"\?\?\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English app intent title literal",
+                    pattern: #"static\s+let\s+title:\s*LocalizedStringResource\s*=\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English intent description literal",
+                    pattern: #"IntentDescription\(\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English intent parameter literal",
+                    pattern: #"@Parameter\(title:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English intent dialog literal",
+                    pattern: #"(?:dialog:\s*|IntentDialog\s*=\s*)"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English shortcut title literal",
+                    pattern: #"\bshortTitle:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English shortcut phrase literal",
+                    pattern: #"(?m)^\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*"(?:,)?$"#
+                ),
+                RegexRule(
+                    description: "bare English AppLocalization fallback",
+                    pattern: #"AppLocalization\.(?:string|format)\(\s*"[a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+"\s*,\s*(?:value:\s*)?"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English capability badge array",
+                    pattern: #"\[\s*(?:"[A-Z]{2,}"\s*,\s*)+"[A-Z]{2,}"\s*\]"#
+                ),
+                RegexRule(
+                    description: "bare English duration option literal",
+                    pattern: #"\(\s*\d+\s*,\s*"\d+\s+(?:min|hour|hours)"\s*\)"#
+                ),
             ],
             allowlistFragments: [
                 #"return "OpenAI""#,
                 #"return "Azure""#,
+                #" ? "EPUB" : "PDF""#,
+                #"return "square.grid.2x2""#,
+                #"return "list.bullet""#,
+                #"AppShortcutPhrase<"#,
+                #""System","#,
+                #""Times New Roman","#,
+                #""Helvetica Neue","#,
+                #""Avenir","#,
+                #""Avenir Next","#,
+                #""Charter","#,
+                #""New York","#,
+                #""Menlo","#,
+                #""Courier New","#,
             ]
         )
 
-        #expect(violations.isEmpty, violations.joined(separator: "\n"))
+        #expect(violations.isEmpty, Comment(rawValue: violations.joined(separator: "\n")))
     }
 
     @Test("audited user-visible error files do not return bare English messages")
@@ -48,20 +133,36 @@ struct HardcodedEnglishAuditTests {
         let violations = try scan(
             files: [
                 "App/Extensions/ShareExtension/DOCXExtractor.swift",
+                "App/ContentView.swift",
+                "App/Platform/Migration/FlutterMigrationService.swift",
+                "App/Platform/Share/SharedInboxImportProcessor.swift",
                 "App/Platform/AI/ShortcutAIService.swift",
                 "App/Platform/DeepLink/ReaderLocatorResolver.swift",
                 "App/Platform/EventKit/CalendarService.swift",
                 "App/Platform/EventKit/RemindersService.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Bookshelf/AIOrganizeService.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/AIChatViewModel.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/ConversationListView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Notes/NotesPDFExportService.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperDetailView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Sync/AISettingsSyncService.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Sync/IncrementalSyncEngine.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Sync/BackupService.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Sync/ConnectionTesterView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Sync/WebDAVSyncService.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/EPUBReaderAnnotationsViewModel.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/PDFReaderAnnotationsViewModel.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderControlsViewModel.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/TranslationMenuSheet.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Settings/AIProviderDetailView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Settings/MCPConfigView.swift",
+                "Packages/PTReader/Sources/PTReader/EPUB/EPUBPublicationOpener.swift",
+                "Packages/PTReader/Sources/PTReader/EPUB/EPUBContentBridge.swift",
                 "Packages/PTNetworking/Sources/PTNetworking/HTTP/NetworkError.swift",
                 "Packages/PTAIServices/Sources/PTAIServices/MCP/MCPClient.swift",
                 "Packages/PTAIServices/Sources/PTAIServices/MCP/MCPConfiguration.swift",
                 "Packages/PTAIServices/Sources/PTAIServices/MCP/MCPTransport.swift",
+                "Packages/PTAIServices/Sources/PTAIServices/Tools/ToolOrchestrator.swift",
                 "Packages/PTCore/Sources/PTCore/Localization/AppLocalization.swift",
             ],
             rules: [
@@ -69,15 +170,118 @@ struct HardcodedEnglishAuditTests {
                     description: "bare English error return",
                     pattern: #"(?:return|errorMessage\s*=)\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
+                RegexRule(
+                    description: "raw localizedDescription reaches user-visible state",
+                    pattern: #"(?:errorMessage|tocErrorMessage|searchErrorMessage|loadError)\s*=\s*error\.localizedDescription|errorMessage:\s*error\.localizedDescription|AppLocalization\.format\([^\n]*error\.localizedDescription|return\s+AppLocalization\.format\([^\n]*error\.localizedDescription"#
+                ),
+                RegexRule(
+                    description: "bare English AppLocalization userFacingErrorMessage fallback",
+                    pattern: #"AppLocalization\.userFacingErrorMessage\([^\n]*fallback:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English attachment placeholder",
+                    pattern: #"\[Attached file:"#
+                ),
             ],
             allowlistFragments: [
-                #"return "#808080""#,
+                "return \"#808080\"",
                 #"return "\(trimmed)/\(remoteFilename)""#,
                 #"return "- id=\(id) | "#,
+                #"return "zh-Hant""#,
+                #"return "zh-Hans""#,
+                #"return "en""#,
+                #"return "image/jpeg""#,
+                #"return "image/gif""#,
+                #"return "image/webp""#,
+                #"return "image/heic""#,
+                #"return "image/png""#,
+                #"return "magnifyingglass""#,
+                #"return "bookmark.fill""#,
+                #"return "text.bubble.fill""#,
+                #"return "highlighter""#,
+                #"return "circle""#,
+                #"return "hourglass""#,
+                #"return "checkmark.circle.fill""#,
+                #"return "xmark.circle.fill""#,
             ]
         )
 
-        #expect(violations.isEmpty, violations.joined(separator: "\n"))
+        #expect(violations.isEmpty, Comment(rawValue: violations.joined(separator: "\n")))
+    }
+
+    @Test("audited formatter files do not build bare English user-visible output")
+    func auditedFormatterFilesAvoidBareEnglishOutput() throws {
+        let violations = try scan(
+            files: [
+                "Packages/PTFeatures/Sources/PTFeatures/Bookshelf/BookshelfViewModel.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Notes/NotesSupport.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Notes/NotesPDFExportService.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperDownloadWorker.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/HighlightExportService.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderViewModel.swift",
+                "Packages/PTReader/Sources/PTReader/PDF/PDFContentBridge.swift",
+            ],
+            rules: [
+                RegexRule(
+                    description: "bare English output literal",
+                    pattern: #"(?:return|out \+=|title:\s*)\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English attributed string literal",
+                    pattern: #"NSAttributedString\(string:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English single-expression switch literal",
+                    pattern: #"case\s+\.[a-zA-Z0-9_]+:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+            ],
+            allowlistFragments: [
+                #"return "E8D890""#,
+                #"return "D09898""#,
+                #"return "B898C8""#,
+            ]
+        )
+
+        #expect(violations.isEmpty, Comment(rawValue: violations.joined(separator: "\n")))
+    }
+
+    @Test("remaining localization closure files avoid helper fallbacks and hardcoded English badges")
+    func closureFilesAvoidHelperFallbacks() throws {
+        let violations = try scan(
+            files: [
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/ProviderPickerSheet.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Settings/AIProviderCenterView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Settings/AIToolsConfigView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Settings/AIImageAnalysisView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Statistics/CompletionTrackingView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/KAIROS/KAIROSService.swift",
+            ],
+            rules: [
+                RegexRule(
+                    description: "localized helper fallback literal",
+                    pattern: #"\blocalized\(\s*"[a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+"\s*,\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z%][^"]*""#
+                ),
+                RegexRule(
+                    description: "format helper fallback literal",
+                    pattern: #"\bformat\(\s*"[a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+"\s*,\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z%][^"]*""#
+                ),
+                RegexRule(
+                    description: "hardcoded provider capability badge array",
+                    pattern: #"\[\s*(?:"[A-Z]{2,}"\s*,\s*)+"[A-Z]{2,}"\s*\]"#
+                ),
+                RegexRule(
+                    description: "hardcoded rawValue uppercased badge",
+                    pattern: #"\.rawValue\.uppercased\(\)"#
+                ),
+                RegexRule(
+                    description: "parenthesized default literal",
+                    pattern: #""\(default\)""#
+                ),
+            ],
+            allowlistFragments: []
+        )
+
+        #expect(violations.isEmpty, Comment(rawValue: violations.joined(separator: "\n")))
     }
 
     private func scan(

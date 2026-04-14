@@ -133,6 +133,8 @@ public final class SettingsViewModel {
 
     /// Reset reading-detail values to defaults.
     public func resetReadingDetail() {
+        defaultFontSize = AppConfig.Defaults.defaultFontSize
+        defaultFontFamily = BookStyle.preferredDefaultFontFamily(locale: .autoupdatingCurrent)
         lineHeight = 1.4
         letterSpacing = 0
         paragraphSpacing = 8.0

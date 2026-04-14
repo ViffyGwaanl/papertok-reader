@@ -64,13 +64,18 @@ public enum MCPConnectionStatus: Sendable, Equatable {
     public var displayText: String {
         switch self {
         case .disconnected:
-            return AppLocalization.string("common.disconnected", value: "Disconnected")
+            return AppLocalization.string("common.disconnected")
         case .connecting:
-            return AppLocalization.string("common.connecting_ellipsis", value: "Connecting...")
+            return AppLocalization.string("common.connecting_ellipsis")
         case .connected(let count):
-            return AppLocalization.format("common.connected_tool_count_format", "Connected (%d tools)", count)
+            return AppLocalization.format("common.connected_tool_count_format", locale: .autoupdatingCurrent, count)
         case .error(let msg):
-            return AppLocalization.format("common.error_detail_format", "Error: %@", msg)
+            return AppLocalization.format(
+                "common.error_detail_format",
+                fallback: "%@",
+                locale: .autoupdatingCurrent,
+                msg
+            )
         }
     }
 

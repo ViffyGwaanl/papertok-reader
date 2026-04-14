@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 public struct NotesSummary: Equatable, Sendable {
     public let totalNotes: Int
@@ -35,9 +36,9 @@ public enum NotesExportFormat: String, CaseIterable, Identifiable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .markdown: return "Markdown"
-        case .csv: return "CSV"
-        case .txt: return "TXT"
+        case .markdown: return localizedCatalogString("notes.export.type.markdown")
+        case .csv: return localizedCatalogString("notes.export.type.csv")
+        case .txt: return localizedCatalogString("notes.export.type.txt")
         }
     }
 }
@@ -78,10 +79,10 @@ public enum NotesExportBuilder {
 
     private static func renderMarkdown(groups: [NotesBookGroup], summary: NotesSummary) -> String {
         var lines = [
-            "# PaperTok Notes Export",
+            "# \(localizedCatalogString("notes.export.title"))",
             "",
-            "- Total notes: \(summary.totalNotes)",
-            "- Books with notes: \(summary.booksWithNotes)",
+            "- \(localizedCatalogFormat("notes.export.total_notes_format", summary.totalNotes))",
+            "- \(localizedCatalogFormat("notes.export.books_with_notes_format", summary.booksWithNotes))",
         ]
 
         for group in groups {
@@ -91,10 +92,10 @@ public enum NotesExportBuilder {
             for note in group.notes {
                 lines.append("- [\(note.displayType)] \(note.content)")
                 if note.chapter.isEmpty == false {
-                    lines.append("  - Chapter: \(note.chapter)")
+                    lines.append("  - \(localizedCatalogFormat("notes.export.chapter_format", note.chapter))")
                 }
                 if let readerNote = note.readerNote, readerNote.isEmpty == false {
-                    lines.append("  - Note: \(readerNote)")
+                    lines.append("  - \(localizedCatalogFormat("notes.export.note_format", readerNote))")
                 }
             }
         }
@@ -121,9 +122,9 @@ public enum NotesExportBuilder {
 
     private static func renderText(groups: [NotesBookGroup], summary: NotesSummary) -> String {
         var lines = [
-            "PaperTok Notes Export",
-            "Total notes: \(summary.totalNotes)",
-            "Books with notes: \(summary.booksWithNotes)",
+            localizedCatalogString("notes.export.title"),
+            localizedCatalogFormat("notes.export.total_notes_format", summary.totalNotes),
+            localizedCatalogFormat("notes.export.books_with_notes_format", summary.booksWithNotes),
         ]
 
         for group in groups {
@@ -134,10 +135,10 @@ public enum NotesExportBuilder {
             for note in group.notes {
                 lines.append("[\(note.displayType)] \(note.content)")
                 if note.chapter.isEmpty == false {
-                    lines.append("Chapter: \(note.chapter)")
+                    lines.append(localizedCatalogFormat("notes.export.chapter_format", note.chapter))
                 }
                 if let readerNote = note.readerNote, readerNote.isEmpty == false {
-                    lines.append("Note: \(readerNote)")
+                    lines.append(localizedCatalogFormat("notes.export.note_format", readerNote))
                 }
                 lines.append("")
             }
@@ -155,10 +156,45 @@ public enum NotesExportBuilder {
 extension BookNote {
     public var displayType: String {
         switch type.lowercased() {
-        case "highlight": return "Highlight"
-        case "bookmark": return "Bookmark"
-        case "note": return "Note"
+        case "highlight": return localizedCatalogString("reader.highlight")
+        case "bookmark": return localizedCatalogString("reader.bookmark")
+        case "note": return localizedCatalogString("common.note")
         default: return type.capitalized
         }
     }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: localizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

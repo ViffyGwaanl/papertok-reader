@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import PDFKit
+import PTCore
 @testable import PTFeatures
 
 @Suite("BookshelfViewModel")
@@ -258,6 +259,30 @@ struct BookshelfViewModelTests {
         #expect(vm2.sortOrder == .titleAsc)
     }
 
+    @Test("localized filter titles and edit errors use catalog-backed text")
+    func localizedTitlesAndEditErrors() {
+        #expect(
+            BookshelfViewModel.ReadingStatusFilter.finished.title
+                == localizedCatalogString("bookshelf.completed")
+        )
+        #expect(
+            BookshelfViewModel.ReadingStatusFilter.reading.title
+                == localizedCatalogString("bookshelf.in_progress")
+        )
+        #expect(
+            BookshelfViewModel.ReadingStatusFilter.notStarted.title
+                == localizedCatalogString("bookshelf.unread")
+        )
+        #expect(
+            BookshelfEditError.emptyTitle.errorDescription
+                == localizedCatalogString("bookshelf.edit.empty_title_required")
+        )
+        #expect(
+            BookshelfEditError.bookNotFound.errorDescription
+                == localizedCatalogString("bookshelf.edit.book_not_found")
+        )
+    }
+
     @Test("Edit mode toggle and selection")
     func editModeToggle() async throws {
         let db = try AppDatabase.makeInMemory()
@@ -341,4 +366,35 @@ struct BookshelfViewModelTests {
         #expect(movedB.groupId == groupID)
         #expect(vm.selectedBookIDs.isEmpty)
     }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

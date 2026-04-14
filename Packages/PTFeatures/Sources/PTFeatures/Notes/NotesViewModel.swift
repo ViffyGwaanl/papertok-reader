@@ -19,17 +19,8 @@ public enum NotesFilterType: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    private var fallbackDisplayName: String {
-        switch self {
-        case .all: return "All"
-        case .highlight: return "Highlights"
-        case .bookmark: return "Bookmarks"
-        case .note: return "Notes"
-        }
-    }
-
     public var displayName: String {
-        AppLocalization.string(displayNameKey, value: fallbackDisplayName)
+        localizedCatalogString(displayNameKey)
     }
 
     public var systemImage: String {
@@ -57,16 +48,8 @@ public enum NotesSortOrder: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    private var fallbackDisplayName: String {
-        switch self {
-        case .dateDescending: return "Most Recent"
-        case .dateAscending: return "Oldest First"
-        case .chapter: return "By Chapter"
-        }
-    }
-
     public var displayName: String {
-        AppLocalization.string(displayNameKey, value: fallbackDisplayName)
+        localizedCatalogString(displayNameKey)
     }
 }
 
@@ -190,14 +173,7 @@ public final class NotesViewModel {
                 }
                 let latestDate = sortedNotes.first.map { $0.createTime ?? $0.updateTime } ?? .distantPast
                 let title = bookTitlesByID[bookId]
-                    ?? String(
-                        format: AppLocalization.string(
-                            "notes.book_fallback_format",
-                            value: "Book #%lld"
-                        ),
-                        locale: .autoupdatingCurrent,
-                        bookId
-                    )
+                    ?? localizedBookFallbackTitle(for: bookId)
                 return NotesBookGroup(
                     bookId: bookId,
                     bookTitle: title,
@@ -212,4 +188,46 @@ public final class NotesViewModel {
                 return lhs.lastUpdatedAt > rhs.lastUpdatedAt
             }
     }
+
+    private func localizedBookFallbackTitle(for bookId: Int64) -> String {
+        localizedCatalogFormat(
+            "notes.book_fallback_format",
+            bookId
+        )
+    }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: localizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

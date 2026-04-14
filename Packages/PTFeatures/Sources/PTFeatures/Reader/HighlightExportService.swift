@@ -41,7 +41,10 @@ public struct HighlightExportService: Sendable {
 
     private func renderMarkdown(notes: [BookNote], bookTitle: String) -> String {
         var out = "# \(bookTitle)\n\n"
-        out += "Exported \(formattedDate(Date())) — \(notes.count) annotation\(notes.count == 1 ? "" : "s")\n\n"
+        out += localizedCatalogFormat("reader.export.summary_format",
+            formattedDate(Date()),
+            notes.count
+        ) + "\n\n"
 
         let groups = NoteGroup.group(notes: notes)
         for group in groups {
@@ -65,12 +68,16 @@ public struct HighlightExportService: Sendable {
         var out = "\(bookTitle)\n"
         out += String(repeating: "=", count: bookTitle.count) + "\n\n"
         for note in notes {
-            out += "[\(note.type.uppercased())] \(note.content)\n"
+            out += "[\(localizedNoteTypeLabel(for: note.type))] \(note.content)\n"
             if !note.chapter.isEmpty {
-                out += "  Chapter: \(note.chapter)\n"
+                out += "  " + localizedCatalogFormat("reader.export.chapter_format",
+                    note.chapter
+                ) + "\n"
             }
             if let readerNote = note.readerNote, !readerNote.isEmpty {
-                out += "  Note: \(readerNote)\n"
+                out += "  " + localizedCatalogFormat("reader.export.note_format",
+                    readerNote
+                ) + "\n"
             }
             if let createTime = note.createTime {
                 out += "  \(formattedDate(createTime))\n"
@@ -145,10 +152,73 @@ public struct HighlightExportService: Sendable {
                 }
             }
             var groups: [NoteGroup] = []
-            if !highlights.isEmpty { groups.append(.init(title: "Highlights", notes: highlights)) }
-            if !readerNotes.isEmpty { groups.append(.init(title: "Notes", notes: readerNotes)) }
-            if !bookmarks.isEmpty { groups.append(.init(title: "Bookmarks", notes: bookmarks)) }
+            if !highlights.isEmpty {
+                groups.append(.init(
+                    title: localizedCatalogString("reader.export.group_highlights"),
+                    notes: highlights
+                ))
+            }
+            if !readerNotes.isEmpty {
+                groups.append(.init(
+                    title: localizedCatalogString("reader.export.group_notes"),
+                    notes: readerNotes
+                ))
+            }
+            if !bookmarks.isEmpty {
+                groups.append(.init(
+                    title: localizedCatalogString("reader.export.group_bookmarks"),
+                    notes: bookmarks
+                ))
+            }
             return groups
         }
     }
+
+    private func localizedNoteTypeLabel(for rawValue: String) -> String {
+        switch NoteType(rawValue: rawValue) {
+        case .highlight:
+            localizedCatalogString("reader.highlight")
+        case .bookmark:
+            localizedCatalogString("reader.bookmark")
+        case .note:
+            localizedCatalogString("common.note")
+        case nil:
+            rawValue
+        }
+    }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: localizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }

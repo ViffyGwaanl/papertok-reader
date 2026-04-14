@@ -315,26 +315,17 @@ public enum MCPClientError: Error, Sendable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notInitialized:
-            return AppLocalization.string(
-                "errors.mcp.client_not_initialized",
-                value: "MCP client has not been initialized. Call initialize() first."
-            )
+            return AppLocalization.string("errors.mcp.client_not_initialized")
         case .initializeFailed(let reason):
-            return AppLocalization.format(
-                "errors.mcp.initialize_failed_format",
-                "MCP initialization failed: %@",
+            return AppLocalization.format("errors.mcp.initialize_failed_format", locale: .autoupdatingCurrent,
                 reason
             )
         case .resourceReadFailed(let uri):
-            return AppLocalization.format(
-                "errors.mcp.resource_read_failed_format",
-                "Failed to read MCP resource: %@",
+            return AppLocalization.format("errors.mcp.resource_read_failed_format", locale: .autoupdatingCurrent,
                 uri
             )
         case .toolCallFailed(let reason):
-            return AppLocalization.format(
-                "errors.mcp.tool_call_failed_format",
-                "MCP tool call failed: %@",
+            return AppLocalization.format("errors.mcp.tool_call_failed_format", locale: .autoupdatingCurrent,
                 reason
             )
         }
