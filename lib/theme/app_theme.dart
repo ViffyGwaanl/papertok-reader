@@ -42,73 +42,22 @@ class AppTheme {
         eInkMode ? const Color(0xFFF2F2F2) : MorandiPalette.elevatedLight;
     final cardBg =
         eInkMode ? const Color(0xFFFFFFFF) : MorandiPalette.cardLight;
+    final dividerColor = eInkMode
+        ? const Color(0xFFE5E5E5)
+        : MorandiPalette.dividerLight;
 
-    final base = ThemeData(
+    return _buildTheme(
       colorScheme: colorScheme,
-      useMaterial3: true,
-      scaffoldBackgroundColor: scaffoldBg,
-      textTheme: AppTypography.buildTextTheme(colorScheme),
-      dividerColor: MorandiPalette.dividerLight,
-      cardTheme: CardThemeData(
-        elevation: 0,
-        color: cardBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
-        ),
-      ),
-      sliderTheme: SliderThemeData(
-        year2023: false,
-        activeTrackColor: colorScheme.primary,
-        thumbColor: colorScheme.primary,
-        overlayColor: colorScheme.primary.withValues(alpha: 0.12),
-      ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(
-        year2023: false,
-        color: colorScheme.primary,
-      ),
-      switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return Colors.white;
-          return null;
-        }),
-        trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return colorScheme.primary;
-          return null;
-        }),
-      ),
-      checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return colorScheme.primary;
-          return null;
-        }),
-      ),
-      radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return colorScheme.primary;
-          return null;
-        }),
-      ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: groupedBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.cornerRadiusLarge),
-          ),
-        ),
-      ),
-      drawerTheme: DrawerThemeData(
-        backgroundColor: groupedBg,
-      ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: groupedBg,
-      ),
+      scaffoldBg: scaffoldBg,
+      cardBg: cardBg,
+      groupedBg: groupedBg,
+      dividerColor: dividerColor,
+      brightness: Brightness.light,
     );
-
-    return base.useSystemChineseFont(Brightness.light);
   }
 
   /// Build dark theme.
-  /// [seedColor] overrides the default sage accent.
+  /// [seedColor] overrides the default Claude terracotta accent.
   /// [eInkMode] forces hardcoded b/w.
   /// [trueDarkMode] uses pure black background for OLED screens.
   static ThemeData dark({
@@ -146,13 +95,198 @@ class AppTheme {
     final cardBg = eInkMode
         ? const Color(0xFF0A0A0A)
         : (trueDarkMode ? const Color(0xFF0C0C18) : MorandiPalette.cardDark);
+    final dividerColor = eInkMode
+        ? const Color(0xFF2A2A2A)
+        : MorandiPalette.dividerDark;
+
+    return _buildTheme(
+      colorScheme: colorScheme,
+      scaffoldBg: scaffoldBg,
+      cardBg: cardBg,
+      groupedBg: groupedBg,
+      dividerColor: dividerColor,
+      brightness: Brightness.dark,
+    );
+  }
+
+  /// Single source of truth for component themes. Both light and dark pass
+  /// resolved surfaces + ColorScheme through here so every control (app bar,
+  /// bottom nav, tab bar, segmented button, buttons, inputs, switches,
+  /// sliders, etc.) inherits the Claude terracotta accent automatically.
+  static ThemeData _buildTheme({
+    required ColorScheme colorScheme,
+    required Color scaffoldBg,
+    required Color cardBg,
+    required Color groupedBg,
+    required Color dividerColor,
+    required Brightness brightness,
+  }) {
+    final accent = colorScheme.primary;
+    final onSurface = colorScheme.onSurface;
+    final onSurfaceVariant = colorScheme.onSurfaceVariant;
 
     final base = ThemeData(
       colorScheme: colorScheme,
       useMaterial3: true,
       scaffoldBackgroundColor: scaffoldBg,
       textTheme: AppTypography.buildTextTheme(colorScheme),
-      dividerColor: MorandiPalette.dividerDark,
+      dividerColor: dividerColor,
+      dividerTheme: DividerThemeData(
+        color: dividerColor,
+        thickness: 0.5,
+        space: 0.5,
+      ),
+
+      // === AppBar ===
+      // Flat warm surface, no blue tint, accent icons.
+      appBarTheme: AppBarTheme(
+        backgroundColor: scaffoldBg,
+        foregroundColor: onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: onSurface),
+        actionsIconTheme: IconThemeData(color: onSurface),
+        titleTextStyle: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          color: onSurface,
+        ),
+      ),
+
+      // === Bottom navigation (legacy BottomNavigationBar) ===
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: cardBg,
+        selectedItemColor: accent,
+        unselectedItemColor: onSurfaceVariant,
+        elevation: 0,
+        type: BottomNavigationBarType.fixed,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+      ),
+
+      // === M3 NavigationBar ===
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: cardBg,
+        indicatorColor: accent.withValues(alpha: 0.15),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final color = states.contains(WidgetState.selected)
+              ? accent
+              : onSurfaceVariant;
+          return TextStyle(color: color, fontSize: 12);
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final color = states.contains(WidgetState.selected)
+              ? accent
+              : onSurfaceVariant;
+          return IconThemeData(color: color, size: 22);
+        }),
+      ),
+
+      // === TabBar ===
+      tabBarTheme: TabBarThemeData(
+        labelColor: accent,
+        unselectedLabelColor: onSurfaceVariant,
+        indicatorColor: accent,
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: Colors.transparent,
+        labelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+
+      // === SegmentedButton (iOS-style 自动/竖排/横排 etc.) ===
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return accent.withValues(alpha: 0.15);
+            }
+            return Colors.transparent;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return accent;
+            return onSurfaceVariant;
+          }),
+          iconColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return accent;
+            return onSurfaceVariant;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            return BorderSide(
+              color: states.contains(WidgetState.selected)
+                  ? accent.withValues(alpha: 0.35)
+                  : dividerColor,
+              width: 0.8,
+            );
+          }),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
+            ),
+          ),
+        ),
+      ),
+
+      // === Buttons ===
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: accent),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: colorScheme.onPrimary,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: colorScheme.onPrimary,
+          elevation: 0,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: accent,
+          side: BorderSide(color: dividerColor),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(foregroundColor: onSurface),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: accent,
+        foregroundColor: colorScheme.onPrimary,
+        elevation: 0,
+      ),
+
+      // === Inputs ===
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: groupedBg,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
+          borderSide: BorderSide(color: dividerColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
+          borderSide: BorderSide(color: dividerColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
+          borderSide: BorderSide(color: accent, width: 1.5),
+        ),
+      ),
+
+      // === Cards ===
       cardTheme: CardThemeData(
         elevation: 0,
         color: cardBg,
@@ -160,15 +294,19 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
         ),
       ),
+
+      // === Controls (already accented, kept here for single source) ===
       sliderTheme: SliderThemeData(
         year2023: false,
-        activeTrackColor: colorScheme.primary,
-        thumbColor: colorScheme.primary,
-        overlayColor: colorScheme.primary.withValues(alpha: 0.12),
+        activeTrackColor: accent,
+        thumbColor: accent,
+        overlayColor: accent.withValues(alpha: 0.12),
+        inactiveTrackColor: dividerColor,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         year2023: false,
-        color: colorScheme.primary,
+        color: accent,
+        linearTrackColor: dividerColor,
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -176,24 +314,27 @@ class AppTheme {
           return null;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          if (states.contains(WidgetState.selected)) return accent;
           return null;
         }),
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          if (states.contains(WidgetState.selected)) return accent;
           return null;
         }),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          if (states.contains(WidgetState.selected)) return accent;
           return null;
         }),
       ),
+
+      // === Containers / surfaces ===
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: groupedBg,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cornerRadiusLarge),
@@ -202,12 +343,34 @@ class AppTheme {
       ),
       drawerTheme: DrawerThemeData(
         backgroundColor: groupedBg,
+        surfaceTintColor: Colors.transparent,
       ),
       dialogTheme: DialogThemeData(
+        backgroundColor: cardBg,
+        surfaceTintColor: Colors.transparent,
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: cardBg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cornerRadius),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        iconColor: onSurface,
+        textColor: onSurface,
+        selectedColor: accent,
+        selectedTileColor: accent.withValues(alpha: 0.1),
+      ),
+      chipTheme: ChipThemeData(
         backgroundColor: groupedBg,
+        selectedColor: accent.withValues(alpha: 0.15),
+        labelStyle: TextStyle(color: onSurface),
+        side: BorderSide(color: dividerColor),
       ),
     );
 
-    return base.useSystemChineseFont(Brightness.dark);
+    return base.useSystemChineseFont(brightness);
   }
 }
