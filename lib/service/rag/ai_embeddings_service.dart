@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/ai_api_key_entry.dart';
-import 'package:anx_reader/models/ai_provider_meta.dart';
-import 'package:anx_reader/service/ai/api_key_rotation.dart';
-import 'package:anx_reader/service/ai/langchain_ai_config.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/ai_api_key_entry.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/service/ai/api_key_rotation.dart';
+import 'package:papertok_reader/service/ai/langchain_ai_config.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:dio/dio.dart';
 
 /// OpenAI-compatible embeddings client that reuses Provider Center configs.

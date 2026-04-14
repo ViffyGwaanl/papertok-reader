@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:anx_reader/service/rag/library/ai_library_index_job.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_queue_repository.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_queue_repository.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 
 class AiIndexCancellationToken {
   bool _cancelled = false;

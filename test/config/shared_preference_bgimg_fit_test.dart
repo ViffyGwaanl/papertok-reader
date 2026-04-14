@@ -1,5 +1,5 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/enums/bgimg_fit.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/enums/bgimg_fit.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

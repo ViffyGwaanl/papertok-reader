@@ -1,18 +1,18 @@
 import 'dart:async';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/models/ai_provider_meta.dart';
-import 'package:anx_reader/service/ai/ai_models_service.dart';
-import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
-import 'package:anx_reader/utils/toast/common.dart';
-import 'package:anx_reader/service/rag/ai_book_indexer.dart';
-import 'package:anx_reader/service/rag/ai_embeddings_service.dart';
-import 'package:anx_reader/service/rag/ai_index_database.dart';
-import 'package:anx_reader/service/rag/ai_text_chunker.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_job.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_queue_service.dart';
-import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/service/ai/ai_models_service.dart';
+import 'package:papertok_reader/service/ai/tools/repository/books_repository.dart';
+import 'package:papertok_reader/utils/toast/common.dart';
+import 'package:papertok_reader/service/rag/ai_book_indexer.dart';
+import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_queue_service.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/utils/text/word_count.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/utils/text/word_count.dart';
 import 'package:riverpod/riverpod.dart';
 
 import 'base_tool.dart';

@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/service/memory/memory_index_coordinator.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_index_coordinator.dart';
 
 class MemoryWriteCoordinator {
   MemoryWriteCoordinator({MarkdownMemoryStore? store})

@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
-import 'package:anx_reader/service/rag/library/ai_headless_reader_bridge.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/service/ai/tools/repository/books_repository.dart';
+import 'package:papertok_reader/service/rag/library/ai_headless_reader_bridge.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AiHeadlessReaderBridgeService {

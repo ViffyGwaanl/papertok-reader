@@ -1,5 +1,5 @@
 // test/page/memory/memory_bulk_selection_controller_test.dart
-import 'package:anx_reader/page/memory/memory_bulk_selection_controller.dart';
+import 'package:papertok_reader/page/memory/memory_bulk_selection_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

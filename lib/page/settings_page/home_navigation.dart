@@ -1,7 +1,7 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 
 class HomeNavigationSettingsPage extends StatefulWidget {

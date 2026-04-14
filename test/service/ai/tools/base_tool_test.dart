@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:anx_reader/service/ai/tools/base_tool.dart';
+import 'package:papertok_reader/service/ai/tools/base_tool.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _PlainInput {

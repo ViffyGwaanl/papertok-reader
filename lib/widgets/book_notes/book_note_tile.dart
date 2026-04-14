@@ -1,8 +1,8 @@
-import 'package:anx_reader/constants/note_annotations.dart';
-import 'package:anx_reader/models/book_note.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/utils/time_to_human.dart';
-import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:papertok_reader/constants/note_annotations.dart';
+import 'package:papertok_reader/models/book_note.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/utils/time_to_human.dart';
+import 'package:papertok_reader/widgets/common/container/filled_container.dart';
 import 'package:flutter/material.dart';
 
 class BookNoteTile extends StatelessWidget {

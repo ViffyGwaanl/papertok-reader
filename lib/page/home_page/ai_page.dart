@@ -1,8 +1,8 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/page/home_page/home_bottom_inset_scope.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/page/home_page/home_bottom_inset_scope.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 

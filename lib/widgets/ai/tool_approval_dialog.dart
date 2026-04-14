@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:anx_reader/enums/ai_tool_risk_level.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/main.dart';
-import 'package:anx_reader/service/ai/tool_approval_delegate.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/widgets/common/pt_dialog.dart';
+import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/main.dart';
+import 'package:papertok_reader/service/ai/tool_approval_delegate.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
 
 /// UI-side implementation of [ToolApprovalDelegate].

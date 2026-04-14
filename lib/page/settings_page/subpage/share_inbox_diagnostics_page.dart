@@ -1,9 +1,9 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
-import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart';
-import 'package:anx_reader/service/receive_file/share_inbox_diagnostics.dart';
-import 'package:anx_reader/utils/toast/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/service/receive_file/share_inbox_cleanup_service.dart';
+import 'package:papertok_reader/service/receive_file/share_inbox_diagnostics.dart';
+import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
 
 class ShareInboxDiagnosticsPage extends StatefulWidget {

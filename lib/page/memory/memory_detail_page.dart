@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:anx_reader/page/memory/widgets/tag_editor.dart';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
+import 'package:papertok_reader/page/memory/widgets/tag_editor.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/markdown/styled_markdown.dart';
 import 'package:flutter/material.dart';
 
 /// Detail view for a single Memory entry (either a MEMORY.md section or

@@ -1,13 +1,13 @@
 import 'dart:async';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
-import 'package:anx_reader/service/rag/ai_book_indexer.dart';
-import 'package:anx_reader/service/rag/ai_index_database.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_job.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_queue_repository.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_queue_runner.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/ai/tools/repository/books_repository.dart';
+import 'package:papertok_reader/service/rag/ai_book_indexer.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_queue_repository.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_queue_runner.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AiLibraryIndexQueueState {

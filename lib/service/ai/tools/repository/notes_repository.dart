@@ -1,7 +1,7 @@
-import 'package:anx_reader/dao/book.dart';
-import 'package:anx_reader/dao/book_note.dart';
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/models/book_note.dart';
+import 'package:papertok_reader/dao/book.dart';
+import 'package:papertok_reader/dao/book_note.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/models/book_note.dart';
 
 class NoteSearchResult {
   NoteSearchResult({

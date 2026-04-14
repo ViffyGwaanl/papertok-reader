@@ -1,4 +1,4 @@
-import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 

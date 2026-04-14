@@ -1,5 +1,5 @@
-import 'package:anx_reader/providers/chapter_content_bridge.dart';
-import 'package:anx_reader/providers/current_reading.dart';
+import 'package:papertok_reader/providers/chapter_content_bridge.dart';
+import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:riverpod/riverpod.dart';
 
 class ChapterContentRepository {

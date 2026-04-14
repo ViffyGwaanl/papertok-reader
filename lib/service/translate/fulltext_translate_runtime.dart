@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
-import 'package:anx_reader/enums/lang_list.dart';
-import 'package:anx_reader/service/translate/fulltext_translate_cache.dart';
-import 'package:anx_reader/service/translate/index.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/enums/inline_fulltext_translate_failure_reason.dart';
+import 'package:papertok_reader/enums/lang_list.dart';
+import 'package:papertok_reader/service/translate/fulltext_translate_cache.dart';
+import 'package:papertok_reader/service/translate/index.dart';
 import 'package:crypto/crypto.dart';
 
 String _sanitizeInlineFullTextTranslation(String raw) {

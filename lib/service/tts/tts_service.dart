@@ -1,8 +1,8 @@
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/service/tts/aliyun/aliyun_tts_backend.dart';
-import 'package:anx_reader/service/tts/azure_tts_backend.dart';
-import 'package:anx_reader/service/tts/openai_tts_backend.dart';
-import 'package:anx_reader/service/tts/tts_service_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/service/tts/aliyun/aliyun_tts_backend.dart';
+import 'package:papertok_reader/service/tts/azure_tts_backend.dart';
+import 'package:papertok_reader/service/tts/openai_tts_backend.dart';
+import 'package:papertok_reader/service/tts/tts_service_provider.dart';
 import 'package:flutter/material.dart';
 
 /// TTS service enumeration.

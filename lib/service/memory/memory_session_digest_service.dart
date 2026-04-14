@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:anx_reader/utils/ai_reasoning_parser.dart';
+import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:langchain_core/chat_models.dart';
 
 class MemorySessionDigestDraft {

@@ -1,15 +1,15 @@
 import 'dart:io';
 
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/page/memory/memory_bulk_selection_controller.dart';
-import 'package:anx_reader/page/memory/memory_detail_page.dart';
-import 'package:anx_reader/page/memory/widgets/memory_row.dart';
-import 'package:anx_reader/page/memory/widgets/tag_editor.dart';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/service/memory/memory_pending_count_provider.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
-import 'package:anx_reader/widgets/common/pt_dialog.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/page/memory/memory_bulk_selection_controller.dart';
+import 'package:papertok_reader/page/memory/memory_detail_page.dart';
+import 'package:papertok_reader/page/memory/widgets/memory_row.dart';
+import 'package:papertok_reader/page/memory/widgets/tag_editor.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_pending_count_provider.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

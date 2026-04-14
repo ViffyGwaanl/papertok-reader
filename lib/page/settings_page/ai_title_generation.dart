@@ -1,12 +1,12 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/ai_provider_meta.dart';
-import 'package:anx_reader/service/ai/ai_models_service.dart';
-import 'package:anx_reader/utils/toast/common.dart';
-import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
-import 'package:anx_reader/widgets/common/pt_dialog.dart';
-import 'package:anx_reader/widgets/settings/settings_section.dart';
-import 'package:anx_reader/widgets/settings/settings_tile.dart';
-import 'package:anx_reader/widgets/settings/settings_title.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/service/ai/ai_models_service.dart';
+import 'package:papertok_reader/utils/toast/common.dart';
+import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:papertok_reader/widgets/common/pt_dialog.dart';
+import 'package:papertok_reader/widgets/settings/settings_section.dart';
+import 'package:papertok_reader/widgets/settings/settings_tile.dart';
+import 'package:papertok_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/material.dart';
 
 class AiTitleGenerationSettingsPage extends StatefulWidget {

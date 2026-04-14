@@ -1,5 +1,5 @@
-import 'package:anx_reader/theme/morandi_palette.dart';
-import 'package:anx_reader/widgets/common/container/outlined_container.dart';
+import 'package:papertok_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/widgets/common/container/outlined_container.dart';
 import 'package:flutter/material.dart';
 
 class ToolTileBase extends StatefulWidget {

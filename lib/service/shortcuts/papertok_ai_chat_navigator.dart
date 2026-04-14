@@ -1,7 +1,7 @@
-import 'package:anx_reader/app/app_globals.dart';
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/page/settings_page/subpage/ai_chat_page.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/app/app_globals.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/page/settings_page/subpage/ai_chat_page.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter/material.dart';
 
 class PapertokAiChatNavigator {

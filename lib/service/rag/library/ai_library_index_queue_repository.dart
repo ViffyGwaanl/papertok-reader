@@ -1,5 +1,5 @@
-import 'package:anx_reader/service/rag/ai_index_database.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_job.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
 import 'package:sqflite/sqflite.dart';
 
 class AiLibraryIndexQueueRepository {

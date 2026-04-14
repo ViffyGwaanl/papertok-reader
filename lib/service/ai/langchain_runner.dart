@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
-import 'package:anx_reader/enums/ai_tool_risk_level.dart';
-import 'package:anx_reader/service/ai/ai_usage_tracker.dart';
-import 'package:anx_reader/service/ai/tool_approval_delegate.dart';
-import 'package:anx_reader/service/ai/tool_orchestrator.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/service/ai/tools/tool_approval_decider.dart';
-import 'package:anx_reader/service/ai/tools/util/json_repair.dart';
-import 'package:anx_reader/service/mcp/mcp_tool_registry.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/enums/ai_tool_approval_policy.dart';
+import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
+import 'package:papertok_reader/service/ai/ai_usage_tracker.dart';
+import 'package:papertok_reader/service/ai/tool_approval_delegate.dart';
+import 'package:papertok_reader/service/ai/tool_orchestrator.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/service/ai/tools/tool_approval_decider.dart';
+import 'package:papertok_reader/service/ai/tools/util/json_repair.dart';
+import 'package:papertok_reader/service/mcp/mcp_tool_registry.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:langchain/langchain.dart';
 
 class CancelableLangchainRunner {

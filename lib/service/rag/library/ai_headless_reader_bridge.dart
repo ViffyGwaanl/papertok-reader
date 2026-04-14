@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/models/toc_item.dart';
-import 'package:anx_reader/page/home_page.dart';
-import 'package:anx_reader/service/book_player/book_player_server.dart';
-import 'package:anx_reader/utils/log/common.dart';
-import 'package:anx_reader/utils/webView/anx_headless_webview.dart';
-import 'package:anx_reader/utils/webView/gererate_url.dart';
-import 'package:anx_reader/utils/webView/webview_console_message.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/models/toc_item.dart';
+import 'package:papertok_reader/page/home_page.dart';
+import 'package:papertok_reader/service/book_player/book_player_server.dart';
+import 'package:papertok_reader/utils/log/common.dart';
+import 'package:papertok_reader/utils/webView/anx_headless_webview.dart';
+import 'package:papertok_reader/utils/webView/gererate_url.dart';
+import 'package:papertok_reader/utils/webView/webview_console_message.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 

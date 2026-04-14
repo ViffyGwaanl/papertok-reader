@@ -1,5 +1,5 @@
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/main.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/main.dart';
 
 class RelativeTimeFormatter {
   const RelativeTimeFormatter._();

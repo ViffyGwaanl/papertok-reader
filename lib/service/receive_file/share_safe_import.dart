@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart';
-import 'package:anx_reader/service/receive_file/share_inbox_paths.dart';
-import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/service/receive_file/share_inbox_cleanup_service.dart';
+import 'package:papertok_reader/service/receive_file/share_inbox_paths.dart';
+import 'package:papertok_reader/utils/get_path/get_cache_dir.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:path/path.dart' as p;
 
 class ShareSafeImport {

@@ -1,12 +1,12 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/enums/lang_list.dart';
-import 'package:anx_reader/main.dart';
-import 'package:anx_reader/service/ai/prompt_generate.dart';
-import 'package:anx_reader/service/ai/index.dart';
-import 'package:anx_reader/service/config/config_item.dart';
-import 'package:anx_reader/service/translate/index.dart';
-import 'package:anx_reader/widgets/ai/ai_stream.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/enums/lang_list.dart';
+import 'package:papertok_reader/main.dart';
+import 'package:papertok_reader/service/ai/prompt_generate.dart';
+import 'package:papertok_reader/service/ai/index.dart';
+import 'package:papertok_reader/service/config/config_item.dart';
+import 'package:papertok_reader/service/translate/index.dart';
+import 'package:papertok_reader/widgets/ai/ai_stream.dart';
 import 'package:flutter/material.dart';
 
 class AiTranslateProvider extends TranslateServiceProvider {

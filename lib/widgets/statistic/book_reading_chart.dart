@@ -1,5 +1,5 @@
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/utils/date/convert_seconds.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/utils/date/convert_seconds.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

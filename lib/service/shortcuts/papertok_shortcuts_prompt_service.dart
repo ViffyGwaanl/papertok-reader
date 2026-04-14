@@ -1,5 +1,5 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/share_prompt_preset.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/share_prompt_preset.dart';
 
 class ShortcutsPromptResolution {
   const ShortcutsPromptResolution({

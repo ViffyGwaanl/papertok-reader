@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:anx_reader/main.dart';
-import 'package:anx_reader/theme/morandi_palette.dart';
-import 'package:anx_reader/theme/app_spacing.dart';
-import 'package:anx_reader/widgets/common/pt_dialog.dart';
+import 'package:papertok_reader/main.dart';
+import 'package:papertok_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/theme/app_spacing.dart';
+import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 
 /// Generic picker dialog wrapper — rewritten on top of [PTDialog] so every
 /// caller automatically gets the Morandi look. The [saveToPrefs] parameter

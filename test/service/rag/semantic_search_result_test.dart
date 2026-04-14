@@ -1,4 +1,4 @@
-import 'package:anx_reader/service/rag/semantic_search_current_book.dart';
+import 'package:papertok_reader/service/rag/semantic_search_current_book.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

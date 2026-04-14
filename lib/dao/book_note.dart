@@ -1,5 +1,5 @@
-import 'package:anx_reader/dao/base_dao.dart';
-import 'package:anx_reader/models/book_note.dart';
+import 'package:papertok_reader/dao/base_dao.dart';
+import 'package:papertok_reader/models/book_note.dart';
 
 class BookNoteDao extends BaseDao {
   BookNoteDao();

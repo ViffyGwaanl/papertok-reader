@@ -1,7 +1,7 @@
 // test/service/memory/markdown_memory_store_test.dart
 import 'dart:io';
 
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:isolate';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_channel.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_channel.dart';
 import 'package:flutter/widgets.dart';
 
 /// Headless entrypoint used by iOS App Intents.

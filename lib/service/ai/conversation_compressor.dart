@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
 

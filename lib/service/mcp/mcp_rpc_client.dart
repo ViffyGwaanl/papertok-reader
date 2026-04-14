@@ -1,4 +1,4 @@
-import 'package:anx_reader/models/mcp_tool_meta.dart';
+import 'package:papertok_reader/models/mcp_tool_meta.dart';
 
 abstract class McpRpcClient {
   String get transportCode;

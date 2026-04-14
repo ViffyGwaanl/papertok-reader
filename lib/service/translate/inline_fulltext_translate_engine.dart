@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
-import 'package:anx_reader/enums/lang_list.dart';
-import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
-import 'package:anx_reader/service/ai/index.dart';
-import 'package:anx_reader/service/ai/prompt_generate.dart';
-import 'package:anx_reader/service/translate/fulltext_translate_cache.dart';
-import 'package:anx_reader/service/translate/fulltext_translate_runtime.dart';
-import 'package:anx_reader/service/translate/index.dart';
+import 'package:papertok_reader/enums/lang_list.dart';
+import 'package:papertok_reader/models/inline_fulltext_translation_progress.dart';
+import 'package:papertok_reader/service/ai/index.dart';
+import 'package:papertok_reader/service/ai/prompt_generate.dart';
+import 'package:papertok_reader/service/translate/fulltext_translate_cache.dart';
+import 'package:papertok_reader/service/translate/fulltext_translate_runtime.dart';
+import 'package:papertok_reader/service/translate/index.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 

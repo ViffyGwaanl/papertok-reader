@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:anx_reader/providers/ai_chat.dart';
-import 'package:anx_reader/models/attachment_item.dart';
-import 'package:anx_reader/app/app_globals.dart';
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_prompt_service.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/providers/ai_chat.dart';
+import 'package:papertok_reader/models/attachment_item.dart';
+import 'package:papertok_reader/app/app_globals.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_prompt_service.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PapertokShortcutsHandoffService {

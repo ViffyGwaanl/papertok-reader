@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:anx_reader/service/memory/memory_candidate.dart';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_candidate.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:path/path.dart' as p;
 
 class MemoryCandidateStore {

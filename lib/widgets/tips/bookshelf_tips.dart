@@ -1,4 +1,4 @@
-import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:flutter/material.dart';
 
 class BookshelfTips extends StatelessWidget {

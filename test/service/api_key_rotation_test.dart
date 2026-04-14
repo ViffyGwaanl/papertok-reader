@@ -1,4 +1,4 @@
-import 'package:anx_reader/service/ai/api_key_rotation.dart';
+import 'package:papertok_reader/service/ai/api_key_rotation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

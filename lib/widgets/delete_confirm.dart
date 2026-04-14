@@ -1,5 +1,5 @@
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/theme/morandi_palette.dart';
 import 'package:flutter/material.dart';
 
 class DeleteConfirm extends StatefulWidget {

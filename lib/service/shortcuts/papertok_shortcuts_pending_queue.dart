@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;

@@ -1,7 +1,7 @@
-import 'package:anx_reader/service/rag/ai_index_database.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_job.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_queue_repository.dart';
-import 'package:anx_reader/service/rag/library/ai_library_index_queue_runner.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_queue_repository.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_queue_runner.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

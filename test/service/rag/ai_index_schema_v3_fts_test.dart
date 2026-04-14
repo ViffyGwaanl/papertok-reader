@@ -1,4 +1,4 @@
-import 'package:anx_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

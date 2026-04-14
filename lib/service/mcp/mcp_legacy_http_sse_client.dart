@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:anx_reader/models/mcp_server_meta.dart';
-import 'package:anx_reader/models/mcp_tool_meta.dart';
-import 'package:anx_reader/service/mcp/mcp_http_exception.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/models/mcp_server_meta.dart';
+import 'package:papertok_reader/models/mcp_tool_meta.dart';
+import 'package:papertok_reader/service/mcp/mcp_http_exception.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:http/http.dart' as http;
 
 /// Legacy MCP transport: HTTP with SSE (protocol version 2024-11-05).
@@ -15,7 +15,7 @@ import 'package:http/http.dart' as http;
 /// - POST endpoint receives JSON-RPC requests/notifications.
 ///
 /// Server messages are sent as SSE `message` events where data is JSON.
-import 'package:anx_reader/service/mcp/mcp_rpc_client.dart';
+import 'package:papertok_reader/service/mcp/mcp_rpc_client.dart';
 
 class McpLegacyHttpSseClient implements McpRpcClient {
   McpLegacyHttpSseClient({

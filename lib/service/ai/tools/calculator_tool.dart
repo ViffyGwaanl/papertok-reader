@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/service/ai/tools/input/calculator_input.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/service/ai/tools/input/calculator_input.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:math_expressions/math_expressions.dart';
 
 import 'base_tool.dart';

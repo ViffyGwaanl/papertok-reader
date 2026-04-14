@@ -1,17 +1,17 @@
 import 'dart:convert';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/enums/ai_dock_side.dart';
-import 'package:anx_reader/enums/ai_pad_panel_mode.dart';
-import 'package:anx_reader/enums/ai_panel_position.dart';
-import 'package:anx_reader/enums/ai_prompts.dart';
-import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
-import 'package:anx_reader/models/ai_input_quick_prompt.dart';
-import 'package:anx_reader/models/user_prompt.dart';
-import 'package:anx_reader/models/mcp_server_meta.dart';
-import 'package:anx_reader/service/ai/ai_services.dart';
-import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/enums/ai_dock_side.dart';
+import 'package:papertok_reader/enums/ai_pad_panel_mode.dart';
+import 'package:papertok_reader/enums/ai_panel_position.dart';
+import 'package:papertok_reader/enums/ai_prompts.dart';
+import 'package:papertok_reader/enums/ai_tool_approval_policy.dart';
+import 'package:papertok_reader/models/ai_input_quick_prompt.dart';
+import 'package:papertok_reader/models/user_prompt.dart';
+import 'package:papertok_reader/models/mcp_server_meta.dart';
+import 'package:papertok_reader/service/ai/ai_services.dart';
+import 'package:papertok_reader/service/memory/memory_workflow_policy.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 
 const int aiSettingsSchemaVersion = 1;
 

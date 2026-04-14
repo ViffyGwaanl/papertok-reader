@@ -1,8 +1,8 @@
-import 'package:anx_reader/enums/sync_protocol.dart';
-import 'package:anx_reader/main.dart';
-import 'package:anx_reader/service/sync/sync_connection_tester.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/widgets/common/pt_dialog.dart';
+import 'package:papertok_reader/enums/sync_protocol.dart';
+import 'package:papertok_reader/main.dart';
+import 'package:papertok_reader/service/sync/sync_connection_tester.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
 
 class SyncTestHelper {

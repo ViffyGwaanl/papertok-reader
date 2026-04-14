@@ -1,5 +1,5 @@
-import 'package:anx_reader/models/current_reading_state.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/models/current_reading_state.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'current_reading.g.dart';

@@ -1,4 +1,4 @@
-import 'package:anx_reader/service/memory/memory_session_digest_service.dart';
+import 'package:papertok_reader/service/memory/memory_session_digest_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

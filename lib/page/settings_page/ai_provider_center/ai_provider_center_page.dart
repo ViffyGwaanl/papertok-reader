@@ -1,10 +1,10 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/models/ai_provider_meta.dart';
-import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_detail_page.dart';
-import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
-import 'package:anx_reader/service/ai/ai_services.dart';
-import 'package:anx_reader/utils/page_transitions.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/page/settings_page/ai_provider_center/ai_provider_detail_page.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/service/ai/ai_services.dart';
+import 'package:papertok_reader/utils/page_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 

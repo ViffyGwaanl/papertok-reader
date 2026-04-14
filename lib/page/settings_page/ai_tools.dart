@@ -1,19 +1,19 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
-import 'package:anx_reader/enums/ai_tool_risk_level.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/page/settings_page/mcp_servers.dart';
-import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
-import 'package:anx_reader/page/settings_page/subpage/share_and_shortcuts_panel_page.dart';
-import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
-import 'package:anx_reader/widgets/settings/settings_section.dart';
-import 'package:anx_reader/widgets/settings/settings_tile.dart';
-import 'package:anx_reader/widgets/settings/settings_title.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/theme/morandi_palette.dart';
-import 'package:anx_reader/utils/platform_utils.dart';
-import 'package:anx_reader/utils/page_transitions.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/enums/ai_tool_approval_policy.dart';
+import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/page/settings_page/mcp_servers.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/page/settings_page/subpage/share_and_shortcuts_panel_page.dart';
+import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:papertok_reader/widgets/settings/settings_section.dart';
+import 'package:papertok_reader/widgets/settings/settings_tile.dart';
+import 'package:papertok_reader/widgets/settings/settings_title.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/utils/platform_utils.dart';
+import 'package:papertok_reader/utils/page_transitions.dart';
 import 'package:flutter/material.dart';
 
 class AiToolsSettingsPage extends StatefulWidget {

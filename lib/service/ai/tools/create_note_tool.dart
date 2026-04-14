@@ -1,14 +1,14 @@
 import 'dart:async';
 
-import 'package:anx_reader/dao/book_note.dart';
-import 'package:anx_reader/enums/ai_tool_risk_level.dart';
-import 'package:anx_reader/enums/ai_tool_scene.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/models/book_note.dart';
-import 'package:anx_reader/providers/current_reading.dart';
-import 'package:anx_reader/service/ai/annotation_ledger.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/service/ai/tools/input/create_note_input.dart';
+import 'package:papertok_reader/dao/book_note.dart';
+import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
+import 'package:papertok_reader/enums/ai_tool_scene.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/book_note.dart';
+import 'package:papertok_reader/providers/current_reading.dart';
+import 'package:papertok_reader/service/ai/annotation_ledger.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/service/ai/tools/input/create_note_input.dart';
 
 import 'base_tool.dart';
 

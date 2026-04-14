@@ -1,5 +1,5 @@
-import 'package:anx_reader/models/share_prompt_preset.dart';
-import 'package:anx_reader/service/receive_file/share_to_ai_service.dart';
+import 'package:papertok_reader/models/share_prompt_preset.dart';
+import 'package:papertok_reader/service/receive_file/share_to_ai_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

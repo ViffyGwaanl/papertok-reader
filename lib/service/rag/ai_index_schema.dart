@@ -1,4 +1,4 @@
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
 
 // NOTE: This DB is intended to be rebuildable. Keep migrations forward-only.

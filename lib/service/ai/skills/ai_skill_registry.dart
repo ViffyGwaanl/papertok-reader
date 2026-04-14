@@ -1,4 +1,4 @@
-import 'package:anx_reader/service/ai/skills/ai_skill.dart';
+import 'package:papertok_reader/service/ai/skills/ai_skill.dart';
 
 /// Registry of built-in and user-defined skills.
 class AiSkillRegistry {

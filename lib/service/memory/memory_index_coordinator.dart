@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/service/memory/memory_index_database.dart';
-import 'package:anx_reader/service/memory/memory_search_service.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_index_database.dart';
+import 'package:papertok_reader/service/memory/memory_search_service.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 
 /// Coordinates background refresh of the derived memory index.
 ///

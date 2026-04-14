@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:anx_reader/enums/ai_thinking_mode.dart';
-import 'package:anx_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/enums/ai_thinking_mode.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:langchain_anthropic/langchain_anthropic.dart';
 import 'package:langchain_google/langchain_google.dart';
 import 'package:langchain_openai/langchain_openai.dart';

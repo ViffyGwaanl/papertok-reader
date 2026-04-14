@@ -6,8 +6,8 @@ import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/language_models.dart';
 import 'package:langchain_core/prompts.dart';
 import 'package:langchain_core/tools.dart';
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:langchain_openai/langchain_openai.dart';
 
 /// A minimal OpenAI Responses API chat model wrapper.

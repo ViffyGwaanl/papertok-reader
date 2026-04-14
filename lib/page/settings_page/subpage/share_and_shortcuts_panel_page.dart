@@ -1,12 +1,12 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
-import 'package:anx_reader/page/settings_page/subpage/share_inbox_diagnostics_page.dart';
-import 'package:anx_reader/page/settings_page/subpage/share_prompt_presets_page.dart';
-import 'package:anx_reader/utils/page_transitions.dart';
-import 'package:anx_reader/utils/platform_utils.dart';
-import 'package:anx_reader/widgets/settings/settings_section.dart';
-import 'package:anx_reader/widgets/settings/settings_tile.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/page/settings_page/subpage/share_inbox_diagnostics_page.dart';
+import 'package:papertok_reader/page/settings_page/subpage/share_prompt_presets_page.dart';
+import 'package:papertok_reader/utils/page_transitions.dart';
+import 'package:papertok_reader/utils/platform_utils.dart';
+import 'package:papertok_reader/widgets/settings/settings_section.dart';
+import 'package:papertok_reader/widgets/settings/settings_tile.dart';
 import 'package:flutter/material.dart';
 
 class ShareAndShortcutsPanelPage extends StatefulWidget {

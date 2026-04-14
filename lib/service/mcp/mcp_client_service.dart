@@ -1,15 +1,15 @@
 import 'dart:async';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/mcp_server_meta.dart';
-import 'package:anx_reader/models/mcp_tool_meta.dart';
-import 'package:anx_reader/models/mcp_transport_mode.dart';
-import 'package:anx_reader/service/mcp/mcp_connection_test_result.dart';
-import 'package:anx_reader/service/mcp/mcp_http_exception.dart';
-import 'package:anx_reader/service/mcp/mcp_legacy_http_sse_client.dart';
-import 'package:anx_reader/service/mcp/mcp_rpc_client.dart';
-import 'package:anx_reader/service/mcp/mcp_streamable_http_client.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/mcp_server_meta.dart';
+import 'package:papertok_reader/models/mcp_tool_meta.dart';
+import 'package:papertok_reader/models/mcp_transport_mode.dart';
+import 'package:papertok_reader/service/mcp/mcp_connection_test_result.dart';
+import 'package:papertok_reader/service/mcp/mcp_http_exception.dart';
+import 'package:papertok_reader/service/mcp/mcp_legacy_http_sse_client.dart';
+import 'package:papertok_reader/service/mcp/mcp_rpc_client.dart';
+import 'package:papertok_reader/service/mcp/mcp_streamable_http_client.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:http/http.dart' as http;
 
 class McpClientService {

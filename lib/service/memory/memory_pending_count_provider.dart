@@ -1,5 +1,5 @@
-import 'package:anx_reader/service/memory/memory_candidate.dart';
-import 'package:anx_reader/service/memory/memory_workflow_service.dart';
+import 'package:papertok_reader/service/memory/memory_candidate.dart';
+import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Emits the number of memory candidates currently in the pending state.

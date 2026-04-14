@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/service/memory/memory_index_database.dart';
-import 'package:anx_reader/service/rag/ai_embeddings_service.dart';
-import 'package:anx_reader/service/rag/vector_math.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_index_database.dart';
+import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
+import 'package:papertok_reader/service/rag/vector_math.dart';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';

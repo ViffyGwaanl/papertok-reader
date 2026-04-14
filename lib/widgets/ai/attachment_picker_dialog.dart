@@ -3,11 +3,11 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/models/attachment_item.dart';
-import 'package:anx_reader/service/receive_file/docx_plain_text_extractor.dart';
-import 'package:anx_reader/utils/toast/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/attachment_item.dart';
+import 'package:papertok_reader/service/receive_file/docx_plain_text_extractor.dart';
+import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;

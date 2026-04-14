@@ -1,4 +1,4 @@
-import 'package:anx_reader/service/rag/ai_text_chunker.dart';
+import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

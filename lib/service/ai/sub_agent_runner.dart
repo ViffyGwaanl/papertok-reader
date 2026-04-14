@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/service/ai/langchain_ai_config.dart';
-import 'package:anx_reader/service/ai/langchain_registry.dart';
-import 'package:anx_reader/service/ai/langchain_runner.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/ai/langchain_ai_config.dart';
+import 'package:papertok_reader/service/ai/langchain_registry.dart';
+import 'package:papertok_reader/service/ai/langchain_runner.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:langchain_core/chat_models.dart';
 
 /// Runs a lightweight sub-agent with isolated context and restricted tools.

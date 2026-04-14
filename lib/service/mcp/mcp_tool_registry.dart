@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/mcp_server_meta.dart';
-import 'package:anx_reader/models/mcp_tool_meta.dart';
-import 'package:anx_reader/service/mcp/mcp_client_service.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/mcp_server_meta.dart';
+import 'package:papertok_reader/models/mcp_tool_meta.dart';
+import 'package:papertok_reader/service/mcp/mcp_client_service.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:langchain_core/tools.dart';
 
 class McpToolDescriptor {

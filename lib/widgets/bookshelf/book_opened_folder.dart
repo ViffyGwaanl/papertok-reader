@@ -1,11 +1,11 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/providers/book_list.dart';
-import 'package:anx_reader/providers/tb_groups.dart';
-import 'package:anx_reader/theme/morandi_palette.dart';
-import 'package:anx_reader/widgets/bookshelf/book_item.dart';
-import 'package:anx_reader/widgets/common/pt_dialog.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/providers/book_list.dart';
+import 'package:papertok_reader/providers/tb_groups.dart';
+import 'package:papertok_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/widgets/bookshelf/book_item.dart';
+import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

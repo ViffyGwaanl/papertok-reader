@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/page/book_player/epub_player.dart';
-import 'package:anx_reader/page/reading_page.dart';
-import 'package:anx_reader/service/reading/epub_player_key.dart';
-import 'package:anx_reader/theme/app_spacing.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/widgets/common/pt_card.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/page/book_player/epub_player.dart';
+import 'package:papertok_reader/page/reading_page.dart';
+import 'package:papertok_reader/service/reading/epub_player_key.dart';
+import 'package:papertok_reader/theme/app_spacing.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/common/pt_card.dart';
 import 'package:flutter/material.dart';
 
 class ProgressWidget extends StatefulWidget {

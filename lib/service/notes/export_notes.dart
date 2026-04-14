@@ -1,14 +1,14 @@
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/main.dart';
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/models/book_note.dart';
-import 'package:anx_reader/utils/convert_string_to_uint8list.dart';
-import 'package:anx_reader/utils/save_file_to_download.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/main.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/models/book_note.dart';
+import 'package:papertok_reader/utils/convert_string_to_uint8list.dart';
+import 'package:papertok_reader/utils/save_file_to_download.dart';
 import 'package:csv/csv.dart';
 import 'package:fast_gbk/fast_gbk.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:anx_reader/utils/toast/common.dart';
+import 'package:papertok_reader/utils/toast/common.dart';
 
 enum ExportType { copy, md, txt, csv }
 

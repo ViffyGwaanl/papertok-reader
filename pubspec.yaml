@@ -1,4 +1,4 @@
-name: anx_reader
+name: papertok_reader
 description: "An e-book reader."
 publish_to: 'none'
 

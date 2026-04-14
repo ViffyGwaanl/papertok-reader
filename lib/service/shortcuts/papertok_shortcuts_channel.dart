@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:anx_reader/service/shortcuts/papertok_quick_ask_service.dart';
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_pending_queue.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_quick_ask_service.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_pending_queue.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter/services.dart';
 
 /// iOS App Intents -> Flutter bridge.

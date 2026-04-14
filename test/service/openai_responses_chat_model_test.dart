@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:anx_reader/service/ai/openai_responses_chat_model.dart';
+import 'package:papertok_reader/service/ai/openai_responses_chat_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:langchain_core/chat_models.dart';

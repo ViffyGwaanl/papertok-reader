@@ -1,6 +1,6 @@
-import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
-import 'package:anx_reader/service/vibration_service.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/service/vibration_service.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 
 class VibrationTestPage extends StatefulWidget {

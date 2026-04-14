@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/ai_quick_prompt_chip.dart';
-import 'package:anx_reader/theme/app_spacing.dart';
-import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/ai_quick_prompt_chip.dart';
+import 'package:papertok_reader/theme/app_spacing.dart';
+import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
 
 /// Resizable AI chat bottom sheet.

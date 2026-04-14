@@ -1,4 +1,4 @@
-import 'package:anx_reader/service/memory/memory_rule_prefs.dart';
+import 'package:papertok_reader/service/memory/memory_rule_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -1,37 +1,37 @@
 import 'dart:async';
 
-export 'package:anx_reader/app/app_globals.dart' show navigatorKey;
+export 'package:papertok_reader/app/app_globals.dart' show navigatorKey;
 
-import 'package:anx_reader/app/app_globals.dart';
-import 'package:anx_reader/app/app_route_observer.dart';
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_channel.dart';
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_entrypoint.dart'
+import 'package:papertok_reader/app/app_globals.dart';
+import 'package:papertok_reader/app/app_route_observer.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_channel.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_entrypoint.dart'
     as papertok_shortcuts;
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_pending_queue.dart';
-import 'package:anx_reader/utils/platform_utils.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_pending_queue.dart';
+import 'package:papertok_reader/utils/platform_utils.dart';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/service/memory/memory_rule_prefs.dart';
-import 'package:anx_reader/service/deeplink/paperreader_deeplink_handler.dart';
-import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart';
-import 'package:anx_reader/service/shortcuts/shortcuts_callback_service.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/memory/memory_rule_prefs.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_deeplink_handler.dart';
+import 'package:papertok_reader/service/receive_file/share_inbox_cleanup_service.dart';
+import 'package:papertok_reader/service/shortcuts/shortcuts_callback_service.dart';
 import 'package:app_links/app_links.dart';
-import 'package:anx_reader/dao/database.dart';
-import 'package:anx_reader/enums/sync_direction.dart';
-import 'package:anx_reader/enums/sync_trigger.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/models/window_info.dart';
-import 'package:anx_reader/page/home_page.dart';
-import 'package:anx_reader/page/migration_page.dart';
-import 'package:anx_reader/service/book_player/book_player_server.dart';
-import 'package:anx_reader/service/tts/tts_handler.dart';
-import 'package:anx_reader/utils/get_path/macos_migration.dart';
-import 'package:anx_reader/theme/app_theme.dart';
-import 'package:anx_reader/utils/error/common.dart';
-import 'package:anx_reader/utils/get_path/get_base_path.dart';
-import 'package:anx_reader/utils/log/common.dart';
-import 'package:anx_reader/utils/window_position_validator.dart';
-import 'package:anx_reader/providers/sync.dart';
+import 'package:papertok_reader/dao/database.dart';
+import 'package:papertok_reader/enums/sync_direction.dart';
+import 'package:papertok_reader/enums/sync_trigger.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/window_info.dart';
+import 'package:papertok_reader/page/home_page.dart';
+import 'package:papertok_reader/page/migration_page.dart';
+import 'package:papertok_reader/service/book_player/book_player_server.dart';
+import 'package:papertok_reader/service/tts/tts_handler.dart';
+import 'package:papertok_reader/utils/get_path/macos_migration.dart';
+import 'package:papertok_reader/theme/app_theme.dart';
+import 'package:papertok_reader/utils/error/common.dart';
+import 'package:papertok_reader/utils/get_path/get_base_path.dart';
+import 'package:papertok_reader/utils/log/common.dart';
+import 'package:papertok_reader/utils/window_position_validator.dart';
+import 'package:papertok_reader/providers/sync.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/service/receive_file/share_inbox_diagnostics.dart';
-import 'package:anx_reader/service/receive_file/share_inbox_paths.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/receive_file/share_inbox_diagnostics.dart';
+import 'package:papertok_reader/service/receive_file/share_inbox_paths.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:path/path.dart' as p;
 
 class ShareInboxCleanupService {

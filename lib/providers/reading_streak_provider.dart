@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:anx_reader/dao/reading_time.dart';
+import 'package:papertok_reader/dao/reading_time.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'reading_streak_provider.g.dart';

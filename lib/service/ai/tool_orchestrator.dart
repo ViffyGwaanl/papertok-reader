@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:langchain/langchain.dart';
 
 /// Result of a single tool execution within the orchestrator.

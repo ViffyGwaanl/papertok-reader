@@ -1,5 +1,5 @@
-import 'package:anx_reader/theme/morandi_palette.dart';
-import 'package:anx_reader/widgets/common/pt_collapsible_card.dart';
+import 'package:papertok_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/widgets/common/pt_collapsible_card.dart';
 import 'package:flutter/material.dart';
 
 /// Chat-friendly collapsible section used for "thinking" traces and tool-call

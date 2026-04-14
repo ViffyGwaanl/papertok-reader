@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
 
 Map<String, int> fontCache = {
   'en': 1033,

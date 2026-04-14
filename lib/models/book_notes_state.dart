@@ -1,6 +1,6 @@
-import 'package:anx_reader/constants/note_annotations.dart';
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/models/book_note.dart';
+import 'package:papertok_reader/constants/note_annotations.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/models/book_note.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'book_notes_state.freezed.dart';

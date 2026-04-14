@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:anx_reader/service/receive_file/docx_plain_text_extractor.dart';
+import 'package:papertok_reader/service/receive_file/docx_plain_text_extractor.dart';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 

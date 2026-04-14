@@ -1,5 +1,5 @@
-import 'package:anx_reader/service/receive_file/share_inbound_decider.dart';
-import 'package:anx_reader/service/receive_file/share_routing_models.dart';
+import 'package:papertok_reader/service/receive_file/share_inbound_decider.dart';
+import 'package:papertok_reader/service/receive_file/share_routing_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 ShareInboundFile f(String filename) {

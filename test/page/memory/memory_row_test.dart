@@ -1,5 +1,5 @@
-import 'package:anx_reader/page/memory/widgets/memory_row.dart';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/page/memory/widgets/memory_row.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

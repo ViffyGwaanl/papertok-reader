@@ -1,7 +1,7 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/models/share_prompt_preset.dart';
-import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/share_prompt_preset.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:flutter/material.dart';
 
 class SharePromptPresetsPage extends StatefulWidget {

@@ -1,9 +1,9 @@
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/service/ai/tools/base_tool.dart';
-import 'package:anx_reader/service/ai/tools/repository/tag_repository.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/utils/color/hash_color.dart';
-import 'package:anx_reader/utils/color/rgb.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/service/ai/tools/base_tool.dart';
+import 'package:papertok_reader/service/ai/tools/repository/tag_repository.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/utils/color/hash_color.dart';
+import 'package:papertok_reader/utils/color/rgb.dart';
 
 const _tagsListToolId = 'tags_list';
 

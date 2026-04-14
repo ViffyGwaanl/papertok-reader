@@ -1,15 +1,15 @@
 import 'dart:math';
 
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/main.dart';
-import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
-import 'package:anx_reader/service/vibration_service.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/widgets/common/container/filled_container.dart';
-import 'package:anx_reader/widgets/common/fitted_text.dart';
-import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_detail_view.dart';
-import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
-import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/main.dart';
+import 'package:papertok_reader/providers/dashboard_tiles_provider.dart';
+import 'package:papertok_reader/service/vibration_service.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/common/container/filled_container.dart';
+import 'package:papertok_reader/widgets/common/fitted_text.dart';
+import 'package:papertok_reader/widgets/statistic/dashboard_tiles/dashboard_tile_detail_view.dart';
+import 'package:papertok_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
+import 'package:papertok_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heroine/heroine.dart';

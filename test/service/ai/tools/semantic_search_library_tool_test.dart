@@ -1,6 +1,6 @@
-import 'package:anx_reader/service/ai/tools/semantic_search_library_tool.dart';
-import 'package:anx_reader/service/rag/ai_index_database.dart';
-import 'package:anx_reader/service/rag/semantic_search_library.dart';
+import 'package:papertok_reader/service/ai/tools/semantic_search_library_tool.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

@@ -1,4 +1,4 @@
-import 'package:anx_reader/utils/book_file_types.dart';
+import 'package:papertok_reader/utils/book_file_types.dart';
 
 /// A normalized payload coming from iOS Share Sheet / Android share intent.
 ///

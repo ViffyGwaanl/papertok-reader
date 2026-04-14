@@ -1,14 +1,14 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/dao/book.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/models/md5_statistics.dart';
-import 'package:anx_reader/page/settings_page/subpage/chapter_split_rules_page.dart';
-import 'package:anx_reader/page/settings_page/subpage/log_page.dart';
-import 'package:anx_reader/service/md5_service.dart';
-import 'package:anx_reader/utils/toast/common.dart';
-import 'package:anx_reader/widgets/settings/settings_section.dart';
-import 'package:anx_reader/widgets/settings/settings_tile.dart';
-import 'package:anx_reader/widgets/settings/settings_title.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/dao/book.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/md5_statistics.dart';
+import 'package:papertok_reader/page/settings_page/subpage/chapter_split_rules_page.dart';
+import 'package:papertok_reader/page/settings_page/subpage/log_page.dart';
+import 'package:papertok_reader/service/md5_service.dart';
+import 'package:papertok_reader/utils/toast/common.dart';
+import 'package:papertok_reader/widgets/settings/settings_section.dart';
+import 'package:papertok_reader/widgets/settings/settings_tile.dart';
+import 'package:papertok_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 

@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:anx_reader/models/mcp_transport_mode.dart';
+import 'package:papertok_reader/models/mcp_transport_mode.dart';
 
 class McpServerMeta {
   const McpServerMeta({

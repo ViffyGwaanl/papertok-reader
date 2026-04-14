@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/theme/app_elevation.dart';
-import 'package:anx_reader/theme/app_spacing.dart';
-import 'package:anx_reader/theme/morandi_palette.dart';
-import 'package:anx_reader/widgets/common/animated_press.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/theme/app_elevation.dart';
+import 'package:papertok_reader/theme/app_spacing.dart';
+import 'package:papertok_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/widgets/common/animated_press.dart';
 import 'package:flutter/material.dart';
 
 const List<Color> _morandiCoverTints = [

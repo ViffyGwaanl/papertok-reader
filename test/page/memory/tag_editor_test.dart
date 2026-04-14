@@ -1,5 +1,5 @@
 // test/page/memory/tag_editor_test.dart
-import 'package:anx_reader/page/memory/widgets/tag_editor.dart';
+import 'package:papertok_reader/page/memory/widgets/tag_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

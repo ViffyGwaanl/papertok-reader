@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/service/memory/memory_candidate.dart';
-import 'package:anx_reader/service/memory/memory_candidate_store.dart';
-import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
-import 'package:anx_reader/service/memory/memory_workflow_service.dart';
-import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_candidate.dart';
+import 'package:papertok_reader/service/memory/memory_candidate_store.dart';
+import 'package:papertok_reader/service/memory/memory_workflow_policy.dart';
+import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
+import 'package:papertok_reader/service/memory/memory_write_coordinator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:langchain_core/chat_models.dart';
 

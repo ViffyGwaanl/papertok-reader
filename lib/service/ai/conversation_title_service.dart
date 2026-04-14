@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/ai_provider_meta.dart';
-import 'package:anx_reader/service/ai/ai_services.dart';
-import 'package:anx_reader/service/ai/index.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/service/ai/ai_services.dart';
+import 'package:papertok_reader/service/ai/index.dart';
 import 'package:flutter/widgets.dart';
 import 'package:langchain_core/chat_models.dart';
 

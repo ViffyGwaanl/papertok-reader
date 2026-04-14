@@ -1,14 +1,14 @@
 import 'dart:ui';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/page/papers/paper_detail_page.dart';
-import 'package:anx_reader/service/papertok/models.dart';
-import 'package:anx_reader/service/papertok/papertok_api.dart';
-import 'package:anx_reader/theme/morandi_palette.dart';
-import 'package:anx_reader/utils/page_transitions.dart';
-import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
-import 'package:anx_reader/widgets/common/pt_dialog.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/page/papers/paper_detail_page.dart';
+import 'package:papertok_reader/service/papertok/models.dart';
+import 'package:papertok_reader/service/papertok/papertok_api.dart';
+import 'package:papertok_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/utils/page_transitions.dart';
+import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';

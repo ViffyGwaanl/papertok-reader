@@ -1,18 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/models/toc_item.dart';
-import 'package:anx_reader/providers/book_toc.dart';
-import 'package:anx_reader/providers/chapter_content_bridge.dart';
-import 'package:anx_reader/providers/current_reading.dart';
-import 'package:anx_reader/service/rag/ai_embeddings_service.dart';
-import 'package:anx_reader/service/rag/ai_index_database.dart';
-import 'package:anx_reader/service/rag/ai_text_chunker.dart';
-import 'package:anx_reader/service/rag/vector_math.dart';
-import 'package:anx_reader/utils/log/common.dart';
-import 'package:anx_reader/service/rag/library/ai_headless_reader_bridge_service.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/models/toc_item.dart';
+import 'package:papertok_reader/providers/book_toc.dart';
+import 'package:papertok_reader/providers/chapter_content_bridge.dart';
+import 'package:papertok_reader/providers/current_reading.dart';
+import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
+import 'package:papertok_reader/service/rag/vector_math.dart';
+import 'package:papertok_reader/utils/log/common.dart';
+import 'package:papertok_reader/service/rag/library/ai_headless_reader_bridge_service.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 

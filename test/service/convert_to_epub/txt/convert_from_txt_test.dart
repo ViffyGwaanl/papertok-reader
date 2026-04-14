@@ -1,4 +1,4 @@
-import 'package:anx_reader/models/chapter_split_presets.dart';
+import 'package:papertok_reader/models/chapter_split_presets.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -1,6 +1,6 @@
-import 'package:anx_reader/service/ai/sub_agent_runner.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/service/ai/tools/input/spawn_sub_agent_input.dart';
+import 'package:papertok_reader/service/ai/sub_agent_runner.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/service/ai/tools/input/spawn_sub_agent_input.dart';
 
 import 'base_tool.dart';
 

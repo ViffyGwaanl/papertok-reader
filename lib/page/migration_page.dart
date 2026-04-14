@@ -1,6 +1,6 @@
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/theme/morandi_palette.dart';
-import 'package:anx_reader/utils/get_path/macos_migration.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/utils/get_path/macos_migration.dart';
 import 'package:flutter/material.dart';
 
 class MigrationPage extends StatefulWidget {

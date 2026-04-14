@@ -1,15 +1,15 @@
 import 'dart:async';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/page/reading_page.dart';
-import 'package:anx_reader/service/tts/base_tts.dart';
-import 'package:anx_reader/service/tts/tts_service.dart';
-import 'package:anx_reader/service/tts/tts_service_provider.dart';
-import 'package:anx_reader/service/tts/models/tts_segment.dart';
-import 'package:anx_reader/service/tts/models/tts_sentence.dart';
-import 'package:anx_reader/service/tts/models/tts_voice.dart';
-import 'package:anx_reader/utils/log/common.dart';
-import 'package:anx_reader/service/reading/epub_player_key.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/page/reading_page.dart';
+import 'package:papertok_reader/service/tts/base_tts.dart';
+import 'package:papertok_reader/service/tts/tts_service.dart';
+import 'package:papertok_reader/service/tts/tts_service_provider.dart';
+import 'package:papertok_reader/service/tts/models/tts_segment.dart';
+import 'package:papertok_reader/service/tts/models/tts_sentence.dart';
+import 'package:papertok_reader/service/tts/models/tts_voice.dart';
+import 'package:papertok_reader/utils/log/common.dart';
+import 'package:papertok_reader/service/reading/epub_player_key.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 

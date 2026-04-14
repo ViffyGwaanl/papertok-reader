@@ -1,9 +1,9 @@
-import 'package:anx_reader/dao/book.dart';
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/models/tb_group.dart';
-import 'package:anx_reader/providers/book_list.dart';
-import 'package:anx_reader/providers/tb_groups.dart';
-import 'package:anx_reader/service/ai/tools/models/bookshelf_organize_plan.dart';
+import 'package:papertok_reader/dao/book.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/models/tb_group.dart';
+import 'package:papertok_reader/providers/book_list.dart';
+import 'package:papertok_reader/providers/tb_groups.dart';
+import 'package:papertok_reader/service/ai/tools/models/bookshelf_organize_plan.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class BookshelfOrganizeService {

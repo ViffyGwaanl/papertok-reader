@@ -1,6 +1,6 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/models/ai_model_capability.dart';
-import 'package:anx_reader/service/ai/prompt_budgeting_service.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/ai_model_capability.dart';
+import 'package:papertok_reader/service/ai/prompt_budgeting_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';

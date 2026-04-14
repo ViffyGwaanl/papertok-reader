@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Callback for migration progress updates

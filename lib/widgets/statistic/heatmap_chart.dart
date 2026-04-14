@@ -1,6 +1,6 @@
-import 'package:anx_reader/providers/heatmap_data.dart';
-import 'package:anx_reader/providers/statistic_data.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/providers/heatmap_data.dart';
+import 'package:papertok_reader/providers/statistic_data.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

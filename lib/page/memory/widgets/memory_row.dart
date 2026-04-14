@@ -1,5 +1,5 @@
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 
 class MemoryRow extends StatelessWidget {

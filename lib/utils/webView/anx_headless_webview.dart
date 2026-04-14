@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:anx_reader/main.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/main.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 

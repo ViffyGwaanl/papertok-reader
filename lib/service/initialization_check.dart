@@ -1,7 +1,7 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/enums/version_check_type.dart';
-import 'package:anx_reader/utils/app_version.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/enums/version_check_type.dart';
+import 'package:papertok_reader/utils/app_version.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 
 class InitializationCheck {
   static String? _lastVersion;

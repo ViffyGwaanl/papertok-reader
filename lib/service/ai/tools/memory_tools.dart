@@ -1,13 +1,13 @@
 import 'dart:async';
 
-import 'package:anx_reader/enums/ai_tool_risk_level.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
-import 'package:anx_reader/service/ai/tools/base_tool.dart';
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
-import 'package:anx_reader/service/memory/memory_search_service.dart';
+import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/service/ai/tools/base_tool.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_write_coordinator.dart';
+import 'package:papertok_reader/service/memory/memory_search_service.dart';
 
 DateTime? _parseLocalDate(String? yyyyMmDd) {
   if (yyyyMmDd == null) return null;

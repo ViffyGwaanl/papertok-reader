@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:anx_reader/models/mcp_server_meta.dart';
-import 'package:anx_reader/models/mcp_tool_meta.dart';
-import 'package:anx_reader/service/mcp/mcp_http_exception.dart';
-import 'package:anx_reader/service/mcp/mcp_sse_ended_exception.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/models/mcp_server_meta.dart';
+import 'package:papertok_reader/models/mcp_tool_meta.dart';
+import 'package:papertok_reader/service/mcp/mcp_http_exception.dart';
+import 'package:papertok_reader/service/mcp/mcp_sse_ended_exception.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:anx_reader/service/mcp/mcp_rpc_client.dart';
+import 'package:papertok_reader/service/mcp/mcp_rpc_client.dart';
 
 class McpStreamableHttpClient implements McpRpcClient {
   McpStreamableHttpClient({

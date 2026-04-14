@@ -1,5 +1,5 @@
-import 'package:anx_reader/models/ai_provider_meta.dart';
-import 'package:anx_reader/service/ai/ai_models_service.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/service/ai/ai_models_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

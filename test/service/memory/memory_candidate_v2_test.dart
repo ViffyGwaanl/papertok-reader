@@ -1,5 +1,5 @@
-import 'package:anx_reader/service/memory/memory_candidate.dart';
-import 'package:anx_reader/service/memory/memory_source_kind.dart';
+import 'package:papertok_reader/service/memory/memory_candidate.dart';
+import 'package:papertok_reader/service/memory/memory_source_kind.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

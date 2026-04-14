@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:anx_reader/models/ai_model_capability.dart';
-import 'package:anx_reader/models/ai_provider_meta.dart';
-import 'package:anx_reader/service/ai/langchain_ai_config.dart';
+import 'package:papertok_reader/models/ai_model_capability.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/service/ai/langchain_ai_config.dart';
 import 'package:dio/dio.dart';
 
 class AiModelsService {

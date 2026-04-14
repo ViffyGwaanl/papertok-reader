@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:anx_reader/service/ai/index.dart';
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_prompt_service.dart';
+import 'package:papertok_reader/service/ai/index.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_prompt_service.dart';
 import 'package:langchain_core/chat_models.dart';
 
 class PapertokQuickAskService {

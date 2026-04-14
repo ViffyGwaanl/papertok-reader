@@ -1,4 +1,4 @@
-import 'package:anx_reader/service/receive_file/share_inbox_diagnostics.dart';
+import 'package:papertok_reader/service/receive_file/share_inbox_diagnostics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 ShareInboundEvent _event({

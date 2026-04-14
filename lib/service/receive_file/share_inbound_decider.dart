@@ -1,4 +1,4 @@
-import 'package:anx_reader/service/receive_file/share_routing_models.dart';
+import 'package:papertok_reader/service/receive_file/share_routing_models.dart';
 
 /// Pure routing decisions for inbound share payload.
 ///

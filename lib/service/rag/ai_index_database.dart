@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:anx_reader/utils/get_path/databases_path.dart';
-import 'package:anx_reader/utils/log/common.dart';
-import 'package:anx_reader/utils/platform_utils.dart';
+import 'package:papertok_reader/utils/get_path/databases_path.dart';
+import 'package:papertok_reader/utils/log/common.dart';
+import 'package:papertok_reader/utils/platform_utils.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';

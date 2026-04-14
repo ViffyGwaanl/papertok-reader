@@ -1,6 +1,6 @@
-import 'package:anx_reader/enums/ai_tool_approval_policy.dart';
-import 'package:anx_reader/enums/ai_tool_risk_level.dart';
-import 'package:anx_reader/service/ai/tools/tool_approval_decider.dart';
+import 'package:papertok_reader/enums/ai_tool_approval_policy.dart';
+import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
+import 'package:papertok_reader/service/ai/tools/tool_approval_decider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,17 +1,17 @@
 import 'dart:math' as math;
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
-import 'package:anx_reader/widgets/common/axis_flex.dart';
-import 'package:anx_reader/widgets/context_menu/excerpt_menu.dart';
-import 'package:anx_reader/widgets/context_menu/reader_note_menu.dart';
-import 'package:anx_reader/widgets/context_menu/translation_menu.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/common/axis_flex.dart';
+import 'package:papertok_reader/widgets/context_menu/excerpt_menu.dart';
+import 'package:papertok_reader/widgets/context_menu/reader_note_menu.dart';
+import 'package:papertok_reader/widgets/context_menu/translation_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
-import 'package:anx_reader/dao/book_note.dart';
-import 'package:anx_reader/models/book_note.dart';
-import 'package:anx_reader/service/reading/epub_player_key.dart';
+import 'package:papertok_reader/dao/book_note.dart';
+import 'package:papertok_reader/models/book_note.dart';
+import 'package:papertok_reader/service/reading/epub_player_key.dart';
 
 Future<void> showContextMenu(
     BuildContext context,

@@ -1,4 +1,4 @@
-import 'package:anx_reader/enums/ai_tool_risk_level.dart';
+import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
 
 /// Request sent to the UI layer when a tool execution requires user approval.
 class ToolApprovalRequest {

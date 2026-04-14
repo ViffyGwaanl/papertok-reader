@@ -1,12 +1,12 @@
-import 'package:anx_reader/app/app_globals.dart';
-import 'package:anx_reader/service/ai/tools/repository/books_repository.dart';
-import 'package:anx_reader/service/book.dart'
+import 'package:papertok_reader/app/app_globals.dart';
+import 'package:papertok_reader/service/ai/tools/repository/books_repository.dart';
+import 'package:papertok_reader/service/book.dart'
     show pushToReadingPage, pushToReadingPageWithContainer;
-import 'package:anx_reader/service/deeplink/paperreader_reader_intent.dart';
-import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
-import 'package:anx_reader/service/shortcuts/papertok_shortcuts_pending_queue.dart';
-import 'package:anx_reader/service/shortcuts/shortcuts_callback_service.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
+import 'package:papertok_reader/service/shortcuts/papertok_shortcuts_pending_queue.dart';
+import 'package:papertok_reader/service/shortcuts/shortcuts_callback_service.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/models/toc_item.dart';
-import 'package:anx_reader/providers/book_toc.dart';
-import 'package:anx_reader/providers/current_reading.dart';
-import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/toc_item.dart';
+import 'package:papertok_reader/providers/book_toc.dart';
+import 'package:papertok_reader/providers/current_reading.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:riverpod/riverpod.dart';
 
 import 'base_tool.dart';

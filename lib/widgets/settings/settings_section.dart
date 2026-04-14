@@ -1,4 +1,4 @@
-import 'package:anx_reader/widgets/settings/settings_tile.dart';
+import 'package:papertok_reader/widgets/settings/settings_tile.dart';
 import 'package:flutter/material.dart';
 
 abstract class AbstractSettingsSection extends StatelessWidget {

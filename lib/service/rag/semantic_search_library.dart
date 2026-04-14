@@ -1,11 +1,11 @@
 import 'dart:convert';
 
-import 'package:anx_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:meta/meta.dart';
-import 'package:anx_reader/service/rag/ai_embeddings_service.dart';
-import 'package:anx_reader/service/rag/ai_index_database.dart';
-import 'package:anx_reader/service/rag/vector_math.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/vector_math.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
 
 typedef AiLibraryBookTitleResolver = Future<Map<int, String>> Function(

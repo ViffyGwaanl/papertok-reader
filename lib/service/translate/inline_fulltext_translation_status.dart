@@ -1,7 +1,7 @@
 import 'dart:math';
 
-import 'package:anx_reader/enums/inline_fulltext_translate_failure_reason.dart';
-import 'package:anx_reader/models/inline_fulltext_translation_progress.dart';
+import 'package:papertok_reader/enums/inline_fulltext_translate_failure_reason.dart';
+import 'package:papertok_reader/models/inline_fulltext_translation_progress.dart';
 import 'package:flutter/foundation.dart';
 
 /// A lightweight global bus for reporting *inline full-text translation* status.

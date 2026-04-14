@@ -1,7 +1,7 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/page/settings_page/developer/vibration_test_page.dart';
-import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
-import 'package:anx_reader/widgets/settings/settings_section_card.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/page/settings_page/developer/vibration_test_page.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/widgets/settings/settings_section_card.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 

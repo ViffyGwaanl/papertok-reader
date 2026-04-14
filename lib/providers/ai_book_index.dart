@@ -1,8 +1,8 @@
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/providers/current_reading.dart';
-import 'package:anx_reader/service/rag/ai_book_indexer.dart';
-import 'package:anx_reader/service/rag/ai_index_database.dart';
-import 'package:anx_reader/utils/log/common.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/providers/current_reading.dart';
+import 'package:papertok_reader/service/rag/ai_book_indexer.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum AiBookIndexingStatus { idle, indexing, clearing, done, error }

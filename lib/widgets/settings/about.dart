@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:anx_reader/config/shared_preference_provider.dart';
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/main.dart';
-import 'package:anx_reader/page/settings_page/developer/developer_options_page.dart';
-import 'package:anx_reader/utils/toast/common.dart';
-import 'package:anx_reader/widgets/common/pt_dialog.dart';
-import 'package:anx_reader/widgets/settings/link_icon.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/main.dart';
+import 'package:papertok_reader/page/settings_page/developer/developer_options_page.dart';
+import 'package:papertok_reader/utils/toast/common.dart';
+import 'package:papertok_reader/widgets/common/pt_dialog.dart';
+import 'package:papertok_reader/widgets/settings/link_icon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

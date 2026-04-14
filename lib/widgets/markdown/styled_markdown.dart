@@ -1,7 +1,7 @@
-import 'package:anx_reader/service/deeplink/paperreader_deeplink_handler.dart';
-import 'package:anx_reader/service/reading/epub_player_key.dart';
-import 'package:anx_reader/widgets/markdown/selection_control.dart';
-import 'package:anx_reader/widgets/markdown/styled_markdown_typography.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_deeplink_handler.dart';
+import 'package:papertok_reader/service/reading/epub_player_key.dart';
+import 'package:papertok_reader/widgets/markdown/selection_control.dart';
+import 'package:papertok_reader/widgets/markdown/styled_markdown_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

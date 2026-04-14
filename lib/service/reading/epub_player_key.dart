@@ -1,4 +1,4 @@
-import 'package:anx_reader/page/book_player/epub_player.dart';
+import 'package:papertok_reader/page/book_player/epub_player.dart';
 import 'package:flutter/widgets.dart';
 
 /// Global key for the active [EpubPlayer] instance.

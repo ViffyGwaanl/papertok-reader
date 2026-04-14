@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
+import 'package:papertok_reader/utils/get_path/get_cache_dir.dart';
 
 /// Persistent cache for inline full-text translation.
 ///
