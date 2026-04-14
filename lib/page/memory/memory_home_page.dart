@@ -1,4 +1,5 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/page/memory/memory_detail_page.dart';
 import 'package:anx_reader/page/memory/widgets/memory_row.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_pending_count_provider.dart';
@@ -31,11 +32,13 @@ class MemoryHomePage extends ConsumerWidget {
           _MemoryEntriesCard(
             future: effectiveStore.listRecentDailyNotes(count: 14),
             emptyMessage: l10n.memoryHomeTodayEmpty,
+            store: effectiveStore,
           ),
           _SectionHeader(title: l10n.memoryLongTermSectionTitle),
           _MemoryEntriesCard(
             future: effectiveStore.listLongTermEntries(),
             emptyMessage: l10n.memoryHomeLongTermEmpty,
+            store: effectiveStore,
           ),
         ],
       ),
@@ -67,10 +70,12 @@ class _SectionHeader extends StatelessWidget {
 class _MemoryEntriesCard extends StatelessWidget {
   final Future<List<MemoryEntryRef>> future;
   final String emptyMessage;
+  final MarkdownMemoryStore store;
 
   const _MemoryEntriesCard({
     required this.future,
     required this.emptyMessage,
+    required this.store,
   });
 
   @override
@@ -118,8 +123,22 @@ class _MemoryEntriesCard extends StatelessWidget {
               for (var i = 0; i < entries.length; i++) ...[
                 MemoryRow(
                   entry: entries[i],
-                  onTap: () {
-                    // Task 10 wires this to MemoryDetailPage navigation.
+                  onTap: () async {
+                    final allKnownTags = <String>{};
+                    for (final e in entries) {
+                      allKnownTags
+                          .addAll(await store.readEntryTags(e.path));
+                    }
+                    if (!context.mounted) return;
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => MemoryDetailPage(
+                          entry: entries[i],
+                          store: store,
+                          allKnownTags: allKnownTags.toList(),
+                        ),
+                      ),
+                    );
                   },
                 ),
                 if (i < entries.length - 1)
