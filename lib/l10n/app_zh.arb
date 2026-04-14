@@ -994,5 +994,18 @@
   "memoryTodaySectionTitle": "今天",
   "memoryLongTermSectionTitle": "长期记忆",
   "memoryHomeTodayEmpty": "今天还没有日记。开始阅读会话后会自动生成。",
-  "memoryHomeLongTermEmpty": "长期记忆为空。从收件箱批准一条记忆即可开始。"
+  "memoryHomeLongTermEmpty": "长期记忆为空。从收件箱批准一条记忆即可开始。",
+  "memoryBulkSelectionCount": "已选 {count} 项",
+  "@memoryBulkSelectionCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "memoryBulkDeleteTooltip": "删除所选",
+  "memoryBulkAddTagTooltip": "添加标签",
+  "memoryBulkDeleteConfirmTitle": "删除记忆？",
+  "memoryBulkDeleteConfirmBody": "将永久删除 {count} 条记忆。",
+  "@memoryBulkDeleteConfirmBody": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "memoryBulkDeleteAction": "删除",
+  "memoryBulkAddTagTitle": "为所选添加标签"
 }

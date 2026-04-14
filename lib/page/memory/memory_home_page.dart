@@ -1,27 +1,149 @@
+import 'dart:io';
+
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/page/memory/memory_bulk_selection_controller.dart';
 import 'package:anx_reader/page/memory/memory_detail_page.dart';
 import 'package:anx_reader/page/memory/widgets/memory_row.dart';
+import 'package:anx_reader/page/memory/widgets/tag_editor.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_pending_count_provider.dart';
 import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class MemoryHomePage extends ConsumerWidget {
+class MemoryHomePage extends ConsumerStatefulWidget {
   final MarkdownMemoryStore? store;
 
   const MemoryHomePage({super.key, this.store});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MemoryHomePage> createState() => _MemoryHomePageState();
+}
+
+class _MemoryHomePageState extends ConsumerState<MemoryHomePage> {
+  final _bulk = MemoryBulkSelectionController();
+
+  @override
+  void initState() {
+    super.initState();
+    _bulk.addListener(_onBulkChange);
+  }
+
+  @override
+  void dispose() {
+    _bulk.removeListener(_onBulkChange);
+    _bulk.dispose();
+    super.dispose();
+  }
+
+  void _onBulkChange() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _confirmDelete() async {
+    final count = _bulk.selectionCount;
+    final l10n = L10n.of(context);
+    final confirmed = await PTDialog.show<bool>(
+      context,
+      title: l10n.memoryBulkDeleteConfirmTitle,
+      message: l10n.memoryBulkDeleteConfirmBody(count),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        PTDialogAction(
+          label: l10n.memoryBulkDeleteAction,
+          destructive: true,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
+    );
+    if (confirmed != true) return;
+
+    for (final path in _bulk.selected.toList()) {
+      final file = File(path);
+      if (file.existsSync()) {
+        try {
+          await file.delete();
+        } catch (_) {
+          // Best-effort; surface a toast on failure.
+        }
+      }
+    }
+    _bulk.clear();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _showAddTagSheet() async {
+    final store = widget.store ?? MarkdownMemoryStore();
+    final selection = _bulk.selected.toList();
+    final l10n = L10n.of(context);
+
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.memoryBulkAddTagTitle,
+      builder: (sheetCtx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: TagEditor(
+            initial: const <String>[],
+            suggestions: const <String>[],
+            onChanged: (tags) async {
+              if (tags.isEmpty) return;
+              for (final path in selection) {
+                final existing = await store.readEntryTags(path);
+                final merged = <String>{...existing, ...tags}.toList();
+                await store.writeEntryTags(path, merged);
+              }
+            },
+          ),
+        );
+      },
+    );
+    _bulk.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final pendingCount =
         ref.watch(memoryPendingCountProvider).valueOrNull ?? 0;
     final l10n = L10n.of(context);
-    final effectiveStore = store ?? MarkdownMemoryStore();
+    final effectiveStore = widget.store ?? MarkdownMemoryStore();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.memoryTabTitle),
+        leading: _bulk.inSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _bulk.clear,
+              )
+            : null,
+        title: Text(
+          _bulk.inSelectionMode
+              ? l10n.memoryBulkSelectionCount(_bulk.selectionCount)
+              : l10n.memoryTabTitle,
+        ),
+        actions: _bulk.inSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: l10n.memoryBulkDeleteTooltip,
+                  onPressed:
+                      _bulk.selectionCount == 0 ? null : _confirmDelete,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.label_outline),
+                  tooltip: l10n.memoryBulkAddTagTooltip,
+                  onPressed: _bulk.selectionCount == 0
+                      ? null
+                      : _showAddTagSheet,
+                ),
+              ]
+            : null,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
@@ -33,12 +155,14 @@ class MemoryHomePage extends ConsumerWidget {
             future: effectiveStore.listRecentDailyNotes(count: 14),
             emptyMessage: l10n.memoryHomeTodayEmpty,
             store: effectiveStore,
+            bulk: _bulk,
           ),
           _SectionHeader(title: l10n.memoryLongTermSectionTitle),
           _MemoryEntriesCard(
             future: effectiveStore.listLongTermEntries(),
             emptyMessage: l10n.memoryHomeLongTermEmpty,
             store: effectiveStore,
+            bulk: _bulk,
           ),
         ],
       ),
@@ -71,11 +195,13 @@ class _MemoryEntriesCard extends StatelessWidget {
   final Future<List<MemoryEntryRef>> future;
   final String emptyMessage;
   final MarkdownMemoryStore store;
+  final MemoryBulkSelectionController bulk;
 
   const _MemoryEntriesCard({
     required this.future,
     required this.emptyMessage,
     required this.store,
+    required this.bulk,
   });
 
   @override
@@ -123,7 +249,13 @@ class _MemoryEntriesCard extends StatelessWidget {
               for (var i = 0; i < entries.length; i++) ...[
                 MemoryRow(
                   entry: entries[i],
+                  selectionMode: bulk.inSelectionMode,
+                  selected: bulk.selected.contains(entries[i].path),
                   onTap: () async {
+                    if (bulk.inSelectionMode) {
+                      bulk.toggle(entries[i].path);
+                      return;
+                    }
                     final allKnownTags = <String>{};
                     for (final e in entries) {
                       allKnownTags
@@ -139,6 +271,10 @@ class _MemoryEntriesCard extends StatelessWidget {
                         ),
                       ),
                     );
+                  },
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    bulk.enter(seedId: entries[i].path);
                   },
                 ),
                 if (i < entries.length - 1)

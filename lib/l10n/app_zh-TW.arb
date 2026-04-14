@@ -806,5 +806,18 @@
   "memoryTodaySectionTitle": "今天",
   "memoryLongTermSectionTitle": "長期記憶",
   "memoryHomeTodayEmpty": "今天還沒有日記。開始閱讀會話後會自動生成。",
-  "memoryHomeLongTermEmpty": "長期記憶為空。從收件匣批准一條記憶即可開始。"
+  "memoryHomeLongTermEmpty": "長期記憶為空。從收件匣批准一條記憶即可開始。",
+  "memoryBulkSelectionCount": "已選 {count} 項",
+  "@memoryBulkSelectionCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "memoryBulkDeleteTooltip": "刪除所選",
+  "memoryBulkAddTagTooltip": "新增標籤",
+  "memoryBulkDeleteConfirmTitle": "刪除記憶？",
+  "memoryBulkDeleteConfirmBody": "將永久刪除 {count} 條記憶。",
+  "@memoryBulkDeleteConfirmBody": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "memoryBulkDeleteAction": "刪除",
+  "memoryBulkAddTagTitle": "為所選新增標籤"
 }

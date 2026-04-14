@@ -1540,5 +1540,18 @@
   "memoryTodaySectionTitle": "Today",
   "memoryLongTermSectionTitle": "Long-term",
   "memoryHomeTodayEmpty": "No daily notes yet. Start a reading session to generate one.",
-  "memoryHomeLongTermEmpty": "Long-term memory is empty. Approve a candidate from the Inbox to start filling it."
+  "memoryHomeLongTermEmpty": "Long-term memory is empty. Approve a candidate from the Inbox to start filling it.",
+  "memoryBulkSelectionCount": "{count} selected",
+  "@memoryBulkSelectionCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "memoryBulkDeleteTooltip": "Delete selected",
+  "memoryBulkAddTagTooltip": "Add tag",
+  "memoryBulkDeleteConfirmTitle": "Delete memories?",
+  "memoryBulkDeleteConfirmBody": "{count} memories will be permanently deleted.",
+  "@memoryBulkDeleteConfirmBody": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "memoryBulkDeleteAction": "Delete",
+  "memoryBulkAddTagTitle": "Add tag to selection"
 }
