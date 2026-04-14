@@ -270,3 +270,56 @@ extension MarkdownMemoryStoreBrowse on MarkdownMemoryStore {
     return '${trimmed.substring(0, 160)}…';
   }
 }
+
+extension MarkdownMemoryStoreTags on MarkdownMemoryStore {
+  /// Reads the `tags: [a, b]` line from a YAML front-matter block at the
+  /// top of a memory entry file. Returns empty if the file is missing, has
+  /// no front matter, or has a front matter without a tags line.
+  Future<List<String>> readEntryTags(String path) async {
+    final file = File(path);
+    if (!file.existsSync()) return const <String>[];
+    final content = await file.readAsString();
+    final fm = _extractFrontMatterBlock(content);
+    if (fm == null) return const <String>[];
+    final tagMatch = RegExp(r'^tags:\s*\[(.*)\]\s*$', multiLine: true)
+        .firstMatch(fm);
+    if (tagMatch == null) return const <String>[];
+    return tagMatch
+        .group(1)!
+        .split(',')
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  /// Writes [tags] as a YAML front-matter block at the top of the file,
+  /// replacing any existing front matter. Preserves the body verbatim.
+  /// If [tags] is empty, strips the front matter entirely.
+  Future<void> writeEntryTags(String path, List<String> tags) async {
+    final file = File(path);
+    final original = file.existsSync() ? await file.readAsString() : '';
+    final body = _stripFrontMatterBlock(original);
+
+    if (tags.isEmpty) {
+      await file.writeAsString(body);
+      return;
+    }
+
+    final fm = '---\ntags: [${tags.join(', ')}]\n---\n';
+    await file.writeAsString('$fm$body');
+  }
+
+  String? _extractFrontMatterBlock(String content) {
+    if (!content.startsWith('---\n')) return null;
+    final endIdx = content.indexOf('\n---\n', 4);
+    if (endIdx == -1) return null;
+    return content.substring(4, endIdx);
+  }
+
+  String _stripFrontMatterBlock(String content) {
+    if (!content.startsWith('---\n')) return content;
+    final endIdx = content.indexOf('\n---\n', 4);
+    if (endIdx == -1) return content;
+    return content.substring(endIdx + 5);
+  }
+}
