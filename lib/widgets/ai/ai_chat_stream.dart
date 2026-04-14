@@ -1430,11 +1430,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   // we can render a small mode label inside the pill. We use the chat context
   // notice as a cheap proxy — when the user is reading a book the AI chat
   // surface publishes a notice, otherwise we fall back to "Chat".
-  String _detectComposerMode() {
-    final notice = ref.read(aiChatContextNoticeProvider) ?? '';
-    return notice.trim().isNotEmpty ? 'reading' : 'chat';
-  }
-
   Widget _buildQuickSuggestions(List<Map<String, String>> quickPrompts) {
     if (quickPrompts.isEmpty) {
       return const SizedBox.shrink();
@@ -2414,7 +2409,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     // action row) so the action buttons sit at the bottom of the pill even
     // when the text field grows to its multi-line max. All three action
     // surfaces (+, mic, send) are 32x32 to match the Claude reference.
-    final composerMode = _detectComposerMode();
     final composerPill = Container(
       decoration: BoxDecoration(
         color: ClaudePalette.elevated(context),
@@ -2463,41 +2457,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             textInputAction: TextInputAction.send,
             onSubmitted: (_) => _sendMessage(),
           ),
-          // Wave S: tiny mode label (Reading / Chat) — monospace-ish,
-          // tertiary color so it reads as a caption, not a control.
-          Padding(
-            padding: const EdgeInsets.only(
-              left: 0,
-              top: 4,
-              bottom: 4,
-              right: 0,
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    composerMode == 'reading'
-                        ? Icons.menu_book_outlined
-                        : Icons.chat_bubble_outline,
-                    size: 13,
-                    color: ClaudePalette.tertiary(context),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    composerMode == 'reading' ? 'Reading' : 'Chat',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: ClaudePalette.tertiary(context),
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Action row sits at the bottom of the pill.
+          // Action row sits at the bottom of the pill. Provider picker
+          // lives inline right next to the `+` button so nothing renders
+          // under the pill (user feedback: the secondary row below was
+          // cluttering the bottom and the 'Chat' mode label was noise).
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Row(
@@ -2521,6 +2484,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         color: ClaudePalette.fg(context),
                       ),
                     ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                // Inline provider / model picker (was a separate row below
+                // the pill). Constrained with Flexible so long model names
+                // get truncated instead of pushing the send button off.
+                Flexible(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: aiService,
                   ),
                 ),
                 const Spacer(),
@@ -2797,38 +2770,32 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ),
                 ),
               composerPill,
-              // Wave S: quick suggestion chip strip — now rendered BELOW the
-              // pill (Claude Code mobile reference) and only while the
+              // Quick suggestion chip strip — rendered BELOW the pill
+              // (Claude Code mobile reference) and only while the
               // conversation is empty so it feels like a first-run surface.
               if (chatIsEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 10, bottom: 2),
                   child: _buildQuickSuggestions(quickPrompts),
                 ),
-              // Wave L: secondary row below the pill for the provider picker
-              // and minimize affordance — keeps the pill itself unclutterred.
-              Padding(
-                padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: aiService,
+              // Minimize affordance (only when the chat is a nested sheet
+              // inside the reader) — tiny row with no provider info now
+              // that aiService lives inside the pill.
+              if (widget.onRequestMinimize != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, right: 4),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 18,
+                        color: ClaudePalette.secondary(context),
                       ),
+                      onPressed: widget.onRequestMinimize,
                     ),
-                    if (widget.onRequestMinimize != null)
-                      IconButton(
-                        icon: Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 18,
-                          color: ClaudePalette.secondary(context),
-                        ),
-                        onPressed: widget.onRequestMinimize,
-                      ),
-                  ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
