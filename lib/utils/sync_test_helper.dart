@@ -2,6 +2,7 @@ import 'package:anx_reader/enums/sync_protocol.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/service/sync/sync_connection_tester.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
 
 class SyncTestHelper {
@@ -13,17 +14,15 @@ class SyncTestHelper {
     VoidCallback? onTestStart,
     Function(bool success, String message)? onTestComplete,
   }) async {
-    showDialog(
-      context: context,
+    PTDialog.show(
+      context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Row(
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 20),
-            Text(L10n.of(context).testingConnection),
-          ],
-        ),
+      content: Row(
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(width: 20),
+          Text(L10n.of(context).testingConnection),
+        ],
       ),
     );
 
@@ -65,17 +64,15 @@ class SyncTestHelper {
     VoidCallback? onTestStart,
     Function(bool success, String message)? onTestComplete,
   }) async {
-    showDialog(
-      context: context,
+    PTDialog.show(
+      context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Row(
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 20),
-            Text(L10n.of(context).testingConnection),
-          ],
-        ),
+      content: Row(
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(width: 20),
+          Text(L10n.of(context).testingConnection),
+        ],
       ),
     );
 
@@ -110,46 +107,18 @@ class SyncTestHelper {
   }
 
   static void _showTestResult(BuildContext context, SyncTestResult result) {
-    if (result.isSuccess) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.green),
-              const SizedBox(width: 8),
-              Text(L10n.of(context).commonSuccess),
-            ],
-          ),
-          content: Text(result.message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(L10n.of(context).commonOk),
-            ),
-          ],
+    final l10n = L10n.of(context);
+    PTDialog.show(
+      context,
+      title: result.isSuccess ? l10n.commonSuccess : l10n.commonFailed,
+      message: result.message,
+      actions: [
+        PTDialogAction(
+          label: l10n.commonOk,
+          isDefault: true,
+          onPressed: () => Navigator.of(context).pop(),
         ),
-      );
-    } else {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.error, color: Colors.red),
-              const SizedBox(width: 8),
-              Text(L10n.of(context).commonFailed),
-            ],
-          ),
-          content: Text(result.message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(L10n.of(context).commonOk),
-            ),
-          ],
-        ),
-      );
-    }
+      ],
+    );
   }
 }

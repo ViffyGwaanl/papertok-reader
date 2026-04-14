@@ -13,6 +13,7 @@ import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:anx_reader/service/shortcuts/papertok_quick_ask_service.dart';
 import 'package:anx_reader/service/shortcuts/papertok_shortcuts_handoff_service.dart';
 import 'package:anx_reader/utils/log/common.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:image/image.dart' as img;
@@ -58,15 +59,16 @@ class ShareToAiService {
         SmartDialog.show(
           clickMaskDismiss: true,
           builder: (ctx) {
-            return AlertDialog(
-              title: Text('Papertok'),
+            return PTDialog(
+              title: 'Papertok',
               content: SingleChildScrollView(
                 child: Text(reply),
               ),
               actions: [
-                TextButton(
+                PTDialogAction(
+                  label: l10n.commonOk,
+                  isDefault: true,
                   onPressed: () => SmartDialog.dismiss(),
-                  child: Text(l10n.commonOk),
                 ),
               ],
             );
@@ -79,13 +81,14 @@ class ShareToAiService {
       SmartDialog.show(
         clickMaskDismiss: true,
         builder: (ctx) {
-          return AlertDialog(
-            title: Text(l10n.commonAttention),
-            content: Text(e.toString()),
+          return PTDialog(
+            title: l10n.commonAttention,
+            message: e.toString(),
             actions: [
-              TextButton(
+              PTDialogAction(
+                label: l10n.commonOk,
+                isDefault: true,
                 onPressed: () => SmartDialog.dismiss(),
-                child: Text(l10n.commonOk),
               ),
             ],
           );
@@ -170,13 +173,14 @@ class ShareToAiService {
       SmartDialog.show(
         clickMaskDismiss: true,
         builder: (ctx) {
-          return AlertDialog(
-            title: Text(l10n.commonAttention),
-            content: Text(e.toString()),
+          return PTDialog(
+            title: l10n.commonAttention,
+            message: e.toString(),
             actions: [
-              TextButton(
+              PTDialogAction(
+                label: l10n.commonOk,
+                isDefault: true,
                 onPressed: () => SmartDialog.dismiss(),
-                child: Text(l10n.commonOk),
               ),
             ],
           );

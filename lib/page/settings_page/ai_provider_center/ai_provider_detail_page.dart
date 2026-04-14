@@ -10,6 +10,8 @@ import 'package:anx_reader/service/ai/ai_models_service.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/service/ai/langchain_ai_config.dart';
 import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
@@ -351,9 +353,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     }
 
     if (showSnackBar) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.commonSaved)),
-      );
+      AnxToast.show(l10n.commonSaved);
     }
   }
 
@@ -379,12 +379,8 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       return;
     }
     Prefs().selectedAiService = _provider.id;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          l10n.settingsAiProviderCenterDefaultApplied(_provider.name),
-        ),
-      ),
+    AnxToast.show(
+      l10n.settingsAiProviderCenterDefaultApplied(_provider.name),
     );
   }
 
@@ -417,26 +413,19 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       if (!mounted) return;
 
       if (models.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(l10n.settingsAiProviderCenterFetchModelsEmpty)),
-        );
+        AnxToast.show(l10n.settingsAiProviderCenterFetchModelsEmpty);
       } else {
         Prefs().saveAiModelsCacheV1(_provider.id, models);
         Prefs().saveAiModelCapabilitiesCacheV1(_provider.id, capabilities);
         _cachedModels = models;
         _cachedCapabilities = capabilities;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(l10n
-                  .settingsAiProviderCenterFetchModelsSuccess(models.length))),
+        AnxToast.show(
+          l10n.settingsAiProviderCenterFetchModelsSuccess(models.length),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${l10n.commonFailed}: $e')),
-      );
+      AnxToast.show('${l10n.commonFailed}: $e');
     } finally {
       if (!mounted) return;
       setState(() {
@@ -450,26 +439,21 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
     if (_provider.isBuiltIn) return;
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(l10n.settingsAiProviderCenterDeleteTitle),
-          content: Text(
-            l10n.settingsAiProviderCenterDeleteBody(_provider.name),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(l10n.commonDelete),
-            ),
-          ],
-        );
-      },
+    final ok = await PTDialog.show<bool>(
+      context,
+      title: l10n.settingsAiProviderCenterDeleteTitle,
+      message: l10n.settingsAiProviderCenterDeleteBody(_provider.name),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        PTDialogAction(
+          label: l10n.commonDelete,
+          destructive: true,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
     );
 
     if (ok != true || !mounted) return;
@@ -501,79 +485,72 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     bool obscure = true;
 
     try {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) {
-          return StatefulBuilder(
-            builder: (ctx, setInner) {
-              return AlertDialog(
-                title: Text(existing == null ? 'Add API Key' : 'Edit API Key'),
-                content: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: nameController,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Name (optional)',
+      final ok = await PTDialog.show<bool>(
+        context,
+        title: existing == null ? 'Add API Key' : 'Edit API Key',
+        content: StatefulBuilder(
+          builder: (ctx, setInner) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Name (optional)',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: keyController,
+                    obscureText: obscure,
+                    decoration: InputDecoration(
+                      labelText: 'Key',
+                      suffixIcon: IconButton(
+                        onPressed: () => setInner(() => obscure = !obscure),
+                        icon: Icon(
+                          obscure ? Icons.visibility_off : Icons.visibility,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: keyController,
-                        obscureText: obscure,
-                        decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
-                          labelText: 'Key',
-                          suffixIcon: IconButton(
-                            onPressed: () => setInner(() => obscure = !obscure),
-                            icon: Icon(
-                              obscure ? Icons.visibility_off : Icons.visibility,
-                            ),
-                          ),
-                        ),
-                        maxLines: 3,
-                        minLines: 1,
-                      ),
-                      const SizedBox(height: 12),
-                      SwitchListTile.adaptive(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Enabled'),
-                        value: enabled,
-                        onChanged: (v) => setInner(() => enabled = v),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Security: API keys are stored locally only. They are NOT synced via WebDAV and are excluded from plain backups.',
-                        style: Theme.of(ctx).textTheme.bodySmall,
-                      ),
-                    ],
+                    ),
+                    maxLines: 3,
+                    minLines: 1,
                   ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(false),
-                    child: Text(l10n.commonCancel),
+                  const SizedBox(height: 12),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Enabled'),
+                    value: enabled,
+                    onChanged: (v) => setInner(() => enabled = v),
                   ),
-                  FilledButton(
-                    onPressed: () => Navigator.of(ctx).pop(true),
-                    child: Text(l10n.commonSave),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Security: API keys are stored locally only. They are NOT synced via WebDAV and are excluded from plain backups.',
+                    style: Theme.of(ctx).textTheme.bodySmall,
                   ),
                 ],
-              );
-            },
-          );
-        },
+              ),
+            );
+          },
+        ),
+        actions: [
+          PTDialogAction(
+            label: l10n.commonCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          PTDialogAction(
+            label: l10n.commonSave,
+            isDefault: true,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
       );
 
       if (ok != true || !mounted) return;
 
       final key = keyController.text.trim();
       if (key.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.commonFailed}: empty key')),
-        );
+        AnxToast.show('${l10n.commonFailed}: empty key');
         return;
       }
 
@@ -617,33 +594,29 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     final controller = TextEditingController();
 
     try {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) {
-          return AlertDialog(
-            title: const Text('Import API Keys'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText:
-                    'Paste keys here (one per line / separated by comma/semicolon)',
-              ),
-              minLines: 4,
-              maxLines: 10,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(l10n.commonCancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(l10n.commonConfirm),
-              ),
-            ],
-          );
-        },
+      final ok = await PTDialog.show<bool>(
+        context,
+        title: 'Import API Keys',
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText:
+                'Paste keys here (one per line / separated by comma/semicolon)',
+          ),
+          minLines: 4,
+          maxLines: 10,
+        ),
+        actions: [
+          PTDialogAction(
+            label: l10n.commonCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          PTDialogAction(
+            label: l10n.commonConfirm,
+            isDefault: true,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
       );
 
       if (ok != true || !mounted) return;
@@ -681,9 +654,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       }
 
       _setApiKeys(next);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Imported $added key(s)')),
-      );
+      AnxToast.show('Imported $added key(s)');
     } finally {
       controller.dispose();
     }
@@ -691,23 +662,22 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
   Future<void> _deleteKey(AiApiKeyEntry entry) async {
     final l10n = L10n.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.commonDelete),
-        content: Text(
-            'Delete ${entry.name.isEmpty ? entry.maskedKey() : entry.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.commonDelete),
-          ),
-        ],
-      ),
+    final ok = await PTDialog.show<bool>(
+      context,
+      title: l10n.commonDelete,
+      message:
+          'Delete ${entry.name.isEmpty ? entry.maskedKey() : entry.name}?',
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        PTDialogAction(
+          label: l10n.commonDelete,
+          destructive: true,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
     );
 
     if (ok != true || !mounted) return;
@@ -730,9 +700,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
           )
           .toList(growable: false),
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cooldown cleared')),
-    );
+    AnxToast.show('Cooldown cleared');
   }
 
   void _resetStatsForKey(AiApiKeyEntry entry) {
@@ -752,9 +720,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
           )
           .toList(growable: false),
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Stats reset')),
-    );
+    AnxToast.show('Stats reset');
   }
 
   Future<void> _testKey(AiApiKeyEntry entry) async {
@@ -789,9 +755,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
             .toList(growable: false),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Test success: ${entry.name}')),
-      );
+      AnxToast.show('Test success: ${entry.name}');
     } catch (e) {
       if (!mounted) return;
       _setApiKeys(
@@ -808,9 +772,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
             )
             .toList(growable: false),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${l10n.commonFailed}: $e')),
-      );
+      AnxToast.show('${l10n.commonFailed}: $e');
     }
   }
 
@@ -924,9 +886,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                       onTap: () => _showEditKeyDialog(existing: e),
                       onLongPress: () {
                         Clipboard.setData(ClipboardData(text: e.key.trim()));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Key copied')),
-                        );
+                        AnxToast.show('Key copied');
                       },
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -943,9 +903,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                                   Clipboard.setData(
                                     ClipboardData(text: e.key.trim()),
                                   );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Key copied')),
-                                  );
+                                  AnxToast.show('Key copied');
                                   break;
                                 case 'clear_cooldown':
                                   _clearCooldownForKey(e);

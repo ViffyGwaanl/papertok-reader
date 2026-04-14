@@ -1,6 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/widgets/common/color_picker_sheet.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:flutter/material.dart';
 import 'package:anx_reader/utils/color/hash_color.dart';
@@ -87,61 +88,65 @@ class TagChip extends StatelessWidget {
   }) async {
     final l10n = L10n.of(context);
     final controller = TextEditingController(text: initialName);
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        Color colorValue =
-            (initialColor ?? hashColor(initialName)).withAlpha(0xFF);
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(l10n.tagEditTitle),
-                  DeleteConfirm(delete: () async {
-                    await onDelete();
-                    if (context.mounted) Navigator.of(dialogContext).pop();
-                  }),
-                ],
-              ),
-              content: TextField(
+    await PTDialog.show(
+      context,
+      title: l10n.tagEditTitle,
+      content: StatefulBuilder(
+        builder: (context, setStateDialog) {
+          Color colorValue =
+              (initialColor ?? hashColor(initialName)).withAlpha(0xFF);
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
                 controller: controller,
                 decoration: InputDecoration(
                   hintText: l10n.tagNamePlaceholder,
                 ),
               ),
-              actions: [
-                IconButton(
-                  tooltip: l10n.tagColorTooltip,
-                  icon: Icon(Icons.circle, color: colorValue),
-                  onPressed: () async {
-                    final picked = await showRgbColorPicker(
-                      context: context,
-                      initialColor: colorValue,
-                    );
-                    if (picked != null) {
-                      setStateDialog(() {
-                        colorValue = picked;
-                      });
-                      await onColorChange(colorValue);
-                    }
-                  },
-                ),
-                TextButton(
-                  onPressed: () async {
-                    final newName = controller.text.trim();
-                    if (newName.isEmpty) return;
-                    await onRename(newName);
-                    if (context.mounted) Navigator.of(dialogContext).pop();
-                  },
-                  child: Text(l10n.commonSave),
-                ),
-              ],
-            );
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  DeleteConfirm(delete: () async {
+                    await onDelete();
+                    if (context.mounted) Navigator.of(context).pop();
+                  }),
+                  IconButton(
+                    tooltip: l10n.tagColorTooltip,
+                    icon: Icon(Icons.circle, color: colorValue),
+                    onPressed: () async {
+                      final picked = await showRgbColorPicker(
+                        context: context,
+                        initialColor: colorValue,
+                      );
+                      if (picked != null) {
+                        setStateDialog(() {
+                          colorValue = picked;
+                        });
+                        await onColorChange(colorValue);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonSave,
+          isDefault: true,
+          onPressed: () async {
+            final newName = controller.text.trim();
+            if (newName.isEmpty) return;
+            await onRename(newName);
+            if (context.mounted) Navigator.of(context).pop();
           },
-        );
-      },
+        ),
+      ],
     );
     controller.dispose();
   }

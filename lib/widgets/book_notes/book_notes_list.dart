@@ -11,6 +11,7 @@ import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/book_notes/book_note_tile.dart';
 import 'package:anx_reader/widgets/book_share/excerpt_share_service.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/hint/hint_banner.dart';
 import 'package:anx_reader/widgets/tips/notes_tips.dart';
@@ -412,130 +413,125 @@ class BookNotesList extends ConsumerWidget {
     final noteController = TextEditingController(text: currentNote);
     final contentController = TextEditingController(text: currentContent);
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 16),
-                      child: isEditingContent
-                          ? TextField(
-                              controller: contentController,
-                              decoration: InputDecoration(
-                                border: const OutlineInputBorder(),
-                                hintText:
-                                    L10n.of(context).contextMenuAddNoteTips,
-                              ),
-                              maxLines: 3,
-                            )
-                          : GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  isEditingContent = true;
-                                });
-                              },
-                              child: Text(
-                                bookNote.content,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                ),
-                              ),
+    PTDialog.show(
+      context,
+      content: StatefulBuilder(
+        builder: (context, setState) {
+          return SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 16),
+                  child: isEditingContent
+                      ? TextField(
+                          controller: contentController,
+                          decoration: InputDecoration(
+                            hintText:
+                                L10n.of(context).contextMenuAddNoteTips,
+                          ),
+                          maxLines: 3,
+                        )
+                      : GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              isEditingContent = true;
+                            });
+                          },
+                          child: Text(
+                            bookNote.content,
+                            style: const TextStyle(
+                              fontSize: 16,
                             ),
-                    ),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          Row(
-                            children: notesType.map((type) {
-                              return IconButton(
-                                icon: Icon(
-                                  type.icon,
-                                  color: currentType == type.type
-                                      ? Theme.of(context).colorScheme.primary
-                                      : ClaudePalette.secondary(context),
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    currentType = type.type;
-                                  });
-                                },
-                              );
-                            }).toList(),
                           ),
-                          Row(
-                            children: notesColors.map((color) {
-                              return IconButton(
-                                icon: Icon(
-                                  currentColor == color
-                                      ? EvaIcons.checkmark_circle_2
-                                      : Icons.circle,
-                                  color: Color(int.parse('0x99$color')),
-                                  size: 30,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    currentColor = color;
-                                  });
-                                },
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: TextField(
-                        controller: noteController,
-                        decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
-                          hintText: L10n.of(context).contextMenuAddNoteTips,
                         ),
-                        maxLines: 3,
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      Row(
+                        children: notesType.map((type) {
+                          return IconButton(
+                            icon: Icon(
+                              type.icon,
+                              color: currentType == type.type
+                                  ? Theme.of(context).colorScheme.primary
+                                  : ClaudePalette.secondary(context),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                currentType = type.type;
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
+                      Row(
+                        children: notesColors.map((color) {
+                          return IconButton(
+                            icon: Icon(
+                              currentColor == color
+                                  ? EvaIcons.checkmark_circle_2
+                                  : Icons.circle,
+                              color: Color(int.parse('0x99$color')),
+                              size: 30,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                currentColor = color;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: TextField(
+                    controller: noteController,
+                    decoration: InputDecoration(
+                      hintText: L10n.of(context).contextMenuAddNoteTips,
                     ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(L10n.of(context).commonCancel),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    final updatedNote = BookNote(
-                      id: bookNote.id,
-                      bookId: bookNote.bookId,
-                      content: contentController.text.trim(),
-                      cfi: bookNote.cfi,
-                      chapter: bookNote.chapter,
-                      type: currentType,
-                      color: currentColor,
-                      readerNote: noteController.text.trim(),
-                      createTime: bookNote.createTime,
-                      updateTime: DateTime.now(),
-                    );
-                    Navigator.of(context).pop();
-                    await ref
-                        .read(bookNotesControllerProvider(book).notifier)
-                        .updateNote(updatedNote);
-                  },
-                  child: Text(L10n.of(context).commonSave),
+                    maxLines: 3,
+                  ),
                 ),
               ],
+            ),
+          );
+        },
+      ),
+      actions: [
+        PTDialogAction(
+          label: L10n.of(context).commonCancel,
+          onPressed: () => Navigator.pop(context),
+        ),
+        PTDialogAction(
+          label: L10n.of(context).commonSave,
+          isDefault: true,
+          onPressed: () async {
+            final updatedNote = BookNote(
+              id: bookNote.id,
+              bookId: bookNote.bookId,
+              content: contentController.text.trim(),
+              cfi: bookNote.cfi,
+              chapter: bookNote.chapter,
+              type: currentType,
+              color: currentColor,
+              readerNote: noteController.text.trim(),
+              createTime: bookNote.createTime,
+              updateTime: DateTime.now(),
             );
+            Navigator.of(context).pop();
+            await ref
+                .read(bookNotesControllerProvider(book).notifier)
+                .updateNote(updatedNote);
           },
-        );
-      },
+        ),
+      ],
     );
   }
 }

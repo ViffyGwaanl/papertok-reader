@@ -19,6 +19,7 @@ import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/service/memory/memory_index_coordinator.dart';
 import 'package:anx_reader/utils/webdav/test_webdav.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:anx_reader/widgets/settings/webdav_switch.dart';
 import 'package:archive/archive_io.dart';
@@ -165,8 +166,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setState) {
-            return AlertDialog(
-              title: Text(l10n.exportAndImportExport),
+            return PTDialog(
+              title: l10n.exportAndImportExport,
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -216,7 +217,6 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                         obscureText: true,
                         decoration: InputDecoration(
                           labelText: l10n.backupPassword,
-                          border: const OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -225,7 +225,6 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                         obscureText: true,
                         decoration: InputDecoration(
                           labelText: l10n.backupPasswordConfirm,
-                          border: const OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -238,11 +237,13 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                 ),
               ),
               actions: [
-                TextButton(
+                PTDialogAction(
+                  label: l10n.commonCancel,
                   onPressed: () => SmartDialog.dismiss(result: false),
-                  child: Text(l10n.commonCancel),
                 ),
-                TextButton(
+                PTDialogAction(
+                  label: l10n.commonConfirm,
+                  isDefault: true,
                   onPressed: () {
                     if (includeEncryptedApiKeys || includeEncryptedMcpSecrets) {
                       final p1 = passwordController.text;
@@ -254,7 +255,6 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                     }
                     SmartDialog.dismiss(result: true);
                   },
-                  child: Text(l10n.commonConfirm),
                 ),
               ],
             );
@@ -481,24 +481,24 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
 
       final passwordController = TextEditingController();
       final ok = await SmartDialog.show<bool>(
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.backupPassword),
+        builder: (ctx) => PTDialog(
+          title: l10n.backupPassword,
           content: TextField(
             controller: passwordController,
             obscureText: true,
             decoration: InputDecoration(
-              border: const OutlineInputBorder(),
               hintText: l10n.backupPasswordHint,
             ),
           ),
           actions: [
-            TextButton(
+            PTDialogAction(
+              label: l10n.commonCancel,
               onPressed: () => SmartDialog.dismiss(result: false),
-              child: Text(l10n.commonCancel),
             ),
-            TextButton(
+            PTDialogAction(
+              label: l10n.commonConfirm,
+              isDefault: true,
               onPressed: () => SmartDialog.dismiss(result: true),
-              child: Text(l10n.commonConfirm),
             ),
           ],
         ),
@@ -632,8 +632,8 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
     final options =
         await SmartDialog.show<({bool restoreAiIndexDb, bool restoreMemory})?>(
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: Text(l10n.backupImportConfirmTitle),
+        builder: (ctx, setState) => PTDialog(
+          title: l10n.backupImportConfirmTitle,
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -669,18 +669,19 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
             ),
           ),
           actions: [
-            TextButton(
+            PTDialogAction(
+              label: l10n.commonCancel,
               onPressed: () => SmartDialog.dismiss(result: null),
-              child: Text(l10n.commonCancel),
             ),
-            TextButton(
+            PTDialogAction(
+              label: l10n.commonConfirm,
+              isDefault: true,
               onPressed: () => SmartDialog.dismiss(
                 result: (
                   restoreAiIndexDb: restoreAiIndexDb,
                   restoreMemory: restoreMemory,
                 ),
               ),
-              child: Text(l10n.commonConfirm),
             ),
           ],
         ),
@@ -1070,63 +1071,57 @@ void showWebdavDialog(BuildContext context) {
             : false,
         controller: controller,
         decoration: InputDecoration(
-          border: const OutlineInputBorder(),
           labelText: labelText,
         ),
       ),
     );
   }
 
-  showDialog(
-    context: context,
-    builder: (context) {
-      return SimpleDialog(
-        title: Text(title),
-        contentPadding: const EdgeInsets.all(20),
-        children: [
-          buildTextField(
-            L10n.of(context).settingsSyncWebdavUrl,
-            webdavUrlController,
-          ),
-          buildTextField(
-            L10n.of(context).settingsSyncWebdavUsername,
-            webdavUsernameController,
-          ),
-          buildTextField(
-            L10n.of(context).settingsSyncWebdavPassword,
-            webdavPasswordController,
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton.icon(
-                onPressed: () => SyncTestHelper.handleFullTestConnection(
-                  context,
-                  protocol: SyncProtocol.webdav,
-                  config: {
-                    'url': webdavUrlController.text.trim(),
-                    'username': webdavUsernameController.text,
-                    'password': webdavPasswordController.text,
-                  },
-                ),
-                icon: const Icon(Icons.wifi_find),
-                label: Text(L10n.of(context).settingsSyncWebdavTestConnection),
-              ),
-              TextButton(
-                onPressed: () {
-                  webdavInfo['url'] = webdavUrlController.text.trim();
-                  webdavInfo['username'] = webdavUsernameController.text;
-                  webdavInfo['password'] = webdavPasswordController.text;
-                  Prefs().setSyncInfo(SyncProtocol.webdav, webdavInfo);
-                  SyncClientFactory.initializeCurrentClient();
-                  Navigator.pop(context);
-                },
-                child: Text(L10n.of(context).commonSave),
-              ),
-            ],
-          ),
-        ],
-      );
-    },
+  PTDialog.show(
+    context,
+    title: title,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        buildTextField(
+          L10n.of(context).settingsSyncWebdavUrl,
+          webdavUrlController,
+        ),
+        buildTextField(
+          L10n.of(context).settingsSyncWebdavUsername,
+          webdavUsernameController,
+        ),
+        buildTextField(
+          L10n.of(context).settingsSyncWebdavPassword,
+          webdavPasswordController,
+        ),
+      ],
+    ),
+    actions: [
+      PTDialogAction(
+        label: L10n.of(context).settingsSyncWebdavTestConnection,
+        onPressed: () => SyncTestHelper.handleFullTestConnection(
+          context,
+          protocol: SyncProtocol.webdav,
+          config: {
+            'url': webdavUrlController.text.trim(),
+            'username': webdavUsernameController.text,
+            'password': webdavPasswordController.text,
+          },
+        ),
+      ),
+      PTDialogAction(
+        label: L10n.of(context).commonSave,
+        isDefault: true,
+        onPressed: () {
+          webdavInfo['url'] = webdavUrlController.text.trim();
+          webdavInfo['username'] = webdavUsernameController.text;
+          webdavInfo['password'] = webdavPasswordController.text;
+          Prefs().setSyncInfo(SyncProtocol.webdav, webdavInfo);
+          SyncClientFactory.initializeCurrentClient();
+          Navigator.pop(context);
+        },
+      ),
+    ],
   );
 }

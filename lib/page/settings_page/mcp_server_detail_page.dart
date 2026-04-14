@@ -11,6 +11,7 @@ import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
 import 'package:flutter/material.dart';
 
@@ -57,57 +58,52 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
     final nameController = TextEditingController(text: server.name);
     final endpointController = TextEditingController(text: server.endpoint);
 
-    final result = await showDialog<McpServerMeta>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(l10n.settingsMcpEditServer),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: l10n.settingsMcpServerName,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: endpointController,
-                decoration: InputDecoration(
-                  labelText: l10n.settingsMcpServerEndpoint,
-                  hintText: 'https://example.com/mcp',
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
+    final result = await PTDialog.show<McpServerMeta>(
+      context,
+      title: l10n.settingsMcpEditServer,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: nameController,
+            decoration: InputDecoration(
+              labelText: l10n.settingsMcpServerName,
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonCancel),
+          const SizedBox(height: 12),
+          TextField(
+            controller: endpointController,
+            decoration: InputDecoration(
+              labelText: l10n.settingsMcpServerEndpoint,
+              hintText: 'https://example.com/mcp',
             ),
-            FilledButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                final endpoint = endpointController.text.trim();
-                if (name.isEmpty || endpoint.isEmpty) {
-                  AnxToast.show(l10n.commonInvalid);
-                  return;
-                }
+          ),
+        ],
+      ),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.pop(context),
+        ),
+        PTDialogAction(
+          label: l10n.commonConfirm,
+          isDefault: true,
+          onPressed: () {
+            final name = nameController.text.trim();
+            final endpoint = endpointController.text.trim();
+            if (name.isEmpty || endpoint.isEmpty) {
+              AnxToast.show(l10n.commonInvalid);
+              return;
+            }
 
-                final next = server.copyWith(
-                  name: name,
-                  endpoint: endpoint,
-                );
-                Navigator.pop(context, next);
-              },
-              child: Text(l10n.commonConfirm),
-            ),
-          ],
-        );
-      },
+            final next = server.copyWith(
+              name: name,
+              endpoint: endpoint,
+            );
+            Navigator.pop(context, next);
+          },
+        ),
+      ],
     );
 
     nameController.dispose();
@@ -126,41 +122,35 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
       text: const JsonEncoder.withIndent('  ').convert(current),
     );
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(l10n.settingsMcpServerHeaders),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.settingsMcpServerHeadersDesc,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 10,
-                minLines: 6,
-              ),
-            ],
+    final ok = await PTDialog.show<bool>(
+      context,
+      title: l10n.settingsMcpServerHeaders,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.settingsMcpServerHeadersDesc,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.commonConfirm),
-            ),
-          ],
-        );
-      },
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            maxLines: 10,
+            minLines: 6,
+          ),
+        ],
+      ),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.pop(context, false),
+        ),
+        PTDialogAction(
+          label: l10n.commonConfirm,
+          isDefault: true,
+          onPressed: () => Navigator.pop(context, true),
+        ),
+      ],
     );
 
     if (!mounted) {
@@ -220,70 +210,63 @@ class _McpServerDetailPageState extends State<McpServerDetailPage> {
 
     if (!mounted) return;
 
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        final lines = <String>[];
-        lines.add(res.ok ? '✅ ok' : '❌ failed');
-        if (res.toolsCount != null) {
-          lines.add('tools: ${res.toolsCount}');
-        }
-        if (res.protocolVersion != null) {
-          lines.add('protocol: ${res.protocolVersion}');
-        }
-        if (res.sessionId != null) {
-          lines.add('session: ${res.sessionId}');
-        }
-        if (res.getSseSupport != null) {
-          lines.add(
-              'GET SSE: ${res.getSseSupport == true ? 'supported' : 'not supported'}');
-        }
-        if (res.httpStatus != null) {
-          lines.add('GET status: ${res.httpStatus}');
-        }
-        if (res.allowHeader != null) {
-          lines.add('Allow: ${res.allowHeader}');
-        }
-        if (res.message != null && res.message!.trim().isNotEmpty) {
-          lines.add('error: ${res.message}');
-        }
+    final lines = <String>[];
+    lines.add(res.ok ? '✅ ok' : '❌ failed');
+    if (res.toolsCount != null) {
+      lines.add('tools: ${res.toolsCount}');
+    }
+    if (res.protocolVersion != null) {
+      lines.add('protocol: ${res.protocolVersion}');
+    }
+    if (res.sessionId != null) {
+      lines.add('session: ${res.sessionId}');
+    }
+    if (res.getSseSupport != null) {
+      lines.add(
+          'GET SSE: ${res.getSseSupport == true ? 'supported' : 'not supported'}');
+    }
+    if (res.httpStatus != null) {
+      lines.add('GET status: ${res.httpStatus}');
+    }
+    if (res.allowHeader != null) {
+      lines.add('Allow: ${res.allowHeader}');
+    }
+    if (res.message != null && res.message!.trim().isNotEmpty) {
+      lines.add('error: ${res.message}');
+    }
 
-        return AlertDialog(
-          title: Text(l10n.settingsMcpTestConnectionResultTitle),
-          content: SelectableText(lines.join('\n')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonOk),
-            ),
-          ],
-        );
-      },
+    await PTDialog.show<void>(
+      context,
+      title: l10n.settingsMcpTestConnectionResultTitle,
+      content: SelectableText(lines.join('\n')),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonOk,
+          isDefault: true,
+          onPressed: () => Navigator.pop(context),
+        ),
+      ],
     );
   }
 
   Future<void> _clearToolsCache(McpServerMeta server) async {
     final l10n = L10n.of(context);
 
-    final ok = await showDialog<bool>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text(l10n.settingsMcpClearToolsCache),
-              content:
-                  Text(l10n.settingsMcpClearToolsCacheConfirm(server.name)),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(l10n.commonCancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(l10n.commonConfirm),
-                ),
-              ],
-            );
-          },
+    final ok = await PTDialog.show<bool>(
+          context,
+          title: l10n.settingsMcpClearToolsCache,
+          message: l10n.settingsMcpClearToolsCacheConfirm(server.name),
+          actions: [
+            PTDialogAction(
+              label: l10n.commonCancel,
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            PTDialogAction(
+              label: l10n.commonConfirm,
+              destructive: true,
+              onPressed: () => Navigator.pop(context, true),
+            ),
+          ],
         ) ??
         false;
 

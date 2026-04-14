@@ -3,6 +3,7 @@ import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/service/ai/ai_models_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/widgets/settings/settings_title.dart';
@@ -25,48 +26,44 @@ class _AiTitleGenerationSettingsPageState
           : Prefs().aiTitlePrompt,
     );
 
-    final result = await showDialog<_PromptEditResult>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Title prompt'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Customize how automatic conversation titles are generated. '
-                'You can use {{preferredLanguage}} and {{maxChars}} as variables.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter title generation prompt',
-                ),
-                maxLines: 10,
-                minLines: 6,
-                maxLength: 8000,
-              ),
-            ],
+    final result = await PTDialog.show<_PromptEditResult>(
+      context,
+      title: 'Title prompt',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Customize how automatic conversation titles are generated. '
+            'You can use {{preferredLanguage}} and {{maxChars}} as variables.',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, _PromptEditResult.cancel),
-              child: const Text('Cancel'),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'Enter title generation prompt',
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, _PromptEditResult.reset),
-              child: const Text('Reset'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, _PromptEditResult.save),
-              child: const Text('Confirm'),
-            ),
-          ],
-        );
-      },
+            maxLines: 10,
+            minLines: 6,
+            maxLength: 8000,
+          ),
+        ],
+      ),
+      actions: [
+        PTDialogAction(
+          label: 'Cancel',
+          onPressed: () => Navigator.pop(context, _PromptEditResult.cancel),
+        ),
+        PTDialogAction(
+          label: 'Reset',
+          onPressed: () => Navigator.pop(context, _PromptEditResult.reset),
+        ),
+        PTDialogAction(
+          label: 'Confirm',
+          isDefault: true,
+          onPressed: () => Navigator.pop(context, _PromptEditResult.save),
+        ),
+      ],
     );
 
     if (!mounted || result == null || result == _PromptEditResult.cancel) {
@@ -247,29 +244,26 @@ class _AiTitleGenerationSettingsPageState
                         text: Prefs().aiTitleModel.trim(),
                       );
 
-                      final ok = await showDialog<bool>(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('Custom title model'),
-                            content: TextField(
-                              controller: controller,
-                              decoration: const InputDecoration(
-                                hintText: 'Enter model id',
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('Confirm'),
-                              ),
-                            ],
-                          );
-                        },
+                      final ok = await PTDialog.show<bool>(
+                        context,
+                        title: 'Custom title model',
+                        content: TextField(
+                          controller: controller,
+                          decoration: const InputDecoration(
+                            hintText: 'Enter model id',
+                          ),
+                        ),
+                        actions: [
+                          PTDialogAction(
+                            label: 'Cancel',
+                            onPressed: () => Navigator.pop(context, false),
+                          ),
+                          PTDialogAction(
+                            label: 'Confirm',
+                            isDefault: true,
+                            onPressed: () => Navigator.pop(context, true),
+                          ),
+                        ],
                       );
 
                       if (ok == true) {
@@ -325,46 +319,43 @@ class _AiTitleGenerationSettingsPageState
 
   Future<void> _editMaxTitleLength() async {
     double tempValue = Prefs().aiTitleMaxChars.toDouble();
-    final result = await showDialog<int>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Maximum title length'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Current limit: ${tempValue.round()} characters'),
-                  const SizedBox(height: 12),
-                  Slider(
-                    min: 8,
-                    max: 48,
-                    divisions: 10,
-                    value: tempValue,
-                    label: '${tempValue.round()}',
-                    onChanged: (value) {
-                      setDialogState(() {
-                        tempValue = value;
-                      });
-                    },
-                  ),
-                ],
+    final result = await PTDialog.show<int>(
+      context,
+      title: 'Maximum title length',
+      content: StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Current limit: ${tempValue.round()} characters'),
+              const SizedBox(height: 12),
+              Slider(
+                min: 8,
+                max: 48,
+                divisions: 10,
+                value: tempValue,
+                label: '${tempValue.round()}',
+                onChanged: (value) {
+                  setDialogState(() {
+                    tempValue = value;
+                  });
+                },
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, tempValue.round()),
-                  child: const Text('Confirm'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+            ],
+          );
+        },
+      ),
+      actions: [
+        PTDialogAction(
+          label: 'Cancel',
+          onPressed: () => Navigator.pop(context),
+        ),
+        PTDialogAction(
+          label: 'Confirm',
+          isDefault: true,
+          onPressed: () => Navigator.pop(context, tempValue.round()),
+        ),
+      ],
     );
 
     if (result != null) {

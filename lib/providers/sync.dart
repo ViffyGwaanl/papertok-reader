@@ -27,6 +27,7 @@ import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/dao/book.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -248,43 +249,40 @@ class Sync extends _$Sync {
 
     _isShowingDirectionDialog = true;
     try {
-      return await showDialog<SyncDirection>(
-        context: navigatorKey.currentContext!,
+      final ctx = navigatorKey.currentContext!;
+      return await PTDialog.show<SyncDirection>(
+        ctx,
         barrierDismissible: false, // Prevent dismissing by tapping outside
-        builder: (context) => AlertDialog(
-          title: Text(L10n.of(context).commonAttention),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(L10n.of(context).webdavSyncDirection),
-              SizedBox(height: 10),
-              Text(
-                '${L10n.of(context).bookSyncStatusLocalUpdateTime} ${localDb.lastModifiedSync()}',
-              ),
-              Text(
-                '${L10n.of(context).syncRemoteDataUpdateTime} ${remoteDb.mTime}',
-              ),
-            ],
-          ),
-          actionsOverflowDirection: VerticalDirection.up,
-          actionsOverflowAlignment: OverflowBarAlignment.center,
-          actionsOverflowButtonSpacing: 10,
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(SyncDirection.upload);
-              },
-              child: Text(L10n.of(context).webdavUpload),
+        title: L10n.of(ctx).commonAttention,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(L10n.of(ctx).webdavSyncDirection),
+            const SizedBox(height: 10),
+            Text(
+              '${L10n.of(ctx).bookSyncStatusLocalUpdateTime} ${localDb.lastModifiedSync()}',
             ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop(SyncDirection.download);
-              },
-              child: Text(L10n.of(context).webdavDownload),
+            Text(
+              '${L10n.of(ctx).syncRemoteDataUpdateTime} ${remoteDb.mTime}',
             ),
           ],
         ),
+        actions: [
+          PTDialogAction(
+            label: L10n.of(ctx).webdavUpload,
+            onPressed: () {
+              Navigator.of(ctx).pop(SyncDirection.upload);
+            },
+          ),
+          PTDialogAction(
+            label: L10n.of(ctx).webdavDownload,
+            isDefault: true,
+            onPressed: () {
+              Navigator.of(ctx).pop(SyncDirection.download);
+            },
+          ),
+        ],
       );
     } finally {
       _isShowingDirectionDialog = false;
@@ -294,17 +292,17 @@ class Sync extends _$Sync {
   Future<void> _showDatabaseVersionMismatchDialog(int remoteVersion) async {
     await SmartDialog.show(
       clickMaskDismiss: false,
-      builder: (context) => AlertDialog(
-        title: Text(L10n.of(context).webdavSyncAborted),
-        content: Text(
-          L10n.of(context).syncMismatchTip(currentDbVersion, remoteVersion),
-        ),
+      builder: (context) => PTDialog(
+        title: L10n.of(context).webdavSyncAborted,
+        message:
+            L10n.of(context).syncMismatchTip(currentDbVersion, remoteVersion),
         actions: [
-          TextButton(
+          PTDialogAction(
+            label: L10n.of(context).commonOk,
+            isDefault: true,
             onPressed: () {
               SmartDialog.dismiss();
             },
-            child: Text(L10n.of(context).commonOk),
           ),
         ],
       ),
@@ -881,8 +879,8 @@ class Sync extends _$Sync {
       final backups = await getAvailableBackups();
 
       await SmartDialog.show(
-        builder: (context) => AlertDialog(
-          title: Text(L10n.of(context).databaseBackupManagement),
+        builder: (context) => PTDialog(
+          title: L10n.of(context).databaseBackupManagement,
           content: SizedBox(
             width: double.maxFinite,
             child: Column(
@@ -925,9 +923,9 @@ class Sync extends _$Sync {
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(L10n.of(context).commonCancel),
+            PTDialogAction(
+              label: L10n.of(context).commonCancel,
+              onPressed: () => SmartDialog.dismiss(),
             ),
           ],
         ),
@@ -946,17 +944,18 @@ class Sync extends _$Sync {
 
       // Confirmation dialog
       final confirmed = await SmartDialog.show<bool>(
-        builder: (context) => AlertDialog(
-          title: Text(L10n.of(context).confirmRestore),
-          content: Text(L10n.of(context).restoreWarning),
+        builder: (context) => PTDialog(
+          title: L10n.of(context).confirmRestore,
+          message: L10n.of(context).restoreWarning,
           actions: [
-            TextButton(
+            PTDialogAction(
+              label: L10n.of(context).commonCancel,
               onPressed: () => SmartDialog.dismiss(result: false),
-              child: Text(L10n.of(context).commonCancel),
             ),
-            FilledButton(
+            PTDialogAction(
+              label: L10n.of(context).commonConfirm,
+              destructive: true,
               onPressed: () => SmartDialog.dismiss(result: true),
-              child: Text(L10n.of(context).commonConfirm),
             ),
           ],
         ),
@@ -989,15 +988,16 @@ class Sync extends _$Sync {
 
   Future<void> _showSyncAbortedDialog() async {
     await SmartDialog.show(
-      builder: (context) => AlertDialog(
-        title: Text(L10n.of(context).webdavSyncAborted),
-        content: Text(L10n.of(context).webdavSyncAbortedContent),
+      builder: (context) => PTDialog(
+        title: L10n.of(context).webdavSyncAborted,
+        message: L10n.of(context).webdavSyncAbortedContent,
         actions: [
-          TextButton(
+          PTDialogAction(
+            label: L10n.of(context).commonOk,
+            isDefault: true,
             onPressed: () {
               SmartDialog.dismiss();
             },
-            child: Text(L10n.of(context).commonOk),
           ),
         ],
       ),

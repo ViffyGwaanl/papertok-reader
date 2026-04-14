@@ -28,6 +28,7 @@ import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:anx_reader/widgets/ai/attachment_picker_dialog.dart';
 import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/service/ai/skills/ai_skill.dart';
 import 'package:anx_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:anx_reader/models/attachment_item.dart';
@@ -1101,33 +1102,29 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     AiChatHistoryEntry entry,
   ) async {
     final controller = TextEditingController(text: _deriveTitle(entry));
-    final renamed = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Rename conversation'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'Title',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(L10n.of(context).commonCancel),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
-              child: Text(L10n.of(context).commonSave),
-            ),
-          ],
-        );
-      },
+    final renamed = await PTDialog.show<String>(
+      context,
+      title: 'Rename conversation',
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(
+          labelText: 'Title',
+        ),
+      ),
+      actions: [
+        PTDialogAction(
+          label: L10n.of(context).commonCancel,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        PTDialogAction(
+          label: L10n.of(context).commonSave,
+          isDefault: true,
+          onPressed: () =>
+              Navigator.of(context).pop(controller.text.trim()),
+        ),
+      ],
     );
 
     final nextTitle = (renamed ?? '').trim();
@@ -1238,24 +1235,21 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
 
     if (!isLastTurn) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(L10n.of(context).aiChatRegenerateFromHereConfirmTitle),
-            content: Text(L10n.of(context).aiChatRegenerateFromHereConfirmBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(L10n.of(context).commonCancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(L10n.of(context).commonConfirm),
-              ),
-            ],
-          );
-        },
+      final confirmed = await PTDialog.show<bool>(
+        context,
+        title: L10n.of(context).aiChatRegenerateFromHereConfirmTitle,
+        message: L10n.of(context).aiChatRegenerateFromHereConfirmBody,
+        actions: [
+          PTDialogAction(
+            label: L10n.of(context).commonCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          PTDialogAction(
+            label: L10n.of(context).commonConfirm,
+            isDefault: true,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
       );
       if (confirmed != true) {
         return;
@@ -1279,130 +1273,124 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final editableAttachments =
         _extractAttachmentItemsFromHuman(message).toList(growable: true);
     try {
-      final edited = await showDialog<_EditUserMessageResult>(
-        context: context,
-        builder: (context) {
-          return StatefulBuilder(
+      final edited = await PTDialog.show<_EditUserMessageResult>(
+        context,
+        title: L10n.of(context).aiChatEditUserMessageTitle,
+        content: SizedBox(
+          width: 520,
+          child: StatefulBuilder(
             builder: (context, setStateDialog) {
-              return AlertDialog(
-                title: Text(L10n.of(context).aiChatEditUserMessageTitle),
-                content: SizedBox(
-                  width: 520,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextField(
-                          controller: controller,
-                          maxLength: 20000,
-                          maxLines: 6,
-                          minLines: 1,
-                          autofocus: true,
-                        ),
-                        if (editableAttachments.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            '附件 ${editableAttachments.length}',
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (var i = 0;
-                                  i < editableAttachments.length;
-                                  i++)
-                                _buildEditableAttachmentChip(
-                                  editableAttachments[i],
-                                  onRemove: () {
-                                    setStateDialog(() {
-                                      editableAttachments.removeAt(i);
-                                    });
-                                  },
-                                  onPreview: editableAttachments[i].type ==
-                                          AttachmentType.image
-                                      ? () {
-                                          final imageIndexes = <int>[];
-                                          for (var j = 0;
-                                              j < editableAttachments.length;
-                                              j++) {
-                                            if (editableAttachments[j].type ==
-                                                AttachmentType.image) {
-                                              imageIndexes.add(j);
-                                            }
-                                          }
-                                          final initialImageIndex =
-                                              imageIndexes.indexOf(i);
-                                          final images = editableAttachments
-                                              .where((a) =>
-                                                  a.type ==
-                                                  AttachmentType.image)
-                                              .map((a) => a.bytes)
-                                              .toList(growable: false);
-                                          _showImageGallery(
-                                            images,
-                                            initialIndex: initialImageIndex < 0
-                                                ? 0
-                                                : initialImageIndex,
-                                          );
-                                        }
-                                      : null,
-                                ),
-                            ],
-                          ),
-                        ],
-                      ],
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      maxLength: 20000,
+                      maxLines: 6,
+                      minLines: 1,
+                      autofocus: true,
                     ),
-                  ),
+                    if (editableAttachments.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        '附件 ${editableAttachments.length}',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (var i = 0;
+                              i < editableAttachments.length;
+                              i++)
+                            _buildEditableAttachmentChip(
+                              editableAttachments[i],
+                              onRemove: () {
+                                setStateDialog(() {
+                                  editableAttachments.removeAt(i);
+                                });
+                              },
+                              onPreview: editableAttachments[i].type ==
+                                      AttachmentType.image
+                                  ? () {
+                                      final imageIndexes = <int>[];
+                                      for (var j = 0;
+                                          j < editableAttachments.length;
+                                          j++) {
+                                        if (editableAttachments[j].type ==
+                                            AttachmentType.image) {
+                                          imageIndexes.add(j);
+                                        }
+                                      }
+                                      final initialImageIndex =
+                                          imageIndexes.indexOf(i);
+                                      final images = editableAttachments
+                                          .where((a) =>
+                                              a.type ==
+                                              AttachmentType.image)
+                                          .map((a) => a.bytes)
+                                          .toList(growable: false);
+                                      _showImageGallery(
+                                        images,
+                                        initialIndex: initialImageIndex < 0
+                                            ? 0
+                                            : initialImageIndex,
+                                      );
+                                    }
+                                  : null,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(L10n.of(context).commonCancel),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(
-                        _EditUserMessageResult(
-                          text: controller.text.trim(),
-                          attachments:
-                              List<AttachmentItem>.from(editableAttachments),
-                        ),
-                      );
-                    },
-                    child: Text(L10n.of(context).commonSave),
-                  ),
-                ],
               );
             },
-          );
-        },
+          ),
+        ),
+        actions: [
+          PTDialogAction(
+            label: L10n.of(context).commonCancel,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          PTDialogAction(
+            label: L10n.of(context).commonSave,
+            isDefault: true,
+            onPressed: () {
+              Navigator.of(context).pop(
+                _EditUserMessageResult(
+                  text: controller.text.trim(),
+                  attachments:
+                      List<AttachmentItem>.from(editableAttachments),
+                ),
+              );
+            },
+          ),
+        ],
       );
 
       if (edited == null) {
         return;
       }
 
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(L10n.of(context).aiChatRegenerateFromHereConfirmTitle),
-            content: Text(L10n.of(context).aiChatRegenerateFromHereConfirmBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(L10n.of(context).commonCancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(L10n.of(context).commonConfirm),
-              ),
-            ],
-          );
-        },
+      final confirmed = await PTDialog.show<bool>(
+        context,
+        title: L10n.of(context).aiChatRegenerateFromHereConfirmTitle,
+        message: L10n.of(context).aiChatRegenerateFromHereConfirmBody,
+        actions: [
+          PTDialogAction(
+            label: L10n.of(context).commonCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          PTDialogAction(
+            label: L10n.of(context).commonConfirm,
+            isDefault: true,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
       );
 
       if (confirmed != true) {
@@ -2022,31 +2010,33 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       return true;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final l10n = L10n.of(context);
-        return AlertDialog(
-          title: Text(l10n.memoryLongTermConfirmDialogTitle),
-          content: Text(
-            l10n.memoryLongTermConfirmDialogBody(
-              previewText.trim().replaceAll(RegExp(r'\s+'), ' '),
-            ),
-            maxLines: 6,
-            overflow: TextOverflow.ellipsis,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(l10n.commonConfirm),
-            ),
-          ],
-        );
-      },
+    final l10n = L10n.of(context);
+    final confirmed = await PTDialog.show<bool>(
+      context,
+      title: l10n.memoryLongTermConfirmDialogTitle,
+      content: Text(
+        l10n.memoryLongTermConfirmDialogBody(
+          previewText.trim().replaceAll(RegExp(r'\s+'), ' '),
+        ),
+        maxLines: 6,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 14,
+          color: ClaudePalette.secondary(context),
+          height: 1.35,
+        ),
+      ),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        PTDialogAction(
+          label: l10n.commonConfirm,
+          isDefault: true,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
     );
 
     return confirmed == true;
@@ -2067,29 +2057,26 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final prefs = Prefs();
     final l10n = L10n.of(context);
     final dailyStrategy = prefs.memoryWorkflowDailyStrategy;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final body = !prefs.memorySessionDigestEnabled
-            ? l10n.aiChatEndSessionBodyNoDigest
-            : dailyStrategy == MemoryWorkflowDailyStrategy.autoDaily
-                ? l10n.aiChatEndSessionBodyAutoDaily
-                : l10n.aiChatEndSessionBodyReviewInbox;
-        return AlertDialog(
-          title: Text(l10n.aiChatEndSessionTitle),
-          content: Text(body),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(l10n.aiChatEndSessionAction),
-            ),
-          ],
-        );
-      },
+    final body = !prefs.memorySessionDigestEnabled
+        ? l10n.aiChatEndSessionBodyNoDigest
+        : dailyStrategy == MemoryWorkflowDailyStrategy.autoDaily
+            ? l10n.aiChatEndSessionBodyAutoDaily
+            : l10n.aiChatEndSessionBodyReviewInbox;
+    final confirmed = await PTDialog.show<bool>(
+      context,
+      title: l10n.aiChatEndSessionTitle,
+      message: body,
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        PTDialogAction(
+          label: l10n.aiChatEndSessionAction,
+          isDefault: true,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
     );
 
     if (confirmed != true) {
@@ -3618,66 +3605,63 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     //
     // The AI chat itself can be hosted inside a bottom sheet (iPhone/iPad sheet
     // mode). Stacking a sheet-on-sheet may auto-dismiss on some platforms.
-    showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        double scale = Prefs().aiChatFontScale.clamp(minScale, maxScale);
+    double scale = Prefs().aiChatFontScale.clamp(minScale, maxScale);
 
-        return AlertDialog(
-          title: Text(l10n.font),
-          content: StatefulBuilder(
-            builder: (context, setModalState) {
-              void update(double next) {
-                final clamped = next.clamp(minScale, maxScale).toDouble();
-                setModalState(() {
-                  scale = clamped;
-                });
-                Prefs().aiChatFontScale = clamped;
-                // Force rebuild to apply scale immediately.
-                setState(() {});
-              }
+    PTDialog.show<void>(
+      context,
+      title: l10n.font,
+      content: SizedBox(
+        width: 320,
+        child: StatefulBuilder(
+          builder: (context, setModalState) {
+            void update(double next) {
+              final clamped = next.clamp(minScale, maxScale).toDouble();
+              setModalState(() {
+                scale = clamped;
+              });
+              Prefs().aiChatFontScale = clamped;
+              // Force rebuild to apply scale immediately.
+              setState(() {});
+            }
 
-              return SizedBox(
-                width: 320,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${(scale * 100).round()}%',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => update(1.0),
-                          child: Text(l10n.commonReset),
-                        ),
-                      ],
+                    Expanded(
+                      child: Text(
+                        '${(scale * 100).round()}%',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                     ),
-                    Slider(
-                      value: scale,
-                      min: minScale,
-                      max: maxScale,
-                      divisions: 12,
-                      label: '${(scale * 100).round()}%',
-                      onChanged: update,
+                    TextButton(
+                      onPressed: () => update(1.0),
+                      child: Text(l10n.commonReset),
                     ),
                   ],
                 ),
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(l10n.commonOk),
-            ),
-          ],
-        );
-      },
+                Slider(
+                  value: scale,
+                  min: minScale,
+                  max: maxScale,
+                  divisions: 12,
+                  label: '${(scale * 100).round()}%',
+                  onChanged: update,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonOk,
+          isDefault: true,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
     );
   }
 
@@ -3819,28 +3803,30 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Future<void> _showTextFileAttachmentActions(_TextFileAttachmentInfo f) async {
     final l10n = L10n.of(context);
 
-    final choice = await showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(f.filename),
-          content: SingleChildScrollView(
-            child: Text(
-              f.text.length > 2000 ? '${f.text.substring(0, 2000)}…' : f.text,
-            ),
+    final choice = await PTDialog.show<String>(
+      context,
+      title: f.filename,
+      content: SingleChildScrollView(
+        child: Text(
+          f.text.length > 2000 ? '${f.text.substring(0, 2000)}…' : f.text,
+          style: TextStyle(
+            fontSize: 14,
+            color: ClaudePalette.secondary(context),
+            height: 1.35,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop('import'),
-              child: Text(l10n.exportAndImportImport),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(l10n.commonCancel),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        PTDialogAction(
+          label: l10n.exportAndImportImport,
+          isDefault: true,
+          onPressed: () => Navigator.of(context).pop('import'),
+        ),
+      ],
     );
 
     if (choice == 'import') {

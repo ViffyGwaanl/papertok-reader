@@ -8,6 +8,7 @@ import 'package:anx_reader/service/mcp/mcp_client_service.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
 import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:anx_reader/page/settings_page/mcp_server_detail_page.dart';
@@ -32,41 +33,35 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
 
     final controller = TextEditingController();
 
-    final ok = await showDialog<bool>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text(l10n.settingsMcpImportJson),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    l10n.settingsMcpImportJsonDesc,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                    ),
-                    minLines: 6,
-                    maxLines: 12,
-                  ),
-                ],
+    final ok = await PTDialog.show<bool>(
+          context,
+          title: l10n.settingsMcpImportJson,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.settingsMcpImportJsonDesc,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(l10n.commonCancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(l10n.commonConfirm),
-                ),
-              ],
-            );
-          },
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                minLines: 6,
+                maxLines: 12,
+              ),
+            ],
+          ),
+          actions: [
+            PTDialogAction(
+              label: l10n.commonCancel,
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            PTDialogAction(
+              label: l10n.commonConfirm,
+              isDefault: true,
+              onPressed: () => Navigator.pop(context, true),
+            ),
+          ],
         ) ??
         false;
 
@@ -164,25 +159,21 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
   Future<void> _clearToolsCache(McpServerMeta server) async {
     final l10n = L10n.of(context);
 
-    final ok = await showDialog<bool>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text(l10n.settingsMcpClearToolsCache),
-              content:
-                  Text(l10n.settingsMcpClearToolsCacheConfirm(server.name)),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(l10n.commonCancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(l10n.commonConfirm),
-                ),
-              ],
-            );
-          },
+    final ok = await PTDialog.show<bool>(
+          context,
+          title: l10n.settingsMcpClearToolsCache,
+          message: l10n.settingsMcpClearToolsCacheConfirm(server.name),
+          actions: [
+            PTDialogAction(
+              label: l10n.commonCancel,
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            PTDialogAction(
+              label: l10n.commonConfirm,
+              destructive: true,
+              onPressed: () => Navigator.pop(context, true),
+            ),
+          ],
         ) ??
         false;
 
@@ -203,27 +194,23 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
 
     // Show a simple progress dialog. Best-effort; do not block forever.
     if (!mounted) return;
-    showDialog<void>(
-      context: context,
+    PTDialog.show<void>(
+      context,
       barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(l10n.commonRefresh),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              const Center(child: CircularProgressIndicator()),
-              const SizedBox(height: 16),
-              Text(
-                l10n.settingsMcpRefreshingAllTools,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
+      title: l10n.commonRefresh,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          const Center(child: CircularProgressIndicator()),
+          const SizedBox(height: 16),
+          Text(
+            l10n.settingsMcpRefreshingAllTools,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-        );
-      },
+        ],
+      ),
     );
 
     var okCount = 0;
@@ -256,61 +243,56 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
     final endpointController =
         TextEditingController(text: existing?.endpoint ?? '');
 
-    final result = await showDialog<McpServerMeta>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(existing == null
-              ? l10n.settingsMcpAddServer
-              : l10n.settingsMcpEditServer),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: l10n.settingsMcpServerName,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: endpointController,
-                decoration: InputDecoration(
-                  labelText: l10n.settingsMcpServerEndpoint,
-                  hintText: 'https://example.com/mcp',
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
+    final result = await PTDialog.show<McpServerMeta>(
+      context,
+      title: existing == null
+          ? l10n.settingsMcpAddServer
+          : l10n.settingsMcpEditServer,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: nameController,
+            decoration: InputDecoration(
+              labelText: l10n.settingsMcpServerName,
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonCancel),
+          const SizedBox(height: 12),
+          TextField(
+            controller: endpointController,
+            decoration: InputDecoration(
+              labelText: l10n.settingsMcpServerEndpoint,
+              hintText: 'https://example.com/mcp',
             ),
-            FilledButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                final endpoint = endpointController.text.trim();
-                if (name.isEmpty || endpoint.isEmpty) {
-                  AnxToast.show(l10n.commonInvalid);
-                  return;
-                }
+          ),
+        ],
+      ),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.pop(context),
+        ),
+        PTDialogAction(
+          label: l10n.commonConfirm,
+          isDefault: true,
+          onPressed: () {
+            final name = nameController.text.trim();
+            final endpoint = endpointController.text.trim();
+            if (name.isEmpty || endpoint.isEmpty) {
+              AnxToast.show(l10n.commonInvalid);
+              return;
+            }
 
-                final next = McpServerMeta(
-                  id: existing?.id ?? const Uuid().v4(),
-                  name: name,
-                  endpoint: endpoint,
-                  enabled: existing?.enabled ?? true,
-                );
-                Navigator.pop(context, next);
-              },
-              child: Text(l10n.commonConfirm),
-            ),
-          ],
-        );
-      },
+            final next = McpServerMeta(
+              id: existing?.id ?? const Uuid().v4(),
+              name: name,
+              endpoint: endpoint,
+              enabled: existing?.enabled ?? true,
+            );
+            Navigator.pop(context, next);
+          },
+        ),
+      ],
     );
 
     nameController.dispose();
@@ -330,41 +312,35 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
       text: const JsonEncoder.withIndent('  ').convert(current),
     );
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(l10n.settingsMcpServerHeaders),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.settingsMcpServerHeadersDesc,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 10,
-                minLines: 6,
-              ),
-            ],
+    final ok = await PTDialog.show<bool>(
+      context,
+      title: l10n.settingsMcpServerHeaders,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.settingsMcpServerHeadersDesc,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.commonConfirm),
-            ),
-          ],
-        );
-      },
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            maxLines: 10,
+            minLines: 6,
+          ),
+        ],
+      ),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => Navigator.pop(context, false),
+        ),
+        PTDialogAction(
+          label: l10n.commonConfirm,
+          isDefault: true,
+          onPressed: () => Navigator.pop(context, true),
+        ),
+      ],
     );
 
     if (!mounted) {
@@ -440,24 +416,21 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
   Future<void> _deleteServer(McpServerMeta server) async {
     final l10n = L10n.of(context);
 
-    final ok = await showDialog<bool>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text(l10n.settingsMcpDeleteServer),
-              content: Text(l10n.settingsMcpDeleteConfirm(server.name)),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(l10n.commonCancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(l10n.commonDelete),
-                ),
-              ],
-            );
-          },
+    final ok = await PTDialog.show<bool>(
+          context,
+          title: l10n.settingsMcpDeleteServer,
+          message: l10n.settingsMcpDeleteConfirm(server.name),
+          actions: [
+            PTDialogAction(
+              label: l10n.commonCancel,
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            PTDialogAction(
+              label: l10n.commonDelete,
+              destructive: true,
+              onPressed: () => Navigator.pop(context, true),
+            ),
+          ],
         ) ??
         false;
 

@@ -14,6 +14,7 @@ import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.
 import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/page/settings_page/ai_quick_prompts_editor.dart';
 import 'package:anx_reader/page/settings_page/subpage/log_page.dart';
@@ -165,17 +166,14 @@ class _AISettingsState extends ConsumerState<AISettings> {
                   ),
                 );
 
-                return AlertDialog(
-                  title: Text(L10n.of(context).commonEdit),
+                return PTDialog(
+                  title: L10n.of(context).commonEdit,
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TextField(
                         maxLines: 10,
                         controller: controller,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                        ),
                       ),
                       Wrap(
                         children: [
@@ -209,23 +207,24 @@ class _AISettingsState extends ConsumerState<AISettings> {
                     ],
                   ),
                   actions: [
-                    TextButton(
+                    PTDialogAction(
+                      label: L10n.of(context).commonReset,
                       onPressed: () {
                         Prefs().deleteAiPrompt(AiPrompts.values[index]);
                         controller.text = Prefs().getAiPrompt(
                           AiPrompts.values[index],
                         );
                       },
-                      child: Text(L10n.of(context).commonReset),
                     ),
-                    TextButton(
+                    PTDialogAction(
+                      label: L10n.of(context).commonSave,
+                      isDefault: true,
                       onPressed: () {
                         Prefs().saveAiPrompt(
                           AiPrompts.values[index],
                           controller.text,
                         );
                       },
-                      child: Text(L10n.of(context).commonSave),
                     ),
                   ],
                 );
@@ -442,21 +441,22 @@ class _AISettingsState extends ConsumerState<AISettings> {
               title: Text(L10n.of(context).settingsAiCacheClear),
               onPressed: (context) {
                 SmartDialog.show(
-                  builder: (context) => AlertDialog(
-                    title: Text(L10n.of(context).commonConfirm),
+                  builder: (context) => PTDialog(
+                    title: L10n.of(context).commonConfirm,
                     actions: [
-                      TextButton(
+                      PTDialogAction(
+                        label: L10n.of(context).commonCancel,
                         onPressed: () {
                           SmartDialog.dismiss();
                         },
-                        child: Text(L10n.of(context).commonCancel),
                       ),
-                      TextButton(
+                      PTDialogAction(
+                        label: L10n.of(context).commonConfirm,
+                        destructive: true,
                         onPressed: () {
                           ref.read(aiCacheCountProvider.notifier).clearCache();
                           SmartDialog.dismiss();
                         },
-                        child: Text(L10n.of(context).commonConfirm),
                       ),
                     ],
                   ),
@@ -646,54 +646,50 @@ class _AISettingsState extends ConsumerState<AISettings> {
       text: config['webSearchApiKey'] ?? '',
     );
 
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        final l = L10n.of(context);
-        return AlertDialog(
-          title: Text(l.settingsAiWebSearch),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l.settingsAiWebSearchDialogDesc,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  labelText: l.settingsAiWebSearchKeyLabel,
-                  hintText: l.settingsAiWebSearchKeyHint,
-                ),
-              ),
-            ],
+    final l = L10n.of(context);
+    PTDialog.show<void>(
+      context,
+      title: l.settingsAiWebSearch,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.settingsAiWebSearchDialogDesc,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(L10n.of(context).commonCancel),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: l.settingsAiWebSearchKeyLabel,
+              hintText: l.settingsAiWebSearchKeyHint,
             ),
-            TextButton(
-              onPressed: () {
-                final updated = Map<String, String>.from(config);
-                final key = controller.text.trim();
-                if (key.isEmpty) {
-                  updated.remove('webSearchApiKey');
-                } else {
-                  updated['webSearchApiKey'] = key;
-                }
-                Prefs().saveAiConfig(Prefs().selectedAiService, updated);
-                setState(() {});
-                Navigator.pop(context);
-              },
-              child: Text(L10n.of(context).commonSave),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
+      actions: [
+        PTDialogAction(
+          label: L10n.of(context).commonCancel,
+          onPressed: () => Navigator.pop(context),
+        ),
+        PTDialogAction(
+          label: L10n.of(context).commonSave,
+          isDefault: true,
+          onPressed: () {
+            final updated = Map<String, String>.from(config);
+            final key = controller.text.trim();
+            if (key.isEmpty) {
+              updated.remove('webSearchApiKey');
+            } else {
+              updated['webSearchApiKey'] = key;
+            }
+            Prefs().saveAiConfig(Prefs().selectedAiService, updated);
+            setState(() {});
+            Navigator.pop(context);
+          },
+        ),
+      ],
     ).then((_) => controller.dispose());
   }
 
@@ -705,69 +701,64 @@ class _AISettingsState extends ConsumerState<AISettings> {
       text: Prefs().localEmbeddingModel,
     );
 
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        final l = L10n.of(context);
-        return AlertDialog(
-          title: Text(l.settingsAiLocalEmbedding),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l.settingsAiLocalEmbeddingDialogDesc,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: endpointController,
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  labelText: l.settingsAiLocalEmbeddingEndpointLabel,
-                  hintText: l.settingsAiLocalEmbeddingEndpointHint,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: modelController,
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  labelText: l.settingsAiLocalEmbeddingModelLabel,
-                  hintText: l.settingsAiLocalEmbeddingModelHint,
-                ),
-              ),
-            ],
+    final l = L10n.of(context);
+    PTDialog.show<void>(
+      context,
+      title: l.settingsAiLocalEmbedding,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.settingsAiLocalEmbeddingDialogDesc,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(L10n.of(context).commonCancel),
+          const SizedBox(height: 12),
+          TextField(
+            controller: endpointController,
+            decoration: InputDecoration(
+              labelText: l.settingsAiLocalEmbeddingEndpointLabel,
+              hintText: l.settingsAiLocalEmbeddingEndpointHint,
             ),
-            if ((Prefs().localEmbeddingEndpoint ?? '').isNotEmpty)
-              TextButton(
-                onPressed: () {
-                  Prefs().localEmbeddingEndpoint = null;
-                  Prefs().localEmbeddingModel = 'nomic-embed-text';
-                  setState(() {});
-                  Navigator.pop(context);
-                },
-                child: Text(L10n.of(context).commonReset),
-              ),
-            TextButton(
-              onPressed: () {
-                Prefs().localEmbeddingEndpoint = endpointController.text;
-                Prefs().localEmbeddingModel = modelController.text.isEmpty
-                    ? 'nomic-embed-text'
-                    : modelController.text;
-                setState(() {});
-                Navigator.pop(context);
-              },
-              child: Text(L10n.of(context).commonSave),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: modelController,
+            decoration: InputDecoration(
+              labelText: l.settingsAiLocalEmbeddingModelLabel,
+              hintText: l.settingsAiLocalEmbeddingModelHint,
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
+      actions: [
+        PTDialogAction(
+          label: L10n.of(context).commonCancel,
+          onPressed: () => Navigator.pop(context),
+        ),
+        if ((Prefs().localEmbeddingEndpoint ?? '').isNotEmpty)
+          PTDialogAction(
+            label: L10n.of(context).commonReset,
+            onPressed: () {
+              Prefs().localEmbeddingEndpoint = null;
+              Prefs().localEmbeddingModel = 'nomic-embed-text';
+              setState(() {});
+              Navigator.pop(context);
+            },
+          ),
+        PTDialogAction(
+          label: L10n.of(context).commonSave,
+          isDefault: true,
+          onPressed: () {
+            Prefs().localEmbeddingEndpoint = endpointController.text;
+            Prefs().localEmbeddingModel = modelController.text.isEmpty
+                ? 'nomic-embed-text'
+                : modelController.text;
+            setState(() {});
+            Navigator.pop(context);
+          },
+        ),
+      ],
     ).then((_) {
       endpointController.dispose();
       modelController.dispose();
@@ -1028,8 +1019,8 @@ class _AISettingsState extends ConsumerState<AISettings> {
     final contentController = TextEditingController();
 
     SmartDialog.show(
-      builder: (context) => AlertDialog(
-        title: Text(L10n.of(context).settingsAiUserPromptsAdd),
+      builder: (context) => PTDialog(
+        title: L10n.of(context).settingsAiUserPromptsAdd,
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1038,7 +1029,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
                 controller: nameController,
                 decoration: InputDecoration(
                   labelText: L10n.of(context).settingsAiUserPromptsName,
-                  border: const OutlineInputBorder(),
                 ),
                 maxLength: 50,
               ),
@@ -1047,7 +1037,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
                 controller: contentController,
                 decoration: InputDecoration(
                   labelText: L10n.of(context).settingsAiUserPromptsContent,
-                  border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
                 maxLines: 8,
@@ -1058,15 +1047,17 @@ class _AISettingsState extends ConsumerState<AISettings> {
           ),
         ),
         actions: [
-          TextButton(
+          PTDialogAction(
+            label: L10n.of(context).commonCancel,
             onPressed: () {
               SmartDialog.dismiss();
               nameController.dispose();
               contentController.dispose();
             },
-            child: Text(L10n.of(context).commonCancel),
           ),
-          TextButton(
+          PTDialogAction(
+            label: L10n.of(context).commonConfirm,
+            isDefault: true,
             onPressed: () {
               final name = nameController.text.trim();
               final content = contentController.text.trim();
@@ -1084,7 +1075,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
 
               AnxToast.show(L10n.of(context).commonAddSuccess);
             },
-            child: Text(L10n.of(context).commonConfirm),
           ),
         ],
       ),
