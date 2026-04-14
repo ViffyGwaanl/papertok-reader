@@ -21,7 +21,7 @@
 At the top of `lib/page/settings_page/ai.dart`, add:
 
 ```dart
-import 'package:anx_reader/service/ai/skills/ai_skill_registry.dart';
+import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
 ```
 
 - [ ] **Step 2: Add "AI Features" SettingsSection after Quick Prompts section**

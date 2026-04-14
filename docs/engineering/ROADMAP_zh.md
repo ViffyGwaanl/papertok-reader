@@ -61,22 +61,36 @@
 - inbox cleanup / TTL / diagnostics
 - diagnostics 搜索 / 筛选增强已完成
 
-### 1.5 Memory M1（manual-first）
+### 1.5 Memory M1 + 完成版（2026-04-14）
 
-- 检索层 + 最小写入工作流均已打通
-- 已完成：
-  - `daily memory`
-  - `long-term memory`
-  - `review inbox`
+- 检索层 + 最小写入工作流已打通
+- M1 已完成（早期版本）：
+  - `daily memory` / `long-term memory` / `review inbox`
   - 候选记忆 / 审核 / 提升最小闭环
   - Markdown 统一写协调器
+- **完成版（2026-04-14, TF build 6442）** — B1+B2+B3 全部落地：
+  - **B1 源跳转**：MemoryCandidate schema v1→v2（新增 `bookId`/`cfi`/`chapter`/`sourceKind`/`tags`/`rationale`），store 自动迁移保留旧数据，捕获时自动记录阅读上下文，Review Inbox 每行增加 "Open in reader" / "Open conversation" 按钮。详见 `docs/superpowers/plans/2026-04-14-memory-completion.md`。
+  - **B2 顶层入口**：新的 MemoryHomePage tab（可选，opt-in 加入底部导航），浏览 MEMORY.md 段落 + 最近 14 天日记，detail 页内嵌 TagEditor，长按进入多选模式 + 批量删除 / 加标签 toolbar。YAML front-matter 存储 tags。
+  - **B3 可解释自动写入**：每条 candidate 自动生成 rationale 解释（"Captured because..."），Review Inbox 显示 trigger badge + confidence dot，Settings → Memory 新增"自动捕获规则"分组可开关 session_digest / provider_switch。
+  - 测试：43 个 memory 单元/widget test，全通过
+  - 证据：commits `6050ee75` → `d43ff0e1`，TestFlight `1.68.7 (6442)`
 
-### 1.6 低风险命名收口
+### 1.6 命名收口（全部完成，2026-04-14）
 
-- README / docs 入口已统一为 `PaperTok Reader`
-- App 内可见文案 / l10n 已统一为 `PaperTok Reader`
-- iOS / Android 显示名已统一为 `PaperTok Reader`
-- 仍保留技术底座历史真值：`anx_reader` / bundle id / URL scheme
+**低风险层** ✅
+- README / docs / App 内文案 / l10n / iOS / Android 显示名已统一为 `PaperTok Reader`
+
+**中风险层** ✅（Wave U, commit `9cfced66`）
+- iOS `CFBundleName` / macOS `PRODUCT_NAME` / Linux `BINARY_NAME` + `APPLICATION_ID` / Windows project + Runner.rc 全部统一为 papertok_reader / PaperTok Reader
+- 清掉历史残留 `com.anxcye` 公司字符串
+- 证据：TestFlight `1.68.7 (6439)`
+
+**高风险层** ✅（Sub-project A2, commit `b0fe7c2b`）
+- `pubspec.yaml` `name: papertok_reader`
+- 458 个 Dart 文件的 `package:anx_reader/...` → `package:papertok_reader/...` 原子替换
+- 证据：TestFlight `1.68.7 (A2 build)`，43/43 memory test 通过
+
+命名全部完成。详见 `docs/engineering/NAMING_CLEANUP_PLAN_zh.md`。
 
 ### 1.7 阅读器质量提升（吸收上游 v1.14 Phase A + B）
 
@@ -127,27 +141,22 @@
   - 在 full-spec closure 语境下，重新核对 parity / verification truth source
 - 详见：`docs/engineering/SWIFT_NATIVE_STATUS_zh.md`
 
-### 2.1 Memory 工作流后续增强
+### 2.1 Memory 工作流后续增强（M2+）
 
-- session-end candidate digest
-- 可选 auto-daily
-- 更细的策略开关
-- Review Inbox 来源跳转 / 审阅体验增强
+M1 + 完整版（B1+B2+B3）已在 2026-04-14 发布到 TF 6442。后续候选：
 
-策略保持不变：
-- `daily` 半自动 / 可选自动
-- `long-term` 确认后写入
-- 不默认开启完全静默长期写入
+- 更多自动捕获规则：highlight streak（同章节 3 个高亮后提示）/ repeat question（跨 session 重复提问）/ 长按聊天消息"保存到记忆"
+- 向量检索排序调参 / tag taxonomy 建议
+- Cross-device sync（需先评估 conflict 策略）
+- AI chat 的 conversation 深链（当前 openInConversation 只落到通用聊天 tab，conversationId 级别跳转待 AiChatPage 支持 initial id）
 
-详见：`docs/ai/memory_workflow_openclaw_alignment_zh.md`
+策略保持：`daily` 半自动 / `long-term` 确认后写入 / 所有规则可在设置里关闭。
 
-### 2.2 命名收口第二阶段
+详见：`docs/superpowers/plans/2026-04-14-memory-completion.md` 实现计划与 spec。
 
-- 统一 repo / workspace / release artifact 口径
-- macOS / 桌面 artifact naming 收口
-- package rename 单独立项，不与当前收口混做
+### 2.2 命名收口（已完成归档）
 
-详见：`docs/engineering/NAMING_CLEANUP_PLAN_zh.md`
+三层收口全部落地于 2026-04-14。详见 `docs/engineering/NAMING_CLEANUP_PLAN_zh.md`（已归档为历史记录）。
 
 ### 2.3 构建 / 发布回归
 
@@ -172,7 +181,7 @@
 
 ### P1（产品质量）
 
-- Memory M1.5：digest / 策略开关 / Inbox 体验增强
+- Memory M2：highlight streak / repeat question 规则 + 向量检索调参
 - Android 真机回归
 - 错误提示与日志继续增强，减少“黑盒报错”
 - Swift Native：扩大验证面并继续推进源头级错误本地化
@@ -181,7 +190,7 @@
 
 - 译后 EPUB 导出管线（REPLACE / APPEND_BLOCK）
 - 翻译失败诊断再增强
-- 命名第二阶段 / 高风险 rename 预研
+- ~~命名第二阶段 / 高风险 rename 预研~~（已完成 2026-04-14）
 - 桌面端适配与 packaging 验证
 - **Agent 系统集成**：将已完成的优化模块（ToolOrchestrator / ConversationCompressor / BookContentCache / AiUsageTracker / AnnotationLedger）接入主 agent loop
 - **Sub-Agent 系统**：explore / summarize / verify 子 Agent

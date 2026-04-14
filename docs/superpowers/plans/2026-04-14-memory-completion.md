@@ -1,6 +1,10 @@
 # Memory Completion Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status: ✅ COMPLETE — shipped 2026-04-14 to TestFlight build 6442 (commit `d43ff0e1`).**
+>
+> All 12 implementation tasks (B1 tasks 1-5, B2 tasks 6-10 with 10a-10e sub-tasks, B3 tasks 11-12) landed via subagent-driven development with two-stage review per task. 43/43 memory tests pass. One data-loss bug was caught at spec-review stage (Task 3 `allowV1Fallback` default wrong on write paths) and fixed before merge. Task 13 (TF upload) also done.
+>
+> This document is preserved as a historical record of the plan as executed.
 
 **Goal:** Close the three remaining gaps in the Memory feature — source jump-back (B1), top-level Memory destination with browse/organize (B2), and explainable auto-write rules (B3) — so Memory ships at v1.
 
@@ -55,7 +59,7 @@ Sequencing: B1 lands first (schema). B2 and B3 run in parallel after B1 because 
 
 ```dart
 // test/service/memory/memory_source_kind_test.dart
-import 'package:anx_reader/service/memory/memory_source_kind.dart';
+import 'package:papertok_reader/service/memory/memory_source_kind.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -135,8 +139,8 @@ git commit -m "feat(memory): add MemorySourceKind discriminator enum (B1)"
 
 ```dart
 // test/service/memory/memory_candidate_v2_test.dart
-import 'package:anx_reader/service/memory/memory_candidate.dart';
-import 'package:anx_reader/service/memory/memory_source_kind.dart';
+import 'package:papertok_reader/service/memory/memory_candidate.dart';
+import 'package:papertok_reader/service/memory/memory_source_kind.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -309,8 +313,8 @@ git commit -m "feat(memory): add v2 fields to MemoryCandidate (bookId/cfi/chapte
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:anx_reader/service/memory/memory_candidate_store.dart';
-import 'package:anx_reader/service/memory/memory_source_kind.dart';
+import 'package:papertok_reader/service/memory/memory_candidate_store.dart';
+import 'package:papertok_reader/service/memory/memory_source_kind.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -453,10 +457,10 @@ git commit -m "feat(memory): bump store to schema v2 with v1-read fallback (B1)"
 
 ```dart
 // test/service/memory/memory_capture_rule_test.dart
-import 'package:anx_reader/models/book.dart';
-import 'package:anx_reader/providers/current_reading.dart';
-import 'package:anx_reader/service/memory/memory_session_digest_service.dart';
-import 'package:anx_reader/service/memory/memory_source_kind.dart';
+import 'package:papertok_reader/models/book.dart';
+import 'package:papertok_reader/providers/current_reading.dart';
+import 'package:papertok_reader/service/memory/memory_session_digest_service.dart';
+import 'package:papertok_reader/service/memory/memory_source_kind.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -761,7 +765,7 @@ git commit -m "feat(memory): inline jump-back buttons on inbox rows (B1)"
 
 ```dart
 import 'dart:io';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -918,8 +922,8 @@ git commit -m "feat(memory): add browse helpers to MarkdownMemoryStore (B2)"
 
 ```dart
 // lib/service/memory/memory_pending_count_provider.dart
-import 'package:anx_reader/service/memory/memory_candidate.dart';
-import 'package:anx_reader/service/memory/memory_workflow_service.dart';
+import 'package:papertok_reader/service/memory/memory_candidate.dart';
+import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Emits the number of pending review candidates. Consumed by the bottom
@@ -942,7 +946,7 @@ final memoryPendingCountProvider = StreamProvider<int>((ref) async* {
 
 ```dart
 // test/page/memory/memory_home_page_test.dart
-import 'package:anx_reader/page/memory/memory_home_page.dart';
+import 'package:papertok_reader/page/memory/memory_home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -973,10 +977,10 @@ Expected: FAIL — `MemoryHomePage` not found.
 
 ```dart
 // lib/page/memory/memory_home_page.dart
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/service/memory/memory_pending_count_provider.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_pending_count_provider.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -1133,8 +1137,8 @@ git commit -m "feat(memory): MemoryHomePage shell + pending count provider (B2)"
 - [ ] **Step 8.1: Row widget test**
 
 ```dart
-import 'package:anx_reader/page/memory/widgets/memory_row.dart';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/page/memory/widgets/memory_row.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -1163,8 +1167,8 @@ void main() {
 
 ```dart
 // lib/page/memory/widgets/memory_row.dart
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 
 class MemoryRow extends StatelessWidget {
@@ -1292,7 +1296,7 @@ This task is the biggest in the plan; it's decomposed into five strictly-ordered
 ```dart
 // test/service/memory/markdown_memory_store_tags_test.dart
 import 'dart:io';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -1431,7 +1435,7 @@ git commit -m "feat(memory): YAML front-matter tag read/write on markdown store 
 
 ```dart
 // test/page/memory/tag_editor_test.dart
-import 'package:anx_reader/page/memory/widgets/tag_editor.dart';
+import 'package:papertok_reader/page/memory/widgets/tag_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -1486,7 +1490,7 @@ Expected: FAIL — `TagEditor` not found.
 
 ```dart
 // lib/page/memory/widgets/tag_editor.dart
-import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -1641,7 +1645,7 @@ git commit -m "feat(memory): TagEditor widget with inline autocomplete (B2)"
 
 ```dart
 // test/page/memory/memory_bulk_selection_controller_test.dart
-import 'package:anx_reader/page/memory/memory_bulk_selection_controller.dart';
+import 'package:papertok_reader/page/memory/memory_bulk_selection_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -1775,10 +1779,10 @@ git commit -m "feat(memory): MemoryBulkSelectionController for multi-select mode
 // lib/page/memory/memory_detail_page.dart
 import 'dart:io';
 
-import 'package:anx_reader/l10n/generated/L10n.dart';
-import 'package:anx_reader/page/memory/widgets/tag_editor.dart';
-import 'package:anx_reader/service/memory/markdown_memory_store.dart';
-import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/page/memory/widgets/tag_editor.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
@@ -2126,7 +2130,7 @@ git commit -m "feat(memory): long-press multi-select + bulk toolbar (B2)"
 
 ```dart
 // test/service/memory/memory_rationale_test.dart
-import 'package:anx_reader/service/memory/memory_session_digest_service.dart';
+import 'package:papertok_reader/service/memory/memory_session_digest_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -2233,7 +2237,7 @@ git commit -m "feat(memory): surface trigger + confidence + rationale (B3)"
 - [ ] **Step 12.1: Write prefs helper test**
 
 ```dart
-import 'package:anx_reader/service/memory/memory_rule_prefs.dart';
+import 'package:papertok_reader/service/memory/memory_rule_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

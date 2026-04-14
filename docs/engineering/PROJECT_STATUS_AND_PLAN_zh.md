@@ -83,37 +83,56 @@
   - provider / host / eventId / failureReason
 - 修复成功事件被误显示为 `pending` 的状态语义问题。
 
-### 1.7 Memory M1 / M1.5 / M2（2026-03-07）
+### 1.7 Memory 完整版（2026-04-14，TF 6442）
 
-- workflow state 与 memory index cache 分离。
-- 聊天显式入口已交付：
-  - 保存到今日日记
-  - 保存到长期记忆
-  - 加入 Review Inbox
-- 会话结束入口已交付：
-  - 结束当前会话时生成 0-3 条 session digest candidate
-  - 默认进入 Review Inbox，可切换为自动写入今日日记
-- Memory 设置页已支持：
-  - 最小 Review Inbox UI
-  - session digest 开关
-  - automated daily 路由切换
-  - 长期记忆二次确认开关
-- Markdown memory 写入已统一经过协调器，减少并发写路径踩踏风险。
-- 仍保持产品边界：
-  - long-term 默认确认后写入
-  - 不支持 silent auto-write 到 long-term
+M1 已在 2026-03-07 上线。**2026-04-14 完成 B1+B2+B3 三阶段闭环**（详见 `docs/superpowers/plans/2026-04-14-memory-completion.md`）：
 
-### 1.8 低风险命名收口（2026-03-07）
+- **B1 源跳转** ✅
+  - MemoryCandidate schema v1→v2 迁移（新增 bookId/cfi/chapter/sourceKind/tags/rationale 字段，读旧数据时自动补默认）
+  - captureSessionDigest 自动记录当前阅读上下文
+  - Review Inbox 每行新增 `Open in reader` / `Open conversation` 跳转按钮
+  - 数据丢失回归测试（dismiss on legacy v1 data）
+- **B2 顶层 Memory 入口** ✅
+  - 新的 `MemoryHomePage` tab（可选加入底部导航，默认关闭）
+  - 浏览 MEMORY.md 段落 + 最近 14 天日记
+  - 长按进入多选模式 + 批量删除 / 加标签 toolbar
+  - YAML front-matter 存储 tags（每个文件独立）
+  - TagEditor inline 编辑
+- **B3 可解释自动写入** ✅
+  - 每条 candidate 生成 rationale 英文解释句
+  - Review Inbox 显示 trigger badge + confidence dot（3 色：success/warning/tertiary）
+  - Settings → Memory → "自动捕获规则" 分组，可开关 session_digest / provider_switch
+  - MemoryRulePrefs 静态 helper 持久化 per-rule 开关
 
-- 对外产品口径统一为 `PaperTok Reader`。
-- 已覆盖：
-  - README / docs 入口
-  - App 内可见文案 / l10n
-  - iOS / Android 显示名
-- 明确保留不变：
-  - `anx_reader` package / import
-  - bundle id / applicationId
-  - URL scheme / App Group 等技术标识
+交付证据：
+- 17 commits：`6050ee75` → `d43ff0e1`
+- 43 个 memory 测试（原 0 个专用）全部通过
+- TestFlight `1.68.7 (6442)`
+- Subagent-driven development 流程：每个 task impl → spec review → quality review 两阶段 gate
+- 在 Task 3 review 阶段捕获到一个数据丢失 bug（write path 没 fallback 到 v1 read）并修复
+
+仍保持产品边界：
+- long-term 默认确认后写入
+- 不支持 silent auto-write 到 long-term（需用户在 Auto-capture rules 显式启用）
+
+### 1.8 命名收口全部完成（2026-04-14）
+
+三层收口全部落地：
+
+**低风险层**（2026-03-07，已完成）
+- README / docs / App 内文案 / l10n / iOS / Android 显示名统一为 `PaperTok Reader`
+
+**中风险层**（Wave U commit `9cfced66`，2026-04-14）
+- iOS `CFBundleName` / macOS `PRODUCT_NAME` + TEST_HOST / Linux `BINARY_NAME` + `APPLICATION_ID` / Windows project + Runner.rc 全部统一
+- 清掉 `com.anxcye` / `Paper Reader` 等历史残留
+- 证据：TestFlight `1.68.7 (6439)`
+
+**高风险层**（Sub-project A2 commit `b0fe7c2b`，2026-04-14）
+- `pubspec.yaml` `name: papertok_reader`
+- **458 个 Dart 源文件**的 `package:anx_reader/...` → `package:papertok_reader/...`
+- 原子 single-commit 落地，43/43 memory test 回归通过
+
+命名层面不再有遗留工作。详见归档的 `docs/engineering/NAMING_CLEANUP_PLAN_zh.md`。
 
 ### 1.9 上游吸收：阅读器质量改进（v1.14 Phase A + B）（2026-03-22）
 
@@ -145,26 +164,18 @@
 - 下一步重点不应只是继续堆功能，而应继续把“已实现但未重新验证”的区域逐步转成有证据的完成状态。
 - 独立状态文档见：`docs/engineering/SWIFT_NATIVE_STATUS_zh.md`
 
-### 2.1 Memory 工作流后续阶段（P1）
+### 2.1 Memory 工作流 M2+（P2）
 
-M1.5 / M2 的稳定子集已完成；当前剩余增强项主要是：
+Memory 完整版 B1+B2+B3 已在 2026-04-14 上线。后续候选：
 
-- Review Inbox 的来源跳转 / 更完整审阅体验
-- daily -> long-term 的周期性整理入口
-- 更激进但仍可解释的 auto-daily 规则（如仅高置信度 / 更丰富触发器）
-- 端到端真机回归与体验微调
+- 更多自动捕获规则：highlight streak / repeat question / 长按聊天消息"保存到记忆"
+- AI chat conversation 深链（当前 openInConversation 只落到通用 AI tab，conversationId 级别跳转待 AiChatPage 支持 initial id 参数）
+- 向量检索调参 / tag taxonomy 建议
+- Cross-device sync 的 conflict 策略预研
 
-详见：`docs/ai/memory_workflow_openclaw_alignment_zh.md`
+### 2.2 命名收口（已完成归档）
 
-### 2.2 命名收口后续阶段（P1 / P2）
-
-本轮低风险收口已完成；后续仍可继续：
-
-- 工作区路径 / 构建路径 / 发布产物口径统一
-- macOS / 桌面 artifact naming 收口
-- 高风险 package rename（`anx_reader -> papertok_reader`）单独立项评估
-
-详见：`docs/engineering/NAMING_CLEANUP_PLAN_zh.md`
+三层收口全部落地于 2026-04-14。详见 `docs/engineering/NAMING_CLEANUP_PLAN_zh.md`（已归档为历史记录）。
 
 ### 2.3 构建 / 发布回归（P1）
 
@@ -192,17 +203,14 @@ M1.5 / M2 的稳定子集已完成；当前剩余增强项主要是：
 - 如需新测试包，继续使用离线 TestFlight 流程：
   - `FLUTTER_NO_PUB=true FORCE_MANUAL_SIGNING=1 ./scripts/tf_from_commit.sh HEAD`
 
-### Step 2（Memory 后续增强）
+### Step 2（Memory M2 候选）
 
-- Review Inbox 体验增强（来源跳转 / 更多上下文）
-- daily -> long-term 整理入口
-- auto-daily 规则细化与真机体验回归
+- 更多触发规则 + 向量检索调参
+- AI chat conversation 深链（需要 AiChatPage 接 initial conversationId 参数）
 
-### Step 3（命名第二阶段）
+### Step 3（命名收口）
 
-- macOS / 桌面 artifact naming 评估
-- repo/path/release artifact 口径统一
-- 如有必要，再单独出 package rename blast-radius 报告
+~~已完成~~ 2026-04-14 三层全部落地。
 
 ### Step 4（多端回归）
 
@@ -213,4 +221,5 @@ M1.5 / M2 的稳定子集已完成；当前剩余增强项主要是：
 
 - Memory 语义检索会将记忆文本发送到 embeddings provider；需要用户知情。
 - 第三方 Responses 网关兼容性差异大：优先用 Provider Center 开关降级策略，不做自动重试猜测。
-- 本轮命名收口只覆盖 outward-facing surfaces；技术标识仍保留历史值，这是刻意分层，不是遗漏。
+- ~~本轮命名收口只覆盖 outward-facing surfaces；技术标识仍保留历史值，这是刻意分层，不是遗漏。~~
+- 2026-04-14 更新：技术标识层（Wave U 桌面 artifact + A2 Dart package rename）全部完成，命名工作全部落地。

@@ -220,7 +220,7 @@ iOS release archive 过程中发现并修复的编译问题：
 |------|------|
 | `ConversationCompressor` 缺少 `PromptValue` import | 添加 `import 'package:langchain_core/prompts.dart'` |
 | `BaseChatModelOptions.copyWith` 不支持 `maxTokens` 参数 | 移除该参数（已在 config 初始化时设置） |
-| `AiSkill` 类型在 `langchain_registry.dart` 中未导入 | 添加 `import 'package:anx_reader/service/ai/skills/ai_skill.dart'` |
+| `AiSkill` 类型在 `langchain_registry.dart` 中未导入 | 添加 `import 'package:papertok_reader/service/ai/skills/ai_skill.dart'` |
 | 动态 `IconData()` 构造导致 tree-shaking 失败 | 改用 `Icons.auto_fix_high` 常量 |
 | freezed `BgimgType` switch 表达式不穷尽 | 添加 `_ =>` 通配符 case |
 

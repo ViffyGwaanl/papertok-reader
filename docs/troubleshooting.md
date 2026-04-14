@@ -17,7 +17,7 @@
 
 If you see errors like:
 
-- `Target of URI doesn't exist: package:anx_reader/l10n/generated/L10n.dart`
+- `Target of URI doesn't exist: package:papertok_reader/l10n/generated/L10n.dart`
 - missing `*.g.dart` / `toJson()` not found
 
 you likely need to regenerate code:
@@ -129,7 +129,7 @@ For some issues, you may need to first disable the "Clear logs on startup" optio
 
 如果你遇到类似错误：
 
-- `Target of URI doesn't exist: package:anx_reader/l10n/generated/L10n.dart`
+- `Target of URI doesn't exist: package:papertok_reader/l10n/generated/L10n.dart`
 - 缺少 `*.g.dart` / 提示 `toJson()` 不存在
 
 通常是因为尚未生成代码。可执行：
