@@ -11,6 +11,7 @@ import 'package:anx_reader/service/shortcuts/papertok_shortcuts_pending_queue.da
 import 'package:anx_reader/utils/platform_utils.dart';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/service/memory/memory_rule_prefs.dart';
 import 'package:anx_reader/service/deeplink/paperreader_deeplink_handler.dart';
 import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart';
 import 'package:anx_reader/service/shortcuts/shortcuts_callback_service.dart';
@@ -54,6 +55,7 @@ Future<void> shortcutsMain() async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Prefs().initPrefs();
+  await MemoryRulePrefs.init();
 
   // Allow iOS App Intents to reuse the main Flutter engine when the app is
   // foregrounded.

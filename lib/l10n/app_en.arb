@@ -1553,5 +1553,10 @@
     "placeholders": { "count": { "type": "int" } }
   },
   "memoryBulkDeleteAction": "Delete",
-  "memoryBulkAddTagTitle": "Add tag to selection"
+  "memoryBulkAddTagTitle": "Add tag to selection",
+  "memoryAutoCaptureRulesTitle": "Auto-capture rules",
+  "memoryRuleSessionDigestTitle": "Session digest",
+  "memoryRuleSessionDigestDesc": "Capture up to 3 memories when a chat session ends.",
+  "memoryRuleProviderSwitchTitle": "Provider switch",
+  "memoryRuleProviderSwitchDesc": "Capture a digest when you switch AI providers mid-conversation."
 }

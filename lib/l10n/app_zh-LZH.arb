@@ -819,5 +819,10 @@
     "placeholders": { "count": { "type": "int" } }
   },
   "memoryBulkDeleteAction": "刪除",
-  "memoryBulkAddTagTitle": "為所選新增標籤"
+  "memoryBulkAddTagTitle": "為所選新增標籤",
+  "memoryAutoCaptureRulesTitle": "自動捕獲規則",
+  "memoryRuleSessionDigestTitle": "會話摘要",
+  "memoryRuleSessionDigestDesc": "會話結束時最多捕獲 3 條記憶。",
+  "memoryRuleProviderSwitchTitle": "切換提供商",
+  "memoryRuleProviderSwitchDesc": "在對話中切換 AI 提供商時捕獲摘要。"
 }

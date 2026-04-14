@@ -6,11 +6,13 @@ import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
+import 'package:anx_reader/service/memory/memory_rule_prefs.dart';
 import 'package:anx_reader/service/memory/memory_search_service.dart';
 import 'package:anx_reader/service/memory/memory_source_kind.dart';
 import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/memory/memory_workflow_service.dart';
 import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
+import 'package:anx_reader/widgets/settings/settings_section_card.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
@@ -398,6 +400,27 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
             });
           },
           secondary: const Icon(Icons.lock_outline),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAutoCaptureRulesSection() {
+    final l10n = L10n.of(context);
+    return SettingsSectionCard(
+      title: l10n.memoryAutoCaptureRulesTitle,
+      tiles: [
+        _RuleToggleRow(
+          ruleId: 'session_digest',
+          title: l10n.memoryRuleSessionDigestTitle,
+          description: l10n.memoryRuleSessionDigestDesc,
+          onChanged: () => setState(() {}),
+        ),
+        _RuleToggleRow(
+          ruleId: 'provider_switch',
+          title: l10n.memoryRuleProviderSwitchTitle,
+          description: l10n.memoryRuleProviderSwitchDesc,
+          onChanged: () => setState(() {}),
         ),
       ],
     );
@@ -856,6 +879,7 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
           const Divider(),
         ],
         _buildWorkflowSettingsSection(),
+        _buildAutoCaptureRulesSection(),
         _buildReviewInboxSection(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -929,6 +953,70 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
         ),
         const SizedBox(height: 24),
       ],
+    );
+  }
+}
+
+class _RuleToggleRow extends StatefulWidget {
+  final String ruleId;
+  final String title;
+  final String description;
+  final VoidCallback onChanged;
+
+  const _RuleToggleRow({
+    required this.ruleId,
+    required this.title,
+    required this.description,
+    required this.onChanged,
+  });
+
+  @override
+  State<_RuleToggleRow> createState() => _RuleToggleRowState();
+}
+
+class _RuleToggleRowState extends State<_RuleToggleRow> {
+  late bool _enabled = MemoryRulePrefs.isEnabled(widget.ruleId);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: ClaudePalette.fg(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: ClaudePalette.secondary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Switch.adaptive(
+            value: _enabled,
+            onChanged: (v) async {
+              await MemoryRulePrefs.setEnabled(widget.ruleId, v);
+              setState(() => _enabled = v);
+              widget.onChanged();
+            },
+          ),
+        ],
+      ),
     );
   }
 }

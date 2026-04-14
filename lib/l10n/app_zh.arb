@@ -1007,5 +1007,10 @@
     "placeholders": { "count": { "type": "int" } }
   },
   "memoryBulkDeleteAction": "删除",
-  "memoryBulkAddTagTitle": "为所选添加标签"
+  "memoryBulkAddTagTitle": "为所选添加标签",
+  "memoryAutoCaptureRulesTitle": "自动捕获规则",
+  "memoryRuleSessionDigestTitle": "会话摘要",
+  "memoryRuleSessionDigestDesc": "会话结束时最多捕获 3 条记忆。",
+  "memoryRuleProviderSwitchTitle": "切换提供商",
+  "memoryRuleProviderSwitchDesc": "在对话中切换 AI 提供商时捕获摘要。"
 }

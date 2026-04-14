@@ -3,6 +3,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/service/book.dart' as book_service;
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
+import 'package:anx_reader/service/memory/memory_rule_prefs.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
 import 'package:anx_reader/service/memory/memory_candidate_store.dart';
 import 'package:anx_reader/service/memory/memory_session_digest_service.dart';
@@ -185,6 +186,13 @@ class MemoryWorkflowService {
     String? chapter,
     MemorySourceKind sourceKind = MemorySourceKind.chat,
   }) async {
+    if (!MemoryRulePrefs.isEnabled(triggerKind)) {
+      return MemorySessionDigestResult(
+        candidates: const <MemoryCandidate>[],
+        dailyStrategy: dailyStrategy,
+      );
+    }
+
     final drafts = _sessionDigestService.buildCandidates(
       messages,
       maxCandidates: maxCandidates,
