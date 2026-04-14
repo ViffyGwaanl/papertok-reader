@@ -1533,5 +1533,9 @@
   "aiSkillReadingCompanionName": "Reading Companion",
   "aiSkillReadingCompanionDesc": "Explain complex passages in simple, engaging terms",
   "aiSkillSeminarModeName": "Seminar Mode",
-  "aiSkillSeminarModeDesc": "Multi-perspective analysis: critical, supportive, and synthesis views"
+  "aiSkillSeminarModeDesc": "Multi-perspective analysis: critical, supportive, and synthesis views",
+  "memoryTabTitle": "Memory",
+  "memoryInboxSectionTitle": "Inbox",
+  "memoryTodaySectionTitle": "Today",
+  "memoryLongTermSectionTitle": "Long-term"
 }

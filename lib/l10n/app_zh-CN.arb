@@ -1533,5 +1533,9 @@
   "aiSkillReadingCompanionName": "阅读助手",
   "aiSkillReadingCompanionDesc": "用简洁易懂的语言讲解复杂段落",
   "aiSkillSeminarModeName": "研讨会模式",
-  "aiSkillSeminarModeDesc": "多角度分析：批判、支持与综合视角"
+  "aiSkillSeminarModeDesc": "多角度分析：批判、支持与综合视角",
+  "memoryTabTitle": "记忆",
+  "memoryInboxSectionTitle": "收件箱",
+  "memoryTodaySectionTitle": "今天",
+  "memoryLongTermSectionTitle": "长期记忆"
 }

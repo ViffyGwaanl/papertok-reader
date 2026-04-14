@@ -127,6 +127,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -596,7 +598,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "de": [
@@ -727,6 +733,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -1196,7 +1204,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "es": [
@@ -1327,6 +1339,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -1796,7 +1810,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "fr": [
@@ -1927,6 +1945,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -2396,7 +2416,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "it": [
@@ -2527,6 +2551,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -2996,7 +3022,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "ja": [
@@ -3127,6 +3157,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -3596,7 +3628,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "ko": [
@@ -3727,6 +3763,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -4196,7 +4234,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "pt": [
@@ -4327,6 +4369,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -4796,7 +4840,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "ro": [
@@ -4927,6 +4975,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -5396,7 +5446,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "ru": [
@@ -5527,6 +5581,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -5996,7 +6052,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "tr": [
@@ -6127,6 +6187,8 @@
     "memorySavedToDaily",
     "memorySavedToLongTerm",
     "memoryAddedToReviewInbox",
+    "memoryOpenInReader",
+    "memoryOpenConversation",
     "memoryWorkflowActionFailed",
     "memoryWorkflowNothingToSave",
     "memoryWorkflowSettingsTitle",
@@ -6596,7 +6658,11 @@
     "aiSkillReadingCompanionName",
     "aiSkillReadingCompanionDesc",
     "aiSkillSeminarModeName",
-    "aiSkillSeminarModeDesc"
+    "aiSkillSeminarModeDesc",
+    "memoryTabTitle",
+    "memoryInboxSectionTitle",
+    "memoryTodaySectionTitle",
+    "memoryLongTermSectionTitle"
   ],
 
   "zh": [

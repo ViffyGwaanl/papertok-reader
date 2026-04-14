@@ -799,5 +799,9 @@
   "papersTabExplain": "講解",
   "papersTabOriginal": "原文",
   "memoryOpenInReader": "在閱讀器中開啟",
-  "memoryOpenConversation": "開啟對話"
+  "memoryOpenConversation": "開啟對話",
+  "memoryTabTitle": "記憶",
+  "memoryInboxSectionTitle": "收件匣",
+  "memoryTodaySectionTitle": "今天",
+  "memoryLongTermSectionTitle": "長期記憶"
 }
