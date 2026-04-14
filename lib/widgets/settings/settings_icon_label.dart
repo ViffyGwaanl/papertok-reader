@@ -1,18 +1,25 @@
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 
-/// Apple Settings-style icon + title row.
-/// Renders a 29x29 tinted rounded square with a white icon, then a title (and optional subtitle).
+/// Claude-style settings icon + title row.
+///
+/// Renders a monochrome glyph in the foreground color followed by a title
+/// (and optional subtitle). The legacy 29x29 colored tint square has been
+/// removed in favor of Claude's flat monochrome design.
 class SettingsIconLabel extends StatelessWidget {
   final String title;
   final IconData icon;
-  final Color tint;
+
+  /// Deprecated: kept for backwards compatibility with callers that still pass
+  /// a tint color. The value is ignored — Claude rows are monochrome.
+  final Color? tint;
   final String? subtitle;
 
   const SettingsIconLabel({
     super.key,
     required this.title,
     required this.icon,
-    required this.tint,
+    this.tint,
     this.subtitle,
   });
 
@@ -21,16 +28,7 @@ class SettingsIconLabel extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Container(
-          width: 29,
-          height: 29,
-          decoration: BoxDecoration(
-            color: tint,
-            borderRadius: BorderRadius.circular(7),
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, color: Colors.white, size: 16),
-        ),
+        Icon(icon, size: 22, color: ClaudePalette.fg(context)),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -41,6 +39,7 @@ class SettingsIconLabel extends StatelessWidget {
                 title,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontSize: 16,
+                  color: ClaudePalette.fg(context),
                 ),
               ),
               if (subtitle != null && subtitle!.isNotEmpty)
@@ -50,7 +49,7 @@ class SettingsIconLabel extends StatelessWidget {
                     subtitle!,
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontSize: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
+                      color: ClaudePalette.tertiary(context),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -64,9 +63,10 @@ class SettingsIconLabel extends StatelessWidget {
   }
 }
 
-/// Warm Morandi tint palette for Settings icons. Intentionally narrow —
-/// desaturated earthy neutrals keep the settings feel calm and Claude-like
-/// instead of iOS rainbow.
+// Deprecated: Claude monochrome design. Kept for backwards compatibility.
+/// Warm Morandi tint palette for Settings icons. No longer used for rendering
+/// — rows are now monochrome — but the constants remain so existing imports
+/// continue to compile.
 class SettingsIconTints {
   SettingsIconTints._();
   // AI / Assistant

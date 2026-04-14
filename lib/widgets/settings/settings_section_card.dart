@@ -1,7 +1,9 @@
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Apple-style grouped settings section: optional header + Card containing tiles.
+/// Claude-style grouped settings section: optional header + Card containing
+/// monochrome rows separated by hairline dividers.
 class SettingsSectionCard extends StatelessWidget {
   final String? title;
   final String? footer;
@@ -31,7 +33,7 @@ class SettingsSectionCard extends StatelessWidget {
                 title!.toUpperCase(),
                 style: theme.textTheme.labelSmall?.copyWith(
                   letterSpacing: 0.6,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: ClaudePalette.secondary(context),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -40,7 +42,7 @@ class SettingsSectionCard extends StatelessWidget {
           Card(
             margin: EdgeInsets.zero,
             elevation: 0,
-            color: theme.colorScheme.surface,
+            color: ClaudePalette.card(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -55,7 +57,7 @@ class SettingsSectionCard extends StatelessWidget {
                 footer!,
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: 12,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: ClaudePalette.secondary(context),
                 ),
               ),
             ),
@@ -71,8 +73,12 @@ class SettingsSectionCard extends StatelessWidget {
       result.add(tiles[i]);
       if (i < tiles.length - 1) {
         result.add(Padding(
-          padding: const EdgeInsets.only(left: 57),
-          child: Divider(height: 1, thickness: 0.5, color: Theme.of(context).dividerColor),
+          padding: const EdgeInsets.only(left: 50),
+          child: Divider(
+            height: 1,
+            thickness: 0.5,
+            color: ClaudePalette.divider(context),
+          ),
         ));
       }
     }
@@ -80,10 +86,14 @@ class SettingsSectionCard extends StatelessWidget {
   }
 }
 
-/// A standard navigation row with tinted icon, title, optional subtitle, and chevron.
+/// A Claude-style navigation row: monochrome glyph, title, optional subtitle,
+/// chevron. The legacy 29x29 colored tint square has been removed.
 class SettingsNavRow extends StatelessWidget {
   final IconData icon;
-  final Color tint;
+
+  /// Deprecated: kept for backwards compatibility. Ignored visually — Claude
+  /// rows are monochrome.
+  final Color? tint;
   final String title;
   final String? subtitle;
   final VoidCallback onTap;
@@ -91,7 +101,7 @@ class SettingsNavRow extends StatelessWidget {
   const SettingsNavRow({
     super.key,
     required this.icon,
-    required this.tint,
+    this.tint,
     required this.title,
     this.subtitle,
     required this.onTap,
@@ -109,23 +119,20 @@ class SettingsNavRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Container(
-              width: 29,
-              height: 29,
-              decoration: BoxDecoration(
-                color: tint,
-                borderRadius: BorderRadius.circular(7),
-              ),
-              alignment: Alignment.center,
-              child: Icon(icon, color: Colors.white, size: 16),
-            ),
+            Icon(icon, size: 22, color: ClaudePalette.fg(context)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 16)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: ClaudePalette.fg(context),
+                    ),
+                  ),
                   if (subtitle != null && subtitle!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
@@ -133,7 +140,7 @@ class SettingsNavRow extends StatelessWidget {
                         subtitle!,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: ClaudePalette.tertiary(context),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -142,7 +149,11 @@ class SettingsNavRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: 22, color: Theme.of(context).colorScheme.outline),
+            Icon(
+              Icons.chevron_right,
+              size: 22,
+              color: ClaudePalette.tertiary(context),
+            ),
           ],
         ),
       ),
