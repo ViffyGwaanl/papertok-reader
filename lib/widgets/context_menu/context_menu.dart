@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
 import 'package:anx_reader/widgets/context_menu/excerpt_menu.dart';
 import 'package:anx_reader/widgets/context_menu/reader_note_menu.dart';
@@ -118,17 +119,18 @@ Future<void> showContextMenu(
   }
 
   final decoration = BoxDecoration(
-    color: Prefs().eInkMode ? Colors.white : const Color(0xFF24262B),
-    borderRadius: BorderRadius.circular(18),
+    color: Prefs().eInkMode ? Colors.white : ClaudePalette.card(context),
+    borderRadius: BorderRadius.circular(14),
     border: Border.all(
       color: Prefs().eInkMode
-          ? Colors.black.withOpacity(0.18)
-          : Colors.white.withOpacity(0.08),
+          ? Colors.black.withValues(alpha: 0.18)
+          : ClaudePalette.divider(context),
+      width: 0.5,
     ),
     boxShadow: [
       if (!Prefs().eInkMode)
         BoxShadow(
-          color: Colors.black.withOpacity(0.22),
+          color: Colors.black.withValues(alpha: 0.22),
           blurRadius: 26,
           spreadRadius: -8,
           offset: const Offset(0, 12),

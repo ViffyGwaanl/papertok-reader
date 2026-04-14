@@ -3,6 +3,7 @@ import 'package:anx_reader/enums/lang_list.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/translate/index.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
 
@@ -174,26 +175,24 @@ ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final isDark = !Prefs().eInkMode;
-    final background = isDark ? const Color(0xFF24262B) : colors.surface;
-    final foreground = isDark ? Colors.white : colors.onSurface;
+    final background = ClaudePalette.card(context);
+    final foreground = ClaudePalette.fg(context);
 
     return Material(
       color: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isDark
-                ? Colors.white.withOpacity(0.08)
-                : colors.outlineVariant.withOpacity(0.24),
+            color: ClaudePalette.divider(context),
+            width: 0.5,
           ),
           boxShadow: [
             if (isDark)
               BoxShadow(
-                color: Colors.black.withOpacity(0.28),
+                color: Colors.black.withValues(alpha: 0.28),
                 blurRadius: 32,
                 spreadRadius: -10,
                 offset: const Offset(0, 16),
@@ -212,7 +211,7 @@ ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(
                     width: 38,
                     height: 5,
                     decoration: BoxDecoration(
-                      color: foreground.withOpacity(0.18),
+                      color: foreground.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -254,15 +253,11 @@ ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.05)
-                              : colors.surfaceContainerHighest
-                                  .withOpacity(0.58),
+                          color: ClaudePalette.elevated(context),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.06)
-                                : colors.outlineVariant.withOpacity(0.16),
+                            color: ClaudePalette.divider(context),
+                            width: 0.5,
                           ),
                         ),
                         child: Text(
@@ -272,7 +267,7 @@ ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.4,
-                            color: foreground.withOpacity(0.78),
+                            color: foreground.withValues(alpha: 0.78),
                           ),
                         ),
                       ),
@@ -284,10 +279,12 @@ ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.black.withOpacity(0.16)
-                              : colors.surfaceContainerHigh.withOpacity(0.5),
+                          color: ClaudePalette.bg(context),
                           borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: ClaudePalette.divider(context),
+                            width: 0.5,
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -301,7 +298,7 @@ ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(
                               child: Icon(
                                 Icons.arrow_forward_rounded,
                                 size: 18,
-                                color: foreground.withOpacity(0.68),
+                                color: foreground.withValues(alpha: 0.68),
                               ),
                             ),
                             _LangButton(
@@ -317,15 +314,11 @@ ${Prefs().translateFrom.getNative(context)} → ${Prefs().translateTo.getNative(
                         constraints: const BoxConstraints(minHeight: 220),
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.05)
-                              : colors.surfaceContainerHighest
-                                  .withOpacity(0.58),
+                          color: ClaudePalette.elevated(context),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.06)
-                                : colors.outlineVariant.withOpacity(0.16),
+                            color: ClaudePalette.divider(context),
+                            width: 0.5,
                           ),
                         ),
                         child: _loading

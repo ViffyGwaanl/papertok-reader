@@ -14,6 +14,7 @@ import 'package:anx_reader/providers/sync_status.dart';
 import 'package:anx_reader/service/convert_to_epub/txt/convert_from_txt.dart';
 import 'package:anx_reader/service/md5_service.dart';
 import 'package:anx_reader/service/book.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/share_file.dart';
@@ -193,7 +194,7 @@ class BookBottomSheet extends ConsumerWidget {
             const SizedBox(height: 10),
             Text(
               L10n.of(context).bookBottomSheetReplaceWarning,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: MorandiPalette.error(context)),
             ),
           ],
         ),
@@ -321,9 +322,9 @@ class BookBottomSheet extends ConsumerWidget {
               text: L10n.of(context).commonDelete,
             ),
             confirmIcon: IconAndText(
-              icon: const Icon(
+              icon: Icon(
                 EvaIcons.checkmark_circle_2,
-                color: Colors.red,
+                color: MorandiPalette.error(context),
               ),
               text: L10n.of(context).commonConfirm,
             ),

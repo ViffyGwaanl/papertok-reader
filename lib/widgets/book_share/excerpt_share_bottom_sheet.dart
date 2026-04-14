@@ -6,6 +6,8 @@ import 'package:anx_reader/enums/excerpt_share_template.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/font_model.dart';
 import 'package:anx_reader/providers/font_list.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/save_img.dart';
@@ -85,10 +87,10 @@ class _ExcerptShareBottomSheetState
       'text': const ui.Color.fromARGB(255, 246, 217, 149),
       'background': const ui.Color.fromARGB(255, 48, 44, 28)
     },
-    {'text': Colors.black, 'background': Colors.amber.shade100},
-    {'text': Colors.white, 'background': Colors.blueGrey.shade800},
-    {'text': Colors.black, 'background': Colors.pink.shade50},
-    {'text': Colors.white, 'background': Colors.indigo.shade900},
+    {'text': Colors.black, 'background': MorandiPalette.sandLight},
+    {'text': Colors.white, 'background': MorandiPalette.taupeDark},
+    {'text': Colors.black, 'background': MorandiPalette.dustyRoseLight},
+    {'text': Colors.white, 'background': MorandiPalette.mauveDark},
   ];
 
   final List<String?> _backgroundImages = [
@@ -401,11 +403,9 @@ Future<void> showExcerptShareBottomSheet({
   required String excerpt,
   String? chapter,
 }) async {
-  await showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (context) => PointerInterceptor(
+  await PTBottomSheet.show<void>(
+    context,
+    builder: (ctx) => PointerInterceptor(
       child: ExcerptShareBottomSheet(
         bookTitle: bookTitle,
         author: author,

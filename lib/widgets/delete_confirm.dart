@@ -1,4 +1,5 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:flutter/material.dart';
 
 class DeleteConfirm extends StatefulWidget {
@@ -48,7 +49,7 @@ class _DeleteConfirmState extends State<DeleteConfirm> {
         },
         style: isDelete
             ? TextButton.styleFrom(
-                foregroundColor: Colors.red,
+                foregroundColor: MorandiPalette.error(context),
               )
             : null,
         child: Text(isDelete ? confirmText : deleteText),
@@ -70,7 +71,8 @@ class _DeleteConfirmState extends State<DeleteConfirm> {
         },
         icon: isDelete
             ? (widget.confirmIcon ??
-                const Icon(Icons.check_circle_outline, color: Colors.red))
+                Icon(Icons.check_circle_outline,
+                    color: MorandiPalette.error(context)))
             : (widget.deleteIcon ?? const Icon(Icons.delete_outline)),
       );
     }

@@ -1,4 +1,5 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/get_path/macos_migration.dart';
 import 'package:flutter/material.dart';
 
@@ -98,9 +99,9 @@ class _MigrationPageState extends State<MigrationPage> {
                         : Icons.folder_copy_outlined,
                 size: 64,
                 color: _isComplete
-                    ? Colors.green
+                    ? MorandiPalette.success(context)
                     : _hasFailed
-                        ? Colors.red
+                        ? MorandiPalette.error(context)
                         : Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(height: 24),
@@ -146,7 +147,7 @@ class _MigrationPageState extends State<MigrationPage> {
                 Text(
                   _errorMessage!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.red,
+                        color: MorandiPalette.error(context),
                       ),
                   textAlign: TextAlign.center,
                 ),

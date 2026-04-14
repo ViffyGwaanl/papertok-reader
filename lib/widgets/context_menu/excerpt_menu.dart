@@ -5,6 +5,8 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book_note.dart';
 import 'package:anx_reader/page/reading_page.dart';
 import 'package:anx_reader/service/reading/epub_player_key.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/book_share/excerpt_share_service.dart';
@@ -158,9 +160,9 @@ class ExcerptMenuState extends State<ExcerptMenu> {
 
   Icon deleteIcon() {
     return deleteConfirm
-        ? const Icon(
+        ? Icon(
             EvaIcons.close_circle,
-            color: Colors.red,
+            color: MorandiPalette.error(context),
           )
         : const Icon(Icons.delete_outline_rounded);
   }
@@ -215,9 +217,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     required VoidCallback onTap,
   }) {
     final isDark = !Prefs().eInkMode;
-    final foreground = isDark
-        ? Colors.white
-        : Theme.of(context).colorScheme.onSecondaryContainer;
+    final foreground = ClaudePalette.fg(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -231,7 +231,8 @@ class ExcerptMenuState extends State<ExcerptMenu> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon,
-                    size: 18, color: foreground.withOpacity(isDark ? 0.96 : 1)),
+                    size: 18,
+                    color: foreground.withValues(alpha: isDark ? 0.96 : 1)),
                 const SizedBox(height: 5),
                 Text(
                   label,
@@ -240,7 +241,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
                   style: TextStyle(
                     fontSize: 10.5,
                     height: 1.05,
-                    color: foreground.withOpacity(isDark ? 0.88 : 0.92),
+                    color: foreground.withValues(alpha: isDark ? 0.88 : 0.92),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -268,13 +269,13 @@ class ExcerptMenuState extends State<ExcerptMenu> {
           height: 40,
           decoration: BoxDecoration(
             color: active
-                ? highlight.withOpacity(0.16)
-                : colors.surface.withOpacity(0.44),
+                ? highlight.withValues(alpha: 0.16)
+                : colors.surface.withValues(alpha: 0.44),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: active
-                  ? highlight.withOpacity(0.55)
-                  : colors.outlineVariant.withOpacity(0.35),
+                  ? highlight.withValues(alpha: 0.55)
+                  : colors.outlineVariant.withValues(alpha: 0.35),
             ),
           ),
           child: Icon(
@@ -301,16 +302,16 @@ class ExcerptMenuState extends State<ExcerptMenu> {
           height: 28,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: swatch.withOpacity(0.86),
+            color: swatch.withValues(alpha: 0.86),
             border: Border.all(
               color: active
                   ? colors.onSecondaryContainer
-                  : swatch.withOpacity(0.18),
+                  : swatch.withValues(alpha: 0.18),
               width: active ? 2.2 : 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: swatch.withOpacity(0.22),
+                color: swatch.withValues(alpha: 0.22),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -336,10 +337,10 @@ class ExcerptMenuState extends State<ExcerptMenu> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: colors.surface.withOpacity(0.52),
+            color: colors.surface.withValues(alpha: 0.52),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: colors.outlineVariant.withOpacity(0.35),
+              color: colors.outlineVariant.withValues(alpha: 0.35),
             ),
           ),
           child: Center(child: icon),
@@ -350,8 +351,6 @@ class ExcerptMenuState extends State<ExcerptMenu> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final isDark = !Prefs().eInkMode;
     final actionButtons = <Widget>[
       _actionButton(
         context: context,
@@ -480,9 +479,8 @@ class ExcerptMenuState extends State<ExcerptMenu> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? Colors.white.withOpacity(0.72)
-                              : colors.onSecondaryContainer.withOpacity(0.72),
+                          color: ClaudePalette.fg(context)
+                              .withValues(alpha: 0.72),
                         ),
                       ),
                       const Spacer(),
