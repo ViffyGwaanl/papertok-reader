@@ -3,6 +3,21 @@ import 'dart:io';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:path/path.dart' as p;
 
+/// A lightweight reference to a memory entry for browse-list UIs.
+class MemoryEntryRef {
+  final String title;
+  final String path;
+  final String preview;
+  final DateTime? modified;
+
+  const MemoryEntryRef({
+    required this.title,
+    required this.path,
+    required this.preview,
+    required this.modified,
+  });
+}
+
 /// A lightweight local Markdown memory store.
 ///
 /// Files live under `<documents>/memory/`:
@@ -182,5 +197,76 @@ class MarkdownMemoryStore {
     }
 
     return hits;
+  }
+}
+
+extension MarkdownMemoryStoreBrowse on MarkdownMemoryStore {
+  /// Splits `MEMORY.md` by top-level `#` headings and returns one entry per
+  /// section, in document order. Returns an empty list if the file is
+  /// missing or has no H1 headings.
+  Future<List<MemoryEntryRef>> listLongTermEntries() async {
+    final file = File(p.join(rootDir.path, MarkdownMemoryStore.longTermFileName));
+    if (!file.existsSync()) return const <MemoryEntryRef>[];
+    final raw = await file.readAsString();
+    final modified = file.lastModifiedSync();
+
+    final entries = <MemoryEntryRef>[];
+    final lines = raw.split('\n');
+    String? currentTitle;
+    final buf = StringBuffer();
+
+    void flush() {
+      if (currentTitle == null) return;
+      entries.add(MemoryEntryRef(
+        title: currentTitle!,
+        path: file.path,
+        preview: _browsePreview(buf.toString()),
+        modified: modified,
+      ));
+      buf.clear();
+    }
+
+    for (final line in lines) {
+      if (line.startsWith('# ')) {
+        flush();
+        currentTitle = line.substring(2).trim();
+      } else if (currentTitle != null) {
+        buf.writeln(line);
+      }
+    }
+    flush();
+
+    return entries;
+  }
+
+  /// Returns the most recent daily-note files (filenames matching
+  /// `YYYY-MM-DD.md`) sorted newest-first, capped at [count].
+  Future<List<MemoryEntryRef>> listRecentDailyNotes({int count = 14}) async {
+    if (!rootDir.existsSync()) return const <MemoryEntryRef>[];
+    final dailyPattern = RegExp(r'^(\d{4}-\d{2}-\d{2})\.md$');
+    final files = rootDir
+        .listSync()
+        .whereType<File>()
+        .where((f) => dailyPattern.hasMatch(p.basename(f.path)))
+        .toList()
+      ..sort((a, b) => b.path.compareTo(a.path));
+
+    final result = <MemoryEntryRef>[];
+    for (final f in files.take(count)) {
+      final body = await f.readAsString();
+      result.add(MemoryEntryRef(
+        title: p.basenameWithoutExtension(f.path),
+        path: f.path,
+        preview: _browsePreview(body),
+        modified: f.lastModifiedSync(),
+      ));
+    }
+    return result;
+  }
+
+  String _browsePreview(String body) {
+    final trimmed = body.trim();
+    if (trimmed.length <= 160) return trimmed;
+    return '${trimmed.substring(0, 160)}…';
   }
 }
