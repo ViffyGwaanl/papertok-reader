@@ -14,6 +14,7 @@ import 'package:anx_reader/service/initialization_check.dart';
 import 'package:anx_reader/page/home_page/bookshelf_page.dart';
 import 'package:anx_reader/page/home_page/papers_page.dart';
 import 'package:anx_reader/page/home_page/notes_page.dart';
+import 'package:anx_reader/page/memory/memory_home_page.dart';
 import 'package:anx_reader/page/home_page/settings_page.dart';
 import 'package:anx_reader/page/home_page/statistics_page.dart';
 import 'package:anx_reader/service/receive_file/receive_share.dart';
@@ -193,6 +194,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         'label': L10n.of(context).navBarNotes,
         'identifier': Prefs.homeTabNotes,
       },
+      Prefs.homeTabMemory: {
+        'icon': Icons.psychology_outlined,
+        'label': L10n.of(context).navBarMemory,
+        'identifier': Prefs.homeTabMemory,
+      },
       Prefs.homeTabSettings: {
         'icon': EvaIcons.settings_2,
         'label': L10n.of(context).navBarSettings,
@@ -234,6 +240,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           return const AiPage();
         case Prefs.homeTabNotes:
           return NotesPage(controller: controller);
+        case Prefs.homeTabMemory:
+          return const MemoryHomePage();
         case Prefs.homeTabSettings:
           return SettingsPage(controller: controller);
         default:
@@ -350,6 +358,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                 return 'sparkles';
               case Prefs.homeTabNotes:
                 return 'note.text';
+              case Prefs.homeTabMemory:
+                return 'brain.head.profile';
               case Prefs.homeTabSettings:
                 return 'gearshape.fill';
               default:

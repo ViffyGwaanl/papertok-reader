@@ -130,7 +130,7 @@ class Prefs extends ChangeNotifier {
 
   // Home tabs config (order + enable), backed by SharedPreferences.
   // papers + settings are mandatory and cannot be disabled.
-  static const int _homeTabsSchemaVersion = 1;
+  static const int _homeTabsSchemaVersion = 2;
   static const String _homeTabsSchemaVersionKey = 'homeTabsSchemaVersion';
   static const String _homeTabsOrderKey = 'homeTabsOrder';
   static const String _homeTabsEnabledKey = 'homeTabsEnabled';
@@ -140,6 +140,7 @@ class Prefs extends ChangeNotifier {
   static const String homeTabStatistics = 'statistics';
   static const String homeTabAI = 'ai';
   static const String homeTabNotes = 'notes';
+  static const String homeTabMemory = 'memory';
   static const String homeTabSettings = 'settings';
 
   static const List<String> _homeTabAll = [
@@ -148,6 +149,7 @@ class Prefs extends ChangeNotifier {
     homeTabStatistics,
     homeTabAI,
     homeTabNotes,
+    homeTabMemory,
     homeTabSettings,
   ];
 
@@ -3003,6 +3005,36 @@ Requirements:
       return;
     }
 
+    // v1 → v2: append 'memory' to the stored order/enabled maps (disabled by
+    // default so existing users don't get a surprise new tab).
+    if (v == 1 && hasOrder && hasEnabled) {
+      final storedOrder = prefs.getStringList(_homeTabsOrderKey) ?? const <String>[];
+      final order = List<String>.from(storedOrder);
+      if (!order.contains(homeTabMemory)) {
+        final settingsIdx = order.indexOf(homeTabSettings);
+        if (settingsIdx >= 0) {
+          order.insert(settingsIdx, homeTabMemory);
+        } else {
+          order.add(homeTabMemory);
+        }
+      }
+
+      final storedEnabledJson = prefs.getString(_homeTabsEnabledKey) ?? '{}';
+      final decoded = jsonDecode(storedEnabledJson);
+      final Map<String, dynamic> rawEnabled =
+          decoded is Map ? decoded as Map<String, dynamic> : <String, dynamic>{};
+      final enabled = <String, bool>{
+        for (final entry in rawEnabled.entries)
+          entry.key: entry.value is bool ? entry.value as bool : true,
+      };
+      enabled.putIfAbsent(homeTabMemory, () => false);
+
+      prefs.setInt(_homeTabsSchemaVersionKey, _homeTabsSchemaVersion);
+      prefs.setStringList(_homeTabsOrderKey, order);
+      prefs.setString(_homeTabsEnabledKey, jsonEncode(enabled));
+      return;
+    }
+
     // Migrate from legacy bottom navigator switches.
     // New default UX: Statistics + Notes are hidden unless the user explicitly
     // enabled them (legacy prefs present).
@@ -3017,6 +3049,7 @@ Requirements:
       homeTabStatistics,
       homeTabAI,
       homeTabNotes,
+      homeTabMemory,
       homeTabSettings,
     ];
 
@@ -3026,6 +3059,7 @@ Requirements:
       homeTabStatistics: legacyShowStatistics,
       homeTabAI: legacyShowAI,
       homeTabNotes: legacyShowNotes,
+      homeTabMemory: false,
       homeTabSettings: true,
     };
 
