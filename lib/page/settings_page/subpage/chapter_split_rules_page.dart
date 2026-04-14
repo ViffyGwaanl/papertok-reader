@@ -2,6 +2,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/chapter_split_presets.dart';
 import 'package:anx_reader/models/chapter_split_rule.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
@@ -273,11 +274,9 @@ class _ChapterSplitRulesPageState extends State<ChapterSplitRulesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(L10n.of(context).chapterSplitting),
-      ),
-      body: ListView(
+    return SettingsSubpageScaffold(
+      title: L10n.of(context).chapterSplitting,
+      child: ListView(
         children: [
           _buildRuleSection(
             title: L10n.of(context).builtInRules,
@@ -457,19 +456,17 @@ class _ChapterSplitRuleEditorPageState
   Widget build(BuildContext context) {
     final evaluation = _evaluation;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.rule == null
-            ? L10n.of(context).newCustomRule
-            : L10n.of(context).editCustomRule),
-        actions: [
-          TextButton(
-            onPressed: _canSave ? _onSave : null,
-            child: Text(L10n.of(context).commonSave),
-          ),
-        ],
-      ),
-      body: ListView(
+    return SettingsSubpageScaffold(
+      title: widget.rule == null
+          ? L10n.of(context).newCustomRule
+          : L10n.of(context).editCustomRule,
+      actions: [
+        TextButton(
+          onPressed: _canSave ? _onSave : null,
+          child: Text(L10n.of(context).commonSave),
+        ),
+      ],
+      child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(

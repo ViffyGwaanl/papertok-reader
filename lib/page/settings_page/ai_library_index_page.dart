@@ -12,6 +12,7 @@ import 'package:anx_reader/service/rag/ai_index_database.dart';
 import 'package:anx_reader/service/rag/ai_text_chunker.dart';
 import 'package:anx_reader/service/rag/library/ai_library_index_job.dart';
 import 'package:anx_reader/service/rag/library/ai_library_index_queue_service.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -97,67 +98,42 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     final queue = ref.watch(aiLibraryIndexQueueProvider);
     final queueSvc = ref.read(aiLibraryIndexQueueProvider.notifier);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(l10n.settingsAiLibraryIndexTitle),
-        actions: _selecting
-            ? [
-                TextButton(
-                  onPressed:
-                      _currentVisibleBookIds.isEmpty ? null : _handleSelectAll,
-                  child: Text(l10n.aiLibraryIndexActionSelectAll),
-                ),
-                TextButton(
-                  onPressed:
-                      _selectedBookIds.isEmpty ? null : _handleClearSelection,
-                  child: Text(l10n.aiLibraryIndexActionClearSelection),
-                ),
-                IconButton(
-                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  onPressed: () {
-                    setState(() {
-                      _selecting = false;
-                      _selectedBookIds.clear();
-                    });
-                  },
-                  icon: const Icon(Icons.close),
-                ),
-              ]
-            : [
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _selecting = true;
-                      _selectedBookIds.clear();
-                    });
-                  },
-                  child: Text(l10n.aiLibraryIndexActionSelect),
-                ),
-              ],
-      ),
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text(
-                l10n.settingsAiLibraryIndexSubtitle,
-                style: Theme.of(context).textTheme.bodyMedium,
+    return SettingsSubpageScaffold(
+      title: l10n.settingsAiLibraryIndexTitle,
+      actions: _selecting
+          ? [
+              TextButton(
+                onPressed:
+                    _currentVisibleBookIds.isEmpty ? null : _handleSelectAll,
+                child: Text(l10n.aiLibraryIndexActionSelectAll),
               ),
-            ),
-            _buildConfigTile(context),
-            _buildFilterBar(context),
-            const Divider(height: 1),
-            _buildQueueSection(context, queue, queueSvc),
-            const Divider(height: 1),
-            _buildBooksSection(context),
-          ],
-        ),
-      ),
+              TextButton(
+                onPressed:
+                    _selectedBookIds.isEmpty ? null : _handleClearSelection,
+                child: Text(l10n.aiLibraryIndexActionClearSelection),
+              ),
+              IconButton(
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () {
+                  setState(() {
+                    _selecting = false;
+                    _selectedBookIds.clear();
+                  });
+                },
+                icon: const Icon(Icons.close),
+              ),
+            ]
+          : [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _selecting = true;
+                    _selectedBookIds.clear();
+                  });
+                },
+                child: Text(l10n.aiLibraryIndexActionSelect),
+              ),
+            ],
       bottomNavigationBar: _selecting
           ? SafeArea(
               top: false,
@@ -198,6 +174,26 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
               ),
             )
           : null,
+      child: SafeArea(
+        bottom: false,
+        child: ListView(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Text(
+                l10n.settingsAiLibraryIndexSubtitle,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            _buildConfigTile(context),
+            _buildFilterBar(context),
+            const Divider(height: 1),
+            _buildQueueSection(context, queue, queueSvc),
+            const Divider(height: 1),
+            _buildBooksSection(context),
+          ],
+        ),
+      ),
     );
   }
 

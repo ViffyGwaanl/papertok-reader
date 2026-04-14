@@ -1,3 +1,4 @@
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:flutter/material.dart';
@@ -14,11 +15,9 @@ class FontsSettingPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final fontList = ref.watch(fontsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(L10n.of(context).downloadFonts),
-      ),
-      body: fontList.when(
+    return SettingsSubpageScaffold(
+      title: L10n.of(context).downloadFonts,
+      child: fontList.when(
         data: (fonts) {
           if (fonts.isEmpty) {
             return const Center(

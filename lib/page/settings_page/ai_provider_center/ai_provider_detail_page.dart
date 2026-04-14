@@ -6,6 +6,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/ai_model_capability.dart';
 import 'package:anx_reader/models/ai_api_key_entry.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/service/ai/ai_models_service.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/service/ai/langchain_ai_config.dart';
@@ -1071,24 +1072,22 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     final stored = Prefs().getAiConfig(_provider.id);
     final config = LangchainAiConfig.fromPrefs(_provider.id, stored);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_provider.name),
-        actions: [
-          if (!_provider.isBuiltIn)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: l10n.commonDelete,
-              onPressed: _deleteProvider,
-            ),
+    return SettingsSubpageScaffold(
+      title: _provider.name,
+      actions: [
+        if (!_provider.isBuiltIn)
           IconButton(
-            icon: const Icon(Icons.check),
-            tooltip: l10n.commonSave,
-            onPressed: _save,
+            icon: const Icon(Icons.delete_outline),
+            tooltip: l10n.commonDelete,
+            onPressed: _deleteProvider,
           ),
-        ],
-      ),
-      body: ListView(
+        IconButton(
+          icon: const Icon(Icons.check),
+          tooltip: l10n.commonSave,
+          onPressed: _save,
+        ),
+      ],
+      child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildInfoRow('ID', _provider.id),

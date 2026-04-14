@@ -2,6 +2,7 @@ import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/ai_provider_meta.dart';
 import 'package:anx_reader/page/settings_page/ai_provider_center/ai_provider_detail_page.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/service/ai/ai_services.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:flutter/material.dart';
@@ -215,22 +216,18 @@ class _AiProviderCenterPageState extends State<AiProviderCenterPage> {
         final l10n = L10n.of(context);
 
         if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(l10n.settingsAiProviderCenterTitle),
-            ),
-            body: Center(
+          return SettingsSubpageScaffold(
+            title: l10n.settingsAiProviderCenterTitle,
+            child: Center(
               child: Text('${l10n.commonFailed}: ${snapshot.error}'),
             ),
           );
         }
 
         if (snapshot.connectionState != ConnectionState.done) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(l10n.settingsAiProviderCenterTitle),
-            ),
-            body: const Center(
+          return SettingsSubpageScaffold(
+            title: l10n.settingsAiProviderCenterTitle,
+            child: const Center(
               child: CircularProgressIndicator(),
             ),
           );
@@ -239,10 +236,9 @@ class _AiProviderCenterPageState extends State<AiProviderCenterPage> {
         final providers = Prefs().aiProvidersV1;
         final selectedId = Prefs().selectedAiService;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.settingsAiProviderCenterTitle),
-            actions: [
+        return SettingsSubpageScaffold(
+          title: l10n.settingsAiProviderCenterTitle,
+          actions: [
               PopupMenuButton<String>(
                 onSelected: (value) {
                   switch (value) {
@@ -280,13 +276,12 @@ class _AiProviderCenterPageState extends State<AiProviderCenterPage> {
                 ],
               ),
             ],
-          ),
           floatingActionButton: FloatingActionButton(
             onPressed: _addProvider,
             tooltip: l10n.commonAdd,
             child: const Icon(Icons.add),
           ),
-          body: _reorderMode
+          child: _reorderMode
               ? _buildReorderList(context, providers, selectedId)
               : ListView.separated(
                   itemCount: providers.length,

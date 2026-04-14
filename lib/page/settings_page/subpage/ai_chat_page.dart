@@ -1,5 +1,6 @@
 import 'package:anx_reader/app/app_route_observer.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,11 +68,9 @@ class _AiChatPageState extends ConsumerState<AiChatPage> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(L10n.of(context).aiChat),
-      ),
-      body: const SafeArea(
+    return SettingsSubpageScaffold(
+      title: L10n.of(context).aiChat,
+      child: const SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
           child: AiChatStream(),

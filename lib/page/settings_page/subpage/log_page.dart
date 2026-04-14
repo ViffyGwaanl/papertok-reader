@@ -1,4 +1,5 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/get_path/log_file.dart';
 import 'package:anx_reader/utils/log/common.dart';
@@ -67,21 +68,19 @@ class _LogPageState extends State<LogPage> {
     final l10n = L10n.of(context);
     final filtered = _filteredEntries();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.settingsAdvancedLog),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: initData,
-          ),
-          IconButton(
-            onPressed: () => showMoreAction(context),
-            icon: const Icon(Icons.more_vert),
-          ),
-        ],
-      ),
-      body: Column(
+    return SettingsSubpageScaffold(
+      title: l10n.settingsAdvancedLog,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: initData,
+        ),
+        IconButton(
+          onPressed: () => showMoreAction(context),
+          icon: const Icon(Icons.more_vert),
+        ),
+      ],
+      child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),

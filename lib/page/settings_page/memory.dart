@@ -1,6 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
@@ -154,6 +155,11 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      elevation: 0,
+      color: ClaudePalette.card(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -1002,23 +1008,21 @@ class _MemoryEditorPageState extends ConsumerState<MemoryEditorPage> {
 
         return ok;
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(_fileName),
-          actions: [
-            IconButton(
-              tooltip: l10n.memoryInsertToAiAction,
-              icon: const Icon(Icons.input_outlined),
-              onPressed: _insertSelectedToAiInput,
-            ),
-            IconButton(
-              tooltip: l10n.commonSave,
-              icon: const Icon(Icons.save_outlined),
-              onPressed: _loading ? null : _save,
-            ),
-          ],
-        ),
-        body: _loading
+      child: SettingsSubpageScaffold(
+        title: _fileName,
+        actions: [
+          IconButton(
+            tooltip: l10n.memoryInsertToAiAction,
+            icon: const Icon(Icons.input_outlined),
+            onPressed: _insertSelectedToAiInput,
+          ),
+          IconButton(
+            tooltip: l10n.commonSave,
+            icon: const Icon(Icons.save_outlined),
+            onPressed: _loading ? null : _save,
+          ),
+        ],
+        child: _loading
             ? const Center(child: CircularProgressIndicator())
             : Padding(
                 padding: const EdgeInsets.all(12),

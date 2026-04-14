@@ -12,6 +12,7 @@ import 'package:anx_reader/page/settings_page/settings_page.dart';
 import 'package:anx_reader/page/settings_page/storege.dart';
 import 'package:anx_reader/page/settings_page/sync.dart';
 import 'package:anx_reader/page/settings_page/translate.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/env_var.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
 import 'package:flutter/cupertino.dart';
@@ -62,14 +63,28 @@ class _SubMoreSettingsState extends State<SubMoreSettings> {
       builder: (context, _) {
         final showDeveloperEntry = Prefs().developerOptionsEnabled;
         return Scaffold(
+          backgroundColor: ClaudePalette.bg(context),
           appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            centerTitle: true,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
+              color: ClaudePalette.fg(context),
               onPressed: () {
                 Navigator.pop(context);
               },
             ),
-            title: Text(L10n.of(context).settingsMoreSettings),
+            iconTheme: IconThemeData(color: ClaudePalette.fg(context)),
+            title: Text(
+              L10n.of(context).settingsMoreSettings,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                color: ClaudePalette.fg(context),
+              ),
+            ),
           ),
           body: LayoutBuilder(builder: (context, constraints) {
             List<Map<String, dynamic>> settings = [

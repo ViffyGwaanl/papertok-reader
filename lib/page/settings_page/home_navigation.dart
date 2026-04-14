@@ -1,5 +1,7 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 
 class HomeNavigationSettingsPage extends StatefulWidget {
@@ -62,24 +64,22 @@ class _HomeNavigationSettingsPageState
           return id == Prefs.homeTabPapers || id == Prefs.homeTabSettings;
         }
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(L10n.of(context).settingsHomeNavigation),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Prefs().resetHomeTabsConfigToDefault();
-                },
-                child: Text(
-                  L10n.of(context).commonReset,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+        return SettingsSubpageScaffold(
+          title: L10n.of(context).settingsHomeNavigation,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Prefs().resetHomeTabsConfigToDefault();
+              },
+              child: Text(
+                L10n.of(context).commonReset,
+                style: TextStyle(
+                  color: ClaudePalette.accent(context),
                 ),
               ),
-            ],
-          ),
-          body: Column(
+            ),
+          ],
+          child: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),

@@ -1,10 +1,9 @@
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/ai_input_quick_prompt.dart';
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
-import 'package:anx_reader/widgets/settings/settings_section.dart';
-import 'package:anx_reader/widgets/settings/settings_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -192,39 +191,43 @@ class _AiQuickPromptsEditorState extends State<AiQuickPromptsEditor> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.settingsAiQuickPrompts),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: l10n.commonReset,
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: Text(l10n.commonConfirm),
-                  content: Text(l10n.settingsAiQuickPromptsResetConfirm),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text(l10n.commonCancel),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _resetToDefaults();
-                      },
-                      child: Text(l10n.commonConfirm),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: _prompts.isEmpty
+    return SettingsSubpageScaffold(
+      title: l10n.settingsAiQuickPrompts,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: l10n.commonReset,
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.commonConfirm),
+                content: Text(l10n.settingsAiQuickPromptsResetConfirm),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(l10n.commonCancel),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _resetToDefaults();
+                    },
+                    child: Text(l10n.commonConfirm),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+      floatingActionButton: _prompts.isNotEmpty
+          ? FloatingActionButton(
+              onPressed: _add,
+              child: const Icon(Icons.add),
+            )
+          : null,
+      child: _prompts.isEmpty
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -294,12 +297,6 @@ class _AiQuickPromptsEditorState extends State<AiQuickPromptsEditor> {
                   ),
               ],
             ),
-      floatingActionButton: _prompts.isNotEmpty
-          ? FloatingActionButton(
-              onPressed: _add,
-              child: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 }

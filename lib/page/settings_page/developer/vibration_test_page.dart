@@ -1,4 +1,6 @@
+import 'package:anx_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:anx_reader/service/vibration_service.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:flutter/material.dart';
 
 class VibrationTestPage extends StatefulWidget {
@@ -35,21 +37,25 @@ class _VibrationTestPageState extends State<VibrationTestPage> {
   Widget build(BuildContext context) {
     final caps = _capabilities;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vibration Test'),
-        actions: [
-          IconButton(
-            onPressed: _loadCapabilities,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh capabilities',
-          ),
-        ],
-      ),
-      body: ListView(
+    return SettingsSubpageScaffold(
+      title: 'Vibration Test',
+      actions: [
+        IconButton(
+          onPressed: _loadCapabilities,
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh capabilities',
+        ),
+      ],
+      child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Card(
+            margin: EdgeInsets.zero,
+            elevation: 0,
+            color: ClaudePalette.card(context),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: _loading || caps == null
