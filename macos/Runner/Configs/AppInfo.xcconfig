@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = Paper Reader
+PRODUCT_NAME = PaperTok Reader
 
 // The application's bundle identifier
 PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2024 com.anxcye. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 PaperTok. All rights reserved.

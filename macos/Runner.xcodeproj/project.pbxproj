@@ -520,7 +520,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/anx_reader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/anx_reader";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PaperTok Reader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PaperTok Reader";
 			};
 			name = Debug;
 		};
@@ -535,7 +535,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/anx_reader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/anx_reader";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PaperTok Reader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PaperTok Reader";
 			};
 			name = Release;
 		};
@@ -550,7 +550,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = ai.papertok.paperreader.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/anx_reader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/anx_reader";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PaperTok Reader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PaperTok Reader";
 			};
 			name = Profile;
 		};

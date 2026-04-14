@@ -24,7 +24,7 @@
 		<string>zh</string>
 	</array>
 	<key>CFBundleName</key>
-	<string>anx_reader</string>
+	<string>papertok_reader</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
