@@ -74,7 +74,7 @@ public final class WebDAVSyncService {
               let pass = try? KeychainService.load(key: "webdav_pass") else {
             return nil
         }
-        return WebDAVClient(baseURL: url, auth: .basic(user: user ?? "", password: pass ?? ""))
+        return WebDAVClient(baseURL: url, auth: .basic(user: user, password: pass))
     }
 
     /// Test the stored WebDAV connection.

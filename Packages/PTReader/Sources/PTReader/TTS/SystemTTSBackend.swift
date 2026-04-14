@@ -56,19 +56,18 @@ public final class SystemTTSBackend: NSObject, TTSBackend, @unchecked Sendable {
     ) async throws -> TTSAudioStream {
         guard !text.isEmpty else { throw TTSBackendError.emptyText }
 
-        let utterance = AVSpeechUtterance(string: text)
-        // Map the user-facing 0.5...2.0 multiplier onto AVSpeech's internal range.
-        utterance.rate = Self.mapRate(rate)
-        utterance.pitchMultiplier = Float(max(0.5, min(2.0, pitch)))
-        utterance.volume = Float(max(0.0, min(1.0, volume)))
-
-        if let avVoice = AVSpeechSynthesisVoice(identifier: voice.id) {
-            utterance.voice = avVoice
-        } else {
-            utterance.voice = AVSpeechSynthesisVoice(language: voice.language)
-        }
-
         await MainActor.run {
+            let utterance = AVSpeechUtterance(string: text)
+            // Map the user-facing 0.5...2.0 multiplier onto AVSpeech's internal range.
+            utterance.rate = Self.mapRate(rate)
+            utterance.pitchMultiplier = Float(max(0.5, min(2.0, pitch)))
+            utterance.volume = Float(max(0.0, min(1.0, volume)))
+
+            if let avVoice = AVSpeechSynthesisVoice(identifier: voice.id) {
+                utterance.voice = avVoice
+            } else {
+                utterance.voice = AVSpeechSynthesisVoice(language: voice.language)
+            }
             synthesizer.speak(utterance)
         }
         return .synchronous

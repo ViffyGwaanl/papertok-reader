@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 /// Generates short digests of chat conversations and appends them to daily memory files.
 ///
@@ -12,9 +13,18 @@ public actor SessionDigestService {
 
         public var errorDescription: String? {
             switch self {
-            case .emptyMessages: return "No messages to digest"
-            case .providerReturnedEmpty: return "Provider returned an empty digest"
-            case .memoryDirectoryUnavailable: return "Memory directory is unavailable"
+            case .emptyMessages:
+                return AppLocalization.string(
+                    "errors.memory.digest.no_messages",
+                    value: "No messages are available to summarize."
+                )
+            case .providerReturnedEmpty:
+                return AppLocalization.string("errors.ai.no_response")
+            case .memoryDirectoryUnavailable:
+                return AppLocalization.string(
+                    "errors.memory.digest.directory_unavailable",
+                    value: "Couldn't access the memory folder."
+                )
             }
         }
     }

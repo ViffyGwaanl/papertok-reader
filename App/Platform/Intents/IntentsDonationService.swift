@@ -69,35 +69,35 @@ enum IntentsDonationService {
 
     @MainActor
     static func donateOpenBook(title: String) async {
-        var intent = OpenBookIntent()
+        let intent = OpenBookIntent()
         intent.bookTitle = title
         _ = try? await intent.donate()
     }
 
     @MainActor
     static func donateAskAI(question: String) async {
-        var intent = AskAIIntent()
+        let intent = AskAIIntent()
         intent.question = question
         _ = try? await intent.donate()
     }
 
     @MainActor
     static func donateSearchBooks(query: String) async {
-        var intent = SearchBooksIntent()
+        let intent = SearchBooksIntent()
         intent.query = query
         _ = try? await intent.donate()
     }
 
     @MainActor
     static func donateReadingStats(scope: ReadingStatsScope) async {
-        var intent = GetReadingStatsIntent()
+        let intent = GetReadingStatsIntent()
         intent.scope = scope
         _ = try? await intent.donate()
     }
 
     @MainActor
     static func donateCreateNote(bookTitle: String, noteText: String) async {
-        var intent = CreateNoteIntent()
+        let intent = CreateNoteIntent()
         intent.bookTitle = bookTitle
         intent.noteText = noteText
         _ = try? await intent.donate()

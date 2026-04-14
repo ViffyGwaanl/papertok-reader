@@ -136,7 +136,7 @@ public struct MCPConfigView: View {
                 }
                 let transport = MCPHTTPSSETransport(serverURL: url, apiKey: config.apiKey)
                 let client = MCPClient(transport: transport)
-                let capabilities = try await client.initialize()
+                _ = try await client.initialize()
                 let tools = try await client.listTools()
 
                 // Update config with discovered tools

@@ -192,13 +192,52 @@ public enum EmbeddingError: LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .authenticationFailed(let msg): return "Embedding auth failed: \(msg)"
-        case .rateLimited: return "Embedding request rate-limited"
-        case .transient(let msg): return "Embedding transient error: \(msg)"
-        case .serverError(let code, let msg): return "Embedding server error \(code): \(msg ?? "")"
-        case .emptyResponse: return "Embedding response was empty"
-        case .mismatchedCount(let e, let a): return "Embedding count mismatch expected=\(e) actual=\(a)"
-        case .decodingFailed(let msg): return "Embedding decoding failed: \(msg)"
+        case .authenticationFailed(let msg):
+            let normalized = msg.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if normalized.contains("no api key") {
+                return AppLocalization.string("errors.ai.no_api_key")
+            }
+            if normalized.contains("unauthorized")
+                || normalized.contains("invalid api key")
+                || normalized.contains("forbidden") {
+                return AppLocalization.string("errors.ai.invalid_api_key")
+            }
+            return AppLocalization.string(
+                "errors.ai.embeddings.authentication_failed",
+                value: "Couldn't prepare embeddings."
+            )
+        case .rateLimited:
+            return AppLocalization.string("errors.ai.rate_limited")
+        case .transient:
+            return AppLocalization.string(
+                "errors.ai.embeddings.temporarily_unavailable",
+                value: "Embeddings are temporarily unavailable."
+            )
+        case .serverError(let code, _):
+            return AppLocalization.format(
+                "errors.ai.embeddings.server_error_format",
+                fallback: "The embeddings service returned an error (%lld).",
+                locale: .autoupdatingCurrent,
+                Int64(code)
+            )
+        case .emptyResponse:
+            return AppLocalization.string(
+                "errors.ai.embeddings.empty_response",
+                value: "The embeddings service returned an empty response."
+            )
+        case .mismatchedCount(let expected, let actual):
+            return AppLocalization.format(
+                "errors.ai.embeddings.incomplete_response_format",
+                fallback: "The embeddings service returned %lld results for %lld requests.",
+                locale: .autoupdatingCurrent,
+                Int64(actual),
+                Int64(expected)
+            )
+        case .decodingFailed:
+            return AppLocalization.string(
+                "errors.ai.embeddings.decoding_failed",
+                value: "Couldn't read the embeddings response."
+            )
         }
     }
 }

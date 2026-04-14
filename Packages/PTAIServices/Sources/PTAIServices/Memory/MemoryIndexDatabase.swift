@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 #if canImport(SQLite3)
 import SQLite3
 #elseif canImport(CSQLite)
@@ -31,8 +32,16 @@ public actor MemoryIndexDatabase {
 
         public var errorDescription: String? {
             switch self {
-            case .fileNotFound(let path): return "Memory file not found: \(path)"
-            case .sqliteError(let msg): return "Memory index SQLite error: \(msg)"
+            case .fileNotFound:
+                return AppLocalization.string(
+                    "errors.memory.index.file_not_found",
+                    value: "The selected memory file could not be found."
+                )
+            case .sqliteError:
+                return AppLocalization.string(
+                    "errors.memory.index.unavailable",
+                    value: "Memory search is unavailable."
+                )
             }
         }
     }

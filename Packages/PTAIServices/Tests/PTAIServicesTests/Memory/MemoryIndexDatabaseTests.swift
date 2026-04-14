@@ -78,4 +78,22 @@ struct MemoryIndexDatabaseTests {
         #expect(try await index.search(query: "delta", limit: 5).count == 1)
         #expect(try await index.search(query: "alpha", limit: 5).isEmpty)
     }
+
+    @Test("index errors use localized user-facing descriptions")
+    func testLocalizedIndexErrors() {
+        #expect(
+            MemoryIndexDatabase.IndexError.fileNotFound("/tmp/missing.md").errorDescription
+                == AppLocalization.string(
+                    "errors.memory.index.file_not_found",
+                    value: "The selected memory file could not be found."
+                )
+        )
+        #expect(
+            MemoryIndexDatabase.IndexError.sqliteError("malformed").errorDescription
+                == AppLocalization.string(
+                    "errors.memory.index.unavailable",
+                    value: "Memory search is unavailable."
+                )
+        )
+    }
 }

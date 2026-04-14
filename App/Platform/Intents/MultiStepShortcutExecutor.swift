@@ -135,7 +135,7 @@ final class MultiStepShortcutExecutor: @unchecked Sendable {
             guard let title = parameters["bookTitle"] else {
                 throw MultiStepShortcutError.missingParameter("bookTitle")
             }
-            var intent = OpenBookIntent()
+            let intent = OpenBookIntent()
             intent.bookTitle = title
             _ = try await intent.perform()
             return .ok(values: ["bookTitle": title])
@@ -158,13 +158,13 @@ final class MultiStepShortcutExecutor: @unchecked Sendable {
             guard let query = parameters["query"] else {
                 throw MultiStepShortcutError.missingParameter("query")
             }
-            var intent = SearchBooksIntent()
+            let intent = SearchBooksIntent()
             intent.query = query
             let result = try await intent.perform()
             return .ok(output: result.value, values: ["matches": result.value ?? ""])
 
         case .getReadingStats:
-            var intent = GetReadingStatsIntent()
+            let intent = GetReadingStatsIntent()
             if let scopeRaw = parameters["scope"],
                let scope = ReadingStatsScope(rawValue: scopeRaw) {
                 intent.scope = scope
@@ -179,7 +179,7 @@ final class MultiStepShortcutExecutor: @unchecked Sendable {
             guard let text = parameters["noteText"] else {
                 throw MultiStepShortcutError.missingParameter("noteText")
             }
-            var intent = CreateNoteIntent()
+            let intent = CreateNoteIntent()
             intent.bookTitle = title
             intent.noteText = text
             intent.color = parameters["color"]

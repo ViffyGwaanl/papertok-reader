@@ -1,4 +1,5 @@
 import Foundation
+import PTCore
 
 // MARK: - JSON-RPC 2.0 Message Types
 
@@ -44,7 +45,27 @@ public struct MCPError: Codable, Sendable, LocalizedError {
         self.message = message
     }
 
-    public var errorDescription: String? { "MCP error \(code): \(message)" }
+    public var errorDescription: String? {
+        let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedMessage.isEmpty == false {
+            return AppLocalization.format(
+                "errors.mcp.server_error_with_detail_format",
+                fallback: "The MCP server returned an error (%lld): %@",
+                locale: .autoupdatingCurrent,
+                Int64(code),
+                trimmedMessage
+            )
+        }
+
+        return AppLocalization.format(
+            "errors.mcp.server_error_format",
+            fallback: "The MCP server returned an error (%lld).",
+            locale: .autoupdatingCurrent,
+            Int64(code)
+        )
+    }
+
+    public var failureReason: String? { message }
 
     // Standard JSON-RPC error codes
     public static let parseError = -32700

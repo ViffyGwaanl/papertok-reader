@@ -1,6 +1,7 @@
 #if canImport(UIKit)
 import SwiftUI
 import UIKit
+import PTCore
 import ReadiumNavigator
 import ReadiumShared
 
@@ -33,6 +34,14 @@ public struct EPUBReaderView: UIViewControllerRepresentable {
         self.customCSS = customCSS
     }
 
+    static func loadFailureMessage(for error: Error) -> String {
+        AppLocalization.userFacingErrorMessage(
+            for: error,
+            fallbackKey: "errors.reader.cannot_open",
+            fallback: "Cannot open this book."
+        )
+    }
+
     public func makeUIViewController(context: Context) -> UIViewController {
         do {
             var config = EPUBNavigatorViewController.Configuration()
@@ -50,7 +59,7 @@ public struct EPUBReaderView: UIViewControllerRepresentable {
             // If navigator creation fails, return a placeholder
             let errorVC = UIViewController()
             let label = UILabel()
-            label.text = "Failed to load EPUB: \(error.localizedDescription)"
+            label.text = Self.loadFailureMessage(for: error)
             label.textAlignment = .center
             label.numberOfLines = 0
             label.translatesAutoresizingMaskIntoConstraints = false

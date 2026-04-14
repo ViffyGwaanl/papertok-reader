@@ -269,10 +269,10 @@ extension EPUBNavigatorCoordinator: SelectableNavigatorDelegate {
 
 extension EPUBNavigatorCoordinator: WKScriptMessageHandler {
     public nonisolated func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == EPUBImageScriptBridge.messageHandlerName else {
-            return
-        }
         Task { @MainActor [weak self] in
+            guard message.name == EPUBImageScriptBridge.messageHandlerName else {
+                return
+            }
             self?.handleImageMessage(message.body)
         }
     }

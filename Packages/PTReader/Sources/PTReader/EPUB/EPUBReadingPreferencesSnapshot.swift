@@ -1,10 +1,10 @@
 #if canImport(UIKit)
 import Foundation
 import UIKit
-import ReadiumNavigator
+@preconcurrency import ReadiumNavigator
 import PTCore
 
-public struct EPUBReadingPreferencesSnapshot: Equatable, Sendable {
+public struct EPUBReadingPreferencesSnapshot: Equatable, @unchecked Sendable {
     public let preferences: EPUBPreferences
     public let contentInsets: UIEdgeInsets
 

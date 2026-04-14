@@ -64,6 +64,35 @@ final class MCPClientTests: XCTestCase {
         XCTAssertEqual(response.error?.message, "Method not found")
     }
 
+    func testMCPErrorDescriptionKeepsServerDetail() {
+        let error = MCPError(code: MCPError.methodNotFound, message: "Method not found")
+
+        XCTAssertEqual(
+            error.errorDescription,
+            AppLocalization.format(
+                "errors.mcp.server_error_with_detail_format",
+                fallback: "The MCP server returned an error (%lld): %@",
+                locale: .autoupdatingCurrent,
+                Int64(MCPError.methodNotFound),
+                "Method not found"
+            )
+        )
+    }
+
+    func testMCPErrorDescriptionFallsBackWhenServerDetailIsEmpty() {
+        let error = MCPError(code: MCPError.methodNotFound, message: "   ")
+
+        XCTAssertEqual(
+            error.errorDescription,
+            AppLocalization.format(
+                "errors.mcp.server_error_format",
+                fallback: "The MCP server returned an error (%lld).",
+                locale: .autoupdatingCurrent,
+                Int64(MCPError.methodNotFound)
+            )
+        )
+    }
+
     func testMCPNotificationEncoding() throws {
         let notification = MCPNotification(method: "notifications/initialized")
 
