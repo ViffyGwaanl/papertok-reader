@@ -14,20 +14,25 @@ class MemoryCandidateStore {
   Future<void> _tail = Future<void>.value();
 
   Directory get workflowDir => Directory(p.join(rootDir.path, '.workflow'));
-  File get inboxFile => File(p.join(workflowDir.path, 'review_inbox_v1.json'));
+  File get _v2File => File(p.join(workflowDir.path, 'review_inbox_v2.json'));
+  File get _v1File => File(p.join(workflowDir.path, 'review_inbox_v1.json'));
+  // inboxFile always points at v2 — kept for backward-compat with any external
+  // callers and used by _writeAllUnlocked.
+  File get inboxFile => _v2File;
 
   Future<void> ensureInitialized() async {
     if (!await workflowDir.exists()) {
       await workflowDir.create(recursive: true);
     }
-    if (!await inboxFile.exists()) {
-      await inboxFile.writeAsString(_encode(const <MemoryCandidate>[]));
+    // Only seed an empty v2 file when neither version exists yet.
+    if (!await _v2File.exists() && !await _v1File.exists()) {
+      await _v2File.writeAsString(_encode(const <MemoryCandidate>[]));
     }
   }
 
   Future<List<MemoryCandidate>> list({MemoryCandidateStatus? status}) {
     return _enqueue(() async {
-      final candidates = await _readAllUnlocked();
+      final candidates = await _readAllUnlocked(allowV1Fallback: true);
       final filtered = status == null
           ? candidates
           : candidates.where((c) => c.status == status).toList();
@@ -38,7 +43,7 @@ class MemoryCandidateStore {
 
   Future<MemoryCandidate?> getById(String id) {
     return _enqueue(() async {
-      final candidates = await _readAllUnlocked();
+      final candidates = await _readAllUnlocked(allowV1Fallback: true);
       for (final candidate in candidates) {
         if (candidate.id == id) {
           return candidate;
@@ -96,6 +101,7 @@ class MemoryCandidateStore {
     MemoryCandidate Function(MemoryCandidate current) update,
   ) {
     return _enqueue(() async {
+      // Write path: only read v2 so we don't accidentally migrate v1 data.
       final candidates = await _readAllUnlocked();
       final index = candidates.indexWhere((c) => c.id == id);
       if (index < 0) {
@@ -108,9 +114,29 @@ class MemoryCandidateStore {
     });
   }
 
-  Future<List<MemoryCandidate>> _readAllUnlocked() async {
+  /// Reads all candidates from disk.
+  ///
+  /// When [allowV1Fallback] is true (the default is false), falls back to the
+  /// legacy v1 file if v2 does not yet exist — used by read-only operations
+  /// (`list`, `getById`) so existing users see their data before any write has
+  /// upgraded the store.  Write paths leave [allowV1Fallback] false so the
+  /// first mutation starts v2 from a clean slate (no implicit migration).
+  Future<List<MemoryCandidate>> _readAllUnlocked({
+    bool allowV1Fallback = false,
+  }) async {
     await ensureInitialized();
-    final raw = await inboxFile.readAsString();
+
+    // Prefer v2; optionally fall back to v1 for read-only display operations.
+    final File source;
+    if (await _v2File.exists()) {
+      source = _v2File;
+    } else if (allowV1Fallback && await _v1File.exists()) {
+      source = _v1File;
+    } else {
+      return <MemoryCandidate>[];
+    }
+
+    final raw = await source.readAsString();
     if (raw.trim().isEmpty) return <MemoryCandidate>[];
 
     try {
@@ -139,7 +165,7 @@ class MemoryCandidateStore {
 
   String _encode(List<MemoryCandidate> candidates) {
     final payload = <String, dynamic>{
-      'version': 1,
+      'version': 2,
       'candidates': candidates.map((c) => c.toJson()).toList(growable: false),
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
