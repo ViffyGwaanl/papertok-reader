@@ -701,6 +701,8 @@
   "memorySavedToDaily": "已保存到今日日记",
   "memorySavedToLongTerm": "已保存到长期记忆",
   "memoryAddedToReviewInbox": "已加入待审核队列",
+  "memoryOpenInReader": "在阅读器中打开",
+  "memoryOpenConversation": "打开对话",
   "memoryWorkflowActionFailed": "记忆操作失败",
   "memoryWorkflowNothingToSave": "没有可保存的内容",
   "memoryWorkflowSettingsTitle": "工作流",

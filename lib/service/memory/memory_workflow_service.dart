@@ -1,3 +1,7 @@
+import 'package:anx_reader/dao/book.dart';
+import 'package:anx_reader/l10n/generated/L10n.dart';
+import 'package:anx_reader/models/book.dart';
+import 'package:anx_reader/service/book.dart' as book_service;
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
 import 'package:anx_reader/service/memory/memory_candidate_store.dart';
@@ -5,6 +9,10 @@ import 'package:anx_reader/service/memory/memory_session_digest_service.dart';
 import 'package:anx_reader/service/memory/memory_source_kind.dart';
 import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
+import 'package:anx_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
+import 'package:anx_reader/utils/toast/common.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:langchain_core/chat_models.dart';
 
@@ -341,6 +349,49 @@ class MemoryWorkflowService {
       return collapsed;
     }
     return '${collapsed.substring(0, 77)}...';
+  }
+
+  /// Navigate into the reader at the position where [candidate] was captured.
+  /// No-op if the candidate has no bookId. Shows a toast if the book is not
+  /// found or is deleted.
+  Future<void> openInReader(
+    BuildContext context,
+    MemoryCandidate candidate,
+  ) async {
+    final bookId = candidate.bookId;
+    if (bookId == null) return;
+
+    late final Book book;
+    try {
+      book = await bookDao.selectBookById(bookId);
+    } catch (_) {
+      if (context.mounted) {
+        AnxToast.show(L10n.of(context).bookDeleted);
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    await book_service.pushToReadingPageWithContainer(
+      ProviderScope.containerOf(context),
+      context,
+      book,
+      cfi: candidate.cfi,
+    );
+  }
+
+  /// Navigate to the AI chat at the conversation where [candidate] was
+  /// captured. If [candidate.conversationId] is null, this is a no-op.
+  ///
+  /// TODO: wire a proper deep-link when AiChatPage accepts an initial
+  /// conversationId parameter so the exact conversation can be restored.
+  /// For now we route to the generic AI chat page.
+  Future<void> openInConversation(
+    BuildContext context,
+    MemoryCandidate candidate,
+  ) async {
+    if (candidate.conversationId == null) return;
+    await PapertokAiChatNavigator.show();
   }
 }
 

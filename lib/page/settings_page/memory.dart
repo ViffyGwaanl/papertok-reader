@@ -6,12 +6,14 @@ import 'package:anx_reader/providers/ai_draft_input.dart';
 import 'package:anx_reader/service/memory/markdown_memory_store.dart';
 import 'package:anx_reader/service/memory/memory_candidate.dart';
 import 'package:anx_reader/service/memory/memory_search_service.dart';
+import 'package:anx_reader/service/memory/memory_source_kind.dart';
 import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/memory/memory_workflow_service.dart';
 import 'package:anx_reader/service/memory/memory_write_coordinator.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class MemorySettingsPage extends StatelessWidget {
@@ -212,6 +214,33 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
                   ),
               ],
             ),
+            if ((candidate.sourceKind == MemorySourceKind.reading &&
+                    candidate.bookId != null) ||
+                candidate.conversationId != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    if (candidate.sourceKind == MemorySourceKind.reading &&
+                        candidate.bookId != null)
+                      _SourceActionButton(
+                        icon: Icons.menu_book_outlined,
+                        label: L10n.of(context).memoryOpenInReader,
+                        onTap: () =>
+                            _workflow.openInReader(context, candidate),
+                      ),
+                    if (candidate.conversationId != null)
+                      _SourceActionButton(
+                        icon: Icons.chat_bubble_outline,
+                        label: L10n.of(context).memoryOpenConversation,
+                        onTap: () =>
+                            _workflow.openInConversation(context, candidate),
+                      ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 8),
             if (candidate.status == MemoryCandidateStatus.pending)
               OverflowBar(
@@ -1039,6 +1068,57 @@ class _MemoryEditorPageState extends ConsumerState<MemoryEditorPage> {
                   keyboardType: TextInputType.multiline,
                 ),
               ),
+      ),
+    );
+  }
+}
+
+class _SourceActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _SourceActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: ClaudePalette.bg(context).withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: ClaudePalette.divider(context),
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: ClaudePalette.secondary(context)),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: ClaudePalette.secondary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

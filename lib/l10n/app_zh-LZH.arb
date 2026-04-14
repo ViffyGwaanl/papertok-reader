@@ -797,5 +797,7 @@
   "papersEpubEditionZh": "中文",
   "papersEpubEditionBilingual": "雙語",
   "papersTabExplain": "講解",
-  "papersTabOriginal": "原文"
+  "papersTabOriginal": "原文",
+  "memoryOpenInReader": "在閱讀器中開啟",
+  "memoryOpenConversation": "開啟對話"
 }

@@ -804,6 +804,8 @@
   "memorySavedToDaily": "Saved to today\u2019s daily note",
   "memorySavedToLongTerm": "Saved to long-term memory",
   "memoryAddedToReviewInbox": "Added to review inbox",
+  "memoryOpenInReader": "Open in reader",
+  "memoryOpenConversation": "Open conversation",
   "memoryWorkflowActionFailed": "Memory action failed",
   "memoryWorkflowNothingToSave": "Nothing to save to memory",
   "memoryWorkflowSettingsTitle": "Workflow",
