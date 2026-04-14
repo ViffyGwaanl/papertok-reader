@@ -18,8 +18,8 @@ import 'package:anx_reader/service/memory/memory_candidate.dart';
 import 'package:anx_reader/service/memory/memory_workflow_policy.dart';
 import 'package:anx_reader/service/memory/memory_workflow_service.dart';
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:anx_reader/utils/ai_reasoning_parser.dart';
-import 'package:anx_reader/widgets/ai/ai_collapsible_section.dart';
 import 'package:anx_reader/widgets/ai/tool_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
 import 'package:anx_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
@@ -37,9 +37,9 @@ import 'package:anx_reader/service/book.dart';
 import 'package:anx_reader/service/receive_file/share_inbox_cleanup_service.dart';
 import 'package:anx_reader/service/receive_file/share_inbox_paths.dart';
 import 'package:anx_reader/service/receive_file/share_safe_import.dart';
-import 'package:anx_reader/theme/app_elevation.dart';
-import 'package:anx_reader/theme/app_spacing.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
+import 'package:anx_reader/widgets/common/pt_collapsible_card.dart';
 import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1385,6 +1385,302 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
+  // Local-only state for toggles surfaced in the Add-to-Chat sheet but not
+  // yet wired to a backend. Persistence is intentionally out of scope for
+  // this wave (UI only).
+  bool _webSearchEnabled = false;
+
+  Future<void> _showAddToChatSheet(BuildContext context) async {
+    if (_isStreaming) return;
+    final l10n = L10n.of(context);
+    final activeSkill = AiSkillRegistry.byId(Prefs().activeAiSkillId);
+
+    Widget bigCard({
+      required IconData icon,
+      required String label,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onTap,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: ClaudePalette.elevated(context),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: ClaudePalette.divider(context),
+                    width: 0.5,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon,
+                        size: 26, color: ClaudePalette.accent(context)),
+                    const SizedBox(height: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: ClaudePalette.fg(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget toggleRow({
+      required IconData icon,
+      required String title,
+      required bool value,
+      required ValueChanged<bool> onChanged,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: ClaudePalette.secondary(context)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: ClaudePalette.fg(context),
+                ),
+              ),
+            ),
+            Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+              activeTrackColor: ClaudePalette.accent(context),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget navRow({
+      required IconData icon,
+      required String title,
+      String? trailingValue,
+      required VoidCallback onTap,
+    }) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon,
+                    size: 20, color: ClaudePalette.secondary(context)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: ClaudePalette.fg(context),
+                    ),
+                  ),
+                ),
+                if (trailingValue != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Text(
+                      trailingValue,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: ClaudePalette.tertiary(context),
+                      ),
+                    ),
+                  ),
+                Icon(Icons.chevron_right_rounded,
+                    size: 18, color: ClaudePalette.tertiary(context)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    await PTBottomSheet.show<void>(
+      context,
+      title: 'Add to Chat',
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocalState) {
+            final provider = _currentProvider;
+            final thinkingMode = _thinkingModeForProvider(provider.id);
+            final thinkingOn = thinkingMode != AiThinkingMode.off;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    bigCard(
+                      icon: Icons.photo_camera_outlined,
+                      label: 'Camera',
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _showAttachmentPicker();
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    bigCard(
+                      icon: Icons.photo_library_outlined,
+                      label: 'Photos',
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _showAttachmentPicker();
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    bigCard(
+                      icon: Icons.folder_outlined,
+                      label: 'Files',
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _showAttachmentPicker();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Divider(
+                    height: 1, color: ClaudePalette.divider(context)),
+                const SizedBox(height: 6),
+                toggleRow(
+                  icon: Icons.travel_explore_outlined,
+                  title: 'Web search',
+                  value: _webSearchEnabled,
+                  onChanged: (v) {
+                    setLocalState(() => _webSearchEnabled = v);
+                    setState(() {});
+                  },
+                ),
+                toggleRow(
+                  icon: Icons.psychology_outlined,
+                  title: 'Extended thinking',
+                  value: thinkingOn,
+                  onChanged: (v) {
+                    final next = Map<String, String>.from(
+                      Prefs().getAiConfig(provider.id),
+                    );
+                    next['thinking_mode'] = aiThinkingModeToString(
+                      v ? AiThinkingMode.high : AiThinkingMode.off,
+                    );
+                    Prefs().saveAiConfig(provider.id, next);
+                    setLocalState(() {});
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 6),
+                Divider(
+                    height: 1, color: ClaudePalette.divider(context)),
+                const SizedBox(height: 6),
+                navRow(
+                  icon: Icons.style_outlined,
+                  title: 'Choose style',
+                  trailingValue: activeSkill == null
+                      ? l10n.aiSkillNone
+                      : _localizedSkillName(context, activeSkill),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _showSkillPickerSheet();
+                  },
+                ),
+                navRow(
+                  icon: Icons.tune,
+                  title: l10n.aiChatEditModelTitle,
+                  trailingValue: _modelLabel(_selectedProviderId),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _editCurrentModel();
+                  },
+                ),
+                navRow(
+                  icon: Icons.psychology_alt_outlined,
+                  title: l10n.aiThinkingTitle,
+                  trailingValue:
+                      _thinkingModeLabel(thinkingMode, l10n),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _editThinkingMode();
+                  },
+                ),
+                navRow(
+                  icon: Icons.folder_special_outlined,
+                  title: 'Add to project',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showSkillPickerSheet() async {
+    final l10n = L10n.of(context);
+    final activeId = Prefs().activeAiSkillId;
+    await PTBottomSheet.show<void>(
+      context,
+      title: 'Choose style',
+      builder: (ctx) {
+        final skills = AiSkillRegistry.allSkills();
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PTPickerRow<String>(
+              value: '',
+              groupValue: activeId ?? '',
+              title: l10n.aiSkillNone,
+              leading: Icons.block,
+              onChanged: (_) {
+                Prefs().activeAiSkillId = null;
+                setState(() {});
+                Navigator.of(ctx).pop();
+              },
+            ),
+            for (final skill in skills)
+              PTPickerRow<String>(
+                value: skill.id,
+                groupValue: activeId ?? '',
+                title: _localizedSkillName(context, skill),
+                subtitle: _localizedSkillDesc(context, skill),
+                leading: Icons.auto_fix_high,
+                onChanged: (v) {
+                  Prefs().activeAiSkillId = v;
+                  setState(() {});
+                  Navigator.of(ctx).pop();
+                },
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   void prefillDraft({
     String? message,
     List<AttachmentItem>? attachments,
@@ -1964,9 +2260,17 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ],
       ),
     );
-    Widget inputBox = FilledContainer(
-      padding: const EdgeInsets.all(4),
-      radius: AppSpacing.cornerRadiusLarge,
+    Widget inputBox = Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: ClaudePalette.elevated(context),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: ClaudePalette.divider(context),
+          width: 0.5,
+        ),
+      ),
       child: SafeArea(
         top: false,
         bottom: widget.inputSafeAreaBottom,
@@ -2193,33 +2497,39 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.attach_file, size: 18),
-                          onPressed: _showAttachmentPicker,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(child: aiService),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          icon: Icon(
-                            _thinkingIcon(
-                              _thinkingModeForProvider(_selectedProviderId),
-                            ),
-                            size: 18,
+                  Material(
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => _showAddToChatSheet(context),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: ClaudePalette.card(context),
+                          border: Border.all(
+                            color: ClaudePalette.divider(context),
+                            width: 0.5,
                           ),
-                          tooltip: L10n.of(context).aiThinkingTitle,
-                          onPressed: _editThinkingMode,
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.tune, size: 18),
-                          tooltip: L10n.of(context).aiChatEditModelTitle,
-                          onPressed: _editCurrentModel,
+                        child: Icon(
+                          Icons.add_rounded,
+                          size: 20,
+                          color: ClaudePalette.fg(context),
                         ),
-                        _buildSkillButton(context),
-                      ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: aiService,
+                      ),
                     ),
                   ),
                   if (widget.onRequestMinimize != null)
@@ -2227,17 +2537,31 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       icon: const Icon(Icons.keyboard_arrow_down, size: 18),
                       onPressed: widget.onRequestMinimize,
                     ),
-                  IconButton(
-                    icon: Icon(
-                      chatIsStreaming ? Icons.stop : Icons.send,
-                      size: 18,
+                  Material(
+                    color: chatIsStreaming
+                        ? ClaudePalette.secondary(context)
+                        : ClaudePalette.accent(context),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: chatIsStreaming
+                          ? _cancelStreaming
+                          : () {
+                              HapticFeedback.lightImpact();
+                              _sendMessage();
+                            },
+                      child: SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Icon(
+                          chatIsStreaming
+                              ? Icons.stop_rounded
+                              : Icons.arrow_upward_rounded,
+                          size: 20,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                    onPressed: chatIsStreaming
-                        ? _cancelStreaming
-                        : () {
-                            HapticFeedback.lightImpact();
-                            _sendMessage();
-                          },
                   ),
                 ],
               ),
@@ -2627,42 +2951,35 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final isLastTurn =
         prevHumanIndex != null && prevHumanIndex == lastHumanIndex;
 
+    final maxBubbleWidth = MediaQuery.sizeOf(context).width * 0.8;
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: 8.0,
-        left: isUser ? 8.0 : 0,
-        right: isUser ? 0 : 8.0,
+      padding: EdgeInsets.fromLTRB(
+        isUser ? 8.0 : 12.0,
+        4.0,
+        isUser ? 8.0 : 12.0,
+        8.0,
       ),
       child: Row(
         mainAxisAlignment:
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(width: 8),
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: isUser
-                    ? MorandiPalette.sage(context).withValues(alpha: 0.15)
-                    : MorandiPalette.elevated(context),
-                borderRadius: BorderRadius.only(
-                  topLeft: isUser
-                      ? const Radius.circular(AppSpacing.cornerRadius)
-                      : Radius.zero,
-                  topRight: isUser
-                      ? Radius.zero
-                      : const Radius.circular(AppSpacing.cornerRadius),
-                  bottomLeft: isUser
-                      ? Radius.zero
-                      : const Radius.circular(AppSpacing.cornerRadius),
-                  bottomRight: isUser
-                      ? const Radius.circular(AppSpacing.cornerRadius)
-                      : Radius.zero,
-                ),
-                boxShadow: isUser ? null : AppElevation.level1(context),
-              ),
-              child: Column(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxWidth: isUser ? maxBubbleWidth : double.infinity),
+              child: Container(
+                padding: isUser
+                    ? const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10)
+                    : EdgeInsets.zero,
+                decoration: isUser
+                    ? BoxDecoration(
+                        color: ClaudePalette.accentTint(context),
+                        borderRadius: BorderRadius.circular(18),
+                      )
+                    : null,
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildScaledMessageContent(
@@ -2715,9 +3032,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ),
                 ],
               ),
+              ),
             ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
     );
@@ -2725,57 +3042,55 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   Widget _buildUserMessageItem(_UserChatItem item) {
     final content = _extractUserTextFromHuman(item.message);
+    final maxBubbleWidth = MediaQuery.sizeOf(context).width * 0.8;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
+      padding: const EdgeInsets.only(bottom: 8.0, left: 8.0, right: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(width: 8),
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: MorandiPalette.sage(context).withValues(alpha: 0.15),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppSpacing.cornerRadius),
-                  topRight: Radius.zero,
-                  bottomLeft: Radius.zero,
-                  bottomRight: Radius.circular(AppSpacing.cornerRadius),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: ClaudePalette.accentTint(context),
+                  borderRadius: BorderRadius.circular(18),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildScaledMessageContent(
-                      _buildHumanMessageBody(item.message)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => _showEditUserMessageDialog(
-                          item.index,
-                          item.message,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildScaledMessageContent(
+                        _buildHumanMessageBody(item.message)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => _showEditUserMessageDialog(
+                            item.index,
+                            item.message,
+                          ),
+                          child: Text(L10n.of(context).commonEdit),
                         ),
-                        child: Text(L10n.of(context).commonEdit),
-                      ),
-                      TextButton(
-                        onPressed: () => _copyPlainText(content),
-                        child: Text(L10n.of(context).commonCopy),
-                      ),
-                      _buildMessageMemoryMenu(
-                        text: content,
-                        sourceType: 'chat',
-                        messageNodeId: 'user:${item.index}',
-                      ),
-                    ],
-                  ),
-                ],
+                        TextButton(
+                          onPressed: () => _copyPlainText(content),
+                          child: Text(L10n.of(context).commonCopy),
+                        ),
+                        _buildMessageMemoryMenu(
+                          text: content,
+                          sourceType: 'chat',
+                          messageNodeId: 'user:${item.index}',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
     );
@@ -2803,30 +3118,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         item.userIndex != null && item.userIndex == lastHumanIndex;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, right: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(width: 8),
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: MorandiPalette.elevated(context),
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(AppSpacing.cornerRadius),
-                  bottomLeft: Radius.circular(AppSpacing.cornerRadius),
-                ),
-                boxShadow: AppElevation.level1(context),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildScaledMessageContent(
-                    _buildAssistantSections(content, isStreaming),
-                  ),
-                  Row(
+          _buildScaledMessageContent(
+            _buildAssistantSections(content, isStreaming),
+          ),
+          Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       if (item.variants.length > 1)
@@ -2880,11 +3179,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
         ],
       ),
     );
@@ -2938,88 +3232,112 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return copyText;
   }
 
-  Widget _buildAssistantSections(String content, bool isStreaming) {
-    // Extract the <think>...</think> summary (if any), then parse the rest for
-    // answer text + tool steps.
+  /// Walk the raw assistant content top-to-bottom and produce a chronological
+  /// list of inline parts (text / thinking / tool). Render-only; the original
+  /// model content is never mutated.
+  List<_AssistantPart> _splitIntoParts(String content) {
+    final parts = <_AssistantPart>[];
     final thinkRegex = RegExp(r'<think>([\s\S]*?)<\/think>');
-    final matches = thinkRegex.allMatches(content).toList(growable: false);
 
-    final thinking = matches
-        .map((m) => m.group(1))
-        .whereType<String>()
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .join('\n')
-        .trim();
+    void emitNonThink(String chunk) {
+      if (chunk.isEmpty) return;
+      // Reuse the existing reasoning parser for the non-think slice so that
+      // `<tool-step .../>` tags are extracted in order alongside the
+      // surrounding reply text.
+      final parsed = parseReasoningContent(chunk);
+      for (final entry in parsed.timeline) {
+        if (entry.type == ParsedReasoningEntryType.reply) {
+          final text = (entry.text ?? '').trim();
+          if (text.isEmpty) continue;
+          parts.add(_TextPart(entry.text!));
+        } else {
+          final step = entry.toolStep;
+          if (step != null) parts.add(_ToolPart(step));
+        }
+      }
+    }
 
-    final remaining = content.replaceAll(thinkRegex, '').trim();
-    final parsed = parseReasoningContent(remaining);
+    var cursor = 0;
+    for (final match in thinkRegex.allMatches(content)) {
+      if (match.start > cursor) {
+        emitNonThink(content.substring(cursor, match.start));
+      }
+      final thinkText = (match.group(1) ?? '').trim();
+      if (thinkText.isNotEmpty) {
+        parts.add(_ThinkingPart(thinkText));
+      }
+      cursor = match.end;
+    }
+    if (cursor < content.length) {
+      emitNonThink(content.substring(cursor));
+    }
+    return parts;
+  }
 
-    final answerText = parsed.timeline
-        .where((e) => e.type == ParsedReasoningEntryType.reply)
-        .map((e) => e.text ?? '')
-        .join('')
-        .trim();
-
-    final toolSteps = parsed.toolSteps;
-
-    final l10n = L10n.of(context);
-
+  Widget _buildAssistantSections(String content, bool isStreaming) {
+    final parts = _splitIntoParts(content);
     final children = <Widget>[];
 
-    if (answerText.isEmpty) {
+    if (parts.isEmpty) {
       children.add(
         isStreaming
             ? Skeletonizer.zone(child: Bone.multiText())
             : const SizedBox.shrink(),
       );
     } else {
-      children.add(
-        StyledMarkdown(
-          data: answerText,
-          selectable: true,
-        ),
-      );
-    }
-
-    if (thinking.isNotEmpty) {
-      children.add(const SizedBox(height: 8));
-      children.add(
-        AiCollapsibleSection(
-          title: l10n.aiSectionThinking,
-          icon: Icons.psychology_outlined,
-          iconTint: MorandiPalette.taupe(context),
-          child: StyledMarkdown(
-            data: thinking,
-            selectable: true,
-          ),
-        ),
-      );
-    }
-
-    if (toolSteps.isNotEmpty) {
-      children.add(const SizedBox(height: 8));
-      children.add(
-        AiCollapsibleSection(
-          title: l10n.aiSectionTools,
-          subtitle: '${toolSteps.length}',
-          icon: Icons.build_outlined,
-          iconTint: MorandiPalette.clay(context),
-          child: Column(
-            children: [
-              for (var i = 0; i < toolSteps.length; i++) ...[
-                _buildToolTile(toolSteps[i]),
-                if (i != toolSteps.length - 1) const SizedBox(height: 8),
-              ],
-            ],
-          ),
-        ),
-      );
+      for (final part in parts) {
+        switch (part) {
+          case _TextPart(:final md):
+            children.add(StyledMarkdown(data: md, selectable: true));
+          case _ThinkingPart(:final text):
+            children.add(_buildInlineThinking(text));
+          case _ToolPart(:final step):
+            children.add(
+              PTCollapsibleCard(
+                icon: Icons.build_outlined,
+                title: AiToolRegistry.displayNameForId(step.name),
+                iconTint: MorandiPalette.clay(context),
+                body: _buildToolTile(step),
+              ),
+            );
+        }
+      }
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: children,
+    );
+  }
+
+  Widget _buildInlineThinking(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.psychology_outlined,
+              size: 14,
+              color: ClaudePalette.tertiary(context),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                fontSize: 13,
+                color: ClaudePalette.tertiary(context),
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3481,6 +3799,25 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
     return _CollapsibleText(text: text, style: style);
   }
+}
+
+sealed class _AssistantPart {
+  const _AssistantPart();
+}
+
+class _TextPart extends _AssistantPart {
+  const _TextPart(this.md);
+  final String md;
+}
+
+class _ThinkingPart extends _AssistantPart {
+  const _ThinkingPart(this.text);
+  final String text;
+}
+
+class _ToolPart extends _AssistantPart {
+  const _ToolPart(this.step);
+  final ParsedToolStep step;
 }
 
 class _EditUserMessageResult {
