@@ -1424,6 +1424,84 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     _sendMessage();
   }
 
+  // Wave L: default icon mapping for the quick-suggestion chip strip. The
+  // existing quick prompt bank is string-only, so we pick a reasonable glyph
+  // by index and fall back to a lightbulb for custom user-defined prompts.
+  static const List<IconData> _quickSuggestionIcons = [
+    Icons.auto_awesome_outlined,
+    Icons.psychology_outlined,
+    Icons.summarize_outlined,
+    Icons.insights_outlined,
+    Icons.lightbulb_outline,
+    Icons.translate_outlined,
+    Icons.style_outlined,
+    Icons.help_outline,
+  ];
+
+  Widget _buildQuickSuggestions(List<Map<String, String>> quickPrompts) {
+    if (quickPrompts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        itemCount: quickPrompts.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final prompt = quickPrompts[index];
+          final icon = _quickSuggestionIcons[
+              index % _quickSuggestionIcons.length];
+          return Material(
+            color: Colors.transparent,
+            shape: const StadiumBorder(),
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                _useQuickPrompt(prompt['prompt']!);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: ClaudePalette.elevated(context),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: ClaudePalette.divider(context),
+                    width: 0.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: ClaudePalette.fg(context),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      prompt['label'] ?? '',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: ClaudePalette.fg(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _clearMessage() {
     if (_isStreaming) {
       return;
@@ -2322,9 +2400,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ],
       ),
     );
-    Widget inputBox = Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      padding: const EdgeInsets.all(6),
+    // Wave L: watch draft text so the send/mic swap and suggestion visibility
+    // react to every keystroke without manual setState.
+    final draftText = ref.watch(aiChatDraftInputProvider);
+    final draftIsEmpty = draftText.trim().isEmpty;
+    final chatMessagesAsync = ref.watch(aiChatProvider);
+    final chatIsEmpty = chatMessagesAsync.asData?.value.isEmpty ?? true;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Wave L: rounded pill composer with embedded + / send buttons, matching
+    // Claude's reference surface. Attachments / context notices still live in
+    // the Column above the pill.
+    final composerPill = Container(
       decoration: BoxDecoration(
         color: ClaudePalette.elevated(context),
         borderRadius: BorderRadius.circular(28),
@@ -2332,13 +2419,167 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           color: ClaudePalette.divider(context),
           width: 0.5,
         ),
+        boxShadow: isDarkMode
+            ? [
+                BoxShadow(
+                  color:
+                      ClaudePalette.divider(context).withValues(alpha: 0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Leading + button opens the Add-to-Chat sheet.
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _showAddToChatSheet(context);
+                },
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: 22,
+                    color: ClaudePalette.fg(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          // Expanding multiline text field.
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 8,
+              ),
+              child: TextField(
+                controller: inputController,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: ClaudePalette.fg(context),
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: L10n.of(context).aiHintInputPlaceholder,
+                  hintStyle: TextStyle(
+                    fontSize: 16,
+                    color: ClaudePalette.secondary(context),
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                ),
+                maxLines: 5,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendMessage(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          // Trailing send / stop / mic button.
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              transitionBuilder: (child, animation) => ScaleTransition(
+                scale: animation,
+                child: FadeTransition(opacity: animation, child: child),
+              ),
+              child: chatIsStreaming
+                  ? Material(
+                      key: const ValueKey('composer-stop'),
+                      color: ClaudePalette.secondary(context),
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          _cancelStreaming();
+                        },
+                        child: const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Icon(
+                            Icons.stop_rounded,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  : draftIsEmpty
+                      ? Material(
+                          key: const ValueKey('composer-mic'),
+                          color: Colors.transparent,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                            },
+                            child: SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: Icon(
+                                Icons.graphic_eq_rounded,
+                                size: 22,
+                                color: ClaudePalette.fg(context),
+                              ),
+                            ),
+                          ),
+                        )
+                      : Material(
+                          key: const ValueKey('composer-send'),
+                          color: ClaudePalette.accent(context),
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              _sendMessage();
+                            },
+                            child: const SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: Icon(
+                                Icons.arrow_upward_rounded,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Widget inputBox = Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: SafeArea(
         top: false,
         bottom: widget.inputSafeAreaBottom,
         child: Padding(
           padding: EdgeInsets.only(bottom: widget.bottomPadding),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if ((contextNotice ?? '').trim().isNotEmpty ||
                   (usageSummary ?? '').trim().isNotEmpty)
@@ -2523,109 +2764,37 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     },
                   ),
                 ),
-              Row(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        spacing: 8,
-                        children: quickPrompts.map((prompt) {
-                          return ActionChip(
-                            // labelPadding: EdgeInsets.all(0),
-                            label: Text(prompt['label']!),
-                            onPressed: () => _useQuickPrompt(prompt['prompt']!),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 4),
-              TextField(
-                controller: inputController,
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: L10n.of(context).aiHintInputPlaceholder,
-                  border: InputBorder.none,
+              // Wave L: quick suggestion chip strip — only visible while the
+              // conversation is empty so it feels like a first-run surface.
+              if (chatIsEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: _buildQuickSuggestions(quickPrompts),
                 ),
-                maxLines: 5,
-                minLines: 1,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _sendMessage(),
-              ),
-              SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Material(
-                    color: Colors.transparent,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => _showAddToChatSheet(context),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: ClaudePalette.card(context),
-                          border: Border.all(
-                            color: ClaudePalette.divider(context),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.add_rounded,
-                          size: 20,
-                          color: ClaudePalette.fg(context),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+              composerPill,
+              // Wave L: secondary row below the pill for the provider picker
+              // and minimize affordance — keeps the pill itself unclutterred.
+              Padding(
+                padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
+                child: Row(
+                  children: [
+                    Expanded(
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: aiService,
                       ),
                     ),
-                  ),
-                  if (widget.onRequestMinimize != null)
-                    IconButton(
-                      icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-                      onPressed: widget.onRequestMinimize,
-                    ),
-                  Material(
-                    color: chatIsStreaming
-                        ? ClaudePalette.secondary(context)
-                        : ClaudePalette.accent(context),
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: chatIsStreaming
-                          ? _cancelStreaming
-                          : () {
-                              HapticFeedback.lightImpact();
-                              _sendMessage();
-                            },
-                      child: SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Icon(
-                          chatIsStreaming
-                              ? Icons.stop_rounded
-                              : Icons.arrow_upward_rounded,
-                          size: 20,
-                          color: Colors.white,
+                    if (widget.onRequestMinimize != null)
+                      IconButton(
+                        icon: Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 18,
+                          color: ClaudePalette.secondary(context),
                         ),
+                        onPressed: widget.onRequestMinimize,
                       ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
