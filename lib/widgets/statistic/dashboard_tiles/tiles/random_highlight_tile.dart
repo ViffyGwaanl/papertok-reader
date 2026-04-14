@@ -1,6 +1,7 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book_note.dart';
 import 'package:anx_reader/providers/random_highlight_provider.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/date/relative_time_formatter.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
@@ -85,20 +86,27 @@ class _HighlightCard extends StatelessWidget {
           child: SingleChildScrollView(
             child: Text(
               quote,
-              style: theme.textTheme.titleMedium,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: ClaudePalette.fg(context),
+              ),
             ),
           ),
         ),
-        const Divider(height: 2),
+        Divider(height: 2, color: ClaudePalette.divider(context)),
         Text(
           data.book?.title ?? L10n.of(context).randomHighlightUnknownBook,
-          style: theme.textTheme.labelLarge,
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: ClaudePalette.fg(context),
+            fontWeight: FontWeight.w500,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
         if (data.note.chapter.isNotEmpty)
           Text(
             data.note.chapter,
-            style: theme.textTheme.bodySmall,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: ClaudePalette.secondary(context),
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         Row(
@@ -106,7 +114,9 @@ class _HighlightCard extends StatelessWidget {
             Expanded(
               child: Text(
                 timestamp,
-                style: theme.textTheme.bodySmall,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.tertiary(context),
+                ),
               ),
             ),
             IconButton(
@@ -133,11 +143,17 @@ class _EmptyHighlight extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.sticky_note_2_outlined, size: 32),
+        Icon(
+          Icons.sticky_note_2_outlined,
+          size: 24,
+          color: ClaudePalette.tertiary(context),
+        ),
         const SizedBox(height: 8),
         Text(
           L10n.of(context).randomHighlightEmptyState,
-          style: theme.textTheme.bodyMedium,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: ClaudePalette.secondary(context),
+          ),
         ),
         TextButton.icon(
           onPressed: onRefresh,

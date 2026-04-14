@@ -1,5 +1,7 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/providers/reading_streak_provider.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
+import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
@@ -47,8 +49,9 @@ class _ReadingStreakContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasReadToday = _isSameDay(data.lastReadingDay, DateTime.now());
-    final fireColor =
-        hasReadToday ? theme.colorScheme.primary : theme.colorScheme.outline;
+    final fireColor = hasReadToday
+        ? MorandiPalette.clay(context)
+        : ClaudePalette.tertiary(context);
     final l10n = L10n.of(context);
     final encouragement = hasReadToday
         ? l10n.tileReadingStreakEncouragementActive
@@ -72,13 +75,15 @@ class _ReadingStreakContent extends StatelessWidget {
                   Text(
                     l10n.tileReadingStreakCurrent(data.currentStreak),
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: fireColor,
-                      fontWeight: FontWeight.bold,
+                      color: ClaudePalette.fg(context),
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: theme.textTheme.bodySmall,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
                   ),
                 ],
               ),
@@ -98,7 +103,9 @@ class _ReadingStreakContent extends StatelessWidget {
         const Spacer(),
         Text(
           encouragement,
-          style: theme.textTheme.bodyMedium,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: ClaudePalette.secondary(context),
+          ),
         ),
       ],
     );
@@ -124,17 +131,24 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
+        color: ClaudePalette.elevated(context),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: theme.textTheme.labelSmall),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: ClaudePalette.secondary(context),
+            ),
+          ),
           Text(
             value,
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: ClaudePalette.fg(context),
+            ),
           ),
         ],
       ),

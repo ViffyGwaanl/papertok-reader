@@ -1,6 +1,7 @@
 import 'package:anx_reader/enums/chart_mode.dart';
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/statistic_data_model.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_registry.dart';
 import 'package:anx_reader/providers/statistic_data.dart';
 import 'package:anx_reader/providers/total_reading_time.dart';
@@ -77,16 +78,28 @@ class PeriodSummaryTile extends StatisticsDashboardTileBase {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(formatted, style: theme.textTheme.headlineSmall),
               Text(
-                  '${(periodSeconds / totalSeconds * 100).toStringAsFixed(1)}%',
-                  style: theme.textTheme.labelMedium),
+                formatted,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: ClaudePalette.fg(context),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '${(periodSeconds / totalSeconds * 100).toStringAsFixed(1)}%',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: ClaudePalette.accent(context),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const Spacer(),
               LinearProgressIndicator(
                 value: periodSeconds == 0
                     ? 0
                     : (periodSeconds / totalSeconds).clamp(0, 1).toDouble(),
                 minHeight: 6,
+                color: ClaudePalette.accent(context),
+                backgroundColor: ClaudePalette.divider(context),
               ),
             ],
           );

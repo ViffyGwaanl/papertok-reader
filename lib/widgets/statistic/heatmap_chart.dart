@@ -27,7 +27,7 @@ class HeatmapChart extends ConsumerWidget {
       showText: false,
       scrollable: true,
       colorsets: {
-        1: Theme.of(context).colorScheme.primary,
+        1: ClaudePalette.accent(context),
       },
       onClick: (value) {
         ref.read(statisticDataProvider.notifier).setIsSelectingDay(true, value);

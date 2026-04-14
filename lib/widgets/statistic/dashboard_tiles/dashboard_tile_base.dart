@@ -4,6 +4,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/main.dart';
 import 'package:anx_reader/providers/dashboard_tiles_provider.dart';
 import 'package:anx_reader/service/vibration_service.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
 import 'package:anx_reader/widgets/common/fitted_text.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_detail_view.dart';
@@ -39,15 +40,15 @@ abstract class StatisticsDashboardTileBase {
     return FilledContainer(
       width: double.infinity,
       height: double.infinity,
-      radius: 16,
-      color: Theme.of(context).colorScheme.surfaceContainer,
+      radius: 14,
+      color: ClaudePalette.card(context),
       child: Stack(
         children: [
           Positioned(
             bottom: -20,
             right: -20,
             child: Opacity(
-              opacity: 0.1,
+              opacity: 0.08,
               child: Transform.rotate(
                 angle: -0.2,
                 child: buildCorner(context, ref),
@@ -56,7 +57,7 @@ abstract class StatisticsDashboardTileBase {
           ),
           Container(
             color: Colors.transparent,
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -64,7 +65,11 @@ abstract class StatisticsDashboardTileBase {
                 if (title.isNotEmpty)
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style:
+                        Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: ClaudePalette.fg(context),
+                              fontWeight: FontWeight.w500,
+                            ),
                   ),
                 Expanded(
                   child: buildContent(context, ref),
@@ -117,7 +122,7 @@ abstract class StatisticsDashboardTileBase {
     return Icon(
       iconData,
       size: 90,
-      color: Theme.of(context).colorScheme.primary,
+      color: ClaudePalette.accent(context),
     );
   }
 
@@ -125,7 +130,7 @@ abstract class StatisticsDashboardTileBase {
     return Text(
       text,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
+            color: ClaudePalette.accent(context),
             fontSize: 80,
             fontWeight: FontWeight.bold,
           ),

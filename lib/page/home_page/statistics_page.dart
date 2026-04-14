@@ -10,7 +10,7 @@ import 'package:anx_reader/utils/date/convert_seconds.dart';
 import 'package:anx_reader/utils/date/week_of_year.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
 import 'package:anx_reader/theme/app_spacing.dart';
-import 'package:anx_reader/theme/morandi_palette.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
 import 'package:anx_reader/widgets/common/container/outlined_container.dart';
 import 'package:anx_reader/widgets/common/pt_card.dart';
@@ -141,7 +141,7 @@ class _DateBooksState extends ConsumerState<DateBooks> {
         fontFamily: 'SourceHanSerif',
         fontWeight: FontWeight.bold,
         overflow: TextOverflow.ellipsis,
-        color: MorandiPalette.primaryText(context),
+        color: ClaudePalette.fg(context),
       );
 
   List<int> deleteBookIds = [];
@@ -308,13 +308,14 @@ class BookStatisticItem extends StatelessWidget {
   );
   TextStyle _bookAuthorStyle(BuildContext context) => TextStyle(
         fontSize: 12,
-        color: MorandiPalette.secondaryText(context),
+        color: ClaudePalette.secondary(context),
         overflow: TextOverflow.ellipsis,
       );
-  final TextStyle bookReadingTimeStyle = const TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-  );
+  TextStyle _bookReadingTimeStyle(BuildContext context) => TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w500,
+        color: ClaudePalette.fg(context),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -365,7 +366,7 @@ class BookStatisticItem extends StatelessWidget {
                                   // getReadingTime(context),
                                   convertSeconds(readingTime),
                                   textAlign: TextAlign.end,
-                                  style: bookReadingTimeStyle),
+                                  style: _bookReadingTimeStyle(context)),
                             ],
                           ),
                           const SizedBox(height: 20),
@@ -375,14 +376,19 @@ class BookStatisticItem extends StatelessWidget {
                                 child: LinearProgressIndicator(
                                   value: snapshot.data!.readingPercentage,
                                   backgroundColor:
-                                      MorandiPalette.divider(context),
+                                      ClaudePalette.divider(context),
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                      MorandiPalette.sage(context)),
+                                      ClaudePalette.accent(context)),
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                  '${(snapshot.data!.readingPercentage * 100).toInt()} %'),
+                                '${(snapshot.data!.readingPercentage * 100).toInt()} %',
+                                style: TextStyle(
+                                  color: ClaudePalette.accent(context),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ],
                           ),
                         ]),

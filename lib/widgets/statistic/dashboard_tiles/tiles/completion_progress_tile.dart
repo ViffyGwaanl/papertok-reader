@@ -1,6 +1,7 @@
 import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/providers/reading_completion_provider.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_base.dart';
 import 'package:anx_reader/widgets/statistic/dashboard_tiles/dashboard_tile_metadata.dart';
@@ -85,25 +86,36 @@ class _CompletionContent extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     book.title,
-                                    style: theme.textTheme.bodyMedium,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                      color: ClaudePalette.fg(context),
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 Text(
                                   '$percent%',
-                                  style: theme.textTheme.titleMedium,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: ClaudePalette.accent(context),
+                                  ),
                                 ),
                               ],
                             );
                           },
-                          separatorBuilder: (_, __) =>
-                              const Divider(height: 12, thickness: 0.4),
+                          separatorBuilder: (_, __) => Divider(
+                            height: 12,
+                            thickness: 0.5,
+                            color: ClaudePalette.divider(context),
+                          ),
                         ),
                       ),
                     ),
                     Text(
                       l10n.tileCompletionProgressMotivation,
-                      style: theme.textTheme.bodySmall,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: ClaudePalette.secondary(context),
+                      ),
                     ),
                   ],
                 ),
@@ -132,7 +144,8 @@ class _CompletionRing extends StatelessWidget {
             child: CircularProgressIndicator(
               value: normalized as double,
               strokeWidth: 10,
-              color: Theme.of(context).colorScheme.primary,
+              color: ClaudePalette.accent(context),
+              backgroundColor: ClaudePalette.divider(context),
             ),
           ),
           Column(
@@ -140,11 +153,16 @@ class _CompletionRing extends StatelessWidget {
             children: [
               Text(
                 '${(normalized * 100).toStringAsFixed(0)}%',
-                style: theme.textTheme.headlineSmall,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: ClaudePalette.fg(context),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Text(
                 L10n.of(context).tileCompletionProgressAverageLabel,
-                style: theme.textTheme.labelSmall,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
               ),
             ],
           ),

@@ -1,3 +1,4 @@
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/date/convert_seconds.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -28,8 +29,7 @@ class BookReadingChart extends StatefulWidget {
 class _BookReadingChartState extends State<BookReadingChart> {
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
+    final primaryColor = ClaudePalette.accent(context);
     final formatter = DateFormat('M/d');
 
     final dataLength = widget.cumulativeValues.length;

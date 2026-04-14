@@ -2,6 +2,7 @@ import 'package:anx_reader/l10n/generated/L10n.dart';
 import 'package:anx_reader/models/book.dart';
 import 'package:anx_reader/providers/last_read_book_provider.dart';
 import 'package:anx_reader/service/book.dart';
+import 'package:anx_reader/theme/claude_palette.dart';
 import 'package:anx_reader/utils/date/relative_time_formatter.dart';
 import 'package:anx_reader/widgets/bookshelf/book_cover.dart';
 import 'package:anx_reader/widgets/common/async_skeleton_wrapper.dart';
@@ -115,24 +116,33 @@ class _ContinueReadingContent extends StatelessWidget {
                 book.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleMedium,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: ClaudePalette.fg(context),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 book.author,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: theme.textTheme.labelSmall,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: ClaudePalette.tertiary(context),
+                ),
               ),
               const SizedBox(height: 6),
               LinearProgressIndicator(
                 value: book.readingPercentage.clamp(0, 1),
                 minHeight: 6,
+                color: ClaudePalette.accent(context),
+                backgroundColor: ClaudePalette.divider(context),
               ),
             ],
           ),
@@ -153,11 +163,17 @@ class _EmptyState extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.menu_book_outlined, size: 32),
+        Icon(
+          Icons.menu_book_outlined,
+          size: 24,
+          color: ClaudePalette.tertiary(context),
+        ),
         const SizedBox(height: 8),
         Text(
           l10n.tileContinueReadingEmptyState,
-          style: Theme.of(context).textTheme.bodyMedium,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: ClaudePalette.secondary(context),
+              ),
           textAlign: TextAlign.center,
         ),
         TextButton.icon(
