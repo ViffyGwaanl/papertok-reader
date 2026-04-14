@@ -81,8 +81,7 @@ void main() {
     );
   });
 
-  test('v2 takes precedence when both files exist', () async {
-    // Put a stale v1 row that should be ignored once v2 exists.
+  test('first write migrates v1 data into v2 and both are visible', () async {
     final v1File =
         File(p.join(tempRoot.path, '.workflow', 'review_inbox_v1.json'));
     v1File.createSync(recursive: true);
@@ -90,7 +89,7 @@ void main() {
       'version': 1,
       'candidates': [
         {
-          'id': 'stale-v1',
+          'id': 'legacy',
           'summary': 's',
           'text': 't',
           'targetDoc': 'daily',
@@ -101,11 +100,10 @@ void main() {
       ],
     }));
 
-    // Write a fresh v2 via the store.
     final store = MemoryCandidateStore(rootDir: tempRoot);
     await store.upsert(
       const MemoryCandidate(
-        id: 'fresh-v2',
+        id: 'fresh',
         summary: 's',
         text: 't',
         targetDoc: MemoryDocTarget.daily,
@@ -115,8 +113,59 @@ void main() {
       ),
     );
 
+    // Both candidates visible through a fresh store.
     final store2 = MemoryCandidateStore(rootDir: tempRoot);
     final items = await store2.list();
-    expect(items.map((c) => c.id), ['fresh-v2']);
+    expect(items.map((c) => c.id), containsAll(['legacy', 'fresh']));
+
+    // v2 file exists and contains both rows.
+    final v2File =
+        File(p.join(tempRoot.path, '.workflow', 'review_inbox_v2.json'));
+    expect(v2File.existsSync(), isTrue);
+    final decoded =
+        jsonDecode(v2File.readAsStringSync()) as Map<String, dynamic>;
+    expect((decoded['candidates'] as List).length, 2);
+
+    // v1 file left untouched on disk.
+    expect(v1File.existsSync(), isTrue);
+  });
+
+  test('dismiss on a legacy v1 candidate migrates and updates status', () async {
+    final v1File =
+        File(p.join(tempRoot.path, '.workflow', 'review_inbox_v1.json'));
+    v1File.createSync(recursive: true);
+    v1File.writeAsStringSync(jsonEncode({
+      'version': 1,
+      'candidates': [
+        {
+          'id': 'legacy-1',
+          'summary': 's',
+          'text': 't',
+          'targetDoc': 'daily',
+          'createdAtMs': 1,
+          'status': 'pending',
+          'sourceType': 'session',
+        },
+        {
+          'id': 'legacy-2',
+          'summary': 's',
+          'text': 't',
+          'targetDoc': 'daily',
+          'createdAtMs': 2,
+          'status': 'pending',
+          'sourceType': 'session',
+        },
+      ],
+    }));
+
+    final store = MemoryCandidateStore(rootDir: tempRoot);
+    await store.dismiss('legacy-1');
+
+    final items = await store.list();
+    expect(items.length, 2);
+    final dismissed = items.firstWhere((c) => c.id == 'legacy-1');
+    expect(dismissed.status, MemoryCandidateStatus.dismissed);
+    final stillPending = items.firstWhere((c) => c.id == 'legacy-2');
+    expect(stillPending.status, MemoryCandidateStatus.pending);
   });
 }

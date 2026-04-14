@@ -32,7 +32,7 @@ class MemoryCandidateStore {
 
   Future<List<MemoryCandidate>> list({MemoryCandidateStatus? status}) {
     return _enqueue(() async {
-      final candidates = await _readAllUnlocked(allowV1Fallback: true);
+      final candidates = await _readAllUnlocked();
       final filtered = status == null
           ? candidates
           : candidates.where((c) => c.status == status).toList();
@@ -43,7 +43,7 @@ class MemoryCandidateStore {
 
   Future<MemoryCandidate?> getById(String id) {
     return _enqueue(() async {
-      final candidates = await _readAllUnlocked(allowV1Fallback: true);
+      final candidates = await _readAllUnlocked();
       for (final candidate in candidates) {
         if (candidate.id == id) {
           return candidate;
@@ -101,7 +101,6 @@ class MemoryCandidateStore {
     MemoryCandidate Function(MemoryCandidate current) update,
   ) {
     return _enqueue(() async {
-      // Write path: only read v2 so we don't accidentally migrate v1 data.
       final candidates = await _readAllUnlocked();
       final index = candidates.indexWhere((c) => c.id == id);
       if (index < 0) {
@@ -116,21 +115,17 @@ class MemoryCandidateStore {
 
   /// Reads all candidates from disk.
   ///
-  /// When [allowV1Fallback] is true (the default is false), falls back to the
-  /// legacy v1 file if v2 does not yet exist — used by read-only operations
-  /// (`list`, `getById`) so existing users see their data before any write has
-  /// upgraded the store.  Write paths leave [allowV1Fallback] false so the
-  /// first mutation starts v2 from a clean slate (no implicit migration).
-  Future<List<MemoryCandidate>> _readAllUnlocked({
-    bool allowV1Fallback = false,
-  }) async {
+  /// Prefers v2 when it exists; falls back to v1 so that read AND write paths
+  /// both see legacy data before any migration write has occurred.  On first
+  /// write the caller merges the v1 list with the new candidate and persists
+  /// the result to v2, naturally migrating v1 → v2 in one step.
+  Future<List<MemoryCandidate>> _readAllUnlocked() async {
     await ensureInitialized();
 
-    // Prefer v2; optionally fall back to v1 for read-only display operations.
-    final File source;
-    if (await _v2File.exists()) {
+    File source;
+    if (_v2File.existsSync()) {
       source = _v2File;
-    } else if (allowV1Fallback && await _v1File.exists()) {
+    } else if (_v1File.existsSync()) {
       source = _v1File;
     } else {
       return <MemoryCandidate>[];
@@ -153,7 +148,7 @@ class MemoryCandidateStore {
         }
       }
     } catch (_) {
-      // Fall through to a clean empty state if the workflow file is malformed.
+      // Fall through to clean empty state if the file is malformed.
     }
     return <MemoryCandidate>[];
   }
