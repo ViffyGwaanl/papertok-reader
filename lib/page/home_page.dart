@@ -28,6 +28,7 @@ import 'package:anx_reader/providers/sync.dart';
 import 'package:anx_reader/config/shared_preference_provider.dart';
 import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/common/container/filled_container.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/home/icon_only_native_tab_bar.dart';
 import 'package:anx_reader/widgets/settings/about.dart';
 import 'package:flutter/cupertino.dart';
@@ -35,7 +36,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -91,24 +91,24 @@ class _HomePageState extends ConsumerState<HomePage> {
     AnxLog.info('WebView2 version: $availableVersion');
 
     if (availableVersion == null) {
-      SmartDialog.show(
-        builder: (context) => AlertDialog(
-          title: const Icon(Icons.error),
-          content: Text(L10n.of(context).webview2NotInstalled),
-          actions: [
-            TextButton(
-              onPressed: () => {
-                launchUrl(
-                  Uri.parse(
-                    'https://developer.microsoft.com/en-us/microsoft-edge/webview2',
-                  ),
-                  mode: LaunchMode.externalApplication,
+      if (!mounted) return;
+      PTDialog.show(
+        context,
+        message: L10n.of(context).webview2NotInstalled,
+        actions: [
+          PTDialogAction(
+            label: L10n.of(context).webview2Install,
+            isDefault: true,
+            onPressed: () {
+              launchUrl(
+                Uri.parse(
+                  'https://developer.microsoft.com/en-us/microsoft-edge/webview2',
                 ),
-              },
-              child: Text(L10n.of(context).webview2Install),
-            ),
-          ],
-        ),
+                mode: LaunchMode.externalApplication,
+              );
+            },
+          ),
+        ],
       );
     } else {
       webViewEnvironment = await WebViewEnvironment.create(
@@ -120,20 +120,19 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _showDbUpdatedDialog() {
-    SmartDialog.show(
-      clickMaskDismiss: false,
-      builder: (context) => AlertDialog(
-        title: Text(L10n.of(context).commonAttention),
-        content: Text(L10n.of(context).dbUpdatedTip),
-        actions: [
-          TextButton(
-            onPressed: () {
-              SmartDialog.dismiss();
-            },
-            child: Text(L10n.of(context).commonOk),
-          ),
-        ],
-      ),
+    if (!mounted) return;
+    PTDialog.show(
+      context,
+      barrierDismissible: false,
+      title: L10n.of(context).commonAttention,
+      message: L10n.of(context).dbUpdatedTip,
+      actions: [
+        PTDialogAction(
+          label: L10n.of(context).commonOk,
+          isDefault: true,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
     );
   }
 

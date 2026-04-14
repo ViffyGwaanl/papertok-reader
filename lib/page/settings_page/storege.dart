@@ -8,6 +8,7 @@ import 'package:anx_reader/providers/storage_info.dart';
 import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/utils/get_path/storage_migration.dart';
 import 'package:anx_reader/utils/platform_utils.dart';
+import 'package:anx_reader/utils/toast/common.dart';
 import 'package:anx_reader/widgets/common/anx_button.dart';
 import 'package:anx_reader/widgets/delete_confirm.dart';
 import 'package:anx_reader/widgets/settings/settings_section.dart';
@@ -66,12 +67,7 @@ class _StorageSettingsState extends ConsumerState<StorageSettings>
     final isEmpty = await isDirectoryEmpty(result);
     if (!isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(L10n.of(context).storagePathNotEmpty),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        AnxToast.show(L10n.of(context).storagePathNotEmpty);
       }
       return;
     }
@@ -84,12 +80,7 @@ class _StorageSettingsState extends ConsumerState<StorageSettings>
       await testFile.delete();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(L10n.of(context).storagePathNoPermission),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        AnxToast.show(L10n.of(context).storagePathNoPermission);
       }
       return;
     }
@@ -133,18 +124,9 @@ class _StorageSettingsState extends ConsumerState<StorageSettings>
           _currentStoragePath = _selectedNewPath;
           _selectedNewPath = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(L10n.of(context).storageMigrationSuccess),
-          ),
-        );
+        AnxToast.show(L10n.of(context).storageMigrationSuccess);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(L10n.of(context).storageMigrationFailed),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        AnxToast.show(L10n.of(context).storageMigrationFailed);
       }
     }
   }

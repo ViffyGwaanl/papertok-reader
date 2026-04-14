@@ -11,6 +11,7 @@ import 'package:anx_reader/utils/save_img.dart';
 import 'package:anx_reader/utils/log/common.dart';
 import 'package:anx_reader/utils/share_file.dart';
 import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -188,19 +189,12 @@ $displayText''';
       useAgent: false,
     );
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+    await PTBottomSheet.show<void>(
+      context,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: _AiImageAnalysisSheet(
-              stream: stream,
-              onContinueAsk: _continueAskAiWithAnalysis,
-            ),
-          ),
+        return _AiImageAnalysisSheet(
+          stream: stream,
+          onContinueAsk: _continueAskAiWithAnalysis,
         );
       },
     );

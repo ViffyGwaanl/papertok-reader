@@ -7,6 +7,8 @@ import 'package:anx_reader/service/papertok/models.dart';
 import 'package:anx_reader/service/papertok/papertok_api.dart';
 import 'package:anx_reader/theme/morandi_palette.dart';
 import 'package:anx_reader/utils/page_transitions.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -145,58 +147,53 @@ class _PapersPageState extends State<PapersPage> {
   }
 
   Future<void> _pickDateFilter() async {
-    await showModalBottomSheet(
-      context: context,
+    await PTBottomSheet.show<String>(
+      context,
       builder: (context) {
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              ListTile(
-                title: const Text('Latest'),
-                subtitle: const Text('Use the newest available PaperTok day'),
-                trailing:
-                    _dayFilter == 'latest' ? const Icon(Icons.check) : null,
-                onTap: () {
-                  Navigator.pop(context, 'latest');
-                },
-              ),
-              ListTile(
-                title: const Text('All days'),
-                subtitle: const Text('Random across the whole archive'),
-                trailing: _dayFilter == 'all' ? const Icon(Icons.check) : null,
-                onTap: () {
-                  Navigator.pop(context, 'all');
-                },
-              ),
-              ListTile(
-                title: const Text('Pick a date'),
-                subtitle: Text(
-                  _dayFilter == 'latest' || _dayFilter == 'all'
-                      ? 'Choose a specific day'
-                      : _dayFilter,
-                ),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final now = DateTime.now();
-                  final initial = _parseDay(_dayFilter) ?? now;
-                  final picked = await showDatePicker(
-                    context: this.context,
-                    initialDate: initial,
-                    firstDate: DateTime(2020, 1, 1),
-                    lastDate: DateTime(now.year + 1, 12, 31),
-                  );
-                  if (picked == null || !mounted) return;
-                  final day = _formatDay(picked);
-                  if (_dayFilter == day) return;
-                  setState(() {
-                    _dayFilter = day;
-                  });
-                  await _loadMore(reset: true);
-                },
-              ),
-            ],
-          ),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PTPickerRow<String>(
+              value: 'latest',
+              groupValue: _dayFilter,
+              title: 'Latest',
+              subtitle: 'Use the newest available PaperTok day',
+              onChanged: (v) => Navigator.pop(context, v),
+            ),
+            PTPickerRow<String>(
+              value: 'all',
+              groupValue: _dayFilter,
+              title: 'All days',
+              subtitle: 'Random across the whole archive',
+              onChanged: (v) => Navigator.pop(context, v),
+            ),
+            PTPickerRow<String>(
+              value: '__pick__',
+              groupValue: null,
+              title: 'Pick a date',
+              subtitle: _dayFilter == 'latest' || _dayFilter == 'all'
+                  ? 'Choose a specific day'
+                  : _dayFilter,
+              onChanged: (_) async {
+                Navigator.pop(context);
+                final now = DateTime.now();
+                final initial = _parseDay(_dayFilter) ?? now;
+                final picked = await showDatePicker(
+                  context: this.context,
+                  initialDate: initial,
+                  firstDate: DateTime(2020, 1, 1),
+                  lastDate: DateTime(now.year + 1, 12, 31),
+                );
+                if (picked == null || !mounted) return;
+                final day = _formatDay(picked);
+                if (_dayFilter == day) return;
+                setState(() {
+                  _dayFilter = day;
+                });
+                await _loadMore(reset: true);
+              },
+            ),
+          ],
         );
       },
     ).then((result) async {
@@ -211,34 +208,31 @@ class _PapersPageState extends State<PapersPage> {
 
   Future<void> _editSearch() async {
     final controller = TextEditingController(text: _searchQuery);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Search papers'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Search title or summary',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, _searchQuery),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, ''),
-              child: const Text('Clear'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Apply'),
-            ),
-          ],
-        );
-      },
+    final result = await PTDialog.show<String>(
+      context,
+      title: 'Search papers',
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        decoration: const InputDecoration(
+          hintText: 'Search title or summary',
+        ),
+      ),
+      actions: [
+        PTDialogAction(
+          label: 'Cancel',
+          onPressed: () => Navigator.pop(context, _searchQuery),
+        ),
+        PTDialogAction(
+          label: 'Clear',
+          onPressed: () => Navigator.pop(context, ''),
+        ),
+        PTDialogAction(
+          label: 'Apply',
+          isDefault: true,
+          onPressed: () => Navigator.pop(context, controller.text.trim()),
+        ),
+      ],
     );
 
     if (result != null && mounted) {
@@ -446,7 +440,12 @@ class _PapersPageState extends State<PapersPage> {
 
     if (_cards.isEmpty && _error != null) {
       return Scaffold(
-        appBar: AppBar(title: Text(L10n.of(context).navBarPapers)),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Text(L10n.of(context).navBarPapers),
+        ),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,

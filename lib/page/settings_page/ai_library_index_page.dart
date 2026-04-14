@@ -99,6 +99,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(l10n.settingsAiLibraryIndexTitle),
         actions: _selecting
             ? [

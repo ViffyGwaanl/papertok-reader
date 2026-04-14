@@ -8,6 +8,9 @@ import 'package:anx_reader/service/md5_service.dart';
 import 'package:anx_reader/service/papertok/models.dart';
 import 'package:anx_reader/service/papertok/papertok_api.dart';
 import 'package:anx_reader/utils/get_path/get_temp_dir.dart';
+import 'package:anx_reader/utils/toast/common.dart';
+import 'package:anx_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:anx_reader/widgets/common/pt_dialog.dart';
 import 'package:anx_reader/widgets/markdown/styled_markdown.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
@@ -90,17 +93,17 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
       }
     }
 
-    showDialog(
-      context: context,
+    PTDialog.show(
+      context,
+      title: dialogTitle,
       barrierDismissible: false,
-      builder: (ctx) {
-        dialogContext = ctx;
-        return ValueListenableBuilder<_DownloadProgress>(
-          valueListenable: progressNotifier,
-          builder: (context, prog, _) {
-            return AlertDialog(
-              title: Text(dialogTitle),
-              content: Column(
+      content: Builder(
+        builder: (ctx) {
+          dialogContext = ctx;
+          return ValueListenableBuilder<_DownloadProgress>(
+            valueListenable: progressNotifier,
+            builder: (context, prog, _) {
+              return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -117,20 +120,20 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    cancelToken.cancel('User cancelled');
-                    closeDialogIfOpen();
-                  },
-                  child: Text(L10n.of(context).commonCancel),
-                ),
-              ],
-            );
+              );
+            },
+          );
+        },
+      ),
+      actions: [
+        PTDialogAction(
+          label: L10n.of(context).commonCancel,
+          onPressed: () {
+            cancelToken.cancel('User cancelled');
+            closeDialogIfOpen();
           },
-        );
-      },
+        ),
+      ],
     );
 
     try {
@@ -176,12 +179,10 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
 
       if (!mounted) return;
       final isCancelled = e is DioException && CancelToken.isCancel(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isCancelled
-              ? L10n.of(context).papersCancelled
-              : L10n.of(context).papersDownloadFailed(e.toString())),
-        ),
+      AnxToast.show(
+        isCancelled
+            ? L10n.of(context).papersCancelled
+            : L10n.of(context).papersDownloadFailed(e.toString()),
       );
     }
   }
@@ -203,14 +204,14 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
       }
     }
 
-    showDialog(
-      context: context,
+    PTDialog.show(
+      context,
+      title: L10n.of(context).importing,
       barrierDismissible: false,
-      builder: (ctx) {
-        dialogContext = ctx;
-        return AlertDialog(
-          title: Text(L10n.of(context).importing),
-          content: Row(
+      content: Builder(
+        builder: (ctx) {
+          dialogContext = ctx;
+          return Row(
             children: [
               const SizedBox(
                 width: 20,
@@ -226,9 +227,9 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
                 ),
               ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
 
     try {
@@ -253,11 +254,7 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
     } catch (e) {
       if (!mounted) return;
       closeDialogIfOpen();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(L10n.of(context).importFailed(e.toString())),
-        ),
-      );
+      AnxToast.show(L10n.of(context).importFailed(e.toString()));
     }
   }
 
@@ -317,46 +314,25 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
 
     if (options.isEmpty) return;
 
-    await showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
+    await PTBottomSheet.show<void>(
+      context,
+      title: L10n.of(context).papersChooseEpubEdition,
       builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    L10n.of(context).papersChooseEpubEdition,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final o in options)
+              PTPickerRow<String>(
+                value: o.url,
+                groupValue: null,
+                title: o.title,
+                leading: Icons.menu_book_outlined,
+                onChanged: (_) async {
+                  Navigator.pop(context);
+                  await _downloadAndImportEpubFromUrl(p, o.url);
+                },
               ),
-              const Divider(height: 1),
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: options.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final o = options[index];
-                    return ListTile(
-                      title: Text(o.title),
-                      leading: const Icon(Icons.menu_book_outlined),
-                      trailing: const Icon(Icons.download_outlined),
-                      onTap: () async {
-                        Navigator.pop(context);
-                        await _downloadAndImportEpubFromUrl(p, o.url);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+          ],
         );
       },
     );
@@ -368,6 +344,9 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
           title: Text(L10n.of(context).navBarPapers),
           bottom: TabBar(
             tabs: [
