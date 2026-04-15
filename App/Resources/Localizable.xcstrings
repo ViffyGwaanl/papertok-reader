@@ -1,6 +1,78 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "chat.message.action.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Copy" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "复制" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "複製" } }
+      }
+    },
+    "chat.message.action.edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Edit" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "编辑" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "編輯" } }
+      }
+    },
+    "chat.message.action.retry": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Retry" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "重试" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "重試" } }
+      }
+    },
+    "chat.message.edit.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Edit Message" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "编辑消息" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "編輯訊息" } }
+      }
+    },
+    "chat.message.edit.send_button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Send" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "发送" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "傳送" } }
+      }
+    },
+    "chat.message.branch_navigator.format": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "%1$d / %2$d" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%1$d / %2$d" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "%1$d / %2$d" } }
+      }
+    },
+    "chat.message.branch_navigator.previous": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Previous variant" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "上一个版本" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "上一個版本" } }
+      }
+    },
+    "chat.message.branch_navigator.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Next variant" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "下一个版本" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "下一個版本" } }
+      }
+    },
+    "chat.message.streaming.cancelled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Stopped" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已停止" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "已停止" } }
+      }
+    },
     "chat.conversations.search_placeholder": {
       "extractionState": "manual",
       "localizations": {

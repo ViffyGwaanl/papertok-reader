@@ -11,19 +11,79 @@ struct MessageBubbleView: View {
     var onCopy: ((String) -> Void)? = nil
     var onRegenerate: (() -> Void)? = nil
     var onRetry: (() -> Void)? = nil
+    /// Long-press "Edit" handler on user messages. When non-nil, the user
+    /// bubble context menu exposes an Edit button.
+    var onEdit: (() -> Void)? = nil
+    /// Per-assistant-message retry handler. Distinct from `onRegenerate`
+    /// (which only makes sense on the tail) so any assistant message can be
+    /// individually retried.
+    var onRetryMessage: (() -> Void)? = nil
+    /// Optional branch navigator state `(index, total)` for this message.
+    /// When supplied and `total > 1`, a small `< X/Y >` control renders
+    /// beneath the bubble.
+    var branchNavigator: (index: Int, total: Int)? = nil
+    var onPreviousBranch: (() -> Void)? = nil
+    var onNextBranch: (() -> Void)? = nil
 
     @State private var showSystemContent = false
 
     var body: some View {
         switch message.role {
         case .user:
-            userBubble
+            VStack(alignment: .trailing, spacing: AppSpacing.xxs) {
+                userBubble
+                branchNavigatorControl(alignment: .trailing)
+            }
         case .assistant:
-            assistantBubble
+            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                assistantBubble
+                branchNavigatorControl(alignment: .leading)
+            }
         case .system:
             systemLabel
         case .tool:
             toolResultView
+        }
+    }
+
+    @ViewBuilder
+    private func branchNavigatorControl(alignment: HorizontalAlignment) -> some View {
+        if let nav = branchNavigator, nav.total > 1 {
+            HStack(spacing: AppSpacing.sm) {
+                if alignment == .trailing { Spacer() }
+                Button {
+                    onPreviousBranch?()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.caption.weight(.semibold))
+                }
+                .disabled(nav.index <= 1 || onPreviousBranch == nil)
+                .accessibilityLabel(Text("chat.message.branch_navigator.previous"))
+
+                Text(
+                    String(
+                        format: String(localized: "chat.message.branch_navigator.format"),
+                        nav.index,
+                        nav.total
+                    )
+                )
+                .font(AppTypography.caption)
+                .foregroundStyle(Morandi.secondaryText)
+                .monospacedDigit()
+
+                Button {
+                    onNextBranch?()
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                }
+                .disabled(nav.index >= nav.total || onNextBranch == nil)
+                .accessibilityLabel(Text("chat.message.branch_navigator.next"))
+
+                if alignment == .leading { Spacer() }
+            }
+            .foregroundStyle(Morandi.secondaryText)
+            .padding(.horizontal, AppSpacing.md)
         }
     }
 
@@ -208,6 +268,11 @@ struct MessageBubbleView: View {
     @ViewBuilder
     private func userMenu(text: String) -> some View {
         messageCopyMenu(text: text)
+        if let onEdit {
+            Button { onEdit() } label: {
+                Label(String(localized: "chat.message.action.edit"), systemImage: "pencil")
+            }
+        }
         if status == .failed, let onRetry {
             Button { onRetry() } label: { Label("common.retry", systemImage: "arrow.clockwise") }
         }
@@ -216,7 +281,11 @@ struct MessageBubbleView: View {
     @ViewBuilder
     private func assistantMenu(text: String) -> some View {
         messageCopyMenu(text: text)
-        if let onRegenerate {
+        if let onRetryMessage {
+            Button { onRetryMessage() } label: {
+                Label(String(localized: "chat.message.action.retry"), systemImage: "arrow.clockwise")
+            }
+        } else if let onRegenerate {
             Button { onRegenerate() } label: { Label("ai.regenerate", systemImage: "arrow.clockwise") }
         }
     }

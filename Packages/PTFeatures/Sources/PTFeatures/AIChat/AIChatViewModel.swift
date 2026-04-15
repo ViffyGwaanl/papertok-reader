@@ -765,18 +765,109 @@ public final class AIChatViewModel {
         endTurn()
     }
 
-    /// Regenerate the last assistant message by dropping it and retrying.
+    /// Regenerate the last assistant message by retrying it.
+    ///
+    /// The previous branch is preserved as a sibling so the user can navigate
+    /// back to it via the per-message branch navigator.
     public func regenerateLastAssistant() async {
+        guard isStreaming == false else { return }
         let leafId = conversationTree.activeLeafId()
-        guard let leaf = conversationTree.nodes[leafId],
-              leaf.role == .assistant,
-              let parentId = leaf.parentId else { return }
-        conversationTree.nodes[parentId]?.childIds.removeAll { $0 == leafId }
-        conversationTree.nodes.removeValue(forKey: leafId)
-        let count = conversationTree.nodes[parentId]?.childIds.count ?? 0
-        conversationTree.nodes[parentId]?.activeChildIndex = max(0, count - 1)
+        guard let leaf = conversationTree.nodes[leafId], leaf.role == .assistant else { return }
+        await retry(messageId: leafId)
+    }
+
+    /// Edit a user message and generate a new assistant response.
+    ///
+    /// Creates a new user sibling branch via `editUserMessage`, activates it,
+    /// then triggers a fresh assistant generation. Accepts either a
+    /// `ChatMessage.id` or a conversation-tree node id.
+    public func editAndResend(messageId: String, newText: String) async {
+        guard isStreaming == false else { return }
+        let trimmed = newText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        guard let nodeId = resolveNodeId(for: messageId) else { return }
+        guard conversationTree.editUserMessage(nodeId, newText: trimmed) != nil else { return }
+        errorMessage = nil
         beginTurn(providerId: selectedProviderId, modelId: selectedModelId)
         await continueCurrentTurn()
+        saveConversation()
+    }
+
+    /// Retry an assistant message by creating a new sibling branch.
+    ///
+    /// The old branch is preserved so the branch navigator can toggle between
+    /// variants. Streaming chunks land in the new branch. Accepts either a
+    /// `ChatMessage.id` or a conversation-tree node id.
+    public func retry(messageId: String) async {
+        guard isStreaming == false else { return }
+        guard let nodeId = resolveNodeId(for: messageId),
+              let target = conversationTree.nodes[nodeId], target.role == .assistant,
+              let parentId = target.parentId,
+              let parent = conversationTree.nodes[parentId] else { return }
+        let preservedChildIds = parent.childIds
+        let preservedActiveIndex = parent.activeChildIndex
+        // Temporarily detach existing siblings so the active leaf resolves to
+        // the parent and the streaming loop appends the fresh response there.
+        conversationTree.nodes[parentId]?.childIds = []
+        conversationTree.nodes[parentId]?.activeChildIndex = 0
+        errorMessage = nil
+        beginTurn(providerId: selectedProviderId, modelId: selectedModelId)
+        await continueCurrentTurn()
+        // After streaming, parent's childIds contains the new branch (one or
+        // more nodes from tool-call rounds and the final assistant response).
+        // Re-attach the preserved siblings at the front and activate the new
+        // branch (which occupies the tail).
+        guard var parentNow = conversationTree.nodes[parentId] else { return }
+        let newChildIds = parentNow.childIds
+        let mergedChildIds = preservedChildIds + newChildIds
+        parentNow.childIds = mergedChildIds
+        if newChildIds.isEmpty {
+            // Streaming failed to produce a new branch; restore original state.
+            parentNow.activeChildIndex = preservedActiveIndex
+        } else {
+            parentNow.activeChildIndex = preservedChildIds.count
+        }
+        conversationTree.nodes[parentId] = parentNow
+        saveConversation()
+    }
+
+    /// Switch the active path to the given branch node. Accepts either a
+    /// `ChatMessage.id` or a conversation-tree node id.
+    public func switchToBranch(_ messageId: String) {
+        guard let nodeId = resolveNodeId(for: messageId) else { return }
+        conversationTree.switchToBranch(nodeId)
+    }
+
+    /// Returns `(index, total)` for the branch navigator, where `index` is the
+    /// 1-based position of `messageId` among its parent's children and `total`
+    /// is the sibling count. Returns nil when the message has fewer than two
+    /// siblings. Accepts either a `ChatMessage.id` or a node id.
+    public func branchNavigatorState(for messageId: String) -> (index: Int, total: Int)? {
+        guard let nodeId = resolveNodeId(for: messageId) else { return nil }
+        let siblings = conversationTree.branchSiblings(of: nodeId)
+        guard siblings.count > 1,
+              let pos = siblings.firstIndex(of: nodeId) else {
+            return nil
+        }
+        return (index: pos + 1, total: siblings.count)
+    }
+
+    /// Returns the branch sibling node id immediately before or after
+    /// `messageId` (by `offset`), or nil at the boundary.
+    public func siblingNodeId(for messageId: String, offset: Int) -> String? {
+        guard let nodeId = resolveNodeId(for: messageId) else { return nil }
+        let siblings = conversationTree.branchSiblings(of: nodeId)
+        guard let pos = siblings.firstIndex(of: nodeId) else { return nil }
+        let next = pos + offset
+        guard next >= 0, next < siblings.count else { return nil }
+        return siblings[next]
+    }
+
+    /// Maps a `ChatMessage.id` to its conversation-tree node id. If the input
+    /// is already a node key, it is returned unchanged.
+    private func resolveNodeId(for messageId: String) -> String? {
+        if conversationTree.nodes[messageId] != nil { return messageId }
+        return conversationTree.nodes.first(where: { $0.value.message.id == messageId })?.key
     }
 
     /// Retry the last failed user message by re-running the turn.

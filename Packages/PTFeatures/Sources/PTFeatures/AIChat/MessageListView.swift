@@ -11,6 +11,12 @@ struct MessageListView: View {
     let viewModel: AIChatViewModel
     private let bottomAnchor = "bottom_anchor"
 
+    private struct EditingContext: Identifiable {
+        let id: String
+        let originalText: String
+    }
+    @State private var editingContext: EditingContext?
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -26,7 +32,28 @@ struct MessageListView: View {
                             } : nil,
                             onRetry: message.role == .user ? {
                                 Task { await viewModel.retryLastUserMessage() }
-                            } : nil
+                            } : nil,
+                            onEdit: message.role == .user ? {
+                                editingContext = EditingContext(
+                                    id: message.id,
+                                    originalText: message.textContent ?? ""
+                                )
+                            } : nil,
+                            onRetryMessage: message.role == .assistant ? {
+                                let capturedId = message.id
+                                Task { await viewModel.retry(messageId: capturedId) }
+                            } : nil,
+                            branchNavigator: viewModel.branchNavigatorState(for: message.id),
+                            onPreviousBranch: {
+                                if let sibling = viewModel.siblingNodeId(for: message.id, offset: -1) {
+                                    viewModel.switchToBranch(sibling)
+                                }
+                            },
+                            onNextBranch: {
+                                if let sibling = viewModel.siblingNodeId(for: message.id, offset: 1) {
+                                    viewModel.switchToBranch(sibling)
+                                }
+                            }
                         )
                         .padding(.horizontal, AppSpacing.lg)
                     }
@@ -75,6 +102,16 @@ struct MessageListView: View {
             }
             .onChange(of: viewModel.currentStreamText) {
                 if viewModel.isStreaming { scrollToBottom(proxy: proxy) }
+            }
+            .sheet(item: $editingContext) { context in
+                MessageEditSheet(
+                    originalText: context.originalText,
+                    onSend: { newText in
+                        let messageId = context.id
+                        Task { await viewModel.editAndResend(messageId: messageId, newText: newText) }
+                    },
+                    onCancel: {}
+                )
             }
         }
     }
