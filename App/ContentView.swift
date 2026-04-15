@@ -53,12 +53,20 @@ struct MainTabView: View {
             )
         }
 
-        let runtime = AIChatViewModel.Runtime(
-            providers: AIChatViewModel.Runtime.default.providers,
+        let conversationsDirectory = AppConfig.appGroupContainerURL()
+            .appendingPathComponent("conversations", isDirectory: true)
+        let persistenceService = ConversationPersistenceService(directory: conversationsDirectory)
+        let providerSnapshot = StoredAIProviderCatalog(defaults: AppConfig.groupDefaults).snapshot(
             toolRegistry: .default,
             toolContext: toolContext
         )
-        _aiChatViewModel = State(initialValue: AIChatViewModel(runtime: runtime))
+        let aiChatViewModel = AIChatViewModel(
+            runtime: providerSnapshot.runtime,
+            persistenceService: persistenceService
+        )
+        aiChatViewModel.selectedProviderId = providerSnapshot.selection.providerId
+        aiChatViewModel.selectedModelId = providerSnapshot.selection.modelId
+        _aiChatViewModel = State(initialValue: aiChatViewModel)
     }
 
     var body: some View {
@@ -77,6 +85,19 @@ struct MainTabView: View {
         .handleDeepLinks(navigation: navigation)
         .onReceive(NotificationCenter.default.publisher(for: AppTab.configurationDidChangeNotification)) { _ in
             tabConfigVersion = AppTab.configurationVersion
+        }
+        .onReceive(NotificationCenter.default.publisher(for: StoredAIProviderCatalog.configurationDidChangeNotification)) { _ in
+            let providerSnapshot = StoredAIProviderCatalog(defaults: AppConfig.groupDefaults).snapshot(
+                toolRegistry: aiChatViewModel.runtime.toolRegistry,
+                toolContext: aiChatViewModel.runtime.toolContext
+            )
+            aiChatViewModel.updateRuntime(
+                providerSnapshot.runtime,
+                selection: .init(
+                    providerId: providerSnapshot.selection.providerId,
+                    modelId: providerSnapshot.selection.modelId
+                )
+            )
         }
     }
 
@@ -133,6 +154,12 @@ struct MainTabView: View {
                         await handlePendingAIRequestIfNeeded()
                     }
             }
+        case .memory:
+            NavigationStack {
+                MemoryHomeView(
+                    directory: AppConfig.appGroupContainerURL().appendingPathComponent("memory", isDirectory: true)
+                )
+            }
         case .settings:
             SettingsScreen()
         }
@@ -166,7 +193,7 @@ struct MainTabView: View {
             let didSend = await aiChatViewModel.sendMessage(prompt)
             guard didSend else { return }
 
-            SharedInbox.consume(eventID: event.id)
+            _ = ShareInboxMaintenance.finalizeSuccessfulUse(eventID: event.id)
             await IntentsDonationService.donateAskAI(question: prompt)
             return
         }
@@ -196,6 +223,62 @@ struct MainTabView: View {
 
 // MARK: - Bookshelf Screen
 
+enum ReaderNavigationOverride: Equatable {
+    case epub(locator: String)
+    case pdf(pageIndex: Int)
+
+    var epubLocator: String? {
+        guard case .epub(let locator) = self else { return nil }
+        return locator
+    }
+
+    var pdfPageIndex: Int? {
+        guard case .pdf(let pageIndex) = self else { return nil }
+        return pageIndex
+    }
+
+    static func resolve(book: Book, locator: String?) -> Self? {
+        guard let locator = locator?.trimmingCharacters(in: .whitespacesAndNewlines),
+              locator.isEmpty == false else {
+            return nil
+        }
+
+        if book.filePath.lowercased().hasSuffix(".epub") {
+#if canImport(ReadiumShared)
+            return resolveEPUB(locator: locator)
+#else
+            return nil
+#endif
+        }
+
+        return resolvePDF(locator: locator)
+    }
+
+    private static func resolvePDF(locator: String) -> Self? {
+        guard case .page(let page) = try? ReaderLocatorResolver.parseLocator(locator) else {
+            return nil
+        }
+        return .pdf(pageIndex: max(0, page - 1))
+    }
+
+#if canImport(ReadiumShared)
+    private static func resolveEPUB(locator: String) -> Self? {
+        if let resolved = EPUBAnnotationBridge.locator(fromStoredString: locator) {
+            return .epub(locator: EPUBAnnotationBridge.storedString(from: resolved))
+        }
+
+        let lowercased = locator.lowercased()
+        if lowercased.hasPrefix("cfi:") || lowercased.hasPrefix("epubcfi(") {
+            return nil
+        }
+
+        guard let href = AnyURL(path: locator) else { return nil }
+        let resolved = Locator(href: href, mediaType: .xhtml)
+        return .epub(locator: EPUBAnnotationBridge.storedString(from: resolved))
+    }
+#endif
+}
+
 struct BookshelfScreen: View {
     let database: AppDatabase
     let readerSessionStore: ReaderSessionContextStore?
@@ -206,6 +289,7 @@ struct BookshelfScreen: View {
     @AppStorage("bookshelf.displayMode") private var displayModeRawValue = BookshelfDisplayMode.grid.rawValue
     @State private var viewModel: BookshelfViewModel
     @State private var navigationBook: Book?
+    @State private var navigationOverride: ReaderNavigationOverride?
     @State private var showImporter = false
     @State private var showImportError = false
     @State private var sharedInboxImportErrorMessage: String?
@@ -425,7 +509,7 @@ struct BookshelfScreen: View {
         .toolbar { toolbarItems }
         .navigationDestination(isPresented: navigationPresentation) {
             if let navigationBook {
-                readerDestination(for: navigationBook)
+                readerDestination(for: navigationBook, navigationOverride: navigationOverride)
             }
         }
 
@@ -561,6 +645,7 @@ struct BookshelfScreen: View {
             set: { isPresented in
                 if isPresented == false {
                     navigationBook = nil
+                    navigationOverride = nil
                 }
             }
         )
@@ -633,17 +718,24 @@ struct BookshelfScreen: View {
                     undoBanner(for: pendingUndoBook)
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .importBook)) { _ in
+                showImporter = true
+            }
     }
 
     @ViewBuilder
-    private func readerDestination(for book: Book) -> some View {
+    private func readerDestination(
+        for book: Book,
+        navigationOverride: ReaderNavigationOverride? = nil
+    ) -> some View {
         if book.filePath.lowercased().hasSuffix(".epub") {
 #if canImport(ReadiumShared)
             EPUBBookshelfReaderView(
                 book: book,
                 database: database,
                 readerSessionStore: readerSessionStore,
-                aiChatViewModel: aiChatViewModel
+                aiChatViewModel: aiChatViewModel,
+                initialLocatorOverride: navigationOverride?.epubLocator
             )
                 .navigationBarBackButtonHidden(true)
 #else
@@ -658,7 +750,8 @@ struct BookshelfScreen: View {
                 book: book,
                 database: database,
                 aiChatViewModel: aiChatViewModel,
-                readerSessionStore: readerSessionStore
+                readerSessionStore: readerSessionStore,
+                initialPageOverride: navigationOverride?.pdfPageIndex
             )
                 .navigationBarBackButtonHidden(true)
         }
@@ -1049,6 +1142,7 @@ struct BookshelfScreen: View {
         if let bookID = openRequest.bookID.flatMap(Int64.init),
            let book = try? await bookDAO.fetchById(bookID) {
             navigationBook = book
+            navigationOverride = ReaderNavigationOverride.resolve(book: book, locator: openRequest.locator)
             await IntentsDonationService.donateOpenBook(title: book.title)
             return
         }
@@ -1064,6 +1158,7 @@ struct BookshelfScreen: View {
         } ?? matches.first
         navigationBook = book
         if let book {
+            navigationOverride = ReaderNavigationOverride.resolve(book: book, locator: openRequest.locator)
             await IntentsDonationService.donateOpenBook(title: book.title)
         }
     }
@@ -1709,6 +1804,7 @@ struct EPUBBookshelfReaderView: View {
     let database: AppDatabase
     let readerSessionStore: ReaderSessionContextStore?
     let aiChatViewModel: AIChatViewModel
+    let initialLocatorOverride: String?
 
     @State private var publication: Publication?
     @State private var coordinator = EPUBNavigatorCoordinator()
@@ -1721,6 +1817,7 @@ struct EPUBBookshelfReaderView: View {
     @State private var annotationDraft: EPUBReaderAnnotationDraft?
     @State private var imageExperienceController = ReaderImageExperienceController()
     @State private var annotationErrorMessage: String?
+    @State private var contextMenuCoordinator: ContextMenuCoordinator?
     @State private var isReaderSettingsPresented = false
     @State private var readingSessionRecorder: ReadingSessionRecorder
     @State private var showBrightnessControl = false
@@ -1736,17 +1833,19 @@ struct EPUBBookshelfReaderView: View {
         book: Book,
         database: AppDatabase,
         readerSessionStore: ReaderSessionContextStore?,
-        aiChatViewModel: AIChatViewModel
+        aiChatViewModel: AIChatViewModel,
+        initialLocatorOverride: String? = nil
     ) {
         self.book = book
         self.database = database
         self.readerSessionStore = readerSessionStore
         self.aiChatViewModel = aiChatViewModel
+        self.initialLocatorOverride = initialLocatorOverride
         _readingSessionRecorder = State(initialValue: ReadingSessionRecorder(bookId: book.id, database: database))
     }
 
     private var initialLocator: Locator? {
-        EPUBAnnotationBridge.locator(fromStoredString: book.lastReadPosition)
+        EPUBAnnotationBridge.locator(fromStoredString: initialLocatorOverride ?? book.lastReadPosition)
     }
 
     private let annotationDecorationGroup = "annotations"
@@ -1767,6 +1866,11 @@ struct EPUBBookshelfReaderView: View {
         .sheet(isPresented: tocSheetBinding) { tocSheet }
         .sheet(isPresented: searchSheetBinding) { searchSheet }
         .sheet(isPresented: annotationEditorPresentedBinding) { annotationEditorSheet }
+        .sheet(item: contextMenuSheetBinding, onDismiss: {
+            coordinator.clearSelection()
+        }) { sheet in
+            contextMenuSheetContent(sheet)
+        }
         .sheet(isPresented: readerSettingsPresentedBinding) { readerSettingsSheet }
         .overlay(alignment: .top) {
             if showBrightnessControl {
@@ -1774,6 +1878,16 @@ struct EPUBBookshelfReaderView: View {
                     .padding(.horizontal, AppSpacing.lg)
                     .padding(.top, AppSpacing.sm)
                     .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .center) {
+            if let menuCoordinator = contextMenuCoordinator, menuCoordinator.isMenuVisible {
+                ReaderContextMenuView(coordinator: menuCoordinator) {
+                    menuCoordinator.dismiss()
+                    coordinator.clearSelection()
+                }
+                .transition(.scale.combined(with: .opacity))
+                .zIndex(100)
             }
         }
 #if canImport(AVFoundation)
@@ -1840,6 +1954,15 @@ struct EPUBBookshelfReaderView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PaperTokToggleAI"))) { _ in
             isAIPanelPresented.toggle()
+        }
+        .onChange(of: contextMenuCoordinator?.pendingSearchQuery) { _, pendingQuery in
+            handlePendingContextMenuSearch(pendingQuery)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .previousChapter)) { _ in
+            coordinator.goBackward()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .nextChapter)) { _ in
+            coordinator.goForward()
         }
         .alert("reader.annotation_error", isPresented: annotationErrorPresentedBinding) {
             Button(String(localized: "common.ok")) {
@@ -1985,6 +2108,20 @@ struct EPUBBookshelfReaderView: View {
             await controlsViewModel.loadTableOfContents()
             readerControlsViewModel = controlsViewModel
             if let bookID = book.id {
+                if contextMenuCoordinator == nil {
+                    contextMenuCoordinator = ContextMenuCoordinator(
+                        bookId: bookID,
+                        bookTitle: book.title,
+                        bookAuthor: book.author,
+                        database: database,
+                        translationServiceProvider: { [aiChatViewModel] in
+                            aiChatViewModel.makeTranslationService()
+                        },
+                        onSendToAI: { [aiChatViewModel] prompt in
+                            _ = await aiChatViewModel.sendMessage(prompt)
+                        }
+                    )
+                }
                 let annotationsViewModel = EPUBReaderAnnotationsViewModel(bookId: bookID, database: database)
                 await annotationsViewModel.loadAnnotations()
                 self.annotationsViewModel = annotationsViewModel
@@ -1992,7 +2129,16 @@ struct EPUBBookshelfReaderView: View {
                 await preferencesViewModel.load()
                 self.preferencesViewModel = preferencesViewModel
                 coordinator.onSelectionChange = { locator, selectedText, _ in
-                    presentAnnotationDraft(locator: locator, selectedText: selectedText, type: .highlight)
+                    let chapterTitle = locator.title ?? coordinator.currentChapterTitle
+                    if let menuCoordinator = contextMenuCoordinator {
+                        menuCoordinator.showMenu(
+                            text: selectedText,
+                            locator: EPUBAnnotationBridge.storedString(from: locator),
+                            chapter: chapterTitle
+                        )
+                    } else {
+                        presentAnnotationDraft(locator: locator, selectedText: selectedText, type: .highlight)
+                    }
                 }
                 coordinator.observeDecorationInteractions(inGroup: annotationDecorationGroup) { event in
                     presentAnnotationEditor(decorationID: event.decoration.id)
@@ -2094,7 +2240,12 @@ struct EPUBBookshelfReaderView: View {
     private var searchSheetBinding: Binding<Bool> {
         Binding(
             get: { readerControlsViewModel?.showSearch ?? false },
-            set: { newValue in readerControlsViewModel?.showSearch = newValue }
+            set: { newValue in
+                readerControlsViewModel?.showSearch = newValue
+                if newValue == false {
+                    coordinator.clearSelection()
+                }
+            }
         )
     }
 
@@ -2306,6 +2457,24 @@ struct EPUBBookshelfReaderView: View {
         navigateToEPUBLocation(href: result.chapterHref, progression: result.progression)
     }
 
+    private func handlePendingContextMenuSearch(_ pendingQuery: String?) {
+        guard let query = pendingQuery?.trimmingCharacters(in: .whitespacesAndNewlines),
+              query.isEmpty == false else {
+            return
+        }
+        guard let menuCoordinator = contextMenuCoordinator,
+              let readerControlsViewModel else {
+            return
+        }
+
+        _ = menuCoordinator.takePendingSearchQuery()
+        readerControlsViewModel.searchQuery = query
+        readerControlsViewModel.showSearch = true
+        Task {
+            await readerControlsViewModel.performSearch()
+        }
+    }
+
     private var annotationEditorPresentedBinding: Binding<Bool> {
         Binding(
             get: { annotationDraft != nil },
@@ -2325,6 +2494,13 @@ struct EPUBBookshelfReaderView: View {
                     annotationErrorMessage = nil
                 }
             }
+        )
+    }
+
+    private var contextMenuSheetBinding: Binding<ContextMenuCoordinator.ActiveSheet?> {
+        Binding(
+            get: { contextMenuCoordinator?.activeSheet },
+            set: { newValue in contextMenuCoordinator?.activeSheet = newValue }
         )
     }
 
@@ -2393,6 +2569,58 @@ struct EPUBBookshelfReaderView: View {
             return EPUBReadingPreferencesSnapshot(readingPreferences: preferencesViewModel.readingPreferences)
         }
         return EPUBReadingPreferencesSnapshot(readingPreferences: ReadingPreferences())
+    }
+
+    @ViewBuilder
+    private func contextMenuSheetContent(_ sheet: ContextMenuCoordinator.ActiveSheet) -> some View {
+        if let menuCoordinator = contextMenuCoordinator {
+            switch sheet {
+            case .translation:
+                TranslationMenuSheet(
+                    selectedText: menuCoordinator.selectedText,
+                    translationService: menuCoordinator.translationService,
+                    onDismiss: { menuCoordinator.activeSheet = nil }
+                )
+            case .excerpt:
+                ExcerptMenuSheet(
+                    selectedText: menuCoordinator.selectedText,
+                    bookTitle: book.title,
+                    author: book.author,
+                    chapterTitle: menuCoordinator.chapterTitle,
+                    onSaveToNotes: {
+                        Task { await menuCoordinator.saveExcerptToNotes() }
+                    },
+                    onDismiss: { menuCoordinator.activeSheet = nil }
+                )
+            case .note:
+                NoteEditorSheet(
+                    selectedText: menuCoordinator.selectedText,
+                    chapterTitle: menuCoordinator.chapterTitle,
+                    onSave: { color, noteText in
+                        Task { await menuCoordinator.saveNote(color: color, noteText: noteText) }
+                    },
+                    onDismiss: { menuCoordinator.activeSheet = nil }
+                )
+            case .dictionary:
+                DictionaryLookupSheet(
+                    term: menuCoordinator.selectedText,
+                    onDismiss: { menuCoordinator.activeSheet = nil }
+                )
+            case .noteEdit(let noteID):
+                NoteEditorSheet(
+                    selectedText: menuCoordinator.selectedText,
+                    chapterTitle: menuCoordinator.chapterTitle,
+                    existingNoteID: noteID,
+                    onSave: { color, noteText in
+                        Task { await menuCoordinator.saveNote(color: color, noteText: noteText, existingID: noteID) }
+                    },
+                    onDelete: {
+                        Task { await menuCoordinator.deleteNote(id: noteID) }
+                    },
+                    onDismiss: { menuCoordinator.activeSheet = nil }
+                )
+            }
+        }
     }
 
     private func presentAnnotationDraft(locator: Locator, selectedText: String, type: NoteType) {
@@ -3525,6 +3753,7 @@ struct SettingsScreen: View {
     @State private var showClearCacheConfirmation = false
     @State private var versionTapCount = 0
     @State private var showDeveloperOptions = false
+    @State private var shareDefaultRoute = ShareDefaultRoute.current()
 
     private let themeModes = ["system", "light", "dark"]
     private let pageTurnModes = ["swipe", "scroll"]
@@ -3573,6 +3802,9 @@ struct SettingsScreen: View {
                 // Sync & Backup
                 syncSection
 
+                // Share & Shortcuts
+                shareSection
+
                 // KAIROS
                 kairosSection
 
@@ -3592,6 +3824,9 @@ struct SettingsScreen: View {
             .onChange(of: viewModel.defaultFontFamily) { _, _ in viewModel.save() }
             .onChange(of: viewModel.aiProviderID) { _, _ in viewModel.save() }
             .onChange(of: viewModel.aiModelID) { _, _ in viewModel.save() }
+            .onAppear {
+                shareDefaultRoute = ShareDefaultRoute.current()
+            }
         }
     }
 
@@ -3794,6 +4029,23 @@ struct SettingsScreen: View {
         }
     }
 
+    private var shareSection: some View {
+        Section {
+            NavigationLink {
+                ShareShortcutsSettingsView()
+            } label: {
+                SettingsIconLabel(
+                    String(localized: "settings.share_shortcuts"),
+                    systemImage: "square.and.arrow.up.on.square.fill",
+                    tint: Morandi.powder,
+                    subtitle: shareDefaultRoute.localizedTitle
+                )
+            }
+        } header: {
+            Text("share.title")
+        }
+    }
+
     // MARK: - KAIROS
 
     private var kairosSection: some View {
@@ -3932,6 +4184,163 @@ struct SettingsScreen: View {
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+}
+
+struct ShareShortcutsSettingsView: View {
+    @State private var settings = ShareAndShortcutsSettingsStore().load()
+    @State private var diagnostics = SharedInbox.diagnosticsSnapshot()
+    @State private var cleanupResultCount: Int?
+    private let settingsStore = ShareAndShortcutsSettingsStore()
+    private static let ttlOptions = [1, 3, 7, 14, 30]
+
+    private static let retentionFormatter: DateComponentsFormatter = {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.day, .hour, .minute]
+        formatter.unitsStyle = .full
+        formatter.maximumUnitCount = 2
+        return formatter
+    }()
+
+    var body: some View {
+        Form {
+            Section {
+                Picker(String(localized: "share.settings.default_route"), selection: $settings.defaultRoute) {
+                    ForEach(ShareDefaultRoute.allCases, id: \.self) { route in
+                        Text(route.localizedTitle).tag(route)
+                    }
+                }
+            } header: {
+                Text("share.settings.default_route")
+            } footer: {
+                Text("share.settings.default_route.footer")
+            }
+
+            Section {
+                Picker(String(localized: "share.settings.retention_period"), selection: $settings.ttlDays) {
+                    ForEach(Self.ttlOptions, id: \.self) { days in
+                        Text(retentionLabel(for: days)).tag(days)
+                    }
+                }
+            } header: {
+                Text("share.settings.retention_period")
+            }
+
+            Section {
+                Toggle(String(localized: "share.settings.cleanup_after_use"), isOn: $settings.cleanupAfterUse)
+            } footer: {
+                Text("share.settings.cleanup_after_use.footer")
+            }
+
+            Section(String(localized: "common.diagnostics")) {
+                LabeledContent(String(localized: "share.settings.diagnostics.pending_events")) {
+                    Text("\(diagnostics.pendingEventCount)")
+                        .monospacedDigit()
+                }
+
+                LabeledContent(String(localized: "share.settings.diagnostics.retention")) {
+                    Text(storageRetentionText)
+                }
+
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text("share.settings.diagnostics.latest_event")
+                        .font(AppTypography.subheadline)
+                        .foregroundStyle(Morandi.primaryText)
+
+                    if let latestEvent = diagnostics.latestEvent {
+                        Text(latestEvent.route.localizedTitle)
+                            .font(AppTypography.body.weight(.semibold))
+                            .foregroundStyle(Morandi.primaryText)
+                        Text(latestEvent.createdAt, style: .relative)
+                            .font(AppTypography.caption)
+                            .foregroundStyle(Morandi.secondaryText)
+                        Text(eventSummaryText(for: latestEvent))
+                            .font(AppTypography.caption)
+                            .foregroundStyle(Morandi.secondaryText)
+                    } else {
+                        Text("share.settings.diagnostics.no_events")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(Morandi.secondaryText)
+                    }
+                }
+                .padding(.vertical, AppSpacing.xs)
+            }
+
+            Section {
+                Button(String(localized: "share.settings.cleanup_expired")) {
+                    cleanupExpiredEvents()
+                }
+                .foregroundStyle(Morandi.accent)
+
+                if let cleanupResultCount {
+                    Text(
+                        AppLocalization.format(
+                            "share.settings.cleanup_result_format",
+                            locale: .autoupdatingCurrent,
+                            cleanupResultCount
+                        )
+                    )
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.secondaryText)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Morandi.background)
+        .navigationTitle(String(localized: "settings.share_shortcuts"))
+#if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+#endif
+        .onAppear(perform: loadSettings)
+        .onChange(of: settings.defaultRoute) { _, _ in
+            persistSettings()
+        }
+        .onChange(of: settings.ttlDays) { _, _ in
+            persistSettings()
+        }
+        .onChange(of: settings.cleanupAfterUse) { _, _ in
+            persistSettings()
+        }
+    }
+
+    private var storageRetentionText: String {
+        Self.retentionFormatter.string(from: diagnostics.storageRetention)
+            ?? "\(Int(diagnostics.storageRetention))"
+    }
+
+    private func retentionLabel(for days: Int) -> String {
+        Self.retentionFormatter.string(from: TimeInterval(days * 24 * 60 * 60))
+            ?? "\(days)"
+    }
+
+    private func eventSummaryText(for event: SharedInboxDiagnosticsSnapshot.LatestEvent) -> String {
+        AppLocalization.format(
+            "share.settings.diagnostics.event_summary_format",
+            locale: .autoupdatingCurrent,
+            event.fileCount,
+            event.textCount,
+            event.urlCount
+        )
+    }
+
+    private func loadSettings() {
+        settings = settingsStore.load()
+        reloadDiagnostics()
+    }
+
+    private func persistSettings() {
+        settingsStore.save(settings)
+        cleanupResultCount = nil
+        reloadDiagnostics()
+    }
+
+    private func reloadDiagnostics() {
+        diagnostics = SharedInbox.diagnosticsSnapshot()
+    }
+
+    private func cleanupExpiredEvents() {
+        cleanupResultCount = SharedInbox.cleanupExpiredEvents().count
+        reloadDiagnostics()
     }
 }
 

@@ -37,8 +37,7 @@ public struct EPUBReaderView: UIViewControllerRepresentable {
     static func loadFailureMessage(for error: Error) -> String {
         AppLocalization.userFacingErrorMessage(
             for: error,
-            fallbackKey: "errors.reader.cannot_open",
-            fallback: "Cannot open this book."
+            fallbackKey: "errors.reader.cannot_open"
         )
     }
 

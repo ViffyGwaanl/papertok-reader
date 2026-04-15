@@ -249,31 +249,50 @@ public final class PDFContentBridge: BookContentBridge {
             return label
         }
 
-        return AppLocalization.format(
-            "reader.page_number_format",
-            fallback: "Page %d",
-            locale: .autoupdatingCurrent,
-            pageIndex + 1
-        )
+        return localizedCatalogFormat("reader.page_number_format", pageIndex + 1)
     }
 
     private func localizedSectionTitle(for index: Int) -> String {
-        AppLocalization.format(
-            "reader.section_number_format",
-            fallback: "Section %d",
-            locale: .autoupdatingCurrent,
-            index + 1
-        )
+        localizedCatalogFormat("reader.section_number_format", index + 1)
     }
 
     private func localizedPageRangeTitle(startPage: Int, endPage: Int) -> String {
-        AppLocalization.format(
-            "reader.pages_range_format",
-            fallback: "Pages %d–%d",
-            locale: .autoupdatingCurrent,
-            startPage + 1,
-            endPage + 1
-        )
+        localizedCatalogFormat("reader.pages_range_format", startPage + 1, endPage + 1)
     }
+}
+
+private func localizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
+    String(localized: String.LocalizationValue(key), bundle: localizedCatalogBundle(), locale: locale)
+}
+
+private func localizedCatalogFormat(_ key: String, locale: Locale = .autoupdatingCurrent, _ arguments: CVarArg...) -> String {
+    String(format: localizedCatalogString(key, locale: locale), locale: locale, arguments: arguments)
+}
+
+private func localizedCatalogBundle() -> Bundle {
+    let bundles = Bundle.allBundles + Bundle.allFrameworks
+
+    if Bundle.main.bundleURL.pathExtension == "app" {
+        return .main
+    }
+    if let appBundle = bundles.first(where: { $0.bundleIdentifier == "ai.papertok.paperreader" }) {
+        return appBundle
+    }
+    let candidateDirectories = Set(bundles.map { $0.bundleURL.deletingLastPathComponent() })
+    for directory in candidateDirectories {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { continue }
+
+        for candidateURL in urls where candidateURL.pathExtension == "app" {
+            if let appBundle = Bundle(url: candidateURL),
+               appBundle.bundleIdentifier == "ai.papertok.paperreader" {
+                return appBundle
+            }
+        }
+    }
+    return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
 }
 #endif

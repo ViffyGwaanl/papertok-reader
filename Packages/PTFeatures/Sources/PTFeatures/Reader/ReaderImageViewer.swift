@@ -49,7 +49,7 @@ public struct ReaderImageViewer: View {
                 }
             } else {
                 ContentUnavailableView(
-                    "Unable to Load Image",
+                    String(localized: "common.failed_to_load"),
                     systemImage: "photo",
                     description: Text("reader.image_not_decoded")
                 )
@@ -62,7 +62,11 @@ public struct ReaderImageViewer: View {
             do {
                 exportURL = try ReaderImageFileStore.temporaryFileURL(for: asset)
             } catch {
-                exportError = error.localizedDescription
+                exportError = AppLocalization.userFacingErrorMessage(
+                    for: error,
+                    fallbackKey: "reader.unable_prepare_image",
+                    priority: .preferFallback
+                )
             }
         }
         .alert("reader.unable_prepare_image", isPresented: exportErrorPresentedBinding) {

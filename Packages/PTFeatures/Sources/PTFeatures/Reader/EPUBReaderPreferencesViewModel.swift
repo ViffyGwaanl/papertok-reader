@@ -55,7 +55,10 @@ public final class EPUBReaderPreferencesViewModel {
                 pageTurnMode: .swipe,
                 textAlignment: .justify
             )
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "common.failed_to_load"
+            )
         }
     }
 
@@ -73,7 +76,10 @@ public final class EPUBReaderPreferencesViewModel {
             readingPreferences.isScrollMode = readingPreferences.pageTurnMode == .scroll
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.notes.save_failed"
+            )
         }
     }
 

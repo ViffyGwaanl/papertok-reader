@@ -5,6 +5,7 @@ import PTFeatures
 struct BookshelfOpenRequest: Equatable {
     let bookID: String?
     let title: String?
+    let locator: String?
 }
 
 struct AIChatOpenRequest: Equatable, Identifiable {
@@ -71,9 +72,9 @@ final class RootNavigationCoordinator {
         sharedInboxImportRequest = nil
 
         switch destination {
-        case .openBook(let id, let title, _):
+        case .openBook(let id, let title, let locator):
             selectedTab = .bookshelf
-            pendingBookRequest = BookshelfOpenRequest(bookID: id, title: title)
+            pendingBookRequest = BookshelfOpenRequest(bookID: id, title: title, locator: locator)
         case .aiChat(let initialMessage, let shareToken):
             selectedTab = .ai
             pendingAIRequest = AIChatOpenRequest(message: initialMessage, shareEventID: shareToken)

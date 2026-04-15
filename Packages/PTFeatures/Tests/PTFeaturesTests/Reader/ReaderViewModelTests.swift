@@ -84,6 +84,26 @@ struct ReaderViewModelTests {
         #expect(vm.currentPage == 2)
     }
 
+    @Test("initial page override takes precedence over the stored PDF position")
+    func initialPageOverrideWinsOverStoredPosition() async throws {
+        let db = try AppDatabase.makeInMemory()
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("reader_override_\(UUID().uuidString).pdf")
+        let pdfDoc = PDFDocument()
+        for _ in 0..<5 { pdfDoc.insert(PDFPage(), at: pdfDoc.pageCount) }
+        try pdfDoc.dataRepresentation()!.write(to: tempURL)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        var book = Book.placeholder(title: "Test", filePath: tempURL.path)
+        book.id = 1
+        book.lastReadPosition = "4"
+        let vm = ReaderViewModel(book: book, database: db, initialPageOverride: 1)
+
+        await vm.loadDocument()
+
+        #expect(vm.currentPage == 1)
+    }
+
     @Test("loadDocument publishes an active PDF reader session shell")
     func loadDocumentPublishesReaderSession() async throws {
         let db = try AppDatabase.makeInMemory()
@@ -101,7 +121,10 @@ struct ReaderViewModelTests {
 
         #expect(readerSessionStore.activeBookId == 11)
         #expect(readerSessionStore.locationHref == "pages:0-0")
-        #expect(readerSessionStore.chapterTitle == "Pages 1–1")
+        #expect(
+            readerSessionStore.chapterTitle
+                == localizedCatalogFormat("reader.pages_range_format", 1, 1)
+        )
         #expect(readerSessionStore.hasBookContentBridge)
     }
 
@@ -122,7 +145,10 @@ struct ReaderViewModelTests {
         vm.goToPage(22)
 
         #expect(readerSessionStore.locationHref == "pages:20-24")
-        #expect(readerSessionStore.chapterTitle == "Pages 21–25")
+        #expect(
+            readerSessionStore.chapterTitle
+                == localizedCatalogFormat("reader.pages_range_format", 21, 25)
+        )
     }
 
     @Test("loadDocument exposes the PDF content bridge for reader controls")

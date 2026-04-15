@@ -15,10 +15,7 @@ struct EPUBReaderViewTests {
 
         #expect(
             EPUBReaderView.loadFailureMessage(for: error)
-                == AppLocalization.string(
-                    "errors.reader.cannot_open",
-                    value: "Cannot open this book."
-                )
+                == AppLocalization.string("errors.reader.cannot_open")
         )
     }
 }

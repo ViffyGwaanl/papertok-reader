@@ -15,7 +15,7 @@ public struct TTSFabButton: View {
     public init(
         ttsService: TTSService,
         currentText: @escaping () -> String?,
-        chapterTitle: String? = "Reading"
+        chapterTitle: String? = nil
     ) {
         self.ttsService = ttsService
         self.currentText = currentText

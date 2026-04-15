@@ -11,23 +11,18 @@ import AppKit
 #endif
 
 enum ShortcutAIServiceError: LocalizedError {
-    case unsupportedProvider(String)
     case emptyResponse
     case invalidImageData
+    case requestFailed(String)
 
     var errorDescription: String? {
         switch self {
-        case .unsupportedProvider(let providerID):
-            return AppLocalization.format(
-                "errors.ai.shortcut_unsupported_provider_format",
-                bundle: .main,
-                locale: .autoupdatingCurrent,
-                providerID
-            )
         case .emptyResponse:
             return AppLocalization.string("errors.ai.shortcut_empty_response")
         case .invalidImageData:
             return AppLocalization.string("errors.ai.shortcut_invalid_image")
+        case .requestFailed(let message):
+            return message
         }
     }
 }
@@ -55,15 +50,20 @@ actor ShortcutAIService {
             store.markCompleted(id: queued.id, responseText: response)
             return response
         } catch {
-            store.markFailed(id: queued.id, message: error.localizedDescription)
-            throw error
+            let message = userFacingMessage(for: error)
+            store.markFailed(id: queued.id, message: message)
+            throw ShortcutAIServiceError.requestFailed(message)
         }
     }
 
     private func execute(prompt: String, images: [PendingAIRequestImage]) async throws -> String {
-        let providerID = defaults.string(forKey: AppConfig.Keys.aiProviderID) ?? AppConfig.Defaults.defaultAIProviderID
-        let provider = try makeProvider(id: providerID)
-        let modelID = defaults.string(forKey: AppConfig.Keys.aiModelID) ?? defaultModelID(for: providerID)
+        let resolvedProvider = StoredAIProviderCatalog(defaults: defaults).resolveCurrentProvider()
+        let provider = resolvedProvider.provider
+        let modelID = resolvedProvider.modelId
+        let runtimePreferences = AIChatRuntimePreferences.load(
+            defaults: defaults,
+            providerId: resolvedProvider.providerId
+        )
         let systemPrompt = defaults.string(forKey: AppConfig.Keys.aiSystemPrompt)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -78,40 +78,48 @@ actor ShortcutAIService {
         }
         messages.append(ChatMessage(role: .user, content: userContent))
 
-        let response = try await provider.complete(ChatRequest(messages: messages, model: modelID))
+        let response = try await provider.complete(
+            ChatRequest(
+                messages: messages,
+                model: modelID,
+                temperature: runtimePreferences.generationSettings.temperature,
+                maxTokens: runtimePreferences.generationSettings.maxTokens,
+                topP: runtimePreferences.generationSettings.topP,
+                presencePenalty: runtimePreferences.generationSettings.presencePenalty,
+                frequencyPenalty: runtimePreferences.generationSettings.frequencyPenalty,
+                stopSequences: runtimePreferences.generationSettings.stopSequences.isEmpty
+                    ? nil
+                    : runtimePreferences.generationSettings.stopSequences,
+                thinkingLevel: provider.supportedCapabilities.contains(.thinking)
+                    ? (runtimePreferences.defaultThinkingLevel == .off ? nil : runtimePreferences.defaultThinkingLevel)
+                    : nil
+            )
+        )
         let text = response.message.content.compactMap { part -> String? in
             guard case .text(let value) = part else { return nil }
             return value
         }.joined()
-        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = sanitizedResponseText(text)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         guard normalized.isEmpty == false else {
             throw ShortcutAIServiceError.emptyResponse
         }
         return normalized
     }
 
-    private func makeProvider(id: String) throws -> any ChatModelProvider {
-        switch id {
-        case "openai":
-            return OpenAIProvider(
-                keyResolver: { APIKeyStore.nextEnabledSecret(providerId: "openai") }
-            )
-        case "anthropic":
-            return AnthropicProvider(
-                keyResolver: { APIKeyStore.nextEnabledSecret(providerId: "anthropic") }
-            )
-        default:
-            throw ShortcutAIServiceError.unsupportedProvider(id)
-        }
+    private func userFacingMessage(for error: Error) -> String {
+        AppLocalization.userFacingErrorMessage(
+            for: error,
+            fallbackKey: "errors.ai.service_unavailable"
+        )
     }
 
-    private func defaultModelID(for providerID: String) -> String {
-        switch providerID {
-        case "anthropic":
-            return AppConfig.Defaults.defaultAnthropicModelID
-        default:
-            return AppConfig.Defaults.defaultOpenAIModelID
-        }
+    private func sanitizedResponseText(_ text: String) -> String {
+        text.replacingOccurrences(
+            of: #"(?s)\[thinking\].*?\[/thinking\]"#,
+            with: "",
+            options: .regularExpression
+        )
     }
 
     private func encode(_ images: [IntentFile]) async throws -> [PendingAIRequestImage] {

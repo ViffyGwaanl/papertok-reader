@@ -20,11 +20,16 @@ struct DictionaryLookupView: UIViewControllerRepresentable {
 /// Sheet that presents the system dictionary lookup for a selected
 /// word or phrase. If the system has no definition installed, an
 /// install prompt from the OS is shown automatically.
-struct DictionaryLookupSheet: View {
+public struct DictionaryLookupSheet: View {
     let term: String
     let onDismiss: () -> Void
 
-    var body: some View {
+    public init(term: String, onDismiss: @escaping () -> Void) {
+        self.term = term
+        self.onDismiss = onDismiss
+    }
+
+    public var body: some View {
         NavigationStack {
             Group {
                 if UIReferenceLibraryViewController.dictionaryHasDefinition(forTerm: term) {
@@ -55,10 +60,16 @@ struct DictionaryLookupSheet: View {
     }
 }
 #else
-struct DictionaryLookupSheet: View {
+public struct DictionaryLookupSheet: View {
     let term: String
     let onDismiss: () -> Void
-    var body: some View {
+
+    public init(term: String, onDismiss: @escaping () -> Void) {
+        self.term = term
+        self.onDismiss = onDismiss
+    }
+
+    public var body: some View {
         NavigationStack {
             ContentUnavailableView(
                 String(localized: "reader.dictionary.unavailable_title"),

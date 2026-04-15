@@ -99,15 +99,9 @@ public enum EPUBOpenError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .invalidURL, .assetError, .streamerError:
-            return AppLocalization.string(
-                "errors.reader.cannot_open",
-                value: "Couldn't open this book."
-            )
+            return AppLocalization.string("errors.reader.cannot_open")
         case .searchFailed:
-            return AppLocalization.string(
-                "errors.reader.search_failed",
-                value: "Couldn't search this book."
-            )
+            return AppLocalization.string("errors.reader.search_failed")
         }
     }
 

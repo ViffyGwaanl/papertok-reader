@@ -40,10 +40,7 @@ public final class EPUBReaderAnnotationsViewModel {
     ) async -> BookNote? {
         let trimmedSelection = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard type == .bookmark || trimmedSelection.isEmpty == false else {
-            errorMessage = AppLocalization.string(
-                "errors.reader.selected_text_required",
-                value: "Highlights and notes require selected text."
-            )
+            errorMessage = AppLocalization.string("errors.reader.selected_text_required")
             return nil
         }
 
@@ -80,10 +77,7 @@ public final class EPUBReaderAnnotationsViewModel {
 
         let existingType = NoteType(rawValue: existing.type) ?? .highlight
         if existingType == .bookmark && type != .bookmark {
-            errorMessage = AppLocalization.string(
-                "errors.reader.selected_text_required",
-                value: "Highlights and notes require selected text."
-            )
+            errorMessage = AppLocalization.string("errors.reader.selected_text_required")
             return nil
         }
 
@@ -153,7 +147,7 @@ public final class EPUBReaderAnnotationsViewModel {
 
         let trimmedChapter = chapterTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedChapter.isEmpty
-            ? AppLocalization.string("reader.bookmark", value: "Bookmark")
+            ? AppLocalization.string("reader.bookmark")
             : trimmedChapter
     }
 }

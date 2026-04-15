@@ -3,7 +3,7 @@ import PTCore
 import PTUI
 
 /// Full sheet for excerpt operations: save, share as text, share as image card, copy.
-struct ExcerptMenuSheet: View {
+public struct ExcerptMenuSheet: View {
     let selectedText: String
     let bookTitle: String
     let author: String
@@ -13,7 +13,23 @@ struct ExcerptMenuSheet: View {
 
     @State private var renderedImage: ImageWrapper?
 
-    var body: some View {
+    public init(
+        selectedText: String,
+        bookTitle: String,
+        author: String,
+        chapterTitle: String,
+        onSaveToNotes: @escaping () -> Void,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.selectedText = selectedText
+        self.bookTitle = bookTitle
+        self.author = author
+        self.chapterTitle = chapterTitle
+        self.onSaveToNotes = onSaveToNotes
+        self.onDismiss = onDismiss
+    }
+
+    public var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: AppSpacing.lg) {

@@ -92,10 +92,7 @@ struct EPUBReaderControlsViewModelTests {
         #expect(viewModel.searchResults.isEmpty)
         #expect(
             viewModel.searchErrorMessage
-                == AppLocalization.string(
-                    "errors.reader.search_failed",
-                    value: "Couldn't search this book."
-                )
+                == AppLocalization.string("errors.reader.search_failed")
         )
         #expect(bridge.recordedQueries == ["result", "broken"])
     }
@@ -111,10 +108,7 @@ struct EPUBReaderControlsViewModelTests {
 
         #expect(
             viewModel.searchErrorMessage
-                == AppLocalization.string(
-                    "errors.reader.search_failed",
-                    value: "Couldn't search this book."
-                )
+                == AppLocalization.string("errors.reader.search_failed")
         )
     }
 
@@ -129,10 +123,7 @@ struct EPUBReaderControlsViewModelTests {
         #expect(viewModel.tocEntries.isEmpty)
         #expect(
             viewModel.tocErrorMessage
-                == AppLocalization.string(
-                    "reader.toc.load_failed",
-                    value: "Couldn't load the table of contents."
-                )
+                == AppLocalization.string("reader.toc.load_failed")
         )
     }
 
@@ -146,10 +137,7 @@ struct EPUBReaderControlsViewModelTests {
 
         #expect(
             viewModel.tocErrorMessage
-                == AppLocalization.string(
-                    "reader.toc.load_failed",
-                    value: "Couldn't load the table of contents."
-                )
+                == AppLocalization.string("reader.toc.load_failed")
         )
     }
 }

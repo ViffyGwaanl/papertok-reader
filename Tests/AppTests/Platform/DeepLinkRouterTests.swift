@@ -1,6 +1,10 @@
 import Foundation
 import Testing
 import PTFeatures
+import PTReader
+#if canImport(ReadiumShared)
+import ReadiumShared
+#endif
 @testable import PaperTokReader
 
 @Suite("DeepLinkRouter")
@@ -71,7 +75,7 @@ struct DeepLinkRouterTests {
         defer { router.consumeDestination() }
 
         var selectedTab: AppTab = .bookshelf
-        var pendingBookRequest: BookshelfOpenRequest? = .init(bookID: "7", title: "Old Book")
+        var pendingBookRequest: BookshelfOpenRequest? = .init(bookID: "7", title: "Old Book", locator: nil)
         var pendingAIRequest: AIChatOpenRequest? = .init(message: "old question", shareEventID: "share-event-old")
         var sharedInboxImportRequest: SharedInboxImportRequest? = .init(eventID: "share-event-import")
 
@@ -88,5 +92,65 @@ struct DeepLinkRouterTests {
         #expect(pendingAIRequest == nil)
         #expect(sharedInboxImportRequest == nil)
         #expect(router.pendingDestination == nil)
+    }
+
+    @Test("reader open destinations preserve locator overrides in pending book requests")
+    func openBookDestinationPreservesLocatorOverride() {
+        let router = DeepLinkRouter.shared
+        router.pendingDestination = .openBook(id: "42", title: "Deep Link Book", locator: "Text/chapter-7.xhtml")
+        defer { router.consumeDestination() }
+
+        var selectedTab: AppTab = .ai
+        var pendingBookRequest: BookshelfOpenRequest?
+        var pendingAIRequest: AIChatOpenRequest?
+        var sharedInboxImportRequest: SharedInboxImportRequest?
+
+        RootNavigationCoordinator.consumePendingDestinationIfNeeded(
+            router: router,
+            selectedTab: &selectedTab,
+            pendingBookRequest: &pendingBookRequest,
+            pendingAIRequest: &pendingAIRequest,
+            sharedInboxImportRequest: &sharedInboxImportRequest
+        )
+
+        #expect(selectedTab == .bookshelf)
+        #expect(pendingBookRequest == .init(bookID: "42", title: "Deep Link Book", locator: "Text/chapter-7.xhtml"))
+        #expect(pendingAIRequest == nil)
+        #expect(sharedInboxImportRequest == nil)
+        #expect(router.pendingDestination == nil)
+    }
+
+#if canImport(ReadiumShared)
+    @Test("reader navigation overrides convert EPUB hrefs into stored locators")
+    func readerNavigationOverrideResolvesEPUBHref() throws {
+        let book = Book.placeholder(title: "EPUB", filePath: "/tmp/book.epub")
+
+        let override = try #require(
+            ReaderNavigationOverride.resolve(book: book, locator: "Text/chapter-3.xhtml")
+        )
+
+        let locatorString: String
+        switch override {
+        case .epub(let value):
+            locatorString = value
+        case .pdf:
+            Issue.record("Expected an EPUB override")
+            return
+        }
+
+        let locator = try #require(EPUBAnnotationBridge.locator(fromStoredString: locatorString))
+        #expect(locator.href.string == "Text/chapter-3.xhtml")
+    }
+#endif
+
+    @Test("reader navigation overrides convert PDF page locators to zero based page indices")
+    func readerNavigationOverrideResolvesPDFPage() throws {
+        let book = Book.placeholder(title: "PDF", filePath: "/tmp/book.pdf")
+
+        let override = try #require(
+            ReaderNavigationOverride.resolve(book: book, locator: "page:4")
+        )
+
+        #expect(override == .pdf(pageIndex: 3))
     }
 }

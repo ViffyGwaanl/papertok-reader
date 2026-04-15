@@ -28,6 +28,9 @@ public final class ContextMenuCoordinator {
     /// Whether the floating context menu is visible.
     public var isMenuVisible: Bool = false
 
+    /// A staged search query emitted by the context menu and consumed by the reader surface.
+    public var pendingSearchQuery: String?
+
     /// The highlight color for the next highlight action.
     public var highlightColor: HighlightColor = .yellow
 
@@ -60,8 +63,12 @@ public final class ContextMenuCoordinator {
     private let bookTitle: String
     private let bookAuthor: String
     private let noteDAO: BookNoteDAO
-    public let translationService: AITranslationService?
+    private let translationServiceProvider: () -> AITranslationService?
     private let onSendToAI: ((String) async -> Void)?
+
+    public var translationService: AITranslationService? {
+        translationServiceProvider()
+    }
 
     // MARK: - Init
 
@@ -71,13 +78,15 @@ public final class ContextMenuCoordinator {
         bookAuthor: String,
         database: AppDatabase,
         translationService: AITranslationService? = nil,
+        translationServiceProvider: (() -> AITranslationService?)? = nil,
         onSendToAI: ((String) async -> Void)? = nil
     ) {
         self.bookId = bookId
         self.bookTitle = bookTitle
         self.bookAuthor = bookAuthor
         self.noteDAO = BookNoteDAO(database: database)
-        self.translationService = translationService
+        let fallbackTranslationService = translationService
+        self.translationServiceProvider = translationServiceProvider ?? { fallbackTranslationService }
         self.onSendToAI = onSendToAI
     }
 
@@ -132,13 +141,7 @@ public final class ContextMenuCoordinator {
             isMenuVisible = false
 
         case .search:
-            // Search is handled by the reader view model directly;
-            // post a notification so the reader can open its search sheet.
-            NotificationCenter.default.post(
-                name: .contextMenuSearchRequested,
-                object: nil,
-                userInfo: ["query": selectedText]
-            )
+            pendingSearchQuery = selectedText
             dismiss()
 
         case .share:
@@ -212,13 +215,19 @@ public final class ContextMenuCoordinator {
             content: selectedText,
             cfi: selectedLocator,
             chapter: chapterTitle,
-            type: NoteType.highlight.rawValue,
+            type: NoteType.note.rawValue,
             color: highlightColor.hex,
             createTime: Date(),
             updateTime: Date()
         )
         _ = try? await noteDAO.save(note)
         await MainActor.run { activeSheet = nil }
+    }
+
+    /// Returns the pending search query once and clears it.
+    public func takePendingSearchQuery() -> String? {
+        defer { pendingSearchQuery = nil }
+        return pendingSearchQuery
     }
 
     // MARK: - Private Helpers
@@ -241,24 +250,20 @@ public final class ContextMenuCoordinator {
         }
     }
 
-    private var contextLine: String {
-        chapterTitle.isEmpty
-            ? "from \"\(bookTitle)\""
-            : "from \"\(bookTitle)\", chapter \"\(chapterTitle)\""
-    }
-
     private var explainPrompt: String {
-        "Please explain the following passage \(contextLine):\n\n\"\(selectedText)\""
+        ReaderAIQuickAction.explain.prompt(
+            selectedText: selectedText,
+            bookTitle: bookTitle,
+            chapterTitle: chapterTitle
+        )
     }
 
     private var summarizePrompt: String {
-        "Please summarize the key points of this passage \(contextLine):\n\n\"\(selectedText)\""
+        ReaderAIQuickAction.summarize.prompt(
+            selectedText: selectedText,
+            bookTitle: bookTitle,
+            chapterTitle: chapterTitle
+        )
     }
 
-}
-
-// MARK: - Notification Name
-
-public extension Notification.Name {
-    static let contextMenuSearchRequested = Notification.Name("PTContextMenuSearchRequested")
 }

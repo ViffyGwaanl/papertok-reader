@@ -48,14 +48,15 @@ public final class ReaderViewModel {
     public init(
         book: Book,
         database: AppDatabase,
-        readerSessionStore: ReaderSessionContextStore? = nil
+        readerSessionStore: ReaderSessionContextStore? = nil,
+        initialPageOverride: Int? = nil
     ) {
         self.book = book
         self.bookDAO = BookDAO(database: database)
         self.noteDAO = BookNoteDAO(database: database)
         self.readingSessionRecorder = ReadingSessionRecorder(bookId: book.id, database: database)
         self.readerSessionStore = readerSessionStore
-        self.currentPage = Int(book.lastReadPosition) ?? 0
+        self.currentPage = initialPageOverride ?? Int(book.lastReadPosition) ?? 0
         self.readingPercentage = book.readingPercentage
     }
 

@@ -9,11 +9,16 @@ import PTUI
 /// - Top row: highlight color dots (tap to highlight immediately)
 /// - Bottom rows: action buttons grouped by category
 /// - Morandi card styling with shadow
-struct ReaderContextMenuView: View {
+public struct ReaderContextMenuView: View {
     @Bindable var coordinator: ContextMenuCoordinator
     let onDismiss: () -> Void
 
-    var body: some View {
+    public init(coordinator: ContextMenuCoordinator, onDismiss: @escaping () -> Void) {
+        self.coordinator = coordinator
+        self.onDismiss = onDismiss
+    }
+
+    public var body: some View {
         VStack(spacing: AppSpacing.sm) {
             // Highlight color row
             VStack(spacing: AppSpacing.xs) {

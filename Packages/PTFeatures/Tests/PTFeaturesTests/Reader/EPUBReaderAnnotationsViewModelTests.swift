@@ -142,10 +142,7 @@ struct EPUBReaderAnnotationsViewModelTests {
         #expect(persisted.isEmpty)
         #expect(
             viewModel.errorMessage
-                == AppLocalization.string(
-                    "errors.reader.selected_text_required",
-                    value: "Highlights and notes require selected text."
-                )
+                == AppLocalization.string("errors.reader.selected_text_required")
         )
     }
 
@@ -226,10 +223,7 @@ struct EPUBReaderAnnotationsViewModelTests {
         #expect(persisted[0].readerNote == nil)
         #expect(
             viewModel.errorMessage
-                == AppLocalization.string(
-                    "errors.reader.selected_text_required",
-                    value: "Highlights and notes require selected text."
-                )
+                == AppLocalization.string("errors.reader.selected_text_required")
         )
     }
 

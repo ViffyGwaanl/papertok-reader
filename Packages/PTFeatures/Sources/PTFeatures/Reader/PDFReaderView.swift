@@ -4,6 +4,30 @@ import PTReader
 import PTUI
 import SwiftUI
 
+struct PDFSelectionRouting {
+    let aiQuickActionText: String
+    let aiQuickActionChapter: String
+    let contextMenuText: String
+    let contextMenuLocator: String
+    let contextMenuChapter: String
+    let annotationDraft: EPUBReaderAnnotationDraft?
+
+    var shouldCreateAnnotationDraft: Bool {
+        annotationDraft != nil
+    }
+
+    static func from(selection: PDFSelectionSnapshot) -> PDFSelectionRouting {
+        PDFSelectionRouting(
+            aiQuickActionText: selection.selectedText,
+            aiQuickActionChapter: selection.pageLabel,
+            contextMenuText: selection.selectedText,
+            contextMenuLocator: selection.anchorString,
+            contextMenuChapter: selection.pageLabel,
+            annotationDraft: nil
+        )
+    }
+}
+
 // MARK: - PDFKit platform wrapper
 
 #if canImport(UIKit)
@@ -450,7 +474,8 @@ public struct PDFReaderView: View {
         book: Book,
         database: AppDatabase,
         aiChatViewModel: AIChatViewModel,
-        readerSessionStore: ReaderSessionContextStore? = nil
+        readerSessionStore: ReaderSessionContextStore? = nil,
+        initialPageOverride: Int? = nil
     ) {
         self.database = database
         self.aiChatViewModel = aiChatViewModel
@@ -458,12 +483,99 @@ public struct PDFReaderView: View {
             initialValue: ReaderViewModel(
                 book: book,
                 database: database,
-                readerSessionStore: readerSessionStore
+                readerSessionStore: readerSessionStore,
+                initialPageOverride: initialPageOverride
             )
         )
     }
 
     public var body: some View {
+        readerAlertSurface
+    }
+
+    private var readerAlertSurface: some View {
+        readerCommandSurface
+            .alert("reader.annotation_error", isPresented: annotationErrorPresentedBinding) {
+                Button(String(localized: "common.ok")) {
+                    annotationErrorMessage = nil
+                }
+            } message: {
+                Text(annotationErrorMessage ?? "")
+            }
+    }
+
+    private var readerCommandSurface: some View {
+        readerLifecycleSurface
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PaperTokToggleAI"))) { _ in
+                isAIPanelPresented.toggle()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .previousChapter)) { _ in
+                goToPreviousPageFromCommand()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .nextChapter)) { _ in
+                goToNextPageFromCommand()
+            }
+    }
+
+    private var readerLifecycleSurface: some View {
+        readerPresentationSurface
+            .task {
+                await loadReader()
+                volumeKeyHandler.onVolumeUp = {
+                    Task { @MainActor in
+                        viewModel.goToPage(viewModel.currentPage + 1)
+                    }
+                }
+                volumeKeyHandler.onVolumeDown = {
+                    Task { @MainActor in
+                        viewModel.goToPage(viewModel.currentPage - 1)
+                    }
+                }
+                applyVolumeKeyHandler()
+            }
+            .onDisappear {
+                volumeKeyHandler.stop()
+#if canImport(AVFoundation)
+                ttsService.stop()
+#endif
+                WakeLockController.setKeepScreenOn(false)
+                Task {
+                    await viewModel.saveProgress()
+                    await viewModel.endReadingSession()
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 0) {
+                    if isAIPanelPresented == false {
+                        ReaderAIMinimizedBar(aiChatViewModel: aiChatViewModel) {
+                            isAIPanelPresented = true
+                        }
+                    }
+                    if showPageSlider && !isFullScreen && viewModel.pageCount > 1 {
+                        ReaderPageSlider(
+                            currentPage: $viewModel.currentPage,
+                            pageCount: viewModel.pageCount,
+                            onPageChange: { page in viewModel.goToPage(page) }
+                        )
+                    }
+                }
+            }
+            .onTapGesture(count: 2) {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isFullScreen.toggle()
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                Task {
+                    if newPhase == .background {
+                        await viewModel.saveProgress()
+                    }
+                    await viewModel.handleScenePhaseChange(newPhase)
+                }
+            }
+    }
+
+    private var readerPresentationSurface: some View {
         ReaderAIPanelHost(
             book: viewModel.book,
             aiChatViewModel: aiChatViewModel,
@@ -482,7 +594,9 @@ public struct PDFReaderView: View {
         .sheet(isPresented: searchSheetBinding) { searchSheet }
         .sheet(isPresented: annotationEditorPresentedBinding) { annotationEditorSheet }
         .sheet(isPresented: aiQuickActionsPresentedBinding) { aiQuickActionsSheet }
-        .sheet(item: contextMenuSheetBinding) { sheet in
+        .sheet(item: contextMenuSheetBinding, onDismiss: {
+            selectionResetToken += 1
+        }) { sheet in
             contextMenuSheetContent(sheet)
         }
         .sheet(isPresented: $showBookmarkManager) {
@@ -527,70 +641,6 @@ public struct PDFReaderView: View {
             }
         }
 #endif
-        .task {
-            await loadReader()
-            volumeKeyHandler.onVolumeUp = {
-                Task { @MainActor in
-                    viewModel.goToPage(viewModel.currentPage + 1)
-                }
-            }
-            volumeKeyHandler.onVolumeDown = {
-                Task { @MainActor in
-                    viewModel.goToPage(viewModel.currentPage - 1)
-                }
-            }
-            applyVolumeKeyHandler()
-        }
-        .onDisappear {
-            volumeKeyHandler.stop()
-#if canImport(AVFoundation)
-            ttsService.stop()
-#endif
-            WakeLockController.setKeepScreenOn(false)
-            Task {
-                await viewModel.saveProgress()
-                await viewModel.endReadingSession()
-            }
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 0) {
-                if isAIPanelPresented == false {
-                    ReaderAIMinimizedBar(aiChatViewModel: aiChatViewModel) {
-                        isAIPanelPresented = true
-                    }
-                }
-                if showPageSlider && !isFullScreen && viewModel.pageCount > 1 {
-                    ReaderPageSlider(
-                        currentPage: $viewModel.currentPage,
-                        pageCount: viewModel.pageCount,
-                        onPageChange: { page in viewModel.goToPage(page) }
-                    )
-                }
-            }
-        }
-        .onTapGesture(count: 2) {
-            withAnimation(.easeInOut(duration: 0.25)) {
-                isFullScreen.toggle()
-            }
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            Task {
-                if newPhase == .background {
-                    await viewModel.saveProgress()
-                }
-                await viewModel.handleScenePhaseChange(newPhase)
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PaperTokToggleAI"))) { _ in
-            isAIPanelPresented.toggle()
-        }
-        .alert("reader.annotation_error", isPresented: annotationErrorPresentedBinding) {
-            Button(String(localized: "common.ok")) {
-                annotationErrorMessage = nil
-            }
-        } message: {
-            Text(annotationErrorMessage ?? "")
-        }
     }
 
     // MARK: - Toolbar
@@ -621,6 +671,19 @@ public struct PDFReaderView: View {
                     description: Text("bookshelf.file_could_not_be_opened")
                 )
             }
+        }
+        .onChange(of: contextMenuCoordinator?.pendingSearchQuery) { _, pendingQuery in
+            guard let query = pendingQuery?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  query.isEmpty == false,
+                  let menuCoordinator = contextMenuCoordinator else {
+                return
+            }
+            _ = menuCoordinator.takePendingSearchQuery()
+            readerControlsViewModel?.searchQuery = query
+            readerControlsViewModel?.showSearch = true
+            currentSearchResultIndex = 0
+            selectionResetToken += 1
+            Task { await readerControlsViewModel?.performSearch() }
         }
     }
 
@@ -743,6 +806,9 @@ public struct PDFReaderView: View {
                 bookTitle: viewModel.book.title,
                 bookAuthor: viewModel.book.author,
                 database: database,
+                translationServiceProvider: { [aiChatViewModel] in
+                    aiChatViewModel.makeTranslationService()
+                },
                 onSendToAI: { [aiChatViewModel] prompt in
                     _ = await aiChatViewModel.sendMessage(prompt)
                 }
@@ -1016,25 +1082,24 @@ public struct PDFReaderView: View {
         viewModel.goToPage(range.startPage)
     }
 
+    private func goToPreviousPageFromCommand() {
+        viewModel.goToPage(viewModel.currentPage - 1)
+    }
+
+    private func goToNextPageFromCommand() {
+        viewModel.goToPage(viewModel.currentPage + 1)
+    }
+
     private func presentAnnotationDraft(selection: PDFSelectionSnapshot) {
-        // Store selection context for AI quick actions
-        aiQuickActionText = selection.selectedText
-        aiQuickActionChapter = selection.pageLabel
-
-        // Show context menu if coordinator is available
+        let routing = PDFSelectionRouting.from(selection: selection)
+        aiQuickActionText = routing.aiQuickActionText
+        aiQuickActionChapter = routing.aiQuickActionChapter
         contextMenuCoordinator?.showMenu(
-            text: selection.selectedText,
-            locator: selection.anchorString,
-            chapter: selection.pageLabel
+            text: routing.contextMenuText,
+            locator: routing.contextMenuLocator,
+            chapter: routing.contextMenuChapter
         )
-
-        annotationDraft = EPUBReaderAnnotationDraft(
-            locatorString: selection.anchorString,
-            selectedText: selection.selectedText,
-            chapterTitle: selection.pageLabel,
-            type: .highlight,
-            color: .yellow
-        )
+        annotationDraft = routing.annotationDraft
     }
 
     private func presentBookmarkDraft() {

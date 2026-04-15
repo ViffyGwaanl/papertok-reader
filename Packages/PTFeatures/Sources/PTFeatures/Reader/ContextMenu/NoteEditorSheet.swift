@@ -7,7 +7,7 @@ import PTUI
 ///
 /// Displays the selected text read-only at the top, a color picker, a text
 /// editor for the note body, and save/delete controls.
-struct NoteEditorSheet: View {
+public struct NoteEditorSheet: View {
     let selectedText: String
     let chapterTitle: String
     let existingNoteID: Int64?
@@ -18,7 +18,7 @@ struct NoteEditorSheet: View {
     @State private var highlightColor: HighlightColor
     @State private var noteText: String
 
-    init(
+    public init(
         selectedText: String,
         chapterTitle: String,
         existingNoteID: Int64? = nil,
@@ -40,7 +40,7 @@ struct NoteEditorSheet: View {
 
     private var isEditing: Bool { existingNoteID != nil }
 
-    var body: some View {
+    public var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
@@ -55,7 +55,7 @@ struct NoteEditorSheet: View {
                 .padding(AppSpacing.lg)
             }
             .background(Morandi.background)
-            .navigationTitle(isEditing ? "Edit Note" : "Add Note")
+            .navigationTitle(String(localized: "common.note"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
 #endif
@@ -66,7 +66,7 @@ struct NoteEditorSheet: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isEditing ? "Save" : "Add") {
+                    Button(isEditing ? String(localized: "common.save") : String(localized: "common.add")) {
                         onSave(highlightColor, noteText)
                     }
                     .foregroundStyle(Morandi.accent)
