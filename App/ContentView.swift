@@ -2130,12 +2130,33 @@ struct EPUBBookshelfReaderView: View {
                     .foregroundStyle(Morandi.secondaryText)
                     .monospacedDigit()
                 }
+                if let runtime = fulltextTranslationRuntime, runtime.hasFailures {
+                    partialFailureChip
+                }
                 Text("\(Int((coordinator.readingProgress * 100).rounded()))%")
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.secondaryText)
                     .monospacedDigit()
             }
         }
+    }
+
+    private var partialFailureChip: some View {
+        HStack(spacing: AppSpacing.xxs) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Color.red.opacity(0.85))
+            Text(String(localized: "reader.translation.fulltext.partial_failure"))
+                .font(AppTypography.caption)
+                .foregroundStyle(Morandi.primaryText)
+        }
+        .padding(.horizontal, AppSpacing.xs)
+        .padding(.vertical, AppSpacing.xxs)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Morandi.background.opacity(0.8))
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text(String(localized: "reader.translation.fulltext.partial_failure")))
     }
 
     /// Observable stamp that changes whenever the runtime's paragraphs collection
@@ -2177,6 +2198,7 @@ struct EPUBBookshelfReaderView: View {
             fulltextTranslationEnabled = false
             return
         }
+        persistFulltextTranslationPreference(enabled)
         Task {
             await runtime.setEnabled(enabled)
             if enabled {
@@ -2184,6 +2206,19 @@ struct EPUBBookshelfReaderView: View {
             } else {
                 coordinator.applyDecorations([], in: fulltextTranslationDecorationGroup)
             }
+        }
+    }
+
+    private func restoreFulltextTranslationPreferenceIfNeeded() {
+        guard loadFulltextTranslationPreference(), fulltextTranslationEnabled == false else { return }
+        fulltextTranslationEnabled = true
+        guard let runtime = ensureFulltextTranslationRuntime() else {
+            fulltextTranslationEnabled = false
+            return
+        }
+        Task {
+            await runtime.setEnabled(true)
+            feedFulltextTranslationChapterIfNeeded()
         }
     }
 
@@ -2328,6 +2363,7 @@ struct EPUBBookshelfReaderView: View {
                 progress: coordinator.readingProgress
             )
             await readingSessionRecorder.resume()
+            restoreFulltextTranslationPreferenceIfNeeded()
             loadError = nil
         } catch {
             readerControlsViewModel = nil
@@ -2718,10 +2754,52 @@ struct EPUBBookshelfReaderView: View {
     @ViewBuilder
     private var readerSettingsSheet: some View {
         if let preferencesViewModel {
-            EPUBReaderSettingsView(viewModel: preferencesViewModel) {
+            EPUBReaderSettingsView(
+                viewModel: preferencesViewModel,
+                fulltextTranslationController: makeFulltextTranslationSettingsController()
+            ) {
                 isReaderSettingsPresented = false
             }
         }
+    }
+
+    private func makeFulltextTranslationSettingsController() -> EPUBFulltextTranslationSettingsController? {
+        guard let runtime = ensureFulltextTranslationRuntime() else { return nil }
+        return EPUBFulltextTranslationSettingsController(
+            runtime: runtime,
+            cache: fulltextTranslationCache,
+            onEnabledChanged: { enabled in
+                await MainActor.run {
+                    fulltextTranslationEnabled = enabled
+                    persistFulltextTranslationPreference(enabled)
+                    if enabled {
+                        feedFulltextTranslationChapterIfNeeded()
+                    } else {
+                        coordinator.applyDecorations([], in: fulltextTranslationDecorationGroup)
+                    }
+                }
+            },
+            onTargetLanguageChanged: {
+                await MainActor.run {
+                    fulltextTranslationTargetLanguage = runtime.targetLanguage
+                    feedFulltextTranslationChapterIfNeeded()
+                }
+            }
+        )
+    }
+
+    static func fulltextTranslationPreferenceKey(for bookID: Int64) -> String {
+        "reader.fulltext_translation.enabled.\(bookID)"
+    }
+
+    private func persistFulltextTranslationPreference(_ enabled: Bool) {
+        guard let bookID = book.id else { return }
+        UserDefaults.standard.set(enabled, forKey: Self.fulltextTranslationPreferenceKey(for: bookID))
+    }
+
+    private func loadFulltextTranslationPreference() -> Bool {
+        guard let bookID = book.id else { return false }
+        return UserDefaults.standard.bool(forKey: Self.fulltextTranslationPreferenceKey(for: bookID))
     }
 
     private var preferencesSnapshot: EPUBReadingPreferencesSnapshot {

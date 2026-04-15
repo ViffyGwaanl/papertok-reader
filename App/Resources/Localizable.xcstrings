@@ -27879,6 +27879,14 @@
         }
       }
     },
+    "common.confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Confirm" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "确认" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "確認" } }
+      }
+    },
     "common.clear": {
       "extractionState": "manual",
       "localizations": {

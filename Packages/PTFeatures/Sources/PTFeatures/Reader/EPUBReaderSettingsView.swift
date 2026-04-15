@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import PTAIServices
 import PTCore
 import PTReader
 import PTUI
@@ -60,18 +61,42 @@ private enum EPUBReaderThemePreset: String, CaseIterable, Identifiable {
     }
 }
 
+@MainActor
+public final class EPUBFulltextTranslationSettingsController {
+    public let runtime: FulltextTranslationRuntime
+    public let cache: FulltextTranslationCache
+    public let onEnabledChanged: (Bool) async -> Void
+    public let onTargetLanguageChanged: () async -> Void
+
+    public init(
+        runtime: FulltextTranslationRuntime,
+        cache: FulltextTranslationCache,
+        onEnabledChanged: @escaping (Bool) async -> Void = { _ in },
+        onTargetLanguageChanged: @escaping () async -> Void = {}
+    ) {
+        self.runtime = runtime
+        self.cache = cache
+        self.onEnabledChanged = onEnabledChanged
+        self.onTargetLanguageChanged = onTargetLanguageChanged
+    }
+}
+
 public struct EPUBReaderSettingsView: View {
     @Bindable public var viewModel: EPUBReaderPreferencesViewModel
 
     private let onDone: () -> Void
+    private let fulltextTranslationController: EPUBFulltextTranslationSettingsController?
 
     @State private var selectedThemePreset: EPUBReaderThemePreset
+    @State private var showClearCacheConfirmation: Bool = false
 
     public init(
         viewModel: EPUBReaderPreferencesViewModel,
+        fulltextTranslationController: EPUBFulltextTranslationSettingsController? = nil,
         onDone: @escaping () -> Void
     ) {
         self.viewModel = viewModel
+        self.fulltextTranslationController = fulltextTranslationController
         self.onDone = onDone
         _selectedThemePreset = State(initialValue: EPUBReaderThemePreset.resolve(from: viewModel.readingPreferences.theme))
     }
@@ -83,6 +108,9 @@ public struct EPUBReaderSettingsView: View {
                 spacingSection
                 layoutSection
                 themeSection
+                if fulltextTranslationController != nil {
+                    fulltextTranslationSection
+                }
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
@@ -279,6 +307,62 @@ public struct EPUBReaderSettingsView: View {
                     set: { viewModel.readingPreferences.theme.textColor = $0 }
                 )
             )
+        }
+    }
+
+    @ViewBuilder
+    private var fulltextTranslationSection: some View {
+        if let controller = fulltextTranslationController {
+            Section(String(localized: "reader.translation.fulltext.section.title")) {
+                Toggle(
+                    String(localized: "reader.translation.fulltext.enable"),
+                    isOn: Binding(
+                        get: { controller.runtime.isEnabled },
+                        set: { newValue in
+                            Task { @MainActor in
+                                await controller.runtime.setEnabled(newValue)
+                                await controller.onEnabledChanged(newValue)
+                            }
+                        }
+                    )
+                )
+                .tint(Morandi.accent)
+
+                Picker(
+                    String(localized: "reader.translation.fulltext.target_language"),
+                    selection: Binding(
+                        get: { controller.runtime.targetLanguage },
+                        set: { newValue in
+                            Task { @MainActor in
+                                await controller.runtime.setTargetLanguage(newValue)
+                                await controller.onTargetLanguageChanged()
+                            }
+                        }
+                    )
+                ) {
+                    ForEach(["zh-Hans", "zh-Hant", "en", "ja"], id: \.self) { code in
+                        Text(Locale.current.localizedString(forIdentifier: code) ?? code).tag(code)
+                    }
+                }
+
+                Button(role: .destructive) {
+                    showClearCacheConfirmation = true
+                } label: {
+                    Text(String(localized: "reader.translation.fulltext.clear_cache"))
+                }
+                .confirmationDialog(
+                    String(localized: "reader.translation.fulltext.clear_cache.confirm.title"),
+                    isPresented: $showClearCacheConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button(String(localized: "common.confirm"), role: .destructive) {
+                        Task { await controller.cache.purge() }
+                    }
+                    Button(String(localized: "common.cancel"), role: .cancel) {}
+                } message: {
+                    Text(String(localized: "reader.translation.fulltext.clear_cache.confirm.message"))
+                }
+            }
         }
     }
 

@@ -89,6 +89,7 @@
 		C5BCA1B395631D3F3CE8E185 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6932166FAF1D7324853A45F6 /* AppEnvironment.swift */; };
 		C95E351F7400DBDD0AC854B2 /* ShortcutsCallbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD010CB82800CD591F6A0D8 /* ShortcutsCallbackService.swift */; };
 		CACE6E07DBADD3D4AFC654C4 /* PendingAIRequestStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */; };
+		C676F250A599D7B8CE3EF3B7 /* FulltextTranslationPreferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6725F5CF73E15060EE94664 /* FulltextTranslationPreferenceTests.swift */; };
 		CB66BCFC24B2225513FEF061 /* PTFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = 6490B3DAD3DCE4DA661D2073 /* PTFeatures */; };
 		CBE61F990E203A0E4A4D1EA4 /* APIKeyMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C34172A3A09A5F7C29320D3 /* APIKeyMigrationService.swift */; };
 		CC0E4BD722A7720DCCBFF474 /* SharedInboxImportProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */; };
@@ -189,6 +190,7 @@
 		C8F0E1E59821837D32715C07 /* SharedInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInbox.swift; sourceTree = "<group>"; };
 		D3C772688A1BD8165B84AB46 /* EventKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = EventKit.framework; path = System/Library/Frameworks/EventKit.framework; sourceTree = SDKROOT; };
 		D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingAIRequestStoreTests.swift; sourceTree = "<group>"; };
+		F6725F5CF73E15060EE94664 /* FulltextTranslationPreferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FulltextTranslationPreferenceTests.swift; sourceTree = "<group>"; };
 		E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacMenuCommands.swift; sourceTree = "<group>"; };
 		E22BAD75425206502C29B24E /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		E77EC16F6EDA3773224443A4 /* DeepLinkRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
@@ -364,6 +366,7 @@
 				7AD25A8251359DEFBB2F5C62 /* MigrationLocalizationCatalogTests.swift */,
 				A2F4D860C1A64D6AA1234BCC /* UserFacingLocalizationMappingTests.swift */,
 				D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */,
+				F6725F5CF73E15060EE94664 /* FulltextTranslationPreferenceTests.swift */,
 				B51648928A7843A4B8CBF7BB /* ShareAndShortcutsSettingsTests.swift */,
 				99BC85144C994045B7173CE5 /* ShareAndShortcutsSnapshotTests.swift */,
 				7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */,
@@ -662,6 +665,7 @@
 				C3F6F2794B9026030D94FE55 /* MigrationLocalizationCatalogTests.swift in Sources */,
 				A2F4D860C1A64D6AA1234BCD /* UserFacingLocalizationMappingTests.swift in Sources */,
 				CACE6E07DBADD3D4AFC654C4 /* PendingAIRequestStoreTests.swift in Sources */,
+				C676F250A599D7B8CE3EF3B7 /* FulltextTranslationPreferenceTests.swift in Sources */,
 				22C3BB4FD7D14660A982D451 /* ShareAndShortcutsSettingsTests.swift in Sources */,
 				22F1E2A57F324CB0B5DD11E2 /* ShareAndShortcutsSnapshotTests.swift in Sources */,
 				D4A6F01E2782F86D6A82FDE2 /* ShareExtensionInfoPlistTests.swift in Sources */,
