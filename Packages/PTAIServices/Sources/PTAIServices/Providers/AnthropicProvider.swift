@@ -409,7 +409,9 @@ public struct AnthropicProvider: ChatModelProvider {
 
     public func stream(_ request: ChatRequest) -> AsyncThrowingStream<ChatStreamChunk, Error> {
         AsyncThrowingStream { continuation in
-            Task {
+            // Cancellation contract: onTermination forwards consumer cancellation to the producer
+            // Task; URLSession.AsyncBytes honours Task cancellation and terminates the SSE read.
+            let task = Task {
                 do {
                     let apiKey = try resolveAPIKey()
                     let body = buildRequestBody(request: request, stream: true)
@@ -536,6 +538,7 @@ public struct AnthropicProvider: ChatModelProvider {
                     continuation.finish(throwing: error)
                 }
             }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 

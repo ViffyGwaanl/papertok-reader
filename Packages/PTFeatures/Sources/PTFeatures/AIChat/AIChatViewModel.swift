@@ -158,7 +158,13 @@ public final class AIChatViewModel {
     private var currentTurnRoundCount = 0
     private var approvalExecutionsInFlight: Set<UUID> = []
     private var pendingRuntimeUpdate: (runtime: Runtime, selection: RuntimeSelection)?
+    private var streamingTask: Task<Void, Never>?
     private static let maxToolRoundsPerTurn = 8
+    /// Minimum interval between streaming-token flushes to coalesce SwiftUI re-renders.
+    private static let streamingFlushInterval: Duration = .milliseconds(30)
+
+    /// Public read-only accessor for tests to verify in-flight streaming Task lifecycle.
+    public var isStreamingTaskActive: Bool { streamingTask != nil }
 
     /// Persistence service for saving/loading conversations (optional).
     public var persistenceService: ConversationPersistenceService?
@@ -441,7 +447,20 @@ public final class AIChatViewModel {
         isContinuingTurn = true
         defer { isContinuingTurn = false }
 
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.runStreamingLoop()
+        }
+        streamingTask = task
+        await task.value
+        if streamingTask == task {
+            streamingTask = nil
+        }
+    }
+
+    private func runStreamingLoop() async {
         while true {
+            if Task.isCancelled { return }
             guard let providerOption = activeProviderOption,
                   let modelId = activeTurnModelId else {
                 endTurn()
@@ -480,11 +499,28 @@ public final class AIChatViewModel {
             )
 
             var partialToolCalls: [Int: PartialToolCall] = [:]
+            var pendingText = ""
+            var lastFlush = ContinuousClock.now
+            let clock = ContinuousClock()
+            func flushPending() {
+                if pendingText.isEmpty == false {
+                    appendStreamToken(pendingText)
+                    pendingText = ""
+                    lastFlush = ContinuousClock.now
+                }
+            }
             do {
                 for try await chunk in provider.stream(request) {
+                    if Task.isCancelled {
+                        flushPending()
+                        return
+                    }
                     switch chunk.delta {
                     case .text(let text):
-                        appendStreamToken(text)
+                        pendingText += text
+                        if clock.now - lastFlush >= Self.streamingFlushInterval {
+                            flushPending()
+                        }
                     case .thinking:
                         continue
                     case let .toolCall(index, id, name, arguments):
@@ -493,7 +529,12 @@ public final class AIChatViewModel {
                         partialToolCalls[index] = partial
                     }
                 }
+                flushPending()
+            } catch is CancellationError {
+                flushPending()
+                return
             } catch {
+                flushPending()
                 endTurn()
                 if error is ProviderError {
                     errorMessage = AppLocalization.userFacingErrorMessage(
@@ -505,6 +546,7 @@ public final class AIChatViewModel {
                 }
                 return
             }
+            if Task.isCancelled { return }
 
             let toolCalls = partialToolCalls
                 .sorted { $0.key < $1.key }
@@ -712,6 +754,8 @@ public final class AIChatViewModel {
 
     /// Cancels current streaming generation.
     public func stopStreaming() {
+        streamingTask?.cancel()
+        streamingTask = nil
         if currentStreamText.isEmpty == false {
             addAssistantMessage(currentStreamText)
         }

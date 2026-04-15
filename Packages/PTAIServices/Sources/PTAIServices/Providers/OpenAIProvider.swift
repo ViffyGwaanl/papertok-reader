@@ -290,7 +290,10 @@ public struct OpenAIProvider: ChatModelProvider {
 
     public func stream(_ request: ChatRequest) -> AsyncThrowingStream<ChatStreamChunk, Error> {
         AsyncThrowingStream { continuation in
-            Task {
+            // Cancellation contract: when the consuming Task is cancelled, AsyncThrowingStream
+            // fires onTermination, which we forward to cancel the inner producer Task. The
+            // URLSession.AsyncBytes iteration honours Task cancellation and terminates the SSE read.
+            let task = Task {
                 do {
                     let apiKey = try resolveAPIKey()
                     let body = buildRequestBody(request: request, stream: true)
@@ -359,6 +362,7 @@ public struct OpenAIProvider: ChatModelProvider {
                     continuation.finish(throwing: error)
                 }
             }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 
