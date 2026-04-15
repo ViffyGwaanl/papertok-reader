@@ -27,6 +27,7 @@ public struct AIChatRuntimePreferences {
     public let approvalPolicy: ToolApprovalPolicy
     public let generationSettings: AIChatViewModel.ChatGenerationSettings
     public let defaultThinkingLevel: ThinkingLevel
+    public let responseFormat: ResponseFormat
 
     public static func load(
         defaults: UserDefaults,
@@ -72,11 +73,19 @@ public struct AIChatRuntimePreferences {
             perConversation: false
         )
 
+        let responseFormat: ResponseFormat = {
+            switch defaults.string(forKey: "ai_response_format_\(providerId)") {
+            case "json": return .json
+            default: return .text
+            }
+        }()
+
         return AIChatRuntimePreferences(
             enabledToolNames: enabledToolNames,
             approvalPolicy: approvalPolicy,
             generationSettings: generationSettings,
-            defaultThinkingLevel: resolveThinkingLevel(defaults: defaults, providerId: providerId)
+            defaultThinkingLevel: resolveThinkingLevel(defaults: defaults, providerId: providerId),
+            responseFormat: responseFormat
         )
     }
 

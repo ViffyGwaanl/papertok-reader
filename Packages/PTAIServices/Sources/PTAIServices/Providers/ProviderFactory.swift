@@ -8,7 +8,39 @@ public enum SupportedProvider: String, CaseIterable, Sendable {
     case gemini
     case azure
     case volcengine
+    case siliconflow
+    case groq
+    case mistral
+    case ollama
+    case deepseek
+    case openrouter
     case custom
+
+    /// All providers whose wire format is OpenAI chat/completions compatible
+    /// and which are routed through ``OpenAIProvider`` at runtime.
+    var isOpenAICompatible: Bool {
+        switch self {
+        case .openai, .siliconflow, .groq, .mistral, .ollama, .deepseek, .openrouter:
+            return true
+        case .anthropic, .gemini, .azure, .volcengine, .custom:
+            return false
+        }
+    }
+
+    /// Canonical default base URL for OpenAI-compatible providers.
+    var defaultOpenAICompatibleBaseURL: URL? {
+        switch self {
+        case .openai: return URL(string: "https://api.openai.com")
+        case .siliconflow: return URL(string: "https://api.siliconflow.cn")
+        case .groq: return URL(string: "https://api.groq.com/openai")
+        case .mistral: return URL(string: "https://api.mistral.ai")
+        case .ollama: return URL(string: "http://localhost:11434")
+        case .deepseek: return URL(string: "https://api.deepseek.com")
+        case .openrouter: return URL(string: "https://openrouter.ai/api")
+        case .anthropic, .gemini, .azure, .volcengine, .custom:
+            return nil
+        }
+    }
 }
 
 public enum GeminiSafetyPreset: String, Sendable {
@@ -82,10 +114,13 @@ public enum ProviderFactory {
         config: ProviderConfig = ProviderConfig()
     ) throws -> any ChatModelProvider {
         switch kind {
-        case .openai:
-            let base = config.baseURL ?? URL(string: "https://api.openai.com")!
+        case .openai, .siliconflow, .groq, .mistral, .ollama, .deepseek, .openrouter:
+            let base = config.baseURL ?? kind.defaultOpenAICompatibleBaseURL!
             return OpenAIProvider(
+                id: kind.rawValue,
+                displayName: ProviderFactory.displayName(for: kind),
                 baseURL: base,
+                apiKeyKeychainKey: "\(kind.rawValue)_api_key",
                 overrideAPIKey: config.apiKey,
                 keyResolver: config.keyResolver,
                 networkClient: config.networkClient
@@ -164,6 +199,43 @@ public enum ProviderFactory {
             return []
         case .volcengine:
             return ["doubao-pro-32k", "doubao-pro-128k", "doubao-lite-32k"]
+        case .siliconflow:
+            return [
+                "Qwen/Qwen2.5-72B-Instruct",
+                "Qwen/Qwen2.5-Coder-32B-Instruct",
+                "deepseek-ai/DeepSeek-V3",
+                "deepseek-ai/DeepSeek-R1",
+                "meta-llama/Meta-Llama-3.1-70B-Instruct",
+            ]
+        case .groq:
+            return [
+                "llama-3.3-70b-versatile",
+                "llama-3.1-70b-versatile",
+                "llama-3.1-8b-instant",
+                "mixtral-8x7b-32768",
+                "gemma2-9b-it",
+            ]
+        case .mistral:
+            return [
+                "mistral-large-latest",
+                "mistral-small-latest",
+                "codestral-latest",
+                "pixtral-large-latest",
+                "ministral-8b-latest",
+                "ministral-3b-latest",
+            ]
+        case .ollama:
+            return []
+        case .deepseek:
+            return ["deepseek-chat", "deepseek-reasoner"]
+        case .openrouter:
+            return [
+                "anthropic/claude-3.5-sonnet",
+                "openai/gpt-4o",
+                "google/gemini-2.0-flash-exp",
+                "meta-llama/llama-3.3-70b-instruct",
+                "qwen/qwen-2.5-72b-instruct",
+            ]
         case .custom:
             return []
         }
@@ -176,6 +248,12 @@ public enum ProviderFactory {
         case .gemini: return "Google Gemini"
         case .azure: return "Azure OpenAI"
         case .volcengine: return "Volcengine (Doubao)"
+        case .siliconflow: return "SiliconFlow"
+        case .groq: return "Groq"
+        case .mistral: return "Mistral"
+        case .ollama: return "Ollama"
+        case .deepseek: return "DeepSeek"
+        case .openrouter: return "OpenRouter"
         case .custom: return AppLocalization.string("settings.custom_provider")
         }
     }

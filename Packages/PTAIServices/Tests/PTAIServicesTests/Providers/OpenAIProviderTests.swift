@@ -76,6 +76,43 @@ struct OpenAIProviderTests {
         #expect(json.contains("\"stream_options\":{\"include_usage\":true}"))
     }
 
+    @Test("response body sets json_object when JSON format selected")
+    func responseFormatJSONEncodesJsonObject() throws {
+        let provider = OpenAIProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(
+            messages: [.user("Return JSON")],
+            model: "gpt-4o",
+            responseFormat: .json
+        )
+
+        let body = provider.buildRequestBody(request: request, stream: false)
+        #expect(body.responseFormat?.type == "json_object")
+
+        let data = try JSONEncoder().encode(body)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("\"response_format\":{\"type\":\"json_object\"}"))
+    }
+
+    @Test("response body omits response_format for text (default) mode")
+    func responseFormatTextOmitted() throws {
+        let provider = OpenAIProvider(overrideAPIKey: "test-key")
+        let textRequest = ChatRequest(
+            messages: [.user("Say hi")],
+            model: "gpt-4o",
+            responseFormat: .text
+        )
+        let body = provider.buildRequestBody(request: textRequest, stream: false)
+        #expect(body.responseFormat == nil)
+
+        let nilRequest = ChatRequest(messages: [.user("Say hi")], model: "gpt-4o")
+        let nilBody = provider.buildRequestBody(request: nilRequest, stream: false)
+        #expect(nilBody.responseFormat == nil)
+
+        let data = try JSONEncoder().encode(body)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("response_format") == false)
+    }
+
     @Test("openAIProviderDecodesUsageOnFinalChunk")
     func openAIProviderDecodesUsageOnFinalChunk() throws {
         // Final OpenAI streaming chunk: empty choices array, usage populated.

@@ -32,6 +32,7 @@ public struct AIProviderDetailView: View {
     @State private var frequencyPenalty: Double = 0.0
     @State private var stopSequencesText: String = ""
     @State private var advancedExpanded: Bool = false
+    @State private var responseFormat: String = "text" // text | json
 
     // Provider-specific
     @State private var includeThoughts: Bool = true
@@ -123,6 +124,12 @@ public struct AIProviderDetailView: View {
         case .gemini: return URL(string: "https://aistudio.google.com/app/apikey")
         case .azure: return URL(string: "https://portal.azure.com/")
         case .volcengine: return URL(string: "https://console.volcengine.com/ark")
+        case .siliconflow: return URL(string: "https://cloud.siliconflow.cn/account/ak")
+        case .groq: return URL(string: "https://console.groq.com/keys")
+        case .mistral: return URL(string: "https://console.mistral.ai/api-keys/")
+        case .ollama: return URL(string: "https://ollama.com/")
+        case .deepseek: return URL(string: "https://platform.deepseek.com/api_keys")
+        case .openrouter: return URL(string: "https://openrouter.ai/keys")
         case .custom: return nil
         }
     }
@@ -321,6 +328,12 @@ public struct AIProviderDetailView: View {
             return [CapabilityBadge.chat.label, CapabilityBadge.tools.label]
         case .volcengine:
             return [CapabilityBadge.chat.label, CapabilityBadge.tools.label]
+        case .siliconflow, .groq, .mistral, .ollama, .deepseek, .openrouter:
+            return [
+                CapabilityBadge.chat.label,
+                CapabilityBadge.tools.label,
+                CapabilityBadge.stream.label,
+            ]
         case .custom:
             return [CapabilityBadge.chat.label]
         }
@@ -447,6 +460,16 @@ public struct AIProviderDetailView: View {
                             .autocorrectionDisabled()
                             .font(AppTypography.caption)
                     }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Picker(String(localized: "chat.provider.response_format.title"), selection: $responseFormat) {
+                            Text("chat.provider.response_format.text").tag("text")
+                            Text("chat.provider.response_format.json").tag("json")
+                        }
+                        .foregroundStyle(Morandi.primaryText)
+                        Text("chat.provider.response_format.json_hint")
+                            .font(AppTypography.caption2)
+                            .foregroundStyle(Morandi.tertiaryText)
+                    }
                     Button {
                         resetGenerationDefaults()
                         saveGenerationDefaults()
@@ -464,6 +487,7 @@ public struct AIProviderDetailView: View {
                 .onChange(of: presencePenalty) { _, _ in saveGenerationDefaults() }
                 .onChange(of: frequencyPenalty) { _, _ in saveGenerationDefaults() }
                 .onChange(of: stopSequencesText) { _, _ in saveGenerationDefaults() }
+                .onChange(of: responseFormat) { _, _ in saveGenerationDefaults() }
             } label: {
                 Label(String(localized: "settings.advanced"), systemImage: "slider.horizontal.3")
                     .foregroundStyle(Morandi.primaryText)
@@ -618,6 +642,7 @@ public struct AIProviderDetailView: View {
             frequencyPenalty = defaults.double(forKey: "ai_frequency_penalty_\(id)")
         }
         stopSequencesText = defaults.string(forKey: "ai_stop_sequences_\(id)") ?? ""
+        responseFormat = defaults.string(forKey: "ai_response_format_\(id)") ?? "text"
 
         // Provider-specific
         if defaults.object(forKey: "ai_include_thoughts_\(id)") != nil {
@@ -668,6 +693,7 @@ public struct AIProviderDetailView: View {
         defaults.set(presencePenalty, forKey: "ai_presence_penalty_\(id)")
         defaults.set(frequencyPenalty, forKey: "ai_frequency_penalty_\(id)")
         defaults.set(stopSequencesText, forKey: "ai_stop_sequences_\(id)")
+        defaults.set(responseFormat, forKey: "ai_response_format_\(id)")
 
         defaults.set(includeThoughts, forKey: "ai_include_thoughts_\(id)")
         defaults.set(safetySettings, forKey: "ai_safety_\(id)")
@@ -695,6 +721,7 @@ public struct AIProviderDetailView: View {
         defaults.set(presencePenalty, forKey: "ai_presence_penalty_\(id)")
         defaults.set(frequencyPenalty, forKey: "ai_frequency_penalty_\(id)")
         defaults.set(stopSequencesText, forKey: "ai_stop_sequences_\(id)")
+        defaults.set(responseFormat, forKey: "ai_response_format_\(id)")
         StoredAIProviderCatalog.postConfigurationDidChange()
     }
 

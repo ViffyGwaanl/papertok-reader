@@ -149,6 +149,80 @@ struct StoredAIProviderCatalogTests {
         #expect(geminiModel.supportsThinking)
     }
 
+    @Test("snapshot lists newly added OpenAI-compatible built-in providers")
+    func snapshotListsNewlyAddedBuiltInProviders() throws {
+        let (suiteName, defaults) = makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let snapshot = StoredAIProviderCatalog(defaults: defaults).snapshot(
+            toolRegistry: .default,
+            toolContext: ToolContext()
+        )
+        let ids = Set(snapshot.runtime.providers.map(\.id))
+        for expected in ["siliconflow", "groq", "mistral", "ollama", "deepseek", "openrouter"] {
+            #expect(ids.contains(expected), "Missing built-in provider: \(expected)")
+        }
+
+        func provider(_ id: String) throws -> AIChatViewModel.ProviderOption {
+            try #require(snapshot.runtime.providers.first(where: { $0.id == id }))
+        }
+
+        // Providers with curated lists must expose non-empty defaults.
+        for curated in ["siliconflow", "groq", "mistral", "deepseek", "openrouter"] {
+            let opt = try provider(curated)
+            #expect(opt.models.isEmpty == false, "\(curated) should ship curated models")
+        }
+
+        // DeepSeek reasoner must surface as thinking-capable.
+        let deepseek = try provider("deepseek")
+        let reasoner = try #require(deepseek.models.first(where: { $0.id == "deepseek-reasoner" }))
+        #expect(reasoner.supportsThinking)
+    }
+
+    @Test("catalog carries forward existing per-provider model preferences unchanged")
+    func catalogPreservesExistingModelPreferencesAfterExpansion() throws {
+        let (suiteName, defaults) = makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("openai", forKey: AppConfig.Keys.aiProviderID)
+        defaults.set("gpt-4o", forKey: "ai_model_for_openai")
+        defaults.set("claude-3-5-sonnet-20241022", forKey: "ai_model_for_anthropic")
+
+        let snapshot = StoredAIProviderCatalog(defaults: defaults).snapshot(
+            toolRegistry: .default,
+            toolContext: ToolContext()
+        )
+
+        let openai = try #require(snapshot.runtime.providers.first(where: { $0.id == "openai" }))
+        let anthropic = try #require(snapshot.runtime.providers.first(where: { $0.id == "anthropic" }))
+        #expect(openai.models.first?.id == "gpt-4o")
+        #expect(anthropic.models.first?.id == "claude-3-5-sonnet-20241022")
+    }
+
+    @Test("runtime preferences load persisted response format for provider")
+    func runtimePreferencesLoadsResponseFormat() {
+        let (suiteName, defaults) = makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("json", forKey: "ai_response_format_openai")
+        let prefs = AIChatRuntimePreferences.load(defaults: defaults, providerId: "openai")
+        switch prefs.responseFormat {
+        case .json:
+            break
+        case .text:
+            Issue.record("Expected .json response format but got .text")
+        }
+
+        defaults.set("text", forKey: "ai_response_format_openai")
+        let textPrefs = AIChatRuntimePreferences.load(defaults: defaults, providerId: "openai")
+        switch textPrefs.responseFormat {
+        case .text:
+            break
+        case .json:
+            Issue.record("Expected .text response format but got .json")
+        }
+    }
+
     @Test("resolveCurrentProvider narrows capabilities to the selected model")
     func resolveCurrentProviderNarrowsCapabilitiesToSelectedModel() {
         let (suiteName, defaults) = makeDefaults()

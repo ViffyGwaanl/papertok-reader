@@ -158,7 +158,10 @@ public struct StoredAIProviderCatalog {
     }
 
     private func builtInDescriptors() -> [Descriptor] {
-        let kinds: [SupportedProvider] = [.openai, .anthropic, .gemini, .azure, .volcengine]
+        let kinds: [SupportedProvider] = [
+            .openai, .anthropic, .gemini, .azure, .volcengine,
+            .siliconflow, .groq, .mistral, .ollama, .deepseek, .openrouter,
+        ]
         return kinds.map { kind in
             descriptor(
                 id: kind.rawValue,
@@ -361,20 +364,34 @@ public struct StoredAIProviderCatalog {
             return normalizedModelId.contains("thinking")
                 || normalizedModelId.hasPrefix("gemini-2.5")
                 || normalizedModelId.hasPrefix("gemini-3")
-        case .azure, .volcengine, .custom:
+        case .deepseek:
+            return normalizedModelId.contains("reasoner") || normalizedModelId.contains("r1")
+        case .siliconflow:
+            return normalizedModelId.contains("deepseek-r1") || normalizedModelId.contains("reason")
+        case .openrouter:
+            return normalizedModelId.contains("claude")
+                || normalizedModelId.contains("o1")
+                || normalizedModelId.contains("gpt-5")
+                || normalizedModelId.contains("reason")
+        case .azure, .volcengine, .custom, .groq, .mistral, .ollama:
             return false
         }
     }
 
     private func supportsVision(kind: SupportedProvider, modelId: String) -> Bool {
+        let lower = modelId.lowercased()
         switch kind {
         case .openai, .anthropic, .gemini:
-            return !modelId.lowercased().contains("text-only")
+            return !lower.contains("text-only")
         case .azure:
-            return modelId.lowercased().contains("vision")
-                || modelId.lowercased().contains("gpt-4")
-                || modelId.lowercased().contains("gpt-4o")
-        case .volcengine, .custom:
+            return lower.contains("vision") || lower.contains("gpt-4") || lower.contains("gpt-4o")
+        case .mistral:
+            return lower.contains("pixtral")
+        case .siliconflow:
+            return lower.contains("qwen2-vl") || lower.contains("llama-3.2")
+        case .openrouter:
+            return true
+        case .volcengine, .custom, .groq, .ollama, .deepseek:
             return false
         }
     }
@@ -395,7 +412,8 @@ public struct StoredAIProviderCatalog {
             return "gemini-2.0-flash-exp"
         case .volcengine:
             return "doubao-pro-32k"
-        case .azure, .custom, .openai:
+        case .azure, .custom, .openai,
+             .siliconflow, .groq, .mistral, .ollama, .deepseek, .openrouter:
             return AppConfig.Defaults.defaultOpenAIModelID
         }
     }

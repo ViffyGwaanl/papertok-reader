@@ -583,7 +583,8 @@ public final class AIChatViewModel {
                     ? nil
                     : requestPreferences.generationSettings.stopSequences,
                 tools: toolDefinitions.isEmpty ? nil : toolDefinitions,
-                thinkingLevel: thinkingLevelForCurrentRequest(provider: providerOption)
+                thinkingLevel: thinkingLevelForCurrentRequest(provider: providerOption),
+                responseFormat: requestPreferences.responseFormat
             )
 
             var partialToolCalls: [Int: PartialToolCall] = [:]
@@ -1035,7 +1036,8 @@ public final class AIChatViewModel {
                 enabledToolNames: stored.enabledToolNames,
                 approvalPolicy: stored.approvalPolicy,
                 generationSettings: settings,
-                defaultThinkingLevel: stored.defaultThinkingLevel
+                defaultThinkingLevel: stored.defaultThinkingLevel,
+                responseFormat: stored.responseFormat
             )
         }
         settings = stored.generationSettings

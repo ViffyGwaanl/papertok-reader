@@ -253,6 +253,12 @@ public struct AIProviderCenterView: View {
                 localized("settings.ai_provider.capability.chat"),
                 localized("settings.ai_provider.capability.tools"),
             ]
+        case .siliconflow, .groq, .mistral, .ollama, .deepseek, .openrouter:
+            return [
+                localized("settings.ai_provider.capability.chat"),
+                localized("settings.ai_provider.capability.tools"),
+                localized("settings.ai_provider.capability.stream"),
+            ]
         case .custom:
             return [localized("settings.ai_provider.capability.chat")]
         }
@@ -267,6 +273,12 @@ public struct AIProviderCenterView: View {
             case .gemini: return "circle.hexagongrid"
             case .azure: return "cloud"
             case .volcengine: return "flame"
+            case .siliconflow: return "chip"
+            case .groq: return "bolt.horizontal"
+            case .mistral: return "wind"
+            case .ollama: return "shippingbox"
+            case .deepseek: return "magnifyingglass.circle"
+            case .openrouter: return "arrow.triangle.branch"
             case .custom: return "wrench.adjustable"
             }
         }()
@@ -282,6 +294,8 @@ public struct AIProviderCenterView: View {
         case .gemini: return Morandi.powder
         case .azure: return Morandi.mist
         case .volcengine: return Morandi.clay
+        case .siliconflow, .groq, .mistral, .ollama, .deepseek, .openrouter:
+            return Morandi.lavender
         case .custom: return Morandi.lavender
         }
     }

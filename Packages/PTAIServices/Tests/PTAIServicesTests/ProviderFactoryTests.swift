@@ -114,6 +114,45 @@ struct ProviderFactoryTests {
     @Test("SupportedProvider covers all expected cases")
     func supportedProviderCases() {
         let all = Set(SupportedProvider.allCases.map(\.rawValue))
-        #expect(all == Set(["openai", "anthropic", "gemini", "azure", "volcengine", "custom"]))
+        #expect(all == Set([
+            "openai", "anthropic", "gemini", "azure", "volcengine",
+            "siliconflow", "groq", "mistral", "ollama", "deepseek", "openrouter",
+            "custom",
+        ]))
+    }
+
+    @Test("OpenAI-compatible built-in providers expose default base URLs and curated models")
+    func openAICompatibleBuiltInsHaveDefaults() throws {
+        let cases: [(SupportedProvider, String, Bool)] = [
+            (.siliconflow, "https://api.siliconflow.cn", false),
+            (.groq, "https://api.groq.com/openai", false),
+            (.mistral, "https://api.mistral.ai", false),
+            (.ollama, "http://localhost:11434", true),
+            (.deepseek, "https://api.deepseek.com", false),
+            (.openrouter, "https://openrouter.ai/api", false),
+        ]
+        for (kind, expectedBase, allowEmptyModels) in cases {
+            #expect(kind.isOpenAICompatible)
+            #expect(kind.defaultOpenAICompatibleBaseURL?.absoluteString == expectedBase)
+            let models = ProviderFactory.defaultModels(for: kind)
+            if allowEmptyModels {
+                #expect(models.isEmpty)
+            } else {
+                #expect(models.isEmpty == false, "Provider \(kind.rawValue) must ship default models")
+            }
+            let client = try ProviderFactory.makeProvider(
+                kind: kind,
+                config: ProviderConfig(apiKey: "test")
+            )
+            #expect(client.id == kind.rawValue)
+        }
+    }
+
+    @Test("DeepSeek reasoner model is flagged as thinking-capable")
+    func deepseekReasonerIsThinkingCapable() {
+        // The catalog test-suite verifies the wiring end-to-end; here we just
+        // confirm the curated DeepSeek default list contains the reasoner.
+        let models = ProviderFactory.defaultModels(for: .deepseek)
+        #expect(models.contains("deepseek-reasoner"))
     }
 }
