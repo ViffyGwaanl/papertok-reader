@@ -89,6 +89,7 @@ public struct EPUBReaderSettingsView: View {
 
     @State private var selectedThemePreset: EPUBReaderThemePreset
     @State private var showClearCacheConfirmation: Bool = false
+    @State private var customFonts: [CustomFontDescriptor] = []
 
     public init(
         viewModel: EPUBReaderPreferencesViewModel,
@@ -105,6 +106,7 @@ public struct EPUBReaderSettingsView: View {
         NavigationStack {
             Form {
                 typographySection
+                customFontsSection
                 spacingSection
                 layoutSection
                 themeSection
@@ -114,6 +116,7 @@ public struct EPUBReaderSettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Morandi.background)
+            .task { await reloadCustomFonts() }
             .navigationTitle(String(localized: "reader.reader_settings"))
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -367,7 +370,37 @@ public struct EPUBReaderSettingsView: View {
     }
 
     private var fontFamilies: [String] {
-        BookStyle.preferredFontFamilies()
+        var result = BookStyle.preferredFontFamilies()
+        var seen = Set(result)
+        for custom in customFonts {
+            if seen.insert(custom.displayName).inserted {
+                result.append(custom.displayName)
+            }
+        }
+        return result
+    }
+
+    @ViewBuilder
+    private var customFontsSection: some View {
+        Section {
+            NavigationLink {
+                CustomFontPicker(
+                    viewModel: CustomFontPickerViewModel(registry: CustomFontRegistryProvider.shared)
+                )
+                .task { await reloadCustomFonts() }
+            } label: {
+                HStack {
+                    Text("reader.fonts.custom.section_title")
+                    Spacer()
+                    Text("\(customFonts.count)")
+                        .foregroundStyle(Morandi.secondaryText)
+                }
+            }
+        }
+    }
+
+    private func reloadCustomFonts() async {
+        customFonts = await CustomFontRegistryProvider.shared.list()
     }
 
     private func sliderRow(

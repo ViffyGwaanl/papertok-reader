@@ -55499,6 +55499,78 @@
         }
       }
     },
+    "reader.fonts.custom.section_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Custom Fonts" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "自定义字体" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "自訂字型" } }
+      }
+    },
+    "reader.fonts.custom.add_button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Add Font…" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "添加字体…" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "新增字型…" } }
+      }
+    },
+    "reader.fonts.custom.empty_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No custom fonts installed" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "尚未安装自定义字体" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "尚未安裝自訂字型" } }
+      }
+    },
+    "reader.fonts.custom.empty_subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Add a TTF/OTF font from your files." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "从文件中添加 TTF/OTF 字体。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "從檔案新增 TTF/OTF 字型。" } }
+      }
+    },
+    "reader.fonts.custom.delete_action": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Delete" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "删除" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "刪除" } }
+      }
+    },
+    "reader.fonts.custom.error.unsupported_format": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Unsupported font format." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不支持的字体格式。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "不支援的字型格式。" } }
+      }
+    },
+    "reader.fonts.custom.error.copy_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could not copy the font file." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法复制字体文件。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法複製字型檔案。" } }
+      }
+    },
+    "reader.fonts.custom.error.registration_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could not register the font." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法注册字体。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法註冊字型。" } }
+      }
+    },
+    "reader.fonts.custom.error.metadata_unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could not read font metadata." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法读取字体信息。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法讀取字型資訊。" } }
+      }
+    },
     "reader.appearance.font_family": {
       "extractionState": "manual",
       "localizations": {

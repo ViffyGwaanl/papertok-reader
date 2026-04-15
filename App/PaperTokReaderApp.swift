@@ -2,6 +2,7 @@ import SwiftUI
 import PTCore
 import PTFeatures
 import PTAIServices
+import PTReader
 
 @main
 struct PaperTokReaderApp: App {
@@ -71,6 +72,7 @@ struct PaperTokReaderApp: App {
                     Task.detached(priority: .utility) {
                         await MultiStepShortcutExecutor.shared.resumePending()
                     }
+                    await CustomFontRegistryProvider.shared.registerAll()
                     let migrationService = FlutterMigrationService()
                     showMigration = await migrationService.isMigrationAvailable()
                 }

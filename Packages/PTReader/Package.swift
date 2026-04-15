@@ -32,6 +32,10 @@ let package = Package(
                 "PTReader",
                 "PTCore",
                 .product(name: "ReadiumShared", package: "swift-toolkit", condition: .when(platforms: [.iOS])),
+            ],
+            resources: [
+                .copy("Fonts/Resources/iAWriterDuospace-Regular.ttf"),
+                .copy("Fonts/Resources/LICENSE-iAWriterDuospace.md"),
             ]
         ),
     ]
