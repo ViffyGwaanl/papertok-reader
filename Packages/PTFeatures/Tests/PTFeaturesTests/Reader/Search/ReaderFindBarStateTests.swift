@@ -96,6 +96,40 @@ struct ReaderFindBarStateTests {
         #expect(state.hits.first?.snippet == "alpha")
     }
 
+    @Test("racing submit calls: newer query wins even if older provider is slower")
+    func submitRaceNewerWins() async {
+        actor Dispatcher {
+            var slowContinuation: CheckedContinuation<Void, Never>?
+            func waitSlow() async {
+                await withCheckedContinuation { continuation in
+                    slowContinuation = continuation
+                }
+            }
+            func releaseSlow() {
+                slowContinuation?.resume()
+                slowContinuation = nil
+            }
+        }
+        let dispatcher = Dispatcher()
+
+        let state = ReaderFindBarState(debounceInterval: .zero) { query in
+            if query == "old" {
+                await dispatcher.waitSlow()
+                return [ReaderSearchHit(snippet: "old-hit", locator: .init())]
+            }
+            return [ReaderSearchHit(snippet: "new-hit", locator: .init())]
+        }
+
+        let slow = Task { await state.submit(query: "old") }
+        try? await Task.sleep(for: .milliseconds(10))
+        await state.submit(query: "new")
+        await dispatcher.releaseSlow()
+        _ = await slow.value
+
+        #expect(state.query == "new")
+        #expect(state.hits.map(\.snippet) == ["new-hit"])
+    }
+
     @Test("currentHit returns the hit at currentIndex")
     func currentHitAccessor() async {
         let state = ReaderFindBarState(debounceInterval: .zero) { _ in

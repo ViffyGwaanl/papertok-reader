@@ -176,6 +176,8 @@ struct NativePDFView: UIViewRepresentable {
             if let selection {
                 pdfView.highlightedSelections = [selection]
                 pdfView.setCurrentSelection(selection, animate: true)
+            } else {
+                pdfView.highlightedSelections = nil
             }
         }
 
@@ -363,6 +365,8 @@ struct NativePDFView: NSViewRepresentable {
             if let selection {
                 pdfView.highlightedSelections = [selection]
                 pdfView.setCurrentSelection(selection, animate: true)
+            } else {
+                pdfView.highlightedSelections = nil
             }
         }
 
@@ -739,7 +743,6 @@ public struct PDFReaderView: View {
             readerControlsViewModel?.showSearch = true
             selectionResetToken += 1
             Task {
-                await readerControlsViewModel?.performSearch()
                 await findBarState?.submit(query: query)
             }
         }

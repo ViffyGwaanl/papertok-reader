@@ -39,6 +39,8 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderAIQuickActionsSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderImageViewer.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/EPUBReaderAnnotationEditorView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/Search/ReaderFindBar.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/Search/ReaderFindBarState.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperDetailView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PapersFilterBar.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PapersView.swift",

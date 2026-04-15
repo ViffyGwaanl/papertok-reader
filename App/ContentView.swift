@@ -2260,13 +2260,6 @@ struct EPUBBookshelfReaderView: View {
         )
     }
 
-    private var searchQueryBinding: Binding<String> {
-        Binding(
-            get: { readerControlsViewModel?.searchQuery ?? "" },
-            set: { newValue in readerControlsViewModel?.searchQuery = newValue }
-        )
-    }
-
     private var presentedImageBinding: Binding<ReaderImageAsset?> {
         Binding(
             get: { imageExperienceController.presentedImage },
@@ -2438,11 +2431,7 @@ struct EPUBBookshelfReaderView: View {
             return
         }
         coordinator.navigate(to: locator)
-        #if canImport(UIKit)
         let tint = UIColor.systemYellow
-        #else
-        let tint = NSColor.systemYellow
-        #endif
         let decoration = Decoration(
             id: hit.id.uuidString,
             locator: locator,
@@ -2489,7 +2478,6 @@ struct EPUBBookshelfReaderView: View {
         readerControlsViewModel.searchQuery = query
         readerControlsViewModel.showSearch = true
         Task {
-            await readerControlsViewModel.performSearch()
             await findBarState?.submit(query: query)
         }
     }

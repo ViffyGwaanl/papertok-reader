@@ -13,6 +13,7 @@ public struct ReaderFindBar: View {
 
     @Environment(\.horizontalSizeClass) private var sizeClass
     @FocusState private var queryFocused: Bool
+    @State private var didAutoFocus = false
 
     public init(state: ReaderFindBarState, onClose: @escaping () -> Void) {
         self.state = state
@@ -40,7 +41,11 @@ public struct ReaderFindBar: View {
                 .fill(Morandi.divider)
                 .frame(height: 1)
         }
-        .onAppear { queryFocused = true }
+        .task {
+            guard didAutoFocus == false else { return }
+            didAutoFocus = true
+            queryFocused = true
+        }
     }
 
     // MARK: - Rows

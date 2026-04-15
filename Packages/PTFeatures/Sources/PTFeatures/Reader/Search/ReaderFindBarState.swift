@@ -42,18 +42,37 @@ public final class ReaderFindBarState {
     /// Debounced wrapper around `submit`. The most recent call wins; pending
     /// calls are cancelled if a new query arrives inside the debounce window.
     public func scheduleSubmit(query: String) {
-        self.query = query
-        activeTask?.cancel()
-        let interval = debounceInterval
-        activeTask = Task { [weak self] in
-            try? await Task.sleep(for: interval)
-            if Task.isCancelled { return }
-            await self?.submit(query: query)
-        }
+        startSubmit(query: query, debounce: debounceInterval)
     }
 
-    /// Run a search immediately, bypassing the debounce. Empty queries clear state.
+    /// Run a search immediately, bypassing the debounce. Empty queries clear
+    /// state. Routes through the shared cancellable task slot so concurrent
+    /// callers cannot interleave — the most recent submission always wins.
     public func submit(query: String) async {
+        let task = startSubmit(query: query, debounce: .zero)
+        await task.value
+    }
+
+    @discardableResult
+    private func startSubmit(query: String, debounce: Duration) -> Task<Void, Never> {
+        self.query = query
+        activeTask?.cancel()
+        let provider = self.provider
+        let task = Task { [weak self] in
+            if debounce > .zero {
+                try? await Task.sleep(for: debounce)
+            }
+            if Task.isCancelled { return }
+            await self?.runSubmit(query: query, provider: provider)
+        }
+        activeTask = task
+        return task
+    }
+
+    private func runSubmit(
+        query: String,
+        provider: SearchProvider
+    ) async {
         let trimmedQuery = trimmed(query)
         self.query = query
 
@@ -64,16 +83,22 @@ public final class ReaderFindBarState {
 
         isSearching = true
         errorMessage = nil
-        defer { isSearching = false }
+        defer {
+            if Task.isCancelled == false {
+                isSearching = false
+            }
+        }
 
         do {
             let results = try await provider(trimmedQuery)
+            if Task.isCancelled { return }
             hits = results
             currentIndex = 0
             hasSearched = true
         } catch is CancellationError {
             // Swallow cancellations so a replaced search doesn't surface errors.
         } catch {
+            if Task.isCancelled { return }
             hits = []
             currentIndex = 0
             hasSearched = true
