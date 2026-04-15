@@ -10,7 +10,11 @@ public struct ReaderAIQuickActionsSheet: View {
     public let chapterTitle: String
     public let bookTitle: String
     private let onAction: (ReaderAIQuickAction) -> Void
+    private let onActionWithScope: ((ReaderAIQuickAction, ReaderContextScope) -> Void)?
     private let onDismiss: () -> Void
+
+    @AppStorage("reader.ai.last_scope") private var lastScopeRaw: String = ReaderContextScope.selection.rawValue
+    @State private var scope: ReaderContextScope = .selection
 
     public init(
         selectedText: String,
@@ -23,6 +27,22 @@ public struct ReaderAIQuickActionsSheet: View {
         self.chapterTitle = chapterTitle
         self.bookTitle = bookTitle
         self.onAction = onAction
+        self.onActionWithScope = nil
+        self.onDismiss = onDismiss
+    }
+
+    public init(
+        selectedText: String,
+        chapterTitle: String,
+        bookTitle: String,
+        onActionWithScope: @escaping (ReaderAIQuickAction, ReaderContextScope) -> Void,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.selectedText = selectedText
+        self.chapterTitle = chapterTitle
+        self.bookTitle = bookTitle
+        self.onAction = { _ in }
+        self.onActionWithScope = onActionWithScope
         self.onDismiss = onDismiss
     }
 
@@ -30,6 +50,8 @@ public struct ReaderAIQuickActionsSheet: View {
         NavigationStack {
             VStack(spacing: AppSpacing.lg) {
                 selectedTextCard
+
+                scopePicker
 
                 VStack(spacing: AppSpacing.md) {
                     Text("reader.quick_actions")
@@ -39,7 +61,11 @@ public struct ReaderAIQuickActionsSheet: View {
 
                     ForEach(ReaderAIQuickAction.allCases) { action in
                         Button {
-                            onAction(action)
+                            if let onActionWithScope {
+                                onActionWithScope(action, scope)
+                            } else {
+                                onAction(action)
+                            }
                         } label: {
                             HStack(spacing: AppSpacing.md) {
                                 Image(systemName: action.systemImage)
@@ -87,6 +113,50 @@ public struct ReaderAIQuickActionsSheet: View {
             }
         }
         .presentationDetents([.medium])
+        .onAppear {
+            if let stored = ReaderContextScope(rawValue: lastScopeRaw) {
+                scope = stored
+            } else {
+                scope = selectedText.isEmpty ? .page : .selection
+            }
+        }
+        .onChange(of: scope) { _, newValue in
+            lastScopeRaw = newValue.rawValue
+        }
+    }
+
+    private var scopePicker: some View {
+        Picker(selection: $scope) {
+            ForEach(ReaderContextScope.allCases, id: \.self) { option in
+                Label(
+                    localizedCatalogString(Self.scopeLabelKey(option)),
+                    systemImage: Self.scopeSystemImage(option)
+                )
+                .tag(option)
+            }
+        } label: {
+            EmptyView()
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+    }
+
+    private static func scopeLabelKey(_ scope: ReaderContextScope) -> String {
+        switch scope {
+        case .selection: return "reader.context.scope.selection"
+        case .page: return "reader.context.scope.page"
+        case .chapter: return "reader.context.scope.chapter"
+        case .wholeBook: return "reader.context.scope.whole_book"
+        }
+    }
+
+    private static func scopeSystemImage(_ scope: ReaderContextScope) -> String {
+        switch scope {
+        case .selection: return "text.cursor"
+        case .page: return "doc.text"
+        case .chapter: return "book.pages"
+        case .wholeBook: return "books.vertical"
+        }
     }
 
     private var selectedTextCard: some View {

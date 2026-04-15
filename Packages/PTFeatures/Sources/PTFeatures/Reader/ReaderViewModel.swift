@@ -35,7 +35,7 @@ public final class ReaderViewModel {
     private let noteDAO: BookNoteDAO
     private let readingSessionRecorder: ReadingSessionRecorder
     private let readerSessionStore: ReaderSessionContextStore?
-    private var pdfContentBridge: PDFContentBridge?
+    public private(set) var pdfContentBridge: PDFContentBridge?
 
     /// Whether the current page already has a bookmark.
     public private(set) var isCurrentPageBookmarked: Bool = false

@@ -27882,9 +27882,24 @@
     "common.confirm": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Confirm" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "确认" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "確認" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認"
+          }
+        }
       }
     },
     "common.clear": {
@@ -54216,81 +54231,231 @@
     "reader.translation.fulltext.section.title": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Fulltext Translation" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "全文翻译" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "全文翻譯" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fulltext Translation"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全文翻译"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全文翻譯"
+          }
+        }
       }
     },
     "reader.translation.fulltext.enable": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Show translation under paragraphs" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "在段落下显示译文" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "在段落下顯示譯文" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show translation under paragraphs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在段落下显示译文"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在段落下顯示譯文"
+          }
+        }
       }
     },
     "reader.translation.fulltext.target_language": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Target language" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "目标语言" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "目標語言" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target language"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目标语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標語言"
+          }
+        }
       }
     },
     "reader.translation.fulltext.clear_cache": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Clear translation cache" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "清除翻译缓存" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "清除翻譯快取" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear translation cache"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除翻译缓存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除翻譯快取"
+          }
+        }
       }
     },
     "reader.translation.fulltext.clear_cache.confirm.title": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Clear translation cache?" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "清除翻译缓存？" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "清除翻譯快取？" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear translation cache?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除翻译缓存？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除翻譯快取？"
+          }
+        }
       }
     },
     "reader.translation.fulltext.clear_cache.confirm.message": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "All cached translations will be deleted. This cannot be undone." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "所有已缓存的译文将被删除，此操作无法撤销。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "所有已快取的譯文將被刪除，此操作無法復原。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All cached translations will be deleted. This cannot be undone."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有已缓存的译文将被删除，此操作无法撤销。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有已快取的譯文將被刪除，此操作無法復原。"
+          }
+        }
       }
     },
     "reader.translation.fulltext.translating_count_format": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Translating %1$d/%2$d" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "翻译中 %1$d/%2$d" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "翻譯中 %1$d/%2$d" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translating %1$d/%2$d"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译中 %1$d/%2$d"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻譯中 %1$d/%2$d"
+          }
+        }
       }
     },
     "reader.translation.fulltext.partial_failure": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Some paragraphs failed to translate" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "部分段落翻译失败" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "部分段落翻譯失敗" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some paragraphs failed to translate"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分段落翻译失败"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分段落翻譯失敗"
+          }
+        }
       }
     },
     "reader.translation.fulltext.toolbar_enable": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Enable fulltext translation" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "启用全文翻译" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "啟用全文翻譯" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable fulltext translation"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用全文翻译"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟用全文翻譯"
+          }
+        }
       }
     },
     "reader.translation.fulltext.toolbar_disable": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Disable fulltext translation" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "停用全文翻译" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "停用全文翻譯" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disable fulltext translation"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停用全文翻译"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停用全文翻譯"
+          }
+        }
       }
     },
     "reader.ai_actions": {
@@ -55502,73 +55667,208 @@
     "reader.fonts.custom.section_title": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Custom Fonts" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "自定义字体" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "自訂字型" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom Fonts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义字体"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂字型"
+          }
+        }
       }
     },
     "reader.fonts.custom.add_button": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Add Font…" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "添加字体…" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "新增字型…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Font…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加字体…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增字型…"
+          }
+        }
       }
     },
     "reader.fonts.custom.empty_title": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "No custom fonts installed" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "尚未安装自定义字体" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "尚未安裝自訂字型" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No custom fonts installed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未安装自定义字体"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未安裝自訂字型"
+          }
+        }
       }
     },
     "reader.fonts.custom.empty_subtitle": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Add a TTF/OTF font from your files." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "从文件中添加 TTF/OTF 字体。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "從檔案新增 TTF/OTF 字型。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a TTF/OTF font from your files."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从文件中添加 TTF/OTF 字体。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從檔案新增 TTF/OTF 字型。"
+          }
+        }
       }
     },
     "reader.fonts.custom.delete_action": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Delete" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "删除" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "刪除" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除"
+          }
+        }
       }
     },
     "reader.fonts.custom.error.unsupported_format": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Unsupported font format." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不支持的字体格式。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "不支援的字型格式。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unsupported font format."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不支持的字体格式。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不支援的字型格式。"
+          }
+        }
       }
     },
     "reader.fonts.custom.error.copy_failed": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Could not copy the font file." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法复制字体文件。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法複製字型檔案。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not copy the font file."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法复制字体文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法複製字型檔案。"
+          }
+        }
       }
     },
     "reader.fonts.custom.error.registration_failed": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Could not register the font." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法注册字体。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法註冊字型。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not register the font."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法注册字体。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法註冊字型。"
+          }
+        }
       }
     },
     "reader.fonts.custom.error.metadata_unavailable": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Could not read font metadata." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法读取字体信息。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法讀取字型資訊。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not read font metadata."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取字体信息。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取字型資訊。"
+          }
+        }
       }
     },
     "reader.appearance.font_family": {
@@ -108074,6 +108374,236 @@
           "stringUnit": {
             "state": "translated",
             "value": "清除搜尋"
+          }
+        }
+      }
+    },
+    "reader.context.preamble.book_intro_format": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are reading \"%1$@\" by %2$@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你正在阅读《%1$@》（作者：%2$@）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你正在閱讀《%1$@》（作者：%2$@）。"
+          }
+        }
+      }
+    },
+    "reader.context.preamble.book_intro_no_author_format": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are reading \"%1$@\"."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你正在阅读《%1$@》。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你正在閱讀《%1$@》。"
+          }
+        }
+      }
+    },
+    "reader.context.preamble.chapter_format": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chapter: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "章节：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "章節：%@"
+          }
+        }
+      }
+    },
+    "reader.context.preamble.scope_format": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scope: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "范围：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範圍：%@"
+          }
+        }
+      }
+    },
+    "reader.context.preamble.page_format": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page: %1$d/%2$d"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "页码：%1$d/%2$d"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "頁碼：%1$d/%2$d"
+          }
+        }
+      }
+    },
+    "reader.context.scope.selection": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selection"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选中文本"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選取文字"
+          }
+        }
+      }
+    },
+    "reader.context.scope.page": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current page"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前页"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前頁"
+          }
+        }
+      }
+    },
+    "reader.context.scope.chapter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current chapter"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前章节"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前章節"
+          }
+        }
+      }
+    },
+    "reader.context.scope.whole_book": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whole book"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整本书"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整本書"
+          }
+        }
+      }
+    },
+    "reader.context.truncated_marker": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "[content truncated]"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "［内容已截断］"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "［內容已截斷］"
           }
         }
       }

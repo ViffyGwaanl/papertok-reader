@@ -1288,16 +1288,33 @@ public struct PDFReaderView: View {
             selectedText: aiQuickActionText ?? "",
             chapterTitle: aiQuickActionChapter,
             bookTitle: viewModel.book.title,
-            onAction: { action in
-                let prompt = action.prompt(
-                    selectedText: aiQuickActionText ?? "",
+            onActionWithScope: { action, scope in
+                let selection = aiQuickActionText
+                let actionPrompt = action.prompt(
+                    selectedText: selection ?? "",
                     bookTitle: viewModel.book.title,
                     chapterTitle: aiQuickActionChapter
                 )
                 aiQuickActionText = nil
                 isAIPanelPresented = true
-                Task {
-                    await aiChatViewModel.sendMessage(prompt)
+                Task { @MainActor in
+                    var seed = actionPrompt
+                    if let bridge = viewModel.pdfContentBridge {
+                        let resolver = PDFReaderContextResolver(
+                            bridge: bridge,
+                            book: viewModel.book,
+                            currentPageProvider: { [weak viewModel] in viewModel?.currentPage ?? 0 }
+                        )
+                        if let result = try? await resolver.resolve(
+                            scope: scope,
+                            currentLocator: .pdf(pageIndex: viewModel.currentPage),
+                            selection: selection
+                        ) {
+                            let preamble = ReaderContextPreambleBuilder().buildPreamble(for: result)
+                            seed = preamble + "\n\n" + actionPrompt
+                        }
+                    }
+                    await aiChatViewModel.sendMessage(seed)
                 }
             },
             onDismiss: {
