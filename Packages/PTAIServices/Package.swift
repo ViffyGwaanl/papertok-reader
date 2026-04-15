@@ -13,6 +13,6 @@ let package = Package(
     ],
     targets: [
         .target(name: "PTAIServices", dependencies: ["PTCore", "PTNetworking"]),
-        .testTarget(name: "PTAIServicesTests", dependencies: ["PTAIServices", "PTNetworking"]),
+        .testTarget(name: "PTAIServicesTests", dependencies: ["PTAIServices", "PTCore", "PTNetworking"]),
     ]
 )

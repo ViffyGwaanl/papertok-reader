@@ -7,6 +7,31 @@ public enum KeychainError: Error {
     case deleteFailed(OSStatus)
 }
 
+/// Protocol wrapper around a Keychain backend so tests can substitute an in-memory stub.
+public protocol KeychainServing: Sendable {
+    func save(_ value: String, forKey key: String) throws
+    func load(forKey key: String) -> String?
+    func delete(forKey key: String) throws
+}
+
+/// Default Keychain-backed implementation of `KeychainServing`.
+public struct SystemKeychainService: KeychainServing {
+    public static let shared = SystemKeychainService()
+    public init() {}
+
+    public func save(_ value: String, forKey key: String) throws {
+        try KeychainService.save(key: key, value: value)
+    }
+
+    public func load(forKey key: String) -> String? {
+        (try? KeychainService.load(key: key)) ?? nil
+    }
+
+    public func delete(forKey key: String) throws {
+        try KeychainService.delete(key: key)
+    }
+}
+
 public enum KeychainService {
     private static let service = AppConfig.bundleId
 

@@ -16,10 +16,16 @@ public struct MCPServerConfig: Codable, Sendable, Identifiable, Equatable {
     public let id: String
     public var name: String
     public var url: String
+    /// Transient in-memory API key. Never encoded to JSON — MCPServerStore persists this in Keychain.
     public var apiKey: String?
     public var isEnabled: Bool
     public var transportType: MCPTransportType
     public var discoveredTools: [MCPToolInfo]
+    public var command: String?
+    public var arguments: [String]
+    public var environment: [String: String]
+    /// Transient in-memory headers. Never encoded to JSON — MCPServerStore persists these in Keychain.
+    public var customHeaders: [String: String]
 
     public init(
         id: String = UUID().uuidString,
@@ -28,7 +34,11 @@ public struct MCPServerConfig: Codable, Sendable, Identifiable, Equatable {
         apiKey: String? = nil,
         isEnabled: Bool = true,
         transportType: MCPTransportType = .httpSSE,
-        discoveredTools: [MCPToolInfo] = []
+        discoveredTools: [MCPToolInfo] = [],
+        command: String? = nil,
+        arguments: [String] = [],
+        environment: [String: String] = [:],
+        customHeaders: [String: String] = [:]
     ) {
         self.id = id
         self.name = name
@@ -37,6 +47,55 @@ public struct MCPServerConfig: Codable, Sendable, Identifiable, Equatable {
         self.isEnabled = isEnabled
         self.transportType = transportType
         self.discoveredTools = discoveredTools
+        self.command = command
+        self.arguments = arguments
+        self.environment = environment
+        self.customHeaders = customHeaders
+    }
+
+    // Invariant: `apiKey` and `customHeaders` are secrets — they MUST NOT appear in the JSON payload.
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case url
+        case isEnabled
+        case transportType
+        case discoveredTools
+        case command
+        case arguments
+        case environment
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.url = try c.decode(String.self, forKey: .url)
+        self.isEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        self.transportType = try c.decodeIfPresent(MCPTransportType.self, forKey: .transportType) ?? .httpSSE
+        self.discoveredTools = try c.decodeIfPresent([MCPToolInfo].self, forKey: .discoveredTools) ?? []
+        self.command = try c.decodeIfPresent(String.self, forKey: .command)
+        self.arguments = try c.decodeIfPresent([String].self, forKey: .arguments) ?? []
+        self.environment = try c.decodeIfPresent([String: String].self, forKey: .environment) ?? [:]
+        self.apiKey = nil
+        self.customHeaders = [:]
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(url, forKey: .url)
+        try c.encode(isEnabled, forKey: .isEnabled)
+        try c.encode(transportType, forKey: .transportType)
+        try c.encode(discoveredTools, forKey: .discoveredTools)
+        try c.encodeIfPresent(command, forKey: .command)
+        if !arguments.isEmpty {
+            try c.encode(arguments, forKey: .arguments)
+        }
+        if !environment.isEmpty {
+            try c.encode(environment, forKey: .environment)
+        }
     }
 }
 
@@ -85,23 +144,3 @@ public enum MCPConnectionStatus: Sendable, Equatable {
     }
 }
 
-/// Persists MCP server configurations to UserDefaults.
-public struct MCPConfigStore: @unchecked Sendable {
-    private let defaults: UserDefaults
-    private let key = "mcp_server_configs"
-
-    public init(defaults: UserDefaults = UserDefaults.standard) {
-        self.defaults = defaults
-    }
-
-    public func loadConfigs() -> [MCPServerConfig] {
-        guard let data = defaults.data(forKey: key) else { return [] }
-        return (try? JSONDecoder().decode([MCPServerConfig].self, from: data)) ?? []
-    }
-
-    public func saveConfigs(_ configs: [MCPServerConfig]) {
-        if let data = try? JSONEncoder().encode(configs) {
-            defaults.set(data, forKey: key)
-        }
-    }
-}

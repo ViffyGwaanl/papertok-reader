@@ -3,14 +3,15 @@ import XCTest
 
 final class MCPConfigurationTests: XCTestCase {
 
-    func testServerConfigCodable() throws {
+    func testServerConfigCodableDropsSecrets() throws {
         let tool = MCPToolInfo(name: "test_tool", description: "A test tool", parametersSchema: "{}")
         let config = MCPServerConfig(
             name: "Test Server",
             url: "http://localhost:8080",
             apiKey: "secret",
             isEnabled: true,
-            discoveredTools: [tool]
+            discoveredTools: [tool],
+            customHeaders: ["X-Header": "value"]
         )
 
         let data = try JSONEncoder().encode(config)
@@ -18,10 +19,26 @@ final class MCPConfigurationTests: XCTestCase {
 
         XCTAssertEqual(decoded.name, "Test Server")
         XCTAssertEqual(decoded.url, "http://localhost:8080")
-        XCTAssertEqual(decoded.apiKey, "secret")
+        XCTAssertNil(decoded.apiKey, "apiKey must not be persisted in JSON")
+        XCTAssertTrue(decoded.customHeaders.isEmpty, "customHeaders must not be persisted in JSON")
         XCTAssertTrue(decoded.isEnabled)
         XCTAssertEqual(decoded.discoveredTools.count, 1)
         XCTAssertEqual(decoded.discoveredTools.first?.name, "test_tool")
+
+        let json = String(data: data, encoding: .utf8) ?? ""
+        XCTAssertFalse(json.contains("secret"))
+        XCTAssertFalse(json.contains("X-Header"))
+    }
+
+    func testServerConfigDecodesLegacyPayloadWithoutNewFields() throws {
+        let legacyJSON = """
+        {"id":"abc","name":"N","url":"http://x","isEnabled":true,"transportType":"http_sse","discoveredTools":[]}
+        """.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(MCPServerConfig.self, from: legacyJSON)
+        XCTAssertEqual(decoded.id, "abc")
+        XCTAssertEqual(decoded.arguments, [])
+        XCTAssertTrue(decoded.environment.isEmpty)
+        XCTAssertNil(decoded.command)
     }
 
     func testConnectionStatusDisplay() {
@@ -41,26 +58,4 @@ final class MCPConfigurationTests: XCTestCase {
         XCTAssertFalse(MCPConnectionStatus.error("x").isConnected)
     }
 
-    func testConfigStore() {
-        let suiteName = "MCPConfigTest-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        let store = MCPConfigStore(defaults: defaults)
-
-        // Initially empty
-        XCTAssertTrue(store.loadConfigs().isEmpty)
-
-        // Save and reload
-        let configs = [
-            MCPServerConfig(name: "Server A", url: "http://a.com"),
-            MCPServerConfig(name: "Server B", url: "http://b.com"),
-        ]
-        store.saveConfigs(configs)
-
-        let loaded = store.loadConfigs()
-        XCTAssertEqual(loaded.count, 2)
-        XCTAssertEqual(loaded[0].name, "Server A")
-        XCTAssertEqual(loaded[1].name, "Server B")
-
-        defaults.removePersistentDomain(forName: suiteName)
-    }
 }

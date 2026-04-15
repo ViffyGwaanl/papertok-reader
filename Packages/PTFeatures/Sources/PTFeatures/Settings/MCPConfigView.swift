@@ -7,16 +7,16 @@ import PTUI
 /// Allows adding, editing, removing, and toggling MCP server connections.
 /// Displays connection status and discovered tools for each server.
 public struct MCPConfigView: View {
-    @State private var configs: [MCPServerConfig]
+    @State private var configs: [MCPServerConfig] = []
     @State private var statuses: [String: MCPConnectionStatus] = [:]
     @State private var showAddSheet = false
     @State private var editingConfig: MCPServerConfig?
+    @State private var didLoad = false
 
-    private let store: MCPConfigStore
+    private let store: MCPServerStore
 
-    public init(store: MCPConfigStore = MCPConfigStore()) {
+    public init(store: MCPServerStore = MCPServerStore()) {
         self.store = store
-        _configs = State(initialValue: store.loadConfigs())
     }
 
     public var body: some View {
@@ -33,6 +33,12 @@ public struct MCPConfigView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .task {
+            if !didLoad {
+                configs = await store.load()
+                didLoad = true
+            }
+        }
         .sheet(isPresented: $showAddSheet) {
             MCPServerEditSheet(
                 config: nil,
@@ -164,7 +170,10 @@ public struct MCPConfigView: View {
     }
 
     private func save() {
-        store.saveConfigs(configs)
+        let snapshot = configs
+        Task {
+            try? await store.save(snapshot)
+        }
     }
 }
 
