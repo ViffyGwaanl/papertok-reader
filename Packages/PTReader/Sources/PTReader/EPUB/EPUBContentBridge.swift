@@ -7,7 +7,7 @@ import ReadiumShared
 /// Provides chapter-level and full-text content access, table of contents,
 /// and text search for AI tools and the reader UI.
 public final class EPUBContentBridge: BookContentBridge, @unchecked Sendable {
-    private let publication: Publication
+    internal let publication: Publication
 
     public init(publication: Publication) {
         self.publication = publication
