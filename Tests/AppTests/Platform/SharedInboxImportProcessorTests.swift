@@ -84,6 +84,59 @@ struct SharedInboxImportProcessorTests {
         #expect(SharedInbox.loadEvent(id: eventID, containerURL: containerURL) == nil)
     }
 
+    @Test("full success can retain the shared inbox event for diagnostics")
+    func fullSuccessCanRetainEventForDiagnostics() async throws {
+        let containerURL = try makeContainerURL(prefix: "SharedInboxImportProcessorRetained")
+        defer { try? FileManager.default.removeItem(at: containerURL) }
+
+        let eventID = UUID().uuidString
+        let book = try makeStoredBookItem(filename: "retained.epub", eventID: eventID, containerURL: containerURL)
+        try SharedInbox.save(
+            SharedInboxEvent(
+                id: eventID,
+                createdAt: Date(),
+                route: .bookshelfImport,
+                text: [],
+                urls: [],
+                fileItems: [book]
+            ),
+            containerURL: containerURL
+        )
+
+        let processor = SharedInboxImportProcessor(
+            dependencies: .init(
+                loadEvent: { lookupEventID in
+                    SharedInbox.loadEvent(id: lookupEventID, containerURL: containerURL)
+                },
+                saveEvent: { event in
+                    try SharedInbox.save(event, containerURL: containerURL)
+                },
+                consumeEvent: { _ in
+                    // Simulate a cleanup policy that keeps successful events for diagnostics.
+                },
+                finalizeSuccessfulUse: { _ in
+                    .retained
+                },
+                fileURL: { item, lookupEventID in
+                    SharedInbox.fileURL(for: item, eventID: lookupEventID, containerURL: containerURL)
+                },
+                fileExists: { url in
+                    FileManager.default.fileExists(atPath: url.path)
+                },
+                importBook: { _ in nil }
+            )
+        )
+
+        let result = await processor.process(eventID: eventID)
+
+        #expect(result.importedCount == 1)
+        #expect(result.remainingCount == 0)
+        #expect(result.discardedCount == 0)
+        #expect(result.didConsumeEvent == false)
+        #expect(result.errorMessage == nil)
+        #expect(SharedInbox.loadEvent(id: eventID, containerURL: containerURL) != nil)
+    }
+
     @Test("missing shared files are discarded instead of staying pending forever")
     func missingFilesAreDiscarded() async throws {
         let containerURL = try makeContainerURL(prefix: "SharedInboxImportProcessorMissing")
@@ -156,6 +209,10 @@ struct SharedInboxImportProcessorTests {
             },
             consumeEvent: { eventID in
                 SharedInbox.consume(eventID: eventID, containerURL: containerURL)
+            },
+            finalizeSuccessfulUse: { eventID in
+                SharedInbox.consume(eventID: eventID, containerURL: containerURL)
+                return .consumed
             },
             fileURL: { item, eventID in
                 SharedInbox.fileURL(for: item, eventID: eventID, containerURL: containerURL)

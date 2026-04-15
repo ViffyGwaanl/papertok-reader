@@ -48,4 +48,129 @@ struct SharedInboxTests {
             .path
         #expect(FileManager.default.fileExists(atPath: deletedEventPath) == false)
     }
+
+    @Test("configured share TTL drives manual cleanup")
+    func configuredTTLCleanupUsesStoredDays() throws {
+        let containerURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SharedInboxConfiguredCleanup-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: containerURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: containerURL) }
+
+        let suiteName = "SharedInboxConfiguredCleanup.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settingsStore = ShareAndShortcutsSettingsStore(defaults: defaults)
+        settingsStore.save(
+            ShareAndShortcutsSettings(
+                defaultRoute: .auto,
+                ttlDays: 1,
+                cleanupAfterUse: true
+            )
+        )
+
+        let expiredDate = Date(timeIntervalSince1970: 1_700_000_000)
+        let event = SharedInboxEvent(
+            id: "configured-expired-event",
+            createdAt: expiredDate,
+            route: .aiChat,
+            text: ["hello"],
+            urls: [],
+            fileItems: []
+        )
+        try SharedInbox.save(event, containerURL: containerURL)
+
+        let report = ShareInboxMaintenance.cleanupNow(
+            settingsStore: settingsStore,
+            containerURL: containerURL,
+            now: expiredDate.addingTimeInterval(60 * 60 * 48)
+        )
+
+        #expect(report.removedEventIDs == ["configured-expired-event"])
+        #expect(report.remainingEventCount == 0)
+        #expect(settingsStore.lastCleanupMetadata?.removedCount == 1)
+    }
+
+    @Test("diagnostics snapshot uses stored TTL days")
+    func diagnosticsSnapshotUsesStoredTTLDays() throws {
+        let containerURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SharedInboxDiagnosticsTTL-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: containerURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: containerURL) }
+
+        let suiteName = "SharedInboxDiagnosticsTTL.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settingsStore = ShareAndShortcutsSettingsStore(defaults: defaults)
+        settingsStore.save(
+            ShareAndShortcutsSettings(
+                defaultRoute: .auto,
+                ttlDays: 7,
+                cleanupAfterUse: true
+            )
+        )
+
+        let createdAt = Date(timeIntervalSince1970: 1_700_000_000)
+        try SharedInbox.save(
+            SharedInboxEvent(
+                id: "diagnostics-ttl-event",
+                createdAt: createdAt,
+                route: .aiChat,
+                text: ["hello"],
+                urls: [],
+                fileItems: []
+            ),
+            containerURL: containerURL
+        )
+
+        let snapshot = SharedInbox.diagnosticsSnapshot(
+            defaults: defaults,
+            containerURL: containerURL,
+            now: createdAt.addingTimeInterval(60 * 60 * 24 * 2)
+        )
+
+        #expect(snapshot.pendingEventCount == 1)
+        #expect(snapshot.storageRetention == TimeInterval(7 * 24 * 60 * 60))
+    }
+
+    @Test("successful use can preserve inbox events when cleanup-after-use is disabled")
+    func successfulUseCanRetainEventForDiagnostics() throws {
+        let containerURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SharedInboxRetention-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: containerURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: containerURL) }
+
+        let suiteName = "SharedInboxRetention.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settingsStore = ShareAndShortcutsSettingsStore(defaults: defaults)
+        settingsStore.save(
+            ShareAndShortcutsSettings(
+                defaultRoute: .ask,
+                ttlDays: 7,
+                cleanupAfterUse: false
+            )
+        )
+
+        let event = SharedInboxEvent(
+            id: "retained-event",
+            createdAt: Date(),
+            route: .ask,
+            text: ["Keep me around"],
+            urls: [],
+            fileItems: []
+        )
+        try SharedInbox.save(event, containerURL: containerURL)
+
+        let disposition = ShareInboxMaintenance.finalizeSuccessfulUse(
+            eventID: event.id,
+            settingsStore: settingsStore,
+            containerURL: containerURL
+        )
+
+        #expect(disposition == .retained)
+        #expect(SharedInbox.loadEvent(id: event.id, containerURL: containerURL) != nil)
+    }
 }
