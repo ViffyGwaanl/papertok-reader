@@ -1,4 +1,6 @@
 import SwiftUI
+import PTCore
+import PTAIServices
 import PTUI
 
 /// View for browsing and editing daily memory markdown files.
@@ -82,6 +84,7 @@ public struct MemoryView: View {
         let query = searchText.lowercased()
         return memoryFiles.filter {
             $0.filename.lowercased().contains(query) ||
+            $0.displayName.lowercased().contains(query) ||
             $0.preview.lowercased().contains(query)
         }
     }
@@ -207,17 +210,23 @@ public struct MemoryView: View {
         }
 
         let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
         memoryFiles = files
             .filter { $0.pathExtension == "md" }
             .compactMap { url -> MemoryFileInfo? in
                 let name = url.deletingPathExtension().lastPathComponent
-                let date = dateFormatter.date(from: name) ?? Date.distantPast
+                let date = MemoryDocumentLocalization.date(fromFileName: url.lastPathComponent)
+                    ?? dateFormatter.date(from: name)
+                    ?? Date.distantPast
                 let preview = (try? String(contentsOf: url, encoding: .utf8).prefix(100)) ?? ""
                 return MemoryFileInfo(
                     filename: url.lastPathComponent,
-                    displayName: name,
+                    displayName: MemoryDocumentLocalization.displayTitle(
+                        forDocumentName: url.lastPathComponent,
+                        locale: .autoupdatingCurrent
+                    ),
                     date: date,
                     preview: String(preview),
                     url: url
@@ -227,9 +236,7 @@ public struct MemoryView: View {
     }
 
     private func loadContent(for date: Date) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let filename = "\(formatter.string(from: date)).md"
+        let filename = MemoryDocumentLocalization.fileName(for: date)
         let url = memoryDirectory.appendingPathComponent(filename)
 
         if FileManager.default.fileExists(atPath: url.path) {
@@ -241,9 +248,7 @@ public struct MemoryView: View {
     }
 
     private func saveContent() {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let filename = "\(formatter.string(from: selectedDate)).md"
+        let filename = MemoryDocumentLocalization.fileName(for: selectedDate)
         let url = memoryDirectory.appendingPathComponent(filename)
 
         do {
@@ -253,7 +258,10 @@ public struct MemoryView: View {
             errorMessage = nil
             loadMemoryFiles()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.notes.save_failed"
+            )
         }
     }
 
@@ -266,9 +274,10 @@ public struct MemoryView: View {
 
     private func createTodayMemory() {
         selectedDate = Date()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        content = "# Memory - \(formatter.string(from: Date()))\n\n"
+        content = MemoryDocumentLocalization.dailyHeader(
+            for: selectedDate,
+            locale: .autoupdatingCurrent
+        )
         isDirty = true
         saveContent()
     }

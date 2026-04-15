@@ -32,10 +32,16 @@ public actor SessionDigestService {
     private let model: String
     private let maxWords: Int
     private let dateFormatter: DateFormatter
+    private let locale: Locale
 
-    public init(model: String = "gpt-4o-mini", maxWords: Int = 200) {
+    public init(
+        model: String = "gpt-4o-mini",
+        maxWords: Int = 200,
+        locale: Locale = .autoupdatingCurrent
+    ) {
         self.model = model
         self.maxWords = maxWords
+        self.locale = locale
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "en_US_POSIX")
         fmt.timeZone = TimeZone.current
@@ -51,12 +57,13 @@ public actor SessionDigestService {
     ) async throws -> String {
         guard !messages.isEmpty else { throw DigestError.emptyMessages }
 
-        let transcript = Self.formatTranscript(messages: messages)
+        let transcript = Self.formatTranscript(messages: messages, locale: locale)
         let systemPrompt = """
         You are a memory summarizer. Produce a concise digest (maximum \(maxWords) words) of
         the following conversation. Focus on: user goals, decisions made, facts learned about
         the user, open tasks, and any durable context worth remembering later. Write in
         neutral third-person past tense. Do not include pleasantries. Output plain text only.
+        \(MemoryDocumentLocalization.digestLanguageInstruction(locale: locale))
         """
 
         let request = ChatRequest(
@@ -88,18 +95,13 @@ public actor SessionDigestService {
 
         let filename = dateFormatter.string(from: now) + ".md"
         let fileURL = memoryDirectory.appendingPathComponent(filename)
-
-        let timeFmt = DateFormatter()
-        timeFmt.locale = Locale(identifier: "en_US_POSIX")
-        timeFmt.dateFormat = "HH:mm"
-        let header = "\n\n## Session digest \(timeFmt.string(from: now))\n\n"
-        let block = header + text + "\n"
+        let block = MemoryDocumentLocalization.sessionDigestHeader(at: now, locale: locale) + text + "\n"
 
         if FileManager.default.fileExists(atPath: fileURL.path) {
             let existing = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
             try (existing + block).write(to: fileURL, atomically: true, encoding: .utf8)
         } else {
-            let title = "# Daily memory — \(dateFormatter.string(from: now))\n"
+            let title = MemoryDocumentLocalization.dailyHeader(for: now, locale: locale)
             try (title + block).write(to: fileURL, atomically: true, encoding: .utf8)
         }
         return text
@@ -114,16 +116,10 @@ public actor SessionDigestService {
         }
     }
 
-    private static func formatTranscript(messages: [ChatMessage]) -> String {
+    private static func formatTranscript(messages: [ChatMessage], locale: Locale) -> String {
         var lines: [String] = []
         for message in messages {
-            let role: String
-            switch message.role {
-            case .system: role = "System"
-            case .user: role = "User"
-            case .assistant: role = "Assistant"
-            case .tool: role = "Tool"
-            }
+            let role = MemoryDocumentLocalization.transcriptRoleTitle(message.role, locale: locale)
             let text = message.textContent ?? ""
             if text.isEmpty { continue }
             lines.append("\(role): \(text)")

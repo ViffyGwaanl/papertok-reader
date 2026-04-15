@@ -8,6 +8,7 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
     case notes
     case statistics
     case ai
+    case memory
     case settings
 
     public var id: String { rawValue }
@@ -19,6 +20,7 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         case .notes: return "tab.notes"
         case .statistics: return "tab.statistics"
         case .ai: return "tab.ai"
+        case .memory: return "tab.memory"
         case .settings: return "tab.settings"
         }
     }
@@ -34,12 +36,13 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         case .notes: return "note.text"
         case .statistics: return "chart.bar"
         case .ai: return "sparkles"
+        case .memory: return "brain.head.profile"
         case .settings: return "gearshape"
         }
     }
 
     /// Default tab order.
-    public static let defaultOrder: [AppTab] = [.papers, .bookshelf, .notes, .statistics, .ai, .settings]
+    public static let defaultOrder: [AppTab] = [.papers, .bookshelf, .notes, .statistics, .ai, .memory, .settings]
 
     // MARK: - Home Navigation Configuration (UserDefaults-backed)
 
@@ -73,7 +76,7 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
         let order: [AppTab]
         if let rawOrder = defaults.stringArray(forKey: orderKey) {
-            order = rawOrder.compactMap { AppTab(rawValue: $0) }
+            order = normalizedOrder(from: rawOrder.compactMap { AppTab(rawValue: $0) })
         } else {
             order = defaultOrder
         }
@@ -81,6 +84,9 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         if let rawEnabled = defaults.stringArray(forKey: enabledKey) {
             var set = Set(rawEnabled.compactMap { AppTab(rawValue: $0) })
             set.insert(.settings)
+            for tab in defaultOrder where rawEnabled.contains(tab.rawValue) == false {
+                set.insert(tab)
+            }
             enabledSet = set
         } else {
             enabledSet = Set(AppTab.allCases)
@@ -108,5 +114,19 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         let version = defaults.integer(forKey: versionKey) + 1
         defaults.set(version, forKey: versionKey)
         NotificationCenter.default.post(name: configurationDidChangeNotification, object: nil)
+    }
+
+    private static func normalizedOrder(from storedOrder: [AppTab]) -> [AppTab] {
+        var order = storedOrder
+        for tab in defaultOrder where order.contains(tab) == false {
+            if tab == .settings {
+                order.append(tab)
+            } else if let settingsIndex = order.firstIndex(of: .settings) {
+                order.insert(tab, at: settingsIndex)
+            } else {
+                order.append(tab)
+            }
+        }
+        return order
     }
 }

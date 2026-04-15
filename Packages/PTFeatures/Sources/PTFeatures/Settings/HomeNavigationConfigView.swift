@@ -11,16 +11,28 @@ public struct HomeNavigationConfigView: View {
 
     public init() {
         let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
-        let storedOrder: [AppTab]
+        var storedOrder: [AppTab]
         if let raw = defaults.stringArray(forKey: "home_nav_tab_order") {
             storedOrder = raw.compactMap { AppTab(rawValue: $0) }
         } else {
             storedOrder = AppTab.defaultOrder
         }
+        for tab in AppTab.defaultOrder where storedOrder.contains(tab) == false {
+            if tab == .settings {
+                storedOrder.append(tab)
+            } else if let settingsIndex = storedOrder.firstIndex(of: .settings) {
+                storedOrder.insert(tab, at: settingsIndex)
+            } else {
+                storedOrder.append(tab)
+            }
+        }
         let storedEnabled: Set<AppTab>
         if let raw = defaults.stringArray(forKey: "home_nav_enabled_tabs") {
             var set = Set(raw.compactMap { AppTab(rawValue: $0) })
             set.insert(.settings)
+            for tab in AppTab.defaultOrder where raw.contains(tab.rawValue) == false {
+                set.insert(tab)
+            }
             storedEnabled = set
         } else {
             storedEnabled = Set(AppTab.allCases)
