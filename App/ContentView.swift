@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import PDFKit
 import PTCore
 import PTFeatures
 import PTAIServices
@@ -1813,34 +1814,76 @@ struct PDFBookshelfReaderView: View {
     let initialPageOverride: Int?
 
     @State private var preferencesViewModel: EPUBReaderPreferencesViewModel?
+    @State private var readerState: ReaderState = .loading(progress: nil)
 
     var body: some View {
-        Group {
-            if let preferencesViewModel {
-                PDFReaderView(
-                    book: book,
-                    database: database,
-                    aiChatViewModel: aiChatViewModel,
-                    readerSessionStore: readerSessionStore,
-                    initialPageOverride: initialPageOverride,
-                    readingPreferences: preferencesViewModel.readingPreferences
-                )
+        ZStack {
+            if readerState == .ready {
+                Group {
+                    if let preferencesViewModel {
+                        PDFReaderView(
+                            book: book,
+                            database: database,
+                            aiChatViewModel: aiChatViewModel,
+                            readerSessionStore: readerSessionStore,
+                            initialPageOverride: initialPageOverride,
+                            readingPreferences: preferencesViewModel.readingPreferences
+                        )
+                    } else {
+                        PDFReaderView(
+                            book: book,
+                            database: database,
+                            aiChatViewModel: aiChatViewModel,
+                            readerSessionStore: readerSessionStore,
+                            initialPageOverride: initialPageOverride
+                        )
+                    }
+                }
             } else {
-                PDFReaderView(
-                    book: book,
-                    database: database,
-                    aiChatViewModel: aiChatViewModel,
-                    readerSessionStore: readerSessionStore,
-                    initialPageOverride: initialPageOverride
+                ReaderStateScreen(
+                    state: readerState,
+                    onRetry: { Task { await preflight() } }
                 )
             }
         }
         .task {
+            await preflight()
             guard preferencesViewModel == nil, let bookID = book.id else { return }
             let vm = EPUBReaderPreferencesViewModel(bookId: bookID, database: database)
             await vm.load()
             preferencesViewModel = vm
         }
+    }
+
+    private func preflight() async {
+        readerState = .loading(progress: nil)
+        let url = URL(fileURLWithPath: book.filePath)
+        let fm = FileManager.default
+        if fm.fileExists(atPath: url.path) == false {
+            readerState = .failed(error: ReaderRenderError(
+                kind: .missingResource,
+                underlyingMessage: url.lastPathComponent,
+                isRecoverable: true
+            ))
+            return
+        }
+        if fm.isReadableFile(atPath: url.path) == false {
+            readerState = .permissionDenied(detail: url.lastPathComponent)
+            return
+        }
+        guard let doc = PDFDocument(url: url) else {
+            readerState = .failed(error: ReaderRenderError(
+                kind: .openFailed,
+                underlyingMessage: url.lastPathComponent,
+                isRecoverable: true
+            ))
+            return
+        }
+        if doc.pageCount == 0 {
+            readerState = .empty(reason: .noPages)
+            return
+        }
+        readerState = .ready
     }
 }
 
@@ -2039,10 +2082,7 @@ struct EPUBBookshelfReaderView: View {
         ZStack {
             Morandi.background.ignoresSafeArea()
 
-            if isLoading {
-                ProgressView(AppLocalization.string("reader.opening_ellipsis"))
-                    .tint(Morandi.accent)
-            } else if let publication {
+            if let publication, isLoading == false, loadError == nil {
                 EPUBReaderView(
                     publication: publication,
                     coordinator: coordinator,
@@ -2061,13 +2101,31 @@ struct EPUBBookshelfReaderView: View {
                     feedFulltextTranslationChapterIfNeeded()
                 }
             } else {
-                ContentUnavailableView(
-                    String(localized: "reader.cannot_open_title"),
-                    systemImage: "book.closed",
-                    description: Text(loadError ?? String(localized: "errors.reader.cannot_open"))
+                ReaderStateScreen(
+                    state: currentReaderState,
+                    onRetry: {
+                        Task {
+                            loadError = nil
+                            publication = nil
+                            await loadPublication()
+                        }
+                    }
                 )
             }
         }
+    }
+
+    private var currentReaderState: ReaderState {
+        if isLoading { return .loading(progress: nil) }
+        if let loadError {
+            return .failed(error: ReaderRenderError(
+                kind: .openFailed,
+                underlyingMessage: loadError,
+                isRecoverable: true
+            ))
+        }
+        if publication == nil { return .loading(progress: nil) }
+        return .ready
     }
 
     @ToolbarContentBuilder

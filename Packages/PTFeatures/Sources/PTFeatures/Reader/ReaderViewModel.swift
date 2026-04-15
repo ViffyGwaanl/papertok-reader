@@ -27,6 +27,9 @@ public final class ReaderViewModel {
     public private(set) var tocEntries: [ChapterEntry] = []
     public var showTOC: Bool = false
     public private(set) var isLoading: Bool = false
+    /// Unified reader state (idle / loading / empty / permissionDenied / failed / ready).
+    /// Consumed by `ReaderStateScreen`. `isLoading` is kept in sync for back-compat.
+    public private(set) var state: ReaderState = .idle
 
     // MARK: - Internal state
     public private(set) var pdfDocument: PDFDocument?
@@ -64,11 +67,37 @@ public final class ReaderViewModel {
 
     public func loadDocument() async {
         isLoading = true
+        state = .loading(progress: nil)
         defer { isLoading = false }
 
         let url = URL(fileURLWithPath: book.filePath)
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: url.path) == false {
+            readerSessionStore?.clear()
+            state = .failed(error: ReaderRenderError(
+                kind: .missingResource,
+                underlyingMessage: url.lastPathComponent,
+                isRecoverable: true
+            ))
+            return
+        }
+        if fileManager.isReadableFile(atPath: url.path) == false {
+            readerSessionStore?.clear()
+            state = .permissionDenied(detail: url.lastPathComponent)
+            return
+        }
         guard let doc = PDFDocument(url: url) else {
             readerSessionStore?.clear()
+            state = .failed(error: ReaderRenderError(
+                kind: .openFailed,
+                underlyingMessage: url.lastPathComponent,
+                isRecoverable: true
+            ))
+            return
+        }
+        if doc.pageCount == 0 {
+            readerSessionStore?.clear()
+            state = .empty(reason: .noPages)
             return
         }
 
@@ -94,6 +123,16 @@ public final class ReaderViewModel {
         publishReaderSession()
         await loadBookmarks()
         await readingSessionRecorder.resume()
+        state = .ready
+    }
+
+    /// Re-run the document open path. Intended to be wired to a Retry
+    /// button on `ReaderStateScreen`.
+    public func retry() async {
+        pdfDocument = nil
+        pageCount = 0
+        state = .idle
+        await loadDocument()
     }
 
     // MARK: - Navigation

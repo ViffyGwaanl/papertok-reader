@@ -28,6 +28,7 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/MessageBubbleView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Memory/MemoryHomeView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/PDFReaderView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/State/ReaderStateScreen.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/EPUBReaderSettingsView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/CustomFontPicker.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/BookmarkManagerView.swift",

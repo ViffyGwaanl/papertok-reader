@@ -60110,6 +60110,134 @@
         }
       }
     },
+    "reader.state.loading_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Opening book…" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在打开图书…" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在開啟書籍…" } }
+      }
+    },
+    "reader.state.empty.no_pages.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Empty Book" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "空白图书" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "空白書籍" } }
+      }
+    },
+    "reader.state.empty.no_pages.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This book has no pages to display." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "本书没有可显示的内容。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "本書沒有可顯示的內容。" } }
+      }
+    },
+    "reader.state.empty.unsupported_format.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Unsupported Format" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不支持的格式" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "不支援的格式" } }
+      }
+    },
+    "reader.state.empty.unsupported_format.body_format": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "PaperTok cannot read .%@ files yet." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "PaperTok 暂时无法读取 .%@ 文件。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "PaperTok 暫時無法讀取 .%@ 檔案。" } }
+      }
+    },
+    "reader.state.empty.zero_length.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Empty Document" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "空文档" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "空文件" } }
+      }
+    },
+    "reader.state.empty.zero_length.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The file appears to be empty." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "文件似乎没有内容。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "檔案似乎沒有內容。" } }
+      }
+    },
+    "reader.state.permission_denied.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Permission Denied" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "权限被拒绝" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "權限被拒絕" } }
+      }
+    },
+    "reader.state.permission_denied.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "PaperTok could not open this file. Check the file's location and permissions." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "PaperTok 无法打开此文件。请检查文件的位置和权限。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "PaperTok 無法開啟此檔案。請檢查檔案的位置和權限。" } }
+      }
+    },
+    "reader.state.failed.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Couldn't Open Book" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法打开图书" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法開啟書籍" } }
+      }
+    },
+    "reader.state.retry": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Retry" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "重试" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "重試" } }
+      }
+    },
+    "reader.state.error.kind.open_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could not open the file." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法打开文件。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法開啟檔案。" } }
+      }
+    },
+    "reader.state.error.kind.parsing_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The file is corrupted or invalid." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "文件已损坏或无效。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "檔案已損毀或無效。" } }
+      }
+    },
+    "reader.state.error.kind.missing_resource": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "A required resource is missing." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "缺少必需的资源。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "缺少必要的資源。" } }
+      }
+    },
+    "reader.state.error.kind.file_system_error": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "File system error." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "文件系统错误。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "檔案系統錯誤。" } }
+      }
+    },
+    "reader.state.error.kind.unknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "An unknown error occurred." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "发生未知错误。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "發生未知錯誤。" } }
+      }
+    },
     "reader.original": {
       "extractionState": "manual",
       "localizations": {
