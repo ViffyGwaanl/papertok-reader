@@ -870,6 +870,63 @@ struct AIChatViewModelExtTests {
         #expect(vm.messages.last?.textContent == "Done")
     }
 
+    @MainActor
+    @Test("saveConversation stamps currentBookId on a brand-new conversation")
+    func saveConversationStampsCurrentBookIdOnNewConversation() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AIChatVMStampTest-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let service = ConversationPersistenceService(directory: tempDir)
+
+        let runtime = makeRuntime(chunks: [])
+        let vm = AIChatViewModel(runtime: runtime)
+        vm.persistenceService = service
+        vm.currentBookId = "book-abc"
+        vm.conversationTitle = "Stamped"
+
+        vm.saveConversation()
+
+        let id = try #require(vm.conversationId)
+        let loaded = try #require(try service.load(id: id))
+        #expect(loaded.bookId == "book-abc")
+        #expect(loaded.isPinned == false)
+    }
+
+    @MainActor
+    @Test("saveConversation preserves existing bookId when updating a persisted conversation")
+    func saveConversationPreservesExistingBookIdOnUpdate() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AIChatVMStampTest-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let service = ConversationPersistenceService(directory: tempDir)
+
+        let convId = UUID().uuidString
+        let tree = ConversationTree(systemPrompt: "s")
+        let existing = ConversationPersistenceService.PersistedConversation(
+            id: convId,
+            title: "Original",
+            systemPrompt: "s",
+            tree: tree,
+            isPinned: true,
+            bookId: "book-original"
+        )
+        try service.save(existing)
+
+        let runtime = makeRuntime(chunks: [])
+        let vm = AIChatViewModel(runtime: runtime)
+        vm.persistenceService = service
+        vm.conversationId = convId
+        vm.conversationTitle = "Updated"
+        vm.currentBookId = "book-different"
+
+        vm.saveConversation()
+
+        let loaded = try #require(try service.load(id: convId))
+        #expect(loaded.bookId == "book-original")
+        #expect(loaded.isPinned == true)
+        #expect(loaded.title == "Updated")
+    }
+
     private func makeDefaults() -> UserDefaults {
         let suiteName = "AIChatViewModelExtTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

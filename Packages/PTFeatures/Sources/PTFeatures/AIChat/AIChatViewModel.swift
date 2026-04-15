@@ -166,6 +166,9 @@ public final class AIChatViewModel {
     public var conversationId: String?
     /// Title of the current conversation (derived from first user message).
     public var conversationTitle: String = aiChatLocalizedCatalogString("ai.new_conversation")
+    /// Book identifier of the reader host that is currently driving the chat, if any.
+    /// Set by the reader entry points in W2.1b; stamped into freshly-created conversations only.
+    public var currentBookId: String? = nil
 
     public init(
         systemPrompt: String? = nil,
@@ -277,14 +280,18 @@ public final class AIChatViewModel {
         }
 
         let systemPrompt = messages.first(where: { $0.role == .system })?.textContent ?? aiChatLocalizedCatalogString("ai.chat.system_prompt_default")
+        let existing = (try? service.load(id: id)) ?? nil
         let persisted = ConversationPersistenceService.PersistedConversation(
             id: id,
             title: conversationTitle,
             systemPrompt: systemPrompt,
             tree: conversationTree,
+            createdAt: existing?.createdAt ?? Date(),
             updatedAt: Date(),
             providerId: selectedProviderId,
-            modelId: selectedModelId
+            modelId: selectedModelId,
+            isPinned: existing?.isPinned ?? false,
+            bookId: existing?.bookId ?? currentBookId
         )
         try? service.save(persisted)
     }
