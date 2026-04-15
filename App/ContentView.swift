@@ -4226,7 +4226,7 @@ struct SettingsScreen: View {
             }
 
             NavigationLink {
-                MCPConfigView()
+                MCPServerListView()
             } label: {
                 SettingsIconLabel(
                     String(localized: "settings.mcp_servers"),
