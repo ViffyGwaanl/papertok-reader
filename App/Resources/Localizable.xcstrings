@@ -54205,6 +54205,86 @@
         }
       }
     },
+    "reader.translation.fulltext.section.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Fulltext Translation" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "全文翻译" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "全文翻譯" } }
+      }
+    },
+    "reader.translation.fulltext.enable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Show translation under paragraphs" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "在段落下显示译文" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "在段落下顯示譯文" } }
+      }
+    },
+    "reader.translation.fulltext.target_language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Target language" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "目标语言" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "目標語言" } }
+      }
+    },
+    "reader.translation.fulltext.clear_cache": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Clear translation cache" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "清除翻译缓存" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "清除翻譯快取" } }
+      }
+    },
+    "reader.translation.fulltext.clear_cache.confirm.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Clear translation cache?" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "清除翻译缓存？" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "清除翻譯快取？" } }
+      }
+    },
+    "reader.translation.fulltext.clear_cache.confirm.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "All cached translations will be deleted. This cannot be undone." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "所有已缓存的译文将被删除，此操作无法撤销。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "所有已快取的譯文將被刪除，此操作無法復原。" } }
+      }
+    },
+    "reader.translation.fulltext.translating_count_format": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Translating %1$d/%2$d" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "翻译中 %1$d/%2$d" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "翻譯中 %1$d/%2$d" } }
+      }
+    },
+    "reader.translation.fulltext.partial_failure": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Some paragraphs failed to translate" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "部分段落翻译失败" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "部分段落翻譯失敗" } }
+      }
+    },
+    "reader.translation.fulltext.toolbar_enable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Enable fulltext translation" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "启用全文翻译" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "啟用全文翻譯" } }
+      }
+    },
+    "reader.translation.fulltext.toolbar_disable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Disable fulltext translation" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "停用全文翻译" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "停用全文翻譯" } }
+      }
+    },
     "reader.ai_actions": {
       "extractionState": "manual",
       "localizations": {

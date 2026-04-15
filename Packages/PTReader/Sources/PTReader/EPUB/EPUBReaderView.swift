@@ -18,6 +18,9 @@ public struct EPUBReaderView: UIViewControllerRepresentable {
     /// Optional custom CSS (built via `EPUBCustomCSSBuilder`) to inject into
     /// the Readium navigator on every page change.
     public let customCSS: String?
+    /// Additional decoration templates merged into the Readium navigator
+    /// configuration on construction, keyed by their `Decoration.Style.Id`.
+    public let extraDecorationTemplates: [Decoration.Style.Id: HTMLDecorationTemplate]
     @Bindable public var coordinator: EPUBNavigatorCoordinator
 
     public init(
@@ -25,13 +28,15 @@ public struct EPUBReaderView: UIViewControllerRepresentable {
         coordinator: EPUBNavigatorCoordinator,
         initialLocator: Locator? = nil,
         readingPreferences: EPUBReadingPreferencesSnapshot = .init(readingPreferences: ReadingPreferences()),
-        customCSS: String? = nil
+        customCSS: String? = nil,
+        extraDecorationTemplates: [Decoration.Style.Id: HTMLDecorationTemplate] = [:]
     ) {
         self.publication = publication
         self.coordinator = coordinator
         self.initialLocator = initialLocator
         self.readingPreferences = readingPreferences
         self.customCSS = customCSS
+        self.extraDecorationTemplates = extraDecorationTemplates
     }
 
     static func loadFailureMessage(for error: Error) -> String {
@@ -45,6 +50,11 @@ public struct EPUBReaderView: UIViewControllerRepresentable {
         do {
             var config = EPUBNavigatorViewController.Configuration()
             config.preferences = readingPreferences.preferences
+            if extraDecorationTemplates.isEmpty == false {
+                for (id, template) in extraDecorationTemplates {
+                    config.decorationTemplates[id] = template
+                }
+            }
             let vc = try EPUBNavigatorViewController(
                 publication: publication,
                 initialLocation: initialLocator,

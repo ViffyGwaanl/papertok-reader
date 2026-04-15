@@ -1853,6 +1853,13 @@ struct EPUBBookshelfReaderView: View {
     }
 
     private let annotationDecorationGroup = "annotations"
+    private let fulltextTranslationDecorationGroup = "pt.reader.fulltext_translation"
+
+    @State private var fulltextTranslationRuntime: FulltextTranslationRuntime?
+    @State private var fulltextTranslationCache = FulltextTranslationCache()
+    @State private var fulltextTranslationBridge: EPUBContentBridge?
+    @State private var fulltextTranslationEnabled: Bool = false
+    @State private var fulltextTranslationTargetLanguage: String = "zh-Hans"
 
     var body: some View {
         ReaderAIPanelHost(
@@ -1997,9 +2004,18 @@ struct EPUBBookshelfReaderView: View {
                     publication: publication,
                     coordinator: coordinator,
                     initialLocator: initialLocator,
-                    readingPreferences: preferencesSnapshot
+                    readingPreferences: preferencesSnapshot,
+                    extraDecorationTemplates: [
+                        FulltextTranslationDecorationTemplate.styleID: FulltextTranslationDecorationTemplate.htmlTemplate(),
+                    ]
                 )
                 .ignoresSafeArea(edges: .bottom)
+                .onChange(of: fulltextTranslationRuntimeParagraphStamp) { _, _ in
+                    applyFulltextTranslationDecorations()
+                }
+                .onChange(of: coordinator.currentLocator?.href.string ?? "") { _, _ in
+                    feedFulltextTranslationChapterIfNeeded()
+                }
             } else {
                 ContentUnavailableView(
                     String(localized: "reader.cannot_open_title"),
@@ -2063,6 +2079,16 @@ struct EPUBBookshelfReaderView: View {
             .accessibilityLabel(String(localized: "bookmark.add"))
             .disabled((coordinator.currentLocator ?? initialLocator) == nil)
 
+            Button {
+                toggleFulltextTranslation()
+            } label: {
+                Image(systemName: fulltextTranslationEnabled ? "character.bubble.fill" : "character.bubble")
+                    .foregroundStyle(Morandi.accent)
+            }
+            .accessibilityLabel(String(localized: fulltextTranslationEnabled
+                ? "reader.translation.fulltext.toolbar_disable"
+                : "reader.translation.fulltext.toolbar_enable"))
+
             Menu {
                 Button {
                     readerControlsViewModel?.showTOC = true
@@ -2093,10 +2119,137 @@ struct EPUBBookshelfReaderView: View {
         }
 
         ToolbarItem(placement: .status) {
-            Text("\(Int((coordinator.readingProgress * 100).rounded()))%")
-                .font(AppTypography.caption)
-                .foregroundStyle(Morandi.secondaryText)
-                .monospacedDigit()
+            HStack(spacing: AppSpacing.sm) {
+                if let runtime = fulltextTranslationRuntime, runtime.inFlightCount > 0 {
+                    Text(String(
+                        format: String(localized: "reader.translation.fulltext.translating_count_format"),
+                        runtime.inFlightCount,
+                        runtime.paragraphs.count
+                    ))
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.secondaryText)
+                    .monospacedDigit()
+                }
+                Text("\(Int((coordinator.readingProgress * 100).rounded()))%")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.secondaryText)
+                    .monospacedDigit()
+            }
+        }
+    }
+
+    /// Observable stamp that changes whenever the runtime's paragraphs collection
+    /// updates, used to drive the decoration re-application without requiring
+    /// `Equatable` on the paragraph model inside SwiftUI's `onChange`.
+    private var fulltextTranslationRuntimeParagraphStamp: Int {
+        guard let runtime = fulltextTranslationRuntime else { return 0 }
+        var hasher = Hasher()
+        for p in runtime.paragraphs {
+            hasher.combine(p.id)
+            hasher.combine(p.translatedText ?? "")
+            switch p.status {
+            case .queued: hasher.combine(0)
+            case .translating: hasher.combine(1)
+            case .ready: hasher.combine(2)
+            case .failed: hasher.combine(3)
+            }
+        }
+        return hasher.finalize()
+    }
+
+    private func ensureFulltextTranslationRuntime() -> FulltextTranslationRuntime? {
+        if let runtime = fulltextTranslationRuntime { return runtime }
+        guard let service = aiChatViewModel.makeTranslationService() else { return nil }
+        let adapter = AITranslationServiceTranslator(service: service)
+        let runtime = FulltextTranslationRuntime(
+            translator: adapter,
+            cache: fulltextTranslationCache
+        )
+        runtime.targetLanguage = fulltextTranslationTargetLanguage
+        fulltextTranslationRuntime = runtime
+        return runtime
+    }
+
+    private func toggleFulltextTranslation() {
+        fulltextTranslationEnabled.toggle()
+        let enabled = fulltextTranslationEnabled
+        guard let runtime = ensureFulltextTranslationRuntime() else {
+            fulltextTranslationEnabled = false
+            return
+        }
+        Task {
+            await runtime.setEnabled(enabled)
+            if enabled {
+                feedFulltextTranslationChapterIfNeeded()
+            } else {
+                coordinator.applyDecorations([], in: fulltextTranslationDecorationGroup)
+            }
+        }
+    }
+
+    private func feedFulltextTranslationChapterIfNeeded() {
+        guard fulltextTranslationEnabled,
+              let runtime = fulltextTranslationRuntime,
+              let publication,
+              let locator = coordinator.currentLocator ?? initialLocator else {
+            return
+        }
+        if fulltextTranslationBridge == nil {
+            fulltextTranslationBridge = EPUBContentBridge(publication: publication)
+        }
+        guard let bridge = fulltextTranslationBridge else { return }
+        Task {
+            do {
+                let paragraphs = try await bridge.chapterParagraphs(at: locator)
+                let originals = paragraphs.map { (id: $0.id, text: $0.text) }
+                await runtime.setParagraphs(originals)
+            } catch {
+                // Best-effort; ignore chapter enumeration failures.
+            }
+        }
+    }
+
+    private func applyFulltextTranslationDecorations() {
+        guard let runtime = fulltextTranslationRuntime,
+              fulltextTranslationEnabled else {
+            return
+        }
+        // The runtime only carries `(id, originalText, translatedText, status)`,
+        // so we need to map back to `Locator` via the chapter bridge. We rebuild
+        // decorations from the last enumerated chapter paragraphs.
+        guard let publication,
+              let locator = coordinator.currentLocator ?? initialLocator else {
+            return
+        }
+        if fulltextTranslationBridge == nil {
+            fulltextTranslationBridge = EPUBContentBridge(publication: publication)
+        }
+        guard let bridge = fulltextTranslationBridge else { return }
+        let readyIDs = Set(runtime.paragraphs.compactMap { p -> String? in
+            if case .ready = p.status { return p.id }
+            return nil
+        })
+        let textByID: [String: String] = Dictionary(uniqueKeysWithValues: runtime.paragraphs.compactMap {
+            guard let t = $0.translatedText else { return nil }
+            return ($0.id, t)
+        })
+        Task {
+            do {
+                let paragraphs = try await bridge.chapterParagraphs(at: locator)
+                let decorations = paragraphs.compactMap { p -> Decoration? in
+                    guard readyIDs.contains(p.id), let text = textByID[p.id] else { return nil }
+                    return FulltextTranslationDecorationTemplate.decoration(
+                        id: p.id,
+                        locator: p.locator,
+                        translatedText: text
+                    )
+                }
+                await MainActor.run {
+                    coordinator.applyDecorations(decorations, in: fulltextTranslationDecorationGroup)
+                }
+            } catch {
+                // Best-effort.
+            }
         }
     }
 
