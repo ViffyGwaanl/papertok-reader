@@ -1847,11 +1847,15 @@ struct PDFBookshelfReaderView: View {
             }
         }
         .task {
+            aiChatViewModel.currentBookId = book.id.map(String.init)
             await preflight()
             guard preferencesViewModel == nil, let bookID = book.id else { return }
             let vm = EPUBReaderPreferencesViewModel(bookId: bookID, database: database)
             await vm.load()
             preferencesViewModel = vm
+        }
+        .onDisappear {
+            aiChatViewModel.currentBookId = nil
         }
     }
 
@@ -2014,6 +2018,7 @@ struct EPUBBookshelfReaderView: View {
             )
         }
         .task {
+            aiChatViewModel.currentBookId = book.id.map(String.init)
             await loadPublication()
             volumeKeyHandler.onVolumeUp = {
                 Task { @MainActor in coordinator.goForward() }
@@ -2024,6 +2029,7 @@ struct EPUBBookshelfReaderView: View {
             applyVolumeKeyHandler()
         }
         .onDisappear {
+            aiChatViewModel.currentBookId = nil
             coordinator.onLocatorChange = nil
             coordinator.onSelectionChange = nil
             coordinator.onDecorationActivated = nil

@@ -3,212 +3,208 @@ import PTAIServices
 import PTCore
 import PTUI
 
-/// Lists past AI conversations with resume, delete, and new chat actions.
-///
-/// Each row shows title, date, message count, and a preview of the last message.
+/// Lists past AI conversations with filter chips, search, pin/rename/delete/export actions.
 public struct ConversationListView: View {
-    @State private var summaries: [ConversationPersistenceService.ConversationSummary] = []
-    @State private var pinnedIds: Set<String> = []
-    @State private var searchText: String = ""
-    @State private var errorMessage: String?
-    @State private var renameTarget: ConversationPersistenceService.ConversationSummary?
+    @State private var viewModel: ConversationListViewModel
+    private let currentBookId: String?
+    private let onSelect: (String) -> Void
+    private let onNewChat: () -> Void
+
+    @State private var renameTargetId: String?
     @State private var renameText: String = ""
-    @State private var exportItem: ExportItem?
-
-    private let pinnedKey = "papertok.ai.pinnedConversations"
-
-    let persistenceService: ConversationPersistenceService
-    let onSelect: (String) -> Void
-    let onNewChat: () -> Void
+    @State private var renameErrorVisible: Bool = false
+    @State private var deleteTargetId: String?
+    @State private var exportSourceId: String?
+    @State private var exportedFileURL: URL?
+    @State private var didBootstrap: Bool = false
+    @Environment(\.dismiss) private var dismiss
 
     public init(
-        persistenceService: ConversationPersistenceService,
+        viewModel: ConversationListViewModel,
+        currentBookId: String? = nil,
         onSelect: @escaping (String) -> Void,
         onNewChat: @escaping () -> Void
     ) {
-        self.persistenceService = persistenceService
+        _viewModel = State(initialValue: viewModel)
+        self.currentBookId = currentBookId
         self.onSelect = onSelect
         self.onNewChat = onNewChat
     }
 
     public var body: some View {
-        Group {
-            if summaries.isEmpty {
-                emptyState
-            } else {
-                conversationList
-            }
-        }
-        .navigationTitle(String(localized: "ai.conversations"))
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    onNewChat()
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                        .foregroundStyle(Morandi.accent)
+        content
+            .navigationTitle(String(localized: "ai.conversations"))
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Picker(String(localized: "chat.conversations.sort.last_used"), selection: sortBinding) {
+                            Text("chat.conversations.sort.last_used").tag(ConversationListSortMode.lastUsed)
+                            Text("chat.conversations.sort.created").tag(ConversationListSortMode.created)
+                            Text("chat.conversations.sort.title").tag(ConversationListSortMode.title)
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .foregroundStyle(Morandi.accent)
+                    }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        onNewChat()
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .foregroundStyle(Morandi.accent)
+                    }
                 }
             }
-        }
-        .searchable(
-            text: $searchText,
-            placement: .automatic,
-            prompt: AppLocalization.string("ai.search_conversations")
-        )
-        .onAppear {
-            loadPinned()
-            loadSummaries()
-        }
-        .sheet(item: $renameTarget) { target in
-            renameSheet(for: target)
-        }
-        #if os(iOS)
-        .sheet(item: $exportItem) { item in
-            ShareSheet(items: [item.url])
-        }
-        #endif
-    }
-
-    // MARK: - Sections (date grouping + pinned)
-
-    private struct SectionGroup {
-        let title: String
-        let isPinned: Bool
-        let items: [ConversationPersistenceService.ConversationSummary]
-    }
-
-    private var filteredSummaries: [ConversationPersistenceService.ConversationSummary] {
-        guard searchText.isEmpty == false else { return summaries }
-        let query = searchText.lowercased()
-        return summaries.filter {
-            $0.title.lowercased().contains(query) ||
-            $0.lastMessagePreview.lowercased().contains(query)
-        }
-    }
-
-    private var sections: [SectionGroup] {
-        let items = filteredSummaries
-        let pinned = items.filter { pinnedIds.contains($0.id) }
-        let rest = items.filter { !pinnedIds.contains($0.id) }
-        var result: [SectionGroup] = []
-        if !pinned.isEmpty {
-            result.append(
-                SectionGroup(
-                    title: AppLocalization.string("ai.conversations.pinned"),
-                    isPinned: true,
-                    items: pinned
-                )
+            .searchable(
+                text: searchBinding,
+                placement: .automatic,
+                prompt: Text("chat.conversations.search_placeholder")
             )
-        }
-        let cal = Calendar.current
-        let now = Date()
-        var today: [ConversationPersistenceService.ConversationSummary] = []
-        var yesterday: [ConversationPersistenceService.ConversationSummary] = []
-        var thisWeek: [ConversationPersistenceService.ConversationSummary] = []
-        var earlier: [ConversationPersistenceService.ConversationSummary] = []
-        for item in rest {
-            if cal.isDateInToday(item.updatedAt) { today.append(item) }
-            else if cal.isDateInYesterday(item.updatedAt) { yesterday.append(item) }
-            else if let week = cal.dateInterval(of: .weekOfYear, for: now), week.contains(item.updatedAt) { thisWeek.append(item) }
-            else { earlier.append(item) }
-        }
-        if !today.isEmpty {
-            result.append(SectionGroup(title: AppLocalization.string("common.today"), isPinned: false, items: today))
-        }
-        if !yesterday.isEmpty {
-            result.append(SectionGroup(title: AppLocalization.string("common.yesterday"), isPinned: false, items: yesterday))
-        }
-        if !thisWeek.isEmpty {
-            result.append(SectionGroup(title: AppLocalization.string("common.this_week"), isPinned: false, items: thisWeek))
-        }
-        if !earlier.isEmpty {
-            result.append(SectionGroup(title: AppLocalization.string("common.earlier"), isPinned: false, items: earlier))
-        }
-        return result
+            .task {
+                if didBootstrap == false {
+                    didBootstrap = true
+                    if let bookId = currentBookId {
+                        viewModel.setBookFilter(.book(id: bookId))
+                    } else {
+                        viewModel.setBookFilter(.all)
+                    }
+                    await viewModel.refresh()
+                }
+            }
+            .alert(
+                String(localized: "chat.conversations.rename.title"),
+                isPresented: renameAlertBinding
+            ) {
+                TextField("chat.conversations.rename.placeholder", text: $renameText)
+                Button("common.cancel", role: .cancel) { renameTargetId = nil }
+                Button("common.save") {
+                    guard let id = renameTargetId else { return }
+                    let title = renameText
+                    renameTargetId = nil
+                    Task {
+                        do {
+                            try await viewModel.rename(id: id, to: title)
+                        } catch {
+                            renameErrorVisible = true
+                        }
+                    }
+                }
+            }
+            .alert(
+                String(localized: "chat.conversations.rename.error_empty"),
+                isPresented: $renameErrorVisible
+            ) {
+                Button("common.ok", role: .cancel) { }
+            }
+            .confirmationDialog(
+                String(localized: "chat.conversations.delete.confirm.title"),
+                isPresented: deleteAlertBinding,
+                titleVisibility: .visible
+            ) {
+                Button("chat.conversations.action.delete", role: .destructive) {
+                    guard let id = deleteTargetId else { return }
+                    deleteTargetId = nil
+                    Task { try? await viewModel.delete(id: id) }
+                }
+                Button("common.cancel", role: .cancel) { deleteTargetId = nil }
+            } message: {
+                Text("chat.conversations.delete.confirm.message")
+            }
+            .confirmationDialog(
+                String(localized: "chat.conversations.action.export"),
+                isPresented: exportDialogBinding,
+                titleVisibility: .visible
+            ) {
+                Button("chat.conversations.export.format.markdown") {
+                    performExport(format: .markdown)
+                }
+                Button("chat.conversations.export.format.json") {
+                    performExport(format: .json)
+                }
+                Button("common.cancel", role: .cancel) { exportSourceId = nil }
+            }
+            .sheet(isPresented: exportedFileSheetBinding) {
+                if let url = exportedFileURL {
+                    exportShareSheet(url: url)
+                }
+            }
     }
 
     @ViewBuilder
-    private func renameSheet(for target: ConversationPersistenceService.ConversationSummary) -> some View {
-        NavigationStack {
-            Form {
-                TextField(AppLocalization.string("common.title"), text: $renameText)
+    private var content: some View {
+        VStack(spacing: 0) {
+            filterChipRow
+            if viewModel.conversations.isEmpty {
+                emptyState
+            } else {
+                listBody
             }
-            .navigationTitle(AppLocalization.string("common.rename"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(AppLocalization.string("common.cancel")) { renameTarget = nil }
+        }
+    }
+
+    private var filterChipRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppSpacing.sm) {
+                chip(
+                    labelKey: "chat.conversations.filter.all",
+                    isActive: viewModel.bookFilter == .all
+                ) {
+                    viewModel.setBookFilter(.all)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(AppLocalization.string("common.save")) { performRename(target) }.bold()
+                chip(
+                    labelKey: "chat.conversations.filter.global",
+                    isActive: viewModel.bookFilter == .global
+                ) {
+                    viewModel.setBookFilter(.global)
+                }
+                if let currentBookId {
+                    chip(
+                        labelKey: "chat.conversations.filter.this_book",
+                        isActive: viewModel.bookFilter == .book(id: currentBookId)
+                    ) {
+                        viewModel.setBookFilter(.book(id: currentBookId))
+                    }
                 }
             }
-        }
-        .presentationDetents([.height(200)])
-    }
-
-    private func togglePin(_ id: String) {
-        if pinnedIds.contains(id) { pinnedIds.remove(id) } else { pinnedIds.insert(id) }
-        savePinned()
-    }
-
-    private func performRename(_ target: ConversationPersistenceService.ConversationSummary) {
-        defer { renameTarget = nil }
-        let newTitle = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !newTitle.isEmpty else { return }
-        if var loaded = try? persistenceService.load(id: target.id) {
-            loaded.title = newTitle
-            loaded.updatedAt = Date()
-            try? persistenceService.save(loaded)
-            loadSummaries()
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
         }
     }
 
-    private func export(_ summary: ConversationPersistenceService.ConversationSummary) {
-        guard let loaded = try? persistenceService.load(id: summary.id) else { return }
-        var md = "# \(loaded.title)\n\n"
-        for msg in loaded.tree.activeMessages() {
-            guard let text = msg.textContent, !text.isEmpty else { continue }
-            switch msg.role {
-            case .system:
-                md += "> _\(AppLocalization.string("ai.role.system")): \(text)_\n\n"
-            case .user:
-                md += "**\(AppLocalization.string("ai.role.user")):** \(text)\n\n"
-            case .assistant:
-                md += "**\(AppLocalization.string("ai.role.assistant")):** \(text)\n\n"
-            case .tool: md += "```\n\(text)\n```\n\n"
-            }
+    @ViewBuilder
+    private func chip(labelKey: String.LocalizationValue, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(String(localized: labelKey))
+                .font(AppTypography.caption.weight(.medium))
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.xs)
+                .background(
+                    Capsule().fill(isActive ? Morandi.accent.opacity(0.2) : Color.clear)
+                )
+                .overlay(
+                    Capsule().stroke(isActive ? Morandi.accent : Morandi.tertiaryText, lineWidth: 1)
+                )
+                .foregroundStyle(isActive ? Morandi.accent : Morandi.secondaryText)
         }
-        let safeName = loaded.title.replacingOccurrences(of: "/", with: "_")
-        let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("\(safeName).md")
-        try? md.write(to: tmp, atomically: true, encoding: .utf8)
-        exportItem = ExportItem(url: tmp)
-    }
-
-    private func loadPinned() {
-        if let data = UserDefaults.standard.array(forKey: pinnedKey) as? [String] {
-            pinnedIds = Set(data)
-        }
-    }
-
-    private func savePinned() {
-        UserDefaults.standard.set(Array(pinnedIds), forKey: pinnedKey)
+        .buttonStyle(.plain)
     }
 
     private var emptyState: some View {
         VStack(spacing: AppSpacing.lg) {
             Spacer()
-            Image(systemName: "bubble.left.and.text.bubble.right")
+            Image(systemName: "bubble.left.and.bubble.right")
                 .font(.system(size: 48))
                 .foregroundStyle(Morandi.tertiaryText)
-            Text("ai.no_conversations")
+            Text("chat.conversations.empty.title")
                 .font(AppTypography.title3)
                 .foregroundStyle(Morandi.secondaryText)
-            Button(String(localized: "ai.start_chat")) {
+            Text("chat.conversations.empty.body")
+                .font(AppTypography.caption)
+                .foregroundStyle(Morandi.tertiaryText)
+            Button(String(localized: "chat.conversations.empty.action")) {
                 onNewChat()
+                dismiss()
             }
             .buttonStyle(.borderedProminent)
             .tint(Morandi.accent)
@@ -217,89 +213,26 @@ public struct ConversationListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var conversationList: some View {
+    @ViewBuilder
+    private var listBody: some View {
+        let pinned = viewModel.conversations.filter { $0.isPinned }
+        let rest = viewModel.conversations.filter { !$0.isPinned }
         List {
-            ForEach(sections, id: \.title) { section in
+            if viewModel.pinnedFirst && pinned.isEmpty == false {
                 Section {
-                    ForEach(section.items) { summary in
-                        Button {
-                            onSelect(summary.id)
-                        } label: {
-                            ConversationRowView(
-                                summary: summary,
-                                isPinned: pinnedIds.contains(summary.id)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                            Button {
-                                togglePin(summary.id)
-                            } label: {
-                                Label(
-                                    pinnedIds.contains(summary.id)
-                                        ? AppLocalization.string("ai.unpin_conversation")
-                                        : AppLocalization.string("ai.pin_conversation"),
-                                    systemImage: pinnedIds.contains(summary.id) ? "pin.slash" : "pin"
-                                )
-                            }
-                            .tint(Morandi.accent)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                try? persistenceService.delete(id: summary.id)
-                                summaries.removeAll { $0.id == summary.id }
-                                pinnedIds.remove(summary.id)
-                                savePinned()
-                            } label: {
-                                Label("common.delete", systemImage: "trash")
-                            }
-                            Button {
-                                renameText = summary.title
-                                renameTarget = summary
-                            } label: {
-                                Label("common.rename", systemImage: "pencil")
-                            }
-                            .tint(Morandi.clay)
-                            Button {
-                                export(summary)
-                            } label: {
-                                Label("ai.conversation.export", systemImage: "square.and.arrow.up")
-                            }
-                            .tint(Morandi.powder)
-                        }
-                        .contextMenu {
-                            Button {
-                                togglePin(summary.id)
-                            } label: {
-                                Label(
-                                    pinnedIds.contains(summary.id)
-                                        ? AppLocalization.string("ai.unpin_conversation")
-                                        : AppLocalization.string("ai.pin_conversation"),
-                                    systemImage: pinnedIds.contains(summary.id) ? "pin.slash" : "pin"
-                                )
-                            }
-                            Button {
-                                renameText = summary.title
-                                renameTarget = summary
-                            } label: {
-                                Label("common.rename", systemImage: "pencil")
-                            }
-                            Button {
-                                export(summary)
-                            } label: {
-                                Label("ai.conversation.export_markdown", systemImage: "square.and.arrow.up")
-                            }
-                        }
-                    }
+                    ForEach(pinned) { item in row(for: item) }
                 } header: {
-                    HStack(spacing: 6) {
-                        if section.isPinned {
-                            Image(systemName: "pin.fill").font(.caption2)
-                        }
-                        Text(section.title)
-                    }
-                    .foregroundStyle(Morandi.secondaryText)
+                    Text("chat.conversations.section.pinned")
+                        .foregroundStyle(Morandi.secondaryText)
                 }
+                Section {
+                    ForEach(rest) { item in row(for: item) }
+                } header: {
+                    Text("chat.conversations.section.recent")
+                        .foregroundStyle(Morandi.secondaryText)
+                }
+            } else {
+                ForEach(viewModel.conversations) { item in row(for: item) }
             }
         }
         #if os(iOS)
@@ -309,81 +242,167 @@ public struct ConversationListView: View {
         #endif
     }
 
-    private func loadSummaries() {
-        do {
-            summaries = try persistenceService.listSummaries()
-        } catch {
-            errorMessage = AppLocalization.localizedErrorDescription(error)
-                ?? AppLocalization.string("common.failed_to_load")
+    @ViewBuilder
+    private func row(for item: ConversationListItem) -> some View {
+        Button {
+            onSelect(item.id)
+        } label: {
+            ConversationRowView(item: item)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button {
+                renameText = item.title
+                renameTargetId = item.id
+            } label: {
+                Label("chat.conversations.action.rename", systemImage: "pencil")
+            }
+            Button {
+                Task { try? await viewModel.togglePin(id: item.id) }
+            } label: {
+                if item.isPinned {
+                    Label("chat.conversations.action.unpin", systemImage: "pin.slash")
+                } else {
+                    Label("chat.conversations.action.pin", systemImage: "pin")
+                }
+            }
+            Button {
+                exportSourceId = item.id
+            } label: {
+                Label("chat.conversations.action.export", systemImage: "square.and.arrow.up")
+            }
+            Button(role: .destructive) {
+                deleteTargetId = item.id
+            } label: {
+                Label("chat.conversations.action.delete", systemImage: "trash")
+            }
         }
     }
 
-    private func deleteSummaries(at offsets: IndexSet) {
-        for index in offsets {
-            let summary = summaries[index]
-            try? persistenceService.delete(id: summary.id)
+    private func performExport(format: ConversationExportFormat) {
+        guard let id = exportSourceId else { return }
+        exportSourceId = nil
+        Task {
+            if let url = try? await viewModel.export(id: id, format: format) {
+                exportedFileURL = url
+            }
         }
-        summaries.remove(atOffsets: offsets)
+    }
+
+    // MARK: - Bindings
+
+    private var searchBinding: Binding<String> {
+        Binding(
+            get: { viewModel.searchQuery },
+            set: { viewModel.setSearchQuery($0) }
+        )
+    }
+
+    private var sortBinding: Binding<ConversationListSortMode> {
+        Binding(
+            get: { viewModel.sortMode },
+            set: { viewModel.setSortMode($0) }
+        )
+    }
+
+    private var renameAlertBinding: Binding<Bool> {
+        Binding(
+            get: { renameTargetId != nil },
+            set: { if !$0 { renameTargetId = nil } }
+        )
+    }
+
+    private var deleteAlertBinding: Binding<Bool> {
+        Binding(
+            get: { deleteTargetId != nil },
+            set: { if !$0 { deleteTargetId = nil } }
+        )
+    }
+
+    private var exportDialogBinding: Binding<Bool> {
+        Binding(
+            get: { exportSourceId != nil },
+            set: { if !$0 { exportSourceId = nil } }
+        )
+    }
+
+    private var exportedFileSheetBinding: Binding<Bool> {
+        Binding(
+            get: { exportedFileURL != nil },
+            set: { if !$0 { exportedFileURL = nil } }
+        )
+    }
+
+    @ViewBuilder
+    private func exportShareSheet(url: URL) -> some View {
+        #if os(iOS)
+        ExportShareSheet(items: [url])
+        #else
+        VStack(spacing: AppSpacing.md) {
+            Text(url.lastPathComponent)
+                .font(AppTypography.body)
+            ShareLink(item: url) {
+                Label("chat.conversations.action.export", systemImage: "square.and.arrow.up")
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+        #endif
     }
 }
 
-/// A single row in the conversation list.
+/// A single row in the rewritten conversation list.
 struct ConversationRowView: View {
-    let summary: ConversationPersistenceService.ConversationSummary
-    var isPinned: Bool = false
+    let item: ConversationListItem
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             HStack(spacing: 4) {
-                if isPinned {
+                Text(item.title)
+                    .font(AppTypography.body.weight(.semibold))
+                    .foregroundStyle(Morandi.primaryText)
+                    .lineLimit(1)
+                Spacer()
+                if item.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.caption2)
                         .foregroundStyle(Morandi.accent)
                 }
-                Text(summary.title)
-                    .font(AppTypography.body.weight(.medium))
-                    .foregroundStyle(Morandi.primaryText)
-                    .lineLimit(1)
-                Spacer()
-                Text(formattedDate)
-                    .font(AppTypography.caption2)
-                    .foregroundStyle(Morandi.tertiaryText)
             }
-
-            if !summary.lastMessagePreview.isEmpty {
-                Text(summary.lastMessagePreview)
+            if item.snippet.isEmpty == false {
+                Text(item.snippet)
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.secondaryText)
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
-
-            HStack(spacing: 4) {
-                Image(systemName: "bubble.left.and.bubble.right")
-                    .font(.system(size: 9))
-                Text("\(summary.messageCount)")
+            HStack(spacing: 6) {
+                Text(item.updatedAt, format: .relative(presentation: .named))
                     .font(AppTypography.caption2)
+                    .foregroundStyle(Morandi.tertiaryText)
+                Text(verbatim: "·")
+                    .font(AppTypography.caption2)
+                    .foregroundStyle(Morandi.tertiaryText)
+                HStack(spacing: 2) {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .font(.system(size: 9))
+                    Text("\(item.messageCount)")
+                        .font(AppTypography.caption2)
+                }
+                .foregroundStyle(Morandi.tertiaryText)
+                if item.bookId != nil {
+                    Image(systemName: "book.closed")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Morandi.tertiaryText)
+                        .accessibilityLabel(Text("chat.conversations.book_indicator.tooltip"))
+                }
             }
-            .foregroundStyle(Morandi.tertiaryText)
         }
         .padding(.vertical, AppSpacing.xs)
     }
-
-    private var formattedDate: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: summary.updatedAt, relativeTo: Date())
-    }
-}
-
-// MARK: - Export Helpers
-
-struct ExportItem: Identifiable {
-    var id: String { url.path }
-    let url: URL
 }
 
 #if os(iOS)
-struct ShareSheet: UIViewControllerRepresentable {
+private struct ExportShareSheet: UIViewControllerRepresentable {
     let items: [Any]
     func makeUIViewController(context: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)

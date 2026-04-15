@@ -150,7 +150,11 @@ public struct AIChatView: View {
             if let persistenceService = viewModel.persistenceService {
                 NavigationStack {
                     ConversationListView(
-                        persistenceService: persistenceService,
+                        viewModel: ConversationListViewModel(
+                            persistence: persistenceService,
+                            chatViewModel: viewModel
+                        ),
+                        currentBookId: viewModel.currentBookId,
                         onSelect: { id in
                             if viewModel.isStreaming == false,
                                viewModel.loadConversation(id: id) {
