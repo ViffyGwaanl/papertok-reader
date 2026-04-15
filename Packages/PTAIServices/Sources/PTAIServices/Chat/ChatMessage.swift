@@ -4,25 +4,72 @@ public enum ChatRole: String, Codable, Sendable {
     case system, user, assistant, tool
 }
 
-public struct ChatMessage: Codable, Sendable, Identifiable, Equatable {
+public struct ChatMessage: Sendable, Identifiable, Equatable {
     public let id: String
     public let role: ChatRole
     public let content: [ContentPart]
     public let toolCallId: String?
     public let toolCalls: [ToolCall]?
+    public var citations: [MessageCitation]
 
-    public init(id: String = UUID().uuidString, role: ChatRole, content: [ContentPart], toolCallId: String? = nil, toolCalls: [ToolCall]? = nil) {
-        self.id = id; self.role = role; self.content = content; self.toolCallId = toolCallId; self.toolCalls = toolCalls
+    public init(
+        id: String = UUID().uuidString,
+        role: ChatRole,
+        content: [ContentPart],
+        toolCallId: String? = nil,
+        toolCalls: [ToolCall]? = nil,
+        citations: [MessageCitation] = []
+    ) {
+        self.id = id
+        self.role = role
+        self.content = content
+        self.toolCallId = toolCallId
+        self.toolCalls = toolCalls
+        self.citations = citations
     }
 
     public var textContent: String? {
         content.compactMap { if case .text(let t) = $0 { return t } else { return nil } }.first
     }
 
-    public static func system(_ text: String) -> ChatMessage { ChatMessage(role: .system, content: [.text(text)]) }
-    public static func user(_ text: String) -> ChatMessage { ChatMessage(role: .user, content: [.text(text)]) }
-    public static func assistant(_ text: String, toolCalls: [ToolCall]? = nil) -> ChatMessage { ChatMessage(role: .assistant, content: [.text(text)], toolCalls: toolCalls) }
-    public static func toolResult(toolCallId: String, content: String) -> ChatMessage { ChatMessage(role: .tool, content: [.text(content)], toolCallId: toolCallId) }
+    public static func system(_ text: String, citations: [MessageCitation] = []) -> ChatMessage {
+        ChatMessage(role: .system, content: [.text(text)], citations: citations)
+    }
+    public static func user(_ text: String, citations: [MessageCitation] = []) -> ChatMessage {
+        ChatMessage(role: .user, content: [.text(text)], citations: citations)
+    }
+    public static func assistant(_ text: String, toolCalls: [ToolCall]? = nil, citations: [MessageCitation] = []) -> ChatMessage {
+        ChatMessage(role: .assistant, content: [.text(text)], toolCalls: toolCalls, citations: citations)
+    }
+    public static func toolResult(toolCallId: String, content: String, citations: [MessageCitation] = []) -> ChatMessage {
+        ChatMessage(role: .tool, content: [.text(content)], toolCallId: toolCallId, citations: citations)
+    }
+}
+
+extension ChatMessage: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, role, content, toolCallId, toolCalls, citations
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.role = try c.decode(ChatRole.self, forKey: .role)
+        self.content = try c.decode([ContentPart].self, forKey: .content)
+        self.toolCallId = try c.decodeIfPresent(String.self, forKey: .toolCallId)
+        self.toolCalls = try c.decodeIfPresent([ToolCall].self, forKey: .toolCalls)
+        self.citations = try c.decodeIfPresent([MessageCitation].self, forKey: .citations) ?? []
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(role, forKey: .role)
+        try c.encode(content, forKey: .content)
+        try c.encodeIfPresent(toolCallId, forKey: .toolCallId)
+        try c.encodeIfPresent(toolCalls, forKey: .toolCalls)
+        try c.encode(citations, forKey: .citations)
+    }
 }
 
 public enum ContentPart: Codable, Sendable, Equatable {

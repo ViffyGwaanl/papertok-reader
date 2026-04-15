@@ -72,4 +72,45 @@ public struct ConversationTree: Codable, Sendable {
     }
 
     public func variantCount(parentId: String) -> Int { nodes[parentId]?.childIds.count ?? 0 }
+
+    @discardableResult
+    public mutating func editUserMessage(_ messageId: String, newText: String) -> String? {
+        guard let node = nodes[messageId], node.role == .user, let parentId = node.parentId else { return nil }
+        let newNode = ConversationNode(message: .user(newText), parentId: parentId)
+        nodes[newNode.id] = newNode
+        nodes[parentId]?.childIds.append(newNode.id)
+        if let count = nodes[parentId]?.childIds.count {
+            nodes[parentId]?.activeChildIndex = count - 1
+        }
+        return newNode.id
+    }
+
+    @discardableResult
+    public mutating func retryAssistantMessage(_ messageId: String) -> String? {
+        guard let node = nodes[messageId], node.role == .assistant, let parentId = node.parentId else { return nil }
+        let newNode = ConversationNode(message: .assistant(""), parentId: parentId)
+        nodes[newNode.id] = newNode
+        nodes[parentId]?.childIds.append(newNode.id)
+        if let count = nodes[parentId]?.childIds.count {
+            nodes[parentId]?.activeChildIndex = count - 1
+        }
+        return newNode.id
+    }
+
+    public func branchSiblings(of nodeId: String) -> [String] {
+        guard let node = nodes[nodeId] else { return [] }
+        guard let parentId = node.parentId, let parent = nodes[parentId] else { return [nodeId] }
+        return parent.childIds
+    }
+
+    public mutating func switchToBranch(_ nodeId: String) {
+        guard nodes[nodeId] != nil else { return }
+        var currentId = nodeId
+        while let node = nodes[currentId], let parentId = node.parentId, let parent = nodes[parentId] {
+            if let idx = parent.childIds.firstIndex(of: currentId) {
+                nodes[parentId]?.activeChildIndex = idx
+            }
+            currentId = parentId
+        }
+    }
 }
