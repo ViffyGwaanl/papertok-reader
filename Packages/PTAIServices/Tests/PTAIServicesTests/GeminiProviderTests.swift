@@ -15,7 +15,9 @@ struct GeminiProviderTests {
             ],
             model: "gemini-2.0-flash-exp",
             temperature: 0.5,
-            maxTokens: 256
+            maxTokens: 256,
+            topP: 0.8,
+            stopSequences: ["END", "STOP"]
         )
 
         let body = provider.buildRequestBody(request: request)
@@ -24,6 +26,8 @@ struct GeminiProviderTests {
         #expect(body.systemInstruction != nil)
         #expect(body.generationConfig?.temperature == 0.5)
         #expect(body.generationConfig?.maxOutputTokens == 256)
+        #expect(body.generationConfig?.topP == 0.8)
+        #expect(body.generationConfig?.stopSequences == ["END", "STOP"])
 
         let data = try JSONEncoder().encode(body)
         let json = String(data: data, encoding: .utf8) ?? ""
@@ -32,6 +36,8 @@ struct GeminiProviderTests {
         #expect(json.contains("Hello"))
         #expect(json.contains("generation_config"))
         #expect(json.contains("max_output_tokens"))
+        #expect(json.contains("topP"))
+        #expect(json.contains("stopSequences"))
     }
 
     @Test("Assistant messages map role to model")
@@ -93,5 +99,33 @@ struct GeminiProviderTests {
         #expect(provider.supportedCapabilities.contains(.thinking))
         #expect(provider.supportedCapabilities.contains(.vision))
         #expect(provider.supportedCapabilities.contains(.toolCalling))
+    }
+
+    @Test("request body encodes thinking config and strict safety settings")
+    func requestBodyEncodesThinkingAndSafetyConfig() throws {
+        let provider = GeminiProvider(
+            overrideAPIKey: "test-key",
+            includeThoughts: true,
+            safetyPreset: .strict
+        )
+        let request = ChatRequest(
+            messages: [.user("Reason this through")],
+            model: "gemini-2.5-flash",
+            thinkingLevel: .high
+        )
+
+        let body = provider.buildRequestBody(request: request)
+        #expect(body.generationConfig?.thinkingConfig?.includeThoughts == true)
+        #expect(body.generationConfig?.thinkingConfig?.thinkingBudget != nil)
+        #expect(body.safetySettings?.count == 4)
+        #expect(body.safetySettings?.allSatisfy { $0.threshold == "BLOCK_LOW_AND_ABOVE" } == true)
+
+        let data = try JSONEncoder().encode(body)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("thinking_config"))
+        #expect(json.contains("includeThoughts"))
+        #expect(json.contains("thinkingBudget"))
+        #expect(json.contains("safety_settings"))
+        #expect(json.contains("BLOCK_LOW_AND_ABOVE"))
     }
 }
