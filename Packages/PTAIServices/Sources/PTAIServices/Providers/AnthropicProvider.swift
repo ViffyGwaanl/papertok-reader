@@ -13,13 +13,24 @@ struct AnthropicRequestBody: Encodable, Sendable {
     let topP: Double?
     let stopSequences: [String]?
     let tools: [AnthropicToolDef]?
+    let thinking: AnthropicThinkingConfig?
     let stream: Bool
 
     enum CodingKeys: String, CodingKey {
-        case model, messages, system, temperature, tools, stream
+        case model, messages, system, temperature, tools, thinking, stream
         case maxTokens = "max_tokens"
         case topP = "top_p"
         case stopSequences = "stop_sequences"
+    }
+}
+
+struct AnthropicThinkingConfig: Encodable, Sendable {
+    let type: String
+    let budgetTokens: Int
+
+    enum CodingKeys: String, CodingKey {
+        case type
+        case budgetTokens = "budget_tokens"
     }
 }
 
@@ -607,6 +618,12 @@ public struct AnthropicProvider: ChatModelProvider {
 
         let maxTokens = request.maxTokens ?? defaultMaxTokens
 
+        let thinkingConfig: AnthropicThinkingConfig? = {
+            guard let budget = request.thinkingBudgetTokens, budget > 0 else { return nil }
+            guard Self.modelSupportsThinking(request.model) else { return nil }
+            return AnthropicThinkingConfig(type: "enabled", budgetTokens: budget)
+        }()
+
         return AnthropicRequestBody(
             model: request.model,
             messages: messages,
@@ -616,8 +633,21 @@ public struct AnthropicProvider: ChatModelProvider {
             topP: request.topP,
             stopSequences: request.stopSequences,
             tools: tools,
+            thinking: thinkingConfig,
             stream: stream
         )
+    }
+
+    public static func modelSupportsThinking(_ model: String) -> Bool {
+        let lower = model.lowercased()
+        // Anthropic extended thinking is available on Claude 3.5+ Sonnet/Opus and
+        // Claude 4 lineage. Older 3.0 / Haiku models reject the `thinking` field.
+        if lower.contains("haiku") { return false }
+        if lower.contains("claude-3-5") { return true }
+        if lower.contains("claude-3-7") { return true }
+        if lower.contains("claude-sonnet-4") || lower.contains("claude-opus-4") { return true }
+        if lower.contains("claude-4") { return true }
+        return false
     }
 
     func encodeMessage(_ message: ChatMessage) -> AnthropicMessage {

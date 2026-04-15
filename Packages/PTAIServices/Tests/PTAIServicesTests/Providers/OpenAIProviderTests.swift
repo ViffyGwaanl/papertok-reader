@@ -113,6 +113,54 @@ struct OpenAIProviderTests {
         #expect(json.contains("response_format") == false)
     }
 
+    @Test("request body includes penalties when non-zero")
+    func openAIRequestIncludesPenaltiesWhenNonZero() throws {
+        let provider = OpenAIProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(
+            messages: [.user("Hi")],
+            model: "gpt-4o",
+            presencePenalty: 0.7,
+            frequencyPenalty: -0.5
+        )
+        let body = provider.buildRequestBody(request: request, stream: false)
+        #expect(body.presencePenalty == 0.7)
+        #expect(body.frequencyPenalty == -0.5)
+        let data = try JSONEncoder().encode(body)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("\"presence_penalty\":0.7"))
+        #expect(json.contains("\"frequency_penalty\":-0.5"))
+    }
+
+    @Test("request body includes stop sequences as `stop` field")
+    func openAIRequestIncludesStopSequences() throws {
+        let provider = OpenAIProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(
+            messages: [.user("Hi")],
+            model: "gpt-4o",
+            stopSequences: ["END", "DONE"]
+        )
+        let body = provider.buildRequestBody(request: request, stream: false)
+        #expect(body.stop == ["END", "DONE"])
+        let data = try JSONEncoder().encode(body)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("\"stop\":[\"END\",\"DONE\"]"))
+    }
+
+    @Test("OpenAI request ignores thinking budget tokens")
+    func openAIRequestIgnoresThinkingBudget() throws {
+        let provider = OpenAIProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(
+            messages: [.user("Hi")],
+            model: "gpt-5",
+            thinkingBudgetTokens: 16_384
+        )
+        let body = provider.buildRequestBody(request: request, stream: false)
+        let data = try JSONEncoder().encode(body)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("budget_tokens") == false)
+        #expect(json.contains("thinking_budget") == false)
+    }
+
     @Test("openAIProviderDecodesUsageOnFinalChunk")
     func openAIProviderDecodesUsageOnFinalChunk() throws {
         // Final OpenAI streaming chunk: empty choices array, usage populated.

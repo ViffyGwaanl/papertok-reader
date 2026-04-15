@@ -40,6 +40,7 @@ public struct AIProviderDetailView: View {
     @State private var reasoningEffort: String = "medium" // minimal | low | medium | high
     @State private var returnReasoningSummary: Bool = false
     @State private var usePreviousResponseId: Bool = false
+    @State private var thinkingBudgetTokensText: String = ""
 
     // Failover policy
     @State private var failureThreshold: Int = 3
@@ -176,6 +177,8 @@ public struct AIProviderDetailView: View {
                 }
                 .foregroundStyle(Morandi.primaryText)
 
+                modelCapabilityBadges(for: selectedModel)
+
                 TextField(String(localized: "ai.providers.custom_model_id"), text: $selectedModel)
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
@@ -183,6 +186,132 @@ public struct AIProviderDetailView: View {
                     .autocorrectionDisabled()
                     .font(AppTypography.caption)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func modelCapabilityBadges(for model: String) -> some View {
+        let badges = Self.badgesForModel(provider: provider, model: model)
+        if badges.isEmpty {
+            EmptyView()
+        } else {
+            HStack(spacing: AppSpacing.xs) {
+                ForEach(badges, id: \.self) { badge in
+                    Image(systemName: badge.systemImage)
+                        .font(.caption2)
+                        .foregroundStyle(Morandi.sage)
+                        .padding(4)
+                        .background(Circle().fill(Morandi.sage.opacity(0.15)))
+                        .accessibilityLabel(badge.localizationKey)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    /// Logic-only helper exposed for tests: returns the capability badges to
+    /// render for a given (provider, model) pair, in stable display order.
+    static func badgesForModel(provider: SupportedProvider, model: String) -> [ModelCapabilityBadge] {
+        var badges: [ModelCapabilityBadge] = []
+        if Self.modelSupportsTools(provider: provider, model: model) {
+            badges.append(.tools)
+        }
+        if Self.modelSupportsVision(provider: provider, model: model) {
+            badges.append(.vision)
+        }
+        if Self.modelSupportsThinking(provider: provider, model: model) {
+            badges.append(.thinking)
+        }
+        if Self.modelSupportsImageGeneration(provider: provider, model: model) {
+            badges.append(.imageGeneration)
+        }
+        return badges
+    }
+
+    enum ModelCapabilityBadge: String, Hashable {
+        case tools
+        case vision
+        case thinking
+        case imageGeneration
+
+        var systemImage: String {
+            switch self {
+            case .tools: return "wrench.and.screwdriver"
+            case .vision: return "eye"
+            case .thinking: return "brain"
+            case .imageGeneration: return "photo"
+            }
+        }
+
+        var localizationKey: LocalizedStringResource {
+            switch self {
+            case .tools: return "chat.provider.capability.tools"
+            case .vision: return "chat.provider.capability.vision"
+            case .thinking: return "chat.provider.capability.thinking"
+            case .imageGeneration: return "chat.provider.capability.image_generation"
+            }
+        }
+    }
+
+    private static func modelSupportsTools(provider: SupportedProvider, model: String) -> Bool {
+        switch provider {
+        case .openai, .anthropic, .gemini, .azure, .volcengine,
+             .siliconflow, .groq, .mistral, .deepseek, .openrouter:
+            return true
+        case .ollama, .custom:
+            return false
+        }
+    }
+
+    private static func modelSupportsVision(provider: SupportedProvider, model: String) -> Bool {
+        let lower = model.lowercased()
+        switch provider {
+        case .openai:
+            return lower.contains("gpt-4") || lower.contains("gpt-5") || lower.contains("o1")
+        case .anthropic:
+            return !lower.contains("haiku") || lower.contains("3-5")
+        case .gemini:
+            return true
+        case .mistral:
+            return lower.contains("pixtral")
+        case .openrouter:
+            return true
+        case .siliconflow:
+            return lower.contains("qwen2-vl") || lower.contains("vl")
+        case .azure, .volcengine, .groq, .ollama, .deepseek, .custom:
+            return false
+        }
+    }
+
+    private static func modelSupportsThinking(provider: SupportedProvider, model: String) -> Bool {
+        let lower = model.lowercased()
+        switch provider {
+        case .anthropic:
+            return AnthropicProvider.modelSupportsThinking(model)
+        case .openai:
+            return lower.hasPrefix("o") || lower.contains("gpt-5") || lower.contains("reason")
+        case .gemini:
+            return lower.contains("thinking") || lower.hasPrefix("gemini-2.5") || lower.hasPrefix("gemini-3")
+        case .deepseek:
+            return lower.contains("reasoner") || lower.contains("r1")
+        case .openrouter:
+            return lower.contains("o1") || lower.contains("reason") || lower.contains("thinking")
+        case .siliconflow:
+            return lower.contains("deepseek-r1") || lower.contains("reason")
+        case .azure, .volcengine, .groq, .mistral, .ollama, .custom:
+            return false
+        }
+    }
+
+    private static func modelSupportsImageGeneration(provider: SupportedProvider, model: String) -> Bool {
+        let lower = model.lowercased()
+        switch provider {
+        case .openai:
+            return lower.contains("dall-e") || lower.contains("gpt-image")
+        case .gemini:
+            return lower.contains("imagen")
+        default:
+            return false
         }
     }
 
@@ -547,6 +676,7 @@ public struct AIProviderDetailView: View {
                     Text("common.strict").tag("strict")
                     Text("common.relaxed").tag("relaxed")
                 }
+                thinkingBudgetRow
             }
         case .openai, .anthropic:
             Section(String(localized: "settings.ai_provider.reasoning")) {
@@ -562,10 +692,50 @@ public struct AIProviderDetailView: View {
                     Toggle(String(localized: "settings.ai_provider.use_previous_response_id"), isOn: $usePreviousResponseId)
                         .tint(Morandi.accent)
                 }
+                if provider == .anthropic {
+                    thinkingBudgetRow
+                }
+            }
+        case .deepseek:
+            Section(String(localized: "settings.ai_provider.reasoning")) {
+                thinkingBudgetRow
             }
         default:
             EmptyView()
         }
+    }
+
+    /// Provider-specific thinking budget editor. Anthropic / Gemini / DeepSeek
+    /// reasoner accept an explicit token budget for the extended thinking phase.
+    /// Empty string = use provider default. OpenAI is excluded because the OpenAI
+    /// API does not accept this knob.
+    @ViewBuilder
+    private var thinkingBudgetRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("chat.provider.thinking.budget_tokens.title")
+                    .foregroundStyle(Morandi.primaryText)
+                Spacer()
+                TextField("8192", text: $thinkingBudgetTokensText)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 90)
+                    #if os(iOS)
+                    .keyboardType(.numberPad)
+                    #endif
+                    .onChange(of: thinkingBudgetTokensText) { _, _ in saveThinkingBudget() }
+            }
+            Text("chat.provider.thinking.budget_tokens.hint")
+                .font(AppTypography.caption2)
+                .foregroundStyle(Morandi.tertiaryText)
+        }
+    }
+
+    private func saveThinkingBudget() {
+        let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
+        let trimmed = thinkingBudgetTokensText.trimmingCharacters(in: .whitespaces)
+        let value = Int(trimmed)
+        AIChatRuntimePreferences.persistThinkingBudget(value, defaults: defaults, providerId: storageID)
+        StoredAIProviderCatalog.postConfigurationDidChange()
     }
 
     // MARK: - Failover Policy
@@ -652,6 +822,11 @@ public struct AIProviderDetailView: View {
         reasoningEffort = defaults.string(forKey: "ai_reasoning_effort_\(id)") ?? "medium"
         returnReasoningSummary = defaults.bool(forKey: "ai_reasoning_summary_\(id)")
         usePreviousResponseId = defaults.bool(forKey: "ai_prev_response_id_\(id)")
+        if let budget = AIChatRuntimePreferences.loadThinkingBudget(defaults: defaults, providerId: id) {
+            thinkingBudgetTokensText = String(budget)
+        } else {
+            thinkingBudgetTokensText = ""
+        }
 
         // Failover
         if defaults.object(forKey: "ai_failure_threshold_\(id)") != nil {

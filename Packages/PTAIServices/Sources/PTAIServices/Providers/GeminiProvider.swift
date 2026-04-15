@@ -502,7 +502,10 @@ public struct GeminiProvider: ChatModelProvider {
         }
 
         let generationConfig: GeminiGenerationConfig? = {
-            let thinkingConfig = buildThinkingConfig(for: request.thinkingLevel)
+            let thinkingConfig = buildThinkingConfig(
+                for: request.thinkingLevel,
+                explicitBudget: request.thinkingBudgetTokens
+            )
             let responseMime: String? = {
                 guard let fmt = request.responseFormat else { return nil }
                 switch fmt {
@@ -537,8 +540,14 @@ public struct GeminiProvider: ChatModelProvider {
         )
     }
 
-    private func buildThinkingConfig(for level: ThinkingLevel?) -> GeminiThinkingConfig? {
-        let thinkingBudget = level.map(thinkingBudget(for:))
+    private func buildThinkingConfig(
+        for level: ThinkingLevel?,
+        explicitBudget: Int? = nil
+    ) -> GeminiThinkingConfig? {
+        let thinkingBudget: Int? = {
+            if let explicit = explicitBudget, explicit > 0 { return explicit }
+            return level.map(thinkingBudget(for:))
+        }()
         if includeThoughts == false, thinkingBudget == nil {
             return nil
         }

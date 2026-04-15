@@ -127,6 +127,29 @@ public final class AIChatViewModel {
         public var stopSequences: [String]
         public var systemPrompt: String
         public var perConversation: Bool
+        public var thinkingBudgetTokens: Int?
+
+        public init(
+            temperature: Double,
+            maxTokens: Int,
+            topP: Double,
+            presencePenalty: Double,
+            frequencyPenalty: Double,
+            stopSequences: [String],
+            systemPrompt: String,
+            perConversation: Bool,
+            thinkingBudgetTokens: Int? = nil
+        ) {
+            self.temperature = temperature
+            self.maxTokens = maxTokens
+            self.topP = topP
+            self.presencePenalty = presencePenalty
+            self.frequencyPenalty = frequencyPenalty
+            self.stopSequences = stopSequences
+            self.systemPrompt = systemPrompt
+            self.perConversation = perConversation
+            self.thinkingBudgetTokens = thinkingBudgetTokens
+        }
 
         public static let `default` = ChatGenerationSettings(
             temperature: 0.7,
@@ -136,7 +159,8 @@ public final class AIChatViewModel {
             frequencyPenalty: 0.0,
             stopSequences: [],
             systemPrompt: aiChatLocalizedCatalogString("ai.chat.system_prompt_default"),
-            perConversation: false
+            perConversation: false,
+            thinkingBudgetTokens: nil
         )
     }
 
@@ -584,6 +608,7 @@ public final class AIChatViewModel {
                     : requestPreferences.generationSettings.stopSequences,
                 tools: toolDefinitions.isEmpty ? nil : toolDefinitions,
                 thinkingLevel: thinkingLevelForCurrentRequest(provider: providerOption),
+                thinkingBudgetTokens: requestPreferences.generationSettings.thinkingBudgetTokens,
                 responseFormat: requestPreferences.responseFormat
             )
 

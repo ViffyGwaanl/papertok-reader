@@ -236,6 +236,10 @@ struct HardcodedEnglishAuditTests {
                 #"return "hourglass""#,
                 #"return "checkmark.circle.fill""#,
                 #"return "xmark.circle.fill""#,
+                #"return "wrench.and.screwdriver""#,
+                #"return "eye""#,
+                #"return "brain""#,
+                #"return "photo""#,
             ]
         )
 

@@ -19,6 +19,7 @@ public struct ChatRequest: Sendable {
     public let stopSequences: [String]?
     public let tools: [ToolDefinition]?
     public let thinkingLevel: ThinkingLevel?
+    public let thinkingBudgetTokens: Int?
     public let responseFormat: ResponseFormat?
 
     public init(
@@ -32,6 +33,7 @@ public struct ChatRequest: Sendable {
         stopSequences: [String]? = nil,
         tools: [ToolDefinition]? = nil,
         thinkingLevel: ThinkingLevel? = nil,
+        thinkingBudgetTokens: Int? = nil,
         responseFormat: ResponseFormat? = nil
     ) {
         self.messages = messages
@@ -44,6 +46,7 @@ public struct ChatRequest: Sendable {
         self.stopSequences = stopSequences
         self.tools = tools
         self.thinkingLevel = thinkingLevel
+        self.thinkingBudgetTokens = thinkingBudgetTokens
         self.responseFormat = responseFormat
     }
 }

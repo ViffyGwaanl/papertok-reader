@@ -100,6 +100,62 @@ final class AnthropicProviderTests: XCTestCase {
         XCTAssertEqual(body.tools?.first?.inputSchema.required, ["city"])
     }
 
+    func testBuildRequestBody_includesStopSequences() throws {
+        let provider = AnthropicProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(
+            messages: [.user("Hi")],
+            model: "claude-sonnet-4-20250514",
+            stopSequences: ["END", "STOP"]
+        )
+        let body = provider.buildRequestBody(request: request, stream: false)
+        XCTAssertEqual(body.stopSequences, ["END", "STOP"])
+    }
+
+    func testBuildRequestBody_includesThinkingBudgetWhenSet() throws {
+        let provider = AnthropicProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(
+            messages: [.user("Solve")],
+            model: "claude-sonnet-4-20250514",
+            thinkingBudgetTokens: 4096
+        )
+        let body = provider.buildRequestBody(request: request, stream: false)
+        XCTAssertNotNil(body.thinking)
+        XCTAssertEqual(body.thinking?.type, "enabled")
+        XCTAssertEqual(body.thinking?.budgetTokens, 4096)
+
+        let data = try JSONEncoder().encode(body)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let thinking = try XCTUnwrap(json["thinking"] as? [String: Any])
+        XCTAssertEqual(thinking["type"] as? String, "enabled")
+        XCTAssertEqual(thinking["budget_tokens"] as? Int, 4096)
+    }
+
+    func testBuildRequestBody_omitsThinkingBudgetWhenNil() throws {
+        let provider = AnthropicProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(messages: [.user("Hi")], model: "claude-sonnet-4-20250514")
+        let body = provider.buildRequestBody(request: request, stream: false)
+        XCTAssertNil(body.thinking)
+    }
+
+    func testBuildRequestBody_omitsThinkingBudgetForUnsupportedModel() throws {
+        let provider = AnthropicProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(
+            messages: [.user("Hi")],
+            model: "claude-3-haiku-20240307",
+            thinkingBudgetTokens: 8192
+        )
+        let body = provider.buildRequestBody(request: request, stream: false)
+        XCTAssertNil(body.thinking, "Thinking budget should be dropped for non-thinking-capable models")
+    }
+
+    func testModelSupportsThinking_classification() {
+        XCTAssertTrue(AnthropicProvider.modelSupportsThinking("claude-sonnet-4-20250514"))
+        XCTAssertTrue(AnthropicProvider.modelSupportsThinking("claude-opus-4-20250514"))
+        XCTAssertTrue(AnthropicProvider.modelSupportsThinking("claude-3-5-sonnet-20241022"))
+        XCTAssertFalse(AnthropicProvider.modelSupportsThinking("claude-3-haiku-20240307"))
+        XCTAssertFalse(AnthropicProvider.modelSupportsThinking("claude-3-5-haiku-20241022"))
+    }
+
     func testBuildRequestBody_serialization() throws {
         let provider = AnthropicProvider(overrideAPIKey: "test-key")
         let request = ChatRequest(

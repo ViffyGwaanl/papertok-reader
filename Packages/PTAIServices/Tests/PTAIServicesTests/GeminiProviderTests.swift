@@ -128,4 +128,43 @@ struct GeminiProviderTests {
         #expect(json.contains("safety_settings"))
         #expect(json.contains("BLOCK_LOW_AND_ABOVE"))
     }
+
+    @Test("request body includes explicit thinking budget when set")
+    func requestBodyIncludesThinkingBudgetWhenSet() throws {
+        let provider = GeminiProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(
+            messages: [.user("Solve this carefully")],
+            model: "gemini-2.5-pro",
+            thinkingBudgetTokens: 8192
+        )
+        let body = provider.buildRequestBody(request: request)
+        let config = try #require(body.generationConfig)
+        let thinking = try #require(config.thinkingConfig)
+        #expect(thinking.thinkingBudget == 8192)
+
+        let data = try JSONEncoder().encode(body)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("\"thinkingBudget\":8192"))
+    }
+
+    @Test("explicit thinking budget overrides level-derived budget")
+    func explicitThinkingBudgetOverridesLevel() throws {
+        let provider = GeminiProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(
+            messages: [.user("Hi")],
+            model: "gemini-2.5-flash",
+            thinkingLevel: .low,
+            thinkingBudgetTokens: 16_384
+        )
+        let body = provider.buildRequestBody(request: request)
+        #expect(body.generationConfig?.thinkingConfig?.thinkingBudget == 16_384)
+    }
+
+    @Test("request body omits thinking config when budget and level absent")
+    func requestBodyOmitsThinkingConfigWhenAbsent() throws {
+        let provider = GeminiProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(messages: [.user("Hi")], model: "gemini-1.5-flash")
+        let body = provider.buildRequestBody(request: request)
+        #expect(body.generationConfig?.thinkingConfig == nil)
+    }
 }

@@ -46,6 +46,7 @@ public struct AIChatRuntimePreferences {
         let presencePenaltyKey = "ai_presence_penalty_\(providerId)"
         let frequencyPenaltyKey = "ai_frequency_penalty_\(providerId)"
         let stopSequencesKey = "ai_stop_sequences_\(providerId)"
+        let thinkingBudgetKey = "ai_thinking_budget_tokens_\(providerId)"
         let systemPrompt = defaults.string(forKey: AppConfig.Keys.aiSystemPrompt)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let temperature = defaults.object(forKey: temperatureKey) != nil
@@ -62,6 +63,11 @@ public struct AIChatRuntimePreferences {
             : defaultSettings.frequencyPenalty
         let maxTokens = Int(defaults.string(forKey: maxTokensKey) ?? "") ?? defaultSettings.maxTokens
         let stopSequences = parseStopSequences(defaults.string(forKey: stopSequencesKey))
+        let thinkingBudgetTokens: Int? = {
+            guard defaults.object(forKey: thinkingBudgetKey) != nil else { return nil }
+            let value = defaults.integer(forKey: thinkingBudgetKey)
+            return value > 0 ? value : nil
+        }()
         let generationSettings = AIChatViewModel.ChatGenerationSettings(
             temperature: temperature,
             maxTokens: maxTokens,
@@ -70,7 +76,8 @@ public struct AIChatRuntimePreferences {
             frequencyPenalty: frequencyPenalty,
             stopSequences: stopSequences,
             systemPrompt: (systemPrompt?.isEmpty == false ? systemPrompt : nil) ?? defaultSettings.systemPrompt,
-            perConversation: false
+            perConversation: false,
+            thinkingBudgetTokens: thinkingBudgetTokens
         )
 
         let responseFormat: ResponseFormat = {
@@ -101,6 +108,34 @@ public struct AIChatRuntimePreferences {
         defaults.set(settings.frequencyPenalty, forKey: "ai_frequency_penalty_\(providerId)")
         defaults.set(settings.stopSequences.joined(separator: "\n"), forKey: "ai_stop_sequences_\(providerId)")
         defaults.set(settings.systemPrompt, forKey: AppConfig.Keys.aiSystemPrompt)
+        let budgetKey = "ai_thinking_budget_tokens_\(providerId)"
+        if let budget = settings.thinkingBudgetTokens, budget > 0 {
+            defaults.set(budget, forKey: budgetKey)
+        } else {
+            defaults.removeObject(forKey: budgetKey)
+        }
+    }
+
+    public static func persistThinkingBudget(_ tokens: Int?, defaults: UserDefaults, providerId: String) {
+        let key = "ai_thinking_budget_tokens_\(providerId)"
+        if let tokens, tokens > 0 {
+            defaults.set(tokens, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    public static func loadThinkingBudget(defaults: UserDefaults, providerId: String) -> Int? {
+        let key = "ai_thinking_budget_tokens_\(providerId)"
+        guard defaults.object(forKey: key) != nil else { return nil }
+        let value = defaults.integer(forKey: key)
+        return value > 0 ? value : nil
+    }
+
+    /// Splits a comma-separated stop-sequence input into trimmed, non-empty tokens.
+    /// Exposed for UI parsing and testing; supports both comma and newline delimiters.
+    public static func parseStopSequencesInput(_ input: String) -> [String] {
+        parseStopSequences(input)
     }
 
     public static func persistThinkingLevel(_ level: ThinkingLevel, defaults: UserDefaults) {
