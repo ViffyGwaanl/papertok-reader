@@ -226,6 +226,57 @@ public final class PDFContentBridge: BookContentBridge {
         }
     }
 
+    // MARK: - Hierarchical Outline
+
+    /// Walks `PDFDocument.outlineRoot` and returns a hierarchical list of
+    /// outline entries. Nodes with an empty label or an unresolvable
+    /// destination page are skipped. Returns an empty array when the
+    /// document has no outline.
+    public func outlineChapters() async -> [PDFOutlineChapter] {
+        guard let root = document.outlineRoot else { return [] }
+        return collectOutlineChapters(root, depth: 0, parentPath: "")
+    }
+
+    private func collectOutlineChapters(
+        _ outline: PDFOutline,
+        depth: Int,
+        parentPath: String
+    ) -> [PDFOutlineChapter] {
+        var results: [PDFOutlineChapter] = []
+        for i in 0..<outline.numberOfChildren {
+            guard let child = outline.child(at: i) else { continue }
+            let rawTitle = child.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard rawTitle.isEmpty == false else { continue }
+
+            guard let destinationPage = child.destination?.page else { continue }
+            let pageIndex = document.index(for: destinationPage)
+            guard pageIndex >= 0 else { continue }
+
+            let path = parentPath.isEmpty ? "\(i)" : "\(parentPath).\(i)"
+            let id = "\(path)#\(Self.stableTitleHash(rawTitle))"
+            let children = collectOutlineChapters(child, depth: depth + 1, parentPath: path)
+            results.append(
+                PDFOutlineChapter(
+                    id: id,
+                    title: rawTitle,
+                    pageIndex: pageIndex,
+                    depth: depth,
+                    children: children
+                )
+            )
+        }
+        return results
+    }
+
+    private static func stableTitleHash(_ title: String) -> String {
+        var hash: UInt64 = 1469598103934665603
+        for byte in title.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1099511628211
+        }
+        return String(format: "%08x", UInt32(truncatingIfNeeded: hash))
+    }
+
     private func syntheticChapters() -> [PDFChapter] {
         guard pageCount > 0 else { return [] }
         let pagesPerChapter = 20

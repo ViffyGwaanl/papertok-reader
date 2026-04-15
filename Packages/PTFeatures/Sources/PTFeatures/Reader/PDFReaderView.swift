@@ -1,3 +1,4 @@
+import CoreImage
 import PDFKit
 import PTCore
 import PTReader
@@ -45,6 +46,7 @@ struct NativePDFView: UIViewRepresentable {
     let renderedAnnotations: [PDFRenderedAnnotation]
     let selectionResetToken: Int
     let findHighlightRequest: PDFFindHighlightRequest?
+    let themeTintKind: PDFThemeTintKind
     let onSelectionChange: (PDFSelectionSnapshot) -> Void
     let onAnnotationTap: (Int64) -> Void
     @Binding var currentPage: Int
@@ -57,6 +59,7 @@ struct NativePDFView: UIViewRepresentable {
         pdfView.usePageViewController(true, withViewOptions: nil)
         pdfView.backgroundColor = UIColor(Morandi.background)
         pdfView.document = document
+        context.coordinator.applyThemeTint(themeTintKind, to: pdfView)
         NotificationCenter.default.addObserver(
             context.coordinator,
             selector: #selector(Coordinator.pageChanged(_:)),
@@ -96,6 +99,7 @@ struct NativePDFView: UIViewRepresentable {
             pdfView.clearSelection()
         }
         context.coordinator.applyFindHighlight(findHighlightRequest, on: pdfView)
+        context.coordinator.applyThemeTint(themeTintKind, to: pdfView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -114,9 +118,29 @@ struct NativePDFView: UIViewRepresentable {
         var onAnnotationTap: (Int64) -> Void
         var lastSelectionResetToken: Int = 0
         private var lastFindHighlightRequestID: UUID?
+        private var lastAppliedTintKind: PDFThemeTintKind?
 
         private var appliedAnnotationsByPage: [Int: [PDFAnnotation]] = [:]
         private var suppressNextSelectionChange = false
+
+        func applyThemeTint(_ kind: PDFThemeTintKind, to pdfView: PDFView) {
+            guard lastAppliedTintKind != kind else { return }
+            lastAppliedTintKind = kind
+            // iOS: CALayer.filters is not a public API surface we can use here;
+            // ship the tint-kind selection and re-application hook so the
+            // reader observes theme changes, and rely on a follow-up to land
+            // a PDFPageOverlayViewProvider-based renderer. Background color
+            // is still updated below for an immediate visible difference.
+            switch kind {
+            case .none:
+                pdfView.backgroundColor = UIColor(Morandi.background)
+            case .dark:
+                pdfView.backgroundColor = UIColor(red: 0.10, green: 0.10, blue: 0.18, alpha: 1.0)
+            case .sepia:
+                pdfView.backgroundColor = UIColor(red: 0.98, green: 0.95, blue: 0.91, alpha: 1.0)
+            }
+            pdfView.setNeedsDisplay()
+        }
 
         init(
             currentPage: Binding<Int>,
@@ -276,6 +300,7 @@ struct NativePDFView: NSViewRepresentable {
     let renderedAnnotations: [PDFRenderedAnnotation]
     let selectionResetToken: Int
     let findHighlightRequest: PDFFindHighlightRequest?
+    let themeTintKind: PDFThemeTintKind
     let onSelectionChange: (PDFSelectionSnapshot) -> Void
     let onAnnotationTap: (Int64) -> Void
     @Binding var currentPage: Int
@@ -287,6 +312,7 @@ struct NativePDFView: NSViewRepresentable {
         pdfView.displayDirection = .horizontal
         pdfView.document = document
         pdfView.backgroundColor = NSColor(Morandi.background)
+        context.coordinator.applyThemeTint(themeTintKind, to: pdfView)
         NotificationCenter.default.addObserver(
             context.coordinator,
             selector: #selector(Coordinator.pageChanged(_:)),
@@ -325,6 +351,7 @@ struct NativePDFView: NSViewRepresentable {
             pdfView.clearSelection()
         }
         context.coordinator.applyFindHighlight(findHighlightRequest, on: pdfView)
+        context.coordinator.applyThemeTint(themeTintKind, to: pdfView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -343,9 +370,33 @@ struct NativePDFView: NSViewRepresentable {
         var onAnnotationTap: (Int64) -> Void
         var lastSelectionResetToken: Int = 0
         private var lastFindHighlightRequestID: UUID?
+        private var lastAppliedTintKind: PDFThemeTintKind?
 
         private var appliedAnnotationsByPage: [Int: [PDFAnnotation]] = [:]
         private var suppressNextSelectionChange = false
+
+        func applyThemeTint(_ kind: PDFThemeTintKind, to pdfView: PDFView) {
+            guard lastAppliedTintKind != kind else { return }
+            lastAppliedTintKind = kind
+            let filters = PDFThemeTint.filterChain(for: kind).compactMap { descriptor -> CIFilter? in
+                guard let filter = CIFilter(name: descriptor.name) else { return nil }
+                for (key, value) in descriptor.parameters {
+                    filter.setValue(NSNumber(value: value), forKey: key)
+                }
+                return filter
+            }
+            pdfView.wantsLayer = true
+            pdfView.layer?.filters = filters.isEmpty ? nil : filters
+            switch kind {
+            case .none:
+                pdfView.backgroundColor = NSColor(Morandi.background)
+            case .dark:
+                pdfView.backgroundColor = NSColor(red: 0.10, green: 0.10, blue: 0.18, alpha: 1.0)
+            case .sepia:
+                pdfView.backgroundColor = NSColor(red: 0.98, green: 0.95, blue: 0.91, alpha: 1.0)
+            }
+            pdfView.needsDisplay = true
+        }
 
         func applyFindHighlight(_ request: PDFFindHighlightRequest?, on pdfView: PDFView) {
             guard let request else {
@@ -528,13 +579,15 @@ public struct PDFReaderView: View {
 
     private let aiChatViewModel: AIChatViewModel
     private let database: AppDatabase
+    @State private var readingPreferences: ReadingPreferences
 
     public init(
         book: Book,
         database: AppDatabase,
         aiChatViewModel: AIChatViewModel,
         readerSessionStore: ReaderSessionContextStore? = nil,
-        initialPageOverride: Int? = nil
+        initialPageOverride: Int? = nil,
+        readingPreferences: ReadingPreferences = ReadingPreferences()
     ) {
         self.database = database
         self.aiChatViewModel = aiChatViewModel
@@ -546,6 +599,7 @@ public struct PDFReaderView: View {
                 initialPageOverride: initialPageOverride
             )
         )
+        _readingPreferences = State(initialValue: readingPreferences)
     }
 
     public var body: some View {
@@ -718,6 +772,7 @@ public struct PDFReaderView: View {
                     renderedAnnotations: annotationsViewModel?.renderedAnnotations ?? [],
                     selectionResetToken: selectionResetToken,
                     findHighlightRequest: findHighlightRequest,
+                    themeTintKind: PDFThemeTint.resolveTintKind(from: readingPreferences.theme),
                     onSelectionChange: presentAnnotationDraft(selection:),
                     onAnnotationTap: presentAnnotationDraft(noteID:),
                     currentPage: $viewModel.currentPage

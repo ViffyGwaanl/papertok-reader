@@ -80,15 +80,16 @@ public final class ReaderViewModel {
             currentPage = max(0, min(currentPage, pageCount - 1))
         }
 
-        // Build TOC from PDF outline
+        // Build TOC from PDF outline. Prefer the real hierarchical outline
+        // parser; fall back to the service-layer synthetic chapter grouping
+        // when the document has no outline.
         let bridge = PDFContentBridge(document: doc, title: book.title)
         pdfContentBridge = bridge
-        let chapters = bridge.segmentByOutline()
-        if chapters.isEmpty {
-            // Use synthetic chapters (every 20 pages)
+        let outline = await bridge.outlineChapters()
+        if outline.isEmpty {
             tocEntries = (try? await bridge.tableOfContents) ?? []
         } else {
-            tocEntries = chapters.map { $0.toChapterEntry() }
+            tocEntries = Self.flattenOutline(outline, totalPageCount: pageCount)
         }
         publishReaderSession()
         await loadBookmarks()
@@ -245,6 +246,28 @@ public final class ReaderViewModel {
 
     static func localizedPageLabel(for pageIndex: Int) -> String {
         localizedCatalogFormat("reader.page_number_format", pageIndex + 1)
+    }
+
+    /// Flattens a hierarchical PDF outline into ChapterEntry rows. Child
+    /// titles are prefixed with two spaces per depth level so the existing
+    /// flat TOC list surfaces the hierarchy without a tree UI. End pages are
+    /// derived from the next entry's start page (document order preserved).
+    static func flattenOutline(
+        _ outline: [PDFOutlineChapter],
+        totalPageCount: Int
+    ) -> [ChapterEntry] {
+        let flat = outline.flattened()
+        guard flat.isEmpty == false else { return [] }
+        var entries: [ChapterEntry] = []
+        for (i, chapter) in flat.enumerated() {
+            let nextStart = (i + 1 < flat.count) ? flat[i + 1].pageIndex : totalPageCount
+            let endPage = max(chapter.pageIndex, nextStart - 1)
+            let indent = String(repeating: "  ", count: chapter.depth)
+            let title = indent + chapter.title
+            let href = "pages:\(chapter.pageIndex)-\(endPage)"
+            entries.append(ChapterEntry(title: title, href: href, level: chapter.depth))
+        }
+        return entries
     }
 }
 

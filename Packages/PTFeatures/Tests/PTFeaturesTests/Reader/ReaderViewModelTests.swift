@@ -4,6 +4,7 @@ import PDFKit
 @testable import PTFeatures
 import PTAIServices
 import PTCore
+import PTReader
 
 private func makeMinimalPDF(at url: URL) throws {
     let pdfDoc = PDFDocument()
@@ -176,6 +177,47 @@ struct ReaderViewModelTests {
             ReaderViewModel.localizedPageLabel(for: 2)
                 == localizedCatalogFormat("reader.page_number_format", 3)
         )
+    }
+
+    @Test("flattenOutline produces flat entries with indented titles and ranges")
+    func flattenOutlineIndentsNestedChildren() {
+        let outline = [
+            PDFOutlineChapter(
+                id: "0",
+                title: "Chapter 1",
+                pageIndex: 0,
+                depth: 0,
+                children: [
+                    PDFOutlineChapter(
+                        id: "0.0",
+                        title: "Section 1.1",
+                        pageIndex: 2,
+                        depth: 1
+                    )
+                ]
+            ),
+            PDFOutlineChapter(
+                id: "1",
+                title: "Chapter 2",
+                pageIndex: 5,
+                depth: 0
+            ),
+        ]
+        let entries = ReaderViewModel.flattenOutline(outline, totalPageCount: 10)
+        #expect(entries.count == 3)
+        #expect(entries[0].title == "Chapter 1")
+        #expect(entries[0].href == "pages:0-1")
+        #expect(entries[1].title == "  Section 1.1")
+        #expect(entries[1].href == "pages:2-4")
+        #expect(entries[1].level == 1)
+        #expect(entries[2].title == "Chapter 2")
+        #expect(entries[2].href == "pages:5-9")
+    }
+
+    @Test("flattenOutline returns empty for empty input so VM falls back to synthetic chapters")
+    func flattenOutlineEmptyInputFallsBack() {
+        let entries = ReaderViewModel.flattenOutline([], totalPageCount: 100)
+        #expect(entries.isEmpty)
     }
 }
 
