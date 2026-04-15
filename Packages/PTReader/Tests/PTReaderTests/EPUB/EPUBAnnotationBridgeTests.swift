@@ -84,6 +84,59 @@ struct EPUBAnnotationBridgeTests {
         #expect(style.style == "strikethrough")
     }
 
+    @Test("Strikethrough BookNote produces a custom HTML decoration with tint userInfo")
+    func strikethroughBookNoteProducesCustomDecoration() throws {
+        let href = AnyURL(path: "ch1.xhtml")!
+        let locator = Locator(
+            href: href,
+            mediaType: .xhtml,
+            title: "Chapter 1",
+            text: Locator.Text(highlight: "struck")
+        )
+        let stored = EPUBAnnotationBridge.storedString(from: locator)
+        let note = BookNote(
+            id: 17,
+            bookId: 1,
+            content: "struck",
+            cfi: stored,
+            chapter: "Chapter 1",
+            type: BookNoteAnnotationKind.strikethrough.rawValue,
+            color: HighlightColor.red.hex,
+            updateTime: Date()
+        )
+
+        let decoration = try #require(EPUBAnnotationBridge.decoration(from: note))
+        #expect(decoration.style.id == StrikethroughDecorationTemplate.styleID)
+        #expect(decoration.id == "17")
+        let tint = decoration.userInfo[StrikethroughDecorationTemplate.userInfoTintKey as AnyHashable] as? String
+        #expect(tint == "#F44336")
+        #expect(decoration.locator.title == "Chapter 1")
+    }
+
+    @Test("Underline BookNote still maps to Readium .underline decoration")
+    func underlineBookNoteProducesUnderlineDecoration() throws {
+        let href = AnyURL(path: "ch2.xhtml")!
+        let locator = Locator(
+            href: href,
+            mediaType: .xhtml,
+            title: "Chapter 2",
+            text: Locator.Text(highlight: "under")
+        )
+        let note = BookNote(
+            id: 42,
+            bookId: 1,
+            content: "under",
+            cfi: EPUBAnnotationBridge.storedString(from: locator),
+            chapter: "Chapter 2",
+            type: BookNoteAnnotationKind.underline.rawValue,
+            color: HighlightColor.green.hex,
+            updateTime: Date()
+        )
+        let decoration = try #require(EPUBAnnotationBridge.decoration(from: note))
+        #expect(decoration.style.id != StrikethroughDecorationTemplate.styleID)
+        #expect(decoration.style.id.rawValue == "underline")
+    }
+
     @Test("BookNote with note type maps to highlight style")
     func noteToDecoratorStyleNote() {
         let note = BookNote(

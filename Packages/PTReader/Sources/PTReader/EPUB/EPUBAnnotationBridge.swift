@@ -56,27 +56,30 @@ public enum EPUBAnnotationBridge {
         }
         let style = decoratorStyle(for: note)
         let tintColor = colorFromHex(style.tint)
+        let decorationID = note.id.map { "\($0)" } ?? UUID().uuidString
 
-        let decorationStyle: Decoration.Style
         switch style.style {
         case "underline":
-            decorationStyle = .underline(tint: tintColor)
+            return Decoration(
+                id: decorationID,
+                locator: locator,
+                style: .underline(tint: tintColor)
+            )
         case "strikethrough":
-            // Readium 3.8.0 ships no built-in .strikethrough style.
-            // Render as an underline-tinted decoration to visually distinguish
-            // the annotation from a highlight while we live on 3.8.0. The
-            // persisted BookNote still carries the correct kind, so a future
-            // custom HTMLDecorationTemplate can upgrade the rendering.
-            decorationStyle = .underline(tint: tintColor)
+            // Readium 3.8.0 ships no built-in .strikethrough style. We bridge
+            // to a custom HTMLDecorationTemplate registered in EPUBReaderView.
+            return StrikethroughDecorationTemplate.decoration(
+                id: decorationID,
+                locator: locator,
+                tintHex: style.tint
+            )
         default:
-            decorationStyle = .highlight(tint: tintColor)
+            return Decoration(
+                id: decorationID,
+                locator: locator,
+                style: .highlight(tint: tintColor)
+            )
         }
-
-        return Decoration(
-            id: note.id.map { "\($0)" } ?? UUID().uuidString,
-            locator: locator,
-            style: decorationStyle
-        )
     }
 
     /// Build a BookNote from a Readium Locator and selected text.

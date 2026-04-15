@@ -2007,6 +2007,7 @@ struct EPUBBookshelfReaderView: View {
                     readingPreferences: preferencesSnapshot,
                     extraDecorationTemplates: [
                         FulltextTranslationDecorationTemplate.styleID: FulltextTranslationDecorationTemplate.htmlTemplate(),
+                        StrikethroughDecorationTemplate.styleID: StrikethroughDecorationTemplate.htmlTemplate(),
                     ]
                 )
                 .ignoresSafeArea(edges: .bottom)

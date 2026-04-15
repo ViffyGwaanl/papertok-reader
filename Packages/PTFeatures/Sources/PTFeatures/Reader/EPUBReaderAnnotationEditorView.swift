@@ -142,11 +142,17 @@ public struct EPUBReaderAnnotationEditorView: View {
                 .foregroundStyle(Morandi.primaryText)
 
             Picker(String(localized: "common.type"), selection: $draft.type) {
-                Text("reader.highlight").tag(NoteType.highlight)
-                Text("reader.bookmark").tag(NoteType.bookmark)
-                Text("common.note").tag(NoteType.note)
+                if draft.type == .bookmark {
+                    Text("reader.bookmark").tag(NoteType.bookmark)
+                } else {
+                    Text("reader.annotation.style.highlight").tag(NoteType.highlight)
+                    Text("reader.annotation.style.underline").tag(NoteType.underline)
+                    Text("reader.annotation.style.strikethrough").tag(NoteType.strikethrough)
+                    Text("common.note").tag(NoteType.note)
+                }
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("reader.annotation.edit.kind_picker")
         }
     }
 
