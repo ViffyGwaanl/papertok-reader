@@ -14,13 +14,18 @@ public enum DateFormatting {
         return f
     }()
 
-    public static func formatDuration(seconds: Int) -> String {
-        let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        return "\(minutes)m"
+    public static func formatDuration(seconds: Int, locale: Locale = .autoupdatingCurrent) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.hour, .minute]
+        formatter.unitsStyle = .abbreviated
+        formatter.maximumUnitCount = 2
+        formatter.zeroFormattingBehavior = [.dropLeading, .dropTrailing]
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = locale
+        formatter.calendar = calendar
+
+        return formatter.string(from: TimeInterval(seconds)) ?? "\(seconds / 60)"
     }
 
     /// Format a Date as a "yyyy-MM-dd" string.

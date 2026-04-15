@@ -99,7 +99,12 @@ public final class StatisticsViewModel {
         } else {
             let clampedIndex = max(0, min(randomIndexProvider(highlightNotes.count), highlightNotes.count - 1))
             let chosenNote = highlightNotes[clampedIndex]
-            let bookTitle = books.first(where: { $0.id == chosenNote.bookId })?.title ?? "Book #\(chosenNote.bookId)"
+            let bookTitle = books.first(where: { $0.id == chosenNote.bookId })?.title
+                ?? AppLocalization.format(
+                    "notes.book_fallback_format",
+                    locale: displayLocale,
+                    chosenNote.bookId
+                )
             dailyHighlight = StatisticsDailyHighlight(bookId: chosenNote.bookId, bookTitle: bookTitle, note: chosenNote)
         }
 
@@ -107,7 +112,10 @@ public final class StatisticsViewModel {
     }
 
     public var formattedReadingTime: String {
-        DateFormatting.formatDuration(seconds: totalReadingTimeSeconds)
+        DateFormatting.formatDuration(
+            seconds: totalReadingTimeSeconds,
+            locale: displayLocale
+        )
     }
 
     /// Weekly reading summary: total minutes, daily average, and number of active days.
@@ -170,7 +178,12 @@ public final class StatisticsViewModel {
             guard totalMinutes > 0 else { return nil }
             return StatisticsBookTrendBreakdown(
                 bookId: bookId,
-                bookTitle: bookTitlesByID[bookId] ?? "Book #\(bookId)",
+                bookTitle: bookTitlesByID[bookId]
+                    ?? AppLocalization.format(
+                        "notes.book_fallback_format",
+                        locale: displayLocale,
+                        bookId
+                    ),
                 totalMinutes: totalMinutes,
                 points: points
             )
@@ -207,7 +220,7 @@ public final class StatisticsViewModel {
         case .year:
             let monthFormatter = DateFormatter()
             monthFormatter.calendar = calendar
-            monthFormatter.locale = Locale(identifier: "en_US_POSIX")
+            monthFormatter.locale = displayLocale
             monthFormatter.timeZone = calendar.timeZone
             monthFormatter.dateFormat = "MMM"
             return stride(from: 11, through: 0, by: -1).compactMap { offset in
@@ -241,7 +254,7 @@ public final class StatisticsViewModel {
     private func shortWeekday(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.locale = displayLocale
         formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "E"
         return formatter.string(from: date)
@@ -250,10 +263,14 @@ public final class StatisticsViewModel {
     private func dayLabel(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.locale = displayLocale
         formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "d"
         return formatter.string(from: date)
+    }
+
+    private var displayLocale: Locale {
+        calendar.locale ?? .autoupdatingCurrent
     }
 }
 

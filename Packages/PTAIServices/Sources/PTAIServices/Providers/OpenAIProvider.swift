@@ -8,7 +8,12 @@ struct OAIRequestBody: Encodable, Sendable {
     let model: String
     let messages: [OAIMessage]
     let temperature: Double?
+    let reasoningEffort: String?
     let maxTokens: Int?
+    let topP: Double?
+    let presencePenalty: Double?
+    let frequencyPenalty: Double?
+    let stop: [String]?
     let tools: [OAITool]?
     let responseFormat: OAIResponseFormat?
     let stream: Bool
@@ -16,7 +21,12 @@ struct OAIRequestBody: Encodable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case model, messages, temperature, tools, stream
+        case reasoningEffort = "reasoning_effort"
         case maxTokens = "max_tokens"
+        case topP = "top_p"
+        case presencePenalty = "presence_penalty"
+        case frequencyPenalty = "frequency_penalty"
+        case stop
         case responseFormat = "response_format"
         case streamOptions = "stream_options"
     }
@@ -234,7 +244,7 @@ public struct OpenAIProvider: ChatModelProvider {
     }
 
     public var supportedCapabilities: Set<ModelCapability> {
-        [.chat, .vision, .toolCalling, .streaming]
+        [.chat, .vision, .toolCalling, .streaming, .thinking]
     }
 
     // MARK: - complete
@@ -409,12 +419,27 @@ public struct OpenAIProvider: ChatModelProvider {
             model: request.model,
             messages: messages,
             temperature: request.temperature,
+            reasoningEffort: reasoningEffort(for: request.thinkingLevel),
             maxTokens: request.maxTokens,
+            topP: request.topP,
+            presencePenalty: request.presencePenalty,
+            frequencyPenalty: request.frequencyPenalty,
+            stop: request.stopSequences,
             tools: tools,
             responseFormat: responseFormat,
             stream: stream,
             streamOptions: streamOptions
         )
+    }
+
+    private func reasoningEffort(for level: ThinkingLevel?) -> String? {
+        guard let level else { return nil }
+        switch level {
+        case .off:
+            return "none"
+        case .minimal, .low, .medium, .high:
+            return level.rawValue
+        }
     }
 
     func encodeMessage(_ message: ChatMessage) -> OAIMessage {

@@ -15,7 +15,12 @@ public final class SettingsViewModel {
     public var defaultFontFamily: String
 
     // AI Provider
-    public var aiProviderID: String
+    public var aiProviderID: String {
+        didSet {
+            guard oldValue != aiProviderID else { return }
+            aiModelID = Self.resolvedAIModelID(defaults: defaults, providerID: aiProviderID)
+        }
+    }
     public var aiModelID: String
 
     // Reading detail
@@ -56,8 +61,9 @@ public final class SettingsViewModel {
         self.pageTurnMode = defaults.string(forKey: "page_turn_mode") ?? AppConfig.Defaults.defaultPageTurnMode
         self.defaultFontFamily = defaults.string(forKey: "default_font_family")
             ?? BookStyle.preferredDefaultFontFamily(locale: locale)
-        self.aiProviderID = defaults.string(forKey: AppConfig.Keys.aiProviderID) ?? AppConfig.Defaults.defaultAIProviderID
-        self.aiModelID = defaults.string(forKey: AppConfig.Keys.aiModelID) ?? AppConfig.Defaults.defaultOpenAIModelID
+        let initialProviderID = defaults.string(forKey: AppConfig.Keys.aiProviderID) ?? AppConfig.Defaults.defaultAIProviderID
+        self.aiProviderID = initialProviderID
+        self.aiModelID = Self.resolvedAIModelID(defaults: defaults, providerID: initialProviderID)
 
         self.lineHeight = defaults.double(forKey: "reading_line_height").nonZero ?? 1.4
         self.letterSpacing = defaults.double(forKey: "reading_letter_spacing")
@@ -85,6 +91,9 @@ public final class SettingsViewModel {
     }
 
     public func save() {
+        let previousProviderID = defaults.string(forKey: AppConfig.Keys.aiProviderID)
+        let previousModelID = defaults.string(forKey: AppConfig.Keys.aiModelID)
+
         defaults.set(themeMode, forKey: "theme_mode")
         defaults.set(accentColorIndex, forKey: "accent_color_index")
         defaults.set(isOLEDDarkMode, forKey: "oled_dark_mode")
@@ -93,6 +102,9 @@ public final class SettingsViewModel {
         defaults.set(defaultFontFamily, forKey: "default_font_family")
         defaults.set(aiProviderID, forKey: AppConfig.Keys.aiProviderID)
         defaults.set(aiModelID, forKey: AppConfig.Keys.aiModelID)
+        if aiProviderID.isEmpty == false, aiModelID.isEmpty == false {
+            defaults.set(aiModelID, forKey: "ai_model_for_\(aiProviderID)")
+        }
 
         defaults.set(lineHeight, forKey: "reading_line_height")
         defaults.set(letterSpacing, forKey: "reading_letter_spacing")
@@ -112,6 +124,10 @@ public final class SettingsViewModel {
         defaults.set(networkRequestLogging, forKey: "dev_network_logging")
         defaults.set(slowAnimations, forKey: "dev_slow_animations")
         defaults.set(showDebugOverlay, forKey: "dev_debug_overlay")
+
+        if previousProviderID != aiProviderID || previousModelID != aiModelID {
+            StoredAIProviderCatalog.postConfigurationDidChange()
+        }
     }
 
     /// Load persisted QuickPrompts (or built-in defaults).
@@ -197,6 +213,27 @@ public final class SettingsViewModel {
             }
         }
         return total
+    }
+
+    private static func resolvedAIModelID(defaults: UserDefaults, providerID: String) -> String {
+        if let scopedModelID = normalized(defaults.string(forKey: "ai_model_for_\(providerID)")) {
+            return scopedModelID
+        }
+
+        if normalized(defaults.string(forKey: AppConfig.Keys.aiProviderID)) == providerID,
+           let globalModelID = normalized(defaults.string(forKey: AppConfig.Keys.aiModelID)) {
+            return globalModelID
+        }
+
+        return AIProviderID(rawValue: providerID)?.defaultModel ?? AppConfig.Defaults.defaultOpenAIModelID
+    }
+
+    private static func normalized(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              trimmed.isEmpty == false else {
+            return nil
+        }
+        return trimmed
     }
 }
 

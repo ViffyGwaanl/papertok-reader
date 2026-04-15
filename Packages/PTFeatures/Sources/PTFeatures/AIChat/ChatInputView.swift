@@ -84,7 +84,7 @@ struct ChatInputView: View {
             HStack(alignment: .bottom, spacing: AppSpacing.sm) {
                 ZStack(alignment: .topLeading) {
                     if text.isEmpty {
-                        Text("ai.input.placeholder")
+                        Text("ai.chat.placeholder")
                             .font(AppTypography.body)
                             .foregroundStyle(Morandi.tertiaryText)
                             .padding(.horizontal, AppSpacing.md + 4)
@@ -148,7 +148,7 @@ struct ChatInputView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "brain")
                                 .font(.system(size: 13))
-                            Text(thinkingEnabled ? "On" : "Off")
+                            Text(thinkingEnabled ? "common.enabled" : "common.off")
                                 .font(AppTypography.caption2)
                                 .lineLimit(1)
                         }

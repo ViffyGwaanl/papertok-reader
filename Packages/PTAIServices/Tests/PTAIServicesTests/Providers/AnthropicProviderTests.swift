@@ -109,7 +109,9 @@ final class AnthropicProviderTests: XCTestCase {
             ],
             model: "claude-sonnet-4-20250514",
             temperature: 0.7,
-            maxTokens: 1024
+            maxTokens: 1024,
+            topP: 0.91,
+            stopSequences: ["END"]
         )
 
         let body = provider.buildRequestBody(request: request, stream: false)
@@ -121,6 +123,8 @@ final class AnthropicProviderTests: XCTestCase {
         XCTAssertEqual(json?["model"] as? String, "claude-sonnet-4-20250514")
         XCTAssertEqual(json?["max_tokens"] as? Int, 1024)
         XCTAssertEqual(json?["temperature"] as? Double, 0.7)
+        XCTAssertEqual(json?["top_p"] as? Double, 0.91)
+        XCTAssertEqual(json?["stop_sequences"] as? [String], ["END"])
         XCTAssertFalse(json?["stream"] as? Bool ?? true)
         // system is top-level array
         XCTAssertNotNil(json?["system"] as? [[String: Any]])
@@ -380,4 +384,3 @@ final class AnthropicProviderTests: XCTestCase {
         wait(for: [expectation], timeout: 5.0)
     }
 }
-

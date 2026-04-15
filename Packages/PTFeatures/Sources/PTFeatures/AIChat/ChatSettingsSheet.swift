@@ -139,12 +139,17 @@ struct ChatSettingsSheet: View {
     }
 
     private func save() {
-        viewModel.settings = AIChatViewModel.ChatGenerationSettings(
-            temperature: temperature,
-            maxTokens: Int(maxTokens),
-            topP: topP,
-            systemPrompt: systemPrompt,
-            perConversation: perConversation
+        viewModel.applyChatSettings(
+            AIChatViewModel.ChatGenerationSettings(
+                temperature: temperature,
+                maxTokens: Int(maxTokens),
+                topP: topP,
+                presencePenalty: viewModel.settings.presencePenalty,
+                frequencyPenalty: viewModel.settings.frequencyPenalty,
+                stopSequences: viewModel.settings.stopSequences,
+                systemPrompt: systemPrompt,
+                perConversation: perConversation
+            )
         )
     }
 }

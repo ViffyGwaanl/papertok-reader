@@ -11,6 +11,12 @@ public enum SupportedProvider: String, CaseIterable, Sendable {
     case custom
 }
 
+public enum GeminiSafetyPreset: String, Sendable {
+    case `default`
+    case strict
+    case relaxed
+}
+
 public struct ProviderConfig: Sendable {
     public let apiKey: String?
     public let baseURL: URL?
@@ -19,6 +25,8 @@ public struct ProviderConfig: Sendable {
     public let apiVersion: String?
     public let endpointPath: String?
     public let availableModels: [String]
+    public let includeThoughts: Bool
+    public let geminiSafetyPreset: GeminiSafetyPreset
     public let networkClient: NetworkClient
     /// Optional resolver that returns the next API key to use (for rotation).
     /// If provided and it returns a non-empty string, it takes precedence over
@@ -33,6 +41,8 @@ public struct ProviderConfig: Sendable {
         apiVersion: String? = nil,
         endpointPath: String? = nil,
         availableModels: [String] = [],
+        includeThoughts: Bool = false,
+        geminiSafetyPreset: GeminiSafetyPreset = .default,
         networkClient: NetworkClient = NetworkClient(),
         keyResolver: (@Sendable () -> String?)? = nil
     ) {
@@ -43,6 +53,8 @@ public struct ProviderConfig: Sendable {
         self.apiVersion = apiVersion
         self.endpointPath = endpointPath
         self.availableModels = availableModels
+        self.includeThoughts = includeThoughts
+        self.geminiSafetyPreset = geminiSafetyPreset
         self.networkClient = networkClient
         self.keyResolver = keyResolver
     }
@@ -93,6 +105,8 @@ public enum ProviderFactory {
             return GeminiProvider(
                 baseURL: base,
                 overrideAPIKey: config.apiKey,
+                includeThoughts: config.includeThoughts,
+                safetyPreset: config.geminiSafetyPreset,
                 keyResolver: config.keyResolver,
                 networkClient: config.networkClient
             )

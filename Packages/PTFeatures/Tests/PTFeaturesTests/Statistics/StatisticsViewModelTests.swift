@@ -134,7 +134,14 @@ struct StatisticsViewModelTests {
         await viewModel.loadStats()
         viewModel.trendRange = .year
 
-        #expect(viewModel.trendPoints.first(where: { $0.label == "Nov" })?.minutes == 45)
+        #expect(
+            viewModel.trendPoints.first(where: {
+                $0.label == localizedMonth(
+                    for: makeDate("2025-11-15"),
+                    locale: Locale(identifier: "en")
+                )
+            })?.minutes == 45
+        )
         #expect(viewModel.trendPoints.last?.minutes == 30)
     }
 
@@ -213,6 +220,42 @@ struct StatisticsViewModelTests {
         #expect(exactHours.formattedTotal == localizedDuration(minutes: 120))
     }
 
+    @Test("formattedReadingTime uses the calendar locale")
+    func formattedReadingTimeUsesTheCalendarLocale() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let bookDAO = BookDAO(database: database)
+        let readingTimeDAO = ReadingTimeDAO(database: database)
+        let book = try await bookDAO.save(Book.placeholder(title: "Localized", filePath: "/localized.epub"))
+        let bookID = try #require(book.id)
+        _ = try await readingTimeDAO.save(ReadingTime(bookId: bookID, date: "2026-04-07", readingTime: (5 * 3600) + (30 * 60)))
+
+        let locale = Locale(identifier: "zh-Hans")
+        let viewModel = makeViewModel(database: database, locale: locale)
+        await viewModel.loadStats()
+
+        #expect(viewModel.formattedReadingTime == localizedDuration(minutes: 330, locale: locale))
+    }
+
+    @Test("trend labels use the calendar locale")
+    func trendLabelsUseTheCalendarLocale() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let bookDAO = BookDAO(database: database)
+        let readingTimeDAO = ReadingTimeDAO(database: database)
+        let book = try await bookDAO.save(Book.placeholder(title: "Localized Trends", filePath: "/localized-trends.epub"))
+        let bookID = try #require(book.id)
+        _ = try await readingTimeDAO.save(ReadingTime(bookId: bookID, date: "2026-04-07", readingTime: 30 * 60))
+        _ = try await readingTimeDAO.save(ReadingTime(bookId: bookID, date: "2025-11-15", readingTime: 45 * 60))
+
+        let locale = Locale(identifier: "zh-Hans")
+        let viewModel = makeViewModel(database: database, locale: locale)
+        await viewModel.loadStats()
+
+        #expect(viewModel.trendPoints.last?.label == localizedWeekday(for: makeDate("2026-04-07"), locale: locale))
+
+        viewModel.trendRange = .year
+        #expect(viewModel.trendPoints.first(where: { $0.minutes == 45 })?.label == localizedMonth(for: makeDate("2025-11-15"), locale: locale))
+    }
+
     private func makeDate(_ raw: String) -> Date {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -222,9 +265,10 @@ struct StatisticsViewModelTests {
         return formatter.date(from: raw)!
     }
 
-    private func makeViewModel(database: AppDatabase) -> StatisticsViewModel {
+    private func makeViewModel(database: AppDatabase, locale: Locale? = Locale(identifier: "en")) -> StatisticsViewModel {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.locale = locale
         let suiteName = "StatisticsViewModelTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         return StatisticsViewModel(
@@ -236,12 +280,39 @@ struct StatisticsViewModelTests {
         )
     }
 
-    private func localizedDuration(minutes: Int) -> String {
+    private func localizedDuration(minutes: Int, locale: Locale? = nil) -> String {
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = [.hour, .minute]
         formatter.unitsStyle = .abbreviated
         formatter.maximumUnitCount = 2
         formatter.zeroFormattingBehavior = [.dropLeading, .dropTrailing]
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = locale
+        formatter.calendar = calendar
         return formatter.string(from: TimeInterval(minutes * 60)) ?? "\(minutes)"
+    }
+
+    private func localizedWeekday(for date: Date, locale: Locale) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.locale = locale
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = locale
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "E"
+        return formatter.string(from: date)
+    }
+
+    private func localizedMonth(for date: Date, locale: Locale) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.locale = locale
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = locale
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "MMM"
+        return formatter.string(from: date)
     }
 }

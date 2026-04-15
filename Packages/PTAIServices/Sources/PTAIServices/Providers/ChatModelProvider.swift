@@ -13,12 +13,38 @@ public struct ChatRequest: Sendable {
     public let model: String
     public let temperature: Double?
     public let maxTokens: Int?
+    public let topP: Double?
+    public let presencePenalty: Double?
+    public let frequencyPenalty: Double?
+    public let stopSequences: [String]?
     public let tools: [ToolDefinition]?
     public let thinkingLevel: ThinkingLevel?
     public let responseFormat: ResponseFormat?
 
-    public init(messages: [ChatMessage], model: String, temperature: Double? = nil, maxTokens: Int? = nil, tools: [ToolDefinition]? = nil, thinkingLevel: ThinkingLevel? = nil, responseFormat: ResponseFormat? = nil) {
-        self.messages = messages; self.model = model; self.temperature = temperature; self.maxTokens = maxTokens; self.tools = tools; self.thinkingLevel = thinkingLevel; self.responseFormat = responseFormat
+    public init(
+        messages: [ChatMessage],
+        model: String,
+        temperature: Double? = nil,
+        maxTokens: Int? = nil,
+        topP: Double? = nil,
+        presencePenalty: Double? = nil,
+        frequencyPenalty: Double? = nil,
+        stopSequences: [String]? = nil,
+        tools: [ToolDefinition]? = nil,
+        thinkingLevel: ThinkingLevel? = nil,
+        responseFormat: ResponseFormat? = nil
+    ) {
+        self.messages = messages
+        self.model = model
+        self.temperature = temperature
+        self.maxTokens = maxTokens
+        self.topP = topP
+        self.presencePenalty = presencePenalty
+        self.frequencyPenalty = frequencyPenalty
+        self.stopSequences = stopSequences
+        self.tools = tools
+        self.thinkingLevel = thinkingLevel
+        self.responseFormat = responseFormat
     }
 }
 

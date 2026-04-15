@@ -5,6 +5,16 @@ import PTAIServices
 
 @MainActor @Observable
 public final class AIChatViewModel {
+    public struct RuntimeSelection: Sendable, Equatable {
+        public let providerId: String
+        public let modelId: String
+
+        public init(providerId: String, modelId: String) {
+            self.providerId = providerId
+            self.modelId = modelId
+        }
+    }
+
     public struct ModelOption: Sendable, Identifiable {
         public let id: String
         public let displayName: String
@@ -112,6 +122,9 @@ public final class AIChatViewModel {
         public var temperature: Double
         public var maxTokens: Int
         public var topP: Double
+        public var presencePenalty: Double
+        public var frequencyPenalty: Double
+        public var stopSequences: [String]
         public var systemPrompt: String
         public var perConversation: Bool
 
@@ -119,6 +132,9 @@ public final class AIChatViewModel {
             temperature: 0.7,
             maxTokens: 4096,
             topP: 1.0,
+            presencePenalty: 0.0,
+            frequencyPenalty: 0.0,
+            stopSequences: [],
             systemPrompt: aiChatLocalizedCatalogString("ai.chat.system_prompt_default"),
             perConversation: false
         )
@@ -134,12 +150,14 @@ public final class AIChatViewModel {
     public var isStreaming: Bool = false
     public var currentStreamText: String = ""
     public var errorMessage: String?
-    public let runtime: Runtime
+    public private(set) var runtime: Runtime
+    private let defaults: UserDefaults
     private var activeTurnProviderId: String?
     private var activeTurnModelId: String?
     private var isContinuingTurn = false
     private var currentTurnRoundCount = 0
     private var approvalExecutionsInFlight: Set<UUID> = []
+    private var pendingRuntimeUpdate: (runtime: Runtime, selection: RuntimeSelection)?
     private static let maxToolRoundsPerTurn = 8
 
     /// Persistence service for saving/loading conversations (optional).
@@ -152,14 +170,27 @@ public final class AIChatViewModel {
     public init(
         systemPrompt: String? = nil,
         runtime: Runtime = .default,
-        persistenceService: ConversationPersistenceService? = nil
+        persistenceService: ConversationPersistenceService? = nil,
+        defaults: UserDefaults = AppConfig.groupDefaults
     ) {
+        self.defaults = defaults
+        let initialProviderId = runtime.providers.first?.id ?? ""
+        let initialPreferences = AIChatRuntimePreferences.load(
+            defaults: defaults,
+            providerId: initialProviderId
+        )
+        var initialSettings = initialPreferences.generationSettings
+        if let systemPrompt {
+            initialSettings.systemPrompt = systemPrompt
+        }
+        self.settings = initialSettings
+        self.thinkingLevel = initialPreferences.defaultThinkingLevel
         self.conversationTree = ConversationTree(
-            systemPrompt: systemPrompt ?? aiChatLocalizedCatalogString("ai.chat.system_prompt_default")
+            systemPrompt: initialSettings.systemPrompt
         )
         self.runtime = runtime
         self.persistenceService = persistenceService
-        self.selectedProviderId = runtime.providers.first?.id ?? ""
+        self.selectedProviderId = initialProviderId
         self.selectedModelId = runtime.providers.first?.models.first?.id ?? ""
     }
 
@@ -170,6 +201,17 @@ public final class AIChatViewModel {
 
     public var providerOptions: [ProviderOption] {
         runtime.providers
+    }
+
+    public func makeTranslationService() -> AITranslationService? {
+        guard let providerOption = providerOptions.first(where: { $0.id == selectedProviderId }),
+              providerOption.models.contains(where: { $0.id == selectedModelId }) else {
+            return nil
+        }
+        return AITranslationService(
+            provider: providerOption.makeProvider(),
+            model: selectedModelId
+        )
     }
 
     /// Send a user message and stream the provider response into the active branch.
@@ -206,9 +248,11 @@ public final class AIChatViewModel {
 
     /// Clear conversation and start fresh.
     public func clearConversation(systemPrompt: String? = nil) {
+        let resolvedSystemPrompt = systemPrompt ?? settings.systemPrompt
         conversationTree = ConversationTree(
-            systemPrompt: systemPrompt ?? aiChatLocalizedCatalogString("ai.chat.system_prompt_default")
+            systemPrompt: resolvedSystemPrompt
         )
+        settings.systemPrompt = resolvedSystemPrompt
         conversationId = nil
         conversationTitle = aiChatLocalizedCatalogString("ai.new_conversation")
         endTurn()
@@ -247,11 +291,13 @@ public final class AIChatViewModel {
 
     /// Load and resume a conversation from disk.
     public func loadConversation(id: String) -> Bool {
+        guard isStreaming == false else { return false }
         guard let service = persistenceService,
               let persisted = try? service.load(id: id) else { return false }
         conversationTree = persisted.tree
         conversationId = persisted.id
         conversationTitle = persisted.title
+        settings.systemPrompt = persisted.systemPrompt
         if let providerId = persisted.providerId { selectedProviderId = providerId }
         if let modelId = persisted.modelId { selectedModelId = modelId }
         endTurn()
@@ -290,8 +336,34 @@ public final class AIChatViewModel {
 
     // MARK: - Provider Selection
 
-    public var selectedProviderId: String = ""
-    public var selectedModelId: String = ""
+    public var selectedProviderId: String = "" {
+        didSet {
+            guard oldValue != selectedProviderId else { return }
+            syncSelectionAfterProviderChange()
+            persistSelection()
+        }
+    }
+    public var selectedModelId: String = "" {
+        didSet {
+            guard oldValue != selectedModelId else { return }
+            persistModelSelection()
+        }
+    }
+    public var thinkingLevel: ThinkingLevel = .off {
+        didSet {
+            guard oldValue != thinkingLevel else { return }
+            AIChatRuntimePreferences.persistThinkingLevel(thinkingLevel, defaults: defaults)
+        }
+    }
+
+    public var thinkingEnabled: Bool {
+        get { thinkingLevel != .off }
+        set {
+            thinkingLevel = newValue
+                ? AIChatRuntimePreferences.defaultThinkingLevel(defaults: defaults, providerId: selectedProviderId)
+                : .off
+        }
+    }
 
     // MARK: - Streaming Tokens
 
@@ -312,6 +384,7 @@ public final class AIChatViewModel {
         isStreaming = false
         // Auto-save after stream completes
         saveConversation()
+        applyPendingRuntimeUpdateIfNeeded()
     }
 
     // MARK: - Tool Approval Queue
@@ -382,11 +455,21 @@ public final class AIChatViewModel {
             isStreaming = true
 
             let provider = providerOption.makeProvider()
-            let toolDefinitions = runtime.toolRegistry.availableDefinitions(for: runtime.toolContext)
+            let requestPreferences = effectiveRuntimePreferences()
+            let toolDefinitions = availableToolDefinitions(enabledToolNames: requestPreferences.enabledToolNames)
             let request = ChatRequest(
                 messages: messages,
                 model: modelId,
-                tools: toolDefinitions.isEmpty ? nil : toolDefinitions
+                temperature: requestPreferences.generationSettings.temperature,
+                maxTokens: requestPreferences.generationSettings.maxTokens,
+                topP: requestPreferences.generationSettings.topP,
+                presencePenalty: requestPreferences.generationSettings.presencePenalty,
+                frequencyPenalty: requestPreferences.generationSettings.frequencyPenalty,
+                stopSequences: requestPreferences.generationSettings.stopSequences.isEmpty
+                    ? nil
+                    : requestPreferences.generationSettings.stopSequences,
+                tools: toolDefinitions.isEmpty ? nil : toolDefinitions,
+                thinkingLevel: thinkingLevelForCurrentRequest(provider: providerOption)
             )
 
             var partialToolCalls: [Int: PartialToolCall] = [:]
@@ -467,6 +550,7 @@ public final class AIChatViewModel {
         currentStreamText = ""
         streamingTokens.removeAll()
         isStreaming = false
+        applyPendingRuntimeUpdateIfNeeded()
     }
 
     private func executeToolCalls(_ toolCalls: [ToolCall]) async -> Bool {
@@ -474,7 +558,7 @@ public final class AIChatViewModel {
         var queuedApproval = false
 
         for toolCall in toolCalls {
-            guard let tool = runtime.toolRegistry.tool(named: toolCall.name) else {
+            guard let tool = enabledTool(named: toolCall.name) else {
                 conversationTree.append(.toolResult(
                     toolCallId: toolCall.id,
                     content: aiChatLocalizedCatalogFormat(
@@ -486,7 +570,7 @@ public final class AIChatViewModel {
             }
 
             let riskLevel = type(of: tool).riskLevel
-            if riskLevel == .moderate || riskLevel == .dangerous {
+            if effectiveRuntimePreferences().approvalPolicy.requiresApproval(for: riskLevel) {
                 requestApproval(
                     toolName: toolCall.name,
                     toolCallId: toolCall.id,
@@ -539,7 +623,7 @@ public final class AIChatViewModel {
         let resultContent: String
         if isApproved == false {
             resultContent = aiChatLocalizedCatalogString("errors.ai.tool_denied")
-        } else if let tool = runtime.toolRegistry.tool(named: approval.toolName) {
+        } else if let tool = enabledTool(named: approval.toolName) {
             let result = await executeToolCall(tool, toolCallId: approval.toolCallId, argumentsJSON: approval.arguments)
             resultContent = userFacingToolResultContent(for: result)
         } else {
@@ -673,6 +757,168 @@ public final class AIChatViewModel {
             return "image/png"
         }
     }
+
+    public func toggleThinking() {
+        thinkingEnabled.toggle()
+    }
+
+    public func applyChatSettings(_ newSettings: ChatGenerationSettings) {
+        settings = newSettings
+        updateConversationSystemPrompt(newSettings.systemPrompt)
+        if newSettings.perConversation == false {
+            AIChatRuntimePreferences.persist(
+                newSettings,
+                defaults: defaults,
+                providerId: selectedProviderId
+            )
+        }
+    }
+
+    public func updateRuntime(_ runtime: Runtime, selection: RuntimeSelection) {
+        if isStreaming || activeTurnProviderId != nil {
+            pendingRuntimeUpdate = (runtime, selection)
+            return
+        }
+        applyRuntimeUpdate(runtime, selection: selection)
+    }
+
+    private func effectiveRuntimePreferences() -> AIChatRuntimePreferences {
+        let stored = AIChatRuntimePreferences.load(
+            defaults: defaults,
+            providerId: selectedProviderId
+        )
+        if settings.perConversation {
+            return AIChatRuntimePreferences(
+                enabledToolNames: stored.enabledToolNames,
+                approvalPolicy: stored.approvalPolicy,
+                generationSettings: settings,
+                defaultThinkingLevel: stored.defaultThinkingLevel
+            )
+        }
+        settings = stored.generationSettings
+        return stored
+    }
+
+    private func availableToolDefinitions(enabledToolNames: Set<String>) -> [ToolDefinition] {
+        let definitions = runtime.toolRegistry.availableDefinitions(for: runtime.toolContext)
+        guard enabledToolNames.isEmpty == false else { return definitions }
+        return definitions.filter { enabledToolNames.contains($0.name) }
+    }
+
+    private func enabledTool(named name: String) -> (any AITool)? {
+        let enabledToolNames = effectiveRuntimePreferences().enabledToolNames
+        guard enabledToolNames.isEmpty || enabledToolNames.contains(name) else {
+            return nil
+        }
+        return runtime.toolRegistry.tool(named: name)
+    }
+
+    private func thinkingLevelForCurrentRequest(provider: ProviderOption) -> ThinkingLevel? {
+        guard thinkingEnabled else { return nil }
+        guard let model = provider.models.first(where: { $0.id == selectedModelId }),
+              model.supportsThinking else {
+            return nil
+        }
+        return thinkingLevel == .off ? nil : thinkingLevel
+    }
+
+    private func persistSelection() {
+        defaults.set(selectedProviderId, forKey: AppConfig.Keys.aiProviderID)
+        persistModelSelection()
+    }
+
+    private func syncSelectionAfterProviderChange() {
+        guard let provider = providerOptions.first(where: { $0.id == selectedProviderId }) else { return }
+        if let persistedModelId = persistedModelSelection(for: selectedProviderId),
+           provider.models.contains(where: { $0.id == persistedModelId }) {
+            if selectedModelId != persistedModelId {
+                selectedModelId = persistedModelId
+            }
+        } else if provider.models.contains(where: { $0.id == selectedModelId }) == false {
+            selectedModelId = provider.models.first?.id ?? ""
+        }
+        reloadPersistedRuntimePreferencesIfNeeded()
+    }
+
+    private func persistModelSelection() {
+        defaults.set(selectedModelId, forKey: AppConfig.Keys.aiModelID)
+        guard selectedProviderId.isEmpty == false,
+              selectedModelId.isEmpty == false else {
+            return
+        }
+        defaults.set(selectedModelId, forKey: providerScopedModelDefaultsKey(for: selectedProviderId))
+    }
+
+    private func persistedModelSelection(for providerId: String) -> String? {
+        if let scopedModelId = normalized(defaults.string(forKey: providerScopedModelDefaultsKey(for: providerId))) {
+            return scopedModelId
+        }
+
+        let persistedProviderId = normalized(defaults.string(forKey: AppConfig.Keys.aiProviderID))
+        if persistedProviderId == providerId {
+            return normalized(defaults.string(forKey: AppConfig.Keys.aiModelID))
+        }
+
+        return nil
+    }
+
+    private func providerScopedModelDefaultsKey(for providerId: String) -> String {
+        "ai_model_for_\(providerId)"
+    }
+
+    private func updateConversationSystemPrompt(_ systemPrompt: String) {
+        guard let rootNode = conversationTree.nodes[conversationTree.rootId] else { return }
+        conversationTree.nodes[conversationTree.rootId] = .init(
+            id: rootNode.id,
+            message: .system(systemPrompt),
+            parentId: rootNode.parentId,
+            createdAt: rootNode.createdAt
+        )
+        conversationTree.nodes[conversationTree.rootId]?.childIds = rootNode.childIds
+        conversationTree.nodes[conversationTree.rootId]?.activeChildIndex = rootNode.activeChildIndex
+    }
+
+    private func reloadPersistedRuntimePreferencesIfNeeded() {
+        guard settings.perConversation == false else { return }
+        let stored = AIChatRuntimePreferences.load(defaults: defaults, providerId: selectedProviderId)
+        settings = stored.generationSettings
+        thinkingLevel = stored.defaultThinkingLevel
+    }
+
+    private func applyRuntimeUpdate(_ runtime: Runtime, selection: RuntimeSelection) {
+        self.runtime = runtime
+
+        let resolvedProviderId: String
+        if runtime.providers.contains(where: { $0.id == selection.providerId }) {
+            resolvedProviderId = selection.providerId
+        } else {
+            resolvedProviderId = runtime.providers.first?.id ?? ""
+        }
+
+        let resolvedModelId: String
+        if let provider = runtime.providers.first(where: { $0.id == resolvedProviderId }),
+           provider.models.contains(where: { $0.id == selection.modelId }) {
+            resolvedModelId = selection.modelId
+        } else {
+            resolvedModelId = runtime.providers
+                .first(where: { $0.id == resolvedProviderId })?
+                .models
+                .first?
+                .id ?? ""
+        }
+
+        selectedProviderId = resolvedProviderId
+        selectedModelId = resolvedModelId
+        reloadPersistedRuntimePreferencesIfNeeded()
+    }
+
+    private func applyPendingRuntimeUpdateIfNeeded() {
+        guard let pendingRuntimeUpdate,
+              isStreaming == false,
+              activeTurnProviderId == nil else { return }
+        self.pendingRuntimeUpdate = nil
+        applyRuntimeUpdate(pendingRuntimeUpdate.runtime, selection: pendingRuntimeUpdate.selection)
+    }
 }
 
 private func aiChatLocalizedCatalogString(_ key: String, locale: Locale = .autoupdatingCurrent) -> String {
@@ -708,4 +954,10 @@ private func aiChatLocalizedCatalogBundle() -> Bundle {
         }
     }
     return bundles.first(where: { $0.bundleURL.pathExtension == "app" }) ?? .main
+}
+
+private func normalized(_ value: String?) -> String? {
+    guard let value else { return nil }
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
 }

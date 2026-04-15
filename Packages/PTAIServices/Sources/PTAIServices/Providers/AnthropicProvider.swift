@@ -10,12 +10,16 @@ struct AnthropicRequestBody: Encodable, Sendable {
     let maxTokens: Int
     let system: [AnthropicSystemBlock]?
     let temperature: Double?
+    let topP: Double?
+    let stopSequences: [String]?
     let tools: [AnthropicToolDef]?
     let stream: Bool
 
     enum CodingKeys: String, CodingKey {
         case model, messages, system, temperature, tools, stream
         case maxTokens = "max_tokens"
+        case topP = "top_p"
+        case stopSequences = "stop_sequences"
     }
 }
 
@@ -597,6 +601,8 @@ public struct AnthropicProvider: ChatModelProvider {
             maxTokens: maxTokens,
             system: systemBlocks.isEmpty ? nil : systemBlocks,
             temperature: request.temperature,
+            topP: request.topP,
+            stopSequences: request.stopSequences,
             tools: tools,
             stream: stream
         )

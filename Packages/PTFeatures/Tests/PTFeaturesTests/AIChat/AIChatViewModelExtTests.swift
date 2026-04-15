@@ -142,6 +142,24 @@ struct AIChatViewModelExtTests {
         }
     }
 
+    struct MockTranslationProvider: ChatModelProvider {
+        let recorder: RequestRecorder
+        let id: String = "mock-translation"
+        let displayName: String = "Mock Translation Provider"
+        let supportedCapabilities: Set<ModelCapability> = [.chat]
+
+        func complete(_ request: ChatRequest) async throws -> ChatResponse {
+            await recorder.record(request)
+            return ChatResponse(message: .assistant("translated"))
+        }
+
+        func stream(_ request: ChatRequest) -> AsyncThrowingStream<ChatStreamChunk, Error> {
+            AsyncThrowingStream { continuation in
+                continuation.finish()
+            }
+        }
+    }
+
     struct MockDangerousTool: AITool {
         static let name = "mock_dangerous_tool"
         static let description = "A dangerous mock tool."
@@ -153,12 +171,24 @@ struct AIChatViewModelExtTests {
         }
     }
 
+    struct MockModerateTool: AITool {
+        static let name = "mock_moderate_tool"
+        static let description = "A moderate-risk mock tool."
+        static let category = ToolCategory.utility
+        static let riskLevel = ToolRiskLevel.moderate
+
+        func execute(arguments: [String : Any], context: ToolContext) async throws -> ToolResult {
+            ToolResult(content: "{\"status\":\"moderate_ok\"}")
+        }
+    }
+
     @MainActor
     private func makeRuntime(
         chunks: [ChatStreamChunk],
         followupChunks: [ChatStreamChunk] = [],
         extras: [any AITool] = [],
         toolContext: ToolContext = ToolContext(),
+        modelSupportsThinking: Bool = false,
         requestObserver: @escaping @Sendable (ChatRequest) -> Void = { _ in }
     ) -> AIChatViewModel.Runtime {
         AIChatViewModel.Runtime(
@@ -170,7 +200,7 @@ struct AIChatViewModelExtTests {
                         .init(
                             id: "mock-model",
                             displayName: "Mock Model",
-                            supportsThinking: false,
+                            supportsThinking: modelSupportsThinking,
                             supportsVision: false
                         )
                     ],
@@ -231,6 +261,108 @@ struct AIChatViewModelExtTests {
         #expect(vm.providerOptions.isEmpty == false)
         #expect(vm.selectedProviderId == vm.providerOptions.first?.id)
         #expect(vm.selectedModelId == vm.providerOptions.first?.models.first?.id)
+    }
+
+    @MainActor
+    @Test("makeTranslationService uses the current provider and model selection")
+    func makeTranslationServiceUsesCurrentSelection() async throws {
+        let recorder = RequestRecorder()
+        let runtime = AIChatViewModel.Runtime(
+            providers: [
+                .init(
+                    id: "translation",
+                    displayName: "Translation Provider",
+                    models: [
+                        .init(
+                            id: "translation-model",
+                            displayName: "Translation Model",
+                            supportsThinking: false,
+                            supportsVision: false
+                        )
+                    ],
+                    makeProvider: { MockTranslationProvider(recorder: recorder) }
+                )
+            ]
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+
+        let service = try #require(vm.makeTranslationService())
+        let translated = try await service.translate("hello", to: "Japanese")
+
+        #expect(translated == "translated")
+        let request = await recorder.lastRequest
+        #expect(request?.model == "translation-model")
+        #expect(request?.messages.first?.textContent?.contains("Japanese") == true)
+    }
+
+    @MainActor
+    @Test("makeTranslationService returns nil when the current selection is invalid")
+    func makeTranslationServiceReturnsNilForInvalidSelection() {
+        let runtime = AIChatViewModel.Runtime(
+            providers: [
+                .init(
+                    id: "translation",
+                    displayName: "Translation Provider",
+                    models: [
+                        .init(
+                            id: "translation-model",
+                            displayName: "Translation Model",
+                            supportsThinking: false,
+                            supportsVision: false
+                        )
+                    ],
+                    makeProvider: { MockStreamProvider(chunks: []) }
+                )
+            ]
+        )
+        let vm = AIChatViewModel(runtime: runtime)
+        vm.selectedProviderId = "missing-provider"
+        vm.selectedModelId = "missing-model"
+
+        #expect(vm.makeTranslationService() == nil)
+    }
+
+    @MainActor
+    @Test("switching providers restores that provider's persisted model selection")
+    func providerSwitchRestoresPersistedModel() {
+        let suiteName = "AIChatViewModelExtTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("claude-opus-4-20250514", forKey: "ai_model_for_anthropic")
+
+        let runtime = AIChatViewModel.Runtime(
+            providers: [
+                .init(
+                    id: "openai",
+                    displayName: "OpenAI",
+                    models: [
+                        .init(id: "gpt-4.1-mini", displayName: "GPT-4.1 Mini", supportsThinking: false, supportsVision: true),
+                        .init(id: "gpt-4.1", displayName: "GPT-4.1", supportsThinking: false, supportsVision: true),
+                    ],
+                    makeProvider: { MockStreamProvider(chunks: []) }
+                ),
+                .init(
+                    id: "anthropic",
+                    displayName: "Anthropic",
+                    models: [
+                        .init(id: "claude-sonnet-4-20250514", displayName: "Claude Sonnet 4", supportsThinking: true, supportsVision: true),
+                        .init(id: "claude-opus-4-20250514", displayName: "Claude Opus 4", supportsThinking: true, supportsVision: true),
+                    ],
+                    makeProvider: { MockStreamProvider(id: "anthropic", chunks: []) }
+                ),
+            ]
+        )
+
+        let vm = AIChatViewModel(runtime: runtime, defaults: defaults)
+        vm.selectedModelId = "gpt-4.1"
+        vm.selectedProviderId = "anthropic"
+
+        #expect(vm.selectedModelId == "claude-opus-4-20250514")
+        #expect(defaults.string(forKey: AppConfig.Keys.aiProviderID) == "anthropic")
+        #expect(defaults.string(forKey: AppConfig.Keys.aiModelID) == "claude-opus-4-20250514")
+        #expect(defaults.string(forKey: "ai_model_for_anthropic") == "claude-opus-4-20250514")
     }
 
     @MainActor
@@ -518,7 +650,7 @@ struct AIChatViewModelExtTests {
 
         #expect(vm.pendingApprovals.count == 1)
         #expect(vm.pendingApprovals[0].toolName == "mock_dangerous_tool")
-        #expect(vm.messages.contains(where: { $0.role == .tool }) == false)
+        #expect(vm.messages.contains(where: { $0.role == ChatRole.tool }) == false)
     }
 
     @MainActor
@@ -527,6 +659,7 @@ struct AIChatViewModelExtTests {
         let recorder = RequestRecorder()
         let runtime = makeRuntime(
             chunks: [.init(delta: .text("ok"), finishReason: .stop)],
+            modelSupportsThinking: true,
             requestObserver: { request in
                 Task { await recorder.record(request) }
             }
@@ -576,6 +709,172 @@ struct AIChatViewModelExtTests {
         #expect(toolNames.contains("book_content_search"))
         #expect(toolNames.contains("resolve_cfi") == false)
         #expect(toolNames.contains("semantic_search_current_book") == false)
+    }
+
+    @MainActor
+    @Test("sendMessage applies stored provider defaults and current thinking preference")
+    func sendMessageAppliesStoredProviderDefaults() async throws {
+        let defaults = makeDefaults()
+        defaults.set(0.35, forKey: "ai_temperature_mock")
+        defaults.set("2048", forKey: "ai_max_tokens_mock")
+        defaults.set(0.82, forKey: "ai_top_p_mock")
+        defaults.set(0.45, forKey: "ai_presence_penalty_mock")
+        defaults.set(-0.25, forKey: "ai_frequency_penalty_mock")
+        defaults.set("END\nSTOP", forKey: "ai_stop_sequences_mock")
+        defaults.set("high", forKey: AppConfig.Keys.aiThinkingLevel)
+
+        let recorder = RequestRecorder()
+        let runtime = makeRuntime(
+            chunks: [.init(delta: .text("ok"), finishReason: .stop)],
+            modelSupportsThinking: true,
+            requestObserver: { request in
+                Task { await recorder.record(request) }
+            }
+        )
+        let vm = AIChatViewModel(runtime: runtime, defaults: defaults)
+
+        await vm.sendMessage("Tune this request")
+
+        let request = try #require(await recorder.lastRequest)
+        #expect(request.temperature == 0.35)
+        #expect(request.maxTokens == 2048)
+        #expect(request.topP == 0.82)
+        #expect(request.presencePenalty == 0.45)
+        #expect(request.frequencyPenalty == -0.25)
+        #expect(request.stopSequences == ["END", "STOP"])
+        #expect(request.thinkingLevel == .high)
+    }
+
+    @MainActor
+    @Test("updateRuntime applies refreshed provider selection and stored defaults")
+    func updateRuntimeAppliesRefreshedProviderSelectionAndDefaults() {
+        let defaults = makeDefaults()
+        defaults.set(0.15, forKey: "ai_temperature_next")
+        defaults.set("1024", forKey: "ai_max_tokens_next")
+        defaults.set(0.67, forKey: "ai_top_p_next")
+        defaults.set(0.2, forKey: "ai_presence_penalty_next")
+        defaults.set(-0.1, forKey: "ai_frequency_penalty_next")
+        defaults.set("HALT", forKey: "ai_stop_sequences_next")
+        defaults.set("low", forKey: "ai_reasoning_effort_next")
+
+        let initialRuntime = makeRuntime(
+            chunks: [.init(delta: .text("ok"), finishReason: .stop)]
+        )
+        let refreshedRuntime = AIChatViewModel.Runtime(
+            providers: [
+                .init(
+                    id: "next",
+                    displayName: "Next Provider",
+                    models: [
+                        .init(
+                            id: "next-model",
+                            displayName: "Next Model",
+                            supportsThinking: true,
+                            supportsVision: false
+                        )
+                    ],
+                    makeProvider: {
+                        MockStreamProvider(
+                            id: "next",
+                            displayName: "Next Provider",
+                            chunks: [.init(delta: .text("ok"), finishReason: .stop)]
+                        )
+                    }
+                )
+            ]
+        )
+        let vm = AIChatViewModel(runtime: initialRuntime, defaults: defaults)
+
+        vm.updateRuntime(
+            refreshedRuntime,
+            selection: .init(providerId: "next", modelId: "next-model")
+        )
+
+        #expect(vm.selectedProviderId == "next")
+        #expect(vm.selectedModelId == "next-model")
+        #expect(vm.settings.temperature == 0.15)
+        #expect(vm.settings.maxTokens == 1024)
+        #expect(vm.settings.topP == 0.67)
+        #expect(vm.settings.presencePenalty == 0.2)
+        #expect(vm.settings.frequencyPenalty == -0.1)
+        #expect(vm.settings.stopSequences == ["HALT"])
+        #expect(vm.thinkingLevel == .low)
+    }
+
+    @MainActor
+    @Test("sendMessage only advertises tools enabled in settings")
+    func sendMessageAdvertisesOnlyEnabledTools() async throws {
+        let defaults = makeDefaults()
+        defaults.set([MockSafeTool.name], forKey: "ai_enabled_tools")
+
+        let recorder = RequestRecorder()
+        let runtime = makeRuntime(
+            chunks: [.init(delta: .text("ok"), finishReason: .stop)],
+            extras: [MockSafeTool(), MockModerateTool()],
+            requestObserver: { request in
+                Task { await recorder.record(request) }
+            }
+        )
+        let vm = AIChatViewModel(runtime: runtime, defaults: defaults)
+
+        await vm.sendMessage("Which tools are available?")
+
+        let toolNames = Set((await recorder.lastRequest?.tools ?? []).map(\.name))
+        #expect(toolNames == [MockSafeTool.name])
+    }
+
+    @MainActor
+    @Test("approval threshold can force safe tools to wait for approval")
+    func approvalThresholdNeverAutoRunQueuesSafeTools() async {
+        let defaults = makeDefaults()
+        defaults.set("never", forKey: "ai_tool_approval_threshold")
+
+        let runtime = makeRuntime(
+            chunks: [
+                .init(delta: .toolCall(index: 0, id: "tool-safe", name: MockSafeTool.name, arguments: "{\"value\":1}"), finishReason: .toolCalls)
+            ],
+            extras: [MockSafeTool()]
+        )
+        let vm = AIChatViewModel(runtime: runtime, defaults: defaults)
+
+        await vm.sendMessage("Use the safe tool")
+
+        #expect(vm.pendingApprovals.count == 1)
+        #expect(vm.pendingApprovals[0].toolName == MockSafeTool.name)
+        #expect(vm.messages.contains(where: { $0.role == .tool }) == false)
+    }
+
+    @MainActor
+    @Test("approval threshold can auto-run dangerous tools")
+    func approvalThresholdAlwaysApproveAutoRunsDangerousTools() async {
+        let defaults = makeDefaults()
+        defaults.set("always", forKey: "ai_tool_approval_threshold")
+
+        let runtime = makeRuntime(
+            chunks: [
+                .init(delta: .toolCall(index: 0, id: "tool-danger", name: MockDangerousTool.name, arguments: "{\"value\":1}"), finishReason: .toolCalls)
+            ],
+            followupChunks: [
+                .init(delta: .text("Done"), finishReason: .stop)
+            ],
+            extras: [MockDangerousTool()]
+        )
+        let vm = AIChatViewModel(runtime: runtime, defaults: defaults)
+
+        await vm.sendMessage("Run the dangerous tool")
+
+        #expect(vm.pendingApprovals.isEmpty)
+        let toolMessages = vm.messages.filter { $0.role == ChatRole.tool }
+        #expect(toolMessages.count == 1)
+        #expect(toolMessages.first?.textContent?.contains("should_not_run") == true)
+        #expect(vm.messages.last?.textContent == "Done")
+    }
+
+    private func makeDefaults() -> UserDefaults {
+        let suiteName = "AIChatViewModelExtTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
     }
 }
 

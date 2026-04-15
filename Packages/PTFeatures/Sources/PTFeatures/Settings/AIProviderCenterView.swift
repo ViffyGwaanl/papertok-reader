@@ -13,8 +13,6 @@ public struct AIProviderCenterView: View {
     @State private var newCustomName: String = ""
     @State private var pendingDeleteOffsets: IndexSet?
 
-    private static let customProvidersKey = "ai_custom_providers"
-
     private func localized(_ key: String) -> String {
         AppLocalization.string(key)
     }
@@ -305,19 +303,12 @@ public struct AIProviderCenterView: View {
     }
 
     public static func loadCustomProviders() -> [CustomProviderEntry] {
-        let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
-        guard let data = defaults.data(forKey: customProvidersKey),
-              let entries = try? JSONDecoder().decode([CustomProviderEntry].self, from: data) else {
-            return []
-        }
-        return entries
+        CustomProviderStore.load()
     }
 
     public static func saveCustomProviders(_ entries: [CustomProviderEntry]) {
-        let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
-        if let data = try? JSONEncoder().encode(entries) {
-            defaults.set(data, forKey: customProvidersKey)
-        }
+        CustomProviderStore.save(entries)
+        StoredAIProviderCatalog.postConfigurationDidChange()
     }
 }
 

@@ -77,12 +77,28 @@ enum GeminiPart: Encodable, Sendable {
 struct GeminiGenerationConfig: Encodable, Sendable {
     let temperature: Double?
     let maxOutputTokens: Int?
+    let topP: Double?
+    let stopSequences: [String]?
     let responseMimeType: String?
+    let thinkingConfig: GeminiThinkingConfig?
 
     enum CodingKeys: String, CodingKey {
         case temperature
         case maxOutputTokens = "max_output_tokens"
+        case topP
+        case stopSequences
         case responseMimeType = "response_mime_type"
+        case thinkingConfig = "thinking_config"
+    }
+}
+
+struct GeminiThinkingConfig: Encodable, Sendable {
+    let includeThoughts: Bool?
+    let thinkingBudget: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case includeThoughts
+        case thinkingBudget
     }
 }
 
@@ -259,6 +275,8 @@ public struct GeminiProvider: ChatModelProvider {
     let baseURL: URL
     let apiKeyKeychainKey: String
     let overrideAPIKey: String?
+    let includeThoughts: Bool
+    let safetyPreset: GeminiSafetyPreset
     let keyResolver: (@Sendable () -> String?)?
     let networkClient: NetworkClient
 
@@ -268,6 +286,8 @@ public struct GeminiProvider: ChatModelProvider {
         baseURL: URL = URL(string: "https://generativelanguage.googleapis.com")!,
         apiKeyKeychainKey: String = "gemini_api_key",
         overrideAPIKey: String? = nil,
+        includeThoughts: Bool = false,
+        safetyPreset: GeminiSafetyPreset = .default,
         keyResolver: (@Sendable () -> String?)? = nil,
         networkClient: NetworkClient = NetworkClient()
     ) {
@@ -276,6 +296,8 @@ public struct GeminiProvider: ChatModelProvider {
         self.baseURL = baseURL
         self.apiKeyKeychainKey = apiKeyKeychainKey
         self.overrideAPIKey = overrideAPIKey
+        self.includeThoughts = includeThoughts
+        self.safetyPreset = safetyPreset
         self.keyResolver = keyResolver
         self.networkClient = networkClient
     }
@@ -480,6 +502,7 @@ public struct GeminiProvider: ChatModelProvider {
         }
 
         let generationConfig: GeminiGenerationConfig? = {
+            let thinkingConfig = buildThinkingConfig(for: request.thinkingLevel)
             let responseMime: String? = {
                 guard let fmt = request.responseFormat else { return nil }
                 switch fmt {
@@ -487,13 +510,21 @@ public struct GeminiProvider: ChatModelProvider {
                 case .text: return nil
                 }
             }()
-            if request.temperature == nil, request.maxTokens == nil, responseMime == nil {
+            if request.temperature == nil,
+               request.maxTokens == nil,
+               request.topP == nil,
+               request.stopSequences == nil,
+               responseMime == nil,
+               thinkingConfig == nil {
                 return nil
             }
             return GeminiGenerationConfig(
                 temperature: request.temperature,
                 maxOutputTokens: request.maxTokens,
-                responseMimeType: responseMime
+                topP: request.topP,
+                stopSequences: request.stopSequences,
+                responseMimeType: responseMime,
+                thinkingConfig: thinkingConfig
             )
         }()
 
@@ -502,8 +533,53 @@ public struct GeminiProvider: ChatModelProvider {
             systemInstruction: systemInstruction,
             generationConfig: generationConfig,
             tools: tools,
-            safetySettings: nil
+            safetySettings: configuredSafetySettings()
         )
+    }
+
+    private func buildThinkingConfig(for level: ThinkingLevel?) -> GeminiThinkingConfig? {
+        let thinkingBudget = level.map(thinkingBudget(for:))
+        if includeThoughts == false, thinkingBudget == nil {
+            return nil
+        }
+        return GeminiThinkingConfig(
+            includeThoughts: includeThoughts ? true : nil,
+            thinkingBudget: thinkingBudget
+        )
+    }
+
+    private func thinkingBudget(for level: ThinkingLevel) -> Int {
+        switch level {
+        case .off:
+            return 0
+        case .minimal:
+            return 1_024
+        case .low:
+            return 4_096
+        case .medium:
+            return 8_192
+        case .high:
+            return 24_576
+        }
+    }
+
+    private func configuredSafetySettings() -> [GeminiSafetySetting]? {
+        let threshold: String
+        switch safetyPreset {
+        case .default:
+            return nil
+        case .strict:
+            threshold = "BLOCK_LOW_AND_ABOVE"
+        case .relaxed:
+            threshold = "BLOCK_ONLY_HIGH"
+        }
+
+        return [
+            "HARM_CATEGORY_HARASSMENT",
+            "HARM_CATEGORY_HATE_SPEECH",
+            "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "HARM_CATEGORY_DANGEROUS_CONTENT",
+        ].map { GeminiSafetySetting(category: $0, threshold: threshold) }
     }
 
     func encodeMessage(_ message: ChatMessage) -> GeminiContent {

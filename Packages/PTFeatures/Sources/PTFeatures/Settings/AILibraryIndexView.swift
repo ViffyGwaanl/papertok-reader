@@ -265,7 +265,10 @@ public struct AILibraryIndexView: View {
             workingProgress = 1.0
             refreshStatus()
         } catch {
-            lastError = error.localizedDescription
+            lastError = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.cache.clear_failed"
+            )
         }
     }
 }

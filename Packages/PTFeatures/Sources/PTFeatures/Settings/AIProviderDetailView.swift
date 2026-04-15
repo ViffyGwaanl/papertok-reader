@@ -683,6 +683,7 @@ public struct AIProviderDetailView: View {
         isSaved = true
         originalBaseURL = baseURL
         originalModel = selectedModel
+        StoredAIProviderCatalog.postConfigurationDidChange()
     }
 
     private func saveGenerationDefaults() {
@@ -694,6 +695,7 @@ public struct AIProviderDetailView: View {
         defaults.set(presencePenalty, forKey: "ai_presence_penalty_\(id)")
         defaults.set(frequencyPenalty, forKey: "ai_frequency_penalty_\(id)")
         defaults.set(stopSequencesText, forKey: "ai_stop_sequences_\(id)")
+        StoredAIProviderCatalog.postConfigurationDidChange()
     }
 
     private func parseCustomHeaders() -> [String: String] {

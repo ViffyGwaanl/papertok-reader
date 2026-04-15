@@ -42,7 +42,7 @@ struct CodeBlockView: View {
             } label: {
                 HStack(spacing: AppSpacing.xxs) {
                     Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                    Text(copied ? "Copied" : "Copy")
+                    Text("common.copy")
                 }
                 .font(AppTypography.caption2)
                 .foregroundStyle(copied ? Morandi.sage : Morandi.secondaryText)

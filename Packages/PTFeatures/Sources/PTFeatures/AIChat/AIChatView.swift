@@ -11,15 +11,23 @@ import PTUI
 /// - Tool approval sheet (.sheet on pendingApprovals)
 /// - Provider picker sheet (.sheet on showProviderPicker)
 public struct AIChatView: View {
+    private struct SuggestedPrompt: Identifiable {
+        let id: String
+        let icon: String
+        let titleKey: String
+        let promptKey: String
+    }
+
     @Bindable var viewModel: AIChatViewModel
     @State private var inputText: String = ""
     @State private var showProviderPicker = false
     @State private var showAttachmentPicker = false
     @State private var showChatSettings = false
-    @State private var thinkingEnabled: Bool = false
+    @State private var showConversationList = false
 
     private var currentProviderDisplayName: String {
-        viewModel.providerOptions.first(where: { $0.id == viewModel.selectedProviderId })?.displayName ?? "Model"
+        viewModel.providerOptions.first(where: { $0.id == viewModel.selectedProviderId })?.displayName
+            ?? String(localized: "common.model")
     }
 
     private var currentModelSupportsThinking: Bool {
@@ -27,22 +35,40 @@ public struct AIChatView: View {
         return provider.models.first(where: { $0.id == viewModel.selectedModelId })?.supportsThinking ?? false
     }
 
-    private let quickPrompts: [String] = [
-        "Please explain this content",
-        "Please summarize the main points",
-        "Please analyze in depth",
-        "List the key points",
-        "Translate this",
-        "What questions should I ask?"
-    ]
+    private var quickPrompts: [String] {
+        [
+            String(localized: "reader.quick_action.explain.title"),
+            String(localized: "reader.quick_action.summarize.title"),
+            String(localized: "reader.quick_action.translate.title"),
+            String(localized: "reader.quick_action.define_vocabulary.title"),
+        ]
+    }
 
-    private let suggestedPrompts: [(icon: String, title: String, prompt: String)] = [
-        ("lightbulb", "Explain a concept", "Explain the core idea in simple terms."),
-        ("text.quote", "Summarize this page", "Summarize the key points of this page."),
-        ("questionmark.circle", "Ask a question", "What questions should I ask about this?"),
-        ("sparkles", "Find insights", "What are the most insightful takeaways?"),
-        ("list.bullet", "Extract key points", "List the key points as bullet items."),
-        ("character.bubble", "Translate", "Translate the main points to my preferred language."),
+    private let suggestedPrompts: [SuggestedPrompt] = [
+        .init(
+            id: "explain",
+            icon: "lightbulb",
+            titleKey: "reader.quick_action.explain.title",
+            promptKey: "reader.quick_action.explain.subtitle"
+        ),
+        .init(
+            id: "summarize",
+            icon: "text.quote",
+            titleKey: "reader.quick_action.summarize.title",
+            promptKey: "reader.quick_action.summarize.subtitle"
+        ),
+        .init(
+            id: "translate",
+            icon: "character.bubble",
+            titleKey: "reader.quick_action.translate.title",
+            promptKey: "reader.quick_action.translate.subtitle"
+        ),
+        .init(
+            id: "define",
+            icon: "text.book.closed",
+            titleKey: "reader.quick_action.define_vocabulary.title",
+            promptKey: "reader.quick_action.define_vocabulary.subtitle"
+        ),
     ]
 
     public init(viewModel: AIChatViewModel) {
@@ -75,8 +101,8 @@ public struct AIChatView: View {
                 onRemoveAttachment: { id in viewModel.removeAttachment(id: id) },
                 onProviderTap: { showProviderPicker = true },
                 onModelSettingsTap: { showChatSettings = true },
-                onToggleThinking: { thinkingEnabled.toggle() },
-                thinkingEnabled: thinkingEnabled,
+                onToggleThinking: { viewModel.toggleThinking() },
+                thinkingEnabled: viewModel.thinkingEnabled,
                 supportsThinking: currentModelSupportsThinking,
                 currentProviderName: currentProviderDisplayName
             )
@@ -89,6 +115,17 @@ public struct AIChatView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: AppSpacing.md) {
+                    if viewModel.persistenceService != nil {
+                        Button {
+                            showConversationList = true
+                        } label: {
+                            Image(systemName: "text.bubble")
+                                .foregroundStyle(Morandi.accent)
+                        }
+                        .disabled(viewModel.isStreaming)
+                        .accessibilityLabel(Text("ai.conversations"))
+                    }
+
                     Button {
                         viewModel.clearConversation()
                         inputText = ""
@@ -96,6 +133,7 @@ public struct AIChatView: View {
                         Image(systemName: "square.and.pencil")
                             .foregroundStyle(Morandi.accent)
                     }
+                    .disabled(viewModel.isStreaming)
                     Button {
                         showChatSettings = true
                     } label: {
@@ -107,6 +145,27 @@ public struct AIChatView: View {
         }
         .sheet(isPresented: $showProviderPicker) {
             ProviderPickerSheet(viewModel: viewModel, providers: viewModel.providerOptions)
+        }
+        .sheet(isPresented: $showConversationList) {
+            if let persistenceService = viewModel.persistenceService {
+                NavigationStack {
+                    ConversationListView(
+                        persistenceService: persistenceService,
+                        onSelect: { id in
+                            if viewModel.isStreaming == false,
+                               viewModel.loadConversation(id: id) {
+                                showConversationList = false
+                            }
+                        },
+                        onNewChat: {
+                            guard viewModel.isStreaming == false else { return }
+                            viewModel.clearConversation()
+                            inputText = ""
+                            showConversationList = false
+                        }
+                    )
+                }
+            }
         }
         .sheet(isPresented: $showChatSettings) {
             ChatSettingsSheet(viewModel: viewModel)
@@ -183,21 +242,20 @@ public struct AIChatView: View {
                 }
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: AppSpacing.md) {
-                    ForEach(suggestedPrompts.indices, id: \.self) { i in
-                        let p = suggestedPrompts[i]
+                    ForEach(suggestedPrompts) { p in
                         Button {
-                            inputText = p.prompt
+                            inputText = String(localized: String.LocalizationValue(p.promptKey))
                             handleSend()
                         } label: {
                             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                                 Image(systemName: p.icon)
                                     .font(.system(size: 20))
                                     .foregroundStyle(Morandi.accent)
-                                Text(p.title)
+                                Text(LocalizedStringKey(p.titleKey))
                                     .font(AppTypography.callout.weight(.semibold))
                                     .foregroundStyle(Morandi.primaryText)
                                     .lineLimit(1)
-                                Text(p.prompt)
+                                Text(LocalizedStringKey(p.promptKey))
                                     .font(AppTypography.caption2)
                                     .foregroundStyle(Morandi.secondaryText)
                                     .lineLimit(2)
