@@ -6,6 +6,9 @@ import PTAIServices
 #if canImport(ReadiumShared)
 import ReadiumShared
 #endif
+#if canImport(ReadiumNavigator)
+import struct ReadiumNavigator.Decoration
+#endif
 
 #if canImport(UIKit)
 import UIKit
@@ -1812,6 +1815,7 @@ struct EPUBBookshelfReaderView: View {
     @State private var loadError: String?
     @State private var isAIPanelPresented = false
     @State private var readerControlsViewModel: EPUBReaderControlsViewModel?
+    @State private var findBarState: ReaderFindBarState?
     @State private var annotationsViewModel: EPUBReaderAnnotationsViewModel?
     @State private var preferencesViewModel: EPUBReaderPreferencesViewModel?
     @State private var annotationDraft: EPUBReaderAnnotationDraft?
@@ -2104,9 +2108,14 @@ struct EPUBBookshelfReaderView: View {
         do {
             let openedPublication = try await EPUBPublicationOpener().open(at: URL(fileURLWithPath: book.filePath))
             publication = openedPublication
-            let controlsViewModel = EPUBReaderControlsViewModel(bridge: EPUBContentBridge(publication: openedPublication))
+            let epubBridge = EPUBContentBridge(publication: openedPublication)
+            let controlsViewModel = EPUBReaderControlsViewModel(bridge: epubBridge)
             await controlsViewModel.loadTableOfContents()
             readerControlsViewModel = controlsViewModel
+            findBarState = ReaderFindBarState { query in
+                let results = try await epubBridge.searchContent(query: query)
+                return results.map(ReaderSearchHit.from)
+            }
             if let bookID = book.id {
                 if contextMenuCoordinator == nil {
                     contextMenuCoordinator = ContextMenuCoordinator(
@@ -2244,6 +2253,8 @@ struct EPUBBookshelfReaderView: View {
                 readerControlsViewModel?.showSearch = newValue
                 if newValue == false {
                     coordinator.clearSelection()
+                    findBarState?.clear()
+                    coordinator.applyDecorations([], in: findHighlightDecorationGroup)
                 }
             }
         )
@@ -2341,69 +2352,8 @@ struct EPUBBookshelfReaderView: View {
     private var searchSheet: some View {
         NavigationStack {
             Group {
-                if let readerControlsViewModel {
-                    if readerControlsViewModel.searchQuery.isEmpty {
-                        ContentUnavailableView(
-                            AppLocalization.string("reader.search_this_book"),
-                            systemImage: "magnifyingglass",
-                            description: Text("reader.search_epub_prompt")
-                        )
-                    } else if readerControlsViewModel.isSearching {
-                        ProgressView(String(localized: "common.searching"))
-                            .tint(Morandi.accent)
-                    } else if let searchErrorMessage = readerControlsViewModel.searchErrorMessage {
-                        ContentUnavailableView(
-                            AppLocalization.string("reader.search_failed_title"),
-                            systemImage: "exclamationmark.magnifyingglass",
-                            description: Text(searchErrorMessage)
-                        )
-                    } else if readerControlsViewModel.searchResults.isEmpty {
-                        ContentUnavailableView(
-                            AppLocalization.string("reader.search.no_results_title"),
-                            systemImage: "doc.text.magnifyingglass",
-                            description: Text(AppLocalization.format(
-                                "reader.search.no_matches_format",
-                                readerControlsViewModel.searchQuery
-                            ))
-                        )
-                    } else {
-                        List(readerControlsViewModel.searchResults) { result in
-                            Button {
-                                navigateToEPUBSearchResult(result)
-                                readerControlsViewModel.showSearch = false
-                            } label: {
-                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                                    Text(result.chapterTitle)
-                                        .font(AppTypography.headline)
-                                        .foregroundStyle(Morandi.primaryText)
-
-                                    (
-                                        Text(result.textBefore)
-                                            .foregroundStyle(Morandi.secondaryText)
-                                        + Text(result.text)
-                                            .foregroundStyle(Morandi.accent)
-                                            .bold()
-                                        + Text(result.textAfter)
-                                            .foregroundStyle(Morandi.secondaryText)
-                                    )
-                                    .font(AppTypography.body)
-                                    .lineLimit(4)
-
-                                    if result.progression > 0 {
-                                        Text(AppLocalization.format(
-                                            "reader.search.match_at_progress_format",
-                                            Int((result.progression * 100).rounded())
-                                        ))
-                                            .font(AppTypography.caption)
-                                            .foregroundStyle(Morandi.secondaryText)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .listRowBackground(Morandi.background)
-                        }
-                        .listStyle(.plain)
-                    }
+                if let findBarState {
+                    epubSearchSheetBody(state: findBarState)
                 } else {
                     ProgressView(AppLocalization.string("reader.preparing_search_ellipsis"))
                         .tint(Morandi.accent)
@@ -2411,22 +2361,10 @@ struct EPUBBookshelfReaderView: View {
             }
             .background(Morandi.background)
             .navigationTitle(String(localized: "common.search"))
-            .searchable(text: searchQueryBinding, prompt: String(localized: "reader.search_epub_prompt"))
-            .onSubmit(of: .search) {
-                Task { await readerControlsViewModel?.performSearch() }
-            }
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(String(localized: "common.search")) {
-                        Task { await readerControlsViewModel?.performSearch() }
-                    }
-                    .foregroundStyle(Morandi.accent)
-                    .disabled((readerControlsViewModel?.searchQuery.isEmpty ?? true) || (readerControlsViewModel?.isSearching ?? false))
-                }
-
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "common.done")) {
-                        readerControlsViewModel?.showSearch = false
+                        closeEPUBFindBar()
                     }
                     .foregroundStyle(Morandi.accent)
                 }
@@ -2434,6 +2372,86 @@ struct EPUBBookshelfReaderView: View {
         }
         .presentationDetents([.medium, .large])
     }
+
+    @ViewBuilder
+    private func epubSearchSheetBody(state: ReaderFindBarState) -> some View {
+        VStack(spacing: 0) {
+            ReaderFindBar(state: state, onClose: { closeEPUBFindBar() })
+            if state.hits.isEmpty && state.hasSearched == false {
+                ContentUnavailableView(
+                    AppLocalization.string("reader.search_this_book"),
+                    systemImage: "magnifyingglass",
+                    description: Text("reader.search_epub_prompt")
+                )
+            } else if state.hits.isEmpty {
+                ContentUnavailableView(
+                    AppLocalization.string("reader.search.no_results_title"),
+                    systemImage: "doc.text.magnifyingglass",
+                    description: Text(AppLocalization.format(
+                        "reader.search.no_matches_format",
+                        state.query
+                    ))
+                )
+            } else {
+                List(Array(state.hits.enumerated()), id: \.element.id) { index, hit in
+                    Button {
+                        state.select(index: index)
+                    } label: {
+                        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                            Text(hit.chapterTitle)
+                                .font(AppTypography.headline)
+                                .foregroundStyle(Morandi.primaryText)
+                            (
+                                Text(hit.contextBefore)
+                                    .foregroundStyle(Morandi.secondaryText)
+                                + Text(hit.snippet)
+                                    .foregroundStyle(index == state.currentIndex ? Morandi.accent : Morandi.primaryText)
+                                    .bold()
+                                + Text(hit.contextAfter)
+                                    .foregroundStyle(Morandi.secondaryText)
+                            )
+                            .font(AppTypography.body)
+                            .lineLimit(4)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .listRowBackground(Morandi.background)
+                }
+                .listStyle(.plain)
+            }
+        }
+        .onChange(of: state.currentHit) { _, newHit in
+            guard let newHit else { return }
+            navigateToEPUBFindHit(newHit)
+        }
+    }
+
+    private func closeEPUBFindBar() {
+        findBarState?.clear()
+        readerControlsViewModel?.showSearch = false
+        coordinator.applyDecorations([], in: findHighlightDecorationGroup)
+    }
+
+    private func navigateToEPUBFindHit(_ hit: ReaderSearchHit) {
+        guard let locatorString = hit.locator.cfi,
+              let locator = EPUBAnnotationBridge.locator(fromStoredString: locatorString) else {
+            return
+        }
+        coordinator.navigate(to: locator)
+        #if canImport(UIKit)
+        let tint = UIColor.systemYellow
+        #else
+        let tint = NSColor.systemYellow
+        #endif
+        let decoration = Decoration(
+            id: hit.id.uuidString,
+            locator: locator,
+            style: .underline(tint: tint)
+        )
+        coordinator.applyDecorations([decoration], in: findHighlightDecorationGroup)
+    }
+
+    private var findHighlightDecorationGroup: String { "pt.reader.find" }
 
     private func navigateToEPUBLocation(href: String, progression: Double = 0) {
         guard let resolvedHref = AnyURL(path: href) else { return }
@@ -2472,6 +2490,7 @@ struct EPUBBookshelfReaderView: View {
         readerControlsViewModel.showSearch = true
         Task {
             await readerControlsViewModel.performSearch()
+            await findBarState?.submit(query: query)
         }
     }
 

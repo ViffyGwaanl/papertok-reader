@@ -4,6 +4,12 @@ import PTReader
 import PTUI
 import SwiftUI
 
+struct PDFFindHighlightRequest: Equatable {
+    let id = UUID()
+    let pageIndex: Int
+    let snippet: String
+}
+
 struct PDFSelectionRouting {
     let aiQuickActionText: String
     let aiQuickActionChapter: String
@@ -38,6 +44,7 @@ struct NativePDFView: UIViewRepresentable {
     let document: PDFDocument
     let renderedAnnotations: [PDFRenderedAnnotation]
     let selectionResetToken: Int
+    let findHighlightRequest: PDFFindHighlightRequest?
     let onSelectionChange: (PDFSelectionSnapshot) -> Void
     let onAnnotationTap: (Int64) -> Void
     @Binding var currentPage: Int
@@ -88,6 +95,7 @@ struct NativePDFView: UIViewRepresentable {
             context.coordinator.lastSelectionResetToken = selectionResetToken
             pdfView.clearSelection()
         }
+        context.coordinator.applyFindHighlight(findHighlightRequest, on: pdfView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -105,6 +113,7 @@ struct NativePDFView: UIViewRepresentable {
         var onSelectionChange: (PDFSelectionSnapshot) -> Void
         var onAnnotationTap: (Int64) -> Void
         var lastSelectionResetToken: Int = 0
+        private var lastFindHighlightRequestID: UUID?
 
         private var appliedAnnotationsByPage: [Int: [PDFAnnotation]] = [:]
         private var suppressNextSelectionChange = false
@@ -146,6 +155,27 @@ struct NativePDFView: UIViewRepresentable {
 
             DispatchQueue.main.async {
                 self.onSelectionChange(snapshot)
+            }
+        }
+
+        func applyFindHighlight(_ request: PDFFindHighlightRequest?, on pdfView: PDFView) {
+            guard let request else {
+                if lastFindHighlightRequestID != nil {
+                    lastFindHighlightRequestID = nil
+                    pdfView.highlightedSelections = nil
+                }
+                return
+            }
+            guard request.id != lastFindHighlightRequestID else { return }
+            lastFindHighlightRequestID = request.id
+
+            let matches = document.findString(request.snippet, withOptions: [.caseInsensitive])
+            let selection = matches.first { candidate in
+                candidate.pages.contains(where: { document.index(for: $0) == request.pageIndex })
+            }
+            if let selection {
+                pdfView.highlightedSelections = [selection]
+                pdfView.setCurrentSelection(selection, animate: true)
             }
         }
 
@@ -243,6 +273,7 @@ struct NativePDFView: NSViewRepresentable {
     let document: PDFDocument
     let renderedAnnotations: [PDFRenderedAnnotation]
     let selectionResetToken: Int
+    let findHighlightRequest: PDFFindHighlightRequest?
     let onSelectionChange: (PDFSelectionSnapshot) -> Void
     let onAnnotationTap: (Int64) -> Void
     @Binding var currentPage: Int
@@ -291,6 +322,7 @@ struct NativePDFView: NSViewRepresentable {
             context.coordinator.lastSelectionResetToken = selectionResetToken
             pdfView.clearSelection()
         }
+        context.coordinator.applyFindHighlight(findHighlightRequest, on: pdfView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -308,9 +340,31 @@ struct NativePDFView: NSViewRepresentable {
         var onSelectionChange: (PDFSelectionSnapshot) -> Void
         var onAnnotationTap: (Int64) -> Void
         var lastSelectionResetToken: Int = 0
+        private var lastFindHighlightRequestID: UUID?
 
         private var appliedAnnotationsByPage: [Int: [PDFAnnotation]] = [:]
         private var suppressNextSelectionChange = false
+
+        func applyFindHighlight(_ request: PDFFindHighlightRequest?, on pdfView: PDFView) {
+            guard let request else {
+                if lastFindHighlightRequestID != nil {
+                    lastFindHighlightRequestID = nil
+                    pdfView.highlightedSelections = nil
+                }
+                return
+            }
+            guard request.id != lastFindHighlightRequestID else { return }
+            lastFindHighlightRequestID = request.id
+
+            let matches = document.findString(request.snippet, withOptions: [.caseInsensitive])
+            let selection = matches.first { candidate in
+                candidate.pages.contains(where: { document.index(for: $0) == request.pageIndex })
+            }
+            if let selection {
+                pdfView.highlightedSelections = [selection]
+                pdfView.setCurrentSelection(selection, animate: true)
+            }
+        }
 
         init(
             currentPage: Binding<Int>,
@@ -454,7 +508,8 @@ public struct PDFReaderView: View {
     @State private var showPageSlider = true
     @State private var aiQuickActionText: String?
     @State private var aiQuickActionChapter: String = ""
-    @State private var currentSearchResultIndex: Int = 0
+    @State private var findBarState: ReaderFindBarState?
+    @State private var findHighlightRequest: PDFFindHighlightRequest?
     @State private var contextMenuCoordinator: ContextMenuCoordinator?
     @State private var showBookmarkManager = false
     @State private var tocSearchQuery = ""
@@ -658,6 +713,7 @@ public struct PDFReaderView: View {
                     document: doc,
                     renderedAnnotations: annotationsViewModel?.renderedAnnotations ?? [],
                     selectionResetToken: selectionResetToken,
+                    findHighlightRequest: findHighlightRequest,
                     onSelectionChange: presentAnnotationDraft(selection:),
                     onAnnotationTap: presentAnnotationDraft(noteID:),
                     currentPage: $viewModel.currentPage
@@ -681,9 +737,11 @@ public struct PDFReaderView: View {
             _ = menuCoordinator.takePendingSearchQuery()
             readerControlsViewModel?.searchQuery = query
             readerControlsViewModel?.showSearch = true
-            currentSearchResultIndex = 0
             selectionResetToken += 1
-            Task { await readerControlsViewModel?.performSearch() }
+            Task {
+                await readerControlsViewModel?.performSearch()
+                await findBarState?.submit(query: query)
+            }
         }
     }
 
@@ -800,6 +858,14 @@ public struct PDFReaderView: View {
             readerControlsViewModel = PDFReaderControlsViewModel(bridge: bridge)
         }
 
+        if findBarState == nil {
+            let bridgeRef = bridge
+            findBarState = ReaderFindBarState { query in
+                let results = try await bridgeRef.searchContent(query: query)
+                return results.map(ReaderSearchHit.from)
+            }
+        }
+
         if contextMenuCoordinator == nil, let bookID = viewModel.book.id {
             contextMenuCoordinator = ContextMenuCoordinator(
                 bookId: bookID,
@@ -831,14 +897,13 @@ public struct PDFReaderView: View {
     private var searchSheetBinding: Binding<Bool> {
         Binding(
             get: { readerControlsViewModel?.showSearch ?? false },
-            set: { newValue in readerControlsViewModel?.showSearch = newValue }
-        )
-    }
-
-    private var searchQueryBinding: Binding<String> {
-        Binding(
-            get: { readerControlsViewModel?.searchQuery ?? "" },
-            set: { newValue in readerControlsViewModel?.searchQuery = newValue }
+            set: { newValue in
+                readerControlsViewModel?.showSearch = newValue
+                if newValue == false {
+                    findBarState?.clear()
+                    findHighlightRequest = nil
+                }
+            }
         )
     }
 
@@ -940,69 +1005,8 @@ public struct PDFReaderView: View {
     private var searchSheet: some View {
         NavigationStack {
             Group {
-                if let readerControlsViewModel {
-                    if readerControlsViewModel.searchQuery.isEmpty {
-                        ContentUnavailableView(
-                            String(localized: "reader.search_this_pdf"),
-                            systemImage: "magnifyingglass",
-                            description: Text("reader.search_pdf_prompt")
-                        )
-                    } else if readerControlsViewModel.isSearching {
-                        ProgressView(String(localized: "common.searching"))
-                            .tint(Morandi.accent)
-                    } else if let searchErrorMessage = readerControlsViewModel.searchErrorMessage {
-                        ContentUnavailableView(
-                            String(localized: "reader.search_failed_title"),
-                            systemImage: "exclamationmark.magnifyingglass",
-                            description: Text(searchErrorMessage)
-                        )
-                    } else if readerControlsViewModel.searchResults.isEmpty {
-                        ContentUnavailableView(
-                            String(localized: "reader.search.no_results_title"),
-                            systemImage: "doc.text.magnifyingglass",
-                            description: Text(AppLocalization.format(
-                                "reader.search.no_matches_format",
-                                locale: .autoupdatingCurrent,
-                                readerControlsViewModel.searchQuery
-                            ))
-                        )
-                    } else {
-                        List(readerControlsViewModel.searchResults) { result in
-                            Button {
-                                navigateToSearchResult(result)
-                                readerControlsViewModel.showSearch = false
-                            } label: {
-                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                                    Text(result.chapterTitle)
-                                        .font(AppTypography.headline)
-                                        .foregroundStyle(Morandi.primaryText)
-
-                                    (
-                                        Text(result.textBefore)
-                                            .foregroundStyle(Morandi.secondaryText)
-                                        + Text(result.text)
-                                            .foregroundStyle(Morandi.accent)
-                                            .bold()
-                                        + Text(result.textAfter)
-                                            .foregroundStyle(Morandi.secondaryText)
-                                    )
-                                    .font(AppTypography.body)
-                                    .lineLimit(4)
-
-                                    Text(AppLocalization.format(
-                                        "reader.search.match_at_progress_format",
-                                        locale: .autoupdatingCurrent,
-                                        Int((result.progression * 100).rounded())
-                                    ))
-                                        .font(AppTypography.caption)
-                                        .foregroundStyle(Morandi.secondaryText)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .listRowBackground(Morandi.background)
-                        }
-                        .listStyle(.plain)
-                    }
+                if let findBarState {
+                    searchSheetBody(state: findBarState)
                 } else {
                     ProgressView(String(localized: "reader.preparing_search_ellipsis"))
                         .tint(Morandi.accent)
@@ -1010,55 +1014,92 @@ public struct PDFReaderView: View {
             }
             .background(Morandi.background)
             .navigationTitle(String(localized: "common.search"))
-            .searchable(text: searchQueryBinding, prompt: String(localized: "reader.search_this_pdf"))
-            .onSubmit(of: .search) {
-                Task { await readerControlsViewModel?.performSearch() }
-            }
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: AppSpacing.sm) {
-                        if let controls = readerControlsViewModel,
-                           !controls.searchResults.isEmpty {
-                            Text("\(currentSearchResultIndex + 1)/\(controls.searchResults.count)")
-                                .font(AppTypography.caption)
-                                .foregroundStyle(Morandi.secondaryText)
-                                .monospacedDigit()
-
-                            Button {
-                                navigateToPreviousSearchResult()
-                            } label: {
-                                Image(systemName: "chevron.up")
-                            }
-                            .disabled(currentSearchResultIndex <= 0)
-                            .foregroundStyle(Morandi.accent)
-
-                            Button {
-                                navigateToNextSearchResult()
-                            } label: {
-                                Image(systemName: "chevron.down")
-                            }
-                            .disabled(currentSearchResultIndex >= (controls.searchResults.count - 1))
-                            .foregroundStyle(Morandi.accent)
-                        }
-
-                        Button(String(localized: "common.search")) {
-                            currentSearchResultIndex = 0
-                            Task { await readerControlsViewModel?.performSearch() }
-                        }
-                        .foregroundStyle(Morandi.accent)
-                        .disabled((readerControlsViewModel?.searchQuery.isEmpty ?? true) || (readerControlsViewModel?.isSearching ?? false))
-                    }
-                }
-
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "common.done")) {
-                        readerControlsViewModel?.showSearch = false
+                        closeFindBar()
                     }
                     .foregroundStyle(Morandi.accent)
                 }
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    @ViewBuilder
+    private func searchSheetBody(state: ReaderFindBarState) -> some View {
+        VStack(spacing: 0) {
+            ReaderFindBar(state: state, onClose: { closeFindBar() })
+            if state.hits.isEmpty && state.hasSearched == false {
+                ContentUnavailableView(
+                    String(localized: "reader.search_this_pdf"),
+                    systemImage: "magnifyingglass",
+                    description: Text("reader.search_pdf_prompt")
+                )
+            } else if state.hits.isEmpty {
+                ContentUnavailableView(
+                    String(localized: "reader.search.no_results_title"),
+                    systemImage: "doc.text.magnifyingglass",
+                    description: Text(AppLocalization.format(
+                        "reader.search.no_matches_format",
+                        locale: .autoupdatingCurrent,
+                        state.query
+                    ))
+                )
+            } else {
+                List(Array(state.hits.enumerated()), id: \.element.id) { index, hit in
+                    Button {
+                        state.select(index: index)
+                    } label: {
+                        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                            Text(hit.chapterTitle)
+                                .font(AppTypography.headline)
+                                .foregroundStyle(Morandi.primaryText)
+
+                            (
+                                Text(hit.contextBefore)
+                                    .foregroundStyle(Morandi.secondaryText)
+                                + Text(hit.snippet)
+                                    .foregroundStyle(index == state.currentIndex ? Morandi.accent : Morandi.primaryText)
+                                    .bold()
+                                + Text(hit.contextAfter)
+                                    .foregroundStyle(Morandi.secondaryText)
+                            )
+                            .font(AppTypography.body)
+                            .lineLimit(4)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .listRowBackground(Morandi.background)
+                }
+                .listStyle(.plain)
+            }
+        }
+        .onChange(of: state.currentHit) { _, newHit in
+            guard let newHit else { return }
+            navigateToFindBarHit(newHit)
+        }
+    }
+
+    private func closeFindBar() {
+        findBarState?.clear()
+        readerControlsViewModel?.showSearch = false
+        selectionResetToken += 1
+    }
+
+    private func navigateToFindBarHit(_ hit: ReaderSearchHit) {
+        if let pageIndex = hit.locator.pageIndex {
+            viewModel.goToPage(pageIndex)
+        }
+        applyPDFFindHighlight(for: hit)
+    }
+
+    private func applyPDFFindHighlight(for hit: ReaderSearchHit) {
+        guard let pageIndex = hit.locator.pageIndex else { return }
+        findHighlightRequest = PDFFindHighlightRequest(
+            pageIndex: pageIndex,
+            snippet: hit.snippet
+        )
     }
 
     private var annotationEditorSheet: some View {
@@ -1075,11 +1116,6 @@ public struct PDFReaderView: View {
                 selectionResetToken += 1
             }
         )
-    }
-
-    private func navigateToSearchResult(_ result: ContentSearchResult) {
-        guard let range = PDFChapter.parsePageRange(from: result.chapterHref) else { return }
-        viewModel.goToPage(range.startPage)
     }
 
     private func goToPreviousPageFromCommand() {
@@ -1312,19 +1348,4 @@ public struct PDFReaderView: View {
         return viewModel.tocEntries.filter { $0.title.range(of: q, options: .caseInsensitive) != nil }
     }
 
-    // MARK: - Search Result Navigation
-
-    private func navigateToNextSearchResult() {
-        guard let controls = readerControlsViewModel,
-              !controls.searchResults.isEmpty else { return }
-        currentSearchResultIndex = min(currentSearchResultIndex + 1, controls.searchResults.count - 1)
-        navigateToSearchResult(controls.searchResults[currentSearchResultIndex])
-    }
-
-    private func navigateToPreviousSearchResult() {
-        guard let controls = readerControlsViewModel,
-              !controls.searchResults.isEmpty else { return }
-        currentSearchResultIndex = max(currentSearchResultIndex - 1, 0)
-        navigateToSearchResult(controls.searchResults[currentSearchResultIndex])
-    }
 }

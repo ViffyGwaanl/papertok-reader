@@ -441,6 +441,8 @@ struct MigrationLocalizationCatalogTests {
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderImageViewer.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/PDFReaderView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderViewModel.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/Search/ReaderFindBar.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/Search/ReaderFindBarState.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/AIImageAnalysisView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/AIProviderCenterView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/ReadingDetailSettingsView.swift",
