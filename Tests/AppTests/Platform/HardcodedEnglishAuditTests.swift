@@ -21,23 +21,29 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/AIProviderDetailView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/MCPConfigView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/ReadingDetailSettingsView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/AIChatView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/ChatInputView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/ChatSettingsSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/ConversationListView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/MessageBubbleView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Memory/MemoryHomeView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/PDFReaderView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/EPUBReaderSettingsView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/BookmarkManagerView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ContextMenuAction.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ExcerptMenuSheet.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/NoteEditorSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/TTSFloatingActionButton.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/DictionaryLookupSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderAIPanelHost.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderAIQuickActionsSheet.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderImageViewer.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/EPUBReaderAnnotationEditorView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperDetailView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PapersFilterBar.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PapersView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Sync/ConnectionTesterView.swift",
+                "App/Platform/macOS/MacMenuCommands.swift",
                 "App/Platform/Intents/OpenBookIntent.swift",
                 "App/Platform/Intents/SearchBooksIntent.swift",
                 "App/Platform/Intents/GetReadingStatsIntent.swift",
@@ -47,55 +53,59 @@ struct HardcodedEnglishAuditTests {
             rules: [
                 RegexRule(
                     description: "bare English UI literal",
-                    pattern: #"(?:TextField|SecureField|Picker|Toggle|Section|Label|Button|ContentUnavailableView|Menu|PTChip|SharePreview|navigationTitle|confirmationDialog|alert|ProgressView|accessibilityLabel)\(\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"(?:TextField|SecureField|Picker|Toggle|Section|Label|Button|ContentUnavailableView|Menu|PTChip|SharePreview|navigationTitle|confirmationDialog|alert|ProgressView|accessibilityLabel)\(\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English placeholder literal",
-                    pattern: #"placeholder:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"placeholder:\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English text literal",
+                    pattern: #"\bText\(\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English helper title literal",
-                    pattern: #"\btitle:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                    pattern: #"\btitle:\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English helper hint literal",
-                    pattern: #"\bhint:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                    pattern: #"\bhint:\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English help literal",
-                    pattern: #"\.help\(\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                    pattern: #"\.help\(\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English fallback literal",
-                    pattern: #"\?\?\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                    pattern: #"\?\?\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English app intent title literal",
-                    pattern: #"static\s+let\s+title:\s*LocalizedStringResource\s*=\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"static\s+let\s+title:\s*LocalizedStringResource\s*=\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English intent description literal",
-                    pattern: #"IntentDescription\(\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"IntentDescription\(\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English intent parameter literal",
-                    pattern: #"@Parameter\(title:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"@Parameter\(title:\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English intent dialog literal",
-                    pattern: #"(?:dialog:\s*|IntentDialog\s*=\s*)"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"(?:dialog:\s*|IntentDialog\s*=\s*)"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English shortcut title literal",
-                    pattern: #"\bshortTitle:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"\bshortTitle:\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English shortcut phrase literal",
-                    pattern: #"(?m)^\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*"(?:,)?$"#
+                    pattern: #"(?m)^\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Z][^"]*"(?:,)?$"#
                 ),
                 RegexRule(
                     description: "bare English AppLocalization fallback",
-                    pattern: #"AppLocalization\.(?:string|format)\(\s*"[a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+"\s*,\s*(?:value:\s*)?"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Z][^"]*""#
+                    pattern: #"AppLocalization\.(?:string|format)\(\s*"[A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+"\s*,\s*(?:value:\s*)?"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English capability badge array",
@@ -150,9 +160,11 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTFeatures/Sources/PTFeatures/Sync/BackupService.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Sync/ConnectionTesterView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Sync/WebDAVSyncService.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Memory/MemoryHomeViewModel.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/EPUBReaderAnnotationsViewModel.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/PDFReaderAnnotationsViewModel.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderControlsViewModel.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderImageViewer.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/TranslationMenuSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/AIProviderDetailView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/MCPConfigView.swift",
@@ -160,6 +172,8 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTReader/Sources/PTReader/EPUB/EPUBReaderView.swift",
                 "Packages/PTReader/Sources/PTReader/EPUB/EPUBContentBridge.swift",
                 "Packages/PTNetworking/Sources/PTNetworking/HTTP/NetworkError.swift",
+                "Packages/PTAIServices/Sources/PTAIServices/Memory/MemoryWorkflowService.swift",
+                "Packages/PTAIServices/Sources/PTAIServices/Memory/MemoryCandidateStore.swift",
                 "Packages/PTAIServices/Sources/PTAIServices/MCP/MCPClient.swift",
                 "Packages/PTAIServices/Sources/PTAIServices/MCP/MCPMessage.swift",
                 "Packages/PTAIServices/Sources/PTAIServices/MCP/MCPConfiguration.swift",
@@ -173,7 +187,7 @@ struct HardcodedEnglishAuditTests {
             rules: [
                 RegexRule(
                     description: "bare English error return",
-                    pattern: #"(?:return|errorMessage\s*=)\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"(?:return|errorMessage\s*=)\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "raw localizedDescription reaches user-visible state",
@@ -181,7 +195,7 @@ struct HardcodedEnglishAuditTests {
                 ),
                 RegexRule(
                     description: "bare English AppLocalization userFacingErrorMessage fallback",
-                    pattern: #"AppLocalization\.userFacingErrorMessage\([^\n]*fallback:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"AppLocalization\.userFacingErrorMessage\([^\n]*fallback:\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English attachment placeholder",
@@ -223,27 +237,41 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTFeatures/Sources/PTFeatures/Notes/NotesPDFExportService.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperDownloadWorker.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/HighlightExportService.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderImageAnalysisPrompt.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ContextMenuCoordinator.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderViewModel.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/MemoryView.swift",
                 "Packages/PTReader/Sources/PTReader/PDF/PDFContentBridge.swift",
+                "Packages/PTAIServices/Sources/PTAIServices/Memory/MemoryDocumentLocalization.swift",
+                "Packages/PTAIServices/Sources/PTAIServices/Memory/MemoryContextBuilder.swift",
             ],
             rules: [
                 RegexRule(
                     description: "bare English output literal",
-                    pattern: #"(?:return|out \+=|title:\s*)\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"(?:return|out \+=|title:\s*)\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English attributed string literal",
-                    pattern: #"NSAttributedString\(string:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"NSAttributedString\(string:\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
                 ),
                 RegexRule(
                     description: "bare English single-expression switch literal",
-                    pattern: #"case\s+\.[a-zA-Z0-9_]+:\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                    pattern: #"case\s+\.[a-zA-Z0-9_]+:\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z][^"]*""#
+                ),
+                RegexRule(
+                    description: "bare English memory seed header literal",
+                    pattern: ##"content\s*=\s*"#\s*[A-Za-z][^"]*""##
                 ),
             ],
             allowlistFragments: [
                 #"return "E8D890""#,
                 #"return "D09898""#,
                 #"return "B898C8""#,
+                #"return "translation""#,
+                #"return "excerpt""#,
+                #"return "note""#,
+                #"return "dictionary""#,
+                #"return "noteEdit-\(id)""#,
             ]
         )
 
@@ -264,11 +292,11 @@ struct HardcodedEnglishAuditTests {
             rules: [
                 RegexRule(
                     description: "localized helper fallback literal",
-                    pattern: #"\blocalized\(\s*"[a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+"\s*,\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z%][^"]*""#
+                    pattern: #"\blocalized\(\s*"[A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+"\s*,\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z%][^"]*""#
                 ),
                 RegexRule(
                     description: "format helper fallback literal",
-                    pattern: #"\bformat\(\s*"[a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+"\s*,\s*"(?![a-z0-9_.-]+(?:\.[a-z0-9_.-]+)+")[A-Za-z%][^"]*""#
+                    pattern: #"\bformat\(\s*"[A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+"\s*,\s*"(?![A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)+")[A-Za-z%][^"]*""#
                 ),
                 RegexRule(
                     description: "hardcoded provider capability badge array",
