@@ -749,11 +749,11 @@ struct BookshelfScreen: View {
             )
 #endif
         } else {
-            PDFReaderView(
+            PDFBookshelfReaderView(
                 book: book,
                 database: database,
-                aiChatViewModel: aiChatViewModel,
                 readerSessionStore: readerSessionStore,
+                aiChatViewModel: aiChatViewModel,
                 initialPageOverride: navigationOverride?.pdfPageIndex
             )
                 .navigationBarBackButtonHidden(true)
@@ -1797,6 +1797,49 @@ private struct BookshelfBatchMoveSheet: View {
                     Button(String(localized: "common.cancel")) { dismiss() }
                 }
             }
+        }
+    }
+}
+
+/// Thin host around `PDFReaderView` that loads and owns a shared
+/// `ReadingPreferences` store via `EPUBReaderPreferencesViewModel`, so theme
+/// changes made in reader settings propagate to both the PDF page overlay
+/// tint provider and any EPUB reader on the same book.
+struct PDFBookshelfReaderView: View {
+    let book: Book
+    let database: AppDatabase
+    let readerSessionStore: ReaderSessionContextStore?
+    let aiChatViewModel: AIChatViewModel
+    let initialPageOverride: Int?
+
+    @State private var preferencesViewModel: EPUBReaderPreferencesViewModel?
+
+    var body: some View {
+        Group {
+            if let preferencesViewModel {
+                PDFReaderView(
+                    book: book,
+                    database: database,
+                    aiChatViewModel: aiChatViewModel,
+                    readerSessionStore: readerSessionStore,
+                    initialPageOverride: initialPageOverride,
+                    readingPreferences: preferencesViewModel.readingPreferences
+                )
+            } else {
+                PDFReaderView(
+                    book: book,
+                    database: database,
+                    aiChatViewModel: aiChatViewModel,
+                    readerSessionStore: readerSessionStore,
+                    initialPageOverride: initialPageOverride
+                )
+            }
+        }
+        .task {
+            guard preferencesViewModel == nil, let bookID = book.id else { return }
+            let vm = EPUBReaderPreferencesViewModel(bookId: bookID, database: database)
+            await vm.load()
+            preferencesViewModel = vm
         }
     }
 }

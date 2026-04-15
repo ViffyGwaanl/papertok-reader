@@ -59,6 +59,11 @@ struct NativePDFView: UIViewRepresentable {
         pdfView.usePageViewController(true, withViewOptions: nil)
         pdfView.backgroundColor = UIColor(Morandi.background)
         pdfView.document = document
+        if #available(iOS 16.0, *) {
+            let provider = PDFThemedPageOverlayProvider()
+            context.coordinator.themedOverlayProvider = provider
+            pdfView.pageOverlayViewProvider = provider
+        }
         context.coordinator.applyThemeTint(themeTintKind, to: pdfView)
         NotificationCenter.default.addObserver(
             context.coordinator,
@@ -119,6 +124,7 @@ struct NativePDFView: UIViewRepresentable {
         var lastSelectionResetToken: Int = 0
         private var lastFindHighlightRequestID: UUID?
         private var lastAppliedTintKind: PDFThemeTintKind?
+        var themedOverlayProvider: AnyObject?
 
         private var appliedAnnotationsByPage: [Int: [PDFAnnotation]] = [:]
         private var suppressNextSelectionChange = false
@@ -126,11 +132,6 @@ struct NativePDFView: UIViewRepresentable {
         func applyThemeTint(_ kind: PDFThemeTintKind, to pdfView: PDFView) {
             guard lastAppliedTintKind != kind else { return }
             lastAppliedTintKind = kind
-            // iOS: CALayer.filters is not a public API surface we can use here;
-            // ship the tint-kind selection and re-application hook so the
-            // reader observes theme changes, and rely on a follow-up to land
-            // a PDFPageOverlayViewProvider-based renderer. Background color
-            // is still updated below for an immediate visible difference.
             switch kind {
             case .none:
                 pdfView.backgroundColor = UIColor(Morandi.background)
@@ -138,6 +139,12 @@ struct NativePDFView: UIViewRepresentable {
                 pdfView.backgroundColor = UIColor(red: 0.10, green: 0.10, blue: 0.18, alpha: 1.0)
             case .sepia:
                 pdfView.backgroundColor = UIColor(red: 0.98, green: 0.95, blue: 0.91, alpha: 1.0)
+            }
+            if #available(iOS 16.0, *) {
+                if let provider = themedOverlayProvider as? PDFThemedPageOverlayProvider {
+                    provider.tintKind = kind
+                    pdfView.layoutDocumentView()
+                }
             }
             pdfView.setNeedsDisplay()
         }
