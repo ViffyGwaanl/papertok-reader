@@ -5,7 +5,11 @@ import Foundation
 /// The result is meant to be concatenated into the system message of a ``ChatRequest``
 /// so the model has durable context from previous sessions without blowing up token budget.
 public struct MemoryContextBuilder: Sendable {
-    public init() {}
+    private let locale: Locale
+
+    public init(locale: Locale = .autoupdatingCurrent) {
+        self.locale = locale
+    }
 
     /// Produce a bounded block of text summarizing memory from the last `lookbackDays`.
     ///
@@ -30,7 +34,12 @@ public struct MemoryContextBuilder: Sendable {
         if fm.fileExists(atPath: longTerm.path),
            let content = try? String(contentsOf: longTerm, encoding: .utf8),
            !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            pieces.append("### Long-term memory (MEMORY.md)\n" + content.trimmingCharacters(in: .whitespacesAndNewlines))
+            let title = MemoryDocumentLocalization.displayTitle(
+                forDocumentName: longTerm.lastPathComponent,
+                kind: .longTerm,
+                locale: locale
+            )
+            pieces.append("### \(title)\n" + content.trimmingCharacters(in: .whitespacesAndNewlines))
         }
 
         // Daily memory files newest → oldest, limited to lookbackDays.
@@ -50,23 +59,25 @@ public struct MemoryContextBuilder: Sendable {
         }
         dated.sort { $0.0 > $1.0 }
 
-        for (date, url) in dated {
+        for (_, url) in dated {
             guard let content = try? String(contentsOf: url, encoding: .utf8) else { continue }
             let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty { continue }
-            let label = dailyFormatter.string(from: date)
-            pieces.append("### Daily memory — \(label)\n" + trimmed)
+            let title = MemoryDocumentLocalization.displayTitle(
+                forDocumentName: url.lastPathComponent,
+                kind: .daily,
+                locale: locale
+            )
+            pieces.append("### \(title)\n" + trimmed)
         }
 
         if pieces.isEmpty { return "" }
 
-        let header = "## Persistent memory context\n\n" +
-            "The following notes were recorded in previous sessions. Use them to maintain continuity, " +
-            "but do not mention them unless relevant to the user's request.\n\n"
+        let header = MemoryDocumentLocalization.contextHeader(locale: locale)
         var assembled = header + pieces.joined(separator: "\n\n")
         if assembled.count > maxChars {
             let end = assembled.index(assembled.startIndex, offsetBy: maxChars)
-            assembled = String(assembled[..<end]) + "\n…(truncated)"
+            assembled = String(assembled[..<end]) + "\n" + MemoryDocumentLocalization.truncatedSuffix(locale: locale)
         }
         return assembled
     }

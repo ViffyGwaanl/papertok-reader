@@ -4,7 +4,7 @@ import PTCore
 import PTUI
 
 /// In-reader translation sheet with source text, language grid, and result display.
-struct TranslationMenuSheet: View {
+public struct TranslationMenuSheet: View {
     let selectedText: String
     let translationService: AITranslationService?
     let onDismiss: () -> Void
@@ -13,6 +13,16 @@ struct TranslationMenuSheet: View {
     @State private var translatedText: String = ""
     @State private var isTranslating = false
     @State private var errorMessage: String?
+
+    public init(
+        selectedText: String,
+        translationService: AITranslationService?,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.selectedText = selectedText
+        self.translationService = translationService
+        self.onDismiss = onDismiss
+    }
 
     private struct LanguageOption: Identifiable, Hashable {
         let identifier: String
@@ -64,7 +74,7 @@ struct TranslationMenuSheet: View {
         }
     }
 
-    var body: some View {
+    public var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {

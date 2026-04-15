@@ -1,5 +1,6 @@
 import SwiftUI
 import PTAIServices
+import PTCore
 import PTUI
 
 /// In-reader popup for translating selected text.
@@ -235,7 +236,10 @@ public struct TranslationPopupView: View {
                 from: source?.identifier == LanguageOption.autoDetect.identifier ? nil : source?.englishName
             )
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.userFacingErrorMessage(
+                for: error,
+                fallbackKey: "errors.translation.failed"
+            )
         }
 
         isTranslating = false
