@@ -18,6 +18,7 @@ struct SharedInboxImportProcessor {
         let loadEvent: @Sendable (String) -> SharedInboxEvent?
         let saveEvent: @Sendable (SharedInboxEvent) throws -> Void
         let consumeEvent: @Sendable (String) -> Void
+        let finalizeSuccessfulUse: @Sendable (String) -> ShareInboxMaintenanceDisposition
         let fileURL: @Sendable (SharedInboxFileItem, String) -> URL
         let fileExists: @Sendable (URL) -> Bool
         let importBook: @Sendable (URL) async -> Error?
@@ -32,6 +33,9 @@ struct SharedInboxImportProcessor {
                 },
                 consumeEvent: { eventID in
                     SharedInbox.consume(eventID: eventID)
+                },
+                finalizeSuccessfulUse: { eventID in
+                    ShareInboxMaintenance.finalizeSuccessfulUse(eventID: eventID)
                 },
                 fileURL: { item, eventID in
                     SharedInbox.fileURL(for: item, eventID: eventID)
@@ -122,12 +126,12 @@ struct SharedInboxImportProcessor {
         }
 
         guard remainingBookItems.isEmpty == false else {
-            dependencies.consumeEvent(eventID)
+            let disposition = dependencies.finalizeSuccessfulUse(eventID)
             return .init(
                 importedCount: importedCount,
                 remainingCount: 0,
                 discardedCount: discardedCount,
-                didConsumeEvent: true,
+                didConsumeEvent: disposition == .consumed,
                 errorMessage: errorMessage
             )
         }
