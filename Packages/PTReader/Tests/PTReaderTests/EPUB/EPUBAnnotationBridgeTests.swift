@@ -53,6 +53,37 @@ struct EPUBAnnotationBridgeTests {
         #expect(style.style == "underline")
     }
 
+    @Test("BookNote with underline kind maps to underline style")
+    func noteToDecoratorStyleUnderline() {
+        let note = BookNote(
+            bookId: 1,
+            content: "Underlined text",
+            cfi: "",
+            chapter: "Chapter 1",
+            type: BookNoteAnnotationKind.underline.rawValue,
+            color: "FF4CAF50",
+            updateTime: Date()
+        )
+        let style = EPUBAnnotationBridge.decoratorStyle(for: note)
+        #expect(style.style == "underline")
+        #expect(style.tint == "FF4CAF50")
+    }
+
+    @Test("BookNote with strikethrough kind maps to strikethrough style")
+    func noteToDecoratorStyleStrikethrough() {
+        let note = BookNote(
+            bookId: 1,
+            content: "Struck text",
+            cfi: "",
+            chapter: "Chapter 1",
+            type: BookNoteAnnotationKind.strikethrough.rawValue,
+            color: "FFFFEB3B",
+            updateTime: Date()
+        )
+        let style = EPUBAnnotationBridge.decoratorStyle(for: note)
+        #expect(style.style == "strikethrough")
+    }
+
     @Test("BookNote with note type maps to highlight style")
     func noteToDecoratorStyleNote() {
         let note = BookNote(

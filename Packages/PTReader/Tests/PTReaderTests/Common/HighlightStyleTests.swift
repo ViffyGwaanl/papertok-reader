@@ -33,10 +33,12 @@ struct HighlightStyleTests {
 
     @Test("NoteType enum covers all types")
     func noteTypes() {
-        #expect(NoteType.allCases.count == 3)
+        #expect(NoteType.allCases.count == 5)
         #expect(NoteType(rawValue: "highlight") == .highlight)
         #expect(NoteType(rawValue: "bookmark") == .bookmark)
         #expect(NoteType(rawValue: "note") == .note)
+        #expect(NoteType(rawValue: "underline") == .underline)
+        #expect(NoteType(rawValue: "strikethrough") == .strikethrough)
     }
 
     @Test("ContentSearchResult stores fields correctly")

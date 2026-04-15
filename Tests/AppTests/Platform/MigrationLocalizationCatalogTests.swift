@@ -430,6 +430,8 @@ struct MigrationLocalizationCatalogTests {
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/ProviderPickerSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ExcerptMenuSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/NoteEditorSheet.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/AnnotationStylePicker.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ReaderContextMenuView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ContextMenuCoordinator.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/TranslationMenuSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderControlsViewModel.swift",

@@ -33,6 +33,8 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ContextMenuAction.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ExcerptMenuSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/NoteEditorSheet.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/AnnotationStylePicker.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ReaderContextMenuView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/TTSFloatingActionButton.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/DictionaryLookupSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ReaderAIPanelHost.swift",

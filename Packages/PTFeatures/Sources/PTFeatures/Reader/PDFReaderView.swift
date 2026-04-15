@@ -217,7 +217,7 @@ struct NativePDFView: UIViewRepresentable {
                 guard let page = document.page(at: renderedAnnotation.pageIndex) else { continue }
                 let annotation = PDFAnnotation(
                     bounds: renderedAnnotation.bounds,
-                    forType: renderedAnnotation.type == .bookmark ? .text : .highlight,
+                    forType: renderedAnnotation.pdfAnnotationSubtype,
                     withProperties: nil
                 )
                 annotation.color = color(from: renderedAnnotation.colorHex) ?? .systemYellow
@@ -446,7 +446,7 @@ struct NativePDFView: NSViewRepresentable {
                 guard let page = document.page(at: renderedAnnotation.pageIndex) else { continue }
                 let annotation = PDFAnnotation(
                     bounds: renderedAnnotation.bounds,
-                    forType: renderedAnnotation.type == .bookmark ? .text : .highlight,
+                    forType: renderedAnnotation.pdfAnnotationSubtype,
                     withProperties: nil
                 )
                 annotation.color = color(from: renderedAnnotation.colorHex) ?? .systemYellow

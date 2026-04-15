@@ -26,4 +26,6 @@ public enum NoteType: String, CaseIterable, Sendable, Codable {
     case highlight
     case bookmark
     case note
+    case underline
+    case strikethrough
 }

@@ -182,6 +182,10 @@ public struct HighlightExportService: Sendable {
             localizedCatalogString("reader.bookmark")
         case .note:
             localizedCatalogString("common.note")
+        case .underline:
+            localizedCatalogString("reader.annotation.style.underline")
+        case .strikethrough:
+            localizedCatalogString("reader.annotation.style.strikethrough")
         case nil:
             rawValue
         }

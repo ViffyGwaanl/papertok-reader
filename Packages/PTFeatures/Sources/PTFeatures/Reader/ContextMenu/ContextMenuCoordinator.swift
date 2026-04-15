@@ -34,6 +34,10 @@ public final class ContextMenuCoordinator {
     /// The highlight color for the next highlight action.
     public var highlightColor: HighlightColor = .yellow
 
+    /// Which annotation style the next color tap will commit. This is bound
+    /// to `AnnotationStylePicker` in the floating context menu.
+    public var annotationKind: BookNoteAnnotationKind = .highlight
+
     // MARK: - Active Sheet
 
     /// Which secondary sheet is currently presented (if any).
@@ -152,15 +156,25 @@ public final class ContextMenuCoordinator {
 
     // MARK: - Note Persistence
 
-    /// Create a highlight-only BookNote for the current selection.
+    /// Create a highlight-only BookNote for the current selection using the
+    /// currently-selected annotation kind and color.
     public func createHighlight() async {
+        await createAnnotation(kind: annotationKind, color: highlightColor)
+    }
+
+    /// Create a selection-backed annotation of the given kind and color.
+    /// Kinds map directly into the `type` column via `BookNoteAnnotationKind`.
+    public func createAnnotation(
+        kind: BookNoteAnnotationKind,
+        color: HighlightColor
+    ) async {
         let note = BookNote(
             bookId: bookId,
             content: selectedText,
             cfi: selectedLocator,
             chapter: chapterTitle,
-            type: NoteType.highlight.rawValue,
-            color: highlightColor.hex,
+            type: kind.rawValue,
+            color: color.hex,
             createTime: Date(),
             updateTime: Date()
         )

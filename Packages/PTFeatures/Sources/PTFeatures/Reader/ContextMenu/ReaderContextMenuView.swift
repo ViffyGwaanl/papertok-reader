@@ -12,29 +12,32 @@ import PTUI
 public struct ReaderContextMenuView: View {
     @Bindable var coordinator: ContextMenuCoordinator
     let onDismiss: () -> Void
+    @State private var pickerState: AnnotationStylePickerState
 
     public init(coordinator: ContextMenuCoordinator, onDismiss: @escaping () -> Void) {
         self.coordinator = coordinator
         self.onDismiss = onDismiss
+        _pickerState = State(initialValue: AnnotationStylePickerState(
+            kind: coordinator.annotationKind,
+            color: coordinator.highlightColor
+        ))
     }
 
     public var body: some View {
         VStack(spacing: AppSpacing.sm) {
-            // Highlight color row
-            VStack(spacing: AppSpacing.xs) {
+            // Style segment + color row
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text("reader.highlight")
                     .font(AppTypography.caption)
                     .foregroundStyle(Morandi.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                HighlightColorPicker(
-                    selected: coordinator.highlightColor,
-                    onSelect: { color in
-                        coordinator.highlightColor = color
-                        coordinator.handleAction(.highlight)
-                        onDismiss()
-                    }
-                )
+                AnnotationStylePicker(state: pickerState) { kind, color in
+                    coordinator.annotationKind = kind
+                    coordinator.highlightColor = color
+                    coordinator.handleAction(.highlight)
+                    onDismiss()
+                }
             }
 
             Divider()

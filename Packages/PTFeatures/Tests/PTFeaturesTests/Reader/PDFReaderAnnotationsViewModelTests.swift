@@ -117,6 +117,100 @@ struct PDFReaderAnnotationsViewModelTests {
         #expect(viewModel.annotationDraft(noteID: 999) == nil)
     }
 
+    @Test("createAnnotation produces an underline rendered annotation with the right PDF subtype")
+    func createUnderlineAnnotation() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let noteDAO = BookNoteDAO(database: database)
+        let bookID = try await insertBook(title: "Underline PDF", database: database)
+        let document = makeDocument(pageCount: 1)
+        let viewModel = PDFReaderAnnotationsViewModel(bookId: bookID, database: database, document: document)
+        let anchor = PDFAnnotationAnchor(
+            kind: .selection,
+            pageIndex: 0,
+            pageLabel: "Page 1",
+            rects: [
+                .init(pageIndex: 0, normalizedX: 0.1, normalizedY: 0.2, normalizedWidth: 0.3, normalizedHeight: 0.04)
+            ]
+        )
+
+        _ = await viewModel.createAnnotation(
+            selectedText: "Key theorem",
+            locatorString: PDFAnnotationBridge.storedString(from: anchor),
+            chapterTitle: "Page 1",
+            type: .underline,
+            color: .green,
+            readerNote: nil
+        )
+
+        let persisted = try await noteDAO.fetchByBookId(bookID)
+        #expect(persisted.count == 1)
+        #expect(persisted[0].type == BookNoteAnnotationKind.underline.rawValue)
+        #expect(viewModel.renderedAnnotations.count == 1)
+        #expect(viewModel.renderedAnnotations[0].type == .underline)
+        #expect(viewModel.renderedAnnotations[0].pdfAnnotationSubtype == .underline)
+    }
+
+    @Test("createAnnotation produces a strikethrough rendered annotation mapped to strikeOut")
+    func createStrikethroughAnnotation() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let noteDAO = BookNoteDAO(database: database)
+        let bookID = try await insertBook(title: "Strikethrough PDF", database: database)
+        let document = makeDocument(pageCount: 1)
+        let viewModel = PDFReaderAnnotationsViewModel(bookId: bookID, database: database, document: document)
+        let anchor = PDFAnnotationAnchor(
+            kind: .selection,
+            pageIndex: 0,
+            pageLabel: "Page 1",
+            rects: [
+                .init(pageIndex: 0, normalizedX: 0.05, normalizedY: 0.15, normalizedWidth: 0.4, normalizedHeight: 0.04)
+            ]
+        )
+
+        _ = await viewModel.createAnnotation(
+            selectedText: "Obsolete fact",
+            locatorString: PDFAnnotationBridge.storedString(from: anchor),
+            chapterTitle: "Page 1",
+            type: .strikethrough,
+            color: .red,
+            readerNote: nil
+        )
+
+        let persisted = try await noteDAO.fetchByBookId(bookID)
+        #expect(persisted.count == 1)
+        #expect(persisted[0].type == BookNoteAnnotationKind.strikethrough.rawValue)
+        #expect(viewModel.renderedAnnotations.count == 1)
+        #expect(viewModel.renderedAnnotations[0].type == .strikethrough)
+        #expect(viewModel.renderedAnnotations[0].pdfAnnotationSubtype == .strikeOut)
+    }
+
+    @Test("highlight rendered annotation retains highlight subtype")
+    func highlightSubtypeStable() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let bookID = try await insertBook(title: "Highlight PDF", database: database)
+        let document = makeDocument(pageCount: 1)
+        let viewModel = PDFReaderAnnotationsViewModel(bookId: bookID, database: database, document: document)
+        let anchor = PDFAnnotationAnchor(
+            kind: .selection,
+            pageIndex: 0,
+            pageLabel: "Page 1",
+            rects: [
+                .init(pageIndex: 0, normalizedX: 0.0, normalizedY: 0.0, normalizedWidth: 0.2, normalizedHeight: 0.05)
+            ]
+        )
+
+        _ = await viewModel.createAnnotation(
+            selectedText: "Proof sketch",
+            locatorString: PDFAnnotationBridge.storedString(from: anchor),
+            chapterTitle: "Page 1",
+            type: .highlight,
+            color: .yellow,
+            readerNote: nil
+        )
+
+        #expect(viewModel.renderedAnnotations.count == 1)
+        #expect(viewModel.renderedAnnotations[0].pdfAnnotationSubtype == .highlight)
+    }
+
     private func insertBook(title: String, database: AppDatabase) async throws -> Int64 {
         let bookDAO = BookDAO(database: database)
         let saved = try await bookDAO.save(Book.placeholder(title: title, filePath: "/\(UUID().uuidString).pdf"))

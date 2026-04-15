@@ -18,7 +18,7 @@ public enum EPUBAnnotationBridge {
     /// Intermediate style representation for BookNote -> Decoration mapping.
     public struct DecoratorStyle: Sendable {
         public let tint: String
-        public let style: String // "highlight" | "underline"
+        public let style: String // "highlight" | "underline" | "strikethrough"
 
         public init(tint: String, style: String = "highlight") {
             self.tint = tint
@@ -29,9 +29,20 @@ public enum EPUBAnnotationBridge {
     /// Map a BookNote to a DecoratorStyle.
     public static func decoratorStyle(for note: BookNote) -> DecoratorStyle {
         let noteType = NoteType(rawValue: note.type)
+        let styleString: String
+        switch noteType {
+        case .bookmark:
+            styleString = "underline"
+        case .underline:
+            styleString = "underline"
+        case .strikethrough:
+            styleString = "strikethrough"
+        default:
+            styleString = "highlight"
+        }
         return DecoratorStyle(
             tint: note.color.isEmpty ? HighlightColor.yellow.hex : note.color,
-            style: noteType == .bookmark ? "underline" : "highlight"
+            style: styleString
         )
     }
 
@@ -47,9 +58,17 @@ public enum EPUBAnnotationBridge {
         let tintColor = colorFromHex(style.tint)
 
         let decorationStyle: Decoration.Style
-        if style.style == "underline" {
+        switch style.style {
+        case "underline":
             decorationStyle = .underline(tint: tintColor)
-        } else {
+        case "strikethrough":
+            // Readium 3.8.0 ships no built-in .strikethrough style.
+            // Render as an underline-tinted decoration to visually distinguish
+            // the annotation from a highlight while we live on 3.8.0. The
+            // persisted BookNote still carries the correct kind, so a future
+            // custom HTMLDecorationTemplate can upgrade the rendering.
+            decorationStyle = .underline(tint: tintColor)
+        default:
             decorationStyle = .highlight(tint: tintColor)
         }
 

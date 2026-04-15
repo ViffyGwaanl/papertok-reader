@@ -279,6 +279,52 @@ struct EPUBReaderAnnotationsViewModelTests {
         #expect(viewModel.errorMessage == nil)
     }
 
+    @Test("createAnnotation persists underline annotations with the correct type")
+    func createAnnotationPersistsUnderline() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let noteDAO = BookNoteDAO(database: database)
+        let bookID = try await insertBook(title: "Underline Book", database: database)
+        let viewModel = EPUBReaderAnnotationsViewModel(bookId: bookID, database: database)
+
+        _ = await viewModel.createAnnotation(
+            selectedText: "Underlined phrase",
+            locatorString: #"{"href":"chapter-5.xhtml","title":"Chapter 5"}"#,
+            chapterTitle: "Chapter 5",
+            type: .underline,
+            color: .green,
+            readerNote: nil
+        )
+
+        let persisted = try await noteDAO.fetchByBookId(bookID)
+        #expect(persisted.count == 1)
+        #expect(persisted[0].type == BookNoteAnnotationKind.underline.rawValue)
+        #expect(persisted[0].annotationKind == .underline)
+        #expect(persisted[0].color == HighlightColor.green.hex)
+    }
+
+    @Test("createAnnotation persists strikethrough annotations with the correct type")
+    func createAnnotationPersistsStrikethrough() async throws {
+        let database = try AppDatabase.makeInMemory()
+        let noteDAO = BookNoteDAO(database: database)
+        let bookID = try await insertBook(title: "Strikethrough Book", database: database)
+        let viewModel = EPUBReaderAnnotationsViewModel(bookId: bookID, database: database)
+
+        _ = await viewModel.createAnnotation(
+            selectedText: "Outdated claim",
+            locatorString: #"{"href":"chapter-6.xhtml","title":"Chapter 6"}"#,
+            chapterTitle: "Chapter 6",
+            type: .strikethrough,
+            color: .red,
+            readerNote: nil
+        )
+
+        let persisted = try await noteDAO.fetchByBookId(bookID)
+        #expect(persisted.count == 1)
+        #expect(persisted[0].type == BookNoteAnnotationKind.strikethrough.rawValue)
+        #expect(persisted[0].annotationKind == .strikethrough)
+        #expect(persisted[0].color == HighlightColor.red.hex)
+    }
+
     private func insertBook(title: String, database: AppDatabase) async throws -> Int64 {
         let bookDAO = BookDAO(database: database)
         let saved = try await bookDAO.save(Book.placeholder(title: title, filePath: "/\(UUID().uuidString).epub"))

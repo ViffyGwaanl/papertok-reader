@@ -77,6 +77,19 @@ public struct PDFRenderedAnnotation: Equatable, Sendable {
         self.colorHex = colorHex
         self.readerNote = readerNote
     }
+
+    /// The PDFKit annotation subtype that corresponds to this rendered
+    /// annotation's logical NoteType. Bookmarks use `.text` (sticky note),
+    /// underlines use `.underline`, strikethroughs use `.strikeOut`, and
+    /// everything else paints as a `.highlight`.
+    public var pdfAnnotationSubtype: PDFAnnotationSubtype {
+        switch type {
+        case .bookmark: return .text
+        case .underline: return .underline
+        case .strikethrough: return .strikeOut
+        case .highlight, .note: return .highlight
+        }
+    }
 }
 
 public struct PDFSelectionSnapshot: Equatable, Sendable {
