@@ -243,6 +243,7 @@ struct MigrationLocalizationCatalogTests {
             "reader.context.scope.chapter",
             "reader.context.scope.whole_book",
             "reader.context.truncated_marker",
+            "chat.budget.message_truncated.toast",
             "reader.quick_action.explain.title",
             "reader.quick_action.explain.subtitle",
             "reader.quick_action.translate.title",

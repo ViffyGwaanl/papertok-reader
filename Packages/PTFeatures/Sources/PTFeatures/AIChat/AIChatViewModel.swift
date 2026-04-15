@@ -142,6 +142,12 @@ public final class AIChatViewModel {
 
     public var settings: ChatGenerationSettings = .default
 
+    /// Non-blocking informational message (e.g. budget truncation toast).
+    public var infoMessage: String?
+
+    private let maxTokensStrategy: MaxTokensStrategy
+    private let promptBudgeter: PromptBudgeter
+
     /// Per-message transient status used for delivery indicators.
     public enum MessageStatus: Sendable, Equatable { case sending, sent, failed }
     public var messageStatuses: [String: MessageStatus] = [:]
@@ -180,9 +186,15 @@ public final class AIChatViewModel {
         systemPrompt: String? = nil,
         runtime: Runtime = .default,
         persistenceService: ConversationPersistenceService? = nil,
-        defaults: UserDefaults = AppConfig.groupDefaults
+        defaults: UserDefaults = AppConfig.groupDefaults,
+        maxTokensStrategy: MaxTokensStrategy = MaxTokensStrategy(),
+        promptBudgeter: PromptBudgeter? = nil
     ) {
         self.defaults = defaults
+        self.maxTokensStrategy = maxTokensStrategy
+        self.promptBudgeter = promptBudgeter ?? PromptBudgeter(
+            truncationMarker: aiChatLocalizedCatalogString("reader.context.truncated_marker")
+        )
         let initialProviderId = runtime.providers.first?.id ?? ""
         let initialPreferences = AIChatRuntimePreferences.load(
             defaults: defaults,
@@ -483,11 +495,27 @@ public final class AIChatViewModel {
             let provider = providerOption.makeProvider()
             let requestPreferences = effectiveRuntimePreferences()
             let toolDefinitions = availableToolDefinitions(enabledToolNames: requestPreferences.enabledToolNames)
+
+            let budgetResult = promptBudgeter.budget(messages)
+            if budgetResult.wasTruncated {
+                infoMessage = aiChatLocalizedCatalogString("chat.budget.message_truncated.toast")
+            }
+            let budgetedMessages = budgetResult.messages
+            let modelLimits = ModelContextWindowCatalog.limits(for: modelId)
+            let estimatedPromptTokens = estimatePromptTokens(budgetedMessages)
+            let userMaxTokens = requestPreferences.generationSettings.maxTokens
+            let resolvedMaxTokens = maxTokensStrategy.resolve(
+                userOverride: userMaxTokens > 0 ? userMaxTokens : nil,
+                modelMaxOutput: modelLimits.maxOutput,
+                contextWindow: modelLimits.contextWindow,
+                estimatedPromptTokens: estimatedPromptTokens
+            )
+
             let request = ChatRequest(
-                messages: messages,
+                messages: budgetedMessages,
                 model: modelId,
                 temperature: requestPreferences.generationSettings.temperature,
-                maxTokens: requestPreferences.generationSettings.maxTokens,
+                maxTokens: resolvedMaxTokens,
                 topP: requestPreferences.generationSettings.topP,
                 presencePenalty: requestPreferences.generationSettings.presencePenalty,
                 frequencyPenalty: requestPreferences.generationSettings.frequencyPenalty,
@@ -1052,6 +1080,39 @@ public final class AIChatViewModel {
         selectedProviderId = resolvedProviderId
         selectedModelId = resolvedModelId
         reloadPersistedRuntimePreferencesIfNeeded()
+    }
+
+    /// Rough token estimator: per-message CJK runes count as 1 token each,
+    /// non-CJK characters collapse at ~4 chars/token. Per-message overhead of
+    /// 24 tokens accounts for role framing. Mirrors the Flutter reference.
+    private func estimatePromptTokens(_ messages: [ChatMessage]) -> Int {
+        var total = 0
+        for message in messages {
+            total += 24
+            for part in message.content {
+                if case .text(let text) = part {
+                    total += Self.estimateTextTokens(text)
+                }
+            }
+        }
+        return total
+    }
+
+    private static func estimateTextTokens(_ text: String) -> Int {
+        if text.isEmpty { return 0 }
+        var cjk = 0
+        var nonCjk = 0
+        for scalar in text.unicodeScalars {
+            let v = scalar.value
+            if (v >= 0x4E00 && v <= 0x9FFF) ||
+               (v >= 0x3400 && v <= 0x4DBF) ||
+               (v >= 0x20000 && v <= 0x2A6DF) {
+                cjk += 1
+            } else {
+                nonCjk += 1
+            }
+        }
+        return cjk + Int((Double(nonCjk) / 4.0).rounded(.up))
     }
 
     private func applyPendingRuntimeUpdateIfNeeded() {

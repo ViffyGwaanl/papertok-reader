@@ -109043,6 +109043,29 @@
         }
       }
     },
+    "chat.budget.message_truncated.toast": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your last message was truncated to fit the model's context window."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的最后一条消息已被截断以适应模型上下文窗口。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的最後一條訊息已被截斷以符合模型上下文視窗。"
+          }
+        }
+      }
+    },
     "chat.message.citations.section_title": {
       "extractionState": "manual",
       "localizations": {
