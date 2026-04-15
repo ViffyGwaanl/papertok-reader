@@ -1,5 +1,6 @@
 #if os(macOS)
 import SwiftUI
+import PTCore
 
 /// macOS menu bar commands for PaperTok Reader.
 ///
@@ -41,17 +42,11 @@ public struct MacMenuCommands: Commands {
 
         // Help menu
         CommandGroup(replacing: .help) {
-            Link("PaperTok Website", destination: URL(string: "https://papertok.ai")!)
+            Link(
+                "\(String(localized: "app.name")) \(String(localized: "about.website"))",
+                destination: URL(string: "https://papertok.ai")!
+            )
         }
     }
-}
-
-// MARK: - Notification Names for macOS Commands
-
-extension Notification.Name {
-    static let importBook = Notification.Name("PaperTokImportBook")
-    static let toggleAIPanel = Notification.Name("PaperTokToggleAI")
-    static let previousChapter = Notification.Name("PaperTokPreviousChapter")
-    static let nextChapter = Notification.Name("PaperTokNextChapter")
 }
 #endif

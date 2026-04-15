@@ -22,8 +22,16 @@
 		157ECD2FA728F1B104C283F9 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D3C772688A1BD8165B84AB46 /* EventKit.framework */; };
 		16664A5A64A18B35C546408D /* MacMenuCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */; };
 		1A006277668F9C9092A66A6F /* AskAIIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62DC2FD108A5A8CB87F0129E /* AskAIIntent.swift */; };
+		2C11F100A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2C11F110A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings */; };
+		2C11F101A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2C11F111A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings */; };
+		2C11F102A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2C11F112A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings */; };
+		2C11F103A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2C11F113A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings */; };
+		2C11F104A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2C11F114A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings */; };
+		2C11F105A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2C11F115A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings */; };
 		20B6627437835F339BB2C654 /* DOCXExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C08C056B0DBD4C2CE6D10F /* DOCXExtractor.swift */; };
 		226623B14EB1EB59F771035B /* SharedInboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1318196DCF4395B32822A498 /* SharedInboxTests.swift */; };
+		22C3BB4FD7D14660A982D451 /* ShareAndShortcutsSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51648928A7843A4B8CBF7BB /* ShareAndShortcutsSettingsTests.swift */; };
+		22F1E2A57F324CB0B5DD11E2 /* ShareAndShortcutsSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99BC85144C994045B7173CE5 /* ShareAndShortcutsSnapshotTests.swift */; };
 		24BC49A4010C28E702DC2777 /* DeepLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7FABF2B84D350F5A63C0294 /* DeepLinkHandler.swift */; };
 		268A0EC525742F6B86682FCE /* FlutterMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */; };
 		2A37EB434D4F9559725B039F /* ShareHandlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0DF0AC09D1FE4047983C495 /* ShareHandlerTests.swift */; };
@@ -119,7 +127,14 @@
 		03E036FB3ECF195A23BBE74B /* macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = macOS.entitlements; sourceTree = "<group>"; };
 		06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperTokReaderApp.swift; sourceTree = "<group>"; };
 		07FADBDB368F6EDFA2341335 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		2C11F110A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		2C11F111A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		2C11F112A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		2C11F113A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		2C11F114A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		2C11F115A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5E /* AppShortcuts.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppShortcuts.xcstrings; sourceTree = "<group>"; };
+		99BC85144C994045B7173CE5 /* ShareAndShortcutsSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareAndShortcutsSnapshotTests.swift; sourceTree = "<group>"; };
 		1318196DCF4395B32822A498 /* SharedInboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedInboxTests.swift; sourceTree = "<group>"; };
 		14C563F1A2ACF9DF6A869C6D /* SendMessageIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendMessageIntent.swift; sourceTree = "<group>"; };
 		1AB1088870E1CE5C05BA455B /* AppDatabaseToolContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabaseToolContext.swift; sourceTree = "<group>"; };
@@ -161,6 +176,7 @@
 		ADCEFBF2F2EDDF4712719B0A /* OpenBookIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenBookIntent.swift; sourceTree = "<group>"; };
 		ADEB537F9D7A1064ED1F84F5 /* FlutterMigrationPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlutterMigrationPlannerTests.swift; sourceTree = "<group>"; };
 		AF03DC7DEB141E9D534F0E42 /* PTNetworking */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PTNetworking; path = Packages/PTNetworking; sourceTree = SOURCE_ROOT; };
+		B51648928A7843A4B8CBF7BB /* ShareAndShortcutsSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareAndShortcutsSettingsTests.swift; sourceTree = "<group>"; };
 		B0DF0AC09D1FE4047983C495 /* ShareHandlerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareHandlerTests.swift; sourceTree = "<group>"; };
 		B39BD2CD771AFC83F56C5445 /* RootScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootScene.swift; sourceTree = "<group>"; };
 		B41719E23938C9D9FBA36F8C /* AppAIToolContextFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAIToolContextFactory.swift; sourceTree = "<group>"; };
@@ -223,6 +239,8 @@
 				83E1C7F357BD1A7E7E0D6DF1 /* Extensions */,
 				5A8AB48B9B7DF713A1A08500 /* Platform */,
 				096A66DD39E7074A72EDA28C /* Resources */,
+				2C11F110A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings */,
+				2C11F111A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings */,
 				BCFD657BE1FCA5DA7CC33EE8 /* ContentView.swift */,
 				06A0D68ABBF106C140126C08 /* PaperTokReaderApp.swift */,
 			);
@@ -253,6 +271,8 @@
 			children = (
 				C6C08C056B0DBD4C2CE6D10F /* DOCXExtractor.swift */,
 				7DF0BEACE2B73ED668304FF9 /* ShareViewController.swift */,
+				2C11F114A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings */,
+				2C11F115A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings */,
 			);
 			name = ShareExtension;
 			path = App/Extensions/ShareExtension;
@@ -344,6 +364,8 @@
 				7AD25A8251359DEFBB2F5C62 /* MigrationLocalizationCatalogTests.swift */,
 				A2F4D860C1A64D6AA1234BCC /* UserFacingLocalizationMappingTests.swift */,
 				D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */,
+				B51648928A7843A4B8CBF7BB /* ShareAndShortcutsSettingsTests.swift */,
+				99BC85144C994045B7173CE5 /* ShareAndShortcutsSnapshotTests.swift */,
 				7A730D25D47D028734A942DE /* SharedInboxImportProcessorTests.swift */,
 				1318196DCF4395B32822A498 /* SharedInboxTests.swift */,
 				F000149E4483078E18005783 /* ShareExtensionInfoPlistTests.swift */,
@@ -436,6 +458,8 @@
 			children = (
 				E16B8736C3EAFFE4E39488CA /* MacMenuCommands.swift */,
 				96EE94DCBFA9D76FC43355D9 /* MacRootScene.swift */,
+				2C11F112A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings */,
+				2C11F113A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings */,
 			);
 			path = macOS;
 			sourceTree = "<group>";
@@ -504,6 +528,7 @@
 			buildConfigurationList = 728E2948C07230A90234A199 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
 			buildPhases = (
 				50E07238A31784A65EDDC0AC /* Sources */,
+				2C11F120A1B2C3D4E5F60718 /* Resources */,
 				36E43F3D1397F60A4AAF6ECF /* Frameworks */,
 			);
 			buildRules = (
@@ -595,6 +620,8 @@
 			files = (
 				949D6456087846D96E750C0F /* Assets.xcassets in Resources */,
 				A1B2C3D4E5F60718293A4B5D /* AppShortcuts.xcstrings in Resources */,
+				2C11F102A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings in Resources */,
+				2C11F103A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings in Resources */,
 				E0BD0C8965C2FC139407BD03 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -605,7 +632,18 @@
 			files = (
 				F05D22F0737E20049C96F4EB /* Assets.xcassets in Resources */,
 				A1B2C3D4E5F60718293A4B5C /* AppShortcuts.xcstrings in Resources */,
+				2C11F100A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings in Resources */,
+				2C11F101A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings in Resources */,
 				86B5467224AE355C90C36FAD /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2C11F120A1B2C3D4E5F60718 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C11F104A1B2C3D4E5F60718 /* zh-Hans.lproj/InfoPlist.strings in Resources */,
+				2C11F105A1B2C3D4E5F60718 /* zh-Hant.lproj/InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -624,6 +662,8 @@
 				C3F6F2794B9026030D94FE55 /* MigrationLocalizationCatalogTests.swift in Sources */,
 				A2F4D860C1A64D6AA1234BCD /* UserFacingLocalizationMappingTests.swift in Sources */,
 				CACE6E07DBADD3D4AFC654C4 /* PendingAIRequestStoreTests.swift in Sources */,
+				22C3BB4FD7D14660A982D451 /* ShareAndShortcutsSettingsTests.swift in Sources */,
+				22F1E2A57F324CB0B5DD11E2 /* ShareAndShortcutsSnapshotTests.swift in Sources */,
 				D4A6F01E2782F86D6A82FDE2 /* ShareExtensionInfoPlistTests.swift in Sources */,
 				2A37EB434D4F9559725B039F /* ShareHandlerTests.swift in Sources */,
 				CC0E4BD722A7720DCCBFF474 /* SharedInboxImportProcessorTests.swift in Sources */,

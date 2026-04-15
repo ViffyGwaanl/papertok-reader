@@ -1,0 +1,5 @@
+"CFBundleDisplayName" = "PaperTok 阅读器";
+"NSCalendarsUsageDescription" = "PaperTok 阅读器会访问你的日历，以通过 AI 创建阅读提醒和学习安排。";
+"NSCalendarsFullAccessUsageDescription" = "PaperTok 阅读器会访问你的日历，以通过 AI 创建阅读提醒和学习安排。";
+"NSRemindersUsageDescription" = "PaperTok 阅读器会访问你的提醒事项，帮助你跟踪阅读目标和截止时间。";
+"NSRemindersFullAccessUsageDescription" = "PaperTok 阅读器会访问你的提醒事项，帮助你跟踪阅读目标和截止时间。";

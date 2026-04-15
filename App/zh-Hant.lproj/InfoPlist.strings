@@ -1,0 +1,5 @@
+"CFBundleDisplayName" = "PaperTok 閱讀器";
+"NSCalendarsUsageDescription" = "PaperTok 閱讀器會存取你的行事曆，以透過 AI 建立閱讀提醒與學習排程。";
+"NSCalendarsFullAccessUsageDescription" = "PaperTok 閱讀器會存取你的行事曆，以透過 AI 建立閱讀提醒與學習排程。";
+"NSRemindersUsageDescription" = "PaperTok 閱讀器會存取你的提醒事項，協助你追蹤閱讀目標與截止時間。";
+"NSRemindersFullAccessUsageDescription" = "PaperTok 閱讀器會存取你的提醒事項，協助你追蹤閱讀目標與截止時間。";
