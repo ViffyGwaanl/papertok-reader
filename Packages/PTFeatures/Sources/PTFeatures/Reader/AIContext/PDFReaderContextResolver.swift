@@ -1,5 +1,6 @@
 #if canImport(PDFKit)
 import Foundation
+import PTAIServices
 import PTCore
 import PTReader
 
@@ -9,17 +10,25 @@ public final class PDFReaderContextResolver: ReaderContextResolver {
     private let book: Book
     private let currentPageProvider: @MainActor () -> Int
     private let clipper: BudgetedTextClipper
+    private let cache: BookContentCache?
 
     public init(
         bridge: PDFContentBridge,
         book: Book,
         currentPageProvider: @escaping @MainActor () -> Int,
-        clipper: BudgetedTextClipper = BudgetedTextClipper()
+        clipper: BudgetedTextClipper = BudgetedTextClipper(),
+        cache: BookContentCache? = nil
     ) {
         self.bridge = bridge
         self.book = book
         self.currentPageProvider = currentPageProvider
         self.clipper = clipper
+        self.cache = cache
+    }
+
+    private var cacheBookId: String {
+        if let id = book.id { return String(id) }
+        return book.filePath
     }
 
     public nonisolated func resolve(
@@ -61,7 +70,19 @@ public final class PDFReaderContextResolver: ReaderContextResolver {
             )
 
         case .page:
-            let text = bridge.extractPageText(page: resolvedPage)
+            let pageCacheKey = BookContentCache.Key(
+                bookId: cacheBookId,
+                scope: .pdfPage(index: resolvedPage)
+            )
+            let text: String
+            if let cache, let cached = await cache.get(pageCacheKey) {
+                text = cached
+            } else {
+                text = bridge.extractPageText(page: resolvedPage)
+                if let cache {
+                    await cache.set(pageCacheKey, value: text)
+                }
+            }
             let flat = await bridge.outlineChapters().flattened()
             return ReaderContextResult(
                 scope: .page,
@@ -80,14 +101,26 @@ public final class PDFReaderContextResolver: ReaderContextResolver {
             let (start, end, title) = chapterRange(for: resolvedPage, flatChapters: flat, totalPages: totalPages)
             // Cap chapter assembly at 200 pages to bound worst case.
             let capped = min(end, start + 200 - 1)
-            var parts: [String] = []
-            if capped >= start {
-                for page in start...capped {
-                    let text = bridge.extractPageText(page: page)
-                    if text.isEmpty == false { parts.append(text) }
+            let chapterCacheKey = BookContentCache.Key(
+                bookId: cacheBookId,
+                scope: .pdfChapter(startPage: start, endPage: capped)
+            )
+            let joined: String
+            if let cache, let cached = await cache.get(chapterCacheKey) {
+                joined = cached
+            } else {
+                var parts: [String] = []
+                if capped >= start {
+                    for page in start...capped {
+                        let text = bridge.extractPageText(page: page)
+                        if text.isEmpty == false { parts.append(text) }
+                    }
+                }
+                joined = parts.joined(separator: "\n\n")
+                if let cache {
+                    await cache.set(chapterCacheKey, value: joined)
                 }
             }
-            let joined = parts.joined(separator: "\n\n")
             return ReaderContextResult(
                 scope: .chapter,
                 bookTitle: book.title,
@@ -101,12 +134,24 @@ public final class PDFReaderContextResolver: ReaderContextResolver {
             )
 
         case .wholeBook:
-            var parts: [String] = []
-            for page in 0..<totalPages {
-                let text = bridge.extractPageText(page: page)
-                if text.isEmpty == false { parts.append(text) }
+            let wholeCacheKey = BookContentCache.Key(
+                bookId: cacheBookId,
+                scope: .pdfWholeBook
+            )
+            let full: String
+            if let cache, let cached = await cache.get(wholeCacheKey) {
+                full = cached
+            } else {
+                var parts: [String] = []
+                for page in 0..<totalPages {
+                    let text = bridge.extractPageText(page: page)
+                    if text.isEmpty == false { parts.append(text) }
+                }
+                full = parts.joined(separator: "\n\n")
+                if let cache {
+                    await cache.set(wholeCacheKey, value: full)
+                }
             }
-            let full = parts.joined(separator: "\n\n")
             let (clipped, truncated, originalCount) = clipper.clip(full)
             let flat = await bridge.outlineChapters().flattened()
             return ReaderContextResult(

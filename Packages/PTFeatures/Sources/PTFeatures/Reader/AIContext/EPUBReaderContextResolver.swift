@@ -1,5 +1,6 @@
 #if canImport(ReadiumShared)
 import Foundation
+import PTAIServices
 import PTCore
 import PTReader
 import ReadiumShared
@@ -8,15 +9,23 @@ public final class EPUBReaderContextResolver: ReaderContextResolver, @unchecked 
     private let bridge: EPUBContentBridge
     private let book: Book
     private let clipper: BudgetedTextClipper
+    private let cache: BookContentCache?
 
     public init(
         bridge: EPUBContentBridge,
         book: Book,
-        clipper: BudgetedTextClipper = BudgetedTextClipper()
+        clipper: BudgetedTextClipper = BudgetedTextClipper(),
+        cache: BookContentCache? = nil
     ) {
         self.bridge = bridge
         self.book = book
         self.clipper = clipper
+        self.cache = cache
+    }
+
+    private var cacheBookId: String {
+        if let id = book.id { return String(id) }
+        return book.filePath
     }
 
     public func resolve(
@@ -97,8 +106,21 @@ public final class EPUBReaderContextResolver: ReaderContextResolver, @unchecked 
             guard let locator = readiumLocator else {
                 throw ReaderContextError.missingLocator
             }
-            let paragraphs = try await bridge.chapterParagraphs(at: locator)
-            let joined = paragraphs.map(\.text).joined(separator: "\n\n")
+            let href = locator.href.string
+            let cacheKey = BookContentCache.Key(
+                bookId: cacheBookId,
+                scope: .epubChapter(href: href)
+            )
+            let joined: String
+            if let cache, let cached = await cache.get(cacheKey) {
+                joined = cached
+            } else {
+                let paragraphs = try await bridge.chapterParagraphs(at: locator)
+                joined = paragraphs.map(\.text).joined(separator: "\n\n")
+                if let cache {
+                    await cache.set(cacheKey, value: joined)
+                }
+            }
             return ReaderContextResult(
                 scope: .chapter,
                 bookTitle: book.title,
@@ -112,24 +134,36 @@ public final class EPUBReaderContextResolver: ReaderContextResolver, @unchecked 
             )
 
         case .wholeBook:
-            var parts: [String] = []
-            let entries = (try? await bridge.tableOfContents) ?? []
-            for entry in entries {
-                let entryTitle = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                do {
-                    let paragraphs = try await bridge.chapterParagraphs(href: entry.href)
-                    let joined = paragraphs.map(\.text).joined(separator: "\n\n")
-                    guard joined.isEmpty == false else { continue }
-                    if entryTitle.isEmpty == false {
-                        parts.append("# \(entryTitle)\n\n\(joined)")
-                    } else {
-                        parts.append(joined)
+            let wholeCacheKey = BookContentCache.Key(
+                bookId: cacheBookId,
+                scope: .epubWholeBook
+            )
+            let fullText: String
+            if let cache, let cached = await cache.get(wholeCacheKey) {
+                fullText = cached
+            } else {
+                var parts: [String] = []
+                let entries = (try? await bridge.tableOfContents) ?? []
+                for entry in entries {
+                    let entryTitle = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                    do {
+                        let paragraphs = try await bridge.chapterParagraphs(href: entry.href)
+                        let joined = paragraphs.map(\.text).joined(separator: "\n\n")
+                        guard joined.isEmpty == false else { continue }
+                        if entryTitle.isEmpty == false {
+                            parts.append("# \(entryTitle)\n\n\(joined)")
+                        } else {
+                            parts.append(joined)
+                        }
+                    } catch {
+                        continue
                     }
-                } catch {
-                    continue
+                }
+                fullText = parts.joined(separator: "\n\n")
+                if let cache {
+                    await cache.set(wholeCacheKey, value: fullText)
                 }
             }
-            let fullText = parts.joined(separator: "\n\n")
             let (clipped, truncated, originalCount) = clipper.clip(fullText)
             return ReaderContextResult(
                 scope: .wholeBook,
