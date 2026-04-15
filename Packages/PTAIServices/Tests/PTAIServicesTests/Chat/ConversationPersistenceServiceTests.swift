@@ -210,4 +210,37 @@ final class ConversationPersistenceServiceTests: XCTestCase {
         try service.deleteAll()
         XCTAssertEqual(try service.listSummaries().count, 0)
     }
+
+    // MARK: - W2.3b: updateTitle
+
+    func testUpdateTitleChangesPersistedTitle() throws {
+        var tree = ConversationTree(systemPrompt: "s")
+        tree.append(.user("hi"))
+        let conv = ConversationPersistenceService.PersistedConversation(
+            id: "title-1", title: "Old", systemPrompt: "s", tree: tree
+        )
+        try service.save(conv)
+
+        try service.updateTitle(id: "title-1", "New Title")
+        let loaded = try XCTUnwrap(service.load(id: "title-1"))
+        XCTAssertEqual(loaded.title, "New Title")
+    }
+
+    func testUpdateTitleUpdatesUpdatedAtTimestamp() throws {
+        let tree = ConversationTree(systemPrompt: "s")
+        let past = Date(timeIntervalSince1970: 1_000_000)
+        let conv = ConversationPersistenceService.PersistedConversation(
+            id: "title-2", title: "Old", systemPrompt: "s", tree: tree,
+            createdAt: past, updatedAt: past
+        )
+        try service.save(conv)
+
+        try service.updateTitle(id: "title-2", "Renamed")
+        let loaded = try XCTUnwrap(service.load(id: "title-2"))
+        XCTAssertGreaterThan(loaded.updatedAt, past)
+    }
+
+    func testUpdateTitleThrowsOnUnknownId() {
+        XCTAssertThrowsError(try service.updateTitle(id: "does-not-exist", "X"))
+    }
 }

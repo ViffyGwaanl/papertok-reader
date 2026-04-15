@@ -184,6 +184,21 @@ public struct ConversationPersistenceService: Sendable {
         userDefaults.set(true, forKey: Self.legacyPinnedMigrationMarkerKey)
     }
 
+    // MARK: - Update Title
+
+    public enum UpdateError: Error, Sendable {
+        case notFound(id: String)
+    }
+
+    public func updateTitle(id: String, _ newTitle: String) throws {
+        guard var existing = try load(id: id) else {
+            throw UpdateError.notFound(id: id)
+        }
+        existing.title = newTitle
+        existing.updatedAt = Date()
+        try save(existing)
+    }
+
     // MARK: - Delete
 
     public func delete(id: String) throws {

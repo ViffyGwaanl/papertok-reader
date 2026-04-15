@@ -147,6 +147,8 @@ public final class AIChatViewModel {
 
     private let maxTokensStrategy: MaxTokensStrategy
     private let promptBudgeter: PromptBudgeter
+    private let compressor: ConversationCompressor?
+    private let titleService: AutoTitleService?
 
     /// Per-message transient status used for delivery indicators.
     public enum MessageStatus: Sendable, Equatable { case sending, sent, failed }
@@ -188,13 +190,17 @@ public final class AIChatViewModel {
         persistenceService: ConversationPersistenceService? = nil,
         defaults: UserDefaults = AppConfig.groupDefaults,
         maxTokensStrategy: MaxTokensStrategy = MaxTokensStrategy(),
-        promptBudgeter: PromptBudgeter? = nil
+        promptBudgeter: PromptBudgeter? = nil,
+        compressor: ConversationCompressor? = nil,
+        titleService: AutoTitleService? = nil
     ) {
         self.defaults = defaults
         self.maxTokensStrategy = maxTokensStrategy
         self.promptBudgeter = promptBudgeter ?? PromptBudgeter(
             truncationMarker: aiChatLocalizedCatalogString("reader.context.truncated_marker")
         )
+        self.compressor = compressor
+        self.titleService = titleService
         let initialProviderId = runtime.providers.first?.id ?? ""
         let initialPreferences = AIChatRuntimePreferences.load(
             defaults: defaults,
@@ -409,7 +415,41 @@ public final class AIChatViewModel {
         isStreaming = false
         // Auto-save after stream completes
         saveConversation()
+        maybeSpawnAutoTitleTask()
         applyPendingRuntimeUpdateIfNeeded()
+    }
+
+    /// Fires the auto-title background task after the first assistant turn of a
+    /// new conversation completes. No-op when: titleService is unset, conversation
+    /// already has a non-default title, or this is not the first assistant turn.
+    private func maybeSpawnAutoTitleTask() {
+        guard let service = titleService,
+              let persistence = persistenceService,
+              let id = conversationId else { return }
+        let defaultTitle = aiChatLocalizedCatalogString("ai.new_conversation")
+        guard conversationTitle == defaultTitle
+            || conversationTitle.isEmpty
+            || conversationTitle.count <= 60 else { return }
+        let nonSystemMessages = messages.filter { $0.role != .system }
+        let userCount = nonSystemMessages.filter { $0.role == .user }.count
+        let assistantCount = nonSystemMessages.filter { $0.role == .assistant }.count
+        guard userCount == 1, assistantCount == 1 else { return }
+        // Only fire for conversations whose title was never overridden by user.
+        // A manually-renamed "existing" conversation will have a title that does
+        // not equal the default and does not match the derived prefix — we skip
+        // those by only considering conversations where userCount==1 & assistantCount==1.
+        let snapshot = messages
+        Task.detached { [service, persistence, id] in
+            if let newTitle = await service.generateTitle(from: snapshot, locale: .current) {
+                try? persistence.updateTitle(id: id, newTitle)
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    if self.conversationId == id {
+                        self.conversationTitle = newTitle
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Tool Approval Queue
@@ -496,7 +536,24 @@ public final class AIChatViewModel {
             let requestPreferences = effectiveRuntimePreferences()
             let toolDefinitions = availableToolDefinitions(enabledToolNames: requestPreferences.enabledToolNames)
 
-            let budgetResult = promptBudgeter.budget(messages)
+            let compressionInput: [ChatMessage]
+            if let compressor {
+                let compressionResult: ConversationCompressor.Result
+                do {
+                    compressionResult = try await compressor.compressIfNeeded(messages)
+                } catch {
+                    compressionResult = ConversationCompressor.Result(
+                        messages: messages,
+                        didCompress: false,
+                        summarizedMessageCount: 0
+                    )
+                }
+                _ = compressionResult.didCompress
+                compressionInput = compressionResult.messages
+            } else {
+                compressionInput = messages
+            }
+            let budgetResult = promptBudgeter.budget(compressionInput)
             if budgetResult.wasTruncated {
                 infoMessage = aiChatLocalizedCatalogString("chat.budget.message_truncated.toast")
             }
