@@ -283,6 +283,23 @@ final class AnthropicProviderTests: XCTestCase {
         XCTAssertEqual(event.delta?.partialJson, "{\"city\"")
     }
 
+    func testAccumulateStreamUsage_acrossMessageStartAndMessageDelta() throws {
+        let startJSON = """
+        {"type":"message_start","message":{"id":"msg_1","usage":{"input_tokens":12,"output_tokens":0}}}
+        """.data(using: .utf8)!
+        let deltaJSON = """
+        {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":34}}
+        """.data(using: .utf8)!
+        let decoder = JSONDecoder()
+        let start = try decoder.decode(AnthropicStreamEvent.self, from: startJSON)
+        let delta = try decoder.decode(AnthropicStreamEvent.self, from: deltaJSON)
+
+        let usage = AnthropicProvider.accumulateStreamUsage(events: [start, delta])
+        XCTAssertEqual(usage.promptTokens, 12)
+        XCTAssertEqual(usage.completionTokens, 34)
+        XCTAssertEqual(usage.totalTokens, 46)
+    }
+
     func testStreamEventParsing_messageDelta() throws {
         let json = """
         {"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"input_tokens": 0, "output_tokens": 25}}

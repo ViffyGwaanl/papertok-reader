@@ -59,4 +59,36 @@ struct OpenAIProviderTests {
         let provider = OpenAIProvider(overrideAPIKey: "test-key")
         #expect(provider.supportedCapabilities.contains(.thinking))
     }
+
+    @Test("openAIProviderSendsIncludeUsageFlag")
+    func openAIProviderSendsIncludeUsageFlag() throws {
+        let provider = OpenAIProvider(overrideAPIKey: "test-key")
+        let request = ChatRequest(messages: [.user("Hi")], model: "gpt-4o")
+
+        let streamBody = provider.buildRequestBody(request: request, stream: true)
+        #expect(streamBody.streamOptions?.includeUsage == true)
+
+        let nonStreamBody = provider.buildRequestBody(request: request, stream: false)
+        #expect(nonStreamBody.streamOptions == nil)
+
+        let data = try JSONEncoder().encode(streamBody)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("\"stream_options\":{\"include_usage\":true}"))
+    }
+
+    @Test("openAIProviderDecodesUsageOnFinalChunk")
+    func openAIProviderDecodesUsageOnFinalChunk() throws {
+        // Final OpenAI streaming chunk: empty choices array, usage populated.
+        let json = """
+        {"choices":[],"usage":{"prompt_tokens":42,"completion_tokens":17,"total_tokens":59}}
+        """.data(using: .utf8)!
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let response = try decoder.decode(OAIStreamResponse.self, from: json)
+
+        #expect(response.choices.isEmpty)
+        #expect(response.usage?.promptTokens == 42)
+        #expect(response.usage?.completionTokens == 17)
+        #expect(response.usage?.totalTokens == 59)
+    }
 }

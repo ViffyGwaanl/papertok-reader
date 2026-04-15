@@ -441,6 +441,10 @@ public struct AnthropicProvider: ChatModelProvider {
                     var blockTypes: [Int: String] = [:]
                     var toolCallNames: [Int: String] = [:]
                     var toolCallIds: [Int: String] = [:]
+                    // Anthropic emits input_tokens on message_start and output_tokens on
+                    // message_delta. Accumulate so the final emitted usage carries both.
+                    var accumulatedPromptTokens = 0
+                    var accumulatedCompletionTokens = 0
 
                     for try await event in SSEParser.events(from: bytes) {
                         if event.isDone { break }
@@ -455,10 +459,9 @@ public struct AnthropicProvider: ChatModelProvider {
 
                         switch streamEvent.type {
                         case "message_start":
-                            // May contain usage info
                             if let msgUsage = streamEvent.message?.usage {
-                                let usage = mapUsage(msgUsage)
-                                continuation.yield(ChatStreamChunk(delta: .text(""), usage: usage))
+                                if let input = msgUsage.inputTokens { accumulatedPromptTokens += input }
+                                if let output = msgUsage.outputTokens { accumulatedCompletionTokens += output }
                             }
 
                         case "content_block_start":
@@ -516,14 +519,20 @@ public struct AnthropicProvider: ChatModelProvider {
 
                         case "message_delta":
                             let finishReason = streamEvent.delta?.stopReason.flatMap { mapStopReasonOptional($0) }
-                            let usage = streamEvent.usage.map { mapUsage($0) }
-                            if finishReason != nil || usage != nil {
-                                continuation.yield(ChatStreamChunk(
-                                    delta: .text(""),
-                                    finishReason: finishReason,
-                                    usage: usage
-                                ))
+                            if let msgUsage = streamEvent.usage {
+                                if let input = msgUsage.inputTokens { accumulatedPromptTokens += input }
+                                if let output = msgUsage.outputTokens { accumulatedCompletionTokens += output }
                             }
+                            let usage = TokenUsage(
+                                promptTokens: accumulatedPromptTokens,
+                                completionTokens: accumulatedCompletionTokens,
+                                totalTokens: accumulatedPromptTokens + accumulatedCompletionTokens
+                            )
+                            continuation.yield(ChatStreamChunk(
+                                delta: .text(""),
+                                finishReason: finishReason,
+                                usage: usage
+                            ))
 
                         case "message_stop":
                             break
@@ -688,6 +697,25 @@ public struct AnthropicProvider: ChatModelProvider {
             content: content,
             toolCalls: toolCalls.isEmpty ? nil : toolCalls
         )
+    }
+
+    /// Accumulates Anthropic streaming usage tokens across a sequence of stream
+    /// events. Anthropic emits `input_tokens` on `message_start` and `output_tokens`
+    /// on `message_delta`; both must be summed to get the final usage.
+    static func accumulateStreamUsage(events: [AnthropicStreamEvent]) -> TokenUsage {
+        var prompt = 0
+        var completion = 0
+        for event in events {
+            if let msgUsage = event.message?.usage {
+                if let input = msgUsage.inputTokens { prompt += input }
+                if let output = msgUsage.outputTokens { completion += output }
+            }
+            if let evUsage = event.usage {
+                if let input = evUsage.inputTokens { prompt += input }
+                if let output = evUsage.outputTokens { completion += output }
+            }
+        }
+        return TokenUsage(promptTokens: prompt, completionTokens: completion, totalTokens: prompt + completion)
     }
 
     private func mapUsage(_ usage: AnthropicUsage) -> TokenUsage {

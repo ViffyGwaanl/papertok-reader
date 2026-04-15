@@ -1,6 +1,6 @@
 import Foundation
 
-public struct TokenUsage: Codable, Sendable, Equatable {
+public struct TokenUsage: Codable, Sendable, Hashable {
     public let promptTokens: Int
     public let completionTokens: Int
     public let totalTokens: Int

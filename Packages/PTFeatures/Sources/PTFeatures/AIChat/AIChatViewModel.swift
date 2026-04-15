@@ -149,6 +149,7 @@ public final class AIChatViewModel {
     private let promptBudgeter: PromptBudgeter
     private let compressor: ConversationCompressor?
     private let titleService: AutoTitleService?
+    private let usageTracker: UsageTracker?
 
     /// Per-message transient status used for delivery indicators.
     public enum MessageStatus: Sendable, Equatable { case sending, sent, failed }
@@ -192,7 +193,8 @@ public final class AIChatViewModel {
         maxTokensStrategy: MaxTokensStrategy = MaxTokensStrategy(),
         promptBudgeter: PromptBudgeter? = nil,
         compressor: ConversationCompressor? = nil,
-        titleService: AutoTitleService? = nil
+        titleService: AutoTitleService? = nil,
+        usageTracker: UsageTracker? = nil
     ) {
         self.defaults = defaults
         self.maxTokensStrategy = maxTokensStrategy
@@ -201,6 +203,7 @@ public final class AIChatViewModel {
         )
         self.compressor = compressor
         self.titleService = titleService
+        self.usageTracker = usageTracker
         let initialProviderId = runtime.providers.first?.id ?? ""
         let initialPreferences = AIChatRuntimePreferences.load(
             defaults: defaults,
@@ -585,6 +588,7 @@ public final class AIChatViewModel {
 
             var partialToolCalls: [Int: PartialToolCall] = [:]
             var pendingText = ""
+            var capturedUsage: TokenUsage?
             var lastFlush = ContinuousClock.now
             let clock = ContinuousClock()
             func flushPending() {
@@ -599,6 +603,9 @@ public final class AIChatViewModel {
                     if Task.isCancelled {
                         flushPending()
                         return
+                    }
+                    if let usage = chunk.usage {
+                        capturedUsage = usage
                     }
                     switch chunk.delta {
                     case .text(let text):
@@ -632,6 +639,15 @@ public final class AIChatViewModel {
                 return
             }
             if Task.isCancelled { return }
+
+            // Usage tracking: only after a successful (non-cancelled, non-error) provider call.
+            if let tracker = usageTracker, let usage = capturedUsage {
+                await tracker.record(
+                    modelId: modelId,
+                    usage: usage,
+                    conversationId: conversationId
+                )
+            }
 
             let toolCalls = partialToolCalls
                 .sorted { $0.key < $1.key }
