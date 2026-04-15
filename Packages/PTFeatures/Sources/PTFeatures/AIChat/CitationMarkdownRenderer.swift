@@ -43,14 +43,22 @@ enum CitationMarkdownRenderer {
     /// Renders `text` as an `AttributedString` where every `[N]` marker is
     /// styled with a raised baseline and smaller caption font in accent color.
     static func render(_ text: String) -> AttributedString {
-        var attributed = AttributedString(text)
-        for marker in markers(in: text) {
-            let nsRange = NSRange(marker.range, in: text)
-            guard let attrRange = Range(nsRange, in: attributed) else { continue }
-            attributed[attrRange].baselineOffset = 4
-            attributed[attrRange].font = .caption2.weight(.semibold)
-            attributed[attrRange].foregroundColor = Morandi.accent
+        applyMarkers(to: AttributedString(text))
+    }
+
+    /// Overlays citation marker styling on an existing `AttributedString`,
+    /// preserving prior attributes (e.g. markdown-rendered bold/italic) outside
+    /// the marker ranges.
+    static func applyMarkers(to attributed: AttributedString) -> AttributedString {
+        var result = attributed
+        let plain = String(result.characters)
+        for marker in markers(in: plain) {
+            let nsRange = NSRange(marker.range, in: plain)
+            guard let attrRange = Range(nsRange, in: result) else { continue }
+            result[attrRange].baselineOffset = 4
+            result[attrRange].font = .caption2.weight(.semibold)
+            result[attrRange].foregroundColor = Morandi.accent
         }
-        return attributed
+        return result
     }
 }

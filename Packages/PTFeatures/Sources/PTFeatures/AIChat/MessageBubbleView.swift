@@ -37,6 +37,7 @@ struct MessageBubbleView: View {
         case .assistant:
             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                 assistantBubble
+                CitationsFooterView(citations: message.citations)
                 branchNavigatorControl(alignment: .leading)
             }
         case .system:
@@ -164,7 +165,7 @@ struct MessageBubbleView: View {
             ForEach(blocks.indices, id: \.self) { i in
                 switch blocks[i] {
                 case .text(let t):
-                    Text(markdownAttributedString(t))
+                    Text(Self.assistantAttributedBody(for: t))
                         .font(AppTypography.body)
                         .foregroundStyle(Morandi.primaryText)
                         .textSelection(.enabled)
@@ -391,8 +392,10 @@ struct MessageBubbleView: View {
 
     // MARK: - Markdown Helpers
 
-    /// Converts markdown text to an AttributedString with full option set.
-    private func markdownAttributedString(_ text: String) -> AttributedString {
+    /// Converts assistant markdown text to an `AttributedString`, then overlays
+    /// citation marker styling for inline `[N]` tokens.
+    static func assistantAttributedBody(for text: String) -> AttributedString {
+        let base: AttributedString
         if let attributed = try? AttributedString(
             markdown: text,
             options: .init(
@@ -401,9 +404,17 @@ struct MessageBubbleView: View {
                 failurePolicy: .returnPartiallyParsedIfPossible
             )
         ) {
-            return attributed
+            base = attributed
+        } else {
+            base = AttributedString(text)
         }
-        return AttributedString(text)
+        return CitationMarkdownRenderer.applyMarkers(to: base)
+    }
+
+    // MARK: - Test hooks
+
+    static func shouldShowCitationsFooter(for message: ChatMessage) -> Bool {
+        message.role == .assistant && !message.citations.isEmpty
     }
 }
 
