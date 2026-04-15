@@ -387,8 +387,8 @@ struct NativePDFView: NSViewRepresentable {
             lastAppliedTintKind = kind
             let filters = PDFThemeTint.filterChain(for: kind).compactMap { descriptor -> CIFilter? in
                 guard let filter = CIFilter(name: descriptor.name) else { return nil }
-                for (key, value) in descriptor.parameters {
-                    filter.setValue(NSNumber(value: value), forKey: key)
+                for (key, parameter) in descriptor.parameters {
+                    filter.setValue(parameter.ciFilterValue, forKey: key)
                 }
                 return filter
             }

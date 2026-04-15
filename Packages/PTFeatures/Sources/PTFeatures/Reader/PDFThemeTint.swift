@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import PTCore
 
@@ -11,15 +12,37 @@ public enum PDFThemeTintKind: String, Sendable, Equatable, CaseIterable {
     case sepia
 }
 
+/// A parameter value for a `PDFThemeTintFilter`. The cases mirror the
+/// concrete Core Image input shapes: a plain scalar gets wrapped in an
+/// `NSNumber` at apply-time, while `.vector` carries a 4-component
+/// `CIVector` already assembled so `CIFilter.setValue(_:forKey:)` can
+/// accept the value directly. This representation exists so the descriptor
+/// is self-contained: no dotted scalar keys leak out of `PDFThemeTint`.
+public enum PDFThemeTintParameter: Sendable, Equatable {
+    case scalar(Double)
+    case vector(x: Double, y: Double, z: Double, w: Double)
+
+    /// Returns a value suitable for `CIFilter.setValue(_:forKey:)`.
+    public var ciFilterValue: Any {
+        switch self {
+        case .scalar(let value):
+            return NSNumber(value: value)
+        case .vector(let x, let y, let z, let w):
+            return CIVector(x: CGFloat(x), y: CGFloat(y), z: CGFloat(z), w: CGFloat(w))
+        }
+    }
+}
+
 /// A logic-only description of a Core Image filter, used for test-driven
-/// filter-chain selection. The PDF coordinator is responsible for
-/// translating this descriptor into an actual `CIFilter` instance at
-/// render time.
+/// filter-chain selection. Every parameter key is the exact Core Image
+/// input key (`inputIntensity`, `inputRVector`, ...); parameter values are
+/// pre-bundled into scalars or `CIVector`s so consumers can pass them
+/// straight to `CIFilter.setValue(_:forKey:)` with no translation.
 public struct PDFThemeTintFilter: Sendable, Equatable {
     public let name: String
-    public let parameters: [String: Double]
+    public let parameters: [String: PDFThemeTintParameter]
 
-    public init(name: String, parameters: [String: Double] = [:]) {
+    public init(name: String, parameters: [String: PDFThemeTintParameter] = [:]) {
         self.name = name
         self.parameters = parameters
     }
@@ -63,10 +86,10 @@ public enum PDFThemeTint {
                 PDFThemeTintFilter(
                     name: "CIColorMatrix",
                     parameters: [
-                        "rVector.x": 0.85,
-                        "gVector.y": 0.85,
-                        "bVector.z": 0.85,
-                        "aVector.w": 1.0,
+                        "inputRVector": .vector(x: 0.85, y: 0, z: 0, w: 0),
+                        "inputGVector": .vector(x: 0, y: 0.85, z: 0, w: 0),
+                        "inputBVector": .vector(x: 0, y: 0, z: 0.85, w: 0),
+                        "inputAVector": .vector(x: 0, y: 0, z: 0, w: 1.0),
                     ]
                 ),
             ]
@@ -74,7 +97,7 @@ public enum PDFThemeTint {
             return [
                 PDFThemeTintFilter(
                     name: "CISepiaTone",
-                    parameters: ["inputIntensity": 0.7]
+                    parameters: ["inputIntensity": .scalar(0.7)]
                 )
             ]
         }
