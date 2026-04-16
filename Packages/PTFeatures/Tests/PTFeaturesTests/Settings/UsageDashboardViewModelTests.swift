@@ -6,7 +6,7 @@ import Testing
 @Suite("UsageDashboardViewModel")
 struct UsageDashboardViewModelTests {
     @Test("total tokens aggregates all records")
-    func totalTokensAggregatesAllRecords() async throws {
+    @MainActor func totalTokensAggregatesAllRecords() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("test-usage-\(UUID().uuidString)")
         let tracker = UsageTracker(directory: dir)
@@ -31,7 +31,7 @@ struct UsageDashboardViewModelTests {
     }
 
     @Test("per model breakdown groups correctly")
-    func perModelBreakdownGroupsCorrectly() async throws {
+    @MainActor func perModelBreakdownGroupsCorrectly() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("test-usage-\(UUID().uuidString)")
         let tracker = UsageTracker(directory: dir)
@@ -75,7 +75,7 @@ struct UsageDashboardViewModelTests {
     }
 
     @Test("purge calls tracker and refreshes")
-    func purgeCallsTrackerAndRefreshes() async throws {
+    @MainActor func purgeCallsTrackerAndRefreshes() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("test-usage-\(UUID().uuidString)")
         let tracker = UsageTracker(directory: dir)
@@ -99,7 +99,7 @@ struct UsageDashboardViewModelTests {
     }
 
     @Test("today filter shows only today records")
-    func todayFilterShowsOnlyTodayRecords() async throws {
+    @MainActor func todayFilterShowsOnlyTodayRecords() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("test-usage-\(UUID().uuidString)")
         let tracker = UsageTracker(directory: dir)
