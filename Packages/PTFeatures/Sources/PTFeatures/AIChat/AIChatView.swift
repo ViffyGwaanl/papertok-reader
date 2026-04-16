@@ -1,5 +1,6 @@
 import SwiftUI
 import PTAIServices
+import PTCore
 import PTUI
 
 /// Main AI chat screen.
@@ -9,7 +10,13 @@ import PTUI
 /// - Message list (MessageListView)
 /// - Input bar (ChatInputView) pinned to bottom
 /// - Tool approval sheet (.sheet on pendingApprovals)
-/// - Provider picker sheet (.sheet on showProviderPicker)
+///
+/// W5.3: the in-chat provider/model picker has been retired. Tapping the
+/// read-only provider chip now posts `openAIProviderSettings`, which the
+/// root `ContentView` translates into a jump to Settings → AI Provider Center.
+/// Re-resolution of the selected provider happens on every send via
+/// `StoredAIProviderCatalog` + the `configurationDidChangeNotification`
+/// observed by `AIChatViewModel`.
 public struct AIChatView: View {
     private struct SuggestedPrompt: Identifiable {
         let id: String
@@ -20,14 +27,18 @@ public struct AIChatView: View {
 
     @Bindable var viewModel: AIChatViewModel
     @State private var inputText: String = ""
-    @State private var showProviderPicker = false
     @State private var showAttachmentPicker = false
     @State private var showChatSettings = false
     @State private var showConversationList = false
 
     private var currentProviderDisplayName: String {
-        viewModel.providerOptions.first(where: { $0.id == viewModel.selectedProviderId })?.displayName
-            ?? String(localized: "common.model")
+        viewModel.displayedProviderName.isEmpty
+            ? String(localized: "common.model")
+            : viewModel.displayedProviderName
+    }
+
+    private var currentModelDisplayName: String {
+        viewModel.displayedModelName
     }
 
     private var currentModelSupportsThinking: Bool {
@@ -99,12 +110,22 @@ public struct AIChatView: View {
                 onStop: { viewModel.stopStreaming() },
                 onAttach: { showAttachmentPicker = true },
                 onRemoveAttachment: { id in viewModel.removeAttachment(id: id) },
-                onProviderTap: { showProviderPicker = true },
+                onProviderTap: {
+                    // W5.3: provider selection is consolidated in Settings →
+                    // AI Provider Center. The chip is a read-only CTA that
+                    // requests navigation via a notification observed by
+                    // ContentView.
+                    NotificationCenter.default.post(
+                        name: .openAIProviderSettings,
+                        object: nil
+                    )
+                },
                 onModelSettingsTap: { showChatSettings = true },
                 onToggleThinking: { viewModel.toggleThinking() },
                 thinkingEnabled: viewModel.thinkingEnabled,
                 supportsThinking: currentModelSupportsThinking,
-                currentProviderName: currentProviderDisplayName
+                currentProviderName: currentProviderDisplayName,
+                currentModelName: currentModelDisplayName
             )
         }
         .background(Morandi.background)
@@ -142,9 +163,6 @@ public struct AIChatView: View {
                     }
                 }
             }
-        }
-        .sheet(isPresented: $showProviderPicker) {
-            ProviderPickerSheet(viewModel: viewModel, providers: viewModel.providerOptions)
         }
         .sheet(isPresented: $showConversationList) {
             if let persistenceService = viewModel.persistenceService {

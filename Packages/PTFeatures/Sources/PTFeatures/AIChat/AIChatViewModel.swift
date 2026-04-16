@@ -185,6 +185,41 @@ public final class AIChatViewModel {
     public var errorMessage: String?
     public private(set) var runtime: Runtime
     private let defaults: UserDefaults
+    /// Optional callback that returns the latest runtime + selection at send
+    /// time. When wired, `runStreamingLoop` re-resolves from this closure so
+    /// changes persisted by the Settings → AI Provider Center take effect on
+    /// the very next send without the VM having to cache a stale runtime.
+    /// The closure is also invoked when the catalog posts
+    /// `StoredAIProviderCatalog.configurationDidChangeNotification`, so the
+    /// read-only chip in the composer reflects the current selection even
+    /// outside of send flows.
+    public typealias SendTimeResolver = @MainActor @Sendable () -> (
+        runtime: Runtime,
+        selection: RuntimeSelection
+    )?
+    private let sendTimeResolver: SendTimeResolver?
+    /// Retains the notification observer token so `deinit` can unregister it
+    /// without crossing actor isolation boundaries.
+    private let configurationObserverBox = ObserverBox()
+
+    /// Reference-type holder for a notification observer token. Lives in its
+    /// own Sendable box so deinit can reach it without hitting main-actor
+    /// isolation errors.
+    private final class ObserverBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var _token: NSObjectProtocol?
+        func set(_ token: NSObjectProtocol?) {
+            lock.lock(); defer { lock.unlock() }
+            _token = token
+        }
+        func takeAndRemove() {
+            lock.lock(); defer { lock.unlock() }
+            if let token = _token {
+                NotificationCenter.default.removeObserver(token)
+            }
+            _token = nil
+        }
+    }
     private var activeTurnProviderId: String?
     private var activeTurnModelId: String?
     private var isContinuingTurn = false
@@ -218,7 +253,8 @@ public final class AIChatViewModel {
         promptBudgeter: PromptBudgeter? = nil,
         compressor: ConversationCompressor? = nil,
         titleService: AutoTitleService? = nil,
-        usageTracker: UsageTracker? = nil
+        usageTracker: UsageTracker? = nil,
+        sendTimeResolver: SendTimeResolver? = nil
     ) {
         self.defaults = defaults
         self.maxTokensStrategy = maxTokensStrategy
@@ -228,6 +264,7 @@ public final class AIChatViewModel {
         self.compressor = compressor
         self.titleService = titleService
         self.usageTracker = usageTracker
+        self.sendTimeResolver = sendTimeResolver
         let initialProviderId = runtime.providers.first?.id ?? ""
         let initialPreferences = AIChatRuntimePreferences.load(
             defaults: defaults,
@@ -246,6 +283,23 @@ public final class AIChatViewModel {
         self.persistenceService = persistenceService
         self.selectedProviderId = initialProviderId
         self.selectedModelId = runtime.providers.first?.models.first?.id ?? ""
+
+        // Subscribe to provider-config changes so the chip and send path both
+        // observe updates persisted from Settings → AI Provider Center.
+        let token = NotificationCenter.default.addObserver(
+            forName: StoredAIProviderCatalog.configurationDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refreshFromSendTimeResolverIfAvailable()
+            }
+        }
+        self.configurationObserverBox.set(token)
+    }
+
+    deinit {
+        configurationObserverBox.takeAndRemove()
     }
 
     /// Messages in the active conversation branch.
@@ -255,6 +309,23 @@ public final class AIChatViewModel {
 
     public var providerOptions: [ProviderOption] {
         runtime.providers
+    }
+
+    /// Display name for the currently selected provider, derived from the
+    /// runtime. Reactive: recomputes whenever the runtime or selection changes,
+    /// which happens after `configurationDidChangeNotification` refreshes the
+    /// catalog snapshot. Intended for the read-only composer chip.
+    public var displayedProviderName: String {
+        providerOptions.first(where: { $0.id == selectedProviderId })?.displayName
+            ?? selectedProviderId
+    }
+
+    /// Display name for the currently selected model. Same reactive guarantees
+    /// as `displayedProviderName`.
+    public var displayedModelName: String {
+        let provider = providerOptions.first(where: { $0.id == selectedProviderId })
+        return provider?.models.first(where: { $0.id == selectedModelId })?.displayName
+            ?? selectedModelId
     }
 
     public func makeTranslationService() -> AITranslationService? {
@@ -274,6 +345,12 @@ public final class AIChatViewModel {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else { return false }
         guard !isStreaming else { return false }
+        // Re-resolve the effective runtime + selection from the Settings
+        // catalog just before we dispatch. This is the single consolidation
+        // point where changes persisted in AIProviderDetailView become
+        // effective on the very next send (Flutter parity: send-time resolve,
+        // not init-time).
+        refreshFromSendTimeResolverIfAvailable()
         guard let providerOption = providerOptions.first(where: { $0.id == selectedProviderId }) else {
             errorMessage = aiChatLocalizedCatalogString("errors.ai.selected_provider_unavailable")
             return false
@@ -1070,6 +1147,18 @@ public final class AIChatViewModel {
             return
         }
         applyRuntimeUpdate(runtime, selection: selection)
+    }
+
+    /// Re-resolves runtime + selection from the injected `sendTimeResolver`
+    /// (typically backed by `StoredAIProviderCatalog.snapshot()`). No-op when
+    /// no resolver is wired. Runs synchronously on the main actor so the
+    /// caller can depend on the refreshed state immediately after.
+    func refreshFromSendTimeResolverIfAvailable() {
+        guard let sendTimeResolver, let resolved = sendTimeResolver() else { return }
+        // If a stream is in flight, updateRuntime defers the swap until end of
+        // turn via the pendingRuntimeUpdate machinery. Otherwise it applies
+        // right away.
+        updateRuntime(resolved.runtime, selection: resolved.selection)
     }
 
     private func effectiveRuntimePreferences() -> AIChatRuntimePreferences {

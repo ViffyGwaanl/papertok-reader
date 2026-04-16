@@ -60,6 +60,12 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperDetailView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PapersFilterBar.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Papers/PapersView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperDownloadButton.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Papers/CachedAsyncImage.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Papers/MarkdownContentView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperNarrativeTab.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperEpubVariant.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Papers/PaperCardView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Sync/ConnectionTesterView.swift",
                 "App/Platform/macOS/MacMenuCommands.swift",
                 "App/Platform/Intents/OpenBookIntent.swift",
@@ -305,7 +311,8 @@ struct HardcodedEnglishAuditTests {
     func closureFilesAvoidHelperFallbacks() throws {
         let violations = try scan(
             files: [
-                "Packages/PTFeatures/Sources/PTFeatures/AIChat/ProviderPickerSheet.swift",
+                // ProviderPickerSheet.swift retired in W5.3 — provider picker
+                // is gone from the chat composer; selection lives in Settings.
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/AIProviderCenterView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/AIToolsConfigView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/AIImageAnalysisView.swift",

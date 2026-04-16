@@ -29,8 +29,23 @@ struct ChatInputView: View {
     var thinkingEnabled: Bool = false
     var supportsThinking: Bool = false
     var currentProviderName: String = ""
+    /// Display name of the currently-selected model. Shown after the provider
+    /// name in the read-only chip. When empty, only the provider name renders.
+    var currentModelName: String = ""
 
     @FocusState private var focused: Bool
+
+    /// Text rendered inside the provider chip. When both provider + model
+    /// names are available, render "Provider · Model" so users can see which
+    /// model will actually be used. Otherwise fall back to whichever is set.
+    private var providerChipLabel: String {
+        if currentProviderName.isEmpty == false,
+           currentModelName.isEmpty == false,
+           currentProviderName != currentModelName {
+            return "\(currentProviderName) · \(currentModelName)"
+        }
+        return currentProviderName.isEmpty ? currentModelName : currentProviderName
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -128,7 +143,7 @@ struct ChatInputView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "cpu")
                                 .font(.system(size: 14))
-                            Text(currentProviderName)
+                            Text(providerChipLabel)
                                 .font(AppTypography.caption)
                                 .lineLimit(1)
                         }
@@ -141,6 +156,9 @@ struct ChatInputView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(Text(providerChipLabel))
+                    .accessibilityHint(Text("chat.provider.chip.tooltip"))
+                    .accessibilityAddTraits(.isButton)
                 }
 
                 if supportsThinking, let onToggleThinking {

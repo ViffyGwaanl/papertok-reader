@@ -64,9 +64,31 @@ struct MainTabView: View {
             toolRegistry: .default,
             toolContext: toolContext
         )
+        // W5.3 — resolve the effective provider/model fresh from the catalog
+        // on every send so changes persisted by Settings → AI Provider Center
+        // take effect on the very next message, without the VM having to
+        // cache a stale runtime. The closure also fires when the catalog
+        // posts `configurationDidChangeNotification`.
+        let sendTimeResolver: @MainActor @Sendable () -> (
+            runtime: AIChatViewModel.Runtime,
+            selection: AIChatViewModel.RuntimeSelection
+        )? = {
+            let snapshot = StoredAIProviderCatalog(defaults: AppConfig.groupDefaults).snapshot(
+                toolRegistry: .default,
+                toolContext: toolContext
+            )
+            return (
+                snapshot.runtime,
+                AIChatViewModel.RuntimeSelection(
+                    providerId: snapshot.selection.providerId,
+                    modelId: snapshot.selection.modelId
+                )
+            )
+        }
         let aiChatViewModel = AIChatViewModel(
             runtime: providerSnapshot.runtime,
-            persistenceService: persistenceService
+            persistenceService: persistenceService,
+            sendTimeResolver: sendTimeResolver
         )
         aiChatViewModel.selectedProviderId = providerSnapshot.selection.providerId
         aiChatViewModel.selectedModelId = providerSnapshot.selection.modelId
@@ -109,6 +131,12 @@ struct MainTabView: View {
             let locator = userInfo["locator"] as? String
             navigation.selectedTab = .bookshelf
             navigation.pendingBookRequest = BookshelfOpenRequest(bookID: bookID, title: nil, locator: locator)
+        }
+        // W5.3 — the retired in-chat provider picker now routes users to
+        // Settings → AI Provider Center. The chat composer chip posts this
+        // notification; we honor it by switching to the settings tab.
+        .onReceive(NotificationCenter.default.publisher(for: .openAIProviderSettings)) { _ in
+            navigation.selectedTab = .settings
         }
     }
 
