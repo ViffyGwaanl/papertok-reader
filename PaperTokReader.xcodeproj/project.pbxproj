@@ -16,6 +16,7 @@
 		075E5D06B8D23EE6E32AD18D /* MigrationProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3B78DBF176C866114299A1 /* MigrationProgressView.swift */; };
 		0DD5686F9209C8FA836576E0 /* AppAIToolContextFactoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736F6CAB2377109D7FFEEC2D /* AppAIToolContextFactoryTests.swift */; };
 		0E6A0DAEF7490EC3BF00FF17 /* DeepLinkRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F021FFA36AAA92466D6B0408 /* DeepLinkRouterTests.swift */; };
+		W44B000100000000DEADBEEF /* MacMenuCommandsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = W44A000100000000DEADBEEF /* MacMenuCommandsTests.swift */; };
 		12B148AA25DB9EA7DD00784A /* RootScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39BD2CD771AFC83F56C5445 /* RootScene.swift */; };
 		1361C569DF391D9C7986E604 /* SendMessageIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C563F1A2ACF9DF6A869C6D /* SendMessageIntent.swift */; };
 		13AD5CF7FF9864D37A140E6D /* PTFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = B9A7DAF9EF56293ABC8B4FC5 /* PTFeatures */; };
@@ -197,6 +198,7 @@
 		E8FE7FAB1B9CDE5FB38F8B58 /* GetReadingStatsIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetReadingStatsIntent.swift; sourceTree = "<group>"; };
 		F000149E4483078E18005783 /* ShareExtensionInfoPlistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionInfoPlistTests.swift; sourceTree = "<group>"; };
 		F021FFA36AAA92466D6B0408 /* DeepLinkRouterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouterTests.swift; sourceTree = "<group>"; };
+		W44A000100000000DEADBEEF /* MacMenuCommandsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacMenuCommandsTests.swift; sourceTree = "<group>"; };
 		F41C91CE13FFC7FCD99BDD7B /* PendingAIRequestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingAIRequestStore.swift; sourceTree = "<group>"; };
 		FB944AA3BBE4EE1EC4FD9161 /* ShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -363,6 +365,7 @@
 				ADEB537F9D7A1064ED1F84F5 /* FlutterMigrationPlannerTests.swift */,
 				2010F60CC1F5766BE1D25ED1 /* FlutterMigrationServiceTests.swift */,
 				6FDCE10A37CE481EAF449C2E /* HardcodedEnglishAuditTests.swift */,
+				W44A000100000000DEADBEEF /* MacMenuCommandsTests.swift */,
 				7AD25A8251359DEFBB2F5C62 /* MigrationLocalizationCatalogTests.swift */,
 				A2F4D860C1A64D6AA1234BCC /* UserFacingLocalizationMappingTests.swift */,
 				D4CBA62ACE55572A0E481380 /* PendingAIRequestStoreTests.swift */,
@@ -662,6 +665,7 @@
 				772AE087FFC3C26E95AA2854 /* FlutterMigrationPlannerTests.swift in Sources */,
 				9F13B45058E94526B5F9A918 /* FlutterMigrationServiceTests.swift in Sources */,
 				D9491E98E77F122790D3EB3A /* HardcodedEnglishAuditTests.swift in Sources */,
+				W44B000100000000DEADBEEF /* MacMenuCommandsTests.swift in Sources */,
 				C3F6F2794B9026030D94FE55 /* MigrationLocalizationCatalogTests.swift in Sources */,
 				A2F4D860C1A64D6AA1234BCD /* UserFacingLocalizationMappingTests.swift in Sources */,
 				CACE6E07DBADD3D4AFC654C4 /* PendingAIRequestStoreTests.swift in Sources */,

@@ -7,7 +7,12 @@ import PTCore
 /// Keyboard shortcuts:
 /// - Cmd+O: Import book
 /// - Cmd+\: Toggle AI panel
+/// - Cmd+=: Increase font size
+/// - Cmd+-: Decrease font size
 /// - Left/Right arrow: Previous/next chapter (when reader is active)
+///
+/// System-provided menus (Edit, Window) are left intact by not replacing
+/// their default command groups.
 public struct MacMenuCommands: Commands {
     public init() {}
 
@@ -38,6 +43,19 @@ public struct MacMenuCommands: Commands {
                 NotificationCenter.default.post(name: .nextChapter, object: nil)
             }
             .keyboardShortcut(.rightArrow, modifiers: [])
+        }
+
+        // Format menu — font size
+        CommandMenu(String(localized: "macos.menu.format")) {
+            Button(String(localized: "macos.menu.increase_font")) {
+                NotificationCenter.default.post(name: .increaseFontSize, object: nil)
+            }
+            .keyboardShortcut("=", modifiers: .command)
+
+            Button(String(localized: "macos.menu.decrease_font")) {
+                NotificationCenter.default.post(name: .decreaseFontSize, object: nil)
+            }
+            .keyboardShortcut("-", modifiers: .command)
         }
 
         // Help menu

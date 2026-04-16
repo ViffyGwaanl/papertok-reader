@@ -125,6 +125,8 @@ struct MainTabView: View {
         .id(tabConfigVersion)
     }
 
+    @AppStorage("macos.sidebar.width") private var sidebarWidth: Double = 220
+
     private var iPadSplitLayout: some View {
         NavigationSplitView {
             List(selection: $navigation.optionalSelectedTab) {
@@ -136,6 +138,13 @@ struct MainTabView: View {
             .navigationTitle(String(localized: "app.name"))
             .listStyle(.sidebar)
             .id(tabConfigVersion)
+#if os(macOS)
+            .navigationSplitViewColumnWidth(min: 180, ideal: sidebarWidth, max: 400)
+            .onAppear {
+                // Sidebar width is persisted via @AppStorage.
+                // NavigationSplitView on macOS allows user drag-resize natively.
+            }
+#endif
         } detail: {
             destination(for: navigation.selectedTab)
         }
@@ -411,6 +420,15 @@ struct BookshelfScreen: View {
                     Label(String(localized: "common.share"), systemImage: "square.and.arrow.up")
                 }
 
+#if os(macOS)
+                Button {
+                    let bookURL = URL(fileURLWithPath: book.filePath)
+                    NSWorkspace.shared.activateFileViewerSelecting([bookURL])
+                } label: {
+                    Label(String(localized: "macos.context.show_in_finder"), systemImage: "folder")
+                }
+#endif
+
                 Button(role: .destructive) {
                     handleDelete(book)
                 } label: {
@@ -471,6 +489,15 @@ struct BookshelfScreen: View {
                         ShareLink(item: URL(fileURLWithPath: book.filePath)) {
                             Label(String(localized: "common.share"), systemImage: "square.and.arrow.up")
                         }
+
+#if os(macOS)
+                        Button {
+                            let bookURL = URL(fileURLWithPath: book.filePath)
+                            NSWorkspace.shared.activateFileViewerSelecting([bookURL])
+                        } label: {
+                            Label(String(localized: "macos.context.show_in_finder"), systemImage: "folder")
+                        }
+#endif
 
                         Button(role: .destructive) {
                             handleDelete(book)
