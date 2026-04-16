@@ -1903,7 +1903,7 @@ struct EPUBBookshelfReaderView: View {
     @State private var coordinator = EPUBNavigatorCoordinator()
     @State private var isLoading = true
     @State private var loadError: String?
-    @State private var isAIPanelPresented = false
+    @State private var aiPanelState = ReaderAIPanelState()
     @State private var readerControlsViewModel: EPUBReaderControlsViewModel?
     @State private var findBarState: ReaderFindBarState?
     @State private var annotationsViewModel: EPUBReaderAnnotationsViewModel?
@@ -1955,12 +1955,14 @@ struct EPUBBookshelfReaderView: View {
         ReaderAIPanelHost(
             book: book,
             aiChatViewModel: aiChatViewModel,
-            isPresented: $isAIPanelPresented
+            state: aiPanelState
         ) {
             readerContent
         }
         .navigationTitle(book.title)
-#if os(iOS)
+#if os(macOS)
+        .frame(minWidth: aiPanelState.isOpen ? 720 : 400)
+#else
         .navigationBarTitleDisplayMode(.inline)
 #endif
         .toolbar { toolbarContent }
@@ -2046,9 +2048,9 @@ struct EPUBBookshelfReaderView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if isAIPanelPresented == false {
+            if aiPanelState.isOpen == false {
                 ReaderAIMinimizedBar(aiChatViewModel: aiChatViewModel) {
-                    isAIPanelPresented = true
+                    aiPanelState.isOpen = true
                 }
             }
         }
@@ -2056,7 +2058,7 @@ struct EPUBBookshelfReaderView: View {
             Task { await handleScenePhaseChange(newPhase) }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PaperTokToggleAI"))) { _ in
-            isAIPanelPresented.toggle()
+            aiPanelState.toggle()
         }
         .onChange(of: contextMenuCoordinator?.pendingSearchQuery) { _, pendingQuery in
             handlePendingContextMenuSearch(pendingQuery)
@@ -2153,7 +2155,7 @@ struct EPUBBookshelfReaderView: View {
 
         ToolbarItemGroup(placement: .primaryAction) {
             Button {
-                isAIPanelPresented = true
+                aiPanelState.isOpen = true
             } label: {
                 Image(systemName: "bubble.left.and.text.bubble.right")
                     .foregroundStyle(Morandi.accent)
@@ -3063,7 +3065,7 @@ struct EPUBBookshelfReaderView: View {
                 data: request.image.data
             )
         )
-        isAIPanelPresented = true
+        aiPanelState.isOpen = true
         Task {
             _ = await aiChatViewModel.sendMessage(request.prompt)
         }

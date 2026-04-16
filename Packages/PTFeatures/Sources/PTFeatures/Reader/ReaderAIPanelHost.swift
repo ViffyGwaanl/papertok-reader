@@ -78,12 +78,14 @@ public struct ReaderAIPanelHost<Content: View>: View {
 
     private let preferenceStore: ReaderAIPanelPreferencesStore
     private let content: Content
+    private var panelState: ReaderAIPanelState?
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var panelSide: ReaderAIPanelSide
     @State private var panelWidth: Double
     @State private var dragBaseWidth: Double?
 
+    /// Legacy init for backward compatibility (used by PDFReaderView).
     public init(
         book: Book,
         aiChatViewModel: AIChatViewModel,
@@ -94,6 +96,30 @@ public struct ReaderAIPanelHost<Content: View>: View {
         self.book = book
         self.aiChatViewModel = aiChatViewModel
         self._isPresented = isPresented
+        self.preferenceStore = preferenceStore
+        self.content = content()
+        self.panelState = nil
+
+        let preferences = preferenceStore.load(for: book.id)
+        _panelSide = State(initialValue: preferences.side)
+        _panelWidth = State(initialValue: preferences.width)
+    }
+
+    /// State-driven init for use with ReaderAIPanelState.
+    public init(
+        book: Book,
+        aiChatViewModel: AIChatViewModel,
+        state: ReaderAIPanelState,
+        preferenceStore: ReaderAIPanelPreferencesStore = .shared,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.book = book
+        self.aiChatViewModel = aiChatViewModel
+        self.panelState = state
+        self._isPresented = Binding(
+            get: { state.isOpen },
+            set: { state.isOpen = $0 }
+        )
         self.preferenceStore = preferenceStore
         self.content = content()
 
@@ -112,6 +138,7 @@ public struct ReaderAIPanelHost<Content: View>: View {
                     HStack(spacing: 0) {
                         if isPresented && panelSide == .leading {
                             dockedPanel(width: resolvedWidth, availableWidth: availableWidth)
+                                .transition(.move(edge: .leading))
                             Divider()
                                 .background(Morandi.divider)
                         }
@@ -123,8 +150,10 @@ public struct ReaderAIPanelHost<Content: View>: View {
                             Divider()
                                 .background(Morandi.divider)
                             dockedPanel(width: resolvedWidth, availableWidth: availableWidth)
+                                .transition(.move(edge: .trailing))
                         }
                     }
+                    .animation(.spring(duration: 0.35, bounce: 0.15), value: isPresented)
                 } else {
                     content
                 }
@@ -158,9 +187,9 @@ public struct ReaderAIPanelHost<Content: View>: View {
     private var compactPanel: some View {
         panelContent(isCompact: true)
 #if os(iOS)
-            .presentationDetents([.fraction(0.35), .medium, .large])
+            .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
-            .presentationBackground(.regularMaterial)
+            .presentationBackground(.ultraThinMaterial)
 #endif
             .interactiveDismissDisabled(aiChatViewModel.isStreaming || hasPendingApprovals)
     }
@@ -186,9 +215,7 @@ public struct ReaderAIPanelHost<Content: View>: View {
             AIChatView(viewModel: aiChatViewModel)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(String(localized: isCompact ? "common.close" : "common.minimize")) {
-                            isPresented = false
-                        }
+                        collapseButton(isCompact: isCompact)
                     }
 
                     if isCompact == false {
@@ -204,6 +231,23 @@ public struct ReaderAIPanelHost<Content: View>: View {
                     }
                 }
         }
+    }
+
+    @ViewBuilder
+    private func collapseButton(isCompact: Bool) -> some View {
+#if os(macOS)
+        Button {
+            isPresented = false
+        } label: {
+            Image(systemName: panelSide == .leading ? "sidebar.leading" : "sidebar.trailing")
+        }
+        .accessibilityLabel(String(localized: "reader.ai_panel.collapse"))
+        .help(String(localized: "reader.ai_panel.collapse"))
+#else
+        Button(String(localized: isCompact ? "common.close" : "common.minimize")) {
+            isPresented = false
+        }
+#endif
     }
 
     private func resizeHandle(availableWidth: Double) -> some View {
@@ -258,6 +302,10 @@ public struct ReaderAIPanelHost<Content: View>: View {
             ),
             for: book.id
         )
+        if let panelState {
+            panelState.dockSide = panelSide == .leading ? .leading : .trailing
+            panelState.panelWidth = CGFloat(panelWidth)
+        }
     }
 }
 
