@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import PTCore
 import PTReader
 
 /// Shared observable state for the reader find bar. Drives both EPUB and PDF
@@ -102,7 +103,8 @@ public final class ReaderFindBarState {
             hits = []
             currentIndex = 0
             hasSearched = true
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+            errorMessage = AppLocalization.localizedErrorDescription(error)
+                ?? error.localizedDescription
         }
     }
 

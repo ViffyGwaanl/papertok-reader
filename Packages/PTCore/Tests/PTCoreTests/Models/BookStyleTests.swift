@@ -22,14 +22,14 @@ struct BookStyleTests {
     func defaultValuesForSimplifiedChinese() {
         let style = BookStyle.defaultStyle(for: Locale(identifier: "zh-Hans"))
 
-        #expect(style.fontFamily == "Songti SC")
+        #expect(style.fontFamily == ".PingFang SC")
     }
 
-    @Test("Default font family prefers Chinese serif fonts for Traditional Chinese locales")
+    @Test("Default font family prefers CJK-optimized fonts for Traditional Chinese locales")
     func defaultValuesForTraditionalChinese() {
         let style = BookStyle.defaultStyle(for: Locale(identifier: "zh-Hant"))
 
-        #expect(style.fontFamily == "Songti TC")
+        #expect(style.fontFamily == ".PingFang TC")
     }
 
     @Test("Roundtrips through database")

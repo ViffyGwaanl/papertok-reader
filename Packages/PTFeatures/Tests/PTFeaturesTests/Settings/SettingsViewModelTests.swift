@@ -13,7 +13,7 @@ struct SettingsViewModelTests {
             locale: Locale(identifier: "zh-Hans")
         )
 
-        #expect(viewModel.defaultFontFamily == "Songti SC")
+        #expect(viewModel.defaultFontFamily == ".PingFang SC")
     }
 
     @Test("defaults use non-Chinese fallback font family when unset")

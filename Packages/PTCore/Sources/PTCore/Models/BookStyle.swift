@@ -70,9 +70,18 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
 
         switch chineseScript(for: locale) {
         case .simplified:
-            return unique(["Songti SC", "PingFang SC"] + base)
+            return unique([
+                ".PingFang SC", "PingFang SC",
+                "Songti SC", "STSong",
+                "Heiti SC",
+            ] + base)
         case .traditional:
-            return unique(["Songti TC", "PingFang TC"] + base)
+            return unique([
+                ".PingFang TC", "PingFang TC",
+                ".PingFang HK",
+                "Songti TC", "STSong",
+                "Heiti TC",
+            ] + base)
         case .none:
             return unique(base)
         }

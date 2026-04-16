@@ -183,7 +183,7 @@ public final class ConversationListViewModel {
         case .created:
             return items.sorted { $0.createdAt > $1.createdAt }
         case .title:
-            return items.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+            return items.sorted { LocalizedSort.isAscending($0.title, $1.title) }
         }
     }
 
@@ -202,7 +202,9 @@ public final class ConversationListViewModel {
         } catch let error as ConversationListError {
             throw error
         } catch {
-            throw ConversationListError.persistenceFailed(error.localizedDescription)
+            throw ConversationListError.persistenceFailed(
+                AppLocalization.localizedErrorDescription(error) ?? error.localizedDescription
+            )
         }
         await refresh()
     }
@@ -211,7 +213,9 @@ public final class ConversationListViewModel {
         do {
             try persistence.delete(id: id)
         } catch {
-            throw ConversationListError.persistenceFailed(error.localizedDescription)
+            throw ConversationListError.persistenceFailed(
+                AppLocalization.localizedErrorDescription(error) ?? error.localizedDescription
+            )
         }
         if chatViewModel.conversationId == id {
             // Fall back to most recent remaining, or start fresh.
@@ -234,7 +238,9 @@ public final class ConversationListViewModel {
         } catch let error as ConversationListError {
             throw error
         } catch {
-            throw ConversationListError.persistenceFailed(error.localizedDescription)
+            throw ConversationListError.persistenceFailed(
+                AppLocalization.localizedErrorDescription(error) ?? error.localizedDescription
+            )
         }
         await refresh()
     }
@@ -251,7 +257,9 @@ public final class ConversationListViewModel {
         } catch let error as ConversationListError {
             throw error
         } catch {
-            throw ConversationListError.exportFailed(error.localizedDescription)
+            throw ConversationListError.exportFailed(
+                AppLocalization.localizedErrorDescription(error) ?? error.localizedDescription
+            )
         }
 
         let ext = format == .markdown ? "md" : "json"
@@ -272,7 +280,9 @@ public final class ConversationListViewModel {
                 try data.write(to: url, options: .atomic)
             }
         } catch {
-            throw ConversationListError.exportFailed(error.localizedDescription)
+            throw ConversationListError.exportFailed(
+                AppLocalization.localizedErrorDescription(error) ?? error.localizedDescription
+            )
         }
         return url
     }

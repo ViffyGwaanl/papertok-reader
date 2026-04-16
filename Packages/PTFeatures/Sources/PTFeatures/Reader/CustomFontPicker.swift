@@ -44,7 +44,8 @@ public final class CustomFontPickerViewModel {
         } catch let error as CustomFontRegistryError {
             errorMessage = Self.localizedMessage(for: error)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.localizedErrorDescription(error)
+                ?? error.localizedDescription
         }
     }
 
@@ -54,7 +55,8 @@ public final class CustomFontPickerViewModel {
             try await registry.remove(descriptor.id)
             fonts = await registry.list()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = AppLocalization.localizedErrorDescription(error)
+                ?? error.localizedDescription
         }
     }
 
