@@ -4,6 +4,10 @@ import PTUI
 
 public struct MemoryHomeView: View {
     @State private var viewModel: MemoryHomeViewModel
+    @State private var tagEditorCandidate: MemoryCandidate?
+    @State private var tagEditorTags: [String] = []
+    @State private var showBulkTagPrompt: Bool = false
+    @State private var bulkTagText: String = ""
 
     public init(directory: URL) {
         _viewModel = State(initialValue: MemoryHomeViewModel(service: MemoryWorkflowService(directory: directory)))
@@ -42,17 +46,50 @@ public struct MemoryHomeView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if viewModel.isMultiSelectMode {
+                bulkToolbar
+            }
         }
         .background(Morandi.background)
         .navigationTitle(String(localized: "ai.memory"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink {
+                    MemoryAutoCaptureSettingsView()
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+            }
+        }
         .task {
             await viewModel.load()
         }
         .onChange(of: viewModel.selectedCandidateStatus) { _, _ in
             Task { await viewModel.reloadCandidates() }
+        }
+        .sheet(item: $tagEditorCandidate) { candidate in
+            MemoryTagEditorView(
+                tags: $tagEditorTags,
+                allKnownTags: viewModel.allKnownTags
+            ) { newTags in
+                Task { await viewModel.updateTags(candidateId: candidate.id, tags: newTags) }
+            }
+        }
+        .alert("memory.bulk.add_tag", isPresented: $showBulkTagPrompt) {
+            TextField("memory.tags.add_placeholder", text: $bulkTagText)
+            Button("memory.tags.add") {
+                let tag = bulkTagText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard tag.isEmpty == false else { return }
+                Task { await viewModel.bulkAddTag(ids: viewModel.selectedCandidateIds, tag: tag) }
+                bulkTagText = ""
+            }
+            Button("common.cancel", role: .cancel) {
+                bulkTagText = ""
+            }
         }
     }
 
@@ -91,10 +128,28 @@ public struct MemoryHomeView: View {
         .background(Morandi.destructive)
     }
 
+    // MARK: - Review Section
+
     private var reviewSection: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
+                // Session digest section
+                sessionDigestSection
+
                 statusFilter
+
+                if viewModel.isMultiSelectMode {
+                    HStack {
+                        Text(String(format: String(localized: "memory.bulk.selected_count"), viewModel.selectedCandidateIds.count))
+                            .font(AppTypography.caption.weight(.semibold))
+                            .foregroundStyle(Morandi.accent)
+                        Spacer()
+                        Button("common.cancel") {
+                            viewModel.exitMultiSelect()
+                        }
+                        .font(AppTypography.caption)
+                    }
+                }
 
                 if viewModel.candidates.isEmpty {
                     emptyCard(
@@ -109,6 +164,72 @@ public struct MemoryHomeView: View {
             }
             .padding(AppSpacing.md)
         }
+    }
+
+    // MARK: - Session Digest
+
+    private var sessionDigestSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                Label("memory.digest.title", systemImage: "doc.text.magnifyingglass")
+                    .font(AppTypography.caption.weight(.semibold))
+                    .foregroundStyle(Morandi.primaryText)
+                Spacer()
+            }
+
+            if let digest = viewModel.latestDigestSummary {
+                Text(digest)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text("memory.digest.empty")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.tertiaryText)
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+                .fill(Morandi.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+                        .strokeBorder(Morandi.divider, lineWidth: 0.5)
+                )
+        )
+    }
+
+    // MARK: - Bulk Toolbar
+
+    private var bulkToolbar: some View {
+        HStack(spacing: AppSpacing.md) {
+            Button {
+                Task { await viewModel.bulkApply(ids: viewModel.selectedCandidateIds) }
+            } label: {
+                Label("memory.bulk.apply_all", systemImage: "checkmark.circle")
+                    .font(AppTypography.caption.weight(.semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Morandi.accent)
+
+            Button {
+                Task { await viewModel.bulkDismiss(ids: viewModel.selectedCandidateIds) }
+            } label: {
+                Label("memory.bulk.dismiss_all", systemImage: "xmark.circle")
+                    .font(AppTypography.caption.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+
+            Button {
+                showBulkTagPrompt = true
+            } label: {
+                Label("memory.bulk.add_tag", systemImage: "tag")
+                    .font(AppTypography.caption.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(AppSpacing.md)
+        .background(Morandi.cardBackground.shadow(.drop(radius: 4, y: -2)))
     }
 
     private var statusFilter: some View {
@@ -137,19 +258,39 @@ public struct MemoryHomeView: View {
     }
 
     private func candidateCard(_ candidate: MemoryCandidate) -> some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text(candidate.summary)
-                .font(AppTypography.body.weight(.semibold))
-                .foregroundStyle(Morandi.primaryText)
+        let isSelected = viewModel.selectedCandidateIds.contains(candidate.id)
+
+        return VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                if viewModel.isMultiSelectMode {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(isSelected ? Morandi.accent : Morandi.tertiaryText)
+                }
+                Text(candidate.summary)
+                    .font(AppTypography.body.weight(.semibold))
+                    .foregroundStyle(Morandi.primaryText)
+            }
 
             Text(candidate.effectiveDisplayText)
                 .font(AppTypography.body)
                 .foregroundStyle(Morandi.primaryText)
 
+            // Source pointer -- tappable for jump-back when bookId exists
             if candidate.effectiveSourcePointer.isEmpty == false {
-                Label(candidate.effectiveSourcePointer, systemImage: "point.bottomleft.forward.to.point.topright.scurvepath")
-                    .font(AppTypography.caption)
-                    .foregroundStyle(Morandi.secondaryText)
+                if candidate.bookId != nil {
+                    Button {
+                        viewModel.navigateToSource(candidate)
+                    } label: {
+                        Label(candidate.effectiveSourcePointer, systemImage: "point.bottomleft.forward.to.point.topright.scurvepath")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(Morandi.accent)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Label(candidate.effectiveSourcePointer, systemImage: "point.bottomleft.forward.to.point.topright.scurvepath")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(Morandi.secondaryText)
+                }
             }
 
             if let rationale = candidate.rationale, rationale.isEmpty == false {
@@ -158,6 +299,64 @@ public struct MemoryHomeView: View {
                     .foregroundStyle(Morandi.secondaryText)
             }
 
+            // Tags -- tappable to edit
+            tagChips(for: candidate)
+
+            HStack(spacing: AppSpacing.sm) {
+                Text(targetTitle(candidate.effectiveTargetDoc))
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.tertiaryText)
+                Spacer()
+
+                if !viewModel.isMultiSelectMode {
+                    if candidate.status == .pending {
+                        Button("memory.action.save_daily") {
+                            Task { await viewModel.applyCandidate(candidate.id, target: .daily) }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Morandi.accent)
+
+                        Button("memory.action.save_long_term") {
+                            Task { await viewModel.applyCandidate(candidate.id, target: .longTerm) }
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button("memory.action.dismiss") {
+                            Task { await viewModel.dismissCandidate(candidate.id) }
+                        }
+                        .buttonStyle(.bordered)
+                    } else {
+                        Text(statusTitle(candidate.status))
+                            .font(AppTypography.caption.weight(.semibold))
+                            .foregroundStyle(Morandi.secondaryText)
+                    }
+                }
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+                .fill(isSelected ? Morandi.accent.opacity(0.08) : Morandi.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+                        .strokeBorder(isSelected ? Morandi.accent : Morandi.divider, lineWidth: isSelected ? 1.5 : 0.5)
+                )
+        )
+        .onTapGesture {
+            if viewModel.isMultiSelectMode {
+                viewModel.toggleSelection(candidate.id)
+            }
+        }
+        .onLongPressGesture {
+            if !viewModel.isMultiSelectMode {
+                viewModel.enterMultiSelect(startingWith: candidate.id)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func tagChips(for candidate: MemoryCandidate) -> some View {
+        HStack(spacing: AppSpacing.xs) {
             if candidate.tags.isEmpty == false {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: AppSpacing.xs) {
@@ -173,44 +372,16 @@ public struct MemoryHomeView: View {
                 }
             }
 
-            HStack(spacing: AppSpacing.sm) {
-                Text(targetTitle(candidate.effectiveTargetDoc))
-                    .font(AppTypography.caption)
+            Button {
+                tagEditorTags = candidate.tags
+                tagEditorCandidate = candidate
+            } label: {
+                Image(systemName: "tag.circle")
+                    .font(AppTypography.body)
                     .foregroundStyle(Morandi.tertiaryText)
-                Spacer()
-
-                if candidate.status == .pending {
-                    Button("memory.action.save_daily") {
-                        Task { await viewModel.applyCandidate(candidate.id, target: .daily) }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Morandi.accent)
-
-                    Button("memory.action.save_long_term") {
-                        Task { await viewModel.applyCandidate(candidate.id, target: .longTerm) }
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("memory.action.dismiss") {
-                        Task { await viewModel.dismissCandidate(candidate.id) }
-                    }
-                    .buttonStyle(.bordered)
-                } else {
-                    Text(statusTitle(candidate.status))
-                        .font(AppTypography.caption.weight(.semibold))
-                        .foregroundStyle(Morandi.secondaryText)
-                }
             }
+            .buttonStyle(.plain)
         }
-        .padding(AppSpacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
-                .fill(Morandi.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
-                        .strokeBorder(Morandi.divider, lineWidth: 0.5)
-                )
-        )
     }
 
     private var documentsSection: some View {

@@ -87,6 +87,26 @@ public actor MemoryCandidateStore {
         }
     }
 
+    public func updateTags(_ id: String, tags: [String]) throws -> MemoryCandidate {
+        try update(id) { current in
+            var updated = current
+            updated.tags = tags
+            return updated
+        }
+    }
+
+    public func allTags() throws -> [String] {
+        let candidates = try readAll()
+        var seen = Set<String>()
+        var ordered: [String] = []
+        for candidate in candidates {
+            for tag in candidate.tags where seen.insert(tag).inserted {
+                ordered.append(tag)
+            }
+        }
+        return ordered
+    }
+
     public func dismiss(_ id: String, reviewedAt: Date = Date()) throws -> MemoryCandidate {
         try update(id) { current in
             var updated = current

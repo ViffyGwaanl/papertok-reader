@@ -233,6 +233,39 @@ public actor MemoryWorkflowService {
         return try await candidateStore.dismiss(candidateID)
     }
 
+    public func updateTags(candidateId: String, tags: [String]) async throws -> MemoryCandidate {
+        try ensureDirectory()
+        return try await candidateStore.updateTags(candidateId, tags: tags)
+    }
+
+    public func allTags() async throws -> [String] {
+        try ensureDirectory()
+        return try await candidateStore.allTags()
+    }
+
+    public func bulkApply(ids: [String], targetDoc: MemoryDocTarget, date: Date = Date()) async throws {
+        for id in ids {
+            _ = try await applyCandidate(id, targetDoc: targetDoc, date: date)
+        }
+    }
+
+    public func bulkDismiss(ids: [String]) async throws {
+        for id in ids {
+            _ = try await dismissCandidate(id)
+        }
+    }
+
+    public func bulkAddTag(ids: [String], tag: String) async throws {
+        for id in ids {
+            guard let candidate = try await candidateStore.getById(id) else { continue }
+            var tags = candidate.tags
+            if !tags.contains(tag) {
+                tags.append(tag)
+                _ = try await candidateStore.updateTags(id, tags: tags)
+            }
+        }
+    }
+
     public func listDocuments() throws -> [MemoryDocumentSummary] {
         try ensureDirectory()
         let urls = try fileManager.contentsOfDirectory(

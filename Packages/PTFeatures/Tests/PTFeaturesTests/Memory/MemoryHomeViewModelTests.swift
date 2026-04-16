@@ -97,4 +97,152 @@ struct MemoryHomeViewModelTests {
 
         #expect(viewModel.errorMessage == AppLocalization.string("common.failed_to_load"))
     }
+
+    // MARK: - Bulk Operations
+
+    @Test("bulkApply applies all selected candidates and exits multi-select")
+    func bulkApplyAppliesAll() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let service = MemoryWorkflowService(directory: dir)
+        let c1 = try await service.addToReviewInbox(text: "Item 1", targetDoc: .daily, sourceType: "manual")
+        let c2 = try await service.addToReviewInbox(text: "Item 2", targetDoc: .daily, sourceType: "manual")
+
+        let viewModel = MemoryHomeViewModel(service: service)
+        await viewModel.load()
+        #expect(viewModel.candidates.count == 2)
+
+        viewModel.enterMultiSelect(startingWith: c1.id)
+        viewModel.toggleSelection(c2.id)
+        #expect(viewModel.selectedCandidateIds.count == 2)
+
+        await viewModel.bulkApply(ids: viewModel.selectedCandidateIds)
+
+        #expect(viewModel.isMultiSelectMode == false)
+        #expect(viewModel.selectedCandidateIds.isEmpty)
+        // After applying, pending filter shows empty
+        #expect(viewModel.candidates.isEmpty)
+    }
+
+    @Test("bulkDismiss dismisses all selected candidates")
+    func bulkDismissDismissesAll() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let service = MemoryWorkflowService(directory: dir)
+        let c1 = try await service.addToReviewInbox(text: "Item A", targetDoc: .daily, sourceType: "manual")
+        let c2 = try await service.addToReviewInbox(text: "Item B", targetDoc: .daily, sourceType: "manual")
+
+        let viewModel = MemoryHomeViewModel(service: service)
+        await viewModel.load()
+
+        viewModel.enterMultiSelect(startingWith: c1.id)
+        viewModel.toggleSelection(c2.id)
+        await viewModel.bulkDismiss(ids: viewModel.selectedCandidateIds)
+
+        #expect(viewModel.isMultiSelectMode == false)
+        #expect(viewModel.candidates.isEmpty) // pending filter
+    }
+
+    // MARK: - Tag Update
+
+    @Test("updateTags persists tags on a candidate")
+    func updateTagsPersists() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let service = MemoryWorkflowService(directory: dir)
+        let candidate = try await service.addToReviewInbox(
+            text: "Tag test",
+            targetDoc: .daily,
+            sourceType: "manual"
+        )
+
+        let viewModel = MemoryHomeViewModel(service: service)
+        await viewModel.load()
+
+        await viewModel.updateTags(candidateId: candidate.id, tags: ["swift", "memory"])
+
+        #expect(viewModel.candidates.first?.tags == ["swift", "memory"])
+        #expect(viewModel.allKnownTags.contains("swift"))
+        #expect(viewModel.allKnownTags.contains("memory"))
+    }
+
+    // MARK: - Digest Loading
+
+    @Test("loadLatestDigest returns nil when no documents exist")
+    func digestReturnsNilWhenEmpty() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let service = MemoryWorkflowService(directory: dir)
+        let viewModel = MemoryHomeViewModel(service: service)
+        await viewModel.loadLatestDigest()
+
+        #expect(viewModel.latestDigestSummary == nil)
+    }
+
+    @Test("bulkAddTag adds tag to all selected candidates")
+    func bulkAddTagAddsToAll() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let service = MemoryWorkflowService(directory: dir)
+        let c1 = try await service.addToReviewInbox(text: "Tag bulk 1", targetDoc: .daily, sourceType: "manual")
+        let c2 = try await service.addToReviewInbox(text: "Tag bulk 2", targetDoc: .daily, sourceType: "manual")
+
+        let viewModel = MemoryHomeViewModel(service: service)
+        await viewModel.load()
+
+        viewModel.enterMultiSelect(startingWith: c1.id)
+        viewModel.toggleSelection(c2.id)
+        await viewModel.bulkAddTag(ids: viewModel.selectedCandidateIds, tag: "important")
+
+        // Reload and check tags
+        await viewModel.reloadCandidates()
+        for candidate in viewModel.candidates {
+            #expect(candidate.tags.contains("important"))
+        }
+    }
+
+    // MARK: - Multi-Select Mode
+
+    @Test("enterMultiSelect and exitMultiSelect toggle mode")
+    func multiSelectModeToggles() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let service = MemoryWorkflowService(directory: dir)
+        let c1 = try await service.addToReviewInbox(text: "Mode test", targetDoc: .daily, sourceType: "manual")
+
+        let viewModel = MemoryHomeViewModel(service: service)
+        await viewModel.load()
+
+        #expect(viewModel.isMultiSelectMode == false)
+        viewModel.enterMultiSelect(startingWith: c1.id)
+        #expect(viewModel.isMultiSelectMode == true)
+        #expect(viewModel.selectedCandidateIds.count == 1)
+
+        viewModel.exitMultiSelect()
+        #expect(viewModel.isMultiSelectMode == false)
+        #expect(viewModel.selectedCandidateIds.isEmpty)
+    }
+
+    @Test("toggleSelection removes last item exits multi-select")
+    func toggleSelectionExitsWhenEmpty() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let service = MemoryWorkflowService(directory: dir)
+        let c1 = try await service.addToReviewInbox(text: "Toggle test", targetDoc: .daily, sourceType: "manual")
+
+        let viewModel = MemoryHomeViewModel(service: service)
+        await viewModel.load()
+
+        viewModel.enterMultiSelect(startingWith: c1.id)
+        viewModel.toggleSelection(c1.id)
+        #expect(viewModel.isMultiSelectMode == false)
+        #expect(viewModel.selectedCandidateIds.isEmpty)
+    }
 }

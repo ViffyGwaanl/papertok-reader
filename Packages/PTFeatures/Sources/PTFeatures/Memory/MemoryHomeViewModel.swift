@@ -30,6 +30,18 @@ public final class MemoryHomeViewModel {
     public var errorMessage: String?
     public var isLoading: Bool = false
 
+    // Bulk selection
+    public var isMultiSelectMode: Bool = false
+    public var selectedCandidateIds: Set<String> = []
+
+    // Tag editing
+    public var allKnownTags: [String] = []
+    public var editingTagsCandidateId: String?
+
+    // Session digest
+    public var latestDigestSummary: String?
+    public var isGeneratingDigest: Bool = false
+
     public init(service: MemoryWorkflowService) {
         self.service = service
     }
@@ -39,6 +51,8 @@ public final class MemoryHomeViewModel {
         defer { isLoading = false }
         await reloadCandidates()
         await reloadDocuments(autoloadSelection: true)
+        await reloadAllTags()
+        await loadLatestDigest()
     }
 
     public func reloadCandidates() async {
@@ -177,6 +191,131 @@ public final class MemoryHomeViewModel {
         }
     }
 
+    // MARK: - Bulk Operations
+
+    public func toggleSelection(_ id: String) {
+        if selectedCandidateIds.contains(id) {
+            selectedCandidateIds.remove(id)
+        } else {
+            selectedCandidateIds.insert(id)
+        }
+        if selectedCandidateIds.isEmpty {
+            isMultiSelectMode = false
+        }
+    }
+
+    public func enterMultiSelect(startingWith id: String) {
+        isMultiSelectMode = true
+        selectedCandidateIds = [id]
+    }
+
+    public func exitMultiSelect() {
+        isMultiSelectMode = false
+        selectedCandidateIds = []
+    }
+
+    public func bulkApply(ids: Set<String>, target: MemoryDocTarget = .daily) async {
+        do {
+            try await service.bulkApply(ids: Array(ids), targetDoc: target)
+            exitMultiSelect()
+            errorMessage = nil
+            await reloadCandidates()
+            await reloadDocuments(autoloadSelection: true)
+        } catch {
+            errorMessage = actionErrorMessage(for: error)
+        }
+    }
+
+    public func bulkDismiss(ids: Set<String>) async {
+        do {
+            try await service.bulkDismiss(ids: Array(ids))
+            exitMultiSelect()
+            errorMessage = nil
+            await reloadCandidates()
+        } catch {
+            errorMessage = actionErrorMessage(for: error)
+        }
+    }
+
+    public func bulkAddTag(ids: Set<String>, tag: String) async {
+        do {
+            try await service.bulkAddTag(ids: Array(ids), tag: tag)
+            exitMultiSelect()
+            errorMessage = nil
+            await reloadCandidates()
+            await reloadAllTags()
+        } catch {
+            errorMessage = actionErrorMessage(for: error)
+        }
+    }
+
+    // MARK: - Tag Editing
+
+    public func updateTags(candidateId: String, tags: [String]) async {
+        do {
+            _ = try await service.updateTags(candidateId: candidateId, tags: tags)
+            errorMessage = nil
+            await reloadCandidates()
+            await reloadAllTags()
+        } catch {
+            errorMessage = actionErrorMessage(for: error)
+        }
+    }
+
+    public func reloadAllTags() async {
+        do {
+            allKnownTags = try await service.allTags()
+        } catch {
+            // non-critical
+        }
+    }
+
+    // MARK: - Source Jump-Back
+
+    public func navigateToSource(_ candidate: MemoryCandidate) {
+        guard let bookId = candidate.bookId else { return }
+        let locator = candidate.cfi
+        NotificationCenter.default.post(
+            name: .memorySourceJumpBack,
+            object: nil,
+            userInfo: [
+                "bookID": String(bookId),
+                "locator": locator as Any,
+            ]
+        )
+    }
+
+    // MARK: - Session Digest
+
+    public func loadLatestDigest() async {
+        do {
+            let documents = try await service.listDocuments()
+            guard let latestDaily = documents.first(where: { $0.kind == .daily }) else {
+                latestDigestSummary = nil
+                return
+            }
+            let content = try await service.loadDocument(named: latestDaily.name)
+            // Look for session digest section marker
+            if let range = content.range(of: "## Session Digest") ??
+               content.range(of: "## ") {
+                let afterHeader = content[range.upperBound...]
+                let nextSection = afterHeader.range(of: "\n## ")
+                let digestText: String
+                if let nextSection {
+                    digestText = String(afterHeader[..<nextSection.lowerBound])
+                } else {
+                    digestText = String(afterHeader)
+                }
+                let trimmed = digestText.trimmingCharacters(in: .whitespacesAndNewlines)
+                latestDigestSummary = trimmed.isEmpty ? nil : trimmed
+            } else {
+                latestDigestSummary = nil
+            }
+        } catch {
+            latestDigestSummary = nil
+        }
+    }
+
     private func loadErrorMessage(for error: Error) -> String {
         AppLocalization.userFacingErrorMessage(
             for: error,
@@ -190,4 +329,8 @@ public final class MemoryHomeViewModel {
             fallbackKey: "common.error"
         )
     }
+}
+
+public extension Notification.Name {
+    static let memorySourceJumpBack = Notification.Name("PaperTokMemorySourceJumpBack")
 }
