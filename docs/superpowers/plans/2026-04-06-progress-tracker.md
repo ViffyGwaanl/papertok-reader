@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-04-16 Wave 5 用户反馈打磨完成
+
+**5 commits** 落地（`fd41cec5` → `a0bab3f9`），覆盖用户报告的 13 项 UX 问题 + macOS build 修复。全部 push 到 `origin/swift-native`。
+
+### Wave 5 测试基线
+
+| Suite | W4 结束 | W5 结束 |
+|---|---|---|
+| PTCore | 75 | 75 |
+| PTAIServices | 167 | 167 |
+| PTUI | 20 | 20 |
+| PTFeatures | 363 | 395 |
+| PTReader | 88 | 88 |
+| App Tests | 72 | 76 |
+| **Total** | **785** | **821** |
+
+macOS standalone build 全程 green。
+
+### Wave 5 — 用户反馈打磨 ✅ (5 commits)
+
+- W5.1 Papers 完整重做 (`b1b6d34e`): 图片缓存 (`CachedAsyncImage` URLCache) + 默认反向排序（latest 而非 today）+ 详情全高 `.presentationDetents([.large])` + 解读/对话 分 tab + Markdown 渲染 (`AttributedString(markdown:)`) + 导入按钮上移 + 删除"阅读markdown" + EPUB 3 版本选择菜单 (Chinese/English/Bilingual)
+- W5.3 AI Provider 整合 (`fd41cec5`): 删除 chat 侧 `ProviderPickerSheet` + Settings 成为唯一入口 + `StoredAIProviderCatalog.resolveCurrentProvider()` 在 send-time 重新解析 + 订阅 `configurationDidChangeNotification` + 芯片 tap → 设置页
+- macOS build 修复 (`cf087053`): 排除 iOS lproj 从 macOS target（`9217f0c9` iOS 侧修复的对称版）
+- W5.2 Tabbar/Nav 重构 (`87a7168a`): 默认 tabs 5 个含 AI (`papers → bookshelf → ai → notes → settings`) + `AppTab.allInstallableOrder` 保留全 7 供设置页 + `.toolbar(.hidden, for: .tabBar)` 在 Reader 激活时 + tab icon 单色
+- W5.5 单色图标打磨 (`a0bab3f9`): `SettingsIconLabel` 扁平 Claude 风格 + 16 个 Settings 调用点自动单色 + `PTSettingsCard` 默认色 `MorandiPalette.primaryText` + `AIProviderCenterView` 去除彩色圆角背景 + 状态图标保留语义色（绿色 API key 设置、状态圆点等）
+
+### 用户反馈映射
+
+| # | 用户反馈 | 完成 Wave | Commit |
+|---|---|---|---|
+| 1 | 论文页图片不显示 | W5.1 | b1b6d34e |
+| 2 | 最新论文当天无则空 | W5.1 | b1b6d34e |
+| 3 | 论文详情只弹一半 | W5.1 | b1b6d34e |
+| 4 | 解读/对话分 tab | W5.1 | b1b6d34e |
+| 5 | Markdown 适配 | W5.1 | b1b6d34e |
+| 6 | 底部按钮移顶部 + 删 md 按钮 | W5.1 | b1b6d34e |
+| 7 | EPUB 3 版本选择 | W5.1 | b1b6d34e |
+| 8 | Reader 隐藏 tabbar | W5.2 | 87a7168a |
+| 9 | AI 进默认 tab 不藏 More | W5.2 | 87a7168a |
+| 10 | More → Settings | W5.2 | 87a7168a |
+| 11 | 首页导航配置（已是 toggle） | — | 无需修改（recon 确认） |
+| 12 | 单色图标 (Claude 风格) | W5.2+W5.5 | 87a7168a + a0bab3f9 |
+| 13 | AI Provider 保留详细 + 生效 | W5.3 | fd41cec5 |
+
+---
+
 ## 2026-04-15~16 全量收口 Wave 1–4 执行完成
 
 **47 commits** 落地（原始 HEAD `6c768b97` → 当前 HEAD `e80aad43`），覆盖阅读器 / AI 对话与供应商 / 中文适配 / Memory / Share / PTUI / macOS / 发布硬化八大主线。全部 push 到 `origin/swift-native`。
