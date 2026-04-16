@@ -1,7 +1,78 @@
 # Swift 原生迁移 — 整体进度追踪
 
-**最后更新：** 2026-04-11
+**最后更新：** 2026-04-16
 **分支：** `swift-native`
+
+---
+
+## 2026-04-15~16 全量收口 Wave 1–4 执行完成
+
+**47 commits** 落地（原始 HEAD `6c768b97` → 当前 HEAD `e80aad43`），覆盖阅读器 / AI 对话与供应商 / 中文适配 / Memory / Share / PTUI / macOS / 发布硬化八大主线。全部 push 到 `origin/swift-native`。
+
+### 测试基线
+
+| Suite | 起点 | 终点 |
+|---|---|---|
+| PTCore | 65 | 75 |
+| PTAIServices | 101 | 167+ |
+| PTUI | 5 | 20 |
+| PTFeatures | 164 | 363 |
+| PTReader | 52 | 88 |
+| App Tests | 53 | 72 |
+| **Total** | **440** | **785+** |
+
+macOS standalone build (`PaperTokReader-macOS`) 全程 green。
+
+### Wave 1 — Reader 收口 ✅ (13 commits)
+
+- W1.1: 共享 Find Bar UI（EPUB+PDF 搜索，竞态保护回归测试，macOS 编译 fence）
+- W1.2: EPUB 全文翻译覆盖层（Readium ContentService 段落枚举 + runtime + 磁盘缓存 + HTMLDecorationTemplate + per-book 持久化 + partial-failure chip + 设置面板）
+- W1.3: 下划线 / 删除线注解（AnnotationStylePicker + EPUB strikethrough HTML decoration + in-place kind 编辑，9 种 kind 转换全测）
+- W1.4: 自定义字体上传（CustomFontRegistry actor + CTFontManager + 应用组共享 + 文档拾取 + 启动恢复 + SIL OFL 测试字体）
+- W1.5: PDF 暗色 / 棕褐色模式（PDFPageOverlayViewProvider + Core Image + CIVector 参数正规化） + PDF outline 解析器 + ReaderViewModel 接入
+- W1.7: AI 上下文注入（ReaderContextResolver + 4 scopes + BudgetedTextClipper + ReaderContextPreambleBuilder + Quick Actions Sheet scope picker）
+- W1.8: 统一 Reader 状态屏（ReaderState enum + loading/empty/permission/error/recovery + retry 流程）
+- W1-followup: PDFThemeTint CIVector 清理（消灭 dotted scalar keys + macOS 潜在 crash 回归测试）
+
+### Wave 2 — AI Chat + Provider Settings 收口 ✅ (18 commits)
+
+- W2.1: 会话操作（per-book isolation + isPinned + bookId backward-compat + ConversationListViewModel + rename/delete/pin/search/export/JSON+CJK filenames + ConversationListView 全面重写 + reader entry-point threading）
+- W2.2: 消息操作（tree branching wrappers + Citation model + streaming Task cancel + 30ms debounce + edit & resend + retry + per-message branch navigator + regenerateLastAssistant bug fix + citations footer view + inline [N] markdown markers + MessageBubbleView wiring）
+- W2.3: AI runtime 服务（MaxTokensStrategy + PromptBudgeter + ModelContextWindowCatalog + ConversationCompressor + AutoTitleService + UsageTracker + BookContentCache + provider Anthropic usage bug fix）
+- W2.4: Provider 扩展（SiliconFlow / Groq / Mistral / Ollama / DeepSeek / OpenRouter 一次性内置 + JSON mode response format picker）
+- W2.5: Provider 详情修复（penalty persistence + stop seq parse + thinking budget Anthropic/Gemini + capability badges）
+- W2.6: MCP 全面升级（MCPServerStore actor JSON+Keychain secrets + legacy migration + MCPServerListView + MCPServerDetailView + auth editor + tool smoke test + MCPConfigView 退役）
+- W2.7: 统一设置面板（AI 标题生成设置 + 叙述/翻译联动 + Usage 仪表盘 Charts 7 天图）
+- W2.8: Reader AI panel 三端打磨（ReaderAIPanelState + iPad dock persistence + resize handle + iPhone detents + macOS sidebar collapse + Cmd+\ toggle）
+
+### Wave 3 — 中文 l10n 深化 ✅ (1 commit)
+
+- 拼音 collation 扩面到 ConversationListViewModel
+- CJK 字体栈（PingFang / Songti / STSong / Heiti 在 zh-Hans/zh-Hant 环境优先）
+- 日期格式化审计（全部使用 .autoupdatingCurrent，无硬编码英文 locale）
+- 错误映射扩面到 Wave 1/2 新增表面（ReaderFindBarState, CustomFontPickerViewModel, ConversationListViewModel）
+- LocalizationGuardrailTests（自动解析 Localizable.xcstrings + AppShortcuts.xcstrings，断言每个 key 有 zh-Hans 翻译）
+
+### Wave 4 — Memory + Share + PTUI + macOS + Hardening ✅ (5 commits)
+
+- W4.1: Memory 产品化（tag editor + FlowLayout + bulk ops + auto-capture rules + source jump-back notification + session digest UI）
+- W4.2: Share 升级（ask-after-open toggle + session target picker + attachment limits enforcement）
+- W4.3: PTUI 高阶组件层（SettingsCard + MetricTile + CollapsibleSection + DialogShell + ComposerShell + DiagnosticsRow，PTUI 从 4→10 组件）
+- W4.4: macOS closure（Format 菜单 + Cmd+O import + 右键 "Show in Finder" + sidebar 宽度持久化）
+- W4.5: 发布硬化（accessibility sweep 13 元素 + perf signposts 3 路径 + offline 错误消息 + deep link 验证）
+
+### 已知遗留（需外部依赖/产品决策）
+
+| 项目 | 原因 |
+|---|---|
+| W2.3e 注解账本 | 需 SwiftData vs JSON 持久化方案选择 |
+| W1.6 iPad 双栏阅读 | Readium CSS 层限制，降级 P2 |
+| EPUB quick-actions sheet | PDF 有 sheet，EPUB 无 UI 入口（resolver 可用） |
+| macOS Services | Info.plist 无 NSServices 注册 |
+| Universal links | 需 Apple Developer portal + AASA 文件 |
+| DeepSeek reasoner thinking | reasoning 字段解析未实现 |
+| Crash reporter | 需第三方 SDK (Sentry/Firebase) |
+| Ask-before-routing alert UI | 设置/key 就绪，消费侧 .alert 接入待做 |
 
 ---
 
