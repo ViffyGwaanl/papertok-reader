@@ -123,7 +123,8 @@ private struct MCPServerListRow: View {
     var body: some View {
         HStack(spacing: AppSpacing.sm) {
             Image(systemName: server.transportType == .stdio ? "terminal" : "globe")
-                .foregroundStyle(Morandi.accent)
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(Morandi.primaryText)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(server.name.isEmpty ? String(localized: "common.untitled") : server.name)

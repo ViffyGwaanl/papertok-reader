@@ -11,7 +11,7 @@ public struct PTSettingsCard<Trailing: View>: View {
 
     public init(
         icon: String,
-        iconColor: Color = Morandi.accent,
+        iconColor: Color = Morandi.primaryText,
         title: LocalizedStringKey,
         subtitle: LocalizedStringKey? = nil,
         @ViewBuilder trailing: () -> Trailing
@@ -26,6 +26,7 @@ public struct PTSettingsCard<Trailing: View>: View {
     public var body: some View {
         HStack(spacing: AppSpacing.md) {
             Image(systemName: icon)
+                .symbolRenderingMode(.monochrome)
                 .font(AppTypography.title3)
                 .foregroundStyle(iconColor)
                 .frame(width: 28, height: 28)
@@ -57,10 +58,11 @@ public struct PTSettingsCard<Trailing: View>: View {
 extension PTSettingsCard {
     struct TestHooks {
         let icon: String
+        let iconColor: Color
         let hasSubtitle: Bool
     }
 
     var testHooks: TestHooks {
-        TestHooks(icon: icon, hasSubtitle: subtitle != nil)
+        TestHooks(icon: icon, iconColor: iconColor, hasSubtitle: subtitle != nil)
     }
 }

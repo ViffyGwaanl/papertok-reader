@@ -116,10 +116,6 @@ public struct AIProviderCenterView: View {
         HStack(spacing: AppSpacing.md) {
             providerIcon(for: provider)
                 .frame(width: 32, height: 32)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(providerTint(for: provider).opacity(0.18))
-                )
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: AppSpacing.xs) {
@@ -159,13 +155,10 @@ public struct AIProviderCenterView: View {
     private func customRow(for entry: CustomProviderEntry) -> some View {
         HStack(spacing: AppSpacing.md) {
             Image(systemName: "wrench.adjustable")
+                .symbolRenderingMode(.monochrome)
                 .font(.system(size: 16))
-                .foregroundStyle(Morandi.lavender)
+                .foregroundStyle(Morandi.primaryText)
                 .frame(width: 32, height: 32)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Morandi.lavender.opacity(0.18))
-                )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.displayName)
@@ -283,22 +276,11 @@ public struct AIProviderCenterView: View {
             }
         }()
         Image(systemName: symbol)
+            .symbolRenderingMode(.monochrome)
             .font(.system(size: 16))
-            .foregroundStyle(providerTint(for: provider))
+            .foregroundStyle(Morandi.primaryText)
     }
 
-    private func providerTint(for provider: SupportedProvider) -> Color {
-        switch provider {
-        case .openai: return Morandi.sage
-        case .anthropic: return Morandi.dustyRose
-        case .gemini: return Morandi.powder
-        case .azure: return Morandi.mist
-        case .volcengine: return Morandi.clay
-        case .siliconflow, .groq, .mistral, .ollama, .deepseek, .openrouter:
-            return Morandi.lavender
-        case .custom: return Morandi.lavender
-        }
-    }
 
     // MARK: - Custom provider persistence
 
