@@ -80,6 +80,8 @@ targets:
           - Extensions/ShareExtension/**
           - Info.plist
           - Platform/macOS/Info.plist
+          - zh-Hans.lproj/**
+          - zh-Hant.lproj/**
     resources:
       - path: App/Resources/Localizable.xcstrings
     dependencies:

@@ -37,7 +37,6 @@
 		45386E49AD4F30B70CCD42D4 /* MacRootScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96EE94DCBFA9D76FC43355D9 /* MacRootScene.swift */; };
 		46B3EC75E5C6D30CEAD4508D /* ShareAndShortcutsSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 990CCB02A652D35DC43C9265 /* ShareAndShortcutsSettingsTests.swift */; };
 		482D11109BAD03437CAD6EC3 /* MultiStepShortcutExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AFCC98106ACD055751011E /* MultiStepShortcutExecutor.swift */; };
-		490054ED43351F1477B114C3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 494F574A095ACC554EB84EEB /* InfoPlist.strings */; };
 		4AA06C0EC5A324E5488C89DF /* SharedInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F0E1E59821837D32715C07 /* SharedInbox.swift */; };
 		524F2CC27AB1A25C0AB34843 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DF0BEACE2B73ED668304FF9 /* ShareViewController.swift */; };
 		52BFBF6D928E092740AF4782 /* FlutterMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF02D16979E12BA1D1B212B /* FlutterMigrationService.swift */; };
@@ -47,7 +46,6 @@
 		57CE53936CCD95B087C1B6B3 /* ShortcutAIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88957ED09C3369217AD0A30D /* ShortcutAIService.swift */; };
 		5C6299070050381C878F7CA2 /* PTCore in Frameworks */ = {isa = PBXBuildFile; productRef = 231295C1EBE4221399A3BA81 /* PTCore */; };
 		5E954AB81FB35C9BD1D89198 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A768AFE5CCD35A044EB45243 /* AppIntents.framework */; };
-		63EBF73279391D46BC977701 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = E65714A5EEB99DA9B8C425B0 /* InfoPlist.strings */; };
 		65DFBFC460E5BF9F1A83D545 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A768AFE5CCD35A044EB45243 /* AppIntents.framework */; };
 		66E1054DFAF978CADB78399E /* AppAIToolContextFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41719E23938C9D9FBA36F8C /* AppAIToolContextFactory.swift */; };
 		675EB44BE98BFDEE4CD4B4D0 /* LocalizationGuardrailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F260D97D3AC34985A840265 /* LocalizationGuardrailTests.swift */; };
@@ -644,8 +642,6 @@
 				949D6456087846D96E750C0F /* Assets.xcassets in Resources */,
 				A8CD3A0445572E5C7A313407 /* InfoPlist.strings in Resources */,
 				A343EE543BA3A9814D3C8E87 /* InfoPlist.strings in Resources */,
-				63EBF73279391D46BC977701 /* InfoPlist.strings in Resources */,
-				490054ED43351F1477B114C3 /* InfoPlist.strings in Resources */,
 				E0BD0C8965C2FC139407BD03 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
