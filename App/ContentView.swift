@@ -4254,6 +4254,36 @@ struct SettingsScreen: View {
                     tint: Morandi.dustyRose
                 )
             }
+
+            NavigationLink {
+                AITitleGenerationSettingsView(viewModel: viewModel)
+            } label: {
+                SettingsIconLabel(
+                    String(localized: "settings.ai.title_gen.section"),
+                    systemImage: "textformat.abc",
+                    tint: Morandi.clay
+                )
+            }
+
+            NavigationLink {
+                NarrateTranslateSettingsView(viewModel: viewModel)
+            } label: {
+                SettingsIconLabel(
+                    String(localized: "settings.ai.translation.section"),
+                    systemImage: "character.bubble.fill",
+                    tint: Morandi.mauve
+                )
+            }
+
+            NavigationLink {
+                UsageDashboardView(tracker: UsageTracker())
+            } label: {
+                SettingsIconLabel(
+                    String(localized: "settings.usage.section"),
+                    systemImage: "chart.bar.fill",
+                    tint: Morandi.powder
+                )
+            }
         } header: {
             Text("settings.ai_providers")
         } footer: {
