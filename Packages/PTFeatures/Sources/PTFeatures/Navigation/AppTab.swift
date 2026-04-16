@@ -41,8 +41,24 @@ public enum AppTab: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Default tab order.
-    public static let defaultOrder: [AppTab] = [.papers, .bookshelf, .notes, .statistics, .ai, .memory, .settings]
+    /// Default visible tab order on a fresh install.
+    ///
+    /// Kept to five entries so iOS does NOT auto-collapse a 5th+ tab into a
+    /// system-provided "More" overflow. AI is hoisted to position 3 so the
+    /// chat surface is always one tap away, and Settings anchors position 5
+    /// (satisfying the "More should just be settings" UX request).
+    ///
+    /// Users can still add `.statistics` and `.memory` back into their tab
+    /// bar via `HomeNavigationConfigView` — `allInstallableOrder` supplies
+    /// the full option set for that screen.
+    public static let defaultOrder: [AppTab] = [.papers, .bookshelf, .ai, .notes, .settings]
+
+    /// Full 7-tab roster surfaced by `HomeNavigationConfigView` so users can
+    /// opt in to `.statistics` / `.memory` tabs even though they are no
+    /// longer part of the default visible set.
+    public static let allInstallableOrder: [AppTab] = [
+        .papers, .bookshelf, .ai, .notes, .statistics, .memory, .settings
+    ]
 
     // MARK: - Home Navigation Configuration (UserDefaults-backed)
 

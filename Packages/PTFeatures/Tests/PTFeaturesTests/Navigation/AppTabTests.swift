@@ -19,10 +19,10 @@ struct AppTabTests {
         }
     }
 
-    @Test("Default order matches all cases")
+    @Test("Default order is a five-tab subset")
     func defaultOrder() {
-        #expect(AppTab.defaultOrder.count == 7)
-        #expect(Set(AppTab.defaultOrder) == Set(AppTab.allCases))
+        #expect(AppTab.defaultOrder.count == 5)
+        #expect(Set(AppTab.defaultOrder).isSubset(of: Set(AppTab.allCases)))
     }
 
     @Test("currentOrder appends newly introduced tabs to older saved layouts")
@@ -37,7 +37,9 @@ struct AppTabTests {
         }
 
         let order = AppTab.currentOrder()
-        #expect(order.contains(.memory))
+        // After the W5.2 default shrink, memory is not auto-included in old
+        // saved layouts (only defaultOrder members are backfilled). Settings
+        // remains pinned last.
         #expect(order.last == .settings)
     }
 }

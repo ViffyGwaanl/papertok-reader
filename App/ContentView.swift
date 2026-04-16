@@ -145,7 +145,13 @@ struct MainTabView: View {
             ForEach(AppTab.currentOrder()) { tab in
                 destination(for: tab)
                     .tabItem {
-                        Label(tab.title, systemImage: tab.icon)
+                        // W5.2 — monochrome SF Symbol rendering matches the
+                        // Claude-app aesthetic. The `Label(_:systemImage:)`
+                        // convenience does not expose a rendering-mode knob
+                        // so we construct the Image and Text explicitly.
+                        Image(systemName: tab.icon)
+                            .symbolRenderingMode(.monochrome)
+                        Text(tab.title)
                     }
                     .tag(tab)
             }
@@ -1919,6 +1925,11 @@ struct PDFBookshelfReaderView: View {
         .onDisappear {
             aiChatViewModel.currentBookId = nil
         }
+#if os(iOS)
+        // W5.2 — give the reader full-screen real estate by hiding the
+        // root tab bar while this view is in the navigation stack.
+        .toolbar(.hidden, for: .tabBar)
+#endif
     }
 
     private func preflight() async {
@@ -2145,6 +2156,11 @@ struct EPUBBookshelfReaderView: View {
         } message: {
             Text(preferencesViewModel?.errorMessage ?? "")
         }
+#if os(iOS)
+        // W5.2 — give the reader full-screen real estate by hiding the
+        // root tab bar while this view is in the navigation stack.
+        .toolbar(.hidden, for: .tabBar)
+#endif
     }
 
     @ViewBuilder

@@ -11,13 +11,17 @@ public struct HomeNavigationConfigView: View {
 
     public init() {
         let defaults = UserDefaults(suiteName: "group.ai.papertok.paperreader") ?? .standard
+        // W5.2 — we surface the full `allInstallableOrder` roster so the 2
+        // tabs that were dropped from `defaultOrder` (statistics, memory)
+        // remain configurable here. Tabs absent from the persisted order are
+        // appended (preserving the Settings pin at the tail).
         var storedOrder: [AppTab]
         if let raw = defaults.stringArray(forKey: "home_nav_tab_order") {
             storedOrder = raw.compactMap { AppTab(rawValue: $0) }
         } else {
             storedOrder = AppTab.defaultOrder
         }
-        for tab in AppTab.defaultOrder where storedOrder.contains(tab) == false {
+        for tab in AppTab.allInstallableOrder where storedOrder.contains(tab) == false {
             if tab == .settings {
                 storedOrder.append(tab)
             } else if let settingsIndex = storedOrder.firstIndex(of: .settings) {
@@ -26,16 +30,18 @@ public struct HomeNavigationConfigView: View {
                 storedOrder.append(tab)
             }
         }
+        // Disabled-by-default set: tabs that are installable but not in the
+        // default visible set (statistics, memory). Users can toggle them on
+        // from this screen; they remain off on a fresh install.
+        let defaultDisabled: Set<AppTab> = Set(AppTab.allInstallableOrder)
+            .subtracting(AppTab.defaultOrder)
         let storedEnabled: Set<AppTab>
         if let raw = defaults.stringArray(forKey: "home_nav_enabled_tabs") {
             var set = Set(raw.compactMap { AppTab(rawValue: $0) })
             set.insert(.settings)
-            for tab in AppTab.defaultOrder where raw.contains(tab.rawValue) == false {
-                set.insert(tab)
-            }
             storedEnabled = set
         } else {
-            storedEnabled = Set(AppTab.allCases)
+            storedEnabled = Set(AppTab.allInstallableOrder).subtracting(defaultDisabled)
         }
         _order = State(initialValue: storedOrder)
         _enabled = State(initialValue: storedEnabled)
@@ -141,8 +147,8 @@ public struct HomeNavigationConfigView: View {
         ) {
             Button("common.reset", role: .destructive) {
                 AppTab.resetConfiguration()
-                order = AppTab.defaultOrder
-                enabled = Set(AppTab.allCases)
+                order = AppTab.allInstallableOrder
+                enabled = Set(AppTab.defaultOrder)
             }
             Button("common.cancel", role: .cancel) {}
         }
