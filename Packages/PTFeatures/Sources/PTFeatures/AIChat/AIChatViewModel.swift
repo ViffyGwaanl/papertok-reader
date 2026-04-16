@@ -287,11 +287,13 @@ public final class AIChatViewModel {
             return false
         }
 
+        let signpostID = PerformanceSignposts.beginChatSend()
         errorMessage = nil
         beginTurn(providerId: providerOption.id, modelId: selectedModelId)
         conversationTree.append(ChatMessage(role: .user, content: buildUserContentParts(text: trimmed)))
         clearAttachments()
         await continueCurrentTurn()
+        PerformanceSignposts.endChatSend(signpostID)
         return errorMessage == nil
     }
 
@@ -654,7 +656,9 @@ public final class AIChatViewModel {
             } catch {
                 flushPending()
                 endTurn()
-                if error is ProviderError {
+                if Self.isOfflineError(error) {
+                    errorMessage = aiChatLocalizedCatalogString("chat.error.offline")
+                } else if error is ProviderError {
                     errorMessage = AppLocalization.userFacingErrorMessage(
                         for: error,
                         fallbackKey: "errors.ai.streaming_interrupted"
@@ -727,6 +731,23 @@ public final class AIChatViewModel {
         streamingTokens.removeAll()
         isStreaming = false
         applyPendingRuntimeUpdateIfNeeded()
+    }
+
+    /// Returns `true` when the error indicates the device is offline.
+    nonisolated static func isOfflineError(_ error: Error) -> Bool {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
+                return true
+            default:
+                return false
+            }
+        }
+        // Check wrapped URLErrors (e.g. inside ProviderError or other wrappers)
+        if let underlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? URLError {
+            return Self.isOfflineError(underlying)
+        }
+        return false
     }
 
     private func executeToolCalls(_ toolCalls: [ToolCall]) async -> Bool {

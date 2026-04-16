@@ -68,7 +68,11 @@ public final class ReaderViewModel {
     public func loadDocument() async {
         isLoading = true
         state = .loading(progress: nil)
-        defer { isLoading = false }
+        let signpostID = PerformanceSignposts.beginBookOpen()
+        defer {
+            isLoading = false
+            PerformanceSignposts.endBookOpen(signpostID)
+        }
 
         let url = URL(fileURLWithPath: book.filePath)
         let fileManager = FileManager.default

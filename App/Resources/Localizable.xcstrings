@@ -208,6 +208,29 @@
         }
       }
     },
+    "chat.error.offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You appear to be offline. Check your connection and try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u60a8\u4f3c\u4e4e\u5904\u4e8e\u79bb\u7ebf\u72b6\u6001\u3002\u8bf7\u68c0\u67e5\u7f51\u7edc\u8fde\u63a5\u540e\u91cd\u8bd5\u3002"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u60a8\u4f3c\u4e4e\u8655\u65bc\u96e2\u7dda\u72c0\u614b\u3002\u8acb\u6aa2\u67e5\u7db2\u8def\u9023\u7dda\u5f8c\u91cd\u8a66\u3002"
+          }
+        }
+      }
+    },
     "chat.conversations.search_placeholder": {
       "extractionState": "manual",
       "localizations": {
@@ -54956,6 +54979,75 @@
         }
       }
     },
+    "reader.a11y.find_bar_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-tap to open the search bar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u8f7b\u70b9\u4e24\u6b21\u6253\u5f00\u641c\u7d22\u680f"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u8f15\u9ede\u5169\u6b21\u958b\u555f\u641c\u5c0b\u6b04"
+          }
+        }
+      }
+    },
+    "reader.a11y.fullscreen_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-tap to toggle full screen mode"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u8f7b\u70b9\u4e24\u6b21\u5207\u6362\u5168\u5c4f\u6a21\u5f0f"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u8f15\u9ede\u5169\u6b21\u5207\u63db\u5168\u87a2\u5e55\u6a21\u5f0f"
+          }
+        }
+      }
+    },
+    "reader.a11y.toggle_ai_panel_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-tap to toggle the AI panel"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u8f7b\u70b9\u4e24\u6b21\u5207\u6362 AI \u9762\u677f"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u8f15\u9ede\u5169\u6b21\u5207\u63db AI \u9762\u677f"
+          }
+        }
+      }
+    },
     "reader.ai_panel.expand": {
       "extractionState": "manual",
       "localizations": {
@@ -60469,6 +60561,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "此 PDF 沒有目錄。"
+          }
+        }
+      }
+    },
+    "reader.more_options": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More options"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u66f4\u591a\u9009\u9879"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u66f4\u591a\u9078\u9805"
           }
         }
       }
@@ -98083,6 +98198,52 @@
         }
       }
     },
+    "tts.pitch.high": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High pitch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u9ad8\u97f3\u8c03"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u9ad8\u97f3\u8abf"
+          }
+        }
+      }
+    },
+    "tts.pitch.low": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low pitch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u4f4e\u97f3\u8c03"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u4f4e\u97f3\u8abf"
+          }
+        }
+      }
+    },
     "tts.pitch": {
       "extractionState": "manual",
       "localizations": {
@@ -98973,6 +99134,52 @@
         }
       }
     },
+    "tts.speed.fast": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fast"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u5feb\u901f"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u5feb\u901f"
+          }
+        }
+      }
+    },
+    "tts.speed.slow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slow"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u6162\u901f"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u6162\u901f"
+          }
+        }
+      }
+    },
     "tts.speed": {
       "extractionState": "manual",
       "localizations": {
@@ -99770,6 +99977,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "語音引擎"
+          }
+        }
+      }
+    },
+    "tts.volume.high": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High volume"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u9ad8\u97f3\u91cf"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u9ad8\u97f3\u91cf"
+          }
+        }
+      }
+    },
+    "tts.volume.low": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low volume"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u4f4e\u97f3\u91cf"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\u4f4e\u97f3\u91cf"
           }
         }
       }

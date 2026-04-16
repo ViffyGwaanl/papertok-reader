@@ -347,6 +347,8 @@ public struct ReaderAIMinimizedBar: View {
                 .shadow(color: Morandi.warmGray.opacity(0.18), radius: AppSpacing.shadowRadius)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "reader.ai_panel.expand"))
+            .accessibilityHint(String(localized: "reader.a11y.toggle_ai_panel_hint"))
             .padding(.horizontal, AppSpacing.lg)
             .padding(.vertical, AppSpacing.sm)
             .frame(maxWidth: .infinity, alignment: .trailing)

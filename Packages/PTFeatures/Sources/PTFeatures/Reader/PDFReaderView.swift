@@ -837,6 +837,7 @@ public struct PDFReaderView: View {
                     .foregroundStyle(Morandi.accent)
             }
             .accessibilityLabel(String(localized: isFullScreen ? "common.exit_full_screen" : "common.full_screen"))
+            .accessibilityHint(String(localized: "reader.a11y.fullscreen_hint"))
 
             Button {
                 isAIPanelPresented = true
@@ -845,6 +846,7 @@ public struct PDFReaderView: View {
                     .foregroundStyle(Morandi.accent)
             }
             .accessibilityLabel(String(localized: "reader.open_ai_panel"))
+            .accessibilityHint(String(localized: "reader.a11y.toggle_ai_panel_hint"))
 
             Button {
                 readerControlsViewModel?.showSearch = true
@@ -853,6 +855,7 @@ public struct PDFReaderView: View {
                     .foregroundStyle(Morandi.accent)
             }
             .accessibilityLabel(String(localized: "reader.search_book"))
+            .accessibilityHint(String(localized: "reader.a11y.find_bar_hint"))
             .disabled(readerControlsViewModel == nil)
 
             Button {
@@ -899,6 +902,7 @@ public struct PDFReaderView: View {
                 Image(systemName: "list.bullet")
                     .foregroundStyle(Morandi.accent)
             }
+            .accessibilityLabel(String(localized: "reader.more_options"))
         }
 
         ToolbarItem(placement: .status) {

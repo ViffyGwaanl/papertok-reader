@@ -1,6 +1,7 @@
 #if canImport(ReadiumShared)
 import CryptoKit
 import Foundation
+import PTCore
 import ReadiumShared
 
 /// A single paragraph-sized text element extracted from an EPUB chapter via
@@ -42,12 +43,16 @@ extension EPUBContentBridge {
     /// whose href equals `locator.href`; iteration stops as soon as the
     /// underlying `ContentService` crosses into another resource.
     public func chapterParagraphs(at locator: Locator) async throws -> [EPUBChapterParagraph] {
+        let signpostID = PerformanceSignposts.beginChapterEnum()
+        defer { PerformanceSignposts.endChapterEnum(signpostID) }
         let chapterHref = locator.href.string
         let start = await resolveChapterStart(forHref: chapterHref) ?? locator
         return try await enumerateParagraphs(startingAt: start, chapterHref: chapterHref)
     }
 
     public func chapterParagraphs(href chapterHref: String) async throws -> [EPUBChapterParagraph] {
+        let signpostID = PerformanceSignposts.beginChapterEnum()
+        defer { PerformanceSignposts.endChapterEnum(signpostID) }
         guard let start = await resolveChapterStart(forHref: chapterHref) else {
             throw EPUBChapterParagraphsError.chapterNotFound(href: chapterHref)
         }

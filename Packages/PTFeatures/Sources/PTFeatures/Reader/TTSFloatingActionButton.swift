@@ -237,6 +237,7 @@ struct TTSExpandedControlsSheet: View {
                 Image(systemName: "tortoise.fill")
                     .font(.caption)
                     .foregroundStyle(Morandi.tertiaryText)
+                    .accessibilityLabel(String(localized: "tts.speed.slow"))
                 Slider(
                     value: Binding(
                         get: { service.orchestrator.rate },
@@ -249,6 +250,7 @@ struct TTSExpandedControlsSheet: View {
                 Image(systemName: "hare.fill")
                     .font(.caption)
                     .foregroundStyle(Morandi.tertiaryText)
+                    .accessibilityLabel(String(localized: "tts.speed.fast"))
             }
         }
     }
@@ -268,6 +270,7 @@ struct TTSExpandedControlsSheet: View {
                 Image(systemName: "arrow.down")
                     .font(.caption)
                     .foregroundStyle(Morandi.tertiaryText)
+                    .accessibilityLabel(String(localized: "tts.pitch.low"))
                 Slider(
                     value: Binding(
                         get: { service.orchestrator.pitch },
@@ -280,6 +283,7 @@ struct TTSExpandedControlsSheet: View {
                 Image(systemName: "arrow.up")
                     .font(.caption)
                     .foregroundStyle(Morandi.tertiaryText)
+                    .accessibilityLabel(String(localized: "tts.pitch.high"))
             }
         }
     }
@@ -299,6 +303,7 @@ struct TTSExpandedControlsSheet: View {
                 Image(systemName: "speaker.fill")
                     .font(.caption)
                     .foregroundStyle(Morandi.tertiaryText)
+                    .accessibilityLabel(String(localized: "tts.volume.low"))
                 Slider(
                     value: Binding(
                         get: { service.orchestrator.volume },
@@ -311,6 +316,7 @@ struct TTSExpandedControlsSheet: View {
                 Image(systemName: "speaker.wave.3.fill")
                     .font(.caption)
                     .foregroundStyle(Morandi.tertiaryText)
+                    .accessibilityLabel(String(localized: "tts.volume.high"))
             }
         }
     }

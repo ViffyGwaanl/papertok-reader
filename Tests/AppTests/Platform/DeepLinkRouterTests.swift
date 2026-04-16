@@ -143,6 +143,22 @@ struct DeepLinkRouterTests {
     }
 #endif
 
+    @Test("book URL with ID routes to openBook destination")
+    func openBookURLRoutesToReader() {
+        let url = URL(string: "paperreader://book/123")!
+        let destination = DeepLinkParser.parse(url: url)
+
+        #expect(destination == .openBook(id: "123", title: nil, locator: nil))
+    }
+
+    @Test("chat URL routes to AI tab destination")
+    func chatURLRoutesToAITab() {
+        let url = URL(string: "paperreader://ai")!
+        let destination = DeepLinkParser.parse(url: url)
+
+        #expect(destination == .aiChat(initialMessage: nil, shareToken: nil))
+    }
+
     @Test("reader navigation overrides convert PDF page locators to zero based page indices")
     func readerNavigationOverrideResolvesPDFPage() throws {
         let book = Book.placeholder(title: "PDF", filePath: "/tmp/book.pdf")

@@ -140,6 +140,7 @@ public struct ReaderImageViewer: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
+                .accessibilityLabel(String(localized: "common.close"))
 
                 Spacer()
 
