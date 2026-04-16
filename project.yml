@@ -42,6 +42,7 @@ targets:
           - Extensions/ShareExtension/**
           - Info.plist
           - Platform/macOS/Info.plist
+          - Platform/macOS/*.lproj/**
     resources:
       - path: App/Resources/Localizable.xcstrings
     dependencies:
