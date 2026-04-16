@@ -16,13 +16,9 @@ struct ShareAndShortcutsSnapshotTests {
         defaults.removePersistentDomain(forName: suiteName)
 
         let settingsStore = ShareAndShortcutsSettingsStore(defaults: defaults)
-        settingsStore.save(
-            ShareAndShortcutsSettings(
-                defaultRoute: .bookshelf,
-                ttlDays: 7,
-                cleanupAfterUse: true
-            )
-        )
+        var snapshotSettings = ShareAndShortcutsSettings.default
+        snapshotSettings.defaultRoute = .bookshelf
+        settingsStore.save(snapshotSettings)
 
         let event = SharedInboxEvent(
             id: "snapshot-event",

@@ -62,11 +62,13 @@ struct SharedInboxTests {
 
         let settingsStore = ShareAndShortcutsSettingsStore(defaults: defaults)
         settingsStore.save(
-            ShareAndShortcutsSettings(
-                defaultRoute: .auto,
-                ttlDays: 1,
-                cleanupAfterUse: true
-            )
+            {
+                var s = ShareAndShortcutsSettings.default
+                s.defaultRoute = .auto
+                s.ttlDays = 1
+                s.cleanupAfterUse = true
+                return s
+            }()
         )
 
         let expiredDate = Date(timeIntervalSince1970: 1_700_000_000)
@@ -104,11 +106,11 @@ struct SharedInboxTests {
 
         let settingsStore = ShareAndShortcutsSettingsStore(defaults: defaults)
         settingsStore.save(
-            ShareAndShortcutsSettings(
-                defaultRoute: .auto,
-                ttlDays: 7,
-                cleanupAfterUse: true
-            )
+            {
+                var s = ShareAndShortcutsSettings.default
+                s.ttlDays = 7
+                return s
+            }()
         )
 
         let createdAt = Date(timeIntervalSince1970: 1_700_000_000)
@@ -147,11 +149,13 @@ struct SharedInboxTests {
 
         let settingsStore = ShareAndShortcutsSettingsStore(defaults: defaults)
         settingsStore.save(
-            ShareAndShortcutsSettings(
-                defaultRoute: .ask,
-                ttlDays: 7,
-                cleanupAfterUse: false
-            )
+            {
+                var s = ShareAndShortcutsSettings.default
+                s.defaultRoute = .ask
+                s.ttlDays = 7
+                s.cleanupAfterUse = false
+                return s
+            }()
         )
 
         let event = SharedInboxEvent(

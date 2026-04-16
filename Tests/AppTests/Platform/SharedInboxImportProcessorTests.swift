@@ -123,6 +123,9 @@ struct SharedInboxImportProcessorTests {
                 fileExists: { url in
                     FileManager.default.fileExists(atPath: url.path)
                 },
+                fileSize: { url in
+                    (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64
+                },
                 importBook: { _ in nil }
             )
         )
@@ -178,6 +181,99 @@ struct SharedInboxImportProcessorTests {
         #expect(SharedInbox.loadEvent(id: eventID, containerURL: containerURL) == nil)
     }
 
+    @Test("oversized attachment is rejected before processing")
+    func oversizedAttachmentRejected() async throws {
+        let containerURL = try makeContainerURL(prefix: "SharedInboxImportProcessorOversize")
+        defer { try? FileManager.default.removeItem(at: containerURL) }
+
+        let eventID = UUID().uuidString
+        // Create a file larger than 1 MB limit
+        let largeData = Data(repeating: 0x41, count: 2_000_001)
+        let book = try SharedInbox.store(
+            data: largeData,
+            filename: "big.epub",
+            eventID: eventID,
+            kind: .book,
+            mediaType: "application/epub+zip",
+            containerURL: containerURL
+        )
+        try SharedInbox.save(
+            SharedInboxEvent(
+                id: eventID,
+                createdAt: Date(),
+                route: .bookshelfImport,
+                text: [],
+                urls: [],
+                fileItems: [book]
+            ),
+            containerURL: containerURL
+        )
+
+        var settings = ShareAndShortcutsSettings.default
+        settings.maxAttachmentSizeMB = 1
+
+        let processor = SharedInboxImportProcessor(
+            dependencies: makeDependencies(containerURL: containerURL) { _ in
+                Issue.record("importBook should not be called for oversized files")
+                return nil
+            },
+            settings: settings
+        )
+
+        let result = await processor.process(eventID: eventID)
+
+        #expect(result.importedCount == 0)
+        #expect(result.remainingCount == 1)
+        #expect(result.errorMessage != nil)
+        #expect(result.didConsumeEvent == false)
+    }
+
+    @Test("over-count attachments are rejected before processing")
+    func overCountAttachmentsRejected() async throws {
+        let containerURL = try makeContainerURL(prefix: "SharedInboxImportProcessorOvercount")
+        defer { try? FileManager.default.removeItem(at: containerURL) }
+
+        let eventID = UUID().uuidString
+        var items: [SharedInboxFileItem] = []
+        for i in 0..<4 {
+            let item = try makeStoredBookItem(
+                filename: "book\(i).epub",
+                eventID: eventID,
+                containerURL: containerURL
+            )
+            items.append(item)
+        }
+        try SharedInbox.save(
+            SharedInboxEvent(
+                id: eventID,
+                createdAt: Date(),
+                route: .bookshelfImport,
+                text: [],
+                urls: [],
+                fileItems: items
+            ),
+            containerURL: containerURL
+        )
+
+        var settings = ShareAndShortcutsSettings.default
+        settings.maxAttachmentCount = 2
+
+        let processor = SharedInboxImportProcessor(
+            dependencies: makeDependencies(containerURL: containerURL) { _ in
+                Issue.record("importBook should not be called for over-count")
+                return nil
+            },
+            settings: settings
+        )
+
+        let result = await processor.process(eventID: eventID)
+
+        #expect(result.importedCount == 0)
+        #expect(result.remainingCount == 4)
+        #expect(result.errorMessage != nil)
+        #expect(result.didConsumeEvent == false)
+    }
+
     private func makeContainerURL(prefix: String) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(prefix)-\(UUID().uuidString)", isDirectory: true)
@@ -219,6 +315,9 @@ struct SharedInboxImportProcessorTests {
             },
             fileExists: { url in
                 FileManager.default.fileExists(atPath: url.path)
+            },
+            fileSize: { url in
+                (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64
             },
             importBook: importBook
         )

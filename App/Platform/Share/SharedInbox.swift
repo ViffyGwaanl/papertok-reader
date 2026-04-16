@@ -113,10 +113,31 @@ struct SharedInboxDiagnosticsSnapshot: Equatable, Sendable {
     let latestEvent: LatestEvent?
 }
 
+enum ShareSessionTarget: String, Codable, CaseIterable, Sendable {
+    case automatic
+    case newConversation = "new_conversation"
+    case currentConversation = "current_conversation"
+
+    var localizedTitle: String {
+        switch self {
+        case .automatic:
+            return String(localized: "share.settings.session_target.automatic")
+        case .newConversation:
+            return String(localized: "share.settings.session_target.new_conversation")
+        case .currentConversation:
+            return String(localized: "share.settings.session_target.current_conversation")
+        }
+    }
+}
+
 struct ShareAndShortcutsSettings: Codable, Equatable, Sendable {
     var defaultRoute: ShareDefaultRoute
     var ttlDays: Int
     var cleanupAfterUse: Bool
+    var askBeforeRouting: Bool
+    var sessionTarget: ShareSessionTarget
+    var maxAttachmentSizeMB: Int
+    var maxAttachmentCount: Int
 
     var retentionInterval: TimeInterval? {
         guard ttlDays > 0 else { return nil }
@@ -126,7 +147,11 @@ struct ShareAndShortcutsSettings: Codable, Equatable, Sendable {
     static let `default` = ShareAndShortcutsSettings(
         defaultRoute: .auto,
         ttlDays: 7,
-        cleanupAfterUse: true
+        cleanupAfterUse: true,
+        askBeforeRouting: false,
+        sessionTarget: .automatic,
+        maxAttachmentSizeMB: 10,
+        maxAttachmentCount: 5
     )
 }
 
@@ -167,7 +192,11 @@ struct ShareAndShortcutsSettingsStore {
         return ShareAndShortcutsSettings(
             defaultRoute: defaultRoute,
             ttlDays: ttlDays,
-            cleanupAfterUse: cleanupAfterUse
+            cleanupAfterUse: cleanupAfterUse,
+            askBeforeRouting: ShareAndShortcutsSettings.default.askBeforeRouting,
+            sessionTarget: ShareAndShortcutsSettings.default.sessionTarget,
+            maxAttachmentSizeMB: ShareAndShortcutsSettings.default.maxAttachmentSizeMB,
+            maxAttachmentCount: ShareAndShortcutsSettings.default.maxAttachmentCount
         )
     }
 

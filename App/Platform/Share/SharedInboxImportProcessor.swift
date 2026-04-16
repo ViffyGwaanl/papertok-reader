@@ -21,6 +21,7 @@ struct SharedInboxImportProcessor {
         let finalizeSuccessfulUse: @Sendable (String) -> ShareInboxMaintenanceDisposition
         let fileURL: @Sendable (SharedInboxFileItem, String) -> URL
         let fileExists: @Sendable (URL) -> Bool
+        let fileSize: @Sendable (URL) -> Int64?
         let importBook: @Sendable (URL) async -> Error?
 
         static func live(importBook: @escaping @Sendable (URL) async -> Error?) -> Dependencies {
@@ -43,15 +44,20 @@ struct SharedInboxImportProcessor {
                 fileExists: { url in
                     FileManager.default.fileExists(atPath: url.path)
                 },
+                fileSize: { url in
+                    (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64
+                },
                 importBook: importBook
             )
         }
     }
 
     private let dependencies: Dependencies
+    private let settings: ShareAndShortcutsSettings
 
-    init(dependencies: Dependencies) {
+    init(dependencies: Dependencies, settings: ShareAndShortcutsSettings = ShareAndShortcutsSettingsStore().load()) {
         self.dependencies = dependencies
+        self.settings = settings
     }
 
     init(importBook: @escaping @Sendable (URL) async -> Error?) {
@@ -99,6 +105,30 @@ struct SharedInboxImportProcessor {
                 didConsumeEvent: true,
                 errorMessage: String(localized: "share.error.content_unavailable")
             )
+        }
+
+        if bookItems.count > settings.maxAttachmentCount {
+            return .init(
+                importedCount: 0,
+                remainingCount: bookItems.count,
+                discardedCount: 0,
+                didConsumeEvent: false,
+                errorMessage: String(localized: "share.error.too_many_attachments")
+            )
+        }
+
+        let maxBytes: Int64 = Int64(settings.maxAttachmentSizeMB) * 1_000_000
+        for item in bookItems {
+            let url = dependencies.fileURL(item, eventID)
+            if let size = dependencies.fileSize(url), size > maxBytes {
+                return .init(
+                    importedCount: 0,
+                    remainingCount: bookItems.count,
+                    discardedCount: 0,
+                    didConsumeEvent: false,
+                    errorMessage: String(localized: "share.error.attachment_too_large")
+                )
+            }
         }
 
         var importedCount = 0

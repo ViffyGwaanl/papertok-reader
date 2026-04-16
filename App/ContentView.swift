@@ -103,6 +103,13 @@ struct MainTabView: View {
                 )
             )
         }
+        .onReceive(NotificationCenter.default.publisher(for: .memorySourceJumpBack)) { notification in
+            guard let userInfo = notification.userInfo,
+                  let bookID = userInfo["bookID"] as? String else { return }
+            let locator = userInfo["locator"] as? String
+            navigation.selectedTab = .bookshelf
+            navigation.pendingBookRequest = BookshelfOpenRequest(bookID: bookID, title: nil, locator: locator)
+        }
     }
 
     private var iPhoneTabLayout: some View {
@@ -4605,6 +4612,37 @@ struct ShareShortcutsSettingsView: View {
             }
 
             Section {
+                Toggle(String(localized: "share.settings.ask_before_routing"), isOn: $settings.askBeforeRouting)
+            } footer: {
+                Text("share.settings.ask_before_routing.footer")
+            }
+
+            Section {
+                Picker(String(localized: "share.settings.session_target"), selection: $settings.sessionTarget) {
+                    ForEach(ShareSessionTarget.allCases, id: \.self) { target in
+                        Text(target.localizedTitle).tag(target)
+                    }
+                }
+            } header: {
+                Text("share.settings.session_target")
+            }
+
+            Section {
+                Stepper(
+                    String(localized: "share.settings.max_attachment_size") + ": \(settings.maxAttachmentSizeMB) MB",
+                    value: $settings.maxAttachmentSizeMB,
+                    in: 1...100
+                )
+                Stepper(
+                    String(localized: "share.settings.max_attachment_count") + ": \(settings.maxAttachmentCount)",
+                    value: $settings.maxAttachmentCount,
+                    in: 1...20
+                )
+            } header: {
+                Text("share.settings.attachment_limits")
+            }
+
+            Section {
                 Toggle(String(localized: "share.settings.cleanup_after_use"), isOn: $settings.cleanupAfterUse)
             } footer: {
                 Text("share.settings.cleanup_after_use.footer")
@@ -4677,6 +4715,18 @@ struct ShareShortcutsSettingsView: View {
             persistSettings()
         }
         .onChange(of: settings.cleanupAfterUse) { _, _ in
+            persistSettings()
+        }
+        .onChange(of: settings.askBeforeRouting) { _, _ in
+            persistSettings()
+        }
+        .onChange(of: settings.sessionTarget) { _, _ in
+            persistSettings()
+        }
+        .onChange(of: settings.maxAttachmentSizeMB) { _, _ in
+            persistSettings()
+        }
+        .onChange(of: settings.maxAttachmentCount) { _, _ in
             persistSettings()
         }
     }
