@@ -24,7 +24,7 @@ public final class PapersViewModel {
     public private(set) var error: String?
     public var searchQuery = ""
     public var likedOnly = false
-    public var dayFilter = "all"
+    public var dayFilter = "latest"
     public private(set) var language: String
     public private(set) var customDate: Date?
     public var likedIds: Set<Int> = []

@@ -46,6 +46,24 @@ struct PapersViewModelTests {
         #expect(!vm.likedOnly)
     }
 
+    @Test("Default day filter is 'latest' (reverse-chronological, no day lock)")
+    @MainActor
+    func defaultDayFilterIsLatest() {
+        let vm = makeViewModel()
+        #expect(vm.dayFilter == "latest")
+        #expect(vm.customDate == nil)
+        #expect(!vm.hasCustomDateFilter)
+    }
+
+    @Test("Initial loadMore passes the 'latest' day filter to the API")
+    @MainActor
+    func initialLoadUsesLatestDayFilter() async {
+        let api = RecordingPaperTokAPI()
+        let vm = makeViewModel(api: api)
+        await vm.loadMore(reset: true)
+        #expect(await api.requestedDaysSnapshot() == ["latest"])
+    }
+
     @Test("toggleLike adds and removes card ID from liked set")
     @MainActor
     func toggleLike() throws {

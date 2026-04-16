@@ -40,34 +40,20 @@ struct PaperCardView: View {
         if !card.thumbnails.isEmpty {
             TabView(selection: $currentImageIndex) {
                 ForEach(card.thumbnails.indices, id: \.self) { index in
-                    AsyncImage(url: URL(string: card.thumbnails[index])) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        default:
-                            placeholderImage
-                        }
-                    }
-                    .frame(width: size.width, height: size.height)
-                    .clipped()
-                    .tag(index)
+                    cachedImage(urlString: card.thumbnails[index], size: size)
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
+                        .tag(index)
                 }
             }
             #if os(iOS)
             .tabViewStyle(.page(indexDisplayMode: .never))
             #endif
             .frame(height: size.height)
-        } else if let thumbURL = card.thumbnailURL, let url = URL(string: thumbURL) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().scaledToFill()
-                default:
-                    placeholderImage
-                }
-            }
-            .frame(width: size.width, height: size.height)
-            .clipped()
+        } else if let thumbURL = card.thumbnailURL {
+            cachedImage(urlString: thumbURL, size: size)
+                .frame(width: size.width, height: size.height)
+                .clipped()
         } else {
             LinearGradient(
                 colors: [Morandi.accent.opacity(0.3), Morandi.background],
@@ -75,6 +61,22 @@ struct PaperCardView: View {
                 endPoint: .bottom
             )
         }
+    }
+
+    @ViewBuilder
+    private func cachedImage(urlString: String, size: CGSize) -> some View {
+        CachedAsyncImage(
+            url: URL(string: urlString),
+            content: { image in
+                image.resizable().scaledToFill()
+            },
+            placeholder: {
+                placeholderImage
+            },
+            failure: { _ in
+                placeholderImage
+            }
+        )
     }
 
     private var placeholderImage: some View {

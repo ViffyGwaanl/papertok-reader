@@ -11,7 +11,8 @@ struct PaperDetailDataLoader {
     }
 }
 
-/// Bottom sheet showing full paper detail: images, title, abstract, and download button.
+/// Full-height sheet showing paper detail: carousel, metadata, top action bar,
+/// segmented narrative tabs (explanation / dialogue), and markdown body.
 struct PaperDetailView: View {
     let database: AppDatabase
     let paperId: Int
@@ -25,6 +26,7 @@ struct PaperDetailView: View {
     @State private var downloadStatus: PaperDownloadStatus = .idle(plan: nil)
     @State private var activeDownloadID: UUID?
     @State private var downloadTask: Task<Void, Never>?
+    @State private var narrativeTab: PaperNarrativeTab = .defaultTab
     @Environment(\.dismiss) private var dismiss
 
     init(
@@ -80,7 +82,8 @@ struct PaperDetailView: View {
             }
         }
         #if os(iOS)
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
         #endif
         .task { await loadDetail() }
         .onDisappear {
@@ -95,15 +98,22 @@ struct PaperDetailView: View {
     @ViewBuilder
     private func detailContent(_ detail: PaperTokDetail) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.lg) {
-            // Image carousel
+            // Image carousel (cached, with failure + retry)
             if !detail.carouselImages.isEmpty {
                 TabView {
                     ForEach(detail.carouselImages, id: \.self) { imageURL in
-                        AsyncImage(url: URL(string: imageURL)) { image in
-                            image.resizable().scaledToFit()
-                        } placeholder: {
-                            Morandi.divider
-                        }
+                        CachedAsyncImage(
+                            url: URL(string: imageURL),
+                            content: { image in
+                                image.resizable().scaledToFit()
+                            },
+                            placeholder: {
+                                PaperImageLoadingView()
+                            },
+                            failure: { retry in
+                                PaperImageFailureView(retry: retry)
+                            }
+                        )
                         .frame(maxHeight: 200)
                     }
                 }
@@ -127,19 +137,89 @@ struct PaperDetailView: View {
                     .foregroundStyle(Morandi.secondaryText)
             }
 
-            detailMetadata(detail)
-            detailNarrative(detail)
+            // Top action bar: import EPUB (+variant menu) and view original.
+            // Moved from the bottom of the scroll content (W5.1 issue 6).
+            topActionBar(detail: detail)
 
-            // Download button
-            PaperDownloadButton(
-                detail: detail,
-                status: downloadStatus,
-                onDownload: { beginDownload(detail) },
-                onRetry: { beginDownload(detail) },
-                onCancel: { cancelDownload(detail) }
-            )
+            detailMetadata(detail)
+
+            // Segmented tab switcher (W5.1 issue 4).
+            narrativeTabPicker
+
+            detailNarrative(detail)
         }
         .padding(AppSpacing.xl)
+    }
+
+    @ViewBuilder
+    private func topActionBar(detail: PaperTokDetail) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            idleDownloadCTA(detail: detail)
+
+            if let urlString = detail.url, let originalURL = URL(string: urlString) {
+                Link(destination: originalURL) {
+                    Label(
+                        AppLocalization.string("papers.detail.top_toolbar.view_original"),
+                        systemImage: "safari"
+                    )
+                    .font(AppTypography.subheadline)
+                }
+                .buttonStyle(.bordered)
+                .tint(Morandi.secondaryText)
+            }
+        }
+
+        // Progress / failure / imported states are rendered here (CTA is above).
+        PaperDownloadButton(
+            detail: detail,
+            status: downloadStatus,
+            onRetry: { beginDownload(detail, variant: nil) },
+            onCancel: { cancelDownload(detail) }
+        )
+    }
+
+    @ViewBuilder
+    private func idleDownloadCTA(detail: PaperTokDetail) -> some View {
+        if case .idle(let plan) = downloadStatus, let plan {
+            let variants = PaperDownloadPlan.availableEpubVariants(for: detail)
+            if variants.count > 1 {
+                Menu {
+                    ForEach(variants, id: \.kind) { option in
+                        Button(AppLocalization.string(option.kind.titleKey)) {
+                            beginDownload(detail, variant: option.kind)
+                        }
+                    }
+                } label: {
+                    Label(
+                        AppLocalization.string("papers.detail.top_toolbar.import_epub"),
+                        systemImage: "arrow.down.circle"
+                    )
+                    .font(AppTypography.subheadline.weight(.medium))
+                }
+                .menuStyle(.borderlessButton)
+                .buttonStyle(.borderedProminent)
+                .tint(Morandi.accent)
+            } else {
+                Button {
+                    beginDownload(detail, variant: variants.first?.kind)
+                } label: {
+                    Label(plan.buttonTitle, systemImage: "arrow.down.circle")
+                        .font(AppTypography.subheadline.weight(.medium))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Morandi.accent)
+            }
+        }
+    }
+
+    private var narrativeTabPicker: some View {
+        Picker("", selection: $narrativeTab) {
+            ForEach(PaperNarrativeTab.allCases, id: \.self) { tab in
+                Text(LocalizedStringKey(tab.titleKey)).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
     }
 
     // MARK: - Network
@@ -155,12 +235,12 @@ struct PaperDetailView: View {
         isLoading = false
     }
 
-    private func beginDownload(_ detail: PaperTokDetail) {
+    private func beginDownload(_ detail: PaperTokDetail, variant: PaperEpubVariant?) {
         downloadTask?.cancel()
         let downloadID = UUID()
         activeDownloadID = downloadID
         downloadTask = Task {
-            await startDownload(detail, downloadID: downloadID)
+            await startDownload(detail, downloadID: downloadID, variant: variant)
         }
     }
 
@@ -171,8 +251,14 @@ struct PaperDetailView: View {
         downloadStatus = .idle(plan: PaperDownloadPlan(detail: detail))
     }
 
-    private func startDownload(_ detail: PaperTokDetail, downloadID: UUID) async {
-        guard let plan = PaperDownloadPlan(detail: detail) else {
+    private func startDownload(_ detail: PaperTokDetail, downloadID: UUID, variant: PaperEpubVariant?) async {
+        let plan: PaperDownloadPlan?
+        if let variant {
+            plan = PaperDownloadPlan(detail: detail, variant: variant) ?? PaperDownloadPlan(detail: detail)
+        } else {
+            plan = PaperDownloadPlan(detail: detail)
+        }
+        guard let plan else {
             downloadStatus = .failed(message: String(localized: "errors.papers.no_downloadable_file"), plan: nil)
             return
         }
@@ -238,28 +324,41 @@ struct PaperDetailView: View {
 
     @ViewBuilder
     private func detailNarrative(_ detail: PaperTokDetail) -> some View {
-        if let explain = detail.preferredExplanation(language: language) {
-            detailTextSection(title: String(localized: "papers.explanation"), content: explain)
-        }
-
-        if let dialogue = detail.preferredDialogue(language: language) {
-            detailTextSection(title: String(localized: "papers.dialogue"), content: dialogue)
+        switch narrativeTab {
+        case .explanation:
+            if let text = detail.preferredExplanation(language: language) {
+                narrativeBlock(content: text)
+            } else {
+                narrativeEmptyState
+            }
+        case .dialogue:
+            if let text = detail.preferredDialogue(language: language) {
+                narrativeBlock(content: text)
+            } else {
+                narrativeEmptyState
+            }
         }
     }
 
-    private func detailTextSection(title: String, content: String) -> some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text(title)
-                .font(AppTypography.caption.weight(.semibold))
-                .foregroundStyle(Morandi.secondaryText)
-            Text(content)
-                .font(AppTypography.body)
-                .foregroundStyle(Morandi.primaryText)
-        }
-        .padding(AppSpacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Morandi.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadiusSmall))
+    private func narrativeBlock(content: String) -> some View {
+        Text(PaperMarkdown.render(content))
+            .font(AppTypography.body)
+            .foregroundStyle(Morandi.primaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(AppSpacing.lg)
+            .background(Morandi.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadiusSmall))
+            .textSelection(.enabled)
+    }
+
+    private var narrativeEmptyState: some View {
+        Text(LocalizedStringKey("papers.empty.no_papers"))
+            .font(AppTypography.caption)
+            .foregroundStyle(Morandi.tertiaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(AppSpacing.lg)
+            .background(Morandi.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cornerRadiusSmall))
     }
 
     private func metadataItems(for detail: PaperTokDetail) -> [(label: String, value: String)] {

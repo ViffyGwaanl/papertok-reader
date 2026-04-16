@@ -9,15 +9,24 @@ enum PaperDownloadFormat: String, Equatable, Sendable {
     case pdf
 }
 
+/// An EPUB variant surfaced for a single paper, paired with its resolved URL.
+/// Used by the detail view to show a picker of available language flavors.
+struct PaperEpubVariantOption: Equatable, Sendable {
+    let kind: PaperEpubVariant
+    let rawURL: String
+}
+
 struct PaperDownloadPlan: Equatable, Sendable {
     let format: PaperDownloadFormat
     let downloadURL: URL
     let suggestedFilename: String
+    let variant: PaperEpubVariant?
 
     init?(detail: PaperTokDetail, api: PaperTokAPI = PaperTokAPI()) {
         if let epubURL = detail.bestEpubUrl.flatMap({ Self.makeURL(from: $0, using: api) }) {
             self.format = .epub
             self.downloadURL = epubURL
+            self.variant = Self.defaultVariant(for: detail)
             self.suggestedFilename = Self.suggestedFilename(
                 title: detail.displayTitle ?? detail.title,
                 fallbackID: detail.id,
@@ -32,10 +41,28 @@ struct PaperDownloadPlan: Equatable, Sendable {
 
         self.format = .pdf
         self.downloadURL = pdfURL
+        self.variant = nil
         self.suggestedFilename = Self.suggestedFilename(
             title: detail.displayTitle ?? detail.title,
             fallbackID: detail.id,
             format: .pdf
+        )
+    }
+
+    /// Plan for a specific EPUB variant; returns `nil` if that variant is not
+    /// exposed by the paper (e.g. variant=.english on a paper with only `.chinese`).
+    init?(detail: PaperTokDetail, variant: PaperEpubVariant, api: PaperTokAPI = PaperTokAPI()) {
+        guard let rawURL = Self.rawURL(for: variant, in: detail),
+              let resolved = Self.makeURL(from: rawURL, using: api) else {
+            return nil
+        }
+        self.format = .epub
+        self.downloadURL = resolved
+        self.variant = variant
+        self.suggestedFilename = Self.suggestedFilename(
+            title: detail.displayTitle ?? detail.title,
+            fallbackID: detail.id,
+            format: .epub
         )
     }
 
@@ -45,6 +72,36 @@ struct PaperDownloadPlan: Equatable, Sendable {
             return AppLocalization.string("papers.import_epub")
         case .pdf:
             return AppLocalization.string("papers.import_pdf")
+        }
+    }
+
+    /// Variants present on `detail`, ordered so the language-neutral default
+    /// appears first, followed by Chinese, English, then Bilingual. Consumers
+    /// (the detail view) decide whether to show a menu (>1 option) or just a
+    /// single button.
+    static func availableEpubVariants(for detail: PaperTokDetail) -> [PaperEpubVariantOption] {
+        let pairs: [(PaperEpubVariant, String?)] = [
+            (.default, detail.epubUrl),
+            (.chinese, detail.epubUrlZh),
+            (.english, detail.epubUrlEn),
+            (.bilingual, detail.epubUrlBilingual),
+        ]
+        return pairs.compactMap { variant, raw in
+            guard let raw, !raw.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+            return PaperEpubVariantOption(kind: variant, rawURL: raw)
+        }
+    }
+
+    private static func defaultVariant(for detail: PaperTokDetail) -> PaperEpubVariant? {
+        availableEpubVariants(for: detail).first?.kind
+    }
+
+    private static func rawURL(for variant: PaperEpubVariant, in detail: PaperTokDetail) -> String? {
+        switch variant {
+        case .default: return detail.epubUrl
+        case .chinese: return detail.epubUrlZh
+        case .english: return detail.epubUrlEn
+        case .bilingual: return detail.epubUrlBilingual
         }
     }
 
@@ -88,11 +145,15 @@ enum PaperDownloadStatus: Equatable, Sendable {
     }
 }
 
-/// Download button showing exact persisted state for a paper import.
+/// Renders the live download status for a paper import: in-flight progress,
+/// imported/already-on-shelf confirmation, and failure + retry.
+///
+/// The idle CTA (import button, variant picker, "view original" link) lives in
+/// `PaperDetailView.topActionBar`, so this view no longer renders an action
+/// button when `status == .idle`. See W5.1 issue 6 / 7.
 public struct PaperDownloadButton: View {
     let detail: PaperTokDetail
     let status: PaperDownloadStatus
-    let onDownload: () -> Void
     let onRetry: () -> Void
     let onCancel: () -> Void
 
@@ -153,35 +214,8 @@ public struct PaperDownloadButton: View {
                     }
                 }
 
-            case .idle(let plan):
-                HStack(spacing: AppSpacing.sm) {
-                    if let plan {
-                        Button(action: onDownload) {
-                            Label(plan.buttonTitle, systemImage: "arrow.down.circle")
-                                .font(AppTypography.subheadline.weight(.medium))
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Morandi.accent)
-                    }
-
-                    if let urlString = detail.url, let originalURL = URL(string: urlString) {
-                        Link(destination: originalURL) {
-                            Label(String(localized: "reader.view_original"), systemImage: "safari")
-                                .font(AppTypography.subheadline)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(Morandi.secondaryText)
-                    }
-
-                    if let rawMarkdown = detail.rawMarkdownUrl, let rawURL = URL(string: rawMarkdown) {
-                        Link(destination: rawURL) {
-                            Label(String(localized: "reader.read_markdown"), systemImage: "doc.text")
-                                .font(AppTypography.subheadline)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(Morandi.secondaryText)
-                    }
-                }
+            case .idle:
+                EmptyView()
             }
         }
     }
