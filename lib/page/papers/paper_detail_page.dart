@@ -341,7 +341,7 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
@@ -351,6 +351,7 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
           bottom: TabBar(
             tabs: [
               Tab(text: L10n.of(context).papersTabExplain),
+              Tab(text: L10n.of(context).papersTabChat),
               Tab(text: L10n.of(context).papersTabOriginal),
             ],
           ),
@@ -454,6 +455,26 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
               );
             }
 
+            Widget chatTab() {
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                children: [
+                  if ((p.contentDialogue ?? '').trim().isNotEmpty)
+                    StyledMarkdown(data: p.contentDialogue!)
+                  else
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 48),
+                        child: Text(
+                          L10n.of(context).papersLoadFailed,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }
+
             Widget originalTab() {
               return ListView(
                 padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
@@ -513,6 +534,7 @@ class _PaperDetailPageState extends ConsumerState<PaperDetailPage> {
             return TabBarView(
               children: [
                 explainTab(),
+                chatTab(),
                 originalTab(),
               ],
             );

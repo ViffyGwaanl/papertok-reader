@@ -899,6 +899,7 @@
   "papersEpubEditionZh": "中文",
   "papersEpubEditionBilingual": "双语",
   "papersTabExplain": "讲解",
+  "papersTabChat": "对话",
   "papersTabOriginal": "原文",
   "aiChatEndSessionTitle": "结束当前会话？",
   "aiChatEndSessionBodyNoDigest": "当前会话会保留在历史记录里，然后开始一个全新的会话。",

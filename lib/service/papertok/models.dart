@@ -173,6 +173,7 @@ class PaperTokDetail {
   final String? url;
   final String? oneLiner;
   final String? contentExplain;
+  final String? contentDialogue;
   final String? pdfUrl;
   final String? pdfLocalUrl;
   final String? epubUrl;
@@ -190,6 +191,7 @@ class PaperTokDetail {
     this.url,
     this.oneLiner,
     this.contentExplain,
+    this.contentDialogue,
     this.pdfUrl,
     this.pdfLocalUrl,
     this.epubUrl,
@@ -228,6 +230,7 @@ class PaperTokDetail {
       url: json['url'] as String?,
       oneLiner: json['one_liner'] as String?,
       contentExplain: json['content_explain'] as String?,
+      contentDialogue: json['content_dialogue'] as String?,
       pdfUrl: json['pdf_url'] as String?,
       pdfLocalUrl: json['pdf_local_url'] as String?,
       epubUrl: json['epub_url'] as String?,
