@@ -163,16 +163,7 @@ struct MessageBubbleView: View {
         let blocks = MarkdownBlockParser.parse(text)
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             ForEach(blocks.indices, id: \.self) { i in
-                switch blocks[i] {
-                case .text(let t):
-                    Text(Self.assistantAttributedBody(for: t))
-                        .font(AppTypography.body)
-                        .foregroundStyle(Morandi.primaryText)
-                        .textSelection(.enabled)
-                        .tint(Morandi.accent)
-                case .codeBlock(let language, let code):
-                    CodeBlockView(language: language, code: code)
-                }
+                MarkdownBlockRenderer(block: blocks[i])
             }
         }
         .padding(.horizontal, 14)
@@ -418,42 +409,3 @@ struct MessageBubbleView: View {
     }
 }
 
-// MARK: - Markdown Block Parser
-
-enum MarkdownBlockParser {
-    enum Block {
-        case text(String)
-        case codeBlock(language: String, code: String)
-    }
-
-    static func parse(_ text: String) -> [Block] {
-        var blocks: [Block] = []
-        var currentText = ""
-        let lines = text.components(separatedBy: "\n")
-        var i = 0
-        while i < lines.count {
-            let line = lines[i]
-            if line.hasPrefix("```") {
-                if !currentText.isEmpty {
-                    blocks.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
-                    currentText = ""
-                }
-                let language = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
-                var codeLines: [String] = []
-                i += 1
-                while i < lines.count && !lines[i].hasPrefix("```") {
-                    codeLines.append(lines[i])
-                    i += 1
-                }
-                blocks.append(.codeBlock(language: language, code: codeLines.joined(separator: "\n")))
-                i += 1
-                continue
-            }
-            currentText += line + "\n"
-            i += 1
-        }
-        let trimmed = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty { blocks.append(.text(trimmed)) }
-        return blocks
-    }
-}
