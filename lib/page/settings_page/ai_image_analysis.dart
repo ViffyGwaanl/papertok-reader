@@ -2,7 +2,10 @@ import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/service/ai/ai_models_service.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
+import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
+import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:papertok_reader/widgets/settings/settings_section.dart';
 import 'package:papertok_reader/widgets/settings/settings_tile.dart';
 import 'package:papertok_reader/widgets/settings/settings_title.dart';
@@ -32,42 +35,49 @@ class _AiImageAnalysisSettingsPageState
   }
 
   Future<void> _pickProvider() async {
+    final l10n = L10n.of(context);
     final enabledProviders =
         Prefs().aiProvidersV1.where((p) => p.enabled).toList(growable: false);
 
     if (enabledProviders.isEmpty) {
-      AnxToast.show(L10n.of(context).aiServiceNotConfigured);
+      AnxToast.show(l10n.aiServiceNotConfigured);
       return;
     }
 
-    await showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return ListView(
+    final currentEffectiveId = Prefs().aiImageAnalysisProviderIdEffective;
+    final currentRawId = Prefs().aiImageAnalysisProviderId;
+    // Empty raw id means "follow chat provider".
+    final groupValue = currentRawId.isEmpty ? '' : currentEffectiveId;
+
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.settingsAiImageAnalysisProvider,
+      builder: (ctx) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              title: Text(
-                  L10n.of(context).settingsAiImageAnalysisFollowChatProvider),
-              subtitle: Text(
-                L10n.of(context).settingsAiImageAnalysisFollowChatProviderDesc,
-              ),
-              onTap: () {
+            PTPickerRow<String>(
+              value: '',
+              groupValue: groupValue,
+              title: l10n.settingsAiImageAnalysisFollowChatProvider,
+              subtitle: l10n.settingsAiImageAnalysisFollowChatProviderDesc,
+              leading: Icons.link_outlined,
+              onChanged: (_) {
                 Prefs().aiImageAnalysisProviderId = '';
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 setState(() {});
               },
             ),
-            const Divider(height: 1),
             for (final p in enabledProviders)
-              ListTile(
-                title: Text(p.name),
-                subtitle: Text(_providerTypeLabel(context, p.type)),
-                trailing: (Prefs().aiImageAnalysisProviderIdEffective == p.id)
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
-                  Prefs().aiImageAnalysisProviderId = p.id;
-                  Navigator.pop(context);
+              PTPickerRow<String>(
+                value: p.id,
+                groupValue: groupValue,
+                title: p.name,
+                subtitle: _providerTypeLabel(context, p.type),
+                leading: Icons.extension_outlined,
+                onChanged: (id) {
+                  Prefs().aiImageAnalysisProviderId = id;
+                  Navigator.pop(ctx);
                   setState(() {});
                 },
               ),
@@ -78,90 +88,96 @@ class _AiImageAnalysisSettingsPageState
   }
 
   Future<void> _pickImageOpenMode() async {
+    final l10n = L10n.of(context);
     final current = Prefs().aiImageOpenModeV1;
-    const options = <String>['long_press', 'tap'];
 
-    final picked = await showDialog<String>(
-      context: context,
+    String labelFor(String code) => code == 'tap'
+        ? l10n.settingsAiImageOpenModeTap
+        : l10n.settingsAiImageOpenModeLongPress;
+
+    IconData iconFor(String code) =>
+        code == 'tap' ? Icons.touch_app_outlined : Icons.swipe_outlined;
+
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.settingsAiImageOpenModeTitle,
       builder: (ctx) {
-        return SimpleDialog(
-          title: Text(L10n.of(context).settingsAiImageOpenModeTitle),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            for (final v in options)
-              RadioListTile<String>(
+            for (final v in const <String>['long_press', 'tap'])
+              PTPickerRow<String>(
                 value: v,
                 groupValue: current,
-                title: Text(
-                  v == 'tap'
-                      ? L10n.of(context).settingsAiImageOpenModeTap
-                      : L10n.of(context).settingsAiImageOpenModeLongPress,
-                ),
-                onChanged: (val) => Navigator.of(ctx).pop(val),
+                title: labelFor(v),
+                leading: iconFor(v),
+                onChanged: (val) {
+                  Prefs().aiImageOpenModeV1 = val;
+                  Navigator.pop(ctx);
+                  setState(() {});
+                },
               ),
           ],
         );
       },
     );
-
-    if (picked != null) {
-      Prefs().aiImageOpenModeV1 = picked;
-      setState(() {});
-    }
   }
 
   Future<void> _editPrompt() async {
+    final l10n = L10n.of(context);
     final controller = TextEditingController(
       text: Prefs().aiImageAnalysisPrompt.trim().isEmpty
           ? Prefs().aiImageAnalysisPromptEffective
           : Prefs().aiImageAnalysisPrompt,
     );
 
-    final result = await showDialog<_PromptEditResult>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(L10n.of(context).settingsAiImageAnalysisPromptTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                L10n.of(context).settingsAiImageAnalysisPromptDesc,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  hintText: L10n.of(context).settingsAiImageAnalysisPromptHint,
-                ),
-                maxLines: 10,
-                minLines: 6,
-                maxLength: 20000,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                L10n.of(context).settingsAiImageAnalysisPromptVariablesHelp,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
+    final result = await PTDialog.show<_PromptEditResult>(
+      context,
+      title: l10n.settingsAiImageAnalysisPromptTitle,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.settingsAiImageAnalysisPromptDesc,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, _PromptEditResult.cancel),
-              child: Text(L10n.of(context).commonCancel),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              hintText: l10n.settingsAiImageAnalysisPromptHint,
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, _PromptEditResult.reset),
-              child: Text(L10n.of(context).settingsAiImageAnalysisPromptReset),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, _PromptEditResult.save),
-              child: Text(L10n.of(context).commonConfirm),
-            ),
-          ],
-        );
-      },
+            maxLines: 10,
+            minLines: 6,
+            maxLength: 20000,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.settingsAiImageAnalysisPromptVariablesHelp,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+      actions: [
+        PTDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () =>
+              Navigator.pop(context, _PromptEditResult.cancel),
+        ),
+        PTDialogAction(
+          label: l10n.settingsAiImageAnalysisPromptReset,
+          onPressed: () =>
+              Navigator.pop(context, _PromptEditResult.reset),
+        ),
+        PTDialogAction(
+          label: l10n.commonConfirm,
+          isDefault: true,
+          onPressed: () =>
+              Navigator.pop(context, _PromptEditResult.save),
+        ),
+      ],
     );
 
     if (!mounted || result == null || result == _PromptEditResult.cancel) {
@@ -185,22 +201,24 @@ class _AiImageAnalysisSettingsPageState
   }
 
   Future<void> _pickModel() async {
+    final l10n = L10n.of(context);
     final providerId = Prefs().aiImageAnalysisProviderIdEffective;
     final meta = Prefs().getAiProviderMeta(providerId);
 
     if (meta == null) {
-      AnxToast.show(L10n.of(context).aiServiceNotConfigured);
+      AnxToast.show(l10n.aiServiceNotConfigured);
       return;
     }
 
     var models = Prefs().getAiModelsCacheV1(providerId)?.models ?? const [];
     var loading = false;
 
-    await showModalBottomSheet(
-      context: context,
-      builder: (context) {
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.settingsAiImageAnalysisModel,
+      builder: (ctx) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (ctx, setModalState) {
             Future<void> refresh() async {
               if (loading) return;
               setModalState(() {
@@ -210,7 +228,7 @@ class _AiImageAnalysisSettingsPageState
               try {
                 final rawConfig = Prefs().getAiConfig(providerId);
                 if (rawConfig.isEmpty) {
-                  AnxToast.show(L10n.of(context).aiServiceNotConfigured);
+                  AnxToast.show(l10n.aiServiceNotConfigured);
                   return;
                 }
 
@@ -225,7 +243,7 @@ class _AiImageAnalysisSettingsPageState
 
                 models = fetched;
               } catch (_) {
-                AnxToast.show(L10n.of(context).commonFailed);
+                AnxToast.show(l10n.commonFailed);
               } finally {
                 setModalState(() {
                   loading = false;
@@ -233,102 +251,107 @@ class _AiImageAnalysisSettingsPageState
               }
             }
 
-            return SafeArea(
-              child: ListView(
+            final currentModel = Prefs().aiImageAnalysisModel.trim();
+
+            Future<void> openCustomModelDialog() async {
+              final controller = TextEditingController(text: currentModel);
+
+              final ok = await PTDialog.show<bool>(
+                context,
+                title: l10n.settingsAiImageAnalysisModelCustom,
+                content: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    hintText: l10n.settingsAiImageAnalysisModelCustomHint,
+                  ),
+                ),
+                actions: [
+                  PTDialogAction(
+                    label: l10n.commonCancel,
+                    onPressed: () => Navigator.pop(context, false),
+                  ),
+                  PTDialogAction(
+                    label: l10n.commonConfirm,
+                    isDefault: true,
+                    onPressed: () => Navigator.pop(context, true),
+                  ),
+                ],
+              );
+
+              if (ok == true) {
+                Prefs().aiImageAnalysisModel = controller.text;
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                }
+                setState(() {});
+              }
+              controller.dispose();
+            }
+
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  ListTile(
-                    title: Text(L10n.of(context)
-                        .settingsAiImageAnalysisModelFollowProvider),
-                    subtitle: Text(L10n.of(context)
-                        .settingsAiImageAnalysisModelFollowProviderDesc),
-                    trailing: Prefs().aiImageAnalysisModel.trim().isEmpty
-                        ? const Icon(Icons.check)
-                        : null,
-                    onTap: () {
+                  PTPickerRow<String>(
+                    value: '',
+                    groupValue: currentModel,
+                    title:
+                        l10n.settingsAiImageAnalysisModelFollowProvider,
+                    subtitle:
+                        l10n.settingsAiImageAnalysisModelFollowProviderDesc,
+                    leading: Icons.link_outlined,
+                    onChanged: (_) {
                       Prefs().aiImageAnalysisModel = '';
-                      Navigator.pop(context);
+                      Navigator.pop(ctx);
                       setState(() {});
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.edit_outlined),
-                    title: Text(
-                        L10n.of(context).settingsAiImageAnalysisModelCustom),
-                    subtitle: Text(
-                      L10n.of(context).settingsAiImageAnalysisModelCustomDesc,
+                    leading: Icon(
+                      Icons.edit_outlined,
+                      color: ClaudePalette.secondary(context),
                     ),
-                    onTap: () async {
-                      final controller = TextEditingController(
-                        text: Prefs().aiImageAnalysisModel.trim(),
-                      );
-
-                      final ok = await showDialog<bool>(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: Text(
-                              L10n.of(context)
-                                  .settingsAiImageAnalysisModelCustom,
-                            ),
-                            content: TextField(
-                              controller: controller,
-                              decoration: InputDecoration(
-                                hintText: L10n.of(context)
-                                    .settingsAiImageAnalysisModelCustomHint,
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text(L10n.of(context).commonCancel),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text(L10n.of(context).commonConfirm),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-
-                      if (ok == true) {
-                        Prefs().aiImageAnalysisModel = controller.text;
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
-                        setState(() {});
-                      }
-                    },
+                    title:
+                        Text(l10n.settingsAiImageAnalysisModelCustom),
+                    subtitle: Text(
+                        l10n.settingsAiImageAnalysisModelCustomDesc),
+                    onTap: openCustomModelDialog,
                   ),
                   ListTile(
                     leading: loading
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2),
                           )
-                        : const Icon(Icons.refresh),
-                    title: Text(L10n.of(context).commonRefresh),
+                        : Icon(
+                            Icons.refresh,
+                            color: ClaudePalette.secondary(context),
+                          ),
+                    title: Text(l10n.commonRefresh),
                     onTap: refresh,
                   ),
-                  const Divider(height: 1),
+                  Divider(
+                    height: 1,
+                    color: ClaudePalette.divider(context),
+                  ),
                   if (models.isEmpty)
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        L10n.of(context).settingsAiImageAnalysisModelEmpty,
+                        l10n.settingsAiImageAnalysisModelEmpty,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
                   for (final m in models)
-                    ListTile(
-                      title: Text(m),
-                      trailing: (Prefs().aiImageAnalysisModel.trim() == m)
-                          ? const Icon(Icons.check)
-                          : null,
-                      onTap: () {
-                        Prefs().aiImageAnalysisModel = m;
-                        Navigator.pop(context);
+                    PTPickerRow<String>(
+                      value: m,
+                      groupValue: currentModel,
+                      title: m,
+                      onChanged: (val) {
+                        Prefs().aiImageAnalysisModel = val;
+                        Navigator.pop(ctx);
                         setState(() {});
                       },
                     ),

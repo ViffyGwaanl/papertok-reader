@@ -154,72 +154,57 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     final l10n = L10n.of(context);
     var value = Prefs().shortcutsCallbackTimeoutSecV1.toDouble();
 
-    await showModalBottomSheet<void>(
-      context: context,
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.settingsShortcutsCallbackTimeout,
+      subtitle: l10n.settingsShortcutsCallbackTimeoutDesc,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${value.toInt()} sec',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: MorandiPalette.primaryText(context),
+                  ),
+                ),
+                Slider(
+                  min: 3,
+                  max: 300,
+                  divisions: (300 - 3),
+                  value: value.clamp(3, 300),
+                  label: value.toInt().toString(),
+                  onChanged: (v) {
+                    final snapped = v.round().toDouble();
+                    setModalState(() => value = snapped);
+                  },
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      l10n.settingsShortcutsCallbackTimeout,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(l10n.commonCancel),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      l10n.settingsShortcutsCallbackTimeoutDesc,
-                      style: TextStyle(color: ClaudePalette.secondary(context)),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${value.toInt()} sec',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Slider(
-                      min: 3,
-                      max: 300,
-                      divisions: (300 - 3),
-                      value: value.clamp(3, 300),
-                      label: value.toInt().toString(),
-                      onChanged: (v) {
-                        final snapped = v.round().toDouble();
-                        setModalState(() => value = snapped);
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        Prefs().shortcutsCallbackTimeoutSecV1 =
+                            value.toInt();
+                        Navigator.pop(context);
+                        setState(() {});
                       },
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(l10n.commonCancel),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: () {
-                            Prefs().shortcutsCallbackTimeoutSecV1 =
-                                value.toInt();
-                            Navigator.pop(context);
-                            setState(() {});
-                          },
-                          child: Text(l10n.commonSave),
-                        ),
-                      ],
+                      child: Text(l10n.commonSave),
                     ),
                   ],
                 ),
-              ),
+              ],
             );
           },
         );
@@ -233,72 +218,57 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     final l10n = L10n.of(context);
     var value = Prefs().shortcutsSendMessageTimeoutSecV1.toDouble();
 
-    await showModalBottomSheet<void>(
-      context: context,
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.settingsShortcutsSendMessageTimeout,
+      subtitle: l10n.settingsShortcutsSendMessageTimeoutDesc,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${value.toInt()} sec',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: MorandiPalette.primaryText(context),
+                  ),
+                ),
+                Slider(
+                  min: 5,
+                  max: 180,
+                  divisions: (180 - 5),
+                  value: value.clamp(5, 180),
+                  label: value.toInt().toString(),
+                  onChanged: (v) {
+                    final snapped = v.round().toDouble();
+                    setModalState(() => value = snapped);
+                  },
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      l10n.settingsShortcutsSendMessageTimeout,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(l10n.commonCancel),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      l10n.settingsShortcutsSendMessageTimeoutDesc,
-                      style: TextStyle(color: ClaudePalette.secondary(context)),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${value.toInt()} sec',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Slider(
-                      min: 5,
-                      max: 180,
-                      divisions: (180 - 5),
-                      value: value.clamp(5, 180),
-                      label: value.toInt().toString(),
-                      onChanged: (v) {
-                        final snapped = v.round().toDouble();
-                        setModalState(() => value = snapped);
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        Prefs().shortcutsSendMessageTimeoutSecV1 =
+                            value.toInt();
+                        Navigator.pop(context);
+                        setState(() {});
                       },
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(l10n.commonCancel),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: () {
-                            Prefs().shortcutsSendMessageTimeoutSecV1 =
-                                value.toInt();
-                            Navigator.pop(context);
-                            setState(() {});
-                          },
-                          child: Text(l10n.commonSave),
-                        ),
-                      ],
+                      child: Text(l10n.commonSave),
                     ),
                   ],
                 ),
-              ),
+              ],
             );
           },
         );
@@ -319,40 +289,33 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     final l10n = L10n.of(context);
     final current = Prefs().shortcutsSendMessagePresentationV1;
 
-    Widget item({required String code, required String title}) {
-      return ListTile(
-        title: Text(title),
-        trailing: current == code ? const Icon(Icons.check) : null,
-        onTap: () {
-          Prefs().shortcutsSendMessagePresentationV1 = code;
-          Navigator.pop(context);
-          setState(() {});
-        },
-      );
+    void pick(String code) {
+      Prefs().shortcutsSendMessagePresentationV1 = code;
+      Navigator.pop(context);
+      setState(() {});
     }
 
-    await showModalBottomSheet<void>(
-      context: context,
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.settingsShortcutsSendMessagePresentation,
+      subtitle: l10n.settingsShortcutsSendMessagePresentationDesc,
       builder: (context) {
-        return SafeArea(
-          child: ListView(
-            children: [
-              ListTile(
-                title: Text(l10n.settingsShortcutsSendMessagePresentation),
-                subtitle:
-                    Text(l10n.settingsShortcutsSendMessagePresentationDesc),
-              ),
-              const Divider(height: 1),
-              item(
-                code: 'reuse',
-                title: l10n.settingsShortcutsSendMessagePresentationReuse,
-              ),
-              item(
-                code: 'new',
-                title: l10n.settingsShortcutsSendMessagePresentationNew,
-              ),
-            ],
-          ),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PTPickerRow<String>(
+              value: 'reuse',
+              groupValue: current,
+              title: l10n.settingsShortcutsSendMessagePresentationReuse,
+              onChanged: pick,
+            ),
+            PTPickerRow<String>(
+              value: 'new',
+              groupValue: current,
+              title: l10n.settingsShortcutsSendMessagePresentationNew,
+              onChanged: pick,
+            ),
+          ],
         );
       },
     );
@@ -374,61 +337,54 @@ class _AiToolsSettingsPageState extends State<AiToolsSettingsPage> {
     final current = Prefs().shortcutsCallbackWaitModeV1;
     final learnedCount = Prefs().shortcutsResultKnownNamesV1.length;
 
-    Widget item({
-      required String code,
-      required String title,
-      required String desc,
-    }) {
-      return ListTile(
-        title: Text(title),
-        subtitle: Text(desc),
-        trailing: current == code ? const Icon(Icons.check) : null,
-        onTap: () {
-          Prefs().shortcutsCallbackWaitModeV1 = code;
-          Navigator.pop(context);
-          setState(() {});
-        },
-      );
+    void pick(String code) {
+      Prefs().shortcutsCallbackWaitModeV1 = code;
+      Navigator.pop(context);
+      setState(() {});
     }
 
-    await showModalBottomSheet<void>(
-      context: context,
+    await PTBottomSheet.show<void>(
+      context,
+      title: l10n.settingsShortcutsCallbackWaitMode,
+      subtitle: '${l10n.settingsShortcutsCallbackWaitModeDesc}\n'
+          '${l10n.settingsShortcutsResetLearnedDesc} ($learnedCount)',
       builder: (context) {
-        return SafeArea(
-          child: ListView(
+        return SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                title: Text(l10n.settingsShortcutsCallbackWaitMode),
-                subtitle: Text(
-                  '${l10n.settingsShortcutsCallbackWaitModeDesc}\n'
-                  '${l10n.settingsShortcutsResetLearnedDesc} ($learnedCount)',
-                ),
-              ),
-              const Divider(height: 1),
-              item(
-                code: 'adaptive',
+              PTPickerRow<String>(
+                value: 'adaptive',
+                groupValue: current,
                 title: l10n.settingsShortcutsWaitModeAdaptive,
-                desc: l10n.settingsShortcutsWaitModeAdaptiveDesc,
+                subtitle: l10n.settingsShortcutsWaitModeAdaptiveDesc,
+                onChanged: pick,
               ),
-              const Divider(height: 1),
-              item(
-                code: 'auto',
+              PTPickerRow<String>(
+                value: 'auto',
+                groupValue: current,
                 title: l10n.settingsShortcutsWaitModeAuto,
-                desc: l10n.settingsShortcutsWaitModeAutoDesc,
+                subtitle: l10n.settingsShortcutsWaitModeAutoDesc,
+                onChanged: pick,
               ),
-              const Divider(height: 1),
-              item(
-                code: 'preferResult',
+              PTPickerRow<String>(
+                value: 'preferResult',
+                groupValue: current,
                 title: l10n.settingsShortcutsWaitModePreferResult,
-                desc: l10n.settingsShortcutsWaitModePreferResultDesc,
+                subtitle: l10n.settingsShortcutsWaitModePreferResultDesc,
+                onChanged: pick,
               ),
-              const Divider(height: 1),
-              item(
-                code: 'successOnly',
+              PTPickerRow<String>(
+                value: 'successOnly',
+                groupValue: current,
                 title: l10n.settingsShortcutsWaitModeSuccessOnly,
-                desc: l10n.settingsShortcutsWaitModeSuccessOnlyDesc,
+                subtitle: l10n.settingsShortcutsWaitModeSuccessOnlyDesc,
+                onChanged: pick,
               ),
-              const Divider(height: 1),
+              Divider(
+                height: 1,
+                color: ClaudePalette.divider(context),
+              ),
               ListTile(
                 title: Text(l10n.settingsShortcutsResetLearned),
                 subtitle: Text(l10n.settingsShortcutsResetLearnedDesc),

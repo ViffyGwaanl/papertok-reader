@@ -19,6 +19,7 @@ import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/service/memory/memory_index_coordinator.dart';
 import 'package:papertok_reader/utils/webdav/test_webdav.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:papertok_reader/widgets/settings/settings_title.dart';
 import 'package:papertok_reader/widgets/settings/webdav_switch.dart';
@@ -144,9 +145,14 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
   void _showDataDialog(String title) {
     Future.microtask(() {
       SmartDialog.show(
-        builder: (BuildContext context) => SimpleDialog(
-          title: Center(child: Text(title)),
-          children: const [Center(child: CircularProgressIndicator())],
+        builder: (BuildContext context) => PTDialog(
+          title: title,
+          content: const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: CircularProgressIndicator(),
+            ),
+          ),
         ),
       );
     });
@@ -175,6 +181,9 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                     SwitchListTile(
                       title: Text(l10n.backupIncludeMemory),
                       value: includeMemory,
+                      activeColor: ClaudePalette.accent(ctx),
+                      activeTrackColor: ClaudePalette.accent(ctx)
+                          .withValues(alpha: 0.4),
                       onChanged: (value) {
                         setState(() {
                           includeMemory = value;
@@ -184,6 +193,9 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                     SwitchListTile(
                       title: Text(l10n.backupIncludeAiIndexDb),
                       value: includeAiIndexDb,
+                      activeColor: ClaudePalette.accent(ctx),
+                      activeTrackColor: ClaudePalette.accent(ctx)
+                          .withValues(alpha: 0.4),
                       onChanged: (value) {
                         setState(() {
                           includeAiIndexDb = value;
@@ -194,6 +206,9 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                     SwitchListTile(
                       title: Text(l10n.backupIncludeApiKeyEncrypted),
                       value: includeEncryptedApiKeys,
+                      activeColor: ClaudePalette.accent(ctx),
+                      activeTrackColor: ClaudePalette.accent(ctx)
+                          .withValues(alpha: 0.4),
                       onChanged: (value) {
                         setState(() {
                           includeEncryptedApiKeys = value;
@@ -203,6 +218,9 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                     SwitchListTile(
                       title: Text(l10n.backupIncludeMcpSecretsEncrypted),
                       value: includeEncryptedMcpSecrets,
+                      activeColor: ClaudePalette.accent(ctx),
+                      activeTrackColor: ClaudePalette.accent(ctx)
+                          .withValues(alpha: 0.4),
                       onChanged: (value) {
                         setState(() {
                           includeEncryptedMcpSecrets = value;
@@ -649,6 +667,9 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                   contentPadding: EdgeInsets.zero,
                   title: Text(l10n.backupImportRestoreMemory),
                   value: restoreMemory,
+                  activeColor: ClaudePalette.accent(ctx),
+                  activeTrackColor:
+                      ClaudePalette.accent(ctx).withValues(alpha: 0.4),
                   onChanged: (value) {
                     setState(() {
                       restoreMemory = value;
@@ -659,6 +680,9 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
                   contentPadding: EdgeInsets.zero,
                   title: Text(l10n.backupImportRestoreAiIndexDb),
                   value: restoreAiIndexDb,
+                  activeColor: ClaudePalette.accent(ctx),
+                  activeTrackColor:
+                      ClaudePalette.accent(ctx).withValues(alpha: 0.4),
                   onChanged: (value) {
                     setState(() {
                       restoreAiIndexDb = value;
