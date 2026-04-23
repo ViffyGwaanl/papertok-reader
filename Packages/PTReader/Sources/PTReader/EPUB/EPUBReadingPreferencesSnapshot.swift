@@ -14,6 +14,7 @@ public struct EPUBReadingPreferencesSnapshot: Equatable, @unchecked Sendable {
 
         preferences = EPUBPreferences(
             backgroundColor: Self.readiumColor(from: theme.backgroundColor),
+            columnCount: Self.readiumColumnCount(from: style.maxColumnCount),
             fontFamily: Self.fontFamily(from: style.fontFamily),
             fontSize: Self.clamp(style.fontSize, lower: 0.1, upper: 5.0),
             letterSpacing: Self.clamp(style.letterSpacing / 8.0, lower: 0, upper: 1.0),
@@ -25,6 +26,7 @@ public struct EPUBReadingPreferencesSnapshot: Equatable, @unchecked Sendable {
             textAlign: Self.textAlignment(from: readingPreferences.textAlignment),
             textColor: Self.readiumColor(from: theme.textColor),
             theme: Self.theme(from: theme),
+            verticalText: Self.readiumVerticalText(from: style.writingMode),
             wordSpacing: Self.clamp(style.wordSpacing, lower: 0, upper: 1.0)
         )
 
@@ -107,6 +109,28 @@ public struct EPUBReadingPreferencesSnapshot: Equatable, @unchecked Sendable {
 
     private static func clamp(_ value: Double, lower: Double, upper: Double) -> Double {
         min(max(value, lower), upper)
+    }
+
+    private static func readiumColumnCount(from value: BookStyle.ColumnCount) -> ReadiumNavigator.ColumnCount? {
+        switch value {
+        case .auto:
+            return .auto
+        case .single:
+            return .one
+        case .double:
+            return .two
+        }
+    }
+
+    private static func readiumVerticalText(from writingMode: BookStyle.WritingMode) -> Bool? {
+        switch writingMode {
+        case .auto:
+            return nil
+        case .horizontalTb:
+            return false
+        case .verticalRl:
+            return true
+        }
     }
 }
 #endif

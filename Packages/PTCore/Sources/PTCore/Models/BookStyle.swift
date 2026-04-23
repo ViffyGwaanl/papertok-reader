@@ -15,6 +15,26 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
     public var topMargin: Double
     public var bottomMargin: Double
 
+    // MARK: - W6.3a additions (column count / writing mode / threshold)
+
+    public var maxColumnCount: ColumnCount
+    public var columnThreshold: Double
+    public var writingMode: WritingMode
+
+    /// Number of columns displayed in reflowable EPUB content.
+    public enum ColumnCount: String, Codable, CaseIterable, Sendable {
+        case auto
+        case single
+        case double
+    }
+
+    /// Writing progression mode for the publication.
+    public enum WritingMode: String, Codable, CaseIterable, Sendable {
+        case auto
+        case horizontalTb
+        case verticalRl
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case fontSize = "font_size"
@@ -26,6 +46,75 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         case sideMargin = "side_margin"
         case topMargin = "top_margin"
         case bottomMargin = "bottom_margin"
+        case maxColumnCount = "max_column_count"
+        case columnThreshold = "column_threshold"
+        case writingMode = "writing_mode"
+    }
+
+    public init(
+        id: Int64? = nil,
+        fontSize: Double,
+        fontFamily: String,
+        lineHeight: Double,
+        letterSpacing: Double,
+        wordSpacing: Double,
+        paragraphSpacing: Double,
+        sideMargin: Double,
+        topMargin: Double,
+        bottomMargin: Double,
+        maxColumnCount: ColumnCount = .auto,
+        columnThreshold: Double = 800,
+        writingMode: WritingMode = .auto
+    ) {
+        self.id = id
+        self.fontSize = fontSize
+        self.fontFamily = fontFamily
+        self.lineHeight = lineHeight
+        self.letterSpacing = letterSpacing
+        self.wordSpacing = wordSpacing
+        self.paragraphSpacing = paragraphSpacing
+        self.sideMargin = sideMargin
+        self.topMargin = topMargin
+        self.bottomMargin = bottomMargin
+        self.maxColumnCount = maxColumnCount
+        self.columnThreshold = columnThreshold
+        self.writingMode = writingMode
+    }
+
+    // MARK: - Backward-compat Codable
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decodeIfPresent(Int64.self, forKey: .id)
+        self.fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize) ?? 1.4
+        self.fontFamily = try c.decodeIfPresent(String.self, forKey: .fontFamily) ?? BookStyle.preferredDefaultFontFamily()
+        self.lineHeight = try c.decodeIfPresent(Double.self, forKey: .lineHeight) ?? 1.8
+        self.letterSpacing = try c.decodeIfPresent(Double.self, forKey: .letterSpacing) ?? 0.0
+        self.wordSpacing = try c.decodeIfPresent(Double.self, forKey: .wordSpacing) ?? 0.0
+        self.paragraphSpacing = try c.decodeIfPresent(Double.self, forKey: .paragraphSpacing) ?? 1.0
+        self.sideMargin = try c.decodeIfPresent(Double.self, forKey: .sideMargin) ?? 6.0
+        self.topMargin = try c.decodeIfPresent(Double.self, forKey: .topMargin) ?? 90.0
+        self.bottomMargin = try c.decodeIfPresent(Double.self, forKey: .bottomMargin) ?? 50.0
+        self.maxColumnCount = try c.decodeIfPresent(ColumnCount.self, forKey: .maxColumnCount) ?? .auto
+        self.columnThreshold = try c.decodeIfPresent(Double.self, forKey: .columnThreshold) ?? 800
+        self.writingMode = try c.decodeIfPresent(WritingMode.self, forKey: .writingMode) ?? .auto
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(id, forKey: .id)
+        try c.encode(fontSize, forKey: .fontSize)
+        try c.encode(fontFamily, forKey: .fontFamily)
+        try c.encode(lineHeight, forKey: .lineHeight)
+        try c.encode(letterSpacing, forKey: .letterSpacing)
+        try c.encode(wordSpacing, forKey: .wordSpacing)
+        try c.encode(paragraphSpacing, forKey: .paragraphSpacing)
+        try c.encode(sideMargin, forKey: .sideMargin)
+        try c.encode(topMargin, forKey: .topMargin)
+        try c.encode(bottomMargin, forKey: .bottomMargin)
+        try c.encode(maxColumnCount, forKey: .maxColumnCount)
+        try c.encode(columnThreshold, forKey: .columnThreshold)
+        try c.encode(writingMode, forKey: .writingMode)
     }
 
     public mutating func didInsert(_ inserted: InsertionSuccess) {
@@ -47,7 +136,10 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
             paragraphSpacing: 1.0,
             sideMargin: 6.0,
             topMargin: 90.0,
-            bottomMargin: 50.0
+            bottomMargin: 50.0,
+            maxColumnCount: .auto,
+            columnThreshold: 800,
+            writingMode: .auto
         )
     }
 

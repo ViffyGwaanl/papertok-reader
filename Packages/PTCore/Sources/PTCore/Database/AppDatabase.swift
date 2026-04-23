@@ -132,6 +132,15 @@ public final class AppDatabase: Sendable {
             try db.execute(sql: "PRAGMA user_version = 7")
         }
 
+        // W6.3a — EPUB settings depth (column count + writing mode + threshold)
+        migrator.registerMigration("v1-style-column-mode") { db in
+            try db.alter(table: "tb_styles") { t in
+                t.add(column: "max_column_count", .text).defaults(to: "auto")
+                t.add(column: "column_threshold", .double).defaults(to: 800)
+                t.add(column: "writing_mode", .text).defaults(to: "auto")
+            }
+        }
+
         return migrator
     }
 }

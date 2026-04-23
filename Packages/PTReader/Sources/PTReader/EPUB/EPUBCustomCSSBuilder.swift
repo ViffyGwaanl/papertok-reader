@@ -55,6 +55,26 @@ public enum EPUBCustomCSSBuilder {
         let wordSpacing = formatDouble(style.wordSpacing)
         let paragraphSpacing = formatDouble(style.paragraphSpacing)
         let fontFamily = cssFontFamily(style.fontFamily)
+        let columnCountValue = cssColumnCount(style.maxColumnCount)
+        let writingModeValue = cssWritingMode(style.writingMode)
+        let topMargin = formatDouble(style.topMargin)
+        let bottomMargin = formatDouble(style.bottomMargin)
+
+        // Expose Readium-style CSS custom properties so future themes / Readium
+        // overrides can consume them. Readium's own renderer reads column count
+        // + writing mode via EPUBPreferences (wired in EPUBReadingPreferencesSnapshot),
+        // but the variables are also emitted here so the DOM has a single source
+        // of truth we can verify in tests and fall back to if Readium lags.
+        lines.append("""
+        :root {
+            --readium-column-count: \(columnCountValue);
+            --readium-writing-mode: \(writingModeValue);
+            --readium-word-spacing: \(wordSpacing)em;
+            --readium-para-spacing: \(paragraphSpacing)em;
+            --readium-top-margin: \(topMargin)px;
+            --readium-bottom-margin: \(bottomMargin)px;
+        }
+        """)
 
         lines.append("""
         html, body {
@@ -65,11 +85,12 @@ public enum EPUBCustomCSSBuilder {
             line-height: \(lineHeight) !important;
             letter-spacing: \(letterSpacing)em !important;
             word-spacing: \(wordSpacing)em !important;
+            writing-mode: \(writingModeValue) !important;
             text-align: justify;
             padding-left: \(formatDouble(style.sideMargin))% !important;
             padding-right: \(formatDouble(style.sideMargin))% !important;
-            padding-top: \(formatDouble(style.topMargin))px !important;
-            padding-bottom: \(formatDouble(style.bottomMargin))px !important;
+            padding-top: \(topMargin)px !important;
+            padding-bottom: \(bottomMargin)px !important;
         }
         """)
 
@@ -137,6 +158,26 @@ public enum EPUBCustomCSSBuilder {
             return String(Int(value))
         }
         return String(format: "%.2f", value)
+    }
+
+    internal static func cssColumnCount(_ value: BookStyle.ColumnCount) -> String {
+        switch value {
+        case .auto:
+            return "auto"
+        case .single:
+            return "1"
+        case .double:
+            return "2"
+        }
+    }
+
+    internal static func cssWritingMode(_ value: BookStyle.WritingMode) -> String {
+        switch value {
+        case .auto, .horizontalTb:
+            return "horizontal-tb"
+        case .verticalRl:
+            return "vertical-rl"
+        }
     }
 
     internal static func cssFontFamily(_ raw: String) -> String {

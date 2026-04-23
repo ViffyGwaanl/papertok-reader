@@ -108,7 +108,9 @@ public struct EPUBReaderSettingsView: View {
                 typographySection
                 customFontsSection
                 spacingSection
+                marginSection
                 layoutSection
+                writingDirectionSection
                 themeSection
                 if fulltextTranslationController != nil {
                     fulltextTranslationSection
@@ -206,7 +208,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             sliderRow(
-                title: AppLocalization.string("reader.appearance.word_spacing"),
+                title: AppLocalization.string("reader.settings.spacing.word"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.wordSpacing },
                     set: { viewModel.readingPreferences.style.wordSpacing = $0 }
@@ -217,7 +219,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             sliderRow(
-                title: AppLocalization.string("reader.appearance.paragraph_spacing"),
+                title: AppLocalization.string("reader.settings.spacing.paragraph"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.paragraphSpacing },
                     set: { viewModel.readingPreferences.style.paragraphSpacing = $0 }
@@ -229,20 +231,8 @@ public struct EPUBReaderSettingsView: View {
         }
     }
 
-    private var layoutSection: some View {
+    private var marginSection: some View {
         Section {
-            Picker(
-                AppLocalization.string("reader.appearance.page_turn"),
-                selection: binding(
-                    get: { viewModel.readingPreferences.pageTurnMode },
-                    set: { viewModel.readingPreferences.pageTurnMode = $0 }
-                )
-            ) {
-                Text("reader.appearance.swipe").tag(PageTurnMode.swipe)
-                Text("reader.appearance.tap").tag(PageTurnMode.tap)
-                Text("reader.appearance.scroll").tag(PageTurnMode.scroll)
-            }
-
             sliderRow(
                 title: AppLocalization.string("reader.appearance.side_margin"),
                 value: binding(
@@ -255,7 +245,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             sliderRow(
-                title: AppLocalization.string("reader.appearance.top_margin"),
+                title: AppLocalization.string("reader.settings.margins.top"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.topMargin },
                     set: { viewModel.readingPreferences.style.topMargin = $0 }
@@ -266,7 +256,7 @@ public struct EPUBReaderSettingsView: View {
             )
 
             sliderRow(
-                title: AppLocalization.string("reader.appearance.bottom_margin"),
+                title: AppLocalization.string("reader.settings.margins.bottom"),
                 value: binding(
                     get: { viewModel.readingPreferences.style.bottomMargin },
                     set: { viewModel.readingPreferences.style.bottomMargin = $0 }
@@ -279,6 +269,69 @@ public struct EPUBReaderSettingsView: View {
             Text("reader.appearance.layout")
         } footer: {
             Text("reader.appearance.margin_hint")
+        }
+    }
+
+    private var layoutSection: some View {
+        Section(String(localized: "reader.settings.layout.section")) {
+            Picker(
+                AppLocalization.string("reader.appearance.page_turn"),
+                selection: binding(
+                    get: { viewModel.readingPreferences.pageTurnMode },
+                    set: { viewModel.readingPreferences.pageTurnMode = $0 }
+                )
+            ) {
+                Text("reader.appearance.swipe").tag(PageTurnMode.swipe)
+                Text("reader.appearance.tap").tag(PageTurnMode.tap)
+                Text("reader.appearance.scroll").tag(PageTurnMode.scroll)
+            }
+
+            Picker(
+                AppLocalization.string("reader.settings.layout.column_count"),
+                selection: binding(
+                    get: { viewModel.readingPreferences.style.maxColumnCount },
+                    set: { viewModel.readingPreferences.style.maxColumnCount = $0 }
+                )
+            ) {
+                Text(AppLocalization.string("reader.settings.layout.column_count.auto"))
+                    .tag(BookStyle.ColumnCount.auto)
+                Text(AppLocalization.string("reader.settings.layout.column_count.single"))
+                    .tag(BookStyle.ColumnCount.single)
+                Text(AppLocalization.string("reader.settings.layout.column_count.double"))
+                    .tag(BookStyle.ColumnCount.double)
+            }
+
+            sliderRow(
+                title: AppLocalization.string("reader.settings.layout.column_threshold"),
+                value: binding(
+                    get: { viewModel.readingPreferences.style.columnThreshold },
+                    set: { viewModel.readingPreferences.style.columnThreshold = $0 }
+                ),
+                range: 400...1200,
+                step: 25,
+                format: "%.0f px"
+            )
+        }
+    }
+
+    private var writingDirectionSection: some View {
+        Section {
+            Picker(
+                AppLocalization.string("reader.settings.layout.writing_mode"),
+                selection: binding(
+                    get: { viewModel.readingPreferences.style.writingMode },
+                    set: { viewModel.readingPreferences.style.writingMode = $0 }
+                )
+            ) {
+                Text(AppLocalization.string("reader.settings.layout.writing_mode.auto"))
+                    .tag(BookStyle.WritingMode.auto)
+                Text(AppLocalization.string("reader.settings.layout.writing_mode.horizontal"))
+                    .tag(BookStyle.WritingMode.horizontalTb)
+                Text(AppLocalization.string("reader.settings.layout.writing_mode.vertical"))
+                    .tag(BookStyle.WritingMode.verticalRl)
+            }
+        } header: {
+            Text(AppLocalization.string("reader.settings.layout.writing_mode"))
         }
     }
 
