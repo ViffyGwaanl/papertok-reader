@@ -1,7 +1,45 @@
 # Swift 原生迁移 — 整体进度追踪
 
-**最后更新：** 2026-04-16
+**最后更新：** 2026-04-23
 **分支：** `swift-native`
+
+---
+
+## 2026-04-23 Wave 6 Reader + AI Chat 深度 parity 完成
+
+**7 commits** 落地（`2bec5d5b` → `c5d95b8a`），基于两份深度 gap 审计，关闭 Reader 和 AI Chat 相对 Flutter main 仍然残留的 P1 问题。
+
+### 测试基线
+
+| Suite | W5 结束 | W6 结束 |
+|---|---|---|
+| PTCore | 75 | 88 |
+| PTAIServices | 167 | 167 |
+| PTUI | 20 | 20 |
+| PTFeatures | 395 | 476 |
+| PTReader | 88 | 96 |
+| App Tests | 76 | 76 |
+| **Total** | **821** | **923** |
+
+macOS standalone build 全程 green。
+
+### Wave 6 — 深度 parity (7 commits)
+
+- W6.1 AI Chat 完整 markdown (`2bec5d5b`) — `MarkdownBlockParser` 替换 stub，支持 headers/bold/italic/strikethrough/inline code/code blocks/无序/有序列表/blockquotes/links/HR/tables/citation markers，MessageBubbleView 新渲染器 + 30 tests
+- W6.3a Reader 设置深度 (`bde1f86d`) — 列数（auto/single/double）+ threshold + 书写方向（auto/horizontal-tb/vertical-rl）+ 字/段间距 + 上下边距，BookStyle backward-compat Codable + CSS builder + Readium EPUBPreferences 桥接
+- W6.3b 页眉页脚叠加层 (`f7443c2b`) — `ReadingInfoLayout` 6 位置（上下 × 左中右）× 7 字段（章节/页码/进度/时间/电池/时钟/无），SwiftUI overlay + battery monitoring + clock timer
+- W6.2 Chat 输入打磨 (`6e03a8a5`) — ⌘↩ 发送 / submitLabel(.send) / `InChatModelPickerSheet`（不离开 chat 切换模型）/ `setModelForCurrentProvider` 持久化 + 配置变更通知 / macOS 剪贴板图片粘贴
+- l10n 补齐 (`67159403`) — W6.3b 遗漏的 15 个 `reader.settings.reading_info.*` 键补齐到 Localizable.xcstrings
+- W6.4 Reader 导航打磨 (`cc7e792d`) — 键盘翻页（↑↓←→/空格/PgUp/PgDn）/ toolbar 书签切换（bookmark ↔ bookmark.fill）/ TOC 搜索 / 脚注 popover
+- W6.5 Reader AI 集成 (`c5d95b8a`) — 注释点击 → 编辑 sheet（修改类型/颜色/删除/复制/分享）/ AI scope picker 始终可见（selection 禁用 fallback 到 chapter）/ 全文翻译失败重试按钮
+
+### 已知遗留
+
+| 项目 | 原因 |
+|---|---|
+| Voice input (STT) | Info.plist 无 NSSpeechRecognitionUsageDescription，按 Option 1 隐藏按钮 |
+| Readium pageNumber 总数 | 当前 coordinator 不暴露 totalPages，overlay 显示 "42" 而非 "42 / 247" |
+| macOS 原生 toolbar | 延后 |
 
 ---
 
