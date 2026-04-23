@@ -111,6 +111,7 @@ public struct EPUBReaderSettingsView: View {
                 marginSection
                 layoutSection
                 writingDirectionSection
+                readingInfoSection
                 themeSection
                 if fulltextTranslationController != nil {
                     fulltextTranslationSection
@@ -332,6 +333,80 @@ public struct EPUBReaderSettingsView: View {
             }
         } header: {
             Text(AppLocalization.string("reader.settings.layout.writing_mode"))
+        }
+    }
+
+    private var readingInfoSection: some View {
+        Section(String(localized: "reader.settings.reading_info.section")) {
+            readingInfoPicker(
+                title: AppLocalization.string("reader.settings.reading_info.top_left"),
+                keyPath: \.topLeft
+            )
+            readingInfoPicker(
+                title: AppLocalization.string("reader.settings.reading_info.top_center"),
+                keyPath: \.topCenter
+            )
+            readingInfoPicker(
+                title: AppLocalization.string("reader.settings.reading_info.top_right"),
+                keyPath: \.topRight
+            )
+            readingInfoPicker(
+                title: AppLocalization.string("reader.settings.reading_info.bottom_left"),
+                keyPath: \.bottomLeft
+            )
+            readingInfoPicker(
+                title: AppLocalization.string("reader.settings.reading_info.bottom_center"),
+                keyPath: \.bottomCenter
+            )
+            readingInfoPicker(
+                title: AppLocalization.string("reader.settings.reading_info.bottom_right"),
+                keyPath: \.bottomRight
+            )
+
+            Button {
+                viewModel.readingPreferences.style.readingInfo = .default
+                persist()
+            } label: {
+                Text(AppLocalization.string("reader.settings.reading_info.reset"))
+                    .foregroundStyle(Morandi.accent)
+            }
+        }
+    }
+
+    private func readingInfoPicker(
+        title: String,
+        keyPath: WritableKeyPath<ReadingInfoLayout, ReadingInfoField>
+    ) -> some View {
+        Picker(
+            title,
+            selection: binding(
+                get: { viewModel.readingPreferences.style.readingInfo[keyPath: keyPath] },
+                set: { viewModel.readingPreferences.style.readingInfo[keyPath: keyPath] = $0 }
+            )
+        ) {
+            ForEach(ReadingInfoField.allCases, id: \.rawValue) { field in
+                Text(EPUBReaderSettingsView.readingInfoFieldLabel(field))
+                    .tag(field)
+            }
+        }
+    }
+
+    static func readingInfoFieldLabel(_ field: ReadingInfoField) -> String {
+        switch field {
+        case .nothing:
+            return AppLocalization.string("reader.settings.reading_info.field.nothing")
+        case .chapterTitle:
+            return AppLocalization.string("reader.settings.reading_info.field.chapter")
+        case .pageNumber:
+            return AppLocalization.string("reader.settings.reading_info.field.page_number")
+        case .progressPercentage:
+            return AppLocalization.string("reader.settings.reading_info.field.progress")
+        case .readingTime:
+            return AppLocalization.string("reader.settings.reading_info.field.reading_time")
+        case .batteryLevel:
+            return AppLocalization.string("reader.settings.reading_info.field.battery")
+        case .clock:
+            return AppLocalization.string("reader.settings.reading_info.field.clock")
         }
     }
 

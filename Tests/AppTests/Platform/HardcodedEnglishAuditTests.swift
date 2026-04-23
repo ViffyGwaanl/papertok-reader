@@ -28,6 +28,7 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTFeatures/Sources/PTFeatures/Settings/ReadingDetailSettingsView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/AIChatView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/ChatInputView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/AIChat/InChatModelPickerSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/ChatSettingsSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/ConversationListView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/AIChat/ConversationListViewModel.swift",

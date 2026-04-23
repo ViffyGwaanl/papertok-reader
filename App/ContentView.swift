@@ -1988,6 +1988,10 @@ struct EPUBBookshelfReaderView: View {
     @State private var isReaderSettingsPresented = false
     @State private var readingSessionRecorder: ReadingSessionRecorder
     @State private var showBrightnessControl = false
+    // W6.3b — reading info overlay runtime state.
+    @State private var readingInfoSessionStart: Date = Date()
+    @State private var readingInfoNow: Date = Date()
+    @State private var readingInfoBatteryLevel: Double = -1
     @State private var volumeKeysEnabled = UserDefaults.standard.bool(forKey: "pt.reader.volumeKeysEnabled")
     @State private var volumeKeyHandler = VolumeKeyHandler()
 #if canImport(AVFoundation)
@@ -2185,6 +2189,24 @@ struct EPUBBookshelfReaderView: View {
                 }
                 .onChange(of: coordinator.currentLocator?.href.string ?? "") { _, _ in
                     feedFulltextTranslationChapterIfNeeded()
+                }
+
+                // W6.3b — header/footer reading info overlay.
+                ReadingInfoOverlay(
+                    layout: currentReadingInfoLayout,
+                    context: readingInfoContext,
+                    isVisible: true
+                )
+                .allowsHitTesting(false)
+                .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { now in
+                    readingInfoNow = now
+                    refreshReadingInfoBatteryLevel()
+                }
+                .onAppear {
+                    readingInfoSessionStart = Date()
+                    readingInfoNow = Date()
+                    enableReadingInfoBatteryMonitoring()
+                    refreshReadingInfoBatteryLevel()
                 }
             } else {
                 ReaderStateScreen(
@@ -2995,6 +3017,54 @@ struct EPUBBookshelfReaderView: View {
             return EPUBReadingPreferencesSnapshot(readingPreferences: preferencesViewModel.readingPreferences)
         }
         return EPUBReadingPreferencesSnapshot(readingPreferences: ReadingPreferences())
+    }
+
+    // MARK: - W6.3b Reading info overlay helpers
+
+    private var currentReadingInfoLayout: ReadingInfoLayout {
+        preferencesViewModel?.readingPreferences.style.readingInfo ?? .default
+    }
+
+    private var readingInfoContext: ReadingInfoContext {
+        let chapterTitle: String?
+        let trimmed = coordinator.currentChapterTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        chapterTitle = trimmed.isEmpty ? nil : trimmed
+
+        let progress = coordinator.readingProgress
+        let elapsed = max(0, readingInfoNow.timeIntervalSince(readingInfoSessionStart))
+
+        // Page number approximation: use Readium positions when available,
+        // otherwise fall back to the integer rounded progress percentage so
+        // the user still sees a moving value. Total pages is best-effort
+        // (Readium doesn't expose a global page count through our current
+        // coordinator surface, so this stays nil and the helper renders
+        // "42" rather than "42 / 247").
+        let page = coordinator.currentLocator?.locations.position
+
+        return ReadingInfoContext(
+            chapterTitle: chapterTitle,
+            pageNumber: page,
+            totalPages: nil,
+            progressPercentage: progress,
+            readingTime: elapsed,
+            batteryLevel: readingInfoBatteryLevel >= 0 ? readingInfoBatteryLevel : nil,
+            currentTime: readingInfoNow
+        )
+    }
+
+    private func enableReadingInfoBatteryMonitoring() {
+#if canImport(UIKit)
+        UIDevice.current.isBatteryMonitoringEnabled = true
+#endif
+    }
+
+    private func refreshReadingInfoBatteryLevel() {
+#if canImport(UIKit)
+        let level = UIDevice.current.batteryLevel
+        readingInfoBatteryLevel = Double(level)
+#else
+        readingInfoBatteryLevel = -1
+#endif
     }
 
     @ViewBuilder

@@ -21,6 +21,12 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
     public var columnThreshold: Double
     public var writingMode: WritingMode
 
+    // MARK: - W6.3b additions (reading info overlay)
+
+    /// Describes what is displayed in each of the 6 reader header/footer
+    /// slots (top-left/top-center/top-right + bottom-left/bottom-center/bottom-right).
+    public var readingInfo: ReadingInfoLayout
+
     /// Number of columns displayed in reflowable EPUB content.
     public enum ColumnCount: String, Codable, CaseIterable, Sendable {
         case auto
@@ -49,6 +55,7 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         case maxColumnCount = "max_column_count"
         case columnThreshold = "column_threshold"
         case writingMode = "writing_mode"
+        case readingInfo = "reading_info"
     }
 
     public init(
@@ -64,7 +71,8 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         bottomMargin: Double,
         maxColumnCount: ColumnCount = .auto,
         columnThreshold: Double = 800,
-        writingMode: WritingMode = .auto
+        writingMode: WritingMode = .auto,
+        readingInfo: ReadingInfoLayout = .default
     ) {
         self.id = id
         self.fontSize = fontSize
@@ -79,6 +87,7 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         self.maxColumnCount = maxColumnCount
         self.columnThreshold = columnThreshold
         self.writingMode = writingMode
+        self.readingInfo = readingInfo
     }
 
     // MARK: - Backward-compat Codable
@@ -98,6 +107,7 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         self.maxColumnCount = try c.decodeIfPresent(ColumnCount.self, forKey: .maxColumnCount) ?? .auto
         self.columnThreshold = try c.decodeIfPresent(Double.self, forKey: .columnThreshold) ?? 800
         self.writingMode = try c.decodeIfPresent(WritingMode.self, forKey: .writingMode) ?? .auto
+        self.readingInfo = try c.decodeIfPresent(ReadingInfoLayout.self, forKey: .readingInfo) ?? .default
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -115,6 +125,7 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         try c.encode(maxColumnCount, forKey: .maxColumnCount)
         try c.encode(columnThreshold, forKey: .columnThreshold)
         try c.encode(writingMode, forKey: .writingMode)
+        try c.encode(readingInfo, forKey: .readingInfo)
     }
 
     public mutating func didInsert(_ inserted: InsertionSuccess) {
@@ -139,7 +150,8 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
             bottomMargin: 50.0,
             maxColumnCount: .auto,
             columnThreshold: 800,
-            writingMode: .auto
+            writingMode: .auto,
+            readingInfo: .default
         )
     }
 

@@ -141,6 +141,13 @@ public final class AppDatabase: Sendable {
             }
         }
 
+        // W6.3b — Reader header/footer reading-info overlay (JSON blob).
+        migrator.registerMigration("v2-style-reading-info") { db in
+            try db.alter(table: "tb_styles") { t in
+                t.add(column: "reading_info", .text)
+            }
+        }
+
         return migrator
     }
 }
