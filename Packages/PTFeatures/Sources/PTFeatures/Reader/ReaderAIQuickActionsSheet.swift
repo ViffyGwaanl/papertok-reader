@@ -128,6 +128,14 @@ public struct ReaderAIQuickActionsSheet: View {
             }
         }
         .onChange(of: scope) { _, newValue in
+            // Guard against landing on the `.selection` scope when no text is
+            // selected — the segment stays visible in the picker (Flutter
+            // parity) but must bounce to a usable default so the action
+            // buttons don't operate on an empty prompt.
+            if newValue == .selection, isSelectionScopeDisabled {
+                scope = .chapter
+                return
+            }
             lastScopeRaw = newValue.rawValue
         }
     }

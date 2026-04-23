@@ -108,6 +108,36 @@ public final class EPUBReaderAnnotationsViewModel {
         return notes.first { $0.id == id }
     }
 
+    /// Routes an EPUB decoration tap (from Readium's
+    /// `observeDecorationInteractions`) to the shared context-menu coordinator
+    /// so the reader surfaces the existing-annotation edit sheet. Mirrors the
+    /// PDF view-model's `handleAnnotationTap(id:coordinator:)` for parity.
+    @discardableResult
+    public func handleAnnotationTap(
+        id: Int64,
+        coordinator: ContextMenuCoordinator
+    ) -> Bool {
+        guard let note = notes.first(where: { $0.id == id }) else {
+            return false
+        }
+        coordinator.showAnnotationEdit(note: note)
+        return true
+    }
+
+    /// Convenience overload that accepts a Readium `Decoration.id` string and
+    /// maps it through `note(matchingDecorationID:)` before routing the tap.
+    @discardableResult
+    public func handleAnnotationTap(
+        decorationID: String,
+        coordinator: ContextMenuCoordinator
+    ) -> Bool {
+        guard let note = note(matchingDecorationID: decorationID) else {
+            return false
+        }
+        coordinator.showAnnotationEdit(note: note)
+        return true
+    }
+
     /// Whether a bookmark already exists for the locator anchored at the
     /// supplied stored string. Used by the reader toolbar to pick the
     /// filled vs. outline glyph and the correct accessibility label.
