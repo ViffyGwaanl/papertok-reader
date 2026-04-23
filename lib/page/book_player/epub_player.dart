@@ -103,6 +103,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   OverlayEntry? contextMenuEntry;
   AnimationController? _animationController;
   Animation<double>? _animation;
+  bool _coverFadeStarted = false;
   bool showHistory = false;
   bool canGoBack = false;
   bool canGoForward = false;
@@ -715,6 +716,10 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         handlerName: 'onLoadEnd',
         callback: (args) {
           widget.onLoadEnd();
+          if (_animationController != null && !_coverFadeStarted) {
+            _coverFadeStarted = true;
+            _animationController!.forward();
+          }
         });
 
     controller.addJavaScriptHandler(
@@ -1189,12 +1194,13 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       _animationController = AnimationController(
         duration: const Duration(milliseconds: 600),
         vsync: this,
+        value: 1.0,
       );
       _animation =
           Tween<double>(begin: 1.0, end: 0.0).animate(_animationController!);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _animationController!.forward();
-      });
+      // Cover fade is now started from the WebView onLoadEnd handler
+      // (see setHandler) so the overlay holds through the page push
+      // transition and only fades once the EPUB content has rendered.
     }
     super.initState();
   }
