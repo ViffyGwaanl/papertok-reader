@@ -115,9 +115,16 @@ public struct ReaderAIQuickActionsSheet: View {
         .presentationDetents([.medium])
         .onAppear {
             if let stored = ReaderContextScope(rawValue: lastScopeRaw) {
-                scope = stored
+                // Don't land on `.selection` when there's nothing to select —
+                // fall back to chapter so the picker always shows a usable
+                // default even across app launches.
+                if stored == .selection, isSelectionScopeDisabled {
+                    scope = Self.defaultScope(selectedText: selectedText)
+                } else {
+                    scope = stored
+                }
             } else {
-                scope = selectedText.isEmpty ? .page : .selection
+                scope = Self.defaultScope(selectedText: selectedText)
             }
         }
         .onChange(of: scope) { _, newValue in
@@ -126,19 +133,44 @@ public struct ReaderAIQuickActionsSheet: View {
     }
 
     private var scopePicker: some View {
-        Picker(selection: $scope) {
-            ForEach(ReaderContextScope.allCases, id: \.self) { option in
-                Label(
-                    localizedCatalogString(Self.scopeLabelKey(option)),
-                    systemImage: Self.scopeSystemImage(option)
-                )
-                .tag(option)
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            Picker(selection: $scope) {
+                ForEach(ReaderContextScope.allCases, id: \.self) { option in
+                    Label(
+                        localizedCatalogString(Self.scopeLabelKey(option)),
+                        systemImage: Self.scopeSystemImage(option)
+                    )
+                    .tag(option)
+                }
+            } label: {
+                EmptyView()
             }
-        } label: {
-            EmptyView()
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .accessibilityIdentifier("reader.ai.scope.picker")
+
+            if isSelectionScopeDisabled {
+                Text(localizedCatalogString("reader.ai.scope.selection.disabled"))
+                    .font(AppTypography.caption)
+                    .foregroundStyle(Morandi.secondaryText)
+                    .accessibilityIdentifier("reader.ai.scope.selection.disabled_hint")
+            }
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
+    }
+
+    /// Whether the `.selection` scope should be unavailable because no text is
+    /// selected. The Picker still renders all four scopes so users can switch
+    /// between page / chapter / book freely.
+    public var isSelectionScopeDisabled: Bool {
+        selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Scope selected by default the first time the sheet is opened for a
+    /// given selection state. Exposed for tests; the live picker honors the
+    /// per-user `@AppStorage` preference first.
+    public static func defaultScope(selectedText: String) -> ReaderContextScope {
+        let trimmed = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? .chapter : .selection
     }
 
     private static func scopeLabelKey(_ scope: ReaderContextScope) -> String {

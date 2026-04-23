@@ -1994,6 +1994,8 @@ struct EPUBBookshelfReaderView: View {
     @State private var readingInfoBatteryLevel: Double = -1
     @State private var volumeKeysEnabled = UserDefaults.standard.bool(forKey: "pt.reader.volumeKeysEnabled")
     @State private var volumeKeyHandler = VolumeKeyHandler()
+    @State private var tocSearchQuery: String = ""
+    @State private var footnotePopoverContent: FootnotePopoverContent?
 #if canImport(AVFoundation)
     @State private var ttsService = TTSService()
 #endif
@@ -2043,8 +2045,19 @@ struct EPUBBookshelfReaderView: View {
         .navigationBarTitleDisplayMode(.inline)
 #endif
         .toolbar { toolbarContent }
+        .focusable(true)
+        .onKeyPress(.leftArrow) { coordinator.goPreviousPage(); return .handled }
+        .onKeyPress(.rightArrow) { coordinator.goNextPage(); return .handled }
+        .onKeyPress(.upArrow) { coordinator.goPreviousPage(); return .handled }
+        .onKeyPress(.downArrow) { coordinator.goNextPage(); return .handled }
+        .onKeyPress(.space) { coordinator.goNextPage(); return .handled }
+        .onKeyPress(.pageUp) { coordinator.goPreviousPage(); return .handled }
+        .onKeyPress(.pageDown) { coordinator.goNextPage(); return .handled }
         .sheet(isPresented: tocSheetBinding) { tocSheet }
         .sheet(isPresented: searchSheetBinding) { searchSheet }
+        .sheet(item: $footnotePopoverContent, onDismiss: { footnotePopoverContent = nil }) { content in
+            FootnotePopoverView(content: content, onClose: { footnotePopoverContent = nil })
+        }
         .sheet(isPresented: annotationEditorPresentedBinding) { annotationEditorSheet }
         .sheet(item: contextMenuSheetBinding, onDismiss: {
             coordinator.clearSelection()
@@ -2113,6 +2126,7 @@ struct EPUBBookshelfReaderView: View {
             coordinator.onSelectionChange = nil
             coordinator.onDecorationActivated = nil
             coordinator.onImageActivate = nil
+            coordinator.onFootnoteActivate = nil
             volumeKeyHandler.stop()
 #if canImport(AVFoundation)
             ttsService.stop()
@@ -2281,12 +2295,14 @@ struct EPUBBookshelfReaderView: View {
             .disabled(preferencesViewModel == nil)
 
             Button {
-                presentBookmarkDraft()
+                Task { await toggleEPUBBookmarkAtCurrentPage() }
             } label: {
-                Image(systemName: "bookmark")
+                Image(systemName: BookmarkToolbarIcon.systemName(isBookmarked: isCurrentEPUBPageBookmarked))
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel(String(localized: "bookmark.add"))
+            .accessibilityLabel(String(localized: String.LocalizationValue(
+                BookmarkToolbarIcon.accessibilityKey(isBookmarked: isCurrentEPUBPageBookmarked)
+            )))
             .disabled((coordinator.currentLocator ?? initialLocator) == nil)
 
             Button {
@@ -2567,6 +2583,15 @@ struct EPUBBookshelfReaderView: View {
                     progress: activeCoordinator.readingProgress
                 )
             }
+            coordinator.onFootnoteActivate = { href, content in
+                let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard trimmed.isEmpty == false else { return }
+                footnotePopoverContent = FootnotePopoverContent(
+                    title: AppLocalization.string("reader.footnote.title"),
+                    body: trimmed,
+                    sourceHref: href
+                )
+            }
             publishReaderSession(
                 publication: openedPublication,
                 locator: coordinator.currentLocator ?? initialLocator,
@@ -2692,35 +2717,59 @@ struct EPUBBookshelfReaderView: View {
                             description: Text("reader.no_toc_epub")
                         )
                     } else {
-                        List(readerControlsViewModel.tocEntries) { entry in
-                            Button {
-                                navigateToEPUBLocation(href: entry.href)
-                                readerControlsViewModel.showTOC = false
-                            } label: {
-                                HStack(spacing: AppSpacing.xs) {
-                                    if entry.level > 0 {
-                                        Spacer().frame(width: CGFloat(entry.level) * AppSpacing.lg)
+                        let filteredEntries = TOCSearchFilter.filter(
+                            readerControlsViewModel.tocEntries,
+                            query: tocSearchQuery
+                        )
+                        Group {
+                            if filteredEntries.isEmpty {
+                                VStack(spacing: AppSpacing.md) {
+                                    ContentUnavailableView(
+                                        AppLocalization.string("reader.toc.search.no_matches"),
+                                        systemImage: "magnifyingglass",
+                                        description: Text("reader.toc.search.no_matches")
+                                    )
+                                    Button {
+                                        tocSearchQuery = ""
+                                    } label: {
+                                        Text("common.clear")
+                                            .foregroundStyle(Morandi.accent)
                                     }
-                                    VStack(alignment: .leading, spacing: AppSpacing.xxs) {
-                                        Text(entry.title)
-                                            .font(entry.level == 0 ? AppTypography.headline : AppTypography.body)
-                                            .foregroundStyle(
-                                                entry.level == 0 ? Morandi.primaryText : Morandi.secondaryText
-                                            )
-                                        if entry.childCount > 0 {
-                                            Text(AppLocalization.format("reader.toc.subsection_count_format", locale: .autoupdatingCurrent,
-                                                entry.childCount
-                                            ))
-                                                .font(AppTypography.caption)
-                                                .foregroundStyle(Morandi.secondaryText)
+                                }
+                            } else {
+                                List(filteredEntries) { entry in
+                                    Button {
+                                        navigateToEPUBLocation(href: entry.href)
+                                        readerControlsViewModel.showTOC = false
+                                        tocSearchQuery = ""
+                                    } label: {
+                                        HStack(spacing: AppSpacing.xs) {
+                                            if entry.level > 0 {
+                                                Spacer().frame(width: CGFloat(entry.level) * AppSpacing.lg)
+                                            }
+                                            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                                                Text(entry.title)
+                                                    .font(entry.level == 0 ? AppTypography.headline : AppTypography.body)
+                                                    .foregroundStyle(
+                                                        entry.level == 0 ? Morandi.primaryText : Morandi.secondaryText
+                                                    )
+                                                if entry.childCount > 0 {
+                                                    Text(AppLocalization.format("reader.toc.subsection_count_format", locale: .autoupdatingCurrent,
+                                                        entry.childCount
+                                                    ))
+                                                        .font(AppTypography.caption)
+                                                        .foregroundStyle(Morandi.secondaryText)
+                                                }
+                                            }
+                                            Spacer()
                                         }
                                     }
-                                    Spacer()
+                                    .listRowBackground(Morandi.background)
                                 }
+                                .listStyle(.plain)
                             }
-                            .listRowBackground(Morandi.background)
                         }
-                        .listStyle(.plain)
+                        .searchable(text: $tocSearchQuery, prompt: String(localized: "reader.toc.search.placeholder"))
                     }
                 } else {
                     ProgressView(AppLocalization.string("reader.preparing_controls_ellipsis"))
@@ -3136,6 +3185,35 @@ struct EPUBBookshelfReaderView: View {
         }
 
         presentAnnotationDraft(locator: locator, selectedText: "", type: .bookmark)
+    }
+
+    /// W6.4 — computed flag that drives the bookmark toolbar glyph and
+    /// accessibility label. Mirrors `ReaderViewModel.isCurrentPageBookmarked`
+    /// but uses the Readium locator as the identity key.
+    private var isCurrentEPUBPageBookmarked: Bool {
+        guard let locator = coordinator.currentLocator ?? initialLocator,
+              let annotationsViewModel else {
+            return false
+        }
+        let stored = EPUBAnnotationBridge.storedString(from: locator)
+        return annotationsViewModel.isBookmarked(locatorString: stored)
+    }
+
+    /// W6.4 — one-tap bookmark create/delete for the active EPUB page.
+    /// Refreshes annotation decorations so the in-reader glyph stays in
+    /// sync with the toolbar state.
+    private func toggleEPUBBookmarkAtCurrentPage() async {
+        guard let locator = coordinator.currentLocator ?? initialLocator,
+              let annotationsViewModel else {
+            return
+        }
+        let stored = EPUBAnnotationBridge.storedString(from: locator)
+        let chapterTitle = locator.title ?? coordinator.currentChapterTitle
+        await annotationsViewModel.toggleBookmark(
+            locatorString: stored,
+            chapterTitle: chapterTitle
+        )
+        applyAnnotationDecorations(using: annotationsViewModel)
     }
 
     private func presentAnnotationEditor(decorationID: String) {

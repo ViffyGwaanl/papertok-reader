@@ -108,6 +108,37 @@ public final class EPUBReaderAnnotationsViewModel {
         return notes.first { $0.id == id }
     }
 
+    /// Whether a bookmark already exists for the locator anchored at the
+    /// supplied stored string. Used by the reader toolbar to pick the
+    /// filled vs. outline glyph and the correct accessibility label.
+    public func isBookmarked(locatorString: String) -> Bool {
+        notes.contains { note in
+            note.type == NoteType.bookmark.rawValue && note.cfi == locatorString
+        }
+    }
+
+    /// One-tap bookmark toggle used by the reader toolbar. Creates a
+    /// `NoteType.bookmark` row via the shared annotation flow when none
+    /// exists for the supplied locator, otherwise deletes the existing
+    /// matching bookmark. The in-memory `notes` list is kept in sync.
+    public func toggleBookmark(locatorString: String, chapterTitle: String) async {
+        if let existing = notes.first(where: {
+            $0.type == NoteType.bookmark.rawValue && $0.cfi == locatorString
+        }), let id = existing.id {
+            await deleteAnnotation(id: id)
+            return
+        }
+
+        _ = await createAnnotation(
+            selectedText: "",
+            locatorString: locatorString,
+            chapterTitle: chapterTitle,
+            type: .bookmark,
+            color: .yellow,
+            readerNote: nil
+        )
+    }
+
     private func save(_ note: BookNote) async -> BookNote? {
         do {
             let saved = try await noteDAO.save(note)

@@ -34,6 +34,12 @@ public final class EPUBNavigatorCoordinator: NSObject {
     public var onDecorationActivated: ((OnDecorationActivatedEvent) -> Void)?
     public var onImageActivate: ((ReaderImageAsset) -> Void)?
 
+    /// W6.4 — invoked when the navigator activates a note-style link
+    /// (Readium's footnote callback). The coordinator forwards the
+    /// payload on the main actor so the host can present a popover
+    /// instead of jumping away from the current page.
+    public var onFootnoteActivate: ((_ href: String, _ content: String) -> Void)?
+
     // MARK: - Internal
 
     private var pendingDecorationsByGroup: [String: [Decoration]] = [:]
@@ -69,6 +75,18 @@ public final class EPUBNavigatorCoordinator: NSObject {
         Task { @MainActor [weak self] in
             _ = await self?.navigatorViewController?.goBackward(options: NavigatorGoOptions(animated: true))
         }
+    }
+
+    /// Semantic alias for `goForward()` used by keyboard-nav and
+    /// accessibility shortcuts.
+    public func goNextPage() {
+        goForward()
+    }
+
+    /// Semantic alias for `goBackward()` used by keyboard-nav and
+    /// accessibility shortcuts.
+    public func goPreviousPage() {
+        goBackward()
     }
 
     public func applyDecorations(_ decorations: [Decoration], in group: String) {
@@ -237,7 +255,17 @@ extension EPUBNavigatorCoordinator: EPUBNavigatorDelegate {
     }
 
     public nonisolated func navigator(_ navigator: any Navigator, shouldNavigateToNoteAt link: Link, content: String, referrer: String?) -> Bool {
-        true
+        // Readium already extracts the footnote body text into `content`,
+        // so the host can show it inline without a second network or
+        // resource fetch. Forward the payload to the main actor for
+        // popover presentation and suppress the default jump so the
+        // reader stays anchored on the current page.
+        let href = link.href
+        let snapshotContent = content
+        Task { @MainActor [weak self] in
+            self?.onFootnoteActivate?(href, snapshotContent)
+        }
+        return false
     }
 
     public nonisolated func navigator(_ navigator: any Navigator, didFailToLoadResourceAt href: RelativeURL, withError error: ReadError) {

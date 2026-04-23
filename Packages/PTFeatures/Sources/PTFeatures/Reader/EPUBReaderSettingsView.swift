@@ -476,6 +476,24 @@ public struct EPUBReaderSettingsView: View {
                     }
                 }
 
+                if controller.runtime.isEnabled, controller.runtime.totalCount > 0 {
+                    fulltextTranslationStatusRows(runtime: controller.runtime)
+                }
+
+                if controller.runtime.hasFailures {
+                    Button(role: .destructive) {
+                        controller.runtime.retryFailedParagraphs()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text(String(localized: "reader.translation.fulltext.retry_failed"))
+                        }
+                    }
+                    .accessibilityIdentifier("reader.translation.fulltext.retry_failed")
+                }
+
+                concurrencyRow(runtime: controller.runtime)
+
                 Button(role: .destructive) {
                     showClearCacheConfirmation = true
                 } label: {
@@ -494,6 +512,58 @@ public struct EPUBReaderSettingsView: View {
                     Text(String(localized: "reader.translation.fulltext.clear_cache.confirm.message"))
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func fulltextTranslationStatusRows(runtime: FulltextTranslationRuntime) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            let inFlight = runtime.inFlightCount
+            let total = runtime.totalCount
+            let progressText = AppLocalization.format(
+                "reader.translation.fulltext.status.progress_format",
+                inFlight,
+                total
+            )
+            Text(progressText)
+                .font(AppTypography.caption)
+                .foregroundStyle(Morandi.secondaryText)
+
+            let readyText = AppLocalization.format(
+                "reader.translation.fulltext.status.ready_format",
+                runtime.readyCount
+            )
+            Text(readyText)
+                .font(AppTypography.caption)
+                .foregroundStyle(Morandi.secondaryText)
+
+            if runtime.failedCount > 0 {
+                let failedText = AppLocalization.format(
+                    "reader.translation.fulltext.status.failed_format",
+                    runtime.failedCount
+                )
+                Text(failedText)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("reader.translation.fulltext.status.failed")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func concurrencyRow(runtime: FulltextTranslationRuntime) -> some View {
+        let binding = Binding<Double>(
+            get: { Double(runtime.maxConcurrency) },
+            set: { runtime.setMaxConcurrency(Int($0)) }
+        )
+        let label = AppLocalization.string("reader.translation.fulltext.concurrency")
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            Text("\(label): \(runtime.maxConcurrency)")
+                .font(AppTypography.subheadline)
+                .foregroundStyle(Morandi.primaryText)
+            Slider(value: binding, in: 1...8, step: 1)
+                .tint(Morandi.accent)
+                .accessibilityIdentifier("reader.translation.fulltext.concurrency.slider")
         }
     }
 

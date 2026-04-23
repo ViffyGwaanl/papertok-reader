@@ -27,9 +27,26 @@ public final class FulltextTranslationRuntime: @unchecked Sendable {
         paragraphs.contains { if case .failed = $0.status { true } else { false } }
     }
 
+    /// Number of paragraphs whose translation has completed successfully.
+    @MainActor public var readyCount: Int {
+        paragraphs.reduce(into: 0) { count, paragraph in
+            if paragraph.status == .ready { count += 1 }
+        }
+    }
+
+    /// Number of paragraphs currently in the failed state.
+    @MainActor public var failedCount: Int {
+        paragraphs.reduce(into: 0) { count, paragraph in
+            if case .failed = paragraph.status { count += 1 }
+        }
+    }
+
+    /// Total number of paragraphs the runtime is currently tracking.
+    @MainActor public var totalCount: Int { paragraphs.count }
+
     private let translator: Translator
     private let cache: FulltextTranslationCache
-    private let maxConcurrency: Int
+    @MainActor public private(set) var maxConcurrency: Int
 
     @MainActor private var queue: [String] = []
     @MainActor private var tasks: [String: Task<Void, Never>] = [:]
@@ -41,6 +58,47 @@ public final class FulltextTranslationRuntime: @unchecked Sendable {
         self.translator = translator
         self.cache = cache
         self.maxConcurrency = max(1, maxConcurrency)
+    }
+
+    /// Clamp and apply a new concurrency budget; pumps the queue in case the
+    /// increased budget unblocks waiting paragraphs.
+    @MainActor
+    public func setMaxConcurrency(_ newValue: Int) {
+        let clamped = max(1, min(8, newValue))
+        guard clamped != maxConcurrency else { return }
+        maxConcurrency = clamped
+        pumpQueue()
+    }
+
+    /// Re-queue every paragraph currently in `.failed` state so the worker
+    /// picks them up again. Paragraphs in `.ready`, `.queued`, or
+    /// `.translating` are untouched — this only affects previously failed
+    /// work, matching the Flutter "Retry failed" UX.
+    ///
+    /// Returns the number of paragraphs that were moved back to the queue.
+    @MainActor
+    @discardableResult
+    public func retryFailedParagraphs() -> Int {
+        var requeued = 0
+        for index in paragraphs.indices {
+            if case .failed = paragraphs[index].status {
+                let id = paragraphs[index].id
+                tasks[id]?.cancel()
+                tasks.removeValue(forKey: id)
+                paragraphs[index].status = .queued
+                paragraphs[index].translatedText = nil
+                generation += 1
+                generationByParagraph[id] = generation
+                if queue.contains(id) == false {
+                    queue.append(id)
+                }
+                requeued += 1
+            }
+        }
+        if requeued > 0 {
+            pumpQueue()
+        }
+        return requeued
     }
 
     @MainActor

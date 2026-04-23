@@ -117,6 +117,21 @@ public final class PDFReaderAnnotationsViewModel {
         return EPUBReaderAnnotationDraft(note: note)
     }
 
+    /// Routes a PDF annotation tap (from PDFKit's annotation hit-testing) to
+    /// the shared context-menu coordinator so the reader can surface the
+    /// existing-annotation edit sheet.
+    @discardableResult
+    public func handleAnnotationTap(
+        id: Int64,
+        coordinator: ContextMenuCoordinator
+    ) -> Bool {
+        guard let note = notes.first(where: { $0.id == id }) else {
+            return false
+        }
+        coordinator.showAnnotationEdit(note: note)
+        return true
+    }
+
     private func save(_ note: BookNote) async -> BookNote? {
         do {
             let saved = try await noteDAO.save(note)

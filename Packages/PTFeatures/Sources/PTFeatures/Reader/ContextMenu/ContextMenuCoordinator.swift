@@ -105,6 +105,23 @@ public final class ContextMenuCoordinator {
         activeSheet = nil
     }
 
+    /// Present the annotation edit sheet for an existing `BookNote`. The
+    /// floating selection menu is hidden while the edit sheet is up, and the
+    /// coordinator state is hydrated from the note so the sheet can show the
+    /// current selection text, chapter, color and kind.
+    public func showAnnotationEdit(note: BookNote) {
+        guard let id = note.id else { return }
+        selectedText = note.content
+        selectedLocator = note.cfi
+        chapterTitle = note.chapter
+        highlightColor = HighlightColor(databaseValue: note.color)
+        if let kind = BookNoteAnnotationKind(rawValue: note.type) {
+            annotationKind = kind
+        }
+        isMenuVisible = false
+        activeSheet = .noteEdit(noteID: id)
+    }
+
     /// Dismiss the context menu and any active sheet.
     public func dismiss() {
         isMenuVisible = false

@@ -42,6 +42,7 @@ struct HardcodedEnglishAuditTests {
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/EPUBReaderSettingsView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/CustomFontPicker.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/BookmarkManagerView.swift",
+                "Packages/PTFeatures/Sources/PTFeatures/Reader/FootnotePopoverView.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ContextMenuAction.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/ExcerptMenuSheet.swift",
                 "Packages/PTFeatures/Sources/PTFeatures/Reader/ContextMenu/NoteEditorSheet.swift",

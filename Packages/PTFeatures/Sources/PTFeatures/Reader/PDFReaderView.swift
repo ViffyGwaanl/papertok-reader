@@ -626,6 +626,14 @@ public struct PDFReaderView: View {
 
     private var readerCommandSurface: some View {
         readerLifecycleSurface
+            .focusable(true)
+            .onKeyPress(.leftArrow) { goToPreviousPageFromCommand(); return .handled }
+            .onKeyPress(.rightArrow) { goToNextPageFromCommand(); return .handled }
+            .onKeyPress(.upArrow) { goToPreviousPageFromCommand(); return .handled }
+            .onKeyPress(.downArrow) { goToNextPageFromCommand(); return .handled }
+            .onKeyPress(.space) { goToNextPageFromCommand(); return .handled }
+            .onKeyPress(.pageUp) { goToPreviousPageFromCommand(); return .handled }
+            .onKeyPress(.pageDown) { goToNextPageFromCommand(); return .handled }
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PaperTokToggleAI"))) { _ in
                 isAIPanelPresented.toggle()
             }
@@ -866,10 +874,12 @@ public struct PDFReaderView: View {
                     }
                 }
             } label: {
-                Image(systemName: viewModel.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark")
+                Image(systemName: BookmarkToolbarIcon.systemName(isBookmarked: viewModel.isCurrentPageBookmarked))
                     .foregroundStyle(Morandi.accent)
             }
-            .accessibilityLabel(String(localized: "bookmark.add"))
+            .accessibilityLabel(String(localized: String.LocalizationValue(
+                BookmarkToolbarIcon.accessibilityKey(isBookmarked: viewModel.isCurrentPageBookmarked)
+            )))
             .disabled(viewModel.pdfDocument == nil)
 
             Menu {
@@ -1429,9 +1439,7 @@ public struct PDFReaderView: View {
     // MARK: - TOC Search Helpers
 
     private var filteredTOCEntries: [ChapterEntry] {
-        let q = tocSearchQuery.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return viewModel.tocEntries }
-        return viewModel.tocEntries.filter { $0.title.range(of: q, options: .caseInsensitive) != nil }
+        TOCSearchFilter.filter(viewModel.tocEntries, query: tocSearchQuery)
     }
 
 }
