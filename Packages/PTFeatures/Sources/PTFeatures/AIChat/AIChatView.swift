@@ -30,6 +30,10 @@ public struct AIChatView: View {
     @State private var showAttachmentPicker = false
     @State private var showChatSettings = false
     @State private var showConversationList = false
+    /// W6.2 — toggles the lightweight in-chat model picker sheet. Short-tap
+    /// on the composer model chip opens this; the provider chip to the left
+    /// still routes to Settings → AI Provider Center.
+    @State private var showModelPicker = false
 
     private var currentProviderDisplayName: String {
         viewModel.displayedProviderName.isEmpty
@@ -44,6 +48,17 @@ public struct AIChatView: View {
     private var currentModelSupportsThinking: Bool {
         guard let provider = viewModel.providerOptions.first(where: { $0.id == viewModel.selectedProviderId }) else { return false }
         return provider.models.first(where: { $0.id == viewModel.selectedModelId })?.supportsThinking ?? false
+    }
+
+    /// W6.2 — the list surfaced in the in-chat model picker. Reads from the
+    /// currently-resolved runtime so it always reflects the latest catalog
+    /// snapshot (which may include models persisted by the detailed settings
+    /// screen).
+    private var availableModelsForCurrentProvider: [String] {
+        guard let provider = viewModel.providerOptions.first(where: { $0.id == viewModel.selectedProviderId }) else {
+            return []
+        }
+        return provider.models.map(\.id)
     }
 
     private var quickPrompts: [String] {
@@ -120,8 +135,15 @@ public struct AIChatView: View {
                         object: nil
                     )
                 },
+                onModelTap: { showModelPicker = true },
                 onModelSettingsTap: { showChatSettings = true },
                 onToggleThinking: { viewModel.toggleThinking() },
+                onPasteImage: { data in
+                    viewModel.addAttachment(
+                        .init(type: .image, name: "pasted-image", data: data)
+                    )
+                    viewModel.infoMessage = String(localized: "chat.input.image_pasted")
+                },
                 thinkingEnabled: viewModel.thinkingEnabled,
                 supportsThinking: currentModelSupportsThinking,
                 currentProviderName: currentProviderDisplayName,
@@ -191,6 +213,20 @@ public struct AIChatView: View {
         }
         .sheet(isPresented: $showChatSettings) {
             ChatSettingsSheet(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showModelPicker) {
+            InChatModelPickerSheet(
+                currentProviderId: viewModel.selectedProviderId,
+                currentProviderName: currentProviderDisplayName,
+                currentModelId: viewModel.selectedModelId,
+                availableModels: availableModelsForCurrentProvider,
+                onSelect: { modelId in
+                    viewModel.setModelForCurrentProvider(modelId)
+                },
+                onCustomSubmit: { modelId in
+                    viewModel.setModelForCurrentProvider(modelId)
+                }
+            )
         }
         .sheet(item: Binding(
             get: { viewModel.pendingApprovals.first(where: { $0.isApproved == nil }) },

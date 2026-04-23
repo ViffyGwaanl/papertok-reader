@@ -328,6 +328,23 @@ public final class AIChatViewModel {
             ?? selectedModelId
     }
 
+    /// W6.2 — lightweight in-chat model picker hook. Sets the in-memory model
+    /// selection and persists the provider-scoped UserDefaults key so that the
+    /// next send-time resolver snapshot picks up the change. Empty or
+    /// whitespace-only ids are ignored so we never overwrite with a blank.
+    ///
+    /// Also posts `StoredAIProviderCatalog.configurationDidChangeNotification`
+    /// so any other observers (e.g. the composer chip) see the update the
+    /// moment the picker dismisses.
+    public func setModelForCurrentProvider(_ modelId: String) {
+        let trimmed = modelId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        guard selectedProviderId.isEmpty == false else { return }
+        selectedModelId = trimmed
+        defaults.set(trimmed, forKey: "ai_model_for_\(selectedProviderId)")
+        StoredAIProviderCatalog.postConfigurationDidChange()
+    }
+
     public func makeTranslationService() -> AITranslationService? {
         guard let providerOption = providerOptions.first(where: { $0.id == selectedProviderId }),
               providerOption.models.contains(where: { $0.id == selectedModelId }) else {

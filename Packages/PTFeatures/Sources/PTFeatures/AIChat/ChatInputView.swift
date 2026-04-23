@@ -1,5 +1,6 @@
 import SwiftUI
 import PTUI
+import UniformTypeIdentifiers
 #if os(iOS)
 import UIKit
 #endif
@@ -22,10 +23,21 @@ struct ChatInputView: View {
     let onStop: () -> Void
     let onAttach: () -> Void
     var onRemoveAttachment: (UUID) -> Void
+    /// W6.2 (E) — the mic button is hidden unless the host wires a real
+    /// handler. We do NOT render the affordance when `onVoice` is nil because
+    /// the app has no `NSSpeechRecognitionUsageDescription` yet; showing a
+    /// disabled mic would be worse than showing nothing.
     var onVoice: (() -> Void)? = nil
     var onProviderTap: (() -> Void)? = nil
+    /// W6.2 — short-tap on the secondary model chip opens the in-chat model
+    /// picker sheet (`InChatModelPickerSheet`). When nil the chip is hidden.
+    var onModelTap: (() -> Void)? = nil
     var onModelSettingsTap: (() -> Void)? = nil
     var onToggleThinking: (() -> Void)? = nil
+    /// W6.2 (D) — clipboard image paste hook. When the host wires this, the
+    /// composer listens for `.onPasteCommand(of: [.image])` and forwards the
+    /// decoded image data back to the view model as a new attachment.
+    var onPasteImage: ((Data) -> Void)? = nil
     var thinkingEnabled: Bool = false
     var supportsThinking: Bool = false
     var currentProviderName: String = ""
@@ -114,6 +126,15 @@ struct ChatInputView: View {
                         .focused($focused)
                         .padding(.horizontal, AppSpacing.md)
                         .padding(.vertical, AppSpacing.sm)
+                        // W6.2 (A) — hardware keyboard: ↩ sends, Shift+↩ still
+                        // produces a newline because `.vertical` axis honours
+                        // the modifier. iOS soft-keyboard honours the send
+                        // label too, matching Flutter main.
+                        .submitLabel(.send)
+                        .onSubmit {
+                            guard text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else { return }
+                            onSend()
+                        }
                 }
             }
             .padding(.top, AppSpacing.xs)
@@ -143,7 +164,7 @@ struct ChatInputView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "cpu")
                                 .font(.system(size: 14))
-                            Text(providerChipLabel)
+                            Text(currentProviderName.isEmpty ? providerChipLabel : currentProviderName)
                                 .font(AppTypography.caption)
                                 .lineLimit(1)
                         }
@@ -158,6 +179,32 @@ struct ChatInputView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text(providerChipLabel))
                     .accessibilityHint(Text("chat.provider.chip.tooltip"))
+                    .accessibilityAddTraits(.isButton)
+                }
+
+                // W6.2 — secondary model chip. Short-tap opens the in-chat
+                // model picker sheet. The provider chip to the left still
+                // routes to Settings → AI Provider Center for full config.
+                if let onModelTap, currentModelName.isEmpty == false {
+                    Button(action: onModelTap) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bolt.horizontal")
+                                .font(.system(size: 12))
+                            Text(currentModelName)
+                                .font(AppTypography.caption)
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(Morandi.secondaryText)
+                        .padding(.horizontal, AppSpacing.sm)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Morandi.elevatedBackground)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(currentModelName))
+                    .accessibilityHint(Text("chat.input.model_picker.title"))
                     .accessibilityAddTraits(.isButton)
                 }
 
@@ -217,6 +264,7 @@ struct ChatInputView: View {
         .padding(.horizontal, AppSpacing.md)
         .padding(.bottom, AppSpacing.md)
         .animation(.easeInOut(duration: 0.2), value: focused)
+        .modifier(PasteImageModifier(onPasteImage: onPasteImage))
     }
 
     @ViewBuilder
@@ -243,7 +291,43 @@ struct ChatInputView: View {
             }
             .buttonStyle(.plain)
             .disabled(text.isEmpty)
+            // W6.2 (A) — global ⌘↩ shortcut. Works across iPad, macOS, and
+            // iPhone with a hardware keyboard. SwiftUI dedupes against the
+            // `.onSubmit` wired on the TextField, so there's no double-fire.
+            .keyboardShortcut(.return, modifiers: .command)
             .transition(.scale.combined(with: .opacity))
         }
     }
+}
+
+/// W6.2 (D) — clipboard image paste.
+///
+/// `.onPasteCommand` is macOS-only; on iOS the system's keyboard paste
+/// affordance already routes text through the `TextField`. When a richer
+/// iOS paste UX lands, this modifier can be extended behind the same hook.
+private struct PasteImageModifier: ViewModifier {
+    let onPasteImage: ((Data) -> Void)?
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+        content.onPasteCommand(of: [UTType.image.identifier]) { providers in
+            handlePastedProviders(providers)
+        }
+        #else
+        content
+        #endif
+    }
+
+    #if os(macOS)
+    private func handlePastedProviders(_ providers: [NSItemProvider]) {
+        guard let onPasteImage else { return }
+        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }) else { return }
+        provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
+            guard let data else { return }
+            Task { @MainActor in
+                onPasteImage(data)
+            }
+        }
+    }
+    #endif
 }
