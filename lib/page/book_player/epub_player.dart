@@ -1768,17 +1768,19 @@ return null;
 
   @override
   Widget build(BuildContext context) {
-    // Wait for the security-scoped handle to be ready (only matters for
-    // "inplace" books — for legacy/imported books `open()` resolves
-    // synchronously on the next microtask).
-    if (_scopedAccess == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    String uri = Uri.encodeComponent(_scopedAccess!.path);
-    String url = 'http://127.0.0.1:${Server().port}/book/$uri';
-    String initialCfi = widget.cfi ?? widget.book.lastReadPosition;
+    // For imported books the path is synchronously available; for in-place
+    // books we wait for ScopedFileAccess. Important: the cover overlay
+    // (rendered in the Stack below, gated on Prefs().openBookAnimation)
+    // must always be present so the bookshelf->reader Hero animation has
+    // a stable destination during the Cupertino slide-in.
+    final String resolvedPath = widget.book.isInPlace
+        ? (_scopedAccess?.path ?? '')
+        : widget.book.fileFullPath;
+    final bool hasUrl = resolvedPath.isNotEmpty;
+    final String url = hasUrl
+        ? 'http://127.0.0.1:${Server().port}/book/${Uri.encodeComponent(resolvedPath)}'
+        : '';
+    final String initialCfi = widget.cfi ?? widget.book.lastReadPosition;
 
     return Listener(
       onPointerSignal: (event) {
@@ -1788,7 +1790,10 @@ return null;
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
-            buildWebviewWithIOSWorkaround(context, url, initialCfi),
+            if (hasUrl)
+              buildWebviewWithIOSWorkaround(context, url, initialCfi)
+            else
+              const SizedBox.expand(),
             readingInfoWidget(),
             if (showHistory) _buildHistoryCapsule(),
             _inlineTranslateHud(),
