@@ -5,6 +5,7 @@ import Flutter
 @objc class AppDelegate: FlutterAppDelegate {
   private let remindersChannel = RemindersChannel()
   private let calendarEventKitChannel = CalendarEventKitChannel()
+  private let bookmarkChannel = BookmarkChannel()
 
   override func application(
     _ application: UIApplication,
@@ -15,6 +16,7 @@ import Flutter
     if let controller = window?.rootViewController as? FlutterViewController {
       remindersChannel.register(with: controller)
       calendarEventKitChannel.register(with: controller)
+      bookmarkChannel.register(with: controller)
       PapertokPendingAskBridge.register(with: controller)
     }
 

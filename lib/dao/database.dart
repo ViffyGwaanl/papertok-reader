@@ -13,7 +13,7 @@ import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // Current app database version
-const int currentDbVersion = 7;
+const int currentDbVersion = 8;
 
 const createBookSQL = '''
 CREATE TABLE tb_books (
@@ -27,7 +27,12 @@ CREATE TABLE tb_books (
   is_deleted INTEGER,
   description TEXT,
   create_time TEXT,
-  update_time TEXT
+  update_time TEXT,
+  rating REAL,
+  group_id INTEGER,
+  file_md5 TEXT,
+  bookmark_data BLOB,
+  source_kind TEXT DEFAULT 'imported'
 )
 ''';
 
@@ -438,6 +443,15 @@ class DBHelper {
             VALUES (?, '...', 0, datetime('now'), datetime('now'))
           ''', [groupId]);
         }
+        continue case7;
+      case7:
+      case 7:
+        // add columns to support iOS in-place reading via security-scoped bookmarks
+        await db.execute("ALTER TABLE tb_books ADD COLUMN bookmark_data BLOB");
+        await db.execute(
+            "ALTER TABLE tb_books ADD COLUMN source_kind TEXT DEFAULT 'imported'");
+        await db.execute(
+            "UPDATE tb_books SET source_kind = 'imported' WHERE source_kind IS NULL");
     }
 
     if (oldVersion != 0 && Prefs().webdavStatus) {
