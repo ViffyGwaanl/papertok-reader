@@ -1996,6 +1996,8 @@ struct EPUBBookshelfReaderView: View {
     @State private var volumeKeyHandler = VolumeKeyHandler()
     @State private var tocSearchQuery: String = ""
     @State private var footnotePopoverContent: FootnotePopoverContent?
+    // W7.1 — reader immersion core (chrome auto-hide + 3-zone tap).
+    @State private var chromeVisibility = ReaderChromeVisibilityController()
 #if canImport(AVFoundation)
     @State private var ttsService = TTSService()
 #endif
@@ -2043,6 +2045,12 @@ struct EPUBBookshelfReaderView: View {
         .frame(minWidth: aiPanelState.isOpen ? 720 : 400)
 #else
         .navigationBarTitleDisplayMode(.inline)
+        // W7.1 — immersion core: hide the nav bar + status bar when the
+        // user taps to hide chrome. Animated via opacity transitions on
+        // the controller's `isChromeVisible` property.
+        .toolbar(chromeVisibility.isChromeVisible ? .visible : .hidden, for: .navigationBar)
+        .statusBarHidden(!chromeVisibility.isChromeVisible)
+        .animation(.easeInOut(duration: 0.25), value: chromeVisibility.isChromeVisible)
 #endif
         .toolbar { toolbarContent }
         .focusable(true)
@@ -2119,6 +2127,12 @@ struct EPUBBookshelfReaderView: View {
                 Task { @MainActor in coordinator.goBackward() }
             }
             applyVolumeKeyHandler()
+            // W7.1 — start chrome visible + schedule the auto-hide timer.
+            chromeVisibility.autoHideSeconds = currentAutoHideSeconds
+            chromeVisibility.onReaderAppear()
+        }
+        .onChange(of: currentAutoHideSeconds) { _, newValue in
+            chromeVisibility.autoHideSeconds = newValue
         }
         .onDisappear {
             aiChatViewModel.currentBookId = nil
@@ -2128,6 +2142,7 @@ struct EPUBBookshelfReaderView: View {
             coordinator.onImageActivate = nil
             coordinator.onFootnoteActivate = nil
             volumeKeyHandler.stop()
+            chromeVisibility.onReaderDisappear()
 #if canImport(AVFoundation)
             ttsService.stop()
 #endif
@@ -2205,11 +2220,28 @@ struct EPUBBookshelfReaderView: View {
                     feedFulltextTranslationChapterIfNeeded()
                 }
 
-                // W6.3b — header/footer reading info overlay.
+                // W7.1 — center-third tap toggles chrome. Left/right thirds
+                // defer to Readium's native WebView (long-press for text
+                // selection, swipe for page turn) so we don't break text
+                // selection by stealing every tap.
+                GeometryReader { geo in
+                    HStack(spacing: 0) {
+                        Color.clear.frame(width: geo.size.width / 3)
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { chromeVisibility.toggleChrome() }
+                        Color.clear.frame(width: geo.size.width / 3)
+                    }
+                }
+                .allowsHitTesting(true)
+
+                // W6.3b / W7.1 — header/footer reading info overlay.
+                // Bound to chrome visibility so the info strip fades out
+                // with the rest of the chrome for full-screen immersion.
                 ReadingInfoOverlay(
                     layout: currentReadingInfoLayout,
                     context: readingInfoContext,
-                    isVisible: true
+                    isVisible: chromeVisibility.isChromeVisible
                 )
                 .allowsHitTesting(false)
                 .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { now in
@@ -3072,6 +3104,12 @@ struct EPUBBookshelfReaderView: View {
 
     private var currentReadingInfoLayout: ReadingInfoLayout {
         preferencesViewModel?.readingPreferences.style.readingInfo ?? .default
+    }
+
+    /// W7.1 — seconds before reader chrome auto-hides (per-book preference
+    /// with a 3s default). `0` means never auto-hide.
+    private var currentAutoHideSeconds: Double {
+        preferencesViewModel?.readingPreferences.style.autoHideChromeSeconds ?? 3.0
     }
 
     private var readingInfoContext: ReadingInfoContext {

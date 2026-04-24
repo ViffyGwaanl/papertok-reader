@@ -27,6 +27,14 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
     /// slots (top-left/top-center/top-right + bottom-left/bottom-center/bottom-right).
     public var readingInfo: ReadingInfoLayout
 
+    // MARK: - W7.1 additions (reader immersion)
+
+    /// Number of seconds before the reader chrome (toolbar + info overlay +
+    /// status bar) fades out automatically after the user interacts. A value
+    /// of `0` disables auto-hide — chrome stays visible until manually
+    /// toggled.
+    public var autoHideChromeSeconds: Double
+
     /// Number of columns displayed in reflowable EPUB content.
     public enum ColumnCount: String, Codable, CaseIterable, Sendable {
         case auto
@@ -56,6 +64,7 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         case columnThreshold = "column_threshold"
         case writingMode = "writing_mode"
         case readingInfo = "reading_info"
+        case autoHideChromeSeconds = "auto_hide_chrome_seconds"
     }
 
     public init(
@@ -72,7 +81,8 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         maxColumnCount: ColumnCount = .auto,
         columnThreshold: Double = 800,
         writingMode: WritingMode = .auto,
-        readingInfo: ReadingInfoLayout = .default
+        readingInfo: ReadingInfoLayout = .default,
+        autoHideChromeSeconds: Double = 3.0
     ) {
         self.id = id
         self.fontSize = fontSize
@@ -88,6 +98,7 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         self.columnThreshold = columnThreshold
         self.writingMode = writingMode
         self.readingInfo = readingInfo
+        self.autoHideChromeSeconds = autoHideChromeSeconds
     }
 
     // MARK: - Backward-compat Codable
@@ -108,6 +119,7 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         self.columnThreshold = try c.decodeIfPresent(Double.self, forKey: .columnThreshold) ?? 800
         self.writingMode = try c.decodeIfPresent(WritingMode.self, forKey: .writingMode) ?? .auto
         self.readingInfo = try c.decodeIfPresent(ReadingInfoLayout.self, forKey: .readingInfo) ?? .default
+        self.autoHideChromeSeconds = try c.decodeIfPresent(Double.self, forKey: .autoHideChromeSeconds) ?? 3.0
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -126,6 +138,7 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
         try c.encode(columnThreshold, forKey: .columnThreshold)
         try c.encode(writingMode, forKey: .writingMode)
         try c.encode(readingInfo, forKey: .readingInfo)
+        try c.encode(autoHideChromeSeconds, forKey: .autoHideChromeSeconds)
     }
 
     public mutating func didInsert(_ inserted: InsertionSuccess) {
@@ -151,7 +164,8 @@ public struct BookStyle: Codable, FetchableRecord, PersistableRecord, Identifiab
             maxColumnCount: .auto,
             columnThreshold: 800,
             writingMode: .auto,
-            readingInfo: .default
+            readingInfo: .default,
+            autoHideChromeSeconds: 3.0
         )
     }
 

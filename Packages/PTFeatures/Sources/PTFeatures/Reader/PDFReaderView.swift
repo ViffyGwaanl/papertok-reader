@@ -568,6 +568,8 @@ public struct PDFReaderView: View {
     @State private var selectionResetToken = 0
     @State private var isFullScreen = false
     @State private var showPageSlider = true
+    // W7.1 — reader immersion core (chrome auto-hide + 3-zone tap).
+    @State private var chromeVisibility = ReaderChromeVisibilityController()
     @State private var aiQuickActionText: String?
     @State private var aiQuickActionChapter: String = ""
     @State private var findBarState: ReaderFindBarState?
@@ -660,9 +662,16 @@ public struct PDFReaderView: View {
                     }
                 }
                 applyVolumeKeyHandler()
+                // W7.1 — start chrome visible + schedule the auto-hide timer.
+                chromeVisibility.autoHideSeconds = readingPreferences.style.autoHideChromeSeconds
+                chromeVisibility.onReaderAppear()
+            }
+            .onChange(of: readingPreferences.style.autoHideChromeSeconds) { _, newValue in
+                chromeVisibility.autoHideSeconds = newValue
             }
             .onDisappear {
                 volumeKeyHandler.stop()
+                chromeVisibility.onReaderDisappear()
 #if canImport(AVFoundation)
                 ttsService.stop()
 #endif
@@ -679,7 +688,7 @@ public struct PDFReaderView: View {
                             isAIPanelPresented = true
                         }
                     }
-                    if showPageSlider && !isFullScreen && viewModel.pageCount > 1 {
+                    if showPageSlider && !chromeHidden && viewModel.pageCount > 1 {
                         ReaderPageSlider(
                             currentPage: $viewModel.currentPage,
                             pageCount: viewModel.pageCount,
@@ -688,9 +697,17 @@ public struct PDFReaderView: View {
                     }
                 }
             }
+            // W7.1 — double-tap maps to full chrome toggle so the legacy
+            // fullscreen gesture stays. Declared BEFORE the single-tap so
+            // SwiftUI resolves count=2 first (required for gesture priority).
             .onTapGesture(count: 2) {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     isFullScreen.toggle()
+                    if isFullScreen {
+                        chromeVisibility.hideChrome()
+                    } else {
+                        chromeVisibility.showChrome()
+                    }
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -701,6 +718,14 @@ public struct PDFReaderView: View {
                     await viewModel.handleScenePhaseChange(newPhase)
                 }
             }
+    }
+
+    /// W7.1 — unified "hide reader chrome" flag. Either the legacy
+    /// double-tap fullscreen OR the controller's auto-hide/center-tap
+    /// routing can request hidden chrome; either should collapse nav +
+    /// status bar + reading info overlay.
+    private var chromeHidden: Bool {
+        isFullScreen || !chromeVisibility.isChromeVisible
     }
 
     private var readerPresentationSurface: some View {
@@ -714,8 +739,11 @@ public struct PDFReaderView: View {
         .navigationTitle(viewModel.book.title)
 #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(isFullScreen ? .hidden : .visible, for: .navigationBar)
-        .statusBarHidden(isFullScreen)
+        // W7.1 — unified immersion: hide nav bar + status bar when chrome
+        // is hidden (either via center-tap or legacy double-tap fullscreen).
+        .toolbar(chromeHidden ? .hidden : .visible, for: .navigationBar)
+        .statusBarHidden(chromeHidden)
+        .animation(.easeInOut(duration: 0.25), value: chromeHidden)
 #endif
         .toolbar { toolbarContent }
         .sheet(isPresented: $viewModel.showTOC) { tocSheet }
@@ -756,7 +784,7 @@ public struct PDFReaderView: View {
         }
 #if canImport(AVFoundation)
         .overlay(alignment: .bottomTrailing) {
-            if !isFullScreen && viewModel.pdfDocument != nil {
+            if !chromeHidden && viewModel.pdfDocument != nil {
                 TTSFloatingActionButton(
                     service: ttsService,
                     chapterTitle: viewModel.currentChapterTitle,
@@ -793,6 +821,21 @@ public struct PDFReaderView: View {
                     currentPage: $viewModel.currentPage
                 )
                 .ignoresSafeArea(edges: .bottom)
+
+                // W7.1 — center-third tap toggles chrome. Left/right thirds
+                // are left passthrough so PDFKit can handle text selection
+                // gestures. Double-tap on the outer surface (declared above)
+                // still toggles fullscreen.
+                GeometryReader { geo in
+                    HStack(spacing: 0) {
+                        Color.clear.frame(width: geo.size.width / 3)
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { chromeVisibility.toggleChrome() }
+                        Color.clear.frame(width: geo.size.width / 3)
+                    }
+                }
+                .allowsHitTesting(true)
 
             } else {
                 ContentUnavailableView(

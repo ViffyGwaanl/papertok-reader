@@ -112,6 +112,7 @@ public struct EPUBReaderSettingsView: View {
                 layoutSection
                 writingDirectionSection
                 readingInfoSection
+                immersionSection
                 themeSection
                 if fulltextTranslationController != nil {
                     fulltextTranslationSection
@@ -369,6 +370,38 @@ public struct EPUBReaderSettingsView: View {
             } label: {
                 Text(AppLocalization.string("reader.settings.reading_info.reset"))
                     .foregroundStyle(Morandi.accent)
+            }
+        }
+    }
+
+    // MARK: - W7.1 Immersion section
+
+    private var immersionSection: some View {
+        Section(String(localized: "reader.settings.immersion.section")) {
+            let current = viewModel.readingPreferences.style.autoHideChromeSeconds
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                Text(AppLocalization.string("reader.settings.immersion.auto_hide_seconds"))
+                    .font(AppTypography.subheadline)
+                    .foregroundStyle(Morandi.primaryText)
+
+                Text(AppLocalization.format(
+                    "reader.settings.immersion.auto_hide_seconds.hint_format",
+                    locale: .autoupdatingCurrent,
+                    current
+                ))
+                .font(AppTypography.caption)
+                .foregroundStyle(Morandi.secondaryText)
+                .monospacedDigit()
+
+                Slider(
+                    value: binding(
+                        get: { viewModel.readingPreferences.style.autoHideChromeSeconds },
+                        set: { viewModel.readingPreferences.style.autoHideChromeSeconds = $0 }
+                    ),
+                    in: 0...10,
+                    step: 1
+                )
+                .tint(Morandi.accent)
             }
         }
     }

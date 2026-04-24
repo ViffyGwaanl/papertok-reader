@@ -148,6 +148,13 @@ public final class AppDatabase: Sendable {
             }
         }
 
+        // W7.1 — Reader immersion preference: auto-hide delay in seconds.
+        migrator.registerMigration("v3-style-auto-hide-chrome") { db in
+            try db.alter(table: "tb_styles") { t in
+                t.add(column: "auto_hide_chrome_seconds", .double).defaults(to: 3.0)
+            }
+        }
+
         return migrator
     }
 }
