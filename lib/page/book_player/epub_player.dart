@@ -1805,10 +1805,21 @@ return null;
                     opacity: _animation!,
                     // Match the bookshelf BookItem's Hero tag so the cover
                     // smoothly grows from the tapped tile into the reading
-                    // page instead of stamping on top of the Cupertino
-                    // slide-in mid-transition.
+                    // page. flightShuttleBuilder returns a bare BookCover
+                    // for the entire flight so the source's outer shadow
+                    // wrapper and the destination's bare cover don't paint
+                    // a structurally-different "rectangle stamp" mid-flight.
                     child: Hero(
                       tag: widget.book.coverFullPath,
+                      flightShuttleBuilder: (
+                        flightContext,
+                        animation,
+                        flightDirection,
+                        fromHeroContext,
+                        toHeroContext,
+                      ) {
+                        return BookCover(book: widget.book);
+                      },
                       child: BookCover(book: widget.book),
                     ),
                   ),

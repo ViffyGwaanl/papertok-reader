@@ -63,6 +63,19 @@ class BookItem extends ConsumerWidget {
           Expanded(
             child: Hero(
               tag: book.coverFullPath,
+              // Use the same flight widget as the destination
+              // (epub_player.dart) so source/destination subtree
+              // mismatch doesn't paint a structurally-different
+              // "rounded rectangle stamp" during the flight.
+              flightShuttleBuilder: (
+                flightContext,
+                animation,
+                flightDirection,
+                fromHeroContext,
+                toHeroContext,
+              ) {
+                return BookCover(book: book);
+              },
               child: Container(
                 decoration: BoxDecoration(
                   boxShadow: [
