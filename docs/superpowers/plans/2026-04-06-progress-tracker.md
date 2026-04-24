@@ -1,7 +1,53 @@
 # Swift 原生迁移 — 整体进度追踪
 
-**最后更新：** 2026-04-23
+**最后更新：** 2026-04-24
 **分支：** `swift-native`
+
+---
+
+## 2026-04-24 Wave 7 Reader 阅读体验打磨完成
+
+**3 commits** 落地（`3598fc91` → `f6d26a5e`），基于 UX 深度审计（对比 Apple Books / Kindle / Moon+ / Flutter main），关闭所有 P0/P1 阅读沉浸感和视觉打磨差距。
+
+### 测试基线
+
+| Suite | W6 结束 | W7 结束 |
+|---|---|---|
+| PTCore | 88 | 95 |
+| PTAIServices | 167 | 167 |
+| PTUI | 20 | 20 |
+| PTFeatures | 476 | 509 |
+| PTReader | 96 | 96 |
+| App Tests | 76 | 76 |
+| **Total** | **923** | **963** |
+
+macOS standalone build 全程 green。
+
+### Wave 7 — 阅读沉浸感 + 视觉打磨 (3 commits)
+
+- W7.1 沉浸感核心 (`3598fc91`) — `ReaderChromeVisibilityController`（@Observable + 可注入 Sleeper）+ 3 区点击（左翻前/右翻后/中切换 chrome）+ `.statusBarHidden` + navigation bar toggle + `ReadingInfoOverlay` 绑定 visibility + `BookStyle.autoHideChromeSeconds`（默认 3 秒，0=永不）+ "Immersion" 设置区
+- W7.4 上下文菜单智能定位 (`2ab940de`) — `ContextMenuPlacement.optimal(for:in:menuHeight:)` 选择 above/below/center + `CalloutTriangle` 指向选中区 + 主要动作 4 + "More…" 弹出次要动作 sheet + 40×40 色卡（2pt accent 激活环）+ `ContextMenuButtonStyle` 0.95 scale 按压微动画
+- W7.2+W7.3 视觉打磨 (`f6d26a5e`) —
+  - 主题选择器：文字 Picker → 56×80pt 可视化色卡（Aa 样本）× 4 预设（Light/Sepia/Dark/Night）
+  - OLED 夜间模式：`ReadTheme.defaultNight`（#000000 背景 + #A0A0A0 text）+ `PDFThemeTintKind.night` 反色矩阵
+  - 实时预览卡：设置 sheet 顶部 "The quick brown fox... 敏捷的棕色狐狸跳过懒狗" 随拖动实时更新
+  - PDF 翻页过渡：`PDFPageTransitionController` + 160ms 主题色半透明叠加（键盘/音量键/TOC 跳转，不干扰原生滑动）
+  - TOC 当前章节高亮：`TOCHighlightResolver`（PDF `pages:start-end` + EPUB href 片段容忍）+ 12% accent 背景 + 3pt leading accent bar + level-0 semibold
+
+### UX 审计映射
+
+| UX 审计项 | 严重度 | 解决 Wave |
+|---|---|---|
+| Chrome 始终可见 | P0 | W7.1 |
+| 3 区点击缺失 | P0 | W7.1 |
+| EPUB 状态栏不隐藏 | P0 | W7.1 |
+| `ReadingInfoOverlay` 占空间 | P1 | W7.1（绑定 visibility）|
+| 翻页动画缺失 | P0 | W7.3（PDF 过渡；EPUB 用 Readium 原生）|
+| 主题选择器非可视化 | P1 | W7.2 |
+| OLED 夜间缺失 | P0 | W7.2 |
+| 字体选择器无实时预览 | P1 | W7.2 |
+| 上下文菜单可能被裁剪 | P1 | W7.4 |
+| TOC 无当前章节高亮 | P1 | W7.3 |
 
 ---
 
