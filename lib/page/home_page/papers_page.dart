@@ -25,6 +25,7 @@ class PapersPage extends StatefulWidget {
 class _PapersPageState extends State<PapersPage> {
   final _cards = <PaperTokCard>[];
   final _imageIndexes = <int, int>{};
+  final _imageControllers = <int, PageController>{};
   bool _loading = false;
   bool _lockVerticalPaging = false;
   String? _error;
@@ -32,6 +33,21 @@ class _PapersPageState extends State<PapersPage> {
   String _searchQuery = '';
   Set<int> _likedIds = <int>{};
   bool _likedOnly = false;
+
+  PageController _imageControllerFor(int cardId) {
+    return _imageControllers.putIfAbsent(
+      cardId,
+      () => PageController(initialPage: _imageIndexes[cardId] ?? 0),
+    );
+  }
+
+  @override
+  void dispose() {
+    for (final c in _imageControllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -87,13 +103,33 @@ class _PapersPageState extends State<PapersPage> {
 
     try {
       var effectiveDay = _dayFilter;
+
+      // For 'latest', the upstream API treats the parameter as "today's
+      // date" and may return empty when today has no papers. Resolve the
+      // most-recent day with content first by sampling 'all', then
+      // re-fetch targeted at that day.
+      if (effectiveDay == 'latest' && reset) {
+        final probe = await PaperTokApi.instance.fetchRandomPapers(
+          limit: 50,
+          lang: _lang,
+          day: 'all',
+        );
+        String? maxDay;
+        for (final c in probe) {
+          final d = (c.day ?? '').trim();
+          if (d.isEmpty) continue;
+          if (maxDay == null || d.compareTo(maxDay) > 0) maxDay = d;
+        }
+        effectiveDay = maxDay ?? 'all';
+      }
+
       var next = await PaperTokApi.instance.fetchRandomPapers(
         limit: 20,
         lang: _lang,
         day: effectiveDay,
       );
 
-      if (reset && next.isEmpty && effectiveDay == 'latest') {
+      if (reset && next.isEmpty && effectiveDay != 'all') {
         effectiveDay = 'all';
         next = await PaperTokApi.instance.fetchRandomPapers(
           limit: 20,
@@ -401,6 +437,7 @@ class _PapersPageState extends State<PapersPage> {
         return false;
       },
       child: PageView.builder(
+        controller: _imageControllerFor(card.id),
         padEnds: false,
         allowImplicitScrolling: true,
         itemCount: images.length,
@@ -425,6 +462,27 @@ class _PapersPageState extends State<PapersPage> {
         },
       ),
     );
+  }
+
+  void _handleCardHorizontalSwipe(PaperTokCard card, double velocity) {
+    final images = _imagesForCard(card);
+    if (images.length <= 1) return;
+    final controller = _imageControllerFor(card.id);
+    final current = _imageIndexes[card.id] ?? 0;
+    int target = current;
+    // Negative velocity = swipe right→left = next image.
+    if (velocity < -200 && current < images.length - 1) {
+      target = current + 1;
+    } else if (velocity > 200 && current > 0) {
+      target = current - 1;
+    }
+    if (target != current) {
+      controller.animateToPage(
+        target,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   @override
@@ -606,10 +664,20 @@ class _PapersPageState extends State<PapersPage> {
           final imageIndex = _imageIndexes[card.id] ?? 0;
           final liked = _likedIds.contains(card.id);
 
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              _buildImageCarousel(card),
+          return GestureDetector(
+            // Whole-page horizontal swipe — works over the title/extract
+            // text area too, not just the bare image area.
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragEnd: (details) {
+              _handleCardHorizontalSwipe(
+                card,
+                details.primaryVelocity ?? 0,
+              );
+            },
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _buildImageCarousel(card),
               IgnorePointer(
                 child: Container(
                   decoration: const BoxDecoration(
@@ -813,7 +881,8 @@ class _PapersPageState extends State<PapersPage> {
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           );
         },
       ),

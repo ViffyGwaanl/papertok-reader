@@ -61,40 +61,41 @@ class BookItem extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Hero(
-              tag: book.coverFullPath,
-              // Use the same flight widget as the destination
-              // (epub_player.dart) so source/destination subtree
-              // mismatch doesn't paint a structurally-different
-              // "rounded rectangle stamp" during the flight.
-              flightShuttleBuilder: (
-                flightContext,
-                animation,
-                flightDirection,
-                fromHeroContext,
-                toHeroContext,
-              ) {
-                return BookCover(book: book);
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    if (!Prefs().eInkMode)
-                      BoxShadow(
-                        color: Colors.grey.withAlpha(100),
-                        spreadRadius: 5,
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
+            // Outer grey drop shadow lives OUTSIDE the Hero so it doesn't
+            // pop in/out at the start/end of the flight. The Hero subtree
+            // is now structurally identical to the destination's bare
+            // BookCover (epub_player.dart), so source/shuttle/destination
+            // all paint the same widget tree across the animation.
+            child: Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  if (!Prefs().eInkMode)
+                    BoxShadow(
+                      color: Colors.grey.withAlpha(100),
+                      spreadRadius: 5,
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Hero(
+                      tag: book.coverFullPath,
+                      flightShuttleBuilder: (
+                        flightContext,
+                        animation,
+                        flightDirection,
+                        fromHeroContext,
+                        toHeroContext,
+                      ) {
+                        return BookCover(book: book);
+                      },
                       child: BookCover(book: book),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
