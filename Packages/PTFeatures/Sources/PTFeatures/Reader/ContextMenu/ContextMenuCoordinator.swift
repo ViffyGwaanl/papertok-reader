@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 import PTCore
@@ -27,6 +28,12 @@ public final class ContextMenuCoordinator {
 
     /// Whether the floating context menu is visible.
     public var isMenuVisible: Bool = false
+
+    /// Bounding box of the current text selection in reader-coordinate space.
+    /// When non-nil the context menu uses smart positioning (anchors above /
+    /// below the selection with a callout arrow). When nil the menu falls back
+    /// to center-screen layout for non-reader contexts.
+    public var selectionFrame: CGRect?
 
     /// A staged search query emitted by the context menu and consumed by the reader surface.
     public var pendingSearchQuery: String?
@@ -97,10 +104,24 @@ public final class ContextMenuCoordinator {
     // MARK: - Public API
 
     /// Show the context menu for the given selection.
-    public func showMenu(text: String, locator: String, chapter: String) {
+    ///
+    /// - Parameters:
+    ///   - text: The selected text.
+    ///   - locator: A locator string (CFI for EPUB, anchor for PDF).
+    ///   - chapter: The chapter title containing the selection.
+    ///   - selectionFrame: Bounding box of the selection in reader coordinates,
+    ///     used for smart menu positioning. Pass `nil` to fall back to
+    ///     center-screen placement.
+    public func showMenu(
+        text: String,
+        locator: String,
+        chapter: String,
+        selectionFrame: CGRect? = nil
+    ) {
         selectedText = text
         selectedLocator = locator
         chapterTitle = chapter
+        self.selectionFrame = selectionFrame
         isMenuVisible = true
         activeSheet = nil
     }
@@ -129,6 +150,7 @@ public final class ContextMenuCoordinator {
         selectedText = ""
         selectedLocator = ""
         chapterTitle = ""
+        selectionFrame = nil
     }
 
     /// Handle a context menu action tap.

@@ -17,19 +17,30 @@ struct HighlightColorPicker: View {
                     ZStack {
                         Circle()
                             .fill(morandiColor(for: color))
-                            .frame(width: 30, height: 30)
+                            .frame(width: 40, height: 40)
+                            .overlay(
+                                Circle()
+                                    .stroke(
+                                        selected == color
+                                            ? Morandi.accent
+                                            : Color.clear,
+                                        lineWidth: selected == color ? 2 : 0
+                                    )
+                            )
 
                         if selected == color {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(.white)
                         }
                     }
+                    .padding(2)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text(color.rawValue.capitalized))
             }
         }
+        .padding(.vertical, AppSpacing.xs)
     }
 
     private func morandiColor(for color: HighlightColor) -> Color {
