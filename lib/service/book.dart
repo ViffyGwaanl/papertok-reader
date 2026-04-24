@@ -16,6 +16,7 @@ import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:papertok_reader/providers/sync.dart';
 import 'package:papertok_reader/providers/book_list.dart';
 import 'package:papertok_reader/providers/toc_search.dart';
+import 'package:papertok_reader/service/bookmark/bookmark_channel.dart';
 import 'package:papertok_reader/service/convert_to_epub/txt/convert_from_txt.dart';
 import 'package:papertok_reader/service/md5_service.dart';
 import 'package:papertok_reader/utils/webView/anx_headless_webview.dart';
@@ -586,11 +587,81 @@ Future<void> saveBook(
   return;
 }
 
+/// Persists a Book row that points at an external file via a security-scoped
+/// bookmark. Does NOT copy the file. Intended for "Link from Files" imports.
+Future<void> _saveBookInPlace({
+  required PickedBookmark picked,
+  required String title,
+  required String author,
+  required String description,
+  required String? md5,
+  required String cover,
+  Book? provideBook,
+}) async {
+  final fileNameWithoutExt = path.basenameWithoutExtension(picked.name);
+  final effectiveTitle =
+      (title == 'Unknown' || title.trim().isEmpty) ? fileNameWithoutExt : title;
+  final newBookName =
+      '${effectiveTitle.length > 20 ? effectiveTitle.substring(0, 20) : effectiveTitle}-${DateTime.now().millisecondsSinceEpoch}'
+          .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
+          .replaceAll('\n', '')
+          .replaceAll('\r', '')
+          .trim();
+  String? dbCoverPath = 'cover/$newBookName';
+  dbCoverPath = await saveImageToLocal(cover, dbCoverPath);
+
+  Book book = Book(
+    id: provideBook != null ? provideBook.id : -1,
+    title: provideBook?.title ?? effectiveTitle,
+    coverPath: dbCoverPath ?? '',
+    // Stored only for display/debug — never used to read bytes for inplace
+    // books. Reads always go through ScopedFileAccess + bookmarkData.
+    filePath: picked.displayPath,
+    lastReadPosition: provideBook?.lastReadPosition ?? '',
+    readingPercentage: provideBook?.readingPercentage ?? 0,
+    author: provideBook?.author ?? author,
+    isDeleted: false,
+    rating: provideBook?.rating ?? 0.0,
+    md5: md5,
+    bookmarkData: picked.bookmark,
+    sourceKind: 'inplace',
+    createTime: provideBook?.createTime ?? DateTime.now(),
+    updateTime: DateTime.now(),
+  );
+
+  book.id = await bookDao.insertBook(book);
+  AnxToast.show(L10n.of(navigatorKey.currentContext!).serviceImportSuccess);
+  await headlessInAppWebView?.dispose();
+  headlessInAppWebView = null;
+}
+
+/// Imports a book by reference (no copy) using a security-scoped bookmark.
+/// iOS only — Android continues to use [importBook].
+Future<void> importInPlaceBook(PickedBookmark picked, WidgetRef ref) async {
+  final scope = await BookmarkChannel.instance.startAccess(picked.bookmark);
+  try {
+    final file = File(scope.path);
+    final md5 = await MD5Service.calculateFileMd5(file.path);
+    if (md5 != null) {
+      final existing = await bookDao.getBookByMd5(md5);
+      if (existing != null && !existing.isDeleted) {
+        AnxToast.show(
+            L10n.of(navigatorKey.currentContext!).serviceImportSuccess);
+        return;
+      }
+    }
+    await getBookMetadata(file, md5: md5, ref: ref, picked: picked);
+  } finally {
+    await BookmarkChannel.instance.stopAccess(scope.token);
+  }
+}
+
 Future<void> getBookMetadata(
   File file, {
   Book? book,
   String? md5,
   WidgetRef? ref,
+  PickedBookmark? picked,
 }) async {
   String serverFileName = Server().setTempFile(file);
 
@@ -625,15 +696,27 @@ Future<void> getBookMetadata(
             // base64 cover
             String cover = metadata['cover'] ?? '';
             String description = metadata['description'] ?? '';
-            saveBook(
-              file,
-              title,
-              author,
-              description,
-              md5,
-              cover,
-              provideBook: book,
-            );
+            if (picked != null) {
+              await _saveBookInPlace(
+                picked: picked,
+                title: title,
+                author: author,
+                description: description,
+                md5: md5,
+                cover: cover,
+                provideBook: book,
+              );
+            } else {
+              saveBook(
+                file,
+                title,
+                author,
+                description,
+                md5,
+                cover,
+                provideBook: book,
+              );
+            }
             ref?.read(bookListProvider.notifier).refresh();
             // return;
           });

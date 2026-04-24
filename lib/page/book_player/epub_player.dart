@@ -29,6 +29,7 @@ import 'package:papertok_reader/providers/bookmark.dart';
 import 'package:papertok_reader/providers/chapter_content_bridge.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:papertok_reader/service/book_player/book_player_server.dart';
+import 'package:papertok_reader/service/bookmark/scoped_file_access.dart';
 import 'package:papertok_reader/service/translate/fulltext_translate_runtime.dart';
 import 'package:papertok_reader/service/translate/index.dart';
 import 'package:papertok_reader/service/translate/inline_fulltext_translation_status.dart';
@@ -104,6 +105,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   AnimationController? _animationController;
   Animation<double>? _animation;
   bool _coverFadeStarted = false;
+  ScopedFileAccess? _scopedAccess;
   bool showHistory = false;
   bool canGoBack = false;
   bool canGoForward = false;
@@ -1181,6 +1183,19 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     book = widget.book;
     getThemeColor();
 
+    // Open a scoped file handle so the local HTTP server can serve the
+    // book bytes. For "imported" books this is a passthrough; for
+    // "inplace" books it calls startAccessingSecurityScopedResource
+    // and registers the path on the server's allow-list. Disposed in
+    // [dispose].
+    ScopedFileAccess.open(widget.book).then((h) {
+      if (!mounted) {
+        h.dispose();
+        return;
+      }
+      setState(() => _scopedAccess = h);
+    });
+
     contextMenu = ContextMenu(
       settings: ContextMenuSettings(hideDefaultSystemContextMenuItems: true),
       onCreateContextMenu: (hitTestResult) async {
@@ -1227,6 +1242,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     _animationController?.dispose();
     saveReadingProgress();
     removeOverlay();
+    _scopedAccess?.dispose();
     super.dispose();
   }
 
@@ -1752,7 +1768,15 @@ return null;
 
   @override
   Widget build(BuildContext context) {
-    String uri = Uri.encodeComponent(widget.book.fileFullPath);
+    // Wait for the security-scoped handle to be ready (only matters for
+    // "inplace" books — for legacy/imported books `open()` resolves
+    // synchronously on the next microtask).
+    if (_scopedAccess == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    String uri = Uri.encodeComponent(_scopedAccess!.path);
     String url = 'http://127.0.0.1:${Server().port}/book/$uri';
     String initialCfi = widget.cfi ?? widget.book.lastReadPosition;
 

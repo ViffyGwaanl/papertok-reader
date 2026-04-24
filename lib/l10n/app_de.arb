@@ -798,5 +798,8 @@
   "papersEpubEditionBilingual": "Bilingual",
   "papersTabExplain": "Explain",
   "papersTabChat": "Chat",
+  "bookshelfImportTitle": "Import Book",
+  "bookshelfImportCopy": "Import file (copy to app)",
+  "bookshelfLinkFromFiles": "Link from Files (no copy)",
   "papersTabOriginal": "Original"
 }

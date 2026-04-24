@@ -14,6 +14,7 @@ import 'package:papertok_reader/providers/book_list.dart';
 import 'package:papertok_reader/providers/book_filters.dart';
 import 'package:papertok_reader/providers/tags.dart';
 import 'package:papertok_reader/service/book.dart';
+import 'package:papertok_reader/service/bookmark/bookmark_channel.dart';
 import 'package:papertok_reader/page/search/search_page.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/utils/page_transitions.dart';
@@ -105,6 +106,57 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
     }
 
     importBookList(fileList, context, ref);
+  }
+
+  Future<void> _linkFromFiles() async {
+    try {
+      final picked = await BookmarkChannel.instance.pickInPlace();
+      if (picked == null) return;
+      await importInPlaceBook(picked, ref);
+    } catch (e) {
+      AnxLog.warning('linkFromFiles failed: $e');
+      if (mounted) {
+        AnxToast.show(e.toString());
+      }
+    }
+  }
+
+  Future<void> _showImportMenu() async {
+    if (!AnxPlatform.isIOS) {
+      await _importBook();
+      return;
+    }
+    await PTBottomSheet.show<void>(
+      context,
+      title: L10n.of(context).bookshelfImportTitle,
+      builder: (sheetContext) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PTPickerRow<String>(
+              value: 'import',
+              groupValue: null,
+              title: L10n.of(context).bookshelfImportCopy,
+              leading: Icons.file_upload_outlined,
+              onChanged: (_) {
+                Navigator.pop(sheetContext);
+                _importBook();
+              },
+            ),
+            PTPickerRow<String>(
+              value: 'link',
+              groupValue: null,
+              title: L10n.of(context).bookshelfLinkFromFiles,
+              leading: Icons.folder_shared_outlined,
+              onChanged: (_) {
+                Navigator.pop(sheetContext);
+                _linkFromFiles();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -569,7 +621,7 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
         const SyncButton(),
         IconButton(
           icon: const Icon(Icons.add),
-          onPressed: _importBook,
+          onPressed: _showImportMenu,
         ),
         IconButton(
             icon: const Icon(Icons.sort),

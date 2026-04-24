@@ -62,7 +62,12 @@ class BookBottomSheet extends ConsumerWidget {
         updateTime: DateTime.now(),
       ));
       ref.read(bookListProvider.notifier).refresh();
-      File(book.fileFullPath).delete();
+      // For "inplace" books we never touch the original file — it lives
+      // outside our sandbox and the user owns it. Cover (which we do
+      // generate locally) is still ours to delete.
+      if (!book.isInPlace) {
+        File(book.fileFullPath).delete();
+      }
       File(book.coverFullPath).delete();
     }
 

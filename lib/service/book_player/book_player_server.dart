@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/bookmark/scoped_file_access.dart';
 import 'package:papertok_reader/utils/get_path/get_base_path.dart';
 import 'package:papertok_reader/utils/log/common.dart';
 import 'package:flutter/services.dart';
@@ -170,7 +171,11 @@ class Server {
 
     final resolvedPath = path.canonicalize(bookPathRaw);
 
-    if (!resolvedPath.startsWith(baseDirWithSep)) {
+    final isUnderBaseDir = resolvedPath.startsWith(baseDirWithSep);
+    final isUnderActiveScope = ScopedFileAccess.activeScopedPaths
+        .any((p) => path.canonicalize(p) == resolvedPath);
+
+    if (!isUnderBaseDir && !isUnderActiveScope) {
       AnxLog.warning(
         'Server: Forbidden book path: raw="$bookPathRaw" resolved="$resolvedPath" base="$baseDir"',
       );
