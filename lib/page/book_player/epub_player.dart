@@ -1794,11 +1794,21 @@ return null;
             _inlineTranslateHud(),
             if (Prefs().openBookAnimation)
               SizedBox.expand(
-                  child: IgnorePointer(
-                ignoring: true,
-                child: FadeTransition(
-                    opacity: _animation!, child: BookCover(book: widget.book)),
-              )),
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: FadeTransition(
+                    opacity: _animation!,
+                    // Match the bookshelf BookItem's Hero tag so the cover
+                    // smoothly grows from the tapped tile into the reading
+                    // page instead of stamping on top of the Cupertino
+                    // slide-in mid-transition.
+                    child: Hero(
+                      tag: widget.book.coverFullPath,
+                      child: BookCover(book: widget.book),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

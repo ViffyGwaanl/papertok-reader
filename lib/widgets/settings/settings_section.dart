@@ -1,3 +1,4 @@
+import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/settings/settings_tile.dart';
 import 'package:flutter/material.dart';
 
@@ -27,7 +28,7 @@ class SettingsSection extends AbstractSettingsSection {
     final card = Card(
       margin: EdgeInsets.zero,
       elevation: 0,
-      color: theme.colorScheme.surface,
+      color: ClaudePalette.card(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -49,7 +50,7 @@ class SettingsSection extends AbstractSettingsSection {
               child: DefaultTextStyle(
                 style: theme.textTheme.labelSmall?.copyWith(
                       letterSpacing: 0.6,
-                      color: theme.colorScheme.onSurfaceVariant,
+                      color: ClaudePalette.secondary(context),
                       fontWeight: FontWeight.w600,
                     ) ??
                     const TextStyle(),
@@ -78,7 +79,7 @@ class SettingsSection extends AbstractSettingsSection {
         children.add(Divider(
           height: 1,
           thickness: 0.5,
-          color: Theme.of(context).dividerColor,
+          color: ClaudePalette.divider(context),
           indent: 16,
         ));
       }
