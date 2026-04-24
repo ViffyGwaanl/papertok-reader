@@ -2769,7 +2769,13 @@ struct EPUBBookshelfReaderView: View {
                                     }
                                 }
                             } else {
+                                let resolver = TOCHighlightResolver(
+                                    entries: readerControlsViewModel.tocEntries,
+                                    currentHref: coordinator.currentLocator?.href.string,
+                                    currentPage: nil
+                                )
                                 List(filteredEntries) { entry in
+                                    let isCurrent = resolver.isCurrent(entry: entry)
                                     Button {
                                         navigateToEPUBLocation(href: entry.href)
                                         readerControlsViewModel.showTOC = false
@@ -2782,6 +2788,7 @@ struct EPUBBookshelfReaderView: View {
                                             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                                                 Text(entry.title)
                                                     .font(entry.level == 0 ? AppTypography.headline : AppTypography.body)
+                                                    .fontWeight(entry.level == 0 ? .semibold : .regular)
                                                     .foregroundStyle(
                                                         entry.level == 0 ? Morandi.primaryText : Morandi.secondaryText
                                                     )
@@ -2796,7 +2803,17 @@ struct EPUBBookshelfReaderView: View {
                                             Spacer()
                                         }
                                     }
-                                    .listRowBackground(Morandi.background)
+                                    .listRowBackground(
+                                        isCurrent ? Morandi.accent.opacity(0.12) : Morandi.background
+                                    )
+                                    .overlay(alignment: .leading) {
+                                        if isCurrent {
+                                            Rectangle()
+                                                .fill(Morandi.accent)
+                                                .frame(width: 3)
+                                                .accessibilityHidden(true)
+                                        }
+                                    }
                                 }
                                 .listStyle(.plain)
                             }

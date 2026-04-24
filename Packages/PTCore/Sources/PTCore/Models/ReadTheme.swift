@@ -40,4 +40,16 @@ public struct ReadTheme: Codable, FetchableRecord, PersistableRecord, Identifiab
         textColor: "FF121212",
         backgroundImagePath: ""
     )
+
+    /// OLED-friendly night preset: pure black background with dimmed
+    /// mid-grey text. Distinct from `defaultDark` (which uses a softer
+    /// near-black, RGB 0.10/0.10/0.18). Night aims to minimise emissive
+    /// backlight on OLED screens while keeping the foreground gentle on
+    /// the eyes (no harsh pure white).
+    public static let defaultNight = ReadTheme(
+        id: nil,
+        backgroundColor: "FF000000",
+        textColor: "FFA0A0A0",
+        backgroundImagePath: ""
+    )
 }

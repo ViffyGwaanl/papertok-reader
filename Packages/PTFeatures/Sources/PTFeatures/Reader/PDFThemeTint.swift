@@ -10,6 +10,7 @@ public enum PDFThemeTintKind: String, Sendable, Equatable, CaseIterable {
     case none
     case dark
     case sepia
+    case night
 }
 
 /// A parameter value for a `PDFThemeTintFilter`. The cases mirror the
@@ -63,6 +64,9 @@ public enum PDFThemeTint {
         if theme == .defaultSepia {
             return .sepia
         }
+        if theme == .defaultNight {
+            return .night
+        }
         return .none
     }
 
@@ -99,6 +103,22 @@ public enum PDFThemeTint {
                     name: "CISepiaTone",
                     parameters: ["inputIntensity": .scalar(0.7)]
                 )
+            ]
+        case .night:
+            // OLED night: invert (white page -> black), then attenuate the
+            // resulting "white" text down to ~0.63 so it matches the dimmed
+            // foreground palette and avoids harsh pure-white on pure-black.
+            return [
+                PDFThemeTintFilter(name: "CIColorInvert"),
+                PDFThemeTintFilter(
+                    name: "CIColorMatrix",
+                    parameters: [
+                        "inputRVector": .vector(x: 0.63, y: 0, z: 0, w: 0),
+                        "inputGVector": .vector(x: 0, y: 0.63, z: 0, w: 0),
+                        "inputBVector": .vector(x: 0, y: 0, z: 0.63, w: 0),
+                        "inputAVector": .vector(x: 0, y: 0, z: 0, w: 1.0),
+                    ]
+                ),
             ]
         }
     }

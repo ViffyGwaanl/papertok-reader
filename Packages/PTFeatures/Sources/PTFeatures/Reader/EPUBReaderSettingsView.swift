@@ -17,6 +17,7 @@ private enum EPUBReaderThemePreset: String, CaseIterable, Identifiable {
     case light
     case dark
     case sepia
+    case night
     case custom
 
     var id: String { rawValue }
@@ -29,6 +30,8 @@ private enum EPUBReaderThemePreset: String, CaseIterable, Identifiable {
             return AppLocalization.string("reader.appearance.theme_dark")
         case .sepia:
             return AppLocalization.string("reader.appearance.theme_sepia")
+        case .night:
+            return AppLocalization.string("reader.theme.night")
         case .custom:
             return AppLocalization.string("reader.appearance.theme_custom")
         }
@@ -42,6 +45,8 @@ private enum EPUBReaderThemePreset: String, CaseIterable, Identifiable {
             return .defaultDark
         case .sepia:
             return .defaultSepia
+        case .night:
+            return .defaultNight
         case .custom:
             return .defaultLight
         }
@@ -56,6 +61,9 @@ private enum EPUBReaderThemePreset: String, CaseIterable, Identifiable {
         }
         if theme == .defaultSepia {
             return .sepia
+        }
+        if theme == .defaultNight {
+            return .night
         }
         return .custom
     }
@@ -105,6 +113,7 @@ public struct EPUBReaderSettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
+                previewSection
                 typographySection
                 customFontsSection
                 spacingSection
@@ -143,6 +152,45 @@ public struct EPUBReaderSettingsView: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    private var previewSection: some View {
+        Section(String(localized: "reader.settings.preview.section")) {
+            let style = viewModel.readingPreferences.style
+            let theme = viewModel.readingPreferences.theme
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                Text(AppLocalization.string("reader.settings.preview.sample_text"))
+                    .font(previewFont(for: style))
+                    .foregroundStyle(Color(hex: theme.textColor))
+                    .lineSpacing(previewLineSpacing(for: style))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(AppSpacing.md)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(hex: theme.backgroundColor))
+                    )
+                    .accessibilityIdentifier("reader.settings.preview")
+            }
+            .listRowBackground(Morandi.background)
+        }
+    }
+
+    private func previewFont(for style: BookStyle) -> Font {
+        // Map the stored font-size multiplier (0.8...3.0) onto a compact
+        // point size suitable for the inline preview card.
+        let base: CGFloat = 15
+        let size = base * CGFloat(style.fontSize)
+        return Font.system(size: min(max(size, 11), 30))
+    }
+
+    private func previewLineSpacing(for style: BookStyle) -> CGFloat {
+        // SwiftUI `lineSpacing` is *additional* spacing on top of the
+        // font's intrinsic line height, so convert the ratio minus 1.0
+        // into points.
+        let base: CGFloat = 15
+        let lineHeightPoints = base * CGFloat(style.lineHeight) * CGFloat(style.fontSize)
+        let fontPoints = base * CGFloat(style.fontSize)
+        return max(0, lineHeightPoints - fontPoints)
     }
 
     private var typographySection: some View {
@@ -445,16 +493,16 @@ public struct EPUBReaderSettingsView: View {
 
     private var themeSection: some View {
         Section(String(localized: "settings.theme")) {
-            Picker(AppLocalization.string("reader.appearance.preset"), selection: $selectedThemePreset) {
-                ForEach(EPUBReaderThemePreset.allCases) { preset in
-                    Text(preset.title).tag(preset)
+            let activeKind = ThemeSwatchPreset.active(for: viewModel.readingPreferences.theme)?.kind
+            ThemeSwatchPickerRow(
+                activeKind: activeKind,
+                onSelect: { preset in
+                    viewModel.readingPreferences.theme = preset.theme
+                    selectedThemePreset = EPUBReaderThemePreset.resolve(from: preset.theme)
+                    persist()
                 }
-            }
-            .onChange(of: selectedThemePreset) { _, newValue in
-                guard newValue != .custom else { return }
-                viewModel.readingPreferences.theme = newValue.theme
-                persist()
-            }
+            )
+            .listRowBackground(Morandi.background)
 
             ColorPicker(
                 AppLocalization.string("reader.appearance.background"),

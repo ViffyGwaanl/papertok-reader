@@ -287,6 +287,13 @@ public final class ReaderViewModel {
         currentChapterEntry?.title ?? book.title
     }
 
+    /// The href (`pages:start-end`) of the TOC entry that currently contains
+    /// the reader's position. Used by the TOC panel to draw a "current
+    /// chapter" highlight. `nil` when the TOC has no matching entry.
+    public var currentChapterHref: String? {
+        currentChapterEntry?.href
+    }
+
     static func localizedPageLabel(for pageIndex: Int) -> String {
         localizedCatalogFormat("reader.page_number_format", pageIndex + 1)
     }

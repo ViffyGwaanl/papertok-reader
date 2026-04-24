@@ -139,6 +139,8 @@ struct NativePDFView: UIViewRepresentable {
                 pdfView.backgroundColor = UIColor(red: 0.10, green: 0.10, blue: 0.18, alpha: 1.0)
             case .sepia:
                 pdfView.backgroundColor = UIColor(red: 0.98, green: 0.95, blue: 0.91, alpha: 1.0)
+            case .night:
+                pdfView.backgroundColor = .black
             }
             if #available(iOS 16.0, *) {
                 if let provider = themedOverlayProvider as? PDFThemedPageOverlayProvider {
@@ -401,6 +403,8 @@ struct NativePDFView: NSViewRepresentable {
                 pdfView.backgroundColor = NSColor(red: 0.10, green: 0.10, blue: 0.18, alpha: 1.0)
             case .sepia:
                 pdfView.backgroundColor = NSColor(red: 0.98, green: 0.95, blue: 0.91, alpha: 1.0)
+            case .night:
+                pdfView.backgroundColor = .black
             }
             pdfView.needsDisplay = true
         }
@@ -580,6 +584,10 @@ public struct PDFReaderView: View {
     @State private var showBrightnessControl = false
     @State private var volumeKeysEnabled = UserDefaults.standard.bool(forKey: "pt.reader.volumeKeysEnabled")
     @State private var volumeKeyHandler = VolumeKeyHandler()
+    /// W7.2 — subtle fade overlay that is briefly shown after a
+    /// programmatic page jump (arrow keys, toolbar, TOC, bookmark).
+    /// Native PDFKit swipe/scroll gestures do not route through this.
+    @State private var pageTransitionController = PDFPageTransitionController(fadeDurationMS: 160)
 #if canImport(AVFoundation)
     @State private var ttsService = TTSService()
 #endif
@@ -760,6 +768,7 @@ public struct PDFReaderView: View {
                 viewModel: viewModel,
                 database: database,
                 onJump: { note in
+                    pageTransitionController.triggerTransition()
                     viewModel.jumpToBookmark(note)
                 }
             )
@@ -844,6 +853,17 @@ public struct PDFReaderView: View {
                     description: Text("bookshelf.file_could_not_be_opened")
                 )
             }
+
+            // W7.2 — subtle fade overlay shown for programmatic page jumps.
+            Color(hex: readingPreferences.theme.backgroundColor)
+                .opacity(pageTransitionController.isTransitioning ? 0.35 : 0)
+                .allowsHitTesting(false)
+                .animation(
+                    .easeInOut(duration: 0.16),
+                    value: pageTransitionController.isTransitioning
+                )
+                .ignoresSafeArea()
+                .accessibilityHidden(true)
         }
         .onChange(of: contextMenuCoordinator?.pendingSearchQuery) { _, pendingQuery in
             guard let query = pendingQuery?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -1090,8 +1110,15 @@ public struct PDFReaderView: View {
                             .padding(.horizontal, AppSpacing.lg)
                             .padding(.top, AppSpacing.xs)
                         }
+                        let resolver = TOCHighlightResolver(
+                            entries: viewModel.tocEntries,
+                            currentHref: viewModel.currentChapterHref,
+                            currentPage: viewModel.currentPage
+                        )
                         List(entries) { entry in
+                            let isCurrent = resolver.isCurrent(entry: entry)
                             Button {
+                                pageTransitionController.triggerTransition()
                                 viewModel.goToChapter(href: entry.href)
                                 viewModel.showTOC = false
                                 tocSearchQuery = ""
@@ -1102,10 +1129,21 @@ public struct PDFReaderView: View {
                                     }
                                     highlightedTOCTitle(entry.title)
                                         .font(entry.level == 0 ? AppTypography.headline : AppTypography.body)
+                                        .fontWeight(entry.level == 0 ? .semibold : .regular)
                                     Spacer()
                                 }
                             }
-                            .listRowBackground(Morandi.background)
+                            .listRowBackground(
+                                isCurrent ? Morandi.accent.opacity(0.12) : Morandi.background
+                            )
+                            .overlay(alignment: .leading) {
+                                if isCurrent {
+                                    Rectangle()
+                                        .fill(Morandi.accent)
+                                        .frame(width: 3)
+                                        .accessibilityHidden(true)
+                                }
+                            }
                         }
                         .listStyle(.plain)
                     }
@@ -1241,11 +1279,17 @@ public struct PDFReaderView: View {
     }
 
     private func goToPreviousPageFromCommand() {
-        viewModel.goToPage(viewModel.currentPage - 1)
+        let target = viewModel.currentPage - 1
+        guard target >= 0 else { return }
+        pageTransitionController.triggerTransition()
+        viewModel.goToPage(target)
     }
 
     private func goToNextPageFromCommand() {
-        viewModel.goToPage(viewModel.currentPage + 1)
+        let target = viewModel.currentPage + 1
+        guard target < viewModel.pageCount else { return }
+        pageTransitionController.triggerTransition()
+        viewModel.goToPage(target)
     }
 
     private func presentAnnotationDraft(selection: PDFSelectionSnapshot) {
