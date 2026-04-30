@@ -10,6 +10,22 @@ public enum TTSState: String, Sendable {
     case paused
 }
 
+public extension TTSState {
+    /// W7.5 — Bug #2: drive the reader floating-action-button visibility from
+    /// playback state instead of "is there a book open". The FAB is shown
+    /// while TTS is actively speaking or paused (user can resume); it is
+    /// hidden when fully stopped. The toolbar "Start Reading" button is the
+    /// new entry point that flips this on.
+    var isActiveOrPaused: Bool {
+        switch self {
+        case .speaking, .paused:
+            return true
+        case .stopped:
+            return false
+        }
+    }
+}
+
 /// Backward-compatible facade over `TTSOrchestrator`.
 ///
 /// Existing call sites (reader controls, FAB) continue to use this API. New

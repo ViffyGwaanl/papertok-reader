@@ -2093,7 +2093,13 @@ struct EPUBBookshelfReaderView: View {
         }
 #if canImport(AVFoundation)
         .overlay(alignment: .bottomTrailing) {
-            if publication != nil {
+            // W7.5 — Bug #2: only show the TTS pill while playback is
+            // actually running or paused. The toolbar's "Start Reading"
+            // button is the new entry point.
+            if ReaderTTSFABVisibility.shouldShow(
+                publicationLoaded: publication != nil,
+                state: ttsService.state
+            ) {
                 let title = coordinator.currentChapterTitle.isEmpty ? book.title : coordinator.currentChapterTitle
                 TTSFloatingActionButton(
                     service: ttsService,
@@ -2346,6 +2352,22 @@ struct EPUBBookshelfReaderView: View {
             .accessibilityLabel(String(localized: fulltextTranslationEnabled
                 ? "reader.translation.fulltext.toolbar_disable"
                 : "reader.translation.fulltext.toolbar_enable"))
+
+#if canImport(AVFoundation)
+            // W7.5 — Bug #2: explicit "Start Reading" entry. Tapping again
+            // while playing stops TTS; the floating-action-button handles
+            // pause / resume / advanced controls.
+            Button {
+                toggleEPUBTTSPlayback()
+            } label: {
+                Image(systemName: ttsService.state.isActiveOrPaused ? "stop.circle" : "play.circle")
+                    .foregroundStyle(Morandi.accent)
+            }
+            .accessibilityLabel(String(localized: ttsService.state.isActiveOrPaused
+                ? "reader.toolbar.tts.stop"
+                : "reader.toolbar.tts.start"))
+            .disabled(publication == nil)
+#endif
 
             Menu {
                 Button {
@@ -3382,6 +3404,19 @@ struct EPUBBookshelfReaderView: View {
         }
         return snippet
     }
+
+#if canImport(AVFoundation)
+    /// W7.5 — Bug #2: toolbar entry for TTS. Starts playback on the
+    /// current EPUB chapter when stopped, otherwise stops it. Once
+    /// playback begins the floating-action-button takes over.
+    private func toggleEPUBTTSPlayback() {
+        if ttsService.state.isActiveOrPaused {
+            ttsService.stop()
+        } else if let text = currentEPUBPlainText() {
+            ttsService.speak(text)
+        }
+    }
+#endif
 }
 #endif
 

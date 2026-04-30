@@ -793,7 +793,15 @@ public struct PDFReaderView: View {
         }
 #if canImport(AVFoundation)
         .overlay(alignment: .bottomTrailing) {
-            if !chromeHidden && viewModel.pdfDocument != nil {
+            // W7.5 — only show the FAB while TTS is actually playing/paused.
+            // The toolbar gains a "Start Reading" button as the new entry
+            // point. This keeps the reader chrome clean when the user
+            // isn't actively listening.
+            if !chromeHidden,
+               ReaderTTSFABVisibility.shouldShow(
+                   publicationLoaded: viewModel.pdfDocument != nil,
+                   state: ttsService.state
+               ) {
                 TTSFloatingActionButton(
                     service: ttsService,
                     chapterTitle: viewModel.currentChapterTitle,
@@ -944,6 +952,34 @@ public struct PDFReaderView: View {
                 BookmarkToolbarIcon.accessibilityKey(isBookmarked: viewModel.isCurrentPageBookmarked)
             )))
             .disabled(viewModel.pdfDocument == nil)
+
+            // W7.5 — Bug #1: PDF readers had no translation entry. Tapping
+            // this button hands the current page text to the same
+            // `TranslationMenuSheet` that the selection menu uses.
+            Button {
+                presentPageTranslation()
+            } label: {
+                Image(systemName: "character.bubble")
+                    .foregroundStyle(Morandi.accent)
+            }
+            .accessibilityLabel(String(localized: "reader.toolbar.translation.pdf_translate_page"))
+            .disabled(viewModel.pdfDocument == nil || contextMenuCoordinator == nil)
+
+#if canImport(AVFoundation)
+            // W7.5 — Bug #2: explicit "Start Reading" entry. Once playback
+            // begins the floating-action-button takes over; tapping this
+            // again while playing acts as a stop.
+            Button {
+                toggleTTSPlayback()
+            } label: {
+                Image(systemName: ttsService.state.isActiveOrPaused ? "stop.circle" : "play.circle")
+                    .foregroundStyle(Morandi.accent)
+            }
+            .accessibilityLabel(String(localized: ttsService.state.isActiveOrPaused
+                ? "reader.toolbar.tts.stop"
+                : "reader.toolbar.tts.start"))
+            .disabled(viewModel.pdfDocument == nil)
+#endif
 
             Menu {
                 Button {
@@ -1511,6 +1547,34 @@ public struct PDFReaderView: View {
         let text = page.string?.trimmingCharacters(in: .whitespacesAndNewlines)
         return (text?.isEmpty == false) ? text : nil
     }
+
+    // MARK: - W7.5 toolbar entry points
+
+    /// Pre-fills the existing `TranslationMenuSheet` with the current page
+    /// text and presents it via the shared `ContextMenuCoordinator`. This
+    /// makes the PDF reader's translation feature discoverable from the
+    /// toolbar without forcing the user to first select text.
+    private func presentPageTranslation() {
+        guard let coordinator = contextMenuCoordinator,
+              let pageText = currentPagePlainText() else { return }
+        let chapter = viewModel.currentChapterTitle.isEmpty
+            ? String(format: String(localized: "reader.tts.page_label_format"), viewModel.currentPage + 1)
+            : viewModel.currentChapterTitle
+        coordinator.presentTranslation(text: pageText, chapter: chapter)
+    }
+
+#if canImport(AVFoundation)
+    /// Toolbar entry point for TTS: starts on the current page when stopped,
+    /// otherwise stops playback. The floating-action-button (visible during
+    /// active/paused playback) handles pause/resume in finer detail.
+    private func toggleTTSPlayback() {
+        if ttsService.state.isActiveOrPaused {
+            ttsService.stop()
+        } else if let text = currentPagePlainText() {
+            ttsService.speak(text)
+        }
+    }
+#endif
 
     // MARK: - Volume Key Handler
 

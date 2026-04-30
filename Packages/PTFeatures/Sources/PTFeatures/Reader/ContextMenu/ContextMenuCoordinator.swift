@@ -126,6 +126,24 @@ public final class ContextMenuCoordinator {
         activeSheet = nil
     }
 
+    /// W7.5 — Bug #1: Open the translation sheet directly without going
+    /// through a text-selection gesture. Used by the reader toolbar's
+    /// "Translate Page" entry on PDFs (and any future surface that wants to
+    /// hand a chunk of pre-extracted text to `TranslationMenuSheet`).
+    ///
+    /// Whitespace-only input is treated as a no-op so the user does not
+    /// land on a blank translation sheet that immediately errors out.
+    public func presentTranslation(text: String, chapter: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        selectedText = trimmed
+        selectedLocator = ""
+        chapterTitle = chapter
+        selectionFrame = nil
+        isMenuVisible = false
+        activeSheet = .translation
+    }
+
     /// Present the annotation edit sheet for an existing `BookNote`. The
     /// floating selection menu is hidden while the edit sheet is up, and the
     /// coordinator state is hydrated from the note so the sheet can show the
