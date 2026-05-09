@@ -1,6 +1,10 @@
-git_url("https://github.com/Anxcye/anx-secret.git")
+git_url(ENV["MATCH_GIT_URL"] || "https://github.com/ViffyGwaanl/papertok-reader-match.git")
+git_branch("main")
 storage_mode("git")
-type("appstore") # For macOS: developer_id for direct distribution, appstore for Mac App Store
+type("developer_id") # developer_id for direct distribution, appstore for Mac App Store
+
+team_id("3LJ45MFB74")
+force_legacy_encryption(true)
 
 app_identifier([ENV["APP_BUNDLE_ID"]])
 platform("macos")
