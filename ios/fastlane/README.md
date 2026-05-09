@@ -64,7 +64,7 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 [bundle exec] fastlane ios release_app_store
 ```
 
-Release a new build to Apple Store
+Build & upload a new TestFlight build
 
 ----
 
