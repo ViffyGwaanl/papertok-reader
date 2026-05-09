@@ -73,8 +73,9 @@ google_service_account.json
 .fvm/
 .fvmrc
 
-# iOS Bundler artifacts
+# iOS/macOS Bundler artifacts
 ios/vendor/
+macos/vendor/
 
 # Reference materials
 /参考/
