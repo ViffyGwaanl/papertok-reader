@@ -10,17 +10,56 @@ class ToolStepTile extends StatefulWidget {
   const ToolStepTile({
     super.key,
     required this.step,
+    this.contentOnly = false,
   });
 
   final ParsedToolStep step;
+
+  /// When true, skip the [ToolTileBase] header and render only the
+  /// Input/Output/Error fields — used when the tile is already nested inside
+  /// a [PTCollapsibleCard] that provides its own header.
+  final bool contentOnly;
 
   @override
   State<ToolStepTile> createState() => _ToolStepTileState();
 }
 
 class _ToolStepTileState extends State<ToolStepTile> {
+  Widget _buildFields(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.step.input != null)
+          _ExpandableField(
+            label: 'Input',
+            value: widget.step.input!,
+          ),
+        if (widget.step.output != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: _ExpandableField(
+              label: 'Output',
+              value: widget.step.output!,
+            ),
+          ),
+        if (widget.step.error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: _ExpandableField(
+              label: 'Error',
+              value: widget.step.error!,
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.contentOnly) {
+      return _buildFields(context);
+    }
+
     final statusColor = ToolTileBase.statusColorFor(widget.step.status, context);
     final toolName = AiToolRegistry.displayNameForId(
       widget.step.name,
@@ -31,32 +70,7 @@ class _ToolStepTileState extends State<ToolStepTile> {
       title: toolName,
       leadingIcon: Icons.build,
       statusColor: statusColor,
-      contentBuilder: (context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (widget.step.input != null)
-            _ExpandableField(
-              label: 'Input',
-              value: widget.step.input!,
-            ),
-          if (widget.step.output != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: _ExpandableField(
-                label: 'Output',
-                value: widget.step.output!,
-              ),
-            ),
-          if (widget.step.error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: _ExpandableField(
-                label: 'Error',
-                value: widget.step.error!,
-              ),
-            ),
-        ],
-      ),
+      contentBuilder: _buildFields,
     );
   }
 }

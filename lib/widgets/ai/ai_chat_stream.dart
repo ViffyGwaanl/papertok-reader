@@ -24,6 +24,7 @@ import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/organize_bookshelf_step_tile.dart';
+import 'package:papertok_reader/widgets/ai/tool_tiles/tool_tile_base.dart';
 import 'package:papertok_reader/widgets/delete_confirm.dart';
 import 'package:papertok_reader/widgets/markdown/styled_markdown.dart';
 import 'package:papertok_reader/widgets/ai/attachment_picker_dialog.dart';
@@ -38,7 +39,6 @@ import 'package:papertok_reader/service/receive_file/share_inbox_cleanup_service
 import 'package:papertok_reader/service/receive_file/share_inbox_paths.dart';
 import 'package:papertok_reader/service/receive_file/share_safe_import.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
-import 'package:papertok_reader/theme/morandi_palette.dart';
 import 'package:papertok_reader/widgets/common/pt_collapsible_card.dart';
 import 'package:papertok_reader/utils/get_path/get_cache_dir.dart';
 import 'package:flutter/material.dart';
@@ -3550,8 +3550,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             children.add(
               PTCollapsibleCard(
                 icon: Icons.build_outlined,
-                title: AiToolRegistry.displayNameForId(step.name),
-                iconTint: MorandiPalette.clay(context),
+                title: AiToolRegistry.displayNameForId(
+                    step.name, l10n: L10n.of(context)),
+                subtitle: step.name,
+                iconTint: ToolTileBase.statusColorFor(step.status, context),
                 body: _buildToolTile(step),
               ),
             );
@@ -3566,32 +3568,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   Widget _buildInlineThinking(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(
-              Icons.psychology_outlined,
-              size: 14,
-              color: ClaudePalette.tertiary(context),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontStyle: FontStyle.italic,
-                fontSize: 13,
-                color: ClaudePalette.tertiary(context),
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
+    return PTCollapsibleCard(
+      icon: Icons.psychology_outlined,
+      title: L10n.of(context).aiSectionThinking,
+      iconTint: ClaudePalette.tertiary(context),
+      body: Text(
+        text,
+        style: TextStyle(
+          fontStyle: FontStyle.italic,
+          fontSize: 13,
+          color: ClaudePalette.secondary(context),
+          height: 1.4,
+        ),
       ),
     );
   }
@@ -3606,7 +3594,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (step.name == 'apply_book_tags') {
       return ApplyBookTagsStepTile(step: step);
     }
-    return ToolStepTile(step: step);
+    return ToolStepTile(step: step, contentOnly: true);
   }
 
   void _showFontScaleSheet() {
