@@ -1,4 +1,5 @@
 import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/service/ai/ai_models_service.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
@@ -26,22 +27,22 @@ class _AiTitleGenerationSettingsPageState
           : Prefs().aiTitlePrompt,
     );
 
+    final l10n = L10n.of(context);
     final result = await PTDialog.show<_PromptEditResult>(
       context,
-      title: 'Title prompt',
+      title: l10n.aiTitlePromptDialogTitle,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Customize how automatic conversation titles are generated. '
-            'You can use {{preferredLanguage}} and {{maxChars}} as variables.',
+            l10n.aiTitlePromptDialogDesc,
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              hintText: 'Enter title generation prompt',
+            decoration: InputDecoration(
+              hintText: l10n.aiTitlePromptHint,
             ),
             maxLines: 10,
             minLines: 6,
@@ -51,15 +52,15 @@ class _AiTitleGenerationSettingsPageState
       ),
       actions: [
         PTDialogAction(
-          label: 'Cancel',
+          label: l10n.commonCancel,
           onPressed: () => Navigator.pop(context, _PromptEditResult.cancel),
         ),
         PTDialogAction(
-          label: 'Reset',
+          label: l10n.commonReset,
           onPressed: () => Navigator.pop(context, _PromptEditResult.reset),
         ),
         PTDialogAction(
-          label: 'Confirm',
+          label: l10n.commonConfirm,
           isDefault: true,
           onPressed: () => Navigator.pop(context, _PromptEditResult.save),
         ),
@@ -103,7 +104,7 @@ class _AiTitleGenerationSettingsPageState
         Prefs().aiProvidersV1.where((p) => p.enabled).toList(growable: false);
 
     if (enabledProviders.isEmpty) {
-      AnxToast.show('No AI provider configured');
+      AnxToast.show(L10n.of(context).aiNoProviderConfigured);
       return;
     }
 
@@ -111,9 +112,11 @@ class _AiTitleGenerationSettingsPageState
         ? ''
         : Prefs().aiTitleProviderIdEffective;
 
+    if (!mounted) return;
+    final l10n = L10n.of(context);
     await PTBottomSheet.show(
       context,
-      title: 'Title provider',
+      title: l10n.aiTitleProviderPickerTitle,
       builder: (context) {
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -121,8 +124,8 @@ class _AiTitleGenerationSettingsPageState
             PTPickerRow<String>(
               value: '',
               groupValue: currentId,
-              title: 'Follow current chat provider',
-              subtitle: 'Use the same provider as the active chat session.',
+              title: l10n.aiTitleProviderFollowChat,
+              subtitle: l10n.aiTitleProviderFollowChatDesc,
               onChanged: (_) {
                 Prefs().aiTitleProviderId = '';
                 Navigator.pop(context);
@@ -152,7 +155,7 @@ class _AiTitleGenerationSettingsPageState
     final meta = Prefs().getAiProviderMeta(providerId);
 
     if (meta == null) {
-      AnxToast.show('No AI provider configured');
+      AnxToast.show(L10n.of(context).aiNoProviderConfigured);
       return;
     }
 
@@ -172,9 +175,11 @@ class _AiTitleGenerationSettingsPageState
       return 'Capability unknown';
     }
 
+    if (!mounted) return;
+    final l10n = L10n.of(context);
     await PTBottomSheet.show(
       context,
-      title: 'Title model',
+      title: l10n.aiTitleModelPickerTitle,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -187,7 +192,7 @@ class _AiTitleGenerationSettingsPageState
               try {
                 final rawConfig = Prefs().getAiConfig(providerId);
                 if (rawConfig.isEmpty) {
-                  AnxToast.show('No AI provider configured');
+                  AnxToast.show(l10n.aiNoProviderConfigured);
                   return;
                 }
 
@@ -207,7 +212,7 @@ class _AiTitleGenerationSettingsPageState
                 capabilities = fetched;
                 models = fetched.map((e) => e.id).toList(growable: false);
               } catch (_) {
-                AnxToast.show('Failed to fetch models');
+                AnxToast.show(l10n.aiModelsRefreshFailed);
               } finally {
                 setModalState(() {
                   loading = false;
@@ -220,10 +225,8 @@ class _AiTitleGenerationSettingsPageState
               child: ListView(
                 children: [
                   ListTile(
-                    title: const Text('Follow provider default model'),
-                    subtitle: const Text(
-                      'Use the provider default model for title generation.',
-                    ),
+                    title: Text(l10n.aiTitleModelFollowDefault),
+                    subtitle: Text(l10n.aiTitleModelFollowDefaultDesc),
                     trailing: Prefs().aiTitleModel.trim().isEmpty
                         ? const Icon(Icons.check)
                         : null,
@@ -235,10 +238,8 @@ class _AiTitleGenerationSettingsPageState
                   ),
                   ListTile(
                     leading: const Icon(Icons.edit_outlined),
-                    title: const Text('Custom model'),
-                    subtitle: const Text(
-                      'Manually enter a model id for title generation.',
-                    ),
+                    title: Text(l10n.aiTitleModelCustom),
+                    subtitle: Text(l10n.aiTitleModelCustomDesc),
                     onTap: () async {
                       final controller = TextEditingController(
                         text: Prefs().aiTitleModel.trim(),
@@ -246,20 +247,20 @@ class _AiTitleGenerationSettingsPageState
 
                       final ok = await PTDialog.show<bool>(
                         context,
-                        title: 'Custom title model',
+                        title: l10n.aiTitleModelCustomDialogTitle,
                         content: TextField(
                           controller: controller,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter model id',
+                          decoration: InputDecoration(
+                            hintText: l10n.aiTitleModelCustomHint,
                           ),
                         ),
                         actions: [
                           PTDialogAction(
-                            label: 'Cancel',
+                            label: l10n.commonCancel,
                             onPressed: () => Navigator.pop(context, false),
                           ),
                           PTDialogAction(
-                            label: 'Confirm',
+                            label: l10n.commonConfirm,
                             isDefault: true,
                             onPressed: () => Navigator.pop(context, true),
                           ),
@@ -283,7 +284,7 @@ class _AiTitleGenerationSettingsPageState
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.refresh),
-                    title: const Text('Refresh models'),
+                    title: Text(l10n.aiTitleModelRefresh),
                     onTap: refresh,
                   ),
                   const Divider(height: 1),
@@ -291,7 +292,7 @@ class _AiTitleGenerationSettingsPageState
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        'No cached models yet. Pull the provider model list first.',
+                        l10n.aiTitleModelNoCacheHint,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -318,16 +319,17 @@ class _AiTitleGenerationSettingsPageState
   }
 
   Future<void> _editMaxTitleLength() async {
+    final l10n = L10n.of(context);
     double tempValue = Prefs().aiTitleMaxChars.toDouble();
     final result = await PTDialog.show<int>(
       context,
-      title: 'Maximum title length',
+      title: l10n.aiTitleMaxLengthTitle,
       content: StatefulBuilder(
         builder: (context, setDialogState) {
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Current limit: ${tempValue.round()} characters'),
+              Text(l10n.aiTitleMaxLengthCurrent(tempValue.round())),
               const SizedBox(height: 12),
               Slider(
                 min: 8,
@@ -347,11 +349,11 @@ class _AiTitleGenerationSettingsPageState
       ),
       actions: [
         PTDialogAction(
-          label: 'Cancel',
+          label: l10n.commonCancel,
           onPressed: () => Navigator.pop(context),
         ),
         PTDialogAction(
-          label: 'Confirm',
+          label: l10n.commonConfirm,
           isDefault: true,
           onPressed: () => Navigator.pop(context, tempValue.round()),
         ),
@@ -366,27 +368,26 @@ class _AiTitleGenerationSettingsPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final effectiveProviderId = Prefs().aiTitleProviderIdEffective;
     final providerMeta = Prefs().getAiProviderMeta(effectiveProviderId);
     final providerName = providerMeta?.name ?? effectiveProviderId;
 
     final model = Prefs().aiTitleModel.trim();
-    final modelLabel = model.isEmpty ? 'Follow provider default' : model;
+    final modelLabel = model.isEmpty ? l10n.aiTitleModelDefault : model;
     final promptCustom = Prefs().aiTitlePrompt.trim();
     final promptLabel =
-        promptCustom.isEmpty ? 'Default prompt' : 'Custom prompt';
+        promptCustom.isEmpty ? l10n.aiTitlePromptDefault : l10n.aiTitlePromptCustom;
 
     return settingsSections(
       sections: [
         SettingsSection(
-          title: const Text('Conversation titles'),
+          title: Text(l10n.settingsAiConversationTitles),
           tiles: [
             SettingsTile.switchTile(
               leading: const Icon(Icons.auto_awesome_outlined),
-              title: const Text('Automatic conversation titles'),
-              description: const Text(
-                'Generate a short chat title after the first assistant reply.',
-              ),
+              title: Text(l10n.aiAutoTitleToggleTitle),
+              description: Text(l10n.aiAutoTitleToggleDesc),
               initialValue: Prefs().aiTitleGenerationEnabled,
               onToggle: (value) async {
                 Prefs().aiTitleGenerationEnabled = value;
@@ -397,38 +398,30 @@ class _AiTitleGenerationSettingsPageState
             ),
             SettingsTile.navigation(
               leading: const Icon(Icons.hub_outlined),
-              title: const Text('Title provider'),
-              value: Text(providerName.isEmpty ? 'Not set' : providerName),
-              description: const Text(
-                'Choose which provider handles automatic title generation.',
-              ),
+              title: Text(l10n.aiTitleProviderPickerTitle),
+              value: Text(providerName.isEmpty ? l10n.aiTitleProviderNotSet : providerName),
+              description: Text(l10n.aiTitleProviderPickerDesc),
               onPressed: (_) => _pickProvider(),
             ),
             SettingsTile.navigation(
               leading: const Icon(Icons.smart_toy_outlined),
-              title: const Text('Title model'),
+              title: Text(l10n.aiTitleModelPickerTitle),
               value: Text(modelLabel),
-              description: const Text(
-                'Pick a dedicated model for naming conversations.',
-              ),
+              description: Text(l10n.aiTitleModelPickerDesc),
               onPressed: (_) => _pickModel(),
             ),
             SettingsTile.navigation(
               leading: const Icon(Icons.short_text_outlined),
-              title: const Text('Maximum title length'),
-              value: Text('${Prefs().aiTitleMaxChars} chars'),
-              description: const Text(
-                'Keep generated titles short and easy to scan in history.',
-              ),
+              title: Text(l10n.aiTitleMaxLengthTitle),
+              value: Text(l10n.aiTitleMaxLengthValue(Prefs().aiTitleMaxChars)),
+              description: Text(l10n.aiTitleMaxLengthDesc),
               onPressed: (_) => _editMaxTitleLength(),
             ),
             SettingsTile.navigation(
               leading: const Icon(Icons.edit_note_outlined),
-              title: const Text('Title prompt'),
+              title: Text(l10n.aiTitlePromptDialogTitle),
               value: Text(promptLabel),
-              description: const Text(
-                'Customize the prompt and let it adapt to the current language, such as Chinese.',
-              ),
+              description: Text(l10n.aiTitlePromptTileDesc),
               onPressed: (_) => _editPrompt(),
             ),
           ],

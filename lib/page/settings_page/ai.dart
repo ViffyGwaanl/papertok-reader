@@ -248,7 +248,11 @@ class _AISettingsState extends ConsumerState<AISettings> {
             onPressed: (context) {
               Navigator.of(context).push(
                 CupertinoStyleRoute(
-                    page: const AiTitleGenerationSettingsPage()),
+                  page: SettingsSubpageScaffold(
+                    title: l10n.settingsAiConversationTitles,
+                    child: const AiTitleGenerationSettingsPage(),
+                  ),
+                ),
               );
             },
           ),

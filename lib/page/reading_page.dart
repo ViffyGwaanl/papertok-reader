@@ -28,7 +28,7 @@ import 'package:papertok_reader/utils/env_var.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/utils/ui/status_bar.dart';
 import 'package:papertok_reader/widgets/ai/ai_chat_bottom_sheet.dart';
-import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
+import 'package:papertok_reader/widgets/ai/ai_multi_tab_chat.dart';
 import 'package:papertok_reader/widgets/ai/ai_stream.dart';
 import 'package:papertok_reader/widgets/reading_page/notes_widget.dart';
 import 'package:papertok_reader/models/reading_time.dart';
@@ -101,7 +101,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   late final KairosService _kairos;
   bool bottomBarOffstage = true;
   Widget? _aiChat;
-  final aiChatKey = GlobalKey<AiChatStreamState>();
+  final aiChatKey = GlobalKey<AiMultiTabChatState>();
   static const double _aiChatMinWidth = 240;
   double _aiChatWidth = 300;
   static const double _aiChatMinHeight = 200;
@@ -520,7 +520,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
-          child: AiChatStream(
+          child: AiMultiTabChat(
             key: aiChatKey,
             initialMessage: null,
             sendImmediate: false,
@@ -899,7 +899,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: AiChatStream(
+              child: AiMultiTabChat(
                 key: aiChatKey,
                 initialMessage: content,
                 sendImmediate: sendImmediate,

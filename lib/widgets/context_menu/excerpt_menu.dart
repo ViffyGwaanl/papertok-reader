@@ -418,8 +418,9 @@ class ExcerptMenuState extends State<ExcerptMenu> {
                 content: widget.annoContent,
                 sendImmediate: false,
               );
-              key.aiChatKey.currentState?.inputController.text =
-                  widget.annoContent;
+              key.aiChatKey.currentState?.prefillDraft(
+                message: widget.annoContent,
+              );
             }
           },
         ),

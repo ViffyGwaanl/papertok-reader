@@ -113,6 +113,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   String? backgroundColor;
   String? textColor;
   Timer? styleTimer;
+  Timer? _saveProgressDebounce;
   String bookmarkCfi = '';
   bool bookmarkExists = false;
   WritingModeEnum writingMode = WritingModeEnum.horizontalTb;
@@ -206,6 +207,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
   void changeStyle(BookStyle? bookStyle) {
     styleTimer?.cancel();
+    _saveProgressDebounce?.cancel();
     String bgimgUrl = Prefs().bgimg.getEffectiveUrl(
           isDarkMode: isDarkMode,
           autoAdjust: Prefs().autoAdjustReadingTheme,
@@ -771,7 +773,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
                 chapterTotalPages: chapterTotalPages,
               );
           widget.updateParent();
-          saveReadingProgress();
+          _saveProgressDebounce?.cancel();
+          _saveProgressDebounce =
+              Timer(const Duration(milliseconds: 500), saveReadingProgress);
           widget.onUserInteraction?.call();
         });
     controller.addJavaScriptHandler(
