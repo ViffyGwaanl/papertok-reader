@@ -1160,6 +1160,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   // Streaming lifecycle is managed by [aiChatProvider] so UI minimize/close
   // does not interrupt generation.
 
+  void sendCurrentDraft() {
+    _sendMessage();
+  }
+
   void _sendMessage() {
     if (_isStreaming) {
       return;

@@ -2,7 +2,7 @@ name: papertok_reader
 description: "An e-book reader."
 publish_to: 'none'
 
-version: 1.68.7+6468
+version: 1.68.7+6469
 
 environment:
   sdk: '>=3.5.2 <4.0.0'

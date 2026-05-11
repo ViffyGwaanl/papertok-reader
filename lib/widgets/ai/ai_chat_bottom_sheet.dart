@@ -63,10 +63,10 @@ class AiChatBottomSheet extends StatefulWidget {
   final bool lockToInitialSize;
 
   @override
-  State<AiChatBottomSheet> createState() => _AiChatBottomSheetState();
+  State<AiChatBottomSheet> createState() => AiChatBottomSheetState();
 }
 
-class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
+class AiChatBottomSheetState extends State<AiChatBottomSheet> {
   static const double _minSize = 0.12;
   static const double _maxSize = 0.95;
 
@@ -156,6 +156,45 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
 
   bool _closing = false;
 
+  /// Animate the sheet back into view (used when re-opening a hidden sheet).
+  Future<void> revealSheet() async {
+    _closing = false;
+    final target = _lastExpandedSize.clamp(_minPersistSize, _maxSize);
+    try {
+      await _sheetController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    } catch (_) {}
+  }
+
+  /// Animate the sheet to size 0 without destroying it.
+  Future<void> hideSheet() async {
+    double size = _maxSize;
+    try {
+      size = _sheetController.size;
+    } catch (_) {}
+    if (size >= _minPersistSize) _lastExpandedSize = size;
+    try {
+      await _sheetController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _hideAndClose() async {
+    // Suppress the notification listener so it doesn't also fire onRequestClose
+    // while we animate to 0.
+    _closing = true;
+    await hideSheet();
+    final close = widget.onRequestClose ?? () => Navigator.of(context).pop();
+    close();
+    // Note: _closing stays true; revealSheet() resets it when re-opened.
+  }
+
   @override
   Widget build(BuildContext context) {
     var initial = (widget.initialSizeOverride ?? Prefs().aiSheetInitialSize)
@@ -167,8 +206,9 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
       initial = _maxSize;
     }
 
-    // Seed last expanded size.
-    _lastExpandedSize = initial;
+    // Seed last expanded size only on first build so that user-driven changes
+    // survive setState calls.
+    if (_lastExpandedSize == 0.6) _lastExpandedSize = initial;
 
     final lock = widget.lockToInitialSize;
     // Locked mode: only two valid extents — full (initial) or fully closed (0).
@@ -218,10 +258,7 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
               // Tapping empty space on the tab bar strip closes (lock) or
               // minimizes (normal) the sheet, giving the user an easy way
               // to return to reading without hitting a small close button.
-              onTapTabBar: lock
-                  ? (widget.onRequestClose ??
-                      () => Navigator.of(context).maybePop())
-                  : _toggleMinimize,
+              onTapTabBar: lock ? _hideAndClose : _toggleMinimize,
               trailing: [
                 if (!lock)
                   IconButton(
@@ -230,8 +267,7 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
                   ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: widget.onRequestClose ??
-                      () => Navigator.of(context).pop(),
+                  onPressed: _hideAndClose,
                 ),
               ],
             ),

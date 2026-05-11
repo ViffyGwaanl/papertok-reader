@@ -78,6 +78,11 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
     );
   }
 
+  void sendDraft() {
+    if (_tabs.isEmpty) return;
+    _tabs[_activeTab].chatKey.currentState?.sendCurrentDraft();
+  }
+
   // ── Tab management ─────────────────────────────────────────────────────────
 
   void _addTab() {

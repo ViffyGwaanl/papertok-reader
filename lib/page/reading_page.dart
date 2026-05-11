@@ -102,6 +102,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   bool bottomBarOffstage = true;
   Widget? _aiChat;
   final aiChatKey = GlobalKey<AiMultiTabChatState>();
+  final _aiBottomSheetKey = GlobalKey<AiChatBottomSheetState>();
+  bool _aiChatVisible = false;
   static const double _aiChatMinWidth = 240;
   double _aiChatWidth = 300;
   static const double _aiChatMinHeight = 200;
@@ -848,21 +850,27 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         _shouldUseAiBottomSheet(navigatorKey.currentContext!);
 
     if (useBottomSheet) {
-      // Use a *persistent* bottom sheet on reading page so users can keep
-      // interacting with the book while the assistant keeps streaming.
       final scaffoldState = _scaffoldKey.currentState;
-      if (scaffoldState == null) {
-        return;
-      }
+      if (scaffoldState == null) return;
 
       if (_aiBottomSheetController != null) {
-        // If already shown, do nothing (avoid stacking multiple sheets).
+        // Sheet is alive but hidden — reveal it without rebuilding.
+        setState(() => _aiChatVisible = true);
+        _aiBottomSheetKey.currentState?.revealSheet();
+        if (content != null) {
+          aiChatKey.currentState?.prefillDraft(message: content);
+        }
+        if (sendImmediate) {
+          aiChatKey.currentState?.sendDraft();
+        }
         return;
       }
 
+      setState(() => _aiChatVisible = true);
       _aiBottomSheetController = scaffoldState.showBottomSheet(
         (context) => PointerInterceptor(
           child: AiChatBottomSheet(
+            key: _aiBottomSheetKey,
             aiChatKey: aiChatKey,
             initialMessage: content,
             sendImmediate: sendImmediate,
@@ -872,8 +880,10 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             initialSizeOverride: 0.95,
             rememberSize: false,
             lockToInitialSize: true,
+            // Don't close the controller — just mark as hidden so the
+            // ProviderScope stays alive and streaming continues.
             onRequestClose: () {
-              _aiBottomSheetController?.close();
+              if (mounted) setState(() => _aiChatVisible = false);
             },
           ),
         ),
@@ -888,6 +898,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
 
       _aiBottomSheetController!.closed.whenComplete(() {
         _aiBottomSheetController = null;
+        if (mounted) setState(() => _aiChatVisible = false);
       });
     } else {
       setState(() {
@@ -1159,7 +1170,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             body: Stack(
               children: [
                 _buildMainLayout(context),
-                if (bottomBarOffstage)
+                if (bottomBarOffstage && !_aiChatVisible)
                   const Positioned(
                     right: 16,
                     bottom: 24,

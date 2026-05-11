@@ -609,6 +609,10 @@ const getCSS = ({ fontSize,
     }
     `}
 
+    span, a, em, strong, i, b, u {
+        ${useBookStyles ? '' : `line-height: ${spacing} !important;`}
+    }
+
     p, li, blockquote, dd, div:not(:has(*:not(b, a, em, i, strong, u, span))), font {
         color: ${fontColor} !important;
         ${useBookStyles ? '' : `line-height: ${spacing} !important;`}
