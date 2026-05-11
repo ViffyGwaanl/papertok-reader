@@ -867,9 +867,11 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             initialMessage: content,
             sendImmediate: sendImmediate,
             quickPromptChips: quickPrompts,
-            // Reading page: open fully expanded by default.
+            // Reading page: open fully expanded and lock the height — the
+            // only allowed gesture is "drag down to close".
             initialSizeOverride: 0.95,
             rememberSize: false,
+            lockToInitialSize: true,
             onRequestClose: () {
               _aiBottomSheetController?.close();
             },
@@ -878,6 +880,10 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         backgroundColor: Colors.transparent,
         elevation: 0,
         enableDrag: false,
+        // Force the sheet to span the full Scaffold width, otherwise on
+        // iPad/wide screens Material's default sheet width caps it and the
+        // reading view shows through on the sides.
+        constraints: const BoxConstraints(maxWidth: double.infinity),
       );
 
       _aiBottomSheetController!.closed.whenComplete(() {

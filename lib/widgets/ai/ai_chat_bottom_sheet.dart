@@ -32,6 +32,7 @@ class AiChatBottomSheet extends StatefulWidget {
     this.rememberSize = true,
     this.minimizeBehavior = AiChatBottomSheetMinimizeBehavior.toBar,
     this.onRequestClose,
+    this.lockToInitialSize = false,
   });
 
   final GlobalKey<AiChatStreamState> aiChatKey;
@@ -54,6 +55,12 @@ class AiChatBottomSheet extends StatefulWidget {
   /// - Modal sheet: pass `Navigator.pop`.
   /// - Persistent sheet: pass `PersistentBottomSheetController.close`.
   final VoidCallback? onRequestClose;
+
+  /// When true, the sheet height is locked to [initialSizeOverride] and the
+  /// only allowed gesture is "drag down to close" (no intermediate sizes).
+  /// Used by the reading page where the AI chat should always be near full
+  /// height when open.
+  final bool lockToInitialSize;
 
   @override
   State<AiChatBottomSheet> createState() => _AiChatBottomSheetState();
@@ -147,6 +154,8 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
     }
   }
 
+  bool _closing = false;
+
   @override
   Widget build(BuildContext context) {
     var initial = (widget.initialSizeOverride ?? Prefs().aiSheetInitialSize)
@@ -161,24 +170,35 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
     // Seed last expanded size.
     _lastExpandedSize = initial;
 
+    final lock = widget.lockToInitialSize;
+    // Locked mode: only two valid extents — full (initial) or fully closed (0).
+    // Unlocked: the legacy multi-stop snap layout.
+    final double sheetMin = lock ? 0.0 : _minSize;
+    final double sheetMax = initial;
+    final List<double> snapPoints = lock
+        ? <double>[0.0, initial]
+        : const <double>[_minSize, 0.35, 0.6, 0.9, _maxSize];
+
     return NotificationListener<DraggableScrollableNotification>(
       onNotification: (n) {
         _scheduleSave(n.extent);
+        if (lock && !_closing && n.extent <= 0.05) {
+          _closing = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final close = widget.onRequestClose ??
+                () => Navigator.of(context).maybePop();
+            close();
+          });
+        }
         return false;
       },
       child: DraggableScrollableSheet(
         controller: _sheetController,
         initialChildSize: initial,
-        minChildSize: _minSize,
-        maxChildSize: _maxSize,
+        minChildSize: sheetMin,
+        maxChildSize: sheetMax,
         snap: true,
-        snapSizes: const [
-          _minSize,
-          0.35,
-          0.6,
-          0.9,
-          _maxSize,
-        ],
+        snapSizes: snapPoints,
         builder: (context, scrollController) {
           return Material(
             clipBehavior: Clip.antiAlias,
@@ -191,12 +211,16 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
               sendImmediate: widget.sendImmediate,
               quickPromptChips: widget.quickPromptChips,
               scrollController: scrollController,
-              onRequestMinimize: _toggleMinimize,
+              // In lock mode the only minimize-equivalent is closing the
+              // sheet entirely (drag-down or close button). Don't expose the
+              // collapse-to-bar affordance.
+              onRequestMinimize: lock ? null : _toggleMinimize,
               trailing: [
-                IconButton(
-                  icon: const Icon(Icons.keyboard_arrow_down),
-                  onPressed: _toggleMinimize,
-                ),
+                if (!lock)
+                  IconButton(
+                    icon: const Icon(Icons.keyboard_arrow_down),
+                    onPressed: _toggleMinimize,
+                  ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: widget.onRequestClose ??

@@ -67,13 +67,6 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     super.initState();
 
     _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
-
-    // The queue updates fairly frequently (progress), so debounce book list
-    // refreshes to avoid jitter.
-    ref.listen<AiLibraryIndexQueueState>(aiLibraryIndexQueueProvider,
-        (prev, next) {
-      _scheduleBooksRefresh(const Duration(milliseconds: 900));
-    });
   }
 
   @override
@@ -97,6 +90,14 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     final l10n = L10n.of(context);
     final queue = ref.watch(aiLibraryIndexQueueProvider);
     final queueSvc = ref.read(aiLibraryIndexQueueProvider.notifier);
+
+    // The queue updates fairly frequently (progress), so debounce book list
+    // refreshes to avoid jitter. Must live in build (not initState) per
+    // Riverpod's `ref.listen` contract.
+    ref.listen<AiLibraryIndexQueueState>(aiLibraryIndexQueueProvider,
+        (prev, next) {
+      _scheduleBooksRefresh(const Duration(milliseconds: 900));
+    });
 
     return SettingsSubpageScaffold(
       title: l10n.settingsAiLibraryIndexTitle,
