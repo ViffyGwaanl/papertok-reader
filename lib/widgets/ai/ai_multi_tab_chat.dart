@@ -27,6 +27,7 @@ class AiMultiTabChat extends StatefulWidget {
     this.inputSafeAreaBottom = true,
     this.resizeToAvoidBottomInset = true,
     this.emptyStateBuilder,
+    this.onTapTabBar,
   });
 
   final String? initialMessage;
@@ -39,6 +40,11 @@ class AiMultiTabChat extends StatefulWidget {
   final bool inputSafeAreaBottom;
   final bool resizeToAvoidBottomInset;
   final Widget Function(BuildContext, void Function(String))? emptyStateBuilder;
+
+  /// Called when the user taps the empty background of the tab bar strip.
+  /// In lock mode (reading page bottom sheet) this should close the sheet;
+  /// in normal mode it minimizes it.
+  final VoidCallback? onTapTabBar;
 
   @override
   AiMultiTabChatState createState() => AiMultiTabChatState();
@@ -143,7 +149,13 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
     final colorScheme = Theme.of(context).colorScheme;
     final fg = ClaudePalette.fg(context);
 
-    return SizedBox(
+    // GestureDetector wraps the whole strip so tapping empty space (outside
+    // chips / buttons) fires onTapTabBar. Child interactive widgets absorb
+    // their own taps first, so only truly empty areas reach this handler.
+    return GestureDetector(
+      onTap: widget.onTapTabBar,
+      behavior: HitTestBehavior.translucent,
+      child: SizedBox(
       height: 40,
       child: Row(
         children: [
@@ -180,7 +192,8 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
           ),
         ],
       ),
-    );
+      ), // SizedBox
+    ); // GestureDetector
   }
 }
 

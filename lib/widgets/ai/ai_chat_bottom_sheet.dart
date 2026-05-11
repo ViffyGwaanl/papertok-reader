@@ -215,6 +215,13 @@ class _AiChatBottomSheetState extends State<AiChatBottomSheet> {
               // sheet entirely (drag-down or close button). Don't expose the
               // collapse-to-bar affordance.
               onRequestMinimize: lock ? null : _toggleMinimize,
+              // Tapping empty space on the tab bar strip closes (lock) or
+              // minimizes (normal) the sheet, giving the user an easy way
+              // to return to reading without hitting a small close button.
+              onTapTabBar: lock
+                  ? (widget.onRequestClose ??
+                      () => Navigator.of(context).maybePop())
+                  : _toggleMinimize,
               trailing: [
                 if (!lock)
                   IconButton(
