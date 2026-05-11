@@ -136,6 +136,11 @@ dependencies:
 #       url: https://github.com/Anxcye/langchain_dart.git
 #       ref: bb06c17ca667a906e3e37154b0bda95023d0c9bd
 #       path: packages/openai_dart
+
+# Pin googleai_dart to 3.0.0 — newer 3.x versions renamed
+# `ApiException.code` to `.statusCode`, breaking langchain_google 0.7.1+2.
+dependency_overrides:
+  googleai_dart: 3.0.0
   
 
 dev_dependencies:
