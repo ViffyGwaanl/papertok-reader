@@ -109,40 +109,46 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
     return Column(
       children: [
+        SizedBox(height: topPadding),
         _buildTabBar(context),
         Expanded(
-          child: IndexedStack(
-            index: _activeTab,
-            children: [
-              for (int i = 0; i < _tabs.length; i++)
-                ProviderScope(
-                  key: ValueKey(_tabs[i].id),
-                  overrides: _tabs[i].overrides,
-                  child: AiChatStream(
-                    key: _tabs[i].chatKey,
-                    // Only the first tab receives initialMessage; new tabs
-                    // always start fresh. AiChatStream only consumes
-                    // initialMessage in initState so subsequent rebuilds with
-                    // the same parameter are safe.
-                    initialMessage: i == 0 ? widget.initialMessage : null,
-                    sendImmediate: i == 0 ? widget.sendImmediate : false,
-                    quickPromptChips: widget.quickPromptChips,
-                    // Only the active tab gets the shared scroll controller
-                    // (e.g. from DraggableScrollableSheet). Others use their
-                    // own internal controllers.
-                    scrollController:
-                        i == _activeTab ? widget.scrollController : null,
-                    trailing: widget.trailing,
-                    onRequestMinimize: widget.onRequestMinimize,
-                    bottomPadding: widget.bottomPadding,
-                    inputSafeAreaBottom: widget.inputSafeAreaBottom,
-                    resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
-                    emptyStateBuilder: widget.emptyStateBuilder,
+          child: MediaQuery.removePadding(
+            context: context,
+            removeTop: true,
+            child: IndexedStack(
+              index: _activeTab,
+              children: [
+                for (int i = 0; i < _tabs.length; i++)
+                  ProviderScope(
+                    key: ValueKey(_tabs[i].id),
+                    overrides: _tabs[i].overrides,
+                    child: AiChatStream(
+                      key: _tabs[i].chatKey,
+                      // Only the first tab receives initialMessage; new tabs
+                      // always start fresh. AiChatStream only consumes
+                      // initialMessage in initState so subsequent rebuilds with
+                      // the same parameter are safe.
+                      initialMessage: i == 0 ? widget.initialMessage : null,
+                      sendImmediate: i == 0 ? widget.sendImmediate : false,
+                      quickPromptChips: widget.quickPromptChips,
+                      // Only the active tab gets the shared scroll controller
+                      // (e.g. from DraggableScrollableSheet). Others use their
+                      // own internal controllers.
+                      scrollController:
+                          i == _activeTab ? widget.scrollController : null,
+                      trailing: widget.trailing,
+                      onRequestMinimize: widget.onRequestMinimize,
+                      bottomPadding: widget.bottomPadding,
+                      inputSafeAreaBottom: widget.inputSafeAreaBottom,
+                      resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
+                      emptyStateBuilder: widget.emptyStateBuilder,
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -160,8 +166,6 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
     return GestureDetector(
       onTap: widget.onTapTabBar,
       behavior: HitTestBehavior.translucent,
-      child: SafeArea(
-      bottom: false,
       child: SizedBox(
       height: 40,
       child: Row(
@@ -200,7 +204,6 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
         ],
       ),
       ), // SizedBox
-      ), // SafeArea
     ); // GestureDetector
   }
 }
