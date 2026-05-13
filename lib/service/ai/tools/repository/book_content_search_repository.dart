@@ -19,7 +19,7 @@ class BookContentSearchRepository {
     Duration? searchTimeout,
     Duration? sessionIdleTimeout,
   })  : _booksRepository = booksRepository ?? const BooksRepository(),
-        _searchTimeout = searchTimeout ?? const Duration(seconds: 15),
+        _searchTimeout = searchTimeout ?? const Duration(seconds: 45),
         _sessionIdleTimeout = sessionIdleTimeout ?? const Duration(minutes: 3);
 
   final BooksRepository _booksRepository;

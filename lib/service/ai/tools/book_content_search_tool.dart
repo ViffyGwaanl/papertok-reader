@@ -46,7 +46,7 @@ class BookContentSearchTool
             },
             'required': ['bookId', 'keyword'],
           },
-          timeout: const Duration(seconds: 20),
+          timeout: const Duration(seconds: 50),
         );
 
   final BookContentSearchRepository _repository;

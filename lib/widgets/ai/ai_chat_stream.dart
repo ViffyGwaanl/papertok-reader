@@ -2501,6 +2501,29 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ),
                 ),
                 const Spacer(),
+                // Minimize button (collapse the sheet).
+                if (widget.onRequestMinimize != null)
+                  Material(
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        widget.onRequestMinimize!();
+                      },
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 22,
+                          color: ClaudePalette.fg(context).withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 4),
                 // Trailing send / stop / mic button.
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 150),

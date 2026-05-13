@@ -160,6 +160,8 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
     return GestureDetector(
       onTap: widget.onTapTabBar,
       behavior: HitTestBehavior.translucent,
+      child: SafeArea(
+      bottom: false,
       child: SizedBox(
       height: 40,
       child: Row(
@@ -198,6 +200,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
         ],
       ),
       ), // SizedBox
+      ), // SafeArea
     ); // GestureDetector
   }
 }
