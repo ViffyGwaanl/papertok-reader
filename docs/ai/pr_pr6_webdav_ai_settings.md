@@ -1,3 +1,5 @@
+> **Status: Merged.** This document is retained for historical reference.
+
 # PR Draft — PR-6: WebDAV sync of AI settings (no API key)
 
 ## Title

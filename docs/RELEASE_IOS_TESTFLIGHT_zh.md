@@ -8,12 +8,12 @@
 > - 本仓库：`ViffyGwaanl/papertok-reader`（private）
 > - App 显示名：**PaperTok Reader**
 
-## 当前发布候选（2026-03-07）
+## 当前发布候选（2026-05-13）
 
-- 目标版本：`1.68.3`
-- 本轮目标：发一版新的 TestFlight，把 `1.68.1` 之后到当前的主线更新一起带进去，并额外包含最新的 selection UI / shortcuts preset 改进。
+- 目标版本：`1.68.7`（build 6471）
+- 本轮目标：发一版新的 TestFlight，把 `1.68.3` 之后到当前的主线更新一起带进去。
 
-### 1.68.1 -> 1.68.3 更新摘要
+### 1.68.3 -> 1.68.7 更新摘要
 
 本轮建议在 TestFlight / App Store Connect 的版本说明中整理为：
 

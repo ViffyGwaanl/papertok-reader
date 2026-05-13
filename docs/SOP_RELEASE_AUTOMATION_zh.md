@@ -166,7 +166,8 @@ cd /Users/gwaanl/.openclaw/workspace/repos/papertok-reader
 5) 复制产物到 artifacts 目录 + 生成 sha256
 
 ### 6.2 发布 GitHub Release（每次都发布）
-- tag：`android-v1.68.0-<build>`
+- tag：`android-v1.68.7-<build>`
+  > 注：tag 中的版本号应与 `pubspec.yaml` 中的 `version` 字段保持一致。
 - 附件：APK/AAB/CHECKSUMS.txt
 - Notes 必须标注：若无 keystore 则为 debug signing，不适合 Play Store
 
@@ -189,7 +190,7 @@ bundle exec fastlane pilot distribute \
   --app_platform ios \
   --groups "EX External" \
   --build_number <BUILD> \
-  --app_version 1.68.0 \
+  --app_version 1.68.7 \
   --distribute_external true \
   --submit_beta_review true \
   --reject_build_waiting_for_review true

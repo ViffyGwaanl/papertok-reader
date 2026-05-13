@@ -1,3 +1,5 @@
+> **Status: Merged.** Backup format has since advanced to v5. This document describes the original v4 design and is retained for historical reference.
+
 # PR Draft — PR-7: Backup v4 + optional encrypted API keys + safe import rollback
 
 ## Title
