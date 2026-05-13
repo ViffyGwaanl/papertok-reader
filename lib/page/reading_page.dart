@@ -1174,6 +1174,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                               initialMessage: _aiInitialMessage,
                               sendImmediate: _aiSendImmediate,
                               quickPromptChips: _getAiQuickPromptChips(),
+                              inputSafeAreaBottom: false,
                               onRequestMinimize: () {
                                 if (mounted) {
                                   setState(() => _aiChatVisible = false);

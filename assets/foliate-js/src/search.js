@@ -3,8 +3,9 @@ const CONTEXT_LENGTH = 50
 
 const normalizeWhitespace = str => str.replace(/\s+/g, ' ')
 
-// Zero-width and invisible characters to strip (global for .replace())
+// Zero-width and invisible characters
 const ZERO_WIDTH_RE = /[\u200B\u200C\u200D\uFEFF\u00AD\u2060\u180E]/g
+const ZERO_WIDTH_TEST = /[\u200B\u200C\u200D\uFEFF\u00AD\u2060\u180E]/
 
 // Full-width → half-width punctuation mapping (CJK common)
 const FW_TO_HW = {
@@ -12,14 +13,14 @@ const FW_TO_HW = {
     '\u201C': '"', '\u201D': '"', '\u2018': "'", '\u2019': "'", '（': '(', '）': ')',
     '【': '[', '】': ']', '｛': '{', '｝': '}', '《': '<', '》': '>',
     '、': ',', '～': '~', '…': '...', '—': '-', '－': '-',
-    '\u3000': ' ', // ideographic space → ASCII space
+    '\u3000': ' ',
 }
 const FW_CHARS_RE = new RegExp('[' + Object.keys(FW_TO_HW).join('') + ']', 'g')
 
 /**
- * Light normalization applied ONLY to the query before searching.
- * - Remove zero-width / invisible characters
- * - Convert full-width CJK punctuation to half-width equivalents
+ * Normalize a query string before searching.
+ * - Strip zero-width / invisible chars
+ * - Convert full-width CJK punctuation → half-width
  * - Collapse whitespace
  */
 const normalizeQuery = str => str
@@ -28,13 +29,42 @@ const normalizeQuery = str => str
     .replace(/\s+/g, ' ')
     .trim()
 
+/**
+ * Normalize a haystack string for matching:
+ * - Strip zero-width / invisible characters
+ * - Convert full-width CJK punctuation → half-width (same as query normalization)
+ * Returns { text, posMap } where posMap[cleanIndex] = originalIndex
+ */
+const normalizeHaystack = (str) => {
+    const chars = []
+    const posMap = []
+    for (let i = 0; i < str.length; i++) {
+        const ch = str[i]
+        // Skip zero-width chars
+        if (ZERO_WIDTH_TEST.test(ch)) continue
+        // Map full-width → half-width
+        const mapped = FW_TO_HW[ch]
+        if (mapped) {
+            for (let k = 0; k < mapped.length; k++) {
+                chars.push(mapped[k])
+                posMap.push(i)
+            }
+        } else {
+            chars.push(ch)
+            posMap.push(i)
+        }
+    }
+    return { text: chars.join(''), posMap }
+}
+
 const makeExcerpt = (strs, { startIndex, startOffset, endIndex, endOffset }) => {
     const start = strs[startIndex]
     const end = strs[endIndex]
+    if (!start || !end) return { pre: '', match: '', post: '' }
     const match = start === end
         ? start.slice(startOffset, endOffset)
         : start.slice(startOffset)
-            + strs.slice(start + 1, end).join('')
+            + strs.slice(startIndex + 1, endIndex).join('')
             + end.slice(0, endOffset)
     const trimmedStart = normalizeWhitespace(start.slice(0, startOffset)).trimStart()
     const trimmedEnd = normalizeWhitespace(end.slice(endOffset)).trimEnd()
@@ -45,32 +75,78 @@ const makeExcerpt = (strs, { startIndex, startOffset, endIndex, endOffset }) => 
     return { pre, match, post }
 }
 
-const simpleSearch = function* (strs, query, options = {}) {
+// ── Build cumulative length map for strs → original position tracking ────────
+
+const buildCumLengths = (strs) => {
+    const cumLengths = []
+    let cum = 0
+    for (const s of strs) {
+        cum += s.length
+        cumLengths.push(cum)
+    }
+    return cumLengths
+}
+
+/**
+ * Map a flat character index in the joined haystack back to
+ * { strIndex, offset } within the strs array.
+ */
+const findStrPosition = (cumLengths, strs, originalIndex) => {
+    let idx = 0
+    while (idx < cumLengths.length && cumLengths[idx] <= originalIndex) idx++
+    // Clamp to last string if at exact boundary
+    if (idx >= strs.length) idx = strs.length - 1
+    const prevCum = idx > 0 ? cumLengths[idx - 1] : 0
+    return { strIndex: idx, offset: originalIndex - prevCum }
+}
+
+// ── Primary search: fuzzySimpleSearch ─────────────────────────────────────────
+//
+// Enhanced version of the original simpleSearch:
+// 1. Strips zero-width chars from haystack so "学\u200B院" matches "学院"
+// 2. Uses indexOf for matching — naturally tolerant of CJK text
+// 3. Maps clean positions back to original positions via posMap
+
+const fuzzySimpleSearch = function* (strs, query, options = {}) {
     const { locales = 'en', sensitivity } = options
     const matchCase = sensitivity === 'variant'
-    const haystack = strs.join('')
-    const lowerHaystack = matchCase ? haystack : haystack.toLocaleLowerCase(locales)
-    const needle = matchCase ? query : query.toLocaleLowerCase(locales)
+
+    const originalHaystack = strs.join('')
+    const { text: cleanHaystack, posMap } = normalizeHaystack(originalHaystack)
+
+    const cleanQuery = query.replace(ZERO_WIDTH_RE, '')
+    if (cleanQuery.length === 0) return
+
+    const lowerHaystack = matchCase ? cleanHaystack : cleanHaystack.toLocaleLowerCase(locales)
+    const needle = matchCase ? cleanQuery : cleanQuery.toLocaleLowerCase(locales)
     const needleLength = needle.length
-    if (needleLength === 0) return
+
+    const cumLengths = buildCumLengths(strs)
+
     let index = -1
-    let strIndex = -1
-    let sum = 0
     do {
         index = lowerHaystack.indexOf(needle, index + 1)
         if (index > -1) {
-            while (sum <= index) sum += strs[++strIndex].length
-            const startIndex = strIndex
-            const startOffset = index - (sum - strs[strIndex].length)
-            const end = index + needleLength
-            while (sum <= end) sum += strs[++strIndex].length
-            const endIndex = strIndex
-            const endOffset = end - (sum - strs[strIndex].length)
-            const range = { startIndex, startOffset, endIndex, endOffset }
+            // Map clean position back to original position via posMap
+            const origStart = posMap[index]
+            const endCleanIdx = index + needleLength - 1
+            const origEnd = (endCleanIdx < posMap.length ? posMap[endCleanIdx] : posMap[posMap.length - 1]) + 1
+
+            const startPos = findStrPosition(cumLengths, strs, origStart)
+            const endPos = findStrPosition(cumLengths, strs, origEnd)
+
+            const range = {
+                startIndex: startPos.strIndex,
+                startOffset: startPos.offset,
+                endIndex: endPos.strIndex,
+                endOffset: endPos.offset,
+            }
             yield { range, excerpt: makeExcerpt(strs, range) }
         }
     } while (index > -1)
 }
+
+// ── Segmenter search (kept for matchWholeWords only) ─────────────────────────
 
 const segmenterSearch = function* (strs, query, options = {}) {
     const { locales = 'en', granularity = 'word', sensitivity = 'base' } = options
@@ -92,8 +168,6 @@ const segmenterSearch = function* (strs, query, options = {}) {
         while (substrArr.length < queryLength) {
             const { done, value } = segments.next()
             if (done) {
-                // the current string is exhausted
-                // move on to the next string
                 strIndex++
                 if (strIndex < strs.length) {
                     segments = segmenter.segment(strs[strIndex])[Symbol.iterator]()
@@ -101,9 +175,8 @@ const segmenterSearch = function* (strs, query, options = {}) {
                 } else break main
             }
             const { index, segment } = value
-            // ignore formatting characters
             if (!/[^\p{Format}]/u.test(segment)) continue
-            // normalize whitespace
+            if (ZERO_WIDTH_TEST.test(segment)) continue
             if (/\s/u.test(segment)) {
                 if (!/\s/u.test(substrArr[substrArr.length - 1]?.segment))
                     substrArr.push({ strIndex, index, segment: ' ' })
@@ -126,15 +199,88 @@ const segmenterSearch = function* (strs, query, options = {}) {
     }
 }
 
-export const search = (strs, query, options) => {
-    // Normalize the query (strip zero-width chars, full-width punctuation)
-    // but keep the original search algorithms untouched for stability.
+// ── Multi-term AND search ────────────────────────────────────────────────────
+//
+// Splits query by whitespace into individual terms.
+// For each term, runs fuzzySimpleSearch independently.
+// Only yields results from terms that ALL match (AND logic).
+// De-duplicates by CFI range to avoid showing the same passage twice.
+
+const multiTermSearch = function* (strs, query, options = {}) {
+    const terms = query.split(/\s+/).filter(t => t.length > 0)
+    if (terms.length < 2) return
+
+    // Collect results for each term
+    const allResults = []
+    for (const term of terms) {
+        const termResults = Array.from(fuzzySimpleSearch(strs, term, options))
+        if (termResults.length === 0) return // AND: if any term has 0 results, bail
+        allResults.push(termResults)
+    }
+
+    // Yield results from all terms, de-duplicated by startIndex+startOffset
+    const seen = new Set()
+    for (const termResults of allResults) {
+        for (const result of termResults) {
+            const key = `${result.range.startIndex}:${result.range.startOffset}`
+            if (!seen.has(key)) {
+                seen.add(key)
+                yield result
+            }
+        }
+    }
+}
+
+// ── Main search entry point with 3-level fallback ────────────────────────────
+//
+// Level 1: fuzzySimpleSearch (phrase match with zero-width stripping)
+// Level 2: strip spaces from query and retry (handles "学院 大裂谷" → "学院大裂谷")
+// Level 3: multi-term AND search (split into individual terms)
+//
+// matchWholeWords → segmenterSearch with fuzzySimpleSearch fallback
+
+export const search = function* (strs, query, options) {
     const normalizedQuery = normalizeQuery(query)
-    const { granularity = 'grapheme', sensitivity = 'base' } = options
-    if (!Intl?.Segmenter || granularity === 'grapheme'
-    && (sensitivity === 'variant' || sensitivity === 'accent'))
-        return simpleSearch(strs, normalizedQuery, options)
-    return segmenterSearch(strs, normalizedQuery, options)
+    if (!normalizedQuery) return
+
+    const { granularity = 'grapheme' } = options
+
+    // matchWholeWords: use segmenterSearch first, fall back to fuzzy
+    if (granularity === 'word' && Intl?.Segmenter) {
+        let found = false
+        for (const result of segmenterSearch(strs, normalizedQuery, options)) {
+            found = true
+            yield result
+        }
+        if (found) return
+        // Fall through to fuzzy search below
+    }
+
+    // Level 1: direct phrase search
+    let found = false
+    for (const result of fuzzySimpleSearch(strs, normalizedQuery, options)) {
+        found = true
+        yield result
+    }
+    if (found) return
+
+    // Level 2: strip ALL whitespace and retry (CJK phrase tolerance)
+    const noSpaceQuery = normalizedQuery.replace(/\s+/g, '')
+    if (noSpaceQuery !== normalizedQuery && noSpaceQuery.length > 0) {
+        for (const result of fuzzySimpleSearch(strs, noSpaceQuery, options)) {
+            found = true
+            yield result
+        }
+        if (found) return
+    }
+
+    // Level 3: multi-term AND search (split by spaces, find sections with ALL terms)
+    const terms = normalizedQuery.split(/\s+/).filter(t => t.length > 0)
+    if (terms.length >= 2) {
+        for (const result of multiTermSearch(strs, normalizedQuery, options)) {
+            yield result
+        }
+    }
 }
 
 export const searchMatcher = (textWalker, opts) => {
