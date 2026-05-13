@@ -3,6 +3,69 @@ const CONTEXT_LENGTH = 50
 
 const normalizeWhitespace = str => str.replace(/\s+/g, ' ')
 
+// Zero-width and invisible characters to strip
+const ZERO_WIDTH_RE = /[\u200B\u200C\u200D\uFEFF\u00AD\u2060\u180E]/g
+
+// Full-width → half-width punctuation mapping (CJK common)
+const FW_TO_HW = {
+    '，': ',', '。': '.', '！': '!', '？': '?', '；': ';', '：': ':',
+    '"': '"', '"': '"', ''': "'", ''': "'", '（': '(', '）': ')',
+    '【': '[', '】': ']', '｛': '{', '｝': '}', '《': '<', '》': '>',
+    '、': ',', '～': '~', '…': '...', '—': '-', '－': '-',
+    '　': ' ', // ideographic space → ASCII space
+}
+const FW_CHARS_RE = new RegExp('[' + Object.keys(FW_TO_HW).join('') + ']', 'g')
+
+/**
+ * Normalize text for search matching.
+ * - Collapse consecutive whitespace into a single space
+ * - Remove zero-width / invisible characters
+ * - Convert full-width CJK punctuation to half-width equivalents
+ */
+const normalizeForSearch = str => str
+    .replace(ZERO_WIDTH_RE, '')
+    .replace(FW_CHARS_RE, ch => FW_TO_HW[ch] || ch)
+    .replace(/\s+/g, ' ')
+
+/**
+ * Build an offset map from normalized positions back to original positions.
+ * Returns { normalized, offsets } where offsets[i] gives the original index
+ * corresponding to normalized character i.
+ */
+const buildNormalizedMap = (original) => {
+    const offsets = []
+    let ni = 0
+    let lastWasSpace = false
+    const parts = []
+
+    for (let oi = 0; oi < original.length; oi++) {
+        const ch = original[oi]
+        // Skip zero-width chars
+        if (ZERO_WIDTH_RE.test(ch)) {
+            ZERO_WIDTH_RE.lastIndex = 0
+            continue
+        }
+        // Map full-width → half-width
+        const mapped = FW_TO_HW[ch] || ch
+        // Collapse whitespace
+        if (/\s/.test(mapped)) {
+            if (!lastWasSpace) {
+                parts.push(' ')
+                offsets.push(oi)
+                lastWasSpace = true
+            }
+            continue
+        }
+        // Handle multi-char replacements (e.g., '…' → '...')
+        for (let k = 0; k < mapped.length; k++) {
+            parts.push(mapped[k])
+            offsets.push(oi)
+        }
+        lastWasSpace = false
+    }
+    return { normalized: parts.join(''), offsets }
+}
+
 const makeExcerpt = (strs, { startIndex, startOffset, endIndex, endOffset }) => {
     const start = strs[startIndex]
     const end = strs[endIndex]
@@ -23,24 +86,54 @@ const makeExcerpt = (strs, { startIndex, startOffset, endIndex, endOffset }) => 
 const simpleSearch = function* (strs, query, options = {}) {
     const { locales = 'en', sensitivity } = options
     const matchCase = sensitivity === 'variant'
-    const haystack = strs.join('')
-    const lowerHaystack = matchCase ? haystack : haystack.toLocaleLowerCase(locales)
-    const needle = matchCase ? query : query.toLocaleLowerCase(locales)
-    const needleLength = needle.length
+
+    // Build the haystack from original strings
+    const originalHaystack = strs.join('')
+
+    // Normalize both haystack and needle for matching
+    const { normalized: normHaystack, offsets: normOffsets } = buildNormalizedMap(originalHaystack)
+    const normNeedle = matchCase
+        ? normalizeForSearch(query)
+        : normalizeForSearch(query).toLocaleLowerCase(locales)
+    const searchHaystack = matchCase ? normHaystack : normHaystack.toLocaleLowerCase(locales)
+    const needleLength = normNeedle.length
+
+    if (needleLength === 0) return
+
+    // Build cumulative lengths for mapping back to strs indices
+    const cumLengths = []
+    let cum = 0
+    for (const s of strs) {
+        cum += s.length
+        cumLengths.push(cum)
+    }
+
+    const findStrPosition = (originalIndex) => {
+        let strIndex = 0
+        while (strIndex < cumLengths.length && cumLengths[strIndex] <= originalIndex) {
+            strIndex++
+        }
+        const prevCum = strIndex > 0 ? cumLengths[strIndex - 1] : 0
+        return { strIndex, offset: originalIndex - prevCum }
+    }
+
     let index = -1
-    let strIndex = -1
-    let sum = 0
     do {
-        index = lowerHaystack.indexOf(needle, index + 1)
+        index = searchHaystack.indexOf(normNeedle, index + 1)
         if (index > -1) {
-            while (sum <= index) sum += strs[++strIndex].length
-            const startIndex = strIndex
-            const startOffset = index - (sum - strs[strIndex].length)
-            const end = index + needleLength
-            while (sum <= end) sum += strs[++strIndex].length
-            const endIndex = strIndex
-            const endOffset = end - (sum - strs[strIndex].length)
-            const range = { startIndex, startOffset, endIndex, endOffset }
+            // Map normalized positions back to original positions
+            const origStart = normOffsets[index] ?? 0
+            const origEnd = (normOffsets[index + needleLength - 1] ?? origStart) + 1
+
+            const startPos = findStrPosition(origStart)
+            const endPos = findStrPosition(origEnd)
+
+            const range = {
+                startIndex: startPos.strIndex,
+                startOffset: startPos.offset,
+                endIndex: endPos.strIndex,
+                endOffset: endPos.offset,
+            }
             yield { range, excerpt: makeExcerpt(strs, range) }
         }
     } while (index > -1)
@@ -57,7 +150,9 @@ const segmenterSearch = function* (strs, query, options = {}) {
         segmenter = new Intl.Segmenter('en', { usage: 'search', granularity })
         collator = new Intl.Collator('en', { sensitivity })
     }
-    const queryLength = Array.from(segmenter.segment(query)).length
+    // Normalize query before segmenting
+    const normQuery = normalizeForSearch(query)
+    const queryLength = Array.from(segmenter.segment(normQuery)).length
 
     const substrArr = []
     let strIndex = 0
@@ -75,19 +170,26 @@ const segmenterSearch = function* (strs, query, options = {}) {
                 } else break main
             }
             const { index, segment } = value
-            // ignore formatting characters
+            // ignore formatting characters and zero-width chars
             if (!/[^\p{Format}]/u.test(segment)) continue
+            if (ZERO_WIDTH_RE.test(segment)) {
+                ZERO_WIDTH_RE.lastIndex = 0
+                continue
+            }
             // normalize whitespace
             if (/\s/u.test(segment)) {
                 if (!/\s/u.test(substrArr[substrArr.length - 1]?.segment))
                     substrArr.push({ strIndex, index, segment: ' ' })
                 continue
             }
+            // Normalize segment (full-width → half-width)
+            const normSegment = normalizeForSearch(segment)
             value.strIndex = strIndex
+            value.normSegment = normSegment
             substrArr.push(value)
         }
-        const substr = substrArr.map(x => x.segment).join('')
-        if (collator.compare(query, substr) === 0) {
+        const substr = substrArr.map(x => x.normSegment || x.segment).join('')
+        if (collator.compare(normQuery, substr) === 0) {
             const endIndex = strIndex
             const lastSeg = substrArr[substrArr.length - 1]
             const endOffset = lastSeg.index + lastSeg.segment.length

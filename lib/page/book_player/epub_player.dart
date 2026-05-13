@@ -34,6 +34,8 @@ import 'package:papertok_reader/service/translate/fulltext_translate_runtime.dar
 import 'package:papertok_reader/service/translate/index.dart';
 import 'package:papertok_reader/service/translate/inline_fulltext_translation_status.dart';
 import 'package:papertok_reader/providers/toc_search.dart';
+import 'package:papertok_reader/service/rag/semantic_search_current_book.dart';
+import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/tts/models/tts_sentence.dart';
 import 'package:papertok_reader/utils/coordinates_to_part.dart';
 import 'package:papertok_reader/utils/js/convert_dart_color_to_js.dart';
@@ -353,6 +355,45 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         'matchWholeWords': false,
       })
     ''');
+
+    // Fire-and-forget semantic search in parallel
+    _runSemanticSearch(sanitized);
+  }
+
+  /// Runs semantic vector search in parallel with the JS exact search.
+  /// This is fire-and-forget — errors are silently caught to never block
+  /// the primary search flow.
+  Future<void> _runSemanticSearch(String query) async {
+    final tocSearch = ref.read(tocSearchProvider.notifier);
+
+    // Check if AI index exists for this book
+    if (!ref.read(tocSearchProvider).hasAiIndex) {
+      return;
+    }
+
+    try {
+      tocSearch.startSemanticSearch();
+
+      final service = SemanticSearchCurrentBook();
+      final result = await service.search(
+        bookId: widget.book.id,
+        query: query,
+        maxResults: 6,
+      );
+
+      // Only update if the query hasn't changed since we started
+      final currentQuery = ref.read(tocSearchProvider).query;
+      if (currentQuery != query) return;
+
+      if (result.ok && result.evidence.isNotEmpty) {
+        tocSearch.setSemanticResults(result.evidence);
+      } else {
+        tocSearch.finishSemanticSearch();
+      }
+    } catch (e) {
+      AnxLog.warning('Semantic search failed: $e');
+      tocSearch.finishSemanticSearch();
+    }
   }
 
   void _clearSearchHighlights() {
@@ -1222,6 +1263,20 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       // transition and only fades once the EPUB content has rendered.
     }
     super.initState();
+
+    // Check if AI semantic index exists for this book (async, fire-and-forget)
+    _checkAiIndex();
+  }
+
+  Future<void> _checkAiIndex() async {
+    try {
+      final info = await AiIndexDatabase.instance.getBookIndexInfo(widget.book.id);
+      if (mounted && info != null && info.chunkCount > 0) {
+        ref.read(tocSearchProvider.notifier).setHasAiIndex(true);
+      }
+    } catch (_) {
+      // Silently ignore — if AI index check fails, we just skip semantic search
+    }
   }
 
   @override

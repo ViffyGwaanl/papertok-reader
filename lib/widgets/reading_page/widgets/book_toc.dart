@@ -4,6 +4,7 @@ import 'package:papertok_reader/models/toc_item.dart';
 import 'package:papertok_reader/page/book_player/epub_player.dart';
 import 'package:papertok_reader/providers/book_toc.dart';
 import 'package:papertok_reader/providers/toc_search.dart';
+import 'package:papertok_reader/service/rag/semantic_search_current_book.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/common/container/filled_container.dart';
 import 'package:papertok_reader/service/reading/epub_player_key.dart';
@@ -345,28 +346,96 @@ class _BookTocState extends ConsumerState<BookToc> {
         },
       ),
     );
+    final semanticResults = tocSearchState.semanticResults;
+    final isSemanticSearching = tocSearchState.isSemanticSearching;
+    final hasAiIndex = tocSearchState.hasAiIndex;
+    final hasAnyResults = searchResults.isNotEmpty || semanticResults.isNotEmpty;
+
     var searchResult = Expanded(
         child: Column(
       children: [
         const SizedBox(height: 6.0),
-        if (showSearchProgress)
+        if (showSearchProgress || isSemanticSearching)
           LinearProgressIndicator(
-            value: progressValue,
+            value: showSearchProgress ? progressValue : null,
           ),
         Expanded(
-          child: searchResults.isEmpty
-              ? const SizedBox()
-              : ListView.builder(
+          child: !hasAnyResults && !showSearchProgress && !isSemanticSearching
+              ? _buildEmptySearchState(context, hasAiIndex)
+              : ListView(
                   controller: searchResultsScrollController,
-                  itemCount: searchResults.length,
-                  itemBuilder: (context, index) {
-                    return searchResultWidget(
-                      searchResult: searchResults[index],
-                      hideAppBarAndBottomBar: widget.hideAppBarAndBottomBar,
-                      epubPlayerKey: widget.epubPlayerKey,
-                      closeDrawer: widget.closeDrawer,
-                    );
-                  },
+                  children: [
+                    // Exact match results
+                    for (final result in searchResults)
+                      searchResultWidget(
+                        searchResult: result,
+                        hideAppBarAndBottomBar: widget.hideAppBarAndBottomBar,
+                        epubPlayerKey: widget.epubPlayerKey,
+                        closeDrawer: widget.closeDrawer,
+                      ),
+                    // Semantic search results section
+                    if (semanticResults.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12.0, vertical: 8.0),
+                        child: Row(
+                          children: [
+                            const Text('🧠', style: TextStyle(fontSize: 16)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'AI 语义推荐',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: ClaudePalette.accent(context),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: ClaudePalette.accent(context)
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${semanticResults.length}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: ClaudePalette.accent(context),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      for (final evidence in semanticResults)
+                        _semanticResultWidget(
+                          evidence: evidence,
+                          hideAppBarAndBottomBar: widget.hideAppBarAndBottomBar,
+                          epubPlayerKey: widget.epubPlayerKey,
+                          closeDrawer: widget.closeDrawer,
+                        ),
+                    ],
+                    // Hint to build AI index if not available
+                    if (semanticResults.isEmpty &&
+                        !hasAiIndex &&
+                        !isSemanticSearching &&
+                        searchResults.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Text(
+                          '💡 构建 AI 索引可获得更多智能搜索结果\n设置 → 其他 → AI 语义索引',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: ClaudePalette.tertiary(context),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
         ),
       ],
@@ -486,6 +555,118 @@ Widget searchResultWidget({
         ],
       );
     },
+  );
+}
+
+Widget _buildEmptySearchState(BuildContext context, bool hasAiIndex) {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 48,
+            color: ClaudePalette.tertiary(context),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '暂无搜索结果',
+            style: TextStyle(
+              fontSize: 15,
+              color: ClaudePalette.tertiary(context),
+            ),
+          ),
+          if (!hasAiIndex) ...[
+            const SizedBox(height: 16),
+            Text(
+              '💡 构建 AI 索引可启用智能语义搜索\n设置 → 其他 → AI 语义索引',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: ClaudePalette.tertiary(context),
+              ),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _semanticResultWidget({
+  required AiSemanticSearchEvidence evidence,
+  required Function hideAppBarAndBottomBar,
+  required GlobalKey<EpubPlayerState> epubPlayerKey,
+  required VoidCallback closeDrawer,
+}) {
+  final scorePercent = (evidence.score * 100).toInt();
+  return FilledContainer(
+    margin: const EdgeInsets.only(bottom: 5, left: 4, right: 4),
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+    radius: 10,
+    child: InkWell(
+      onTap: () {
+        hideAppBarAndBottomBar(false);
+        epubPlayerKey.currentState?.goToHref(evidence.href);
+        closeDrawer();
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  evidence.anchor,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: ClaudePalette.accent(
+                        navigatorKey.currentContext!),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: ClaudePalette.accent(
+                          navigatorKey.currentContext!)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '$scorePercent%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: ClaudePalette.accent(
+                        navigatorKey.currentContext!),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            evidence.text,
+            style: TextStyle(
+              fontSize: 13,
+              color: ClaudePalette.tertiary(
+                  navigatorKey.currentContext!),
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    ),
   );
 }
 

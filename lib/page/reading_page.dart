@@ -27,7 +27,6 @@ import 'package:papertok_reader/providers/kairos_provider.dart';
 import 'package:papertok_reader/utils/env_var.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/utils/ui/status_bar.dart';
-import 'package:papertok_reader/widgets/ai/ai_chat_bottom_sheet.dart';
 import 'package:papertok_reader/widgets/ai/ai_multi_tab_chat.dart';
 import 'package:papertok_reader/widgets/ai/ai_stream.dart';
 import 'package:papertok_reader/widgets/reading_page/notes_widget.dart';
@@ -102,8 +101,13 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   bool bottomBarOffstage = true;
   Widget? _aiChat;
   final aiChatKey = GlobalKey<AiMultiTabChatState>();
-  final _aiBottomSheetKey = GlobalKey<AiChatBottomSheetState>();
   bool _aiChatVisible = false;
+  /// Whether the persistent AI bottom-sheet panel has been created at least
+  /// once. Once true the widget stays in the tree (via Offstage) so that
+  /// ProviderScopes survive minimize/restore and streaming is never interrupted.
+  bool _aiChatCreated = false;
+  String? _aiInitialMessage;
+  bool _aiSendImmediate = false;
   static const double _aiChatMinWidth = 240;
   double _aiChatWidth = 300;
   static const double _aiChatMinHeight = 200;
@@ -839,8 +843,6 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             Prefs().aiPadPanelMode == AiPadPanelModeEnum.bottomSheet);
   }
 
-  PersistentBottomSheetController? _aiBottomSheetController;
-
   Future<void> showAiChat({
     String? content,
     bool sendImmediate = false,
@@ -850,13 +852,9 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         _shouldUseAiBottomSheet(navigatorKey.currentContext!);
 
     if (useBottomSheet) {
-      final scaffoldState = _scaffoldKey.currentState;
-      if (scaffoldState == null) return;
-
-      if (_aiBottomSheetController != null) {
-        // Sheet is alive but hidden — reveal it without rebuilding.
+      if (_aiChatCreated) {
+        // Panel already in the tree — just reveal it.
         setState(() => _aiChatVisible = true);
-        _aiBottomSheetKey.currentState?.revealSheet();
         if (content != null) {
           aiChatKey.currentState?.prefillDraft(message: content);
         }
@@ -866,39 +864,12 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         return;
       }
 
-      setState(() => _aiChatVisible = true);
-      _aiBottomSheetController = scaffoldState.showBottomSheet(
-        (context) => PointerInterceptor(
-          child: AiChatBottomSheet(
-            key: _aiBottomSheetKey,
-            aiChatKey: aiChatKey,
-            initialMessage: content,
-            sendImmediate: sendImmediate,
-            quickPromptChips: quickPrompts,
-            // Reading page: open fully expanded and lock the height — the
-            // only allowed gesture is "drag down to close".
-            initialSizeOverride: 0.95,
-            rememberSize: false,
-            lockToInitialSize: true,
-            // Don't close the controller — just mark as hidden so the
-            // ProviderScope stays alive and streaming continues.
-            onRequestClose: () {
-              if (mounted) setState(() => _aiChatVisible = false);
-            },
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        enableDrag: false,
-        // Force the sheet to span the full Scaffold width, otherwise on
-        // iPad/wide screens Material's default sheet width caps it and the
-        // reading view shows through on the sides.
-        constraints: const BoxConstraints(maxWidth: double.infinity),
-      );
-
-      _aiBottomSheetController!.closed.whenComplete(() {
-        _aiBottomSheetController = null;
-        if (mounted) setState(() => _aiChatVisible = false);
+      // First creation: store initial parameters and make visible.
+      setState(() {
+        _aiInitialMessage = content;
+        _aiSendImmediate = sendImmediate;
+        _aiChatCreated = true;
+        _aiChatVisible = true;
       });
     } else {
       setState(() {
@@ -1177,6 +1148,55 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                     child: TtsFab(),
                   ),
                 controller,
+                // Persistent AI chat panel. AnimatedSlide keeps the widget
+                // tree alive (including all per-tab ProviderScopes) so that
+                // streaming continues and state is preserved while hidden,
+                // while still providing a smooth slide-up/down animation.
+                if (_aiChatCreated)
+                  Positioned.fill(
+                    child: AnimatedSlide(
+                      offset: _aiChatVisible
+                          ? Offset.zero
+                          : const Offset(0, 1),
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeOutCubic,
+                      child: IgnorePointer(
+                        ignoring: !_aiChatVisible,
+                        child: PointerInterceptor(
+                          child: Material(
+                            clipBehavior: Clip.antiAlias,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(
+                                  AppSpacing.cornerRadiusLarge),
+                            ),
+                            child: AiMultiTabChat(
+                              key: aiChatKey,
+                              initialMessage: _aiInitialMessage,
+                              sendImmediate: _aiSendImmediate,
+                              quickPromptChips: _getAiQuickPromptChips(),
+                              onRequestMinimize: null,
+                              onTapTabBar: () {
+                                if (mounted) {
+                                  setState(() => _aiChatVisible = false);
+                                }
+                              },
+                              trailing: [
+                                IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () {
+                                    if (mounted) {
+                                      setState(
+                                          () => _aiChatVisible = false);
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
