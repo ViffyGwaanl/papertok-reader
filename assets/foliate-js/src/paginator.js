@@ -1212,6 +1212,22 @@ export class Paginator extends HTMLElement {
           doc.head.append($style)
           this.#styleMap.set(doc, [$styleBefore, $style])
         }
+        // Early bg suppression: getCSS() injects `html/body { background:
+        // transparent !important }` via setStyles(), but that happens AFTER
+        // View.load() flips the iframe to display:block. During that gap the
+        // browser paints the iframe's contentDocument with the default white
+        // body background, which is the "white frame" flash users see on
+        // book open AND on scroll-mode chapter switch. Suppress it inline
+        // here so the very first paint already shows through to #top's
+        // theme-coloured background.
+        if (doc.documentElement) {
+          doc.documentElement.style.background = 'transparent'
+          doc.documentElement.style.backgroundColor = 'transparent'
+        }
+        if (doc.body) {
+          doc.body.style.background = 'transparent'
+          doc.body.style.backgroundColor = 'transparent'
+        }
         onLoad?.({ doc, index })
       }
       const beforeRender = this.#beforeRender.bind(this)

@@ -1841,11 +1841,22 @@ return null;
         : '';
     final String initialCfi = widget.cfi ?? widget.book.lastReadPosition;
 
+    // Anchor the Scaffold's underlying chrome to the book's reading-theme
+    // background. The WebView is rendered with `transparentBackground: true`
+    // so the Scaffold colour shows through during the WebView's brief
+    // initialisation gap; without this, dark-mode users see a black flash
+    // before the foliate document paints. Mirrors the same colour we pass
+    // to the WebView URL via `generateUrl(..., backgroundColor: ...)`.
+    final scaffoldBg = (backgroundColor != null && backgroundColor!.isNotEmpty)
+        ? Color(int.parse('0x$backgroundColor'))
+        : null;
+
     return Listener(
       onPointerSignal: (event) {
         _handlePointerEvents(event);
       },
       child: Scaffold(
+        backgroundColor: scaffoldBg,
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [

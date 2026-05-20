@@ -116,7 +116,7 @@ Stream<String> _generateStream({
   // - LangChain registry resolves by *provider kind* (openai/claude/gemini).
   //   We map from provider meta.type to a stable built-in identifier.
   final meta = Prefs().getAiProviderMeta(selectedProviderId);
-  final registryIdentifier = meta == null
+  var registryIdentifier = meta == null
       ? selectedProviderId
       : switch (meta.type) {
           AiProviderType.anthropic => 'claude',
@@ -124,6 +124,32 @@ Stream<String> _generateStream({
           AiProviderType.openaiResponses => 'openai-responses',
           AiProviderType.openaiCompatible => 'openai',
         };
+
+  // DeepSeek detection: the meta-type switch collapses every OpenAI-compatible
+  // provider to 'openai', including DeepSeek. That hides the dedicated
+  // ChatDeepSeek model that handles V3.1+ thinking-mode `reasoning_content`
+  // correctly. Promote to 'deepseek' when we can tell:
+  //   - the selected provider id is the built-in 'deepseek'
+  //   - the configured base URL points at api.deepseek.com
+  //   - the configured model name starts with deepseek-* (covers NewAPI /
+  //     OpenRouter gateways and any other relay that exposes DeepSeek models)
+  if (registryIdentifier == 'openai') {
+    final cfg = Prefs().getAiConfig(selectedProviderId);
+    final mergedRaw = <String, String>{...cfg, ...(overrideConfig ?? const {})};
+    final url = (mergedRaw['url'] ?? '').toLowerCase();
+    final model = (mergedRaw['model'] ?? '').toLowerCase();
+    if (selectedProviderId == 'deepseek' ||
+        url.contains('deepseek.com') ||
+        model.startsWith('deepseek-') ||
+        model == 'deepseek-chat' ||
+        model == 'deepseek-reasoner') {
+      AnxLog.info(
+        'aiGenerateStream: promoting "$selectedProviderId" to deepseek '
+        '(url=$url model=$model)',
+      );
+      registryIdentifier = 'deepseek';
+    }
+  }
 
   final sanitizedMessages = _sanitizeMessagesForPrompt(
     messages,
