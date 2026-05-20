@@ -161,6 +161,52 @@ void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
   flushBuffer();
 }
 
+class DeepSeekAssistantFields {
+  const DeepSeekAssistantFields({
+    required this.content,
+    this.reasoningContent,
+  });
+
+  final String content;
+  final String? reasoningContent;
+}
+
+/// Split an assistant message authored by the Paper Reader runner into the two
+/// fields DeepSeek expects: `content` (final reply + tool-step plaintext) and
+/// `reasoning_content` (the chain-of-thought that was previously wrapped in
+/// `<think>…</think>`).
+DeepSeekAssistantFields extractDeepSeekAssistantFields(String content) {
+  if (content.isEmpty) {
+    return const DeepSeekAssistantFields(content: '');
+  }
+
+  final thinkRegex = RegExp(r'<think>([\s\S]*?)<\/think>');
+  final matches = thinkRegex.allMatches(content).toList(growable: false);
+
+  String? reasoning;
+  if (matches.isNotEmpty) {
+    final parts = <String>[];
+    for (final m in matches) {
+      final inner = m.group(1)?.trim();
+      if (inner != null && inner.isNotEmpty) {
+        parts.add(inner);
+      }
+    }
+    if (parts.isNotEmpty) {
+      reasoning = parts.join('\n\n');
+    }
+  }
+
+  final remaining = content.replaceAll(thinkRegex, '');
+  final plain = reasoningContentToPlainText(remaining).trim();
+  final cleaned = plain.isEmpty ? remaining.trim() : plain;
+
+  return DeepSeekAssistantFields(
+    content: cleaned,
+    reasoningContent: reasoning,
+  );
+}
+
 String reasoningContentToPlainText(String content) {
   final parsed = parseReasoningContent(content);
   if (parsed.timeline.isEmpty) {

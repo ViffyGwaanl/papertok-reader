@@ -16,6 +16,7 @@ import 'package:langchain_core/tools.dart';
 import 'package:langchain_google/langchain_google.dart';
 import 'package:langchain_openai/langchain_openai.dart';
 
+import 'chat_deepseek.dart';
 import 'gemini_chat_with_thinking.dart';
 import 'openai_responses_chat_model.dart';
 
@@ -54,6 +55,12 @@ class LangchainAiRegistry {
           annotationLedger: annotationLedger,
         );
       case 'deepseek':
+        return _buildPipeline(
+          config,
+          _buildDeepSeek(config),
+          useAgent: useAgent,
+          annotationLedger: annotationLedger,
+        );
       case 'openrouter':
       case 'openai':
       default:
@@ -64,6 +71,15 @@ class LangchainAiRegistry {
           annotationLedger: annotationLedger,
         );
     }
+  }
+
+  BaseChatModel _buildDeepSeek(LangchainAiConfig config) {
+    return ChatDeepSeek(
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl,
+      headers: config.headers.isEmpty ? null : config.headers,
+      defaultOptions: config.toOpenAIOptions(),
+    );
   }
 
   BaseChatModel _buildOpenAi(LangchainAiConfig config) {

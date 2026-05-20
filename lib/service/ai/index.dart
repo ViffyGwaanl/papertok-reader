@@ -109,7 +109,6 @@ Stream<String> _generateStream({
   required LangchainAiRegistry registry,
 }) async* {
   AnxLog.info('aiGenerateStream called identifier: $identifier');
-  final sanitizedMessages = _sanitizeMessagesForPrompt(messages);
   final selectedProviderId = identifier ?? Prefs().selectedAiService;
 
   // Provider Center integration:
@@ -125,6 +124,11 @@ Stream<String> _generateStream({
           AiProviderType.openaiResponses => 'openai-responses',
           AiProviderType.openaiCompatible => 'openai',
         };
+
+  final sanitizedMessages = _sanitizeMessagesForPrompt(
+    messages,
+    registryIdentifier: registryIdentifier,
+  );
 
   final savedConfig = Prefs().getAiConfig(selectedProviderId);
   if (savedConfig.isEmpty &&
@@ -532,7 +536,20 @@ String _mapError(Object error) {
   return '$base${error.toString()}';
 }
 
-List<ChatMessage> _sanitizeMessagesForPrompt(List<ChatMessage> messages) {
+List<ChatMessage> _sanitizeMessagesForPrompt(
+  List<ChatMessage> messages, {
+  required String registryIdentifier,
+}) {
+  // DeepSeek's thinking-mode API expects the chain-of-thought to be passed
+  // back in a dedicated `reasoning_content` field on the assistant message.
+  // ChatDeepSeek extracts `<think>…</think>` directly from the raw assistant
+  // payload, so we must NOT flatten the structured content here for DeepSeek
+  // — otherwise the model would see thinking text crammed into `content` and
+  // reject the request with "must be passed back".
+  if (registryIdentifier == 'deepseek') {
+    return messages;
+  }
+
   return messages.map((message) {
     if (message is AIChatMessage) {
       final plainText = reasoningContentToPlainText(message.content);

@@ -109,6 +109,11 @@ dependencies:
   langchain_google: ^0.7.1+2
   langchain_openai:
     path: packages/langchain_openai
+  # ChatDeepSeek needs the typed openai_dart schema (e.g.
+  # CreateChatCompletionStreamResponse) to parse DeepSeek's
+  # OpenAI-compatible SSE responses, including the non-standard
+  # `reasoning_content` field on assistant deltas.
+  openai_dart: ^0.6.2
   image_picker: ^1.1.2
     # Upstream reference:
     #   version: 0.8.1+1
