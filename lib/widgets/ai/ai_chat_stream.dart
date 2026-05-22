@@ -2324,7 +2324,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final quickPrompts = _getQuickPrompts(context);
     final chatIsStreaming = ref.watch(aiChatStreamingProvider);
     final contextNotice = ref.watch(aiChatContextNoticeProvider);
-    final usageSummary = ref.watch(aiChatUsageSummaryProvider);
 
     // Refresh providers in case user toggled enable/disable in Provider Center.
     _providers = Prefs().aiProvidersV1;
@@ -2613,8 +2612,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if ((contextNotice ?? '').trim().isNotEmpty ||
-                  (usageSummary ?? '').trim().isNotEmpty)
+              if ((contextNotice ?? '').trim().isNotEmpty)
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(bottom: 8),
@@ -2624,31 +2622,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     color: Theme.of(context).colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          (contextNotice ?? '').trim().isNotEmpty
-                              ? contextNotice!
-                              : '',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                      if ((usageSummary ?? '').trim().isNotEmpty) ...[
-                        if ((contextNotice ?? '').trim().isNotEmpty)
-                          const SizedBox(width: 8),
-                        Icon(Icons.token_outlined,
-                            size: 12,
-                            color: Theme.of(context).colorScheme.outline),
-                        const SizedBox(width: 3),
-                        Text(
-                          usageSummary!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.outline,
-                              ),
-                        ),
-                      ],
-                    ],
+                  child: Text(
+                    contextNotice!,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
               // Book import strip (UI-only)
@@ -3234,6 +3210,34 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         prevHumanIndex != null && prevHumanIndex == lastHumanIndex;
 
     final maxBubbleWidth = MediaQuery.sizeOf(context).width * 0.8;
+
+    Widget? footer;
+    if (!isUser) {
+      final segMeta =
+          ref.read(aiChatProvider.notifier).segmentMetaForMessageIndex(index);
+      final segText = segMeta?.footerText() ?? '';
+      final isLastAssistant =
+          index == allMessages.lastIndexWhere((m) => m is AIChatMessage);
+      final usageSummary = ref.watch(aiChatUsageSummaryProvider);
+      final cumulative =
+          isLastAssistant && (usageSummary ?? '').trim().isNotEmpty
+              ? '会话累计 $usageSummary'
+              : '';
+      final pieces =
+          [segText, cumulative].where((s) => s.isNotEmpty).toList();
+      if (pieces.isNotEmpty) {
+        footer = Padding(
+          padding: const EdgeInsets.only(top: 2, left: 2),
+          child: Text(
+            pieces.join('  ·  '),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+        );
+      }
+    }
+
     return Padding(
       padding: EdgeInsets.fromLTRB(
         isUser ? 8.0 : 12.0,
@@ -3312,6 +3316,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ],
                     ],
                   ),
+                  if (footer != null) footer,
                 ],
               ),
               ),
