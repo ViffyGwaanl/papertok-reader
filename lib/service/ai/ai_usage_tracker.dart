@@ -73,10 +73,10 @@ class AiUsageTracker {
   /// Short format for UI status bar.
   String toShortSummary() {
     if (_estimatedCostUsd > 0) {
-      return '${_formatTokenCount(totalTokens)} tokens · '
+      return '${formatTokenCount(totalTokens)} tokens · '
           '\$${_estimatedCostUsd.toStringAsFixed(3)}';
     }
-    return '${_formatTokenCount(totalTokens)} tokens';
+    return '${formatTokenCount(totalTokens)} tokens';
   }
 
   double _calculateCost({
@@ -99,7 +99,7 @@ class AiUsageTracker {
     return inputCost + outputCost + cacheReadCost + cacheWriteCost;
   }
 
-  static String _formatTokenCount(int count) {
+  static String formatTokenCount(int count) {
     if (count >= 1000000) {
       return '${(count / 1000000).toStringAsFixed(1)}M';
     }

@@ -46,6 +46,10 @@ class AiChat extends _$AiChat {
   AiChatHistoryEntry? _draftEntry;
   String? _draftAssistantNodeId;
 
+  String _draftModel = '';
+  int _draftTokenInSnapshot = 0;
+  int _draftTokenOutSnapshot = 0;
+
   @override
   FutureOr<List<ChatMessage>> build() async {
     _currentSessionId = null;
@@ -287,6 +291,11 @@ class AiChat extends _$AiChat {
       ref.read(aiChatContextNoticeProvider.notifier).state = null;
     }
 
+    _draftModel = model;
+    final startTracker = getUsageTracker(sessionId);
+    _draftTokenInSnapshot = startTracker?.inputTokens ?? 0;
+    _draftTokenOutSnapshot = startTracker?.outputTokens ?? 0;
+
     ref.read(aiChatStreamingProvider.notifier).setStreaming(true);
 
     final stream = aiGenerateStream(
@@ -352,6 +361,29 @@ class AiChat extends _$AiChat {
     if (tracker != null && tracker.totalTokens > 0) {
       ref.read(aiChatUsageSummaryProvider.notifier).state =
           tracker.toShortSummary();
+    }
+
+    // Persist per-segment meta (model + this-turn token delta) on the
+    // assistant node so it survives reload.
+    final assistantId = _draftAssistantNodeId;
+    if (assistantId != null && _tree.nodes.containsKey(assistantId)) {
+      final node = _tree.nodes[assistantId]!;
+      int? deltaIn;
+      int? deltaOut;
+      if (tracker != null) {
+        final di = tracker.inputTokens - _draftTokenInSnapshot;
+        final dout = tracker.outputTokens - _draftTokenOutSnapshot;
+        deltaIn = di > 0 ? di : null;
+        deltaOut = dout > 0 ? dout : null;
+      }
+      final meta = AiSegmentMeta(
+        model: _draftModel.isEmpty ? null : _draftModel,
+        inputTokens: deltaIn,
+        outputTokens: deltaOut,
+      );
+      if (!meta.isEmpty) {
+        _tree = _tree.copyWithNode(assistantId, node.copyWith(meta: meta));
+      }
     }
 
     final historyNotifier = ref.read(aiHistoryProvider.notifier);
@@ -597,6 +629,15 @@ class AiChat extends _$AiChat {
     if (siblings.isEmpty) return 0;
     final idx = siblings.indexOf(nodeId);
     return idx < 0 ? 0 : idx;
+  }
+
+  /// Returns the persisted per-segment meta for the message at [messageIndex]
+  /// on the active path, or null if none.
+  AiSegmentMeta? segmentMetaForMessageIndex(int messageIndex) {
+    if (messageIndex < 0 || messageIndex >= _activeNodeIds.length) {
+      return null;
+    }
+    return _tree.nodes[_activeNodeIds[messageIndex]]?.meta;
   }
 
   void persistCurrentConversation(WidgetRef ref) {
