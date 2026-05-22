@@ -15,28 +15,38 @@ void main() {
     await Prefs().initPrefs();
   });
 
-  test('deriveFallbackTitle uses first human line and trims punctuation', () {
+  test('deriveFallbackTitle uses first AI reply line, not the question', () {
     const service = ConversationTitleService();
     final title = service.deriveFallbackTitle(const [
       HumanChatMessage(
-        content: ChatMessageContentText(text: '怎么做 Memory workflow。\n第二行'),
+        content: ChatMessageContentText(text: '怎么做 Memory workflow？'),
       ),
-      AIChatMessage(content: '可以先做 candidate inbox'),
+      AIChatMessage(content: 'Memory 分三步。\n第二行'),
     ]);
 
-    expect(title, '怎么做 Memory workf');
+    expect(title, 'Memory 分三步');
   });
 
-  test('generateTitle falls back when automatic title generation is disabled',
-      () async {
+  test('deriveFallbackTitle returns Conversation when no AI reply', () {
+    const service = ConversationTitleService();
+    final title = service.deriveFallbackTitle(const [
+      HumanChatMessage(
+        content: ChatMessageContentText(text: '只有提问'),
+      ),
+    ]);
+
+    expect(title, 'Conversation');
+  });
+
+  test('generateTitle falls back to first AI reply when disabled', () async {
     const service = ConversationTitleService();
     final title = await service.generateTitle(const [
       HumanChatMessage(
         content: ChatMessageContentText(text: '给这段对话起一个标题'),
       ),
-      AIChatMessage(content: '好的'),
+      AIChatMessage(content: '好的，这是关于 RAG 的讨论'),
     ]);
 
-    expect(title, '给这段对话起一个标题');
+    expect(title, '好的，这是关于 RAG 的讨论');
   });
 }

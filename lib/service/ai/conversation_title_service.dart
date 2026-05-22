@@ -72,10 +72,10 @@ class ConversationTitleService {
 
   String deriveFallbackTitle(List<ChatMessage> messages) {
     for (final message in messages) {
-      if (message is! HumanChatMessage) {
+      if (message is! AIChatMessage) {
         continue;
       }
-      final text = _plainText(message.content).trim();
+      final text = message.contentAsString.trim();
       if (text.isEmpty) {
         continue;
       }
@@ -88,45 +88,15 @@ class ConversationTitleService {
   }
 
   String _buildTranscript(List<ChatMessage> messages) {
-    final lines = <String>[];
     for (final message in messages) {
-      late final String role;
-      late final String text;
-      if (message is HumanChatMessage) {
-        role = 'User';
-        text = _plainText(message.content).trim();
-      } else if (message is AIChatMessage) {
-        role = 'Assistant';
-        text = message.contentAsString.trim();
-      } else {
-        role = 'Message';
-        text = message.contentAsString.trim();
+      if (message is! AIChatMessage) {
+        continue;
       }
+      final text = message.contentAsString.trim();
       if (text.isEmpty) continue;
-      lines.add('$role: $text');
-      if (lines.length >= 8) {
-        break;
-      }
+      return text.length <= 1600 ? text : text.substring(0, 1600);
     }
-
-    final joined = lines.join('\n');
-    if (joined.length <= 1600) {
-      return joined;
-    }
-    return joined.substring(0, 1600);
-  }
-
-  String _plainText(ChatMessageContent content) {
-    if (content is ChatMessageContentText) {
-      return content.text;
-    }
-    if (content is ChatMessageContentMultiModal) {
-      return content.parts
-          .whereType<ChatMessageContentText>()
-          .map((e) => e.text)
-          .join('\n');
-    }
-    return content.toString();
+    return '';
   }
 
   String _titlePrompt({
