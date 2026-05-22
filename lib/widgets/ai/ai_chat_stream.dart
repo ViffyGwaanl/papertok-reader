@@ -1054,8 +1054,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       return stored;
     }
     for (final message in entry.messages) {
-      if (message is HumanChatMessage) {
-        final content = _extractUserTextFromHuman(message).trim();
+      if (message is AIChatMessage) {
+        final content = message.contentAsString.trim();
         if (content.isNotEmpty) {
           final firstLine = content.split('\n').first.trim();
           return firstLine;
