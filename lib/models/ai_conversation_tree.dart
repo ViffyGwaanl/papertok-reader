@@ -275,6 +275,7 @@ class AiConversationNode {
     required this.message,
     required this.createdAt,
     required this.updatedAt,
+    this.meta,
   });
 
   final String id;
@@ -287,6 +288,10 @@ class AiConversationNode {
 
   final int createdAt;
   final int updatedAt;
+
+  /// Per-segment metadata (model + token usage). Null for non-assistant nodes
+  /// and legacy data created before this field existed.
+  final AiSegmentMeta? meta;
 
   ChatMessage? toChatMessage() {
     final msg = message;
@@ -302,6 +307,7 @@ class AiConversationNode {
       'message': message,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      if (meta != null) 'meta': meta!.toJson(),
     };
   }
 
@@ -320,6 +326,14 @@ class AiConversationNode {
       message = rawMessage.map((k, v) => MapEntry(k.toString(), v));
     }
 
+    final rawMeta = json['meta'];
+    AiSegmentMeta? meta;
+    if (rawMeta is Map) {
+      meta = AiSegmentMeta.fromJson(
+        rawMeta.map((k, v) => MapEntry(k.toString(), v)),
+      );
+    }
+
     return AiConversationNode(
       id: id,
       parentId: json['parentId']?.toString(),
@@ -332,6 +346,7 @@ class AiConversationNode {
       updatedAt: json['updatedAt'] is int
           ? json['updatedAt'] as int
           : DateTime.now().millisecondsSinceEpoch,
+      meta: meta,
     );
   }
 
@@ -342,6 +357,7 @@ class AiConversationNode {
     Map<String, dynamic>? message,
     int? createdAt,
     int? updatedAt,
+    AiSegmentMeta? meta,
   }) {
     return AiConversationNode(
       id: id,
@@ -351,6 +367,76 @@ class AiConversationNode {
       message: message ?? this.message,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      meta: meta ?? this.meta,
     );
+  }
+}
+
+/// Per-segment metadata captured for a single assistant turn.
+///
+/// Stored on the assistant [AiConversationNode] so it persists with the
+/// conversation tree. All fields are optional for backward compatibility.
+@immutable
+class AiSegmentMeta {
+  const AiSegmentMeta({
+    this.model,
+    this.inputTokens,
+    this.outputTokens,
+  });
+
+  /// The model name used for this turn (e.g. `gpt-4o`).
+  final String? model;
+
+  /// Input tokens consumed by this turn (delta of the session tracker).
+  final int? inputTokens;
+
+  /// Output tokens produced by this turn (delta of the session tracker).
+  final int? outputTokens;
+
+  bool get isEmpty =>
+      (model == null || model!.isEmpty) &&
+      inputTokens == null &&
+      outputTokens == null;
+
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{};
+    if (model != null && model!.isNotEmpty) map['model'] = model;
+    if (inputTokens != null) map['inputTokens'] = inputTokens;
+    if (outputTokens != null) map['outputTokens'] = outputTokens;
+    return map;
+  }
+
+  factory AiSegmentMeta.fromJson(Map<String, dynamic> json) {
+    final rawIn = json['inputTokens'];
+    final rawOut = json['outputTokens'];
+    return AiSegmentMeta(
+      model: json['model']?.toString(),
+      inputTokens: rawIn is int ? rawIn : (rawIn is num ? rawIn.toInt() : null),
+      outputTokens:
+          rawOut is int ? rawOut : (rawOut is num ? rawOut.toInt() : null),
+    );
+  }
+
+  /// One-line label for the per-segment footer. Returns '' when nothing to show.
+  String footerText() {
+    final parts = <String>[];
+    if (model != null && model!.isNotEmpty) {
+      parts.add(model!);
+    }
+    if (inputTokens != null || outputTokens != null) {
+      final total = (inputTokens ?? 0) + (outputTokens ?? 0);
+      final detail = StringBuffer('${_formatTokenCount(total)} tok');
+      if (inputTokens != null && outputTokens != null) {
+        detail.write(' ($inputTokens in / $outputTokens out)');
+      }
+      parts.add(detail.toString());
+    }
+    return parts.join(' · ');
+  }
+
+  static String _formatTokenCount(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count.toString();
   }
 }
