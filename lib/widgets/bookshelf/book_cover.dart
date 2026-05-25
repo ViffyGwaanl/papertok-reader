@@ -44,11 +44,15 @@ class BookCover extends StatelessWidget {
     final BorderRadius borderRadius = BorderRadius.circular(effectiveRadius);
     final File file = File(book.coverFullPath);
 
+    final Color backgroundColor = _morandiCoverTints[
+        book.title.hashCode.abs() % _morandiCoverTints.length];
+
     Widget child;
 
     if (file.existsSync()) {
       child = Container(
         decoration: BoxDecoration(
+          color: backgroundColor,
           image: DecorationImage(
             image: FileImage(file),
             fit: BoxFit.cover,
@@ -67,8 +71,6 @@ class BookCover extends StatelessWidget {
           final iconSize = coverWidth * 0.8;
           final padding = coverWidth * 0.08;
 
-          final backgroundColor = _morandiCoverTints[
-              book.title.hashCode.abs() % _morandiCoverTints.length];
           final textColor = _getContrastColor(backgroundColor);
 
           final showTitle = Prefs().showBookTitleOnDefaultCover;

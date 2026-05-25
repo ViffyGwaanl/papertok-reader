@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:papertok_reader/theme/morandi_palette.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/dao/book.dart';
 import 'package:papertok_reader/dao/book_note.dart';
@@ -61,6 +64,15 @@ import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'minute_clock.dart';
+
+const List<Color> _morandiCoverTints = [
+  MorandiPalette.sageLight,
+  MorandiPalette.dustyRoseLight,
+  MorandiPalette.clayLight,
+  MorandiPalette.lavenderLight,
+  MorandiPalette.powderLight,
+  MorandiPalette.mossLight,
+];
 
 class EpubPlayer extends ConsumerStatefulWidget {
   final Book book;
@@ -1254,7 +1266,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       _animationController = AnimationController(
         duration: const Duration(milliseconds: 600),
         vsync: this,
-        value: 1.0,
+        value: 0.0,
       );
       _animation =
           Tween<double>(begin: 1.0, end: 0.0).animate(_animationController!);
@@ -1698,6 +1710,116 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     );
   }
 
+  Widget _buildBookOpeningOverlay(BuildContext context, double screenWidth, double screenHeight) {
+    // Choose Morandi background tint matching the book
+    final Color tintColor = _morandiCoverTints[
+        widget.book.title.hashCode.abs() % _morandiCoverTints.length];
+        
+    final File coverFile = File(widget.book.coverFullPath);
+    
+    return SizedBox.expand(
+      child: IgnorePointer(
+        ignoring: true,
+        child: FadeTransition(
+          opacity: _animation!,
+          child: Container(
+            color: Color.lerp(tintColor, Theme.of(context).colorScheme.surface, 0.85),
+            child: Stack(
+              children: [
+                // 1. Soft blurred background cover (if cover exists)
+                if (coverFile.existsSync())
+                  Positioned.fill(
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 30.0, sigmaY: 30.0),
+                      child: Opacity(
+                        opacity: 0.12,
+                        child: Image.file(
+                          coverFile,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+                // 2. Elegant content in the center
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Beautiful Book Cover Card with explicit size constraints
+                      Container(
+                        width: math.min(screenWidth * 0.45, 180.0),
+                        height: math.min(screenWidth * 0.45 * 1.5, 270.0),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 24,
+                              spreadRadius: 6,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: BookCover(
+                            book: widget.book,
+                            radius: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      // Book Title
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 48),
+                        child: Text(
+                          widget.book.title,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            letterSpacing: 0.2,
+                            height: 1.3,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Book Author
+                      Text(
+                        widget.book.author,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 40),
+                      // Minimal elegant loading indicator (shimmer or smooth line)
+                      SizedBox(
+                        width: 120,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            minHeight: 2,
+                            backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+                            color: tintColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _inlineTranslateHud() {
     if (!_translateHudVisible) return const SizedBox.shrink();
 
@@ -1847,9 +1969,16 @@ return null;
     // initialisation gap; without this, dark-mode users see a black flash
     // before the foliate document paints. Mirrors the same colour we pass
     // to the WebView URL via `generateUrl(..., backgroundColor: ...)`.
+    // Ensure we have a matching brightness background color during the transition,
+    // so no light flash ever occurs in Dark Mode, and vice versa.
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color fallbackBg = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFCFBF9);
     final scaffoldBg = (backgroundColor != null && backgroundColor!.isNotEmpty)
         ? Color(int.parse('0x$backgroundColor'))
-        : null;
+        : fallbackBg;
+
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
 
     return Listener(
       onPointerSignal: (event) {
@@ -1868,33 +1997,7 @@ return null;
             if (showHistory) _buildHistoryCapsule(),
             _inlineTranslateHud(),
             if (Prefs().openBookAnimation)
-              SizedBox.expand(
-                child: IgnorePointer(
-                  ignoring: true,
-                  child: FadeTransition(
-                    opacity: _animation!,
-                    // Match the bookshelf BookItem's Hero tag so the cover
-                    // smoothly grows from the tapped tile into the reading
-                    // page. flightShuttleBuilder returns a bare BookCover
-                    // for the entire flight so the source's outer shadow
-                    // wrapper and the destination's bare cover don't paint
-                    // a structurally-different "rectangle stamp" mid-flight.
-                    child: Hero(
-                      tag: widget.book.coverFullPath,
-                      flightShuttleBuilder: (
-                        flightContext,
-                        animation,
-                        flightDirection,
-                        fromHeroContext,
-                        toHeroContext,
-                      ) {
-                        return BookCover(book: widget.book);
-                      },
-                      child: BookCover(book: widget.book),
-                    ),
-                  ),
-                ),
-              ),
+              _buildBookOpeningOverlay(context, screenWidth, screenHeight),
           ],
         ),
       ),
