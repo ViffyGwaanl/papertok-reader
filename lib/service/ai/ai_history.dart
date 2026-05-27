@@ -16,6 +16,8 @@ class AiChatHistoryEntry {
     required this.completed,
     this.title,
     this.titleSource,
+    this.bookId,
+    this.bookTitle,
     this.conversationV2,
   });
 
@@ -26,6 +28,8 @@ class AiChatHistoryEntry {
   final int updatedAt;
   final String? title;
   final String? titleSource;
+  final int? bookId;
+  final String? bookTitle;
 
   /// The active linear view (for backward compatibility and UI convenience).
   final List<ChatMessage> messages;
@@ -44,6 +48,8 @@ class AiChatHistoryEntry {
     String? model,
     String? title,
     String? titleSource,
+    int? bookId,
+    String? bookTitle,
     Map<String, dynamic>? conversationV2,
   }) {
     return AiChatHistoryEntry(
@@ -54,6 +60,8 @@ class AiChatHistoryEntry {
       updatedAt: updatedAt ?? this.updatedAt,
       title: title ?? this.title,
       titleSource: titleSource ?? this.titleSource,
+      bookId: bookId ?? this.bookId,
+      bookTitle: bookTitle ?? this.bookTitle,
       messages: messages ?? this.messages,
       completed: completed ?? this.completed,
       conversationV2: conversationV2 ?? this.conversationV2,
@@ -69,6 +77,8 @@ class AiChatHistoryEntry {
       'updatedAt': updatedAt,
       'title': title,
       'titleSource': titleSource,
+      if (bookId != null) 'bookId': bookId,
+      if (bookTitle != null) 'bookTitle': bookTitle,
       'completed': completed,
       'messages': messages.map((m) => m.toMap()).toList(growable: false),
       if (conversationV2 != null) 'conversationV2': conversationV2,
@@ -111,11 +121,42 @@ class AiChatHistoryEntry {
           : DateTime.now().millisecondsSinceEpoch,
       title: json['title']?.toString(),
       titleSource: json['titleSource']?.toString(),
+      bookId: _parseBookId(json['bookId']),
+      bookTitle: _parseBookTitle(json['bookTitle']),
       completed: json['completed'] == true,
       messages: messages,
       conversationV2: conversationV2,
     );
   }
+
+  static int? _parseBookId(Object? raw) {
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  static String? _parseBookTitle(Object? raw) {
+    final value = raw?.toString().trim();
+    return value == null || value.isEmpty ? null : value;
+  }
+}
+
+enum AiHistoryScope {
+  currentBook,
+  all,
+}
+
+List<AiChatHistoryEntry> filterAiHistoryForBook(
+  List<AiChatHistoryEntry> items, {
+  required int? currentBookId,
+  required AiHistoryScope scope,
+}) {
+  if (scope == AiHistoryScope.all || currentBookId == null) {
+    return items;
+  }
+  return items
+      .where((entry) => entry.bookId == currentBookId)
+      .toList(growable: false);
 }
 
 class AiHistoryStore {

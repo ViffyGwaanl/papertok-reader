@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/providers/ai_history.dart';
+import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:papertok_reader/service/ai/ai_history.dart';
 import 'package:papertok_reader/service/ai/conversation_title_service.dart';
 import 'package:papertok_reader/service/ai/index.dart';
@@ -45,6 +46,9 @@ class AiChat extends _$AiChat {
   StreamSubscription<String>? _generationSub;
   AiChatHistoryEntry? _draftEntry;
   String? _draftAssistantNodeId;
+  String? _loadedHistoryEntryId;
+  int? _loadedHistoryBookId;
+  String? _loadedHistoryBookTitle;
 
   String _draftModel = '';
   int _draftTokenInSnapshot = 0;
@@ -60,6 +64,9 @@ class AiChat extends _$AiChat {
     _generationSub = null;
     _draftEntry = null;
     _draftAssistantNodeId = null;
+    _loadedHistoryEntryId = null;
+    _loadedHistoryBookId = null;
+    _loadedHistoryBookTitle = null;
 
     return List<ChatMessage>.empty();
   }
@@ -80,6 +87,9 @@ class AiChat extends _$AiChat {
     if (sessionId != null) {
       _currentSessionId = sessionId;
     }
+    _loadedHistoryEntryId = null;
+    _loadedHistoryBookId = null;
+    _loadedHistoryBookTitle = null;
     _tree = AiConversationTree.fromLinearMessages(history);
     _rebuildFromTree();
   }
@@ -119,6 +129,11 @@ class AiChat extends _$AiChat {
     }
 
     final now = DateTime.now().millisecondsSinceEpoch;
+    final bookContext = _readCurrentBookContext(ref.read);
+    final historyBookContext = _historyBookContextFor(
+      existing: entry,
+      current: bookContext,
+    );
 
     if (_tree.nodes.isEmpty) {
       _tree = AiConversationTree.empty();
@@ -255,6 +270,8 @@ class AiChat extends _$AiChat {
               updatedAt: now,
               title: fallbackTitle,
               titleSource: 'heuristic',
+              bookId: historyBookContext.bookId,
+              bookTitle: historyBookContext.bookTitle,
               messages: List<ChatMessage>.from(updatedMessages),
               completed: false,
             ))
@@ -270,6 +287,8 @@ class AiChat extends _$AiChat {
       titleSource: (entry?.titleSource?.trim().isNotEmpty ?? false)
           ? entry!.titleSource
           : 'heuristic',
+      bookId: historyBookContext.bookId,
+      bookTitle: historyBookContext.bookTitle,
       conversationV2: _tree.toJson(),
     );
 
@@ -445,6 +464,9 @@ class AiChat extends _$AiChat {
 
     _draftEntry = null;
     _draftAssistantNodeId = null;
+    _loadedHistoryEntryId = null;
+    _loadedHistoryBookId = null;
+    _loadedHistoryBookTitle = null;
     ref.read(aiChatContextNoticeProvider.notifier).state = null;
     ref.read(aiChatUsageSummaryProvider.notifier).state = null;
   }
@@ -468,6 +490,9 @@ class AiChat extends _$AiChat {
     }
 
     _currentSessionId = entry.id;
+    _loadedHistoryEntryId = entry.id;
+    _loadedHistoryBookId = entry.bookId;
+    _loadedHistoryBookTitle = entry.bookTitle;
 
     final rawTree = entry.conversationV2;
     if (rawTree != null) {
@@ -671,6 +696,11 @@ class AiChat extends _$AiChat {
     final historyNotifier = read(aiHistoryProvider.notifier);
     final existing = historyNotifier.findById(sessionId);
     final now = DateTime.now().millisecondsSinceEpoch;
+    final bookContext = _readCurrentBookContext(read);
+    final historyBookContext = _historyBookContextFor(
+      existing: existing,
+      current: bookContext,
+    );
 
     final currentMessages = List<ChatMessage>.from(state.value ?? const []);
     final fallbackTitle = _titleService.deriveFallbackTitle(currentMessages);
@@ -683,6 +713,8 @@ class AiChat extends _$AiChat {
               updatedAt: now,
               title: fallbackTitle,
               titleSource: 'heuristic',
+              bookId: historyBookContext.bookId,
+              bookTitle: historyBookContext.bookTitle,
               messages: currentMessages,
               completed: true,
             ))
@@ -698,6 +730,8 @@ class AiChat extends _$AiChat {
       titleSource: (existing?.titleSource?.trim().isNotEmpty ?? false)
           ? existing!.titleSource
           : 'heuristic',
+      bookId: historyBookContext.bookId,
+      bookTitle: historyBookContext.bookTitle,
       conversationV2: _tree.toJson(),
     );
 
@@ -707,4 +741,55 @@ class AiChat extends _$AiChat {
   String _generateSessionId() {
     return DateTime.now().microsecondsSinceEpoch.toString();
   }
+
+  _AiCurrentBookContext _historyBookContextFor({
+    required AiChatHistoryEntry? existing,
+    required _AiCurrentBookContext current,
+  }) {
+    if (existing != null) {
+      return _AiCurrentBookContext(
+        bookId: existing.bookId,
+        bookTitle: existing.bookTitle,
+      );
+    }
+
+    if (_loadedHistoryEntryId == _currentSessionId) {
+      return _AiCurrentBookContext(
+        bookId: _loadedHistoryBookId,
+        bookTitle: _loadedHistoryBookTitle,
+      );
+    }
+
+    return current;
+  }
+}
+
+_AiCurrentBookContext _readCurrentBookContext(
+  T Function<T>(ProviderListenable<T>) read,
+) {
+  final reading = read(currentReadingProvider);
+  if (!reading.isReading) {
+    return const _AiCurrentBookContext();
+  }
+
+  final book = reading.book;
+  if (book == null || book.id <= 0) {
+    return const _AiCurrentBookContext();
+  }
+
+  final title = book.title.trim();
+  return _AiCurrentBookContext(
+    bookId: book.id,
+    bookTitle: title.isEmpty ? null : title,
+  );
+}
+
+class _AiCurrentBookContext {
+  const _AiCurrentBookContext({
+    this.bookId,
+    this.bookTitle,
+  });
+
+  final int? bookId;
+  final String? bookTitle;
 }

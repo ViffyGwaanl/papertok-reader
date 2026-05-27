@@ -10,6 +10,7 @@ import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/providers/ai_chat.dart';
 import 'package:papertok_reader/providers/ai_draft_input.dart';
 import 'package:papertok_reader/providers/ai_history.dart';
+import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:papertok_reader/service/ai/ai_services.dart';
 import 'package:papertok_reader/service/ai/ai_history.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
@@ -40,6 +41,7 @@ import 'package:papertok_reader/service/receive_file/share_inbox_paths.dart';
 import 'package:papertok_reader/service/receive_file/share_safe_import.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/common/pt_collapsible_card.dart';
+import 'package:papertok_reader/widgets/common/anx_segmented_button.dart';
 import 'package:papertok_reader/utils/get_path/get_cache_dir.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -147,6 +149,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   // For each user turn, the assistant may have multiple generated variants.
   // We keep a lightweight UI-only selection index per turn.
   final Map<int, int> _selectedVariantByUserIndex = {};
+  AiHistoryScope _historyScope = AiHistoryScope.currentBook;
+  int? _historyScopeBookId;
 
   // Attachments for multimodal chat (sent to the model)
   final List<AttachmentItem> _attachments = [];
@@ -872,6 +876,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   Widget _buildHistoryDrawer(BuildContext context) {
     final historyState = ref.watch(aiHistoryProvider);
+    final reading = ref.watch(currentReadingProvider);
+    final currentBookId = reading.isReading ? reading.book?.id : null;
+    final selectedScope = currentBookId == null
+        ? AiHistoryScope.all
+        : _historyScopeBookId == currentBookId
+            ? _historyScope
+            : AiHistoryScope.currentBook;
     return Container(
       color: ClaudePalette.bg(context),
       child: SafeArea(
@@ -902,10 +913,46 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 ],
               ),
             ),
+            if (currentBookId != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: AnxSegmentedButton<AiHistoryScope>(
+                    selected: {selectedScope},
+                    showSelectedIcon: false,
+                    segments: [
+                      SegmentButtonItem(
+                        value: AiHistoryScope.currentBook,
+                        label: _currentBookScopeLabel(context),
+                        icon: const Icon(Icons.menu_book_outlined),
+                      ),
+                      SegmentButtonItem(
+                        value: AiHistoryScope.all,
+                        label: L10n.of(context).settingsShareInboxFilterAll,
+                        icon: const Icon(Icons.forum_outlined),
+                      ),
+                    ],
+                    onSelectionChanged: (selection) {
+                      final next = selection.isEmpty ? null : selection.first;
+                      if (next == null) return;
+                      setState(() {
+                        _historyScopeBookId = currentBookId;
+                        _historyScope = next;
+                      });
+                    },
+                  ),
+                ),
+              ),
             Expanded(
               child: historyState.when(
                 data: (items) {
-                  if (items.isEmpty) {
+                  final scopedItems = filterAiHistoryForBook(
+                    items,
+                    currentBookId: currentBookId,
+                    scope: selectedScope,
+                  );
+                  if (scopedItems.isEmpty) {
                     return Center(
                       child: Text(
                         L10n.of(context).noConversationTip,
@@ -920,7 +967,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ref.watch(aiChatProvider.notifier).currentSessionId;
                   return ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    itemCount: items.length,
+                    itemCount: scopedItems.length,
                     separatorBuilder: (_, __) => Padding(
                       padding: const EdgeInsets.only(left: 16),
                       child: Divider(
@@ -930,7 +977,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                     ),
                     itemBuilder: (context, index) {
-                      final entry = items[index];
+                      final entry = scopedItems[index];
                       return _buildHistoryTile(
                         context,
                         entry,
@@ -955,6 +1002,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ),
       ),
     );
+  }
+
+  String _currentBookScopeLabel(BuildContext context) {
+    final languageCode = Localizations.localeOf(context).languageCode;
+    return languageCode == 'zh' ? '当前书' : 'Current book';
   }
 
   Widget _buildHistoryTile(
