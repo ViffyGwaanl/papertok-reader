@@ -13,8 +13,7 @@ class AiIndexCancellationToken {
 typedef AiLibraryIndexJobExecutor = Future<void> Function(
   int bookId, {
   required AiIndexCancellationToken cancelToken,
-  required void Function(double progress, String? href, String? title)
-      onProgress,
+  required Future<void> Function(AiLibraryIndexJobProgress progress) onProgress,
 });
 
 /// Pure runner for the library indexing queue.
@@ -62,6 +61,7 @@ class AiLibraryIndexQueueRunner {
           status: AiLibraryIndexJobStatus.queued,
           progress: 0,
           clearCurrentChapter: true,
+          clearProgressDetails: true,
         );
       }
     }
@@ -83,6 +83,7 @@ class AiLibraryIndexQueueRunner {
       status: AiLibraryIndexJobStatus.running,
       progress: 0,
       clearCurrentChapter: true,
+      clearProgressDetails: true,
       clearLastError: true,
     );
 
@@ -97,6 +98,7 @@ class AiLibraryIndexQueueRunner {
           status: AiLibraryIndexJobStatus.queued,
           progress: 0,
           clearCurrentChapter: true,
+          clearProgressDetails: true,
         );
         return null;
       }
@@ -104,14 +106,17 @@ class AiLibraryIndexQueueRunner {
       await _executor(
         next.bookId,
         cancelToken: token,
-        onProgress: (p, href, title) {
-          unawaited(
-            _repo.updateJob(
-              next.id,
-              progress: p,
-              currentChapterHref: href,
-              currentChapterTitle: title,
-            ),
+        onProgress: (p) {
+          return _repo.updateJob(
+            next.id,
+            progress: p.progress,
+            phase: p.phase,
+            doneChapters: p.doneChapters,
+            totalChapters: p.totalChapters,
+            doneChunks: p.doneChunks,
+            totalChunks: p.totalChunks,
+            currentChapterHref: p.currentChapterHref,
+            currentChapterTitle: p.currentChapterTitle,
           );
         },
       );

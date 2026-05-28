@@ -30,6 +30,10 @@ class AiLibraryIndexQueueRepository {
       'retry_count': 0,
       'max_retries': maxRetries,
       'progress': 0,
+      'done_chapters': 0,
+      'total_chapters': 0,
+      'done_chunks': 0,
+      'total_chunks': 0,
       'created_at': now,
       'updated_at': now,
     });
@@ -77,10 +81,16 @@ class AiLibraryIndexQueueRepository {
     AiLibraryIndexJobStatus? status,
     int? retryCount,
     double? progress,
+    String? phase,
+    int? doneChapters,
+    int? totalChapters,
+    int? doneChunks,
+    int? totalChunks,
     String? currentChapterHref,
     String? currentChapterTitle,
     String? lastError,
     bool clearCurrentChapter = false,
+    bool clearProgressDetails = false,
     bool clearLastError = false,
   }) async {
     final db = await _db.database;
@@ -93,6 +103,19 @@ class AiLibraryIndexQueueRepository {
     }
     if (retryCount != null) values['retry_count'] = retryCount;
     if (progress != null) values['progress'] = progress;
+    if (clearProgressDetails) {
+      values['phase'] = null;
+      values['done_chapters'] = 0;
+      values['total_chapters'] = 0;
+      values['done_chunks'] = 0;
+      values['total_chunks'] = 0;
+    } else {
+      if (phase != null) values['phase'] = phase;
+      if (doneChapters != null) values['done_chapters'] = doneChapters;
+      if (totalChapters != null) values['total_chapters'] = totalChapters;
+      if (doneChunks != null) values['done_chunks'] = doneChunks;
+      if (totalChunks != null) values['total_chunks'] = totalChunks;
+    }
     if (clearCurrentChapter) {
       values['current_chapter_href'] = null;
       values['current_chapter_title'] = null;
@@ -128,6 +151,11 @@ class AiLibraryIndexQueueRepository {
       retryCount: (r['retry_count'] as num?)?.toInt() ?? 0,
       maxRetries: (r['max_retries'] as num?)?.toInt() ?? 1,
       progress: (r['progress'] as num?)?.toDouble() ?? 0,
+      phase: r['phase']?.toString(),
+      doneChapters: (r['done_chapters'] as num?)?.toInt() ?? 0,
+      totalChapters: (r['total_chapters'] as num?)?.toInt() ?? 0,
+      doneChunks: (r['done_chunks'] as num?)?.toInt() ?? 0,
+      totalChunks: (r['total_chunks'] as num?)?.toInt() ?? 0,
       currentChapterHref: r['current_chapter_href']?.toString(),
       currentChapterTitle: r['current_chapter_title']?.toString(),
       lastError: r['last_error']?.toString(),

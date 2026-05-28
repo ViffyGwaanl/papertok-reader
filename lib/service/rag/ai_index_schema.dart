@@ -2,7 +2,7 @@ import 'package:papertok_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
 
 // NOTE: This DB is intended to be rebuildable. Keep migrations forward-only.
-const int kAiIndexDbVersion = 4;
+const int kAiIndexDbVersion = 5;
 
 class AiIndexMigrations {
   const AiIndexMigrations._();
@@ -30,6 +30,8 @@ class AiIndexMigrations {
           await _v3(db);
         case 4:
           await _v4(db);
+        case 5:
+          await _v5(db);
       }
     }
   }
@@ -205,6 +207,32 @@ END;
         'ALTER TABLE ai_book_index ADD COLUMN chunk_overlap_chars INTEGER');
     await addColumn(
       'ALTER TABLE ai_book_index ADD COLUMN max_chapter_characters INTEGER',
+    );
+  }
+
+  static Future<void> _v5(Database db) async {
+    // Persist the detailed library-indexing heartbeat so the settings UI can
+    // show whether the active book is fetching text or generating embeddings.
+    Future<void> addColumn(String ddl) async {
+      try {
+        await db.execute(ddl);
+      } catch (_) {
+        // Ignore duplicate column errors.
+      }
+    }
+
+    await addColumn('ALTER TABLE ai_index_jobs ADD COLUMN phase TEXT');
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN done_chapters INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN total_chapters INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN done_chunks INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN total_chunks INTEGER DEFAULT 0',
     );
   }
 }

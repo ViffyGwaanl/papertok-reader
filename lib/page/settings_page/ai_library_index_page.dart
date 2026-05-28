@@ -59,6 +59,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   Future<List<_BookRow>>? _booksFuture;
 
   Timer? _refreshDebounce;
+  Timer? _activeQueueHeartbeatTimer;
   int _loadToken = 0;
   List<int> _currentVisibleBookIds = const [];
 
@@ -72,6 +73,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   @override
   void dispose() {
     _refreshDebounce?.cancel();
+    _activeQueueHeartbeatTimer?.cancel();
     super.dispose();
   }
 
@@ -85,11 +87,27 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     });
   }
 
+  void _syncActiveQueueHeartbeatTimer(bool shouldRun) {
+    if (!shouldRun) {
+      _activeQueueHeartbeatTimer?.cancel();
+      _activeQueueHeartbeatTimer = null;
+      return;
+    }
+    _activeQueueHeartbeatTimer ??= Timer.periodic(
+      const Duration(seconds: 15),
+      (_) {
+        if (!mounted) return;
+        setState(() {});
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final queue = ref.watch(aiLibraryIndexQueueProvider);
     final queueSvc = ref.read(aiLibraryIndexQueueProvider.notifier);
+    _syncActiveQueueHeartbeatTimer(queue.activeJob != null);
 
     // The queue updates fairly frequently (progress), so debounce book list
     // refreshes to avoid jitter. Must live in build (not initState) per
@@ -510,7 +528,8 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                       if (!follow) ...[
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: providerId.trim().isEmpty ? null : providerId,
+                          initialValue:
+                              providerId.trim().isEmpty ? null : providerId,
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             labelText: l10n.aiLibraryIndexConfigProviderLabel,
@@ -782,6 +801,10 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     final totalCount = queue.totalJobCount;
 
     final recent = queue.jobs.take(6).toList(growable: false);
+    final activeHeartbeat =
+        active == null ? '' : _jobHeartbeatText(context, active);
+    final activeDetail =
+        active == null ? '' : _jobProgressDetailText(context, active);
 
     Widget statusText(AiLibraryIndexJob j) {
       String label;
@@ -807,12 +830,28 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
               j.status == AiLibraryIndexJobStatus.paused
           ? '  ${_formatPercent(j.progress)}'
           : '';
+      final detail = _jobProgressDetailText(context, j);
 
-      return Text(
-        '$label$progress$retry',
-        style: Theme.of(context).textTheme.bodySmall,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label$progress$retry',
+            style: Theme.of(context).textTheme.bodySmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (detail.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                detail,
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
       );
     }
 
@@ -917,12 +956,32 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              '${l10n.aiLibraryIndexQueueRunning}: #${active.bookId}  '
-              '${_formatPercent(active.progress)}  '
-              '${(active.currentChapterTitle ?? '').trim()}',
+              '${l10n.aiLibraryIndexQueueRunning}: '
+              '${_localizedBookLabel(context, active.bookId)}  '
+              '${_formatPercent(active.progress)}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
+            if (activeHeartbeat.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                activeHeartbeat,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (activeDetail.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                activeDetail,
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
             if ((active.lastError ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
@@ -1047,7 +1106,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _queueSummaryText(context, queue),
+                      active == null
+                          ? _queueSummaryText(context, queue)
+                          : _compactActiveQueueText(context, active),
                       style: theme.textTheme.bodySmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1083,6 +1144,113 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     }
     return 'Queue $percent · handled ${queue.finishedJobCount}/${queue.totalJobCount} · '
         'waiting ${queue.queuedJobCount} · failed ${queue.failedJobCount}';
+  }
+
+  String _compactActiveQueueText(
+    BuildContext context,
+    AiLibraryIndexJob job,
+  ) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final parts = <String>[
+      zh ? '索引 #${job.bookId}' : 'Indexing #${job.bookId}',
+      _formatPercent(job.progress),
+    ];
+    final phase = _localizedPhaseLabel(context, job.phase);
+    if (phase.isNotEmpty) parts.add(phase);
+    if (job.totalChapters > 0) {
+      parts.add(zh
+          ? '章节 ${job.doneChapters}/${job.totalChapters}'
+          : 'chapters ${job.doneChapters}/${job.totalChapters}');
+    }
+    if (job.doneChunks > 0 || job.totalChunks > 0) {
+      final total = job.totalChunks > 0 ? job.totalChunks.toString() : '?';
+      parts.add(zh
+          ? '向量 ${job.doneChunks}/$total'
+          : 'vectors ${job.doneChunks}/$total');
+    }
+    return parts.join(' · ');
+  }
+
+  String _jobProgressDetailText(
+    BuildContext context,
+    AiLibraryIndexJob job,
+  ) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final parts = <String>[];
+
+    final phase = _localizedPhaseLabel(context, job.phase);
+    if (phase.isNotEmpty) parts.add(phase);
+
+    if (job.totalChapters > 0) {
+      parts.add(zh
+          ? '章节 ${job.doneChapters}/${job.totalChapters}'
+          : 'chapters ${job.doneChapters}/${job.totalChapters}');
+    }
+
+    if (job.doneChunks > 0 || job.totalChunks > 0) {
+      final total = job.totalChunks > 0 ? job.totalChunks.toString() : '?';
+      parts.add(zh
+          ? '已生成向量 ${job.doneChunks}/$total'
+          : 'embedded chunks ${job.doneChunks}/$total');
+    }
+
+    final current = ((job.currentChapterTitle ?? '').trim().isNotEmpty
+            ? job.currentChapterTitle
+            : job.currentChapterHref)
+        ?.trim();
+    if (current != null && current.isNotEmpty) {
+      parts.add(zh ? '当前 $current' : 'current $current');
+    }
+
+    return parts.join(' · ');
+  }
+
+  String _jobHeartbeatText(BuildContext context, AiLibraryIndexJob job) {
+    final updatedAt = job.updatedAt;
+    if (updatedAt == null) return '';
+    return _localizedLastUpdateText(context, updatedAt);
+  }
+
+  String _localizedBookLabel(BuildContext context, int bookId) {
+    return Localizations.localeOf(context).languageCode == 'zh'
+        ? '书籍 #$bookId'
+        : 'Book #$bookId';
+  }
+
+  String _localizedPhaseLabel(BuildContext context, String? phase) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    return switch ((phase ?? '').trim()) {
+      'fetch' => zh ? '读取章节' : 'fetching chapter',
+      'embed' => zh ? '生成向量' : 'embedding',
+      'chapter_done' => zh ? '章节完成' : 'chapter done',
+      _ => '',
+    };
+  }
+
+  String _localizedLastUpdateText(BuildContext context, int updatedAtMs) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final age = DateTime.now().difference(
+      DateTime.fromMillisecondsSinceEpoch(updatedAtMs),
+    );
+
+    String ageText;
+    if (age.inSeconds < 30) {
+      ageText = zh ? '刚刚' : 'just now';
+    } else if (age.inMinutes < 1) {
+      ageText = zh ? '${age.inSeconds} 秒前' : '${age.inSeconds}s ago';
+    } else if (age.inHours < 1) {
+      ageText = zh ? '${age.inMinutes} 分钟前' : '${age.inMinutes}m ago';
+    } else {
+      ageText = zh ? '${age.inHours} 小时前' : '${age.inHours}h ago';
+    }
+
+    final stale = age.inMinutes >= 3;
+    if (zh) {
+      return stale ? '最后更新 $ageText（无新进度）' : '最后更新 $ageText';
+    }
+    return stale
+        ? 'last update $ageText (no new progress)'
+        : 'last update $ageText';
   }
 
   String _localizedQueuedLabel(BuildContext context) {

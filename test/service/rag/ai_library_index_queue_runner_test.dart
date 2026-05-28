@@ -124,4 +124,44 @@ void main() {
     expect(job.status, AiLibraryIndexJobStatus.queued);
     expect(job.progress, 0);
   });
+
+  test('runner persists detailed progress emitted by executor', () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final db = AiIndexDatabase.forTesting(path: ':memory:', factory: factory);
+    final repo = AiLibraryIndexQueueRepository(database: db);
+
+    await repo.enqueueBook(5, maxRetries: 1);
+
+    final runner = AiLibraryIndexQueueRunner(
+      repository: repo,
+      executor: (bookId, {required cancelToken, required onProgress}) async {
+        await onProgress(
+          const AiLibraryIndexJobProgress(
+            progress: 0.42,
+            phase: 'embed',
+            doneChapters: 2,
+            totalChapters: 7,
+            doneChunks: 16,
+            totalChunks: 45,
+            currentChapterHref: 'chapter-2.xhtml',
+            currentChapterTitle: 'Chapter 2',
+          ),
+        );
+      },
+    );
+
+    final result = await runner.runOnce();
+
+    expect(result, isNotNull);
+    expect(result!.status, AiLibraryIndexJobStatus.succeeded);
+    expect(result.progress, 0.42);
+    expect(result.phase, 'embed');
+    expect(result.doneChapters, 2);
+    expect(result.totalChapters, 7);
+    expect(result.doneChunks, 16);
+    expect(result.totalChunks, 45);
+    expect(result.currentChapterHref, 'chapter-2.xhtml');
+    expect(result.currentChapterTitle, 'Chapter 2');
+  });
 }

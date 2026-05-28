@@ -255,7 +255,7 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
   Future<void> _executeJob(
     int bookId, {
     required AiIndexCancellationToken cancelToken,
-    required void Function(double progress, String? href, String? title)
+    required Future<void> Function(AiLibraryIndexJobProgress progress)
         onProgress,
   }) async {
     if (cancelToken.cancelled) return;
@@ -272,6 +272,39 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
 
     final providerId = Prefs().aiLibraryIndexProviderIdEffective;
     final embeddingModel = Prefs().aiLibraryIndexEmbeddingModelEffective;
+    final pendingProgressWrites = <Future<void>>[];
+    Object? progressWriteError;
+    StackTrace? progressWriteStackTrace;
+
+    void persistProgress(AiBookIndexProgress p) {
+      if (cancelToken.cancelled) return;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final shouldRefresh = now - _lastProgressRefreshMs > 300;
+      if (shouldRefresh) {
+        _lastProgressRefreshMs = now;
+      }
+
+      final write = onProgress(
+        AiLibraryIndexJobProgress(
+          progress: p.progress,
+          phase: p.phase,
+          doneChapters: p.doneChapters,
+          totalChapters: p.totalChapters,
+          doneChunks: p.doneChunks,
+          totalChunks: p.totalChunks,
+          currentChapterHref: p.currentChapterHref,
+          currentChapterTitle: p.currentChapterTitle,
+        ),
+      ).then((_) async {
+        if (shouldRefresh && !cancelToken.cancelled) {
+          await refresh();
+        }
+      }).catchError((Object e, StackTrace st) {
+        progressWriteError ??= e;
+        progressWriteStackTrace ??= st;
+      });
+      pendingProgressWrites.add(write);
+    }
 
     await indexer.buildBook(
       book: book,
@@ -286,18 +319,16 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
       chunkOverlapChars: Prefs().aiLibraryIndexChunkOverlapChars,
       maxChapterCharacters: Prefs().aiLibraryIndexMaxChapterCharacters,
       shouldCancel: () => cancelToken.cancelled,
-      onProgress: (p) {
-        if (cancelToken.cancelled) return;
-        onProgress(p.progress, p.currentChapterHref, p.currentChapterTitle);
-
-        // Throttle UI refresh while indexing.
-        final now = DateTime.now().millisecondsSinceEpoch;
-        if (now - _lastProgressRefreshMs > 300) {
-          _lastProgressRefreshMs = now;
-          unawaited(refresh());
-        }
-      },
+      onProgress: persistProgress,
     );
+
+    await Future.wait(pendingProgressWrites);
+    if (progressWriteError != null) {
+      Error.throwWithStackTrace(
+        progressWriteError!,
+        progressWriteStackTrace ?? StackTrace.current,
+      );
+    }
   }
 }
 

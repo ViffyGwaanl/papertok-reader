@@ -22,6 +22,11 @@ void main() {
       status: AiLibraryIndexJobStatus.running,
       retryCount: 1,
       progress: 0.5,
+      phase: 'embed',
+      doneChapters: 3,
+      totalChapters: 10,
+      doneChunks: 24,
+      totalChunks: 80,
       currentChapterHref: 'c1.xhtml',
       currentChapterTitle: 'C1',
       lastError: 'boom',
@@ -30,6 +35,11 @@ void main() {
     expect(updated.status, AiLibraryIndexJobStatus.running);
     expect(updated.retryCount, 1);
     expect(updated.progress, 0.5);
+    expect(updated.phase, 'embed');
+    expect(updated.doneChapters, 3);
+    expect(updated.totalChapters, 10);
+    expect(updated.doneChunks, 24);
+    expect(updated.totalChunks, 80);
     expect(updated.currentChapterHref, 'c1.xhtml');
     expect(updated.currentChapterTitle, 'C1');
     expect(updated.lastError, 'boom');
@@ -50,6 +60,11 @@ void main() {
       job.id,
       status: AiLibraryIndexJobStatus.running,
       progress: 0.75,
+      phase: 'embed',
+      doneChapters: 2,
+      totalChapters: 4,
+      doneChunks: 8,
+      totalChunks: 12,
       currentChapterHref: 'c1.xhtml',
       currentChapterTitle: 'C1',
       lastError: 'previous failure',
@@ -60,11 +75,17 @@ void main() {
       status: AiLibraryIndexJobStatus.queued,
       progress: 0,
       clearCurrentChapter: true,
+      clearProgressDetails: true,
       clearLastError: true,
     );
 
     expect(cleared.status, AiLibraryIndexJobStatus.queued);
     expect(cleared.progress, 0);
+    expect(cleared.phase, isNull);
+    expect(cleared.doneChapters, 0);
+    expect(cleared.totalChapters, 0);
+    expect(cleared.doneChunks, 0);
+    expect(cleared.totalChunks, 0);
     expect(cleared.currentChapterHref, isNull);
     expect(cleared.currentChapterTitle, isNull);
     expect(cleared.lastError, isNull);
