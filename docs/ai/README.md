@@ -124,6 +124,7 @@ Docs:
 - [RAG + Memory（Phase 1-5）总体计划与状态（中文）](./rag_memory_plan_zh.md)
 - [RAG + Memory（Phase 1-5）任务清单（中文）](./rag_memory_tasks_zh.md)
 - [Phase 3：全书库 RAG + 批量索引队列（中文）](./rag_phase3_library_rag_zh.md)
+- [Future Agentic Upgrade：AI-agent 可执行未来升级规格（中文）](./future_agentic_upgrade/README_zh.md)
 - [MCP Servers（外部工具）说明（中文）](./mcp_servers_zh.md)
 
 ---
@@ -161,6 +162,7 @@ All AI / translation / multimodal / image-analysis changes are integrated into `
 ## Documents
 
 - [AI 改造：已完成 & 路线图（中文）](./ai_status_roadmap_zh.md)
+- [Future Agentic Upgrade：AI-agent 可执行未来升级规格（中文）](./future_agentic_upgrade/README_zh.md)
 - [RAG + Memory（Phase 1-5）总体计划与状态（中文）](./rag_memory_plan_zh.md)
 - [RAG + Memory（Phase 1-5）任务清单（中文）](./rag_memory_tasks_zh.md)
 - [Phase 3：全书库 RAG + 批量索引队列（中文）](./rag_phase3_library_rag_zh.md)

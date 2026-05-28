@@ -1,0 +1,57 @@
+# PaperTok Reader Future Agentic Upgrade
+
+> 状态：Ready  
+> 用途：给 AI agent team 执行的长期升级规格，而不是按人日、月份或季度排期的人类 roadmap。
+
+本目录把 PaperTok Reader 的未来 AI 学习能力整理成可执行的工程文档体系。所有工作按 `Epic -> Capability -> Agent Task -> Gate -> Acceptance` 组织，任何任务在进入实现前都必须明确输入真相、输出产物、允许改动范围、禁止事项、验证命令和 reviewer gate。
+
+## 1. 阅读顺序
+
+1. `00_product_north_star_zh.md`：产品北极星和外部项目融合方式。
+2. `01_current_capability_map_zh.md`：现有 PaperTok 能力、可复用模块和缺口。
+3. `02_agent_execution_model_zh.md`：AI agent 执行模型、任务模板和禁止写法。
+4. `03_epic_index_zh.md`：全部 Epic 的 DAG 依赖图。
+5. `epics/`：每条能力线的执行规格。
+6. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
+
+## 2. 状态词
+
+| 状态 | 含义 |
+| --- | --- |
+| `Draft` | 方向清楚，但还不能直接交给 agent 实现。 |
+| `Ready` | 依赖、输入、输出、范围、验证和 acceptance 都已锁定。 |
+| `Blocked` | 缺少上游任务、数据、工具、设计决策或外部条件。 |
+| `In Review` | 实现已完成，正在做 reviewer/rescue gate。 |
+| `Accepted` | 通过验收，证据可追溯。 |
+| `Deprecated` | 被新 Epic、Capability 或代码事实替代。 |
+
+本目录自身为 `Ready`，表示文档体系和 Epic 规格可以被 agent team 使用。单个 Epic 的任务仍必须按该 Epic 的 task table、task execution defaults 和对应 gate 执行，不允许跳过 reviewer/rescue gate。
+
+## 3. 执行单位
+
+| 单位 | 定义 | 输出 |
+| --- | --- | --- |
+| `Epic` | 一条完整能力线，例如 AI Seminar、KnowledgeCard、ConceptGraph。 | 可独立追踪的能力文档。 |
+| `Capability` | Epic 内可单独交付的用户或平台能力。 | 结构化接口、服务边界、UI 或数据流。 |
+| `Agent Task` | 可交给一个 AI agent 执行的最小任务。 | 代码、测试、文档或验证证据。 |
+| `Gate` | 进入或完成任务前必须满足的检查。 | 可复用 checklist 和命令。 |
+| `Acceptance` | 证明任务完成的具体标准。 | 测试输出、DB 断言、UI 行为、deep link 或截图。 |
+
+## 4. 全局原则
+
+- 不写人日、月份、季度或传统排期，只写依赖、Gate 和 Acceptance。
+- 不把 OpenMAIC、MarginNote、WikiLinks、Understand-Anything 当作可复制产品，只抽象可融合能力。
+- PaperTok Reader 现有 AI/RAG/Memory 架构是主线，新增能力必须接入现有模块。
+- AI 生成内容默认是 draft，必须带 provenance，写入用户资产前进入 Review 或由用户显式确认。
+- `ai_index.db`、RAPTOR、GraphRAG 索引默认是可重建派生缓存；用户确认过的卡片、复习记录、笔记和记忆才是用户资产。
+- API key 永不同步；外发正文给 LLM 或 embedding provider 必须有功能级开关或明确提示。
+
+## 5. 历史锚点
+
+旧文档保留为历史事实，不在本目录内重写：
+
+- `docs/ai/ai_status_roadmap_zh.md`
+- `docs/ai/agent_system_architecture_zh.md`
+- `docs/ai/rag_memory_plan_zh.md`
+- `docs/superpowers/specs/2026-05-28-library-rag-optimization-design.md`
+- `docs/superpowers/plans/2026-05-28-library-rag-optimization.md`
