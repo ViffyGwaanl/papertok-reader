@@ -27,6 +27,12 @@ class AiBookIndexProgress {
     required this.totalChapters,
     required this.doneChunks,
     required this.totalChunks,
+    this.currentChapterDoneChunks = 0,
+    this.currentChapterTotalChunks = 0,
+    this.embeddingBatchIndex = 0,
+    this.embeddingBatchTotal = 0,
+    this.lastEmbeddingBatchSize = 0,
+    this.lastEmbeddingDim = 0,
     this.currentChapterHref,
     this.currentChapterTitle,
   });
@@ -36,13 +42,25 @@ class AiBookIndexProgress {
   final int totalChapters;
   final int doneChunks;
   final int totalChunks;
+  final int currentChapterDoneChunks;
+  final int currentChapterTotalChunks;
+  final int embeddingBatchIndex;
+  final int embeddingBatchTotal;
+  final int lastEmbeddingBatchSize;
+  final int lastEmbeddingDim;
   final String? currentChapterHref;
   final String? currentChapterTitle;
 
   double get progress {
     if (totalChapters <= 0) return 0;
-    // Chapter-based progress is stable; chunk counters are best-effort.
-    return (doneChapters / totalChapters).clamp(0.0, 1.0);
+    final chapterFraction = currentChapterTotalChunks <= 0
+        ? 0.0
+        : (currentChapterDoneChunks / currentChapterTotalChunks)
+            .clamp(0.0, 1.0)
+            .toDouble();
+    return ((doneChapters + chapterFraction) / totalChapters)
+        .clamp(0.0, 1.0)
+        .toDouble();
   }
 }
 
@@ -297,6 +315,8 @@ class AiBookIndexer {
           totalChapters: chapters.length,
           doneChunks: doneChunks,
           totalChunks: totalChunks,
+          currentChapterDoneChunks: 0,
+          currentChapterTotalChunks: 0,
           currentChapterHref: href,
           currentChapterTitle: title,
         ),
@@ -340,6 +360,8 @@ class AiBookIndexer {
           totalChapters: chapters.length,
           doneChunks: doneChunks,
           totalChunks: totalChunks,
+          currentChapterDoneChunks: 0,
+          currentChapterTotalChunks: chunks.length,
           currentChapterHref: href,
           currentChapterTitle: title,
         ),
@@ -360,9 +382,12 @@ class AiBookIndexer {
       ];
 
       final batchSize = embeddingBatchSize.clamp(1, 64);
+      final batchTotal =
+          ((contextualChunks.length + batchSize - 1) / batchSize).floor();
       for (var offset = 0;
           offset < contextualChunks.length;
           offset += batchSize) {
+        final batchIndex = (offset ~/ batchSize) + 1;
         final batch = contextualChunks
             .skip(offset)
             .take(batchSize)
@@ -375,6 +400,10 @@ class AiBookIndexer {
             totalChapters: chapters.length,
             doneChunks: doneChunks,
             totalChunks: totalChunks,
+            currentChapterDoneChunks: offset,
+            currentChapterTotalChunks: chunks.length,
+            embeddingBatchIndex: batchIndex,
+            embeddingBatchTotal: batchTotal,
             currentChapterHref: href,
             currentChapterTitle: title,
           ),
@@ -427,6 +456,25 @@ class AiBookIndexer {
         throwIfCancelled();
 
         doneChunks += batch.length;
+        onProgress?.call(
+          AiBookIndexProgress(
+            phase: 'embed',
+            doneChapters: doneChapters,
+            totalChapters: chapters.length,
+            doneChunks: doneChunks,
+            totalChunks: totalChunks,
+            currentChapterDoneChunks: offset + batch.length > chunks.length
+                ? chunks.length
+                : offset + batch.length,
+            currentChapterTotalChunks: chunks.length,
+            embeddingBatchIndex: batchIndex,
+            embeddingBatchTotal: batchTotal,
+            lastEmbeddingBatchSize: vectors.length,
+            lastEmbeddingDim: vectors.isEmpty ? 0 : vectors.first.length,
+            currentChapterHref: href,
+            currentChapterTitle: title,
+          ),
+        );
       }
 
       doneChapters++;

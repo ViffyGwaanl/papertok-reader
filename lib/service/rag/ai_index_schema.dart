@@ -2,7 +2,7 @@ import 'package:papertok_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
 
 // NOTE: This DB is intended to be rebuildable. Keep migrations forward-only.
-const int kAiIndexDbVersion = 8;
+const int kAiIndexDbVersion = 9;
 
 class AiIndexMigrations {
   const AiIndexMigrations._();
@@ -38,6 +38,8 @@ class AiIndexMigrations {
           await _v7(db);
         case 8:
           await _v8(db);
+        case 9:
+          await _v9(db);
       }
     }
   }
@@ -421,5 +423,36 @@ CREATE TABLE IF NOT EXISTS ai_graph_community_nodes (
     }
 
     await addColumn('ALTER TABLE ai_chunks ADD COLUMN embedding_blob BLOB');
+  }
+
+  static Future<void> _v9(Database db) async {
+    // More granular library indexing heartbeat. These fields let the settings
+    // UI show whether embeddings are still producing output inside a chapter.
+    Future<void> addColumn(String ddl) async {
+      try {
+        await db.execute(ddl);
+      } catch (_) {
+        // Ignore duplicate column errors.
+      }
+    }
+
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN current_chapter_done_chunks INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN current_chapter_total_chunks INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN embedding_batch_index INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN embedding_batch_total INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN last_embedding_batch_size INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN last_embedding_dim INTEGER DEFAULT 0',
+    );
   }
 }

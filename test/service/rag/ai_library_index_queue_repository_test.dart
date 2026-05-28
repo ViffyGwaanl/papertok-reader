@@ -27,6 +27,12 @@ void main() {
       totalChapters: 10,
       doneChunks: 24,
       totalChunks: 80,
+      currentChapterDoneChunks: 9,
+      currentChapterTotalChunks: 20,
+      embeddingBatchIndex: 2,
+      embeddingBatchTotal: 5,
+      lastEmbeddingBatchSize: 16,
+      lastEmbeddingDim: 1024,
       currentChapterHref: 'c1.xhtml',
       currentChapterTitle: 'C1',
       lastError: 'boom',
@@ -40,6 +46,12 @@ void main() {
     expect(updated.totalChapters, 10);
     expect(updated.doneChunks, 24);
     expect(updated.totalChunks, 80);
+    expect(updated.currentChapterDoneChunks, 9);
+    expect(updated.currentChapterTotalChunks, 20);
+    expect(updated.embeddingBatchIndex, 2);
+    expect(updated.embeddingBatchTotal, 5);
+    expect(updated.lastEmbeddingBatchSize, 16);
+    expect(updated.lastEmbeddingDim, 1024);
     expect(updated.currentChapterHref, 'c1.xhtml');
     expect(updated.currentChapterTitle, 'C1');
     expect(updated.lastError, 'boom');
@@ -65,6 +77,12 @@ void main() {
       totalChapters: 4,
       doneChunks: 8,
       totalChunks: 12,
+      currentChapterDoneChunks: 3,
+      currentChapterTotalChunks: 4,
+      embeddingBatchIndex: 1,
+      embeddingBatchTotal: 2,
+      lastEmbeddingBatchSize: 4,
+      lastEmbeddingDim: 1024,
       currentChapterHref: 'c1.xhtml',
       currentChapterTitle: 'C1',
       lastError: 'previous failure',
@@ -86,6 +104,12 @@ void main() {
     expect(cleared.totalChapters, 0);
     expect(cleared.doneChunks, 0);
     expect(cleared.totalChunks, 0);
+    expect(cleared.currentChapterDoneChunks, 0);
+    expect(cleared.currentChapterTotalChunks, 0);
+    expect(cleared.embeddingBatchIndex, 0);
+    expect(cleared.embeddingBatchTotal, 0);
+    expect(cleared.lastEmbeddingBatchSize, 0);
+    expect(cleared.lastEmbeddingDim, 0);
     expect(cleared.currentChapterHref, isNull);
     expect(cleared.currentChapterTitle, isNull);
     expect(cleared.lastError, isNull);

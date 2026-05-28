@@ -115,6 +115,12 @@ class AiLibraryIndexQueueRunner {
             totalChapters: p.totalChapters,
             doneChunks: p.doneChunks,
             totalChunks: p.totalChunks,
+            currentChapterDoneChunks: p.currentChapterDoneChunks,
+            currentChapterTotalChunks: p.currentChapterTotalChunks,
+            embeddingBatchIndex: p.embeddingBatchIndex,
+            embeddingBatchTotal: p.embeddingBatchTotal,
+            lastEmbeddingBatchSize: p.lastEmbeddingBatchSize,
+            lastEmbeddingDim: p.lastEmbeddingDim,
             currentChapterHref: p.currentChapterHref,
             currentChapterTitle: p.currentChapterTitle,
           );

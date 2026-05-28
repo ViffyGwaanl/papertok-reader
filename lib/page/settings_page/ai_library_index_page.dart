@@ -11,6 +11,7 @@ import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_progress_text.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_queue_service.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:flutter/material.dart';
@@ -260,9 +261,13 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       chunkOverlapChars,
       maxChapterChars,
     );
-    final line3 = rerankEnabled
-        ? 'Rerank: ${Prefs().aiLibraryIndexRerankMode} · $rerankProviderName · $rerankModel'
-        : 'Rerank: off';
+    final line3 = _rerankSummaryText(
+      context,
+      enabled: rerankEnabled,
+      mode: Prefs().aiLibraryIndexRerankMode,
+      providerName: rerankProviderName,
+      model: rerankModel,
+    );
 
     return ListTile(
       leading: const Icon(Icons.tune),
@@ -272,6 +277,68 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       onTap: () => _showIndexConfigDialog(context),
     );
   }
+
+  bool _isZh(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'zh';
+  }
+
+  String _rerankSummaryText(
+    BuildContext context, {
+    required bool enabled,
+    required String mode,
+    required String providerName,
+    required String model,
+  }) {
+    final zh = _isZh(context);
+    if (!enabled) return zh ? '重排：关闭' : 'Rerank: off';
+    final modeLabel = mode == 'llm'
+        ? (zh ? 'LLM 结构化重排' : 'LLM structured reranker')
+        : (zh ? '专用 HTTP 重排模型' : 'Dedicated HTTP reranker');
+    return zh
+        ? '重排：$modeLabel · $providerName · $model'
+        : 'Rerank: $modeLabel · $providerName · $model';
+  }
+
+  String _rerankEnabledTitle(BuildContext context) =>
+      _isZh(context) ? '启用重排模型' : 'Enable reranker';
+
+  String _rerankEnabledDesc(BuildContext context) => _isZh(context)
+      ? '在混合检索之后使用重排模型重新排序候选结果。'
+      : 'Use a rerank model after hybrid retrieval.';
+
+  String _rerankModeLabel(BuildContext context) =>
+      _isZh(context) ? '重排模式' : 'Rerank mode';
+
+  String _rerankModeHttpLabel(BuildContext context) =>
+      _isZh(context) ? '专用 HTTP 重排模型' : 'Dedicated HTTP reranker';
+
+  String _rerankModeLlmLabel(BuildContext context) =>
+      _isZh(context) ? 'LLM 结构化重排' : 'LLM structured reranker';
+
+  String _rerankFollowProviderTitle(BuildContext context) =>
+      _isZh(context) ? '跟随索引供应商' : 'Follow index provider';
+
+  String _rerankFollowProviderDesc(BuildContext context) => _isZh(context)
+      ? '使用与 Embedding 索引相同的供应商配置。'
+      : 'Use the same provider configured for embeddings.';
+
+  String _rerankProviderLabel(BuildContext context) =>
+      _isZh(context) ? '重排供应商' : 'Rerank provider';
+
+  String _rerankModelLabel(BuildContext context) =>
+      _isZh(context) ? '重排模型' : 'Rerank model';
+
+  String _rerankInstructionLabel(BuildContext context) =>
+      _isZh(context) ? '重排指令' : 'Rerank instruction';
+
+  String _rerankCandidatesLabel(BuildContext context) =>
+      _isZh(context) ? '重排候选数量' : 'Rerank candidates';
+
+  String _rerankDocumentCharsLabel(BuildContext context) =>
+      _isZh(context) ? '重排文档字符数' : 'Rerank document chars';
+
+  String _rerankTimeoutLabel(BuildContext context) =>
+      _isZh(context) ? '重排超时（秒）' : 'Rerank timeout (sec)';
 
   Future<void> _showIndexConfigDialog(BuildContext context) async {
     final l10n = L10n.of(context);
@@ -677,10 +744,8 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                           const SizedBox(height: 12),
                           SwitchListTile.adaptive(
                             contentPadding: EdgeInsets.zero,
-                            title: const Text('Enable reranker'),
-                            subtitle: const Text(
-                              'Use a rerank model after hybrid retrieval.',
-                            ),
+                            title: Text(_rerankEnabledTitle(context)),
+                            subtitle: Text(_rerankEnabledDesc(context)),
                             value: rerankEnabled,
                             onChanged: (v) {
                               setState(() {
@@ -692,18 +757,18 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
                               initialValue: rerankMode,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Rerank mode',
+                              decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: _rerankModeLabel(context),
                               ),
-                              items: const [
+                              items: [
                                 DropdownMenuItem(
                                   value: 'http',
-                                  child: Text('Dedicated HTTP reranker'),
+                                  child: Text(_rerankModeHttpLabel(context)),
                                 ),
                                 DropdownMenuItem(
                                   value: 'llm',
-                                  child: Text('LLM structured reranker'),
+                                  child: Text(_rerankModeLlmLabel(context)),
                                 ),
                               ],
                               onChanged: (v) {
@@ -715,10 +780,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                             const SizedBox(height: 8),
                             SwitchListTile.adaptive(
                               contentPadding: EdgeInsets.zero,
-                              title: const Text('Follow index provider'),
-                              subtitle: const Text(
-                                'Use the same provider configured for embeddings.',
-                              ),
+                              title: Text(_rerankFollowProviderTitle(context)),
+                              subtitle:
+                                  Text(_rerankFollowProviderDesc(context)),
                               value: rerankFollow,
                               onChanged: (v) {
                                 setState(() {
@@ -732,9 +796,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                                 initialValue: rerankProviderId.trim().isEmpty
                                     ? null
                                     : rerankProviderId,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  labelText: 'Rerank provider',
+                                decoration: InputDecoration(
+                                  border: const OutlineInputBorder(),
+                                  labelText: _rerankProviderLabel(context),
                                 ),
                                 items: eligible
                                     .map(
@@ -758,9 +822,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                             const SizedBox(height: 8),
                             TextField(
                               controller: rerankModelController,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Rerank model',
+                              decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: _rerankModelLabel(context),
                                 hintText: 'Qwen/Qwen3-Reranker-8B',
                               ),
                             ),
@@ -769,36 +833,36 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                               controller: rerankInstructionController,
                               minLines: 1,
                               maxLines: 3,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Rerank instruction',
+                              decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: _rerankInstructionLabel(context),
                               ),
                             ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: rerankMaxCandidatesController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Rerank candidates',
+                              decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: _rerankCandidatesLabel(context),
                               ),
                             ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: rerankMaxDocumentCharsController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Rerank document chars',
+                              decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: _rerankDocumentCharsLabel(context),
                               ),
                             ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: rerankTimeoutController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Rerank timeout (sec)',
+                              decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: _rerankTimeoutLabel(context),
                               ),
                             ),
                           ],
@@ -1349,59 +1413,20 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     BuildContext context,
     AiLibraryIndexJob job,
   ) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    final parts = <String>[
-      zh ? '索引 #${job.bookId}' : 'Indexing #${job.bookId}',
-      _formatPercent(job.progress),
-    ];
-    final phase = _localizedPhaseLabel(context, job.phase);
-    if (phase.isNotEmpty) parts.add(phase);
-    if (job.totalChapters > 0) {
-      parts.add(zh
-          ? '章节 ${job.doneChapters}/${job.totalChapters}'
-          : 'chapters ${job.doneChapters}/${job.totalChapters}');
-    }
-    if (job.doneChunks > 0 || job.totalChunks > 0) {
-      final total = job.totalChunks > 0 ? job.totalChunks.toString() : '?';
-      parts.add(zh
-          ? '向量 ${job.doneChunks}/$total'
-          : 'vectors ${job.doneChunks}/$total');
-    }
-    return parts.join(' · ');
+    return AiLibraryIndexProgressText.compact(
+      job: job,
+      languageCode: Localizations.localeOf(context).languageCode,
+    );
   }
 
   String _jobProgressDetailText(
     BuildContext context,
     AiLibraryIndexJob job,
   ) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    final parts = <String>[];
-
-    final phase = _localizedPhaseLabel(context, job.phase);
-    if (phase.isNotEmpty) parts.add(phase);
-
-    if (job.totalChapters > 0) {
-      parts.add(zh
-          ? '章节 ${job.doneChapters}/${job.totalChapters}'
-          : 'chapters ${job.doneChapters}/${job.totalChapters}');
-    }
-
-    if (job.doneChunks > 0 || job.totalChunks > 0) {
-      final total = job.totalChunks > 0 ? job.totalChunks.toString() : '?';
-      parts.add(zh
-          ? '已生成向量 ${job.doneChunks}/$total'
-          : 'embedded chunks ${job.doneChunks}/$total');
-    }
-
-    final current = ((job.currentChapterTitle ?? '').trim().isNotEmpty
-            ? job.currentChapterTitle
-            : job.currentChapterHref)
-        ?.trim();
-    if (current != null && current.isNotEmpty) {
-      parts.add(zh ? '当前 $current' : 'current $current');
-    }
-
-    return parts.join(' · ');
+    return AiLibraryIndexProgressText.detail(
+      job: job,
+      languageCode: Localizations.localeOf(context).languageCode,
+    );
   }
 
   String _jobHeartbeatText(BuildContext context, AiLibraryIndexJob job) {
@@ -1414,16 +1439,6 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     return Localizations.localeOf(context).languageCode == 'zh'
         ? '书籍 #$bookId'
         : 'Book #$bookId';
-  }
-
-  String _localizedPhaseLabel(BuildContext context, String? phase) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    return switch ((phase ?? '').trim()) {
-      'fetch' => zh ? '读取章节' : 'fetching chapter',
-      'embed' => zh ? '生成向量' : 'embedding',
-      'chapter_done' => zh ? '章节完成' : 'chapter done',
-      _ => '',
-    };
   }
 
   String _localizedLastUpdateText(BuildContext context, int updatedAtMs) {
@@ -1486,8 +1501,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   }
 
   String _formatPercent(double value) {
-    final percent = (value.clamp(0.0, 1.0) * 100).round();
-    return '$percent%';
+    return AiLibraryIndexProgressText.formatPercent(value);
   }
 
   Widget _buildBookTile(BuildContext context, _BookRow r) {

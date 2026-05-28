@@ -34,6 +34,12 @@ class AiLibraryIndexQueueRepository {
       'total_chapters': 0,
       'done_chunks': 0,
       'total_chunks': 0,
+      'current_chapter_done_chunks': 0,
+      'current_chapter_total_chunks': 0,
+      'embedding_batch_index': 0,
+      'embedding_batch_total': 0,
+      'last_embedding_batch_size': 0,
+      'last_embedding_dim': 0,
       'created_at': now,
       'updated_at': now,
     });
@@ -86,6 +92,12 @@ class AiLibraryIndexQueueRepository {
     int? totalChapters,
     int? doneChunks,
     int? totalChunks,
+    int? currentChapterDoneChunks,
+    int? currentChapterTotalChunks,
+    int? embeddingBatchIndex,
+    int? embeddingBatchTotal,
+    int? lastEmbeddingBatchSize,
+    int? lastEmbeddingDim,
     String? currentChapterHref,
     String? currentChapterTitle,
     String? lastError,
@@ -109,12 +121,36 @@ class AiLibraryIndexQueueRepository {
       values['total_chapters'] = 0;
       values['done_chunks'] = 0;
       values['total_chunks'] = 0;
+      values['current_chapter_done_chunks'] = 0;
+      values['current_chapter_total_chunks'] = 0;
+      values['embedding_batch_index'] = 0;
+      values['embedding_batch_total'] = 0;
+      values['last_embedding_batch_size'] = 0;
+      values['last_embedding_dim'] = 0;
     } else {
       if (phase != null) values['phase'] = phase;
       if (doneChapters != null) values['done_chapters'] = doneChapters;
       if (totalChapters != null) values['total_chapters'] = totalChapters;
       if (doneChunks != null) values['done_chunks'] = doneChunks;
       if (totalChunks != null) values['total_chunks'] = totalChunks;
+      if (currentChapterDoneChunks != null) {
+        values['current_chapter_done_chunks'] = currentChapterDoneChunks;
+      }
+      if (currentChapterTotalChunks != null) {
+        values['current_chapter_total_chunks'] = currentChapterTotalChunks;
+      }
+      if (embeddingBatchIndex != null) {
+        values['embedding_batch_index'] = embeddingBatchIndex;
+      }
+      if (embeddingBatchTotal != null) {
+        values['embedding_batch_total'] = embeddingBatchTotal;
+      }
+      if (lastEmbeddingBatchSize != null) {
+        values['last_embedding_batch_size'] = lastEmbeddingBatchSize;
+      }
+      if (lastEmbeddingDim != null) {
+        values['last_embedding_dim'] = lastEmbeddingDim;
+      }
     }
     if (clearCurrentChapter) {
       values['current_chapter_href'] = null;
@@ -156,6 +192,15 @@ class AiLibraryIndexQueueRepository {
       totalChapters: (r['total_chapters'] as num?)?.toInt() ?? 0,
       doneChunks: (r['done_chunks'] as num?)?.toInt() ?? 0,
       totalChunks: (r['total_chunks'] as num?)?.toInt() ?? 0,
+      currentChapterDoneChunks:
+          (r['current_chapter_done_chunks'] as num?)?.toInt() ?? 0,
+      currentChapterTotalChunks:
+          (r['current_chapter_total_chunks'] as num?)?.toInt() ?? 0,
+      embeddingBatchIndex: (r['embedding_batch_index'] as num?)?.toInt() ?? 0,
+      embeddingBatchTotal: (r['embedding_batch_total'] as num?)?.toInt() ?? 0,
+      lastEmbeddingBatchSize:
+          (r['last_embedding_batch_size'] as num?)?.toInt() ?? 0,
+      lastEmbeddingDim: (r['last_embedding_dim'] as num?)?.toInt() ?? 0,
       currentChapterHref: r['current_chapter_href']?.toString(),
       currentChapterTitle: r['current_chapter_title']?.toString(),
       lastError: r['last_error']?.toString(),

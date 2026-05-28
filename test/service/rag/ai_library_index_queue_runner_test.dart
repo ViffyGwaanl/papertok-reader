@@ -144,6 +144,12 @@ void main() {
             totalChapters: 7,
             doneChunks: 16,
             totalChunks: 45,
+            currentChapterDoneChunks: 4,
+            currentChapterTotalChunks: 9,
+            embeddingBatchIndex: 1,
+            embeddingBatchTotal: 3,
+            lastEmbeddingBatchSize: 8,
+            lastEmbeddingDim: 1024,
             currentChapterHref: 'chapter-2.xhtml',
             currentChapterTitle: 'Chapter 2',
           ),
@@ -161,6 +167,12 @@ void main() {
     expect(result.totalChapters, 7);
     expect(result.doneChunks, 16);
     expect(result.totalChunks, 45);
+    expect(result.currentChapterDoneChunks, 4);
+    expect(result.currentChapterTotalChunks, 9);
+    expect(result.embeddingBatchIndex, 1);
+    expect(result.embeddingBatchTotal, 3);
+    expect(result.lastEmbeddingBatchSize, 8);
+    expect(result.lastEmbeddingDim, 1024);
     expect(result.currentChapterHref, 'chapter-2.xhtml');
     expect(result.currentChapterTitle, 'Chapter 2');
   });
