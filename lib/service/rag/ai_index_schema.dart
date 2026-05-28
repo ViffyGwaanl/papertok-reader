@@ -2,7 +2,7 @@ import 'package:papertok_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
 
 // NOTE: This DB is intended to be rebuildable. Keep migrations forward-only.
-const int kAiIndexDbVersion = 5;
+const int kAiIndexDbVersion = 8;
 
 class AiIndexMigrations {
   const AiIndexMigrations._();
@@ -32,6 +32,12 @@ class AiIndexMigrations {
           await _v4(db);
         case 5:
           await _v5(db);
+        case 6:
+          await _v6(db);
+        case 7:
+          await _v7(db);
+        case 8:
+          await _v8(db);
       }
     }
   }
@@ -234,5 +240,186 @@ END;
     await addColumn(
       'ALTER TABLE ai_index_jobs ADD COLUMN total_chunks INTEGER DEFAULT 0',
     );
+  }
+
+  static Future<void> _v6(Database db) async {
+    // Preserve richer retrieval structure for contextual chunks and
+    // parent/neighbor expansion while keeping old indexes readable.
+    Future<void> addColumn(String ddl) async {
+      try {
+        await db.execute(ddl);
+      } catch (_) {
+        // Ignore duplicate column errors.
+      }
+    }
+
+    await addColumn('ALTER TABLE ai_chunks ADD COLUMN raw_text TEXT');
+    await addColumn('ALTER TABLE ai_chunks ADD COLUMN context_text TEXT');
+    await addColumn(
+      'ALTER TABLE ai_chunks ADD COLUMN embedding_input_hash TEXT',
+    );
+    await addColumn('ALTER TABLE ai_chunks ADD COLUMN context_model TEXT');
+    await addColumn(
+      'ALTER TABLE ai_chunks ADD COLUMN context_version INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_chunks ADD COLUMN context_created_at INTEGER',
+    );
+    await addColumn(
+      'ALTER TABLE ai_chunks ADD COLUMN chapter_order INTEGER DEFAULT 0',
+    );
+    await addColumn(
+      'ALTER TABLE ai_chunks ADD COLUMN toc_level INTEGER DEFAULT 0',
+    );
+    await addColumn('ALTER TABLE ai_chunks ADD COLUMN toc_path TEXT');
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_chunks_book_href_index '
+      'ON ai_chunks(book_id, chapter_href, chunk_index)',
+    );
+  }
+
+  static Future<void> _v7(Database db) async {
+    // Global retrieval layers. These tables are intentionally optional at query
+    // time: if no background summarization/extraction has populated them yet,
+    // the ordinary chunk RAG path remains fully functional.
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS ai_raptor_nodes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER,
+  level INTEGER NOT NULL DEFAULT 0,
+  parent_id INTEGER,
+  cluster_id TEXT,
+  title TEXT,
+  summary TEXT NOT NULL,
+  embedding_json TEXT,
+  embedding_dim INTEGER,
+  embedding_norm REAL,
+  child_count INTEGER DEFAULT 0,
+  created_at INTEGER,
+  updated_at INTEGER,
+  FOREIGN KEY (book_id) REFERENCES ai_book_index(book_id) ON DELETE CASCADE,
+  FOREIGN KEY (parent_id) REFERENCES ai_raptor_nodes(id) ON DELETE CASCADE
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS ai_raptor_node_chunks (
+  node_id INTEGER NOT NULL,
+  chunk_id INTEGER NOT NULL,
+  PRIMARY KEY (node_id, chunk_id),
+  FOREIGN KEY (node_id) REFERENCES ai_raptor_nodes(id) ON DELETE CASCADE,
+  FOREIGN KEY (chunk_id) REFERENCES ai_chunks(id) ON DELETE CASCADE
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS ai_graph_nodes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER,
+  node_type TEXT NOT NULL,
+  name TEXT NOT NULL,
+  canonical_name TEXT,
+  summary TEXT,
+  embedding_json TEXT,
+  embedding_dim INTEGER,
+  embedding_norm REAL,
+  confidence REAL DEFAULT 0,
+  created_at INTEGER,
+  updated_at INTEGER,
+  FOREIGN KEY (book_id) REFERENCES ai_book_index(book_id) ON DELETE CASCADE
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS ai_graph_edges (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER,
+  src_node_id INTEGER NOT NULL,
+  dst_node_id INTEGER NOT NULL,
+  relation TEXT NOT NULL,
+  weight REAL DEFAULT 1,
+  evidence_count INTEGER DEFAULT 0,
+  created_at INTEGER,
+  updated_at INTEGER,
+  FOREIGN KEY (book_id) REFERENCES ai_book_index(book_id) ON DELETE CASCADE,
+  FOREIGN KEY (src_node_id) REFERENCES ai_graph_nodes(id) ON DELETE CASCADE,
+  FOREIGN KEY (dst_node_id) REFERENCES ai_graph_nodes(id) ON DELETE CASCADE
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS ai_graph_node_chunks (
+  node_id INTEGER NOT NULL,
+  chunk_id INTEGER NOT NULL,
+  role TEXT,
+  PRIMARY KEY (node_id, chunk_id),
+  FOREIGN KEY (node_id) REFERENCES ai_graph_nodes(id) ON DELETE CASCADE,
+  FOREIGN KEY (chunk_id) REFERENCES ai_chunks(id) ON DELETE CASCADE
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS ai_graph_communities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER,
+  level INTEGER NOT NULL DEFAULT 0,
+  title TEXT,
+  summary TEXT NOT NULL,
+  embedding_json TEXT,
+  embedding_dim INTEGER,
+  embedding_norm REAL,
+  created_at INTEGER,
+  updated_at INTEGER,
+  FOREIGN KEY (book_id) REFERENCES ai_book_index(book_id) ON DELETE CASCADE
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS ai_graph_community_nodes (
+  community_id INTEGER NOT NULL,
+  node_id INTEGER NOT NULL,
+  PRIMARY KEY (community_id, node_id),
+  FOREIGN KEY (community_id) REFERENCES ai_graph_communities(id) ON DELETE CASCADE,
+  FOREIGN KEY (node_id) REFERENCES ai_graph_nodes(id) ON DELETE CASCADE
+)
+''');
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_raptor_nodes_book_level '
+      'ON ai_raptor_nodes(book_id, level)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_raptor_nodes_parent '
+      'ON ai_raptor_nodes(parent_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_graph_nodes_book_type_name '
+      'ON ai_graph_nodes(book_id, node_type, canonical_name)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_graph_edges_src '
+      'ON ai_graph_edges(src_node_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_graph_edges_dst '
+      'ON ai_graph_edges(dst_node_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_graph_communities_book_level '
+      'ON ai_graph_communities(book_id, level)',
+    );
+  }
+
+  static Future<void> _v8(Database db) async {
+    Future<void> addColumn(String ddl) async {
+      try {
+        await db.execute(ddl);
+      } catch (_) {
+        // Ignore duplicate column errors.
+      }
+    }
+
+    await addColumn('ALTER TABLE ai_chunks ADD COLUMN embedding_blob BLOB');
   }
 }

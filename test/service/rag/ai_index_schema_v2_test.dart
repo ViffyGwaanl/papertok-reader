@@ -80,4 +80,52 @@ void main() {
     expect(jobNames, contains('done_chunks'));
     expect(jobNames, contains('total_chunks'));
   });
+
+  test('AiIndexDatabase upgrades v5 ai_chunks with RAG structure columns',
+      () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final dir = await Directory.systemTemp.createTemp('ai_index_v6_');
+    addTearDown(() async {
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    });
+
+    final path = p.join(dir.path, 'ai_index.db');
+    final oldDb = await factory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 5,
+        onCreate: (db, version) => AiIndexMigrations.migrate(db, 0, version),
+      ),
+    );
+    await oldDb.close();
+
+    final db = AiIndexDatabase.forTesting(path: path, factory: factory);
+    addTearDown(db.close);
+    final handle = await db.database;
+
+    final versionRow = await handle.rawQuery('PRAGMA user_version');
+    final userVersion = (versionRow.first.values.first as num).toInt();
+    expect(userVersion, kAiIndexDbVersion);
+
+    final chunkCols = await handle.rawQuery('PRAGMA table_info(ai_chunks)');
+    final chunkNames = chunkCols.map((c) => c['name']?.toString()).toList();
+
+    expect(chunkNames, contains('raw_text'));
+    expect(chunkNames, contains('context_text'));
+    expect(chunkNames, contains('embedding_blob'));
+    expect(chunkNames, contains('embedding_input_hash'));
+    expect(chunkNames, contains('context_model'));
+    expect(chunkNames, contains('context_version'));
+    expect(chunkNames, contains('context_created_at'));
+    expect(chunkNames, contains('chapter_order'));
+    expect(chunkNames, contains('toc_level'));
+    expect(chunkNames, contains('toc_path'));
+
+    final indexRows = await handle.rawQuery('PRAGMA index_list(ai_chunks)');
+    final indexNames = indexRows.map((c) => c['name']?.toString()).toList();
+    expect(indexNames, contains('idx_ai_chunks_book_href_index'));
+  });
 }

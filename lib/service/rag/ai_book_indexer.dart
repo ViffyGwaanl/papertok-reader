@@ -3,13 +3,17 @@ import 'dart:convert';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/models/book.dart';
-import 'package:papertok_reader/models/toc_item.dart';
 import 'package:papertok_reader/providers/book_toc.dart';
 import 'package:papertok_reader/providers/chapter_content_bridge.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
+import 'package:papertok_reader/service/rag/ai_contextual_chunker.dart';
 import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
+import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
+import 'package:papertok_reader/service/rag/ai_index_chapter_plan.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/ai_index_reuse_policy.dart';
 import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
+import 'package:papertok_reader/service/rag/ai_vector_codec.dart';
 import 'package:papertok_reader/service/rag/vector_math.dart';
 import 'package:papertok_reader/utils/log/common.dart';
 import 'package:papertok_reader/service/rag/library/ai_headless_reader_bridge_service.dart';
@@ -68,9 +72,13 @@ class AiBookIndexer {
 
   /// Bump this when the indexing algorithm changes in a way that makes
   /// previous book indexes incompatible.
-  static const int indexAlgorithmVersion = 1;
+  static const int indexAlgorithmVersion = 3;
 
   final AiTextChunker _chunker = const AiTextChunker();
+  final AiContextualChunkBuilder _contextBuilder =
+      const AiContextualChunkBuilder();
+  late final AiGlobalIndexBuilder _globalIndexBuilder =
+      AiGlobalIndexBuilder(database: _database);
 
   Future<AiBookIndexInfo> buildCurrentBook({
     required bool rebuild,
@@ -99,16 +107,22 @@ class AiBookIndexer {
     final book = reading.book!;
 
     final toc = ref.read(bookTocProvider);
-    final chapters = _flattenToc(toc);
+    final chapters = AiIndexChapterPlan.flattenToc(toc);
 
     // Fallback: index current chapter only if TOC is missing.
     final fallbackHref = (reading.chapterHref ?? '').trim();
     final targetChapters = chapters.isNotEmpty
         ? chapters
         : (fallbackHref.isEmpty
-            ? const <({String href, String title})>[]
-            : <({String href, String title})>[
-                (href: fallbackHref, title: reading.chapterTitle ?? ''),
+            ? const <AiIndexChapter>[]
+            : <AiIndexChapter>[
+                AiIndexChapter(
+                  href: fallbackHref,
+                  title: reading.chapterTitle ?? '',
+                  chapterOrder: 0,
+                  tocLevel: 0,
+                  tocPath: reading.chapterTitle ?? '',
+                ),
               ]);
 
     if (targetChapters.isEmpty) {
@@ -160,7 +174,7 @@ class AiBookIndexer {
 
     try {
       final toc = await bridge.getToc();
-      final chapters = _flattenToc(toc);
+      final chapters = AiIndexChapterPlan.flattenToc(toc);
       if (chapters.isEmpty) {
         throw StateError('No chapters available for indexing.');
       }
@@ -202,21 +216,34 @@ class AiBookIndexer {
     required int chunkMinChars,
     required int chunkOverlapChars,
     required int maxChapterCharacters,
-    required List<({String href, String title})> chapters,
+    required List<AiIndexChapter> chapters,
     required Future<String> Function(String href) fetchChapterByHref,
     AiBookIndexProgressCallback? onProgress,
     AiBookIndexCancellationCheck? shouldCancel,
   }) async {
     final bookId = book.id;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final providerId =
+        (embeddingProviderId ?? Prefs().selectedAiService).trim();
 
     final existing = await _database.getBookIndexInfo(bookId);
-    if (!rebuild && existing != null && existing.chunkCount > 0) {
+    if (!rebuild &&
+        existing != null &&
+        AiIndexReusePolicy.canReuse(
+          existing,
+          bookMd5: book.md5 ?? '',
+          providerId: providerId,
+          embeddingModel: embeddingModel,
+          indexVersion: indexAlgorithmVersion,
+          chunkTargetChars: chunkTargetChars,
+          chunkMaxChars: chunkMaxChars,
+          chunkMinChars: chunkMinChars,
+          chunkOverlapChars: chunkOverlapChars,
+          maxChapterCharacters: maxChapterCharacters,
+        )) {
       return existing;
     }
 
-    final providerId =
-        (embeddingProviderId ?? Prefs().selectedAiService).trim();
     final db = await _database.database;
 
     await db.transaction((txn) async {
@@ -226,7 +253,7 @@ class AiBookIndexer {
         'ai_book_index',
         {
           'book_id': bookId,
-          'book_md5': book.md5,
+          'book_md5': book.md5 ?? '',
           'provider_id': providerId,
           'embedding_model': embeddingModel,
           'chunk_target_chars': chunkTargetChars,
@@ -306,11 +333,40 @@ class AiBookIndexer {
       }
 
       totalChunks += chunks.length;
+      onProgress?.call(
+        AiBookIndexProgress(
+          phase: AiContextualChunkBuilder.progressPhase,
+          doneChapters: doneChapters,
+          totalChapters: chapters.length,
+          doneChunks: doneChunks,
+          totalChunks: totalChunks,
+          currentChapterHref: href,
+          currentChapterTitle: title,
+        ),
+      );
+      final contextualChunks = [
+        for (var i = 0; i < chunks.length; i++)
+          (
+            chunk: chunks[i],
+            context: _contextBuilder.build(
+              bookTitle: book.title,
+              chapter: ch,
+              chunkText: chunks[i].text,
+              chunkIndex: i,
+              totalChunks: chunks.length,
+              embeddingModel: embeddingModel,
+            ),
+          ),
+      ];
 
       final batchSize = embeddingBatchSize.clamp(1, 64);
-      for (var offset = 0; offset < chunks.length; offset += batchSize) {
-        final batch =
-            chunks.skip(offset).take(batchSize).toList(growable: false);
+      for (var offset = 0;
+          offset < contextualChunks.length;
+          offset += batchSize) {
+        final batch = contextualChunks
+            .skip(offset)
+            .take(batchSize)
+            .toList(growable: false);
 
         onProgress?.call(
           AiBookIndexProgress(
@@ -324,7 +380,9 @@ class AiBookIndexer {
           ),
         );
 
-        final texts = batch.map((c) => c.text).toList(growable: false);
+        final texts = batch.map((c) => c.context.embeddingText).toList(
+              growable: false,
+            );
         throwIfCancelled();
         final vectors = await AiEmbeddingsService.embedDocuments(
           texts,
@@ -337,7 +395,8 @@ class AiBookIndexer {
         await db.transaction((txn) async {
           throwIfCancelled();
           for (var i = 0; i < batch.length; i++) {
-            final c = batch[i];
+            final c = batch[i].chunk;
+            final context = batch[i].context;
             final v = vectors[i];
             final norm = VectorMath.l2Norm(v);
             await txn.insert('ai_chunks', {
@@ -347,8 +406,18 @@ class AiBookIndexer {
               'chunk_index': offset + i,
               'start_char': c.startChar,
               'end_char': c.endChar,
-              'text': c.text,
+              'text': context.embeddingText,
+              'raw_text': context.rawText,
+              'context_text': context.contextText,
+              'embedding_input_hash': context.embeddingInputHash,
+              'context_model': AiContextualChunkBuilder.contextModel,
+              'context_version': AiContextualChunkBuilder.contextVersion,
+              'context_created_at': nowMs,
+              'chapter_order': ch.chapterOrder,
+              'toc_level': ch.tocLevel,
+              'toc_path': ch.tocPath,
               'embedding_json': jsonEncode(v),
+              'embedding_blob': AiVectorCodec.encodeFloat32(v),
               'embedding_dim': v.length,
               'embedding_norm': norm,
               'created_at': nowMs,
@@ -375,6 +444,26 @@ class AiBookIndexer {
     }
 
     throwIfCancelled();
+    if (doneChunks > 0) {
+      onProgress?.call(
+        AiBookIndexProgress(
+          phase: 'global',
+          doneChapters: doneChapters,
+          totalChapters: chapters.length,
+          doneChunks: doneChunks,
+          totalChunks: totalChunks,
+        ),
+      );
+      try {
+        await _globalIndexBuilder.rebuildBook(bookId: bookId);
+      } catch (e) {
+        AnxLog.warning(
+          'AiIndex: global layer build failed bookId=$bookId error=$e',
+        );
+      }
+      throwIfCancelled();
+    }
+
     await db.update(
       'ai_book_index',
       {
@@ -390,27 +479,5 @@ class AiBookIndexer {
 
     final info = await _database.getBookIndexInfo(bookId);
     return info ?? AiBookIndexInfo(bookId: bookId, chunkCount: doneChunks);
-  }
-
-  List<({String href, String title})> _flattenToc(List<TocItem> toc) {
-    final out = <({String href, String title})>[];
-
-    void walk(TocItem item) {
-      final href = item.href.trim();
-      if (href.isNotEmpty) {
-        out.add((href: href, title: item.label));
-      }
-      for (final sub in item.subitems) {
-        walk(sub);
-      }
-    }
-
-    for (final item in toc) {
-      walk(item);
-    }
-
-    // Deduplicate hrefs.
-    final seen = <String>{};
-    return out.where((e) => seen.add(e.href)).toList(growable: false);
   }
 }

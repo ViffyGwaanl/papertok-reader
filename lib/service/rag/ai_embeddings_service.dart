@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/models/ai_api_key_entry.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
@@ -323,10 +324,8 @@ class AiEmbeddingsService {
     int timeoutSeconds,
   ) async {
     final results = <List<double>>[];
-    final isOllama = !endpoint.contains('/v1');
-    final url = isOllama
-        ? _join(endpoint, 'api/embeddings')
-        : _join(endpoint, 'v1/embeddings');
+    final isOllama = !_isOpenAiCompatibleLocalEndpoint(endpoint);
+    final url = buildLocalEmbeddingUrl(endpoint);
 
     AnxLog.info('Embeddings: using local endpoint $url model=$model '
         'texts=${texts.length}');
@@ -346,7 +345,8 @@ class AiEmbeddingsService {
         if (embedding is List) {
           results.add(embedding.cast<num>().map((n) => n.toDouble()).toList());
         } else {
-          throw StateError('Local embedding response missing "embedding" field');
+          throw StateError(
+              'Local embedding response missing "embedding" field');
         }
       }
     } else {
@@ -377,5 +377,25 @@ class AiEmbeddingsService {
       return '$baseUrl$path';
     }
     return '$baseUrl/$path';
+  }
+
+  @visibleForTesting
+  static String buildLocalEmbeddingUrl(String endpoint) {
+    final trimmed = endpoint.trim();
+    final normalized = trimmed.endsWith('/')
+        ? trimmed.substring(0, trimmed.length - 1)
+        : trimmed;
+    if (_isOpenAiCompatibleLocalEndpoint(normalized)) {
+      if (normalized.endsWith('/embeddings')) return normalized;
+      return _join(normalized, 'embeddings');
+    }
+    return _join(normalized, 'api/embeddings');
+  }
+
+  static bool _isOpenAiCompatibleLocalEndpoint(String endpoint) {
+    final uri = Uri.tryParse(endpoint.trim());
+    if (uri == null) return endpoint.contains('/v1');
+    final segments = uri.pathSegments.where((e) => e.isNotEmpty);
+    return segments.contains('v1');
   }
 }

@@ -339,7 +339,8 @@ class Prefs extends ChangeNotifier {
   }
 
   Color get themeColor {
-    final colorValue = prefs.getInt('themeColor') ?? ClaudePalette.accentLight.toARGB32();
+    final colorValue =
+        prefs.getInt('themeColor') ?? ClaudePalette.accentLight.toARGB32();
     return Color(colorValue);
   }
 
@@ -1127,6 +1128,24 @@ Requirements:
       'aiLibraryIndexProviderIdV1';
   static const String _aiLibraryIndexEmbeddingModelKey =
       'aiLibraryIndexEmbeddingModelV1';
+  static const String _aiLibraryIndexRerankEnabledKey =
+      'aiLibraryIndexRerankEnabledV1';
+  static const String _aiLibraryIndexRerankModeKey =
+      'aiLibraryIndexRerankModeV1';
+  static const String _aiLibraryIndexRerankFollowIndexProviderKey =
+      'aiLibraryIndexRerankFollowIndexProviderV1';
+  static const String _aiLibraryIndexRerankProviderIdKey =
+      'aiLibraryIndexRerankProviderIdV1';
+  static const String _aiLibraryIndexRerankModelKey =
+      'aiLibraryIndexRerankModelV1';
+  static const String _aiLibraryIndexRerankInstructionKey =
+      'aiLibraryIndexRerankInstructionV1';
+  static const String _aiLibraryIndexRerankMaxCandidatesKey =
+      'aiLibraryIndexRerankMaxCandidatesV1';
+  static const String _aiLibraryIndexRerankMaxDocumentCharsKey =
+      'aiLibraryIndexRerankMaxDocumentCharsV1';
+  static const String _aiLibraryIndexRerankTimeoutSecKey =
+      'aiLibraryIndexRerankTimeoutSecV1';
 
   static const String _aiLibraryIndexChunkTargetCharsKey =
       'aiLibraryIndexChunkTargetCharsV1';
@@ -1271,6 +1290,139 @@ Requirements:
     if (m.isNotEmpty) return m;
     // Keep in sync with AiEmbeddingsService.defaultEmbeddingModel.
     return 'text-embedding-3-large';
+  }
+
+  bool get aiLibraryIndexRerankEnabled {
+    return prefs.getBool(_aiLibraryIndexRerankEnabledKey) ?? false;
+  }
+
+  set aiLibraryIndexRerankEnabled(bool value) {
+    if (aiLibraryIndexRerankEnabled != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_aiLibraryIndexRerankEnabledKey, value);
+    notifyListeners();
+  }
+
+  String get aiLibraryIndexRerankMode {
+    final raw = prefs.getString(_aiLibraryIndexRerankModeKey) ?? 'http';
+    return raw == 'llm' ? 'llm' : 'http';
+  }
+
+  set aiLibraryIndexRerankMode(String value) {
+    final v = value.trim().toLowerCase() == 'llm' ? 'llm' : 'http';
+    if (aiLibraryIndexRerankMode != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiLibraryIndexRerankModeKey, v);
+    notifyListeners();
+  }
+
+  bool get aiLibraryIndexRerankFollowIndexProvider {
+    return prefs.getBool(_aiLibraryIndexRerankFollowIndexProviderKey) ?? true;
+  }
+
+  set aiLibraryIndexRerankFollowIndexProvider(bool value) {
+    if (aiLibraryIndexRerankFollowIndexProvider != value) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setBool(_aiLibraryIndexRerankFollowIndexProviderKey, value);
+    notifyListeners();
+  }
+
+  String get aiLibraryIndexRerankProviderId {
+    return prefs.getString(_aiLibraryIndexRerankProviderIdKey) ?? '';
+  }
+
+  set aiLibraryIndexRerankProviderId(String id) {
+    final v = id.trim();
+    if (aiLibraryIndexRerankProviderId.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiLibraryIndexRerankProviderIdKey, v);
+    notifyListeners();
+  }
+
+  String get aiLibraryIndexRerankProviderIdEffective {
+    final explicit = aiLibraryIndexRerankProviderId.trim();
+    if (!aiLibraryIndexRerankFollowIndexProvider && explicit.isNotEmpty) {
+      return explicit;
+    }
+    return aiLibraryIndexProviderIdEffective;
+  }
+
+  String get aiLibraryIndexRerankModel {
+    return prefs.getString(_aiLibraryIndexRerankModelKey) ?? '';
+  }
+
+  set aiLibraryIndexRerankModel(String model) {
+    final v = model.trim();
+    if (aiLibraryIndexRerankModel.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiLibraryIndexRerankModelKey, v);
+    notifyListeners();
+  }
+
+  String get aiLibraryIndexRerankModelEffective {
+    final m = aiLibraryIndexRerankModel.trim();
+    if (m.isNotEmpty) return m;
+    return 'Qwen/Qwen3-Reranker-8B';
+  }
+
+  String get aiLibraryIndexRerankInstruction {
+    return prefs.getString(_aiLibraryIndexRerankInstructionKey) ?? '';
+  }
+
+  set aiLibraryIndexRerankInstruction(String value) {
+    final v = value.trim();
+    if (aiLibraryIndexRerankInstruction.trim() != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setString(_aiLibraryIndexRerankInstructionKey, v);
+    notifyListeners();
+  }
+
+  int get aiLibraryIndexRerankMaxCandidates {
+    final v = prefs.getInt(_aiLibraryIndexRerankMaxCandidatesKey) ?? 40;
+    return v.clamp(1, 80);
+  }
+
+  set aiLibraryIndexRerankMaxCandidates(int value) {
+    final v = value.clamp(1, 80);
+    if (aiLibraryIndexRerankMaxCandidates != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexRerankMaxCandidatesKey, v);
+    notifyListeners();
+  }
+
+  int get aiLibraryIndexRerankMaxDocumentChars {
+    final v = prefs.getInt(_aiLibraryIndexRerankMaxDocumentCharsKey) ?? 1800;
+    return v.clamp(256, 6000);
+  }
+
+  set aiLibraryIndexRerankMaxDocumentChars(int value) {
+    final v = value.clamp(256, 6000);
+    if (aiLibraryIndexRerankMaxDocumentChars != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexRerankMaxDocumentCharsKey, v);
+    notifyListeners();
+  }
+
+  int get aiLibraryIndexRerankTimeoutSeconds {
+    final v = prefs.getInt(_aiLibraryIndexRerankTimeoutSecKey) ?? 20;
+    return v.clamp(5, 120);
+  }
+
+  set aiLibraryIndexRerankTimeoutSeconds(int value) {
+    final v = value.clamp(5, 120);
+    if (aiLibraryIndexRerankTimeoutSeconds != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexRerankTimeoutSecKey, v);
+    notifyListeners();
   }
 
   int get aiLibraryIndexChunkTargetChars {
@@ -3002,7 +3154,8 @@ Requirements:
     // v1 → v2: append 'memory' to the stored order/enabled maps (disabled by
     // default so existing users don't get a surprise new tab).
     if (v == 1 && hasOrder && hasEnabled) {
-      final storedOrder = prefs.getStringList(_homeTabsOrderKey) ?? const <String>[];
+      final storedOrder =
+          prefs.getStringList(_homeTabsOrderKey) ?? const <String>[];
       final order = List<String>.from(storedOrder);
       if (!order.contains(homeTabMemory)) {
         final settingsIdx = order.indexOf(homeTabSettings);
@@ -3015,8 +3168,9 @@ Requirements:
 
       final storedEnabledJson = prefs.getString(_homeTabsEnabledKey) ?? '{}';
       final decoded = jsonDecode(storedEnabledJson);
-      final Map<String, dynamic> rawEnabled =
-          decoded is Map ? decoded as Map<String, dynamic> : <String, dynamic>{};
+      final Map<String, dynamic> rawEnabled = decoded is Map
+          ? decoded as Map<String, dynamic>
+          : <String, dynamic>{};
       final enabled = <String, bool>{
         for (final entry in rawEnabled.entries)
           entry.key: entry.value is bool ? entry.value as bool : true,

@@ -1,10 +1,8 @@
-import 'dart:convert';
-
 import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:papertok_reader/service/rag/ai_vector_codec.dart';
 import 'package:papertok_reader/service/rag/vector_math.dart';
-import 'package:sqflite/sqflite.dart';
 
 class AiSemanticSearchEvidence {
   const AiSemanticSearchEvidence({
@@ -112,6 +110,8 @@ class SemanticSearchCurrentBook {
         'chapter_title',
         'chunk_index',
         'text',
+        'raw_text',
+        'embedding_blob',
         'embedding_json',
         'embedding_norm',
       ],
@@ -151,18 +151,11 @@ class SemanticSearchCurrentBook {
     final scored = <({Map<String, Object?> row, double score})>[];
 
     for (final r in rows) {
-      final embJson = r['embedding_json']?.toString() ?? '[]';
-      List<double> v;
-      try {
-        final decoded = jsonDecode(embJson);
-        if (decoded is List) {
-          v = decoded.map((x) => (x as num).toDouble()).toList(growable: false);
-        } else {
-          continue;
-        }
-      } catch (_) {
-        continue;
-      }
+      final v = AiVectorCodec.decodeVector(
+        blob: r['embedding_blob'],
+        jsonText: r['embedding_json']?.toString(),
+      );
+      if (v == null || v.isEmpty) continue;
 
       final norm = (r['embedding_norm'] as num?)?.toDouble();
       final score = VectorMath.cosineSimilarity(
@@ -185,7 +178,9 @@ class SemanticSearchCurrentBook {
       final title = (r['chapter_title']?.toString() ?? '').trim();
       final anchor = title.isEmpty ? href : title;
 
-      final rawText = r['text']?.toString() ?? '';
+      final rawText = (r['raw_text']?.toString().trim().isNotEmpty ?? false)
+          ? r['raw_text']!.toString()
+          : r['text']?.toString() ?? '';
       final snippet =
           rawText.length <= 450 ? rawText : '${rawText.substring(0, 450)}…';
 

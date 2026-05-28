@@ -236,6 +236,11 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     final providerName =
         Prefs().getAiProviderMeta(providerId)?.name ?? providerId;
     final embeddingModel = Prefs().aiLibraryIndexEmbeddingModelEffective;
+    final rerankEnabled = Prefs().aiLibraryIndexRerankEnabled;
+    final rerankProviderId = Prefs().aiLibraryIndexRerankProviderIdEffective;
+    final rerankProviderName =
+        Prefs().getAiProviderMeta(rerankProviderId)?.name ?? rerankProviderId;
+    final rerankModel = Prefs().aiLibraryIndexRerankModelEffective;
 
     final chunkTargetChars = Prefs().aiLibraryIndexChunkTargetChars;
     final chunkMaxChars = Prefs().aiLibraryIndexChunkMaxChars;
@@ -255,11 +260,14 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       chunkOverlapChars,
       maxChapterChars,
     );
+    final line3 = rerankEnabled
+        ? 'Rerank: ${Prefs().aiLibraryIndexRerankMode} · $rerankProviderName · $rerankModel'
+        : 'Rerank: off';
 
     return ListTile(
       leading: const Icon(Icons.tune),
       title: Text(l10n.aiLibraryIndexConfigTitle),
-      subtitle: Text('$line1\n$line2'),
+      subtitle: Text('$line1\n$line2\n$line3'),
       isThreeLine: true,
       onTap: () => _showIndexConfigDialog(context),
     );
@@ -270,9 +278,19 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
 
     var follow = Prefs().aiLibraryIndexFollowSelectedProvider;
     var providerId = Prefs().aiLibraryIndexProviderId;
+    var rerankEnabled = Prefs().aiLibraryIndexRerankEnabled;
+    var rerankMode = Prefs().aiLibraryIndexRerankMode;
+    var rerankFollow = Prefs().aiLibraryIndexRerankFollowIndexProvider;
+    var rerankProviderId = Prefs().aiLibraryIndexRerankProviderId;
 
     final modelController = TextEditingController(
       text: Prefs().aiLibraryIndexEmbeddingModel.trim(),
+    );
+    final rerankModelController = TextEditingController(
+      text: Prefs().aiLibraryIndexRerankModel.trim(),
+    );
+    final rerankInstructionController = TextEditingController(
+      text: Prefs().aiLibraryIndexRerankInstruction.trim(),
     );
 
     final targetController = TextEditingController(
@@ -296,6 +314,15 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     );
     final timeoutController = TextEditingController(
       text: Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds.toString(),
+    );
+    final rerankMaxCandidatesController = TextEditingController(
+      text: Prefs().aiLibraryIndexRerankMaxCandidates.toString(),
+    );
+    final rerankMaxDocumentCharsController = TextEditingController(
+      text: Prefs().aiLibraryIndexRerankMaxDocumentChars.toString(),
+    );
+    final rerankTimeoutController = TextEditingController(
+      text: Prefs().aiLibraryIndexRerankTimeoutSeconds.toString(),
     );
 
     List<String> eligibleProviderIds() {
@@ -327,6 +354,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
               // Keep providerId valid.
               if (!eligible.contains(providerId)) {
                 providerId = eligible.isEmpty ? '' : eligible.first;
+              }
+              if (!eligible.contains(rerankProviderId)) {
+                rerankProviderId = eligible.isEmpty ? '' : eligible.first;
               }
 
               Future<void> pickEmbeddingModel() async {
@@ -644,6 +674,134 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                               labelText: l10n.aiLibraryIndexConfigTimeoutLabel,
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Enable reranker'),
+                            subtitle: const Text(
+                              'Use a rerank model after hybrid retrieval.',
+                            ),
+                            value: rerankEnabled,
+                            onChanged: (v) {
+                              setState(() {
+                                rerankEnabled = v;
+                              });
+                            },
+                          ),
+                          if (rerankEnabled) ...[
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              initialValue: rerankMode,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Rerank mode',
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'http',
+                                  child: Text('Dedicated HTTP reranker'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'llm',
+                                  child: Text('LLM structured reranker'),
+                                ),
+                              ],
+                              onChanged: (v) {
+                                setState(() {
+                                  rerankMode = v ?? 'http';
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            SwitchListTile.adaptive(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('Follow index provider'),
+                              subtitle: const Text(
+                                'Use the same provider configured for embeddings.',
+                              ),
+                              value: rerankFollow,
+                              onChanged: (v) {
+                                setState(() {
+                                  rerankFollow = v;
+                                });
+                              },
+                            ),
+                            if (!rerankFollow) ...[
+                              const SizedBox(height: 8),
+                              DropdownButtonFormField<String>(
+                                initialValue: rerankProviderId.trim().isEmpty
+                                    ? null
+                                    : rerankProviderId,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  labelText: 'Rerank provider',
+                                ),
+                                items: eligible
+                                    .map(
+                                      (id) => DropdownMenuItem(
+                                        value: id,
+                                        child: Text(
+                                          Prefs().getAiProviderMeta(id)?.name ??
+                                              id,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(growable: false),
+                                onChanged: (v) {
+                                  setState(() {
+                                    rerankProviderId = v ?? '';
+                                  });
+                                },
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: rerankModelController,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Rerank model',
+                                hintText: 'Qwen/Qwen3-Reranker-8B',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: rerankInstructionController,
+                              minLines: 1,
+                              maxLines: 3,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Rerank instruction',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: rerankMaxCandidatesController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Rerank candidates',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: rerankMaxDocumentCharsController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Rerank document chars',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: rerankTimeoutController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Rerank timeout (sec)',
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 8),
                           Text(
                             l10n.aiLibraryIndexConfigChunkHint,
@@ -660,7 +818,13 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                       setState(() {
                         follow = true;
                         providerId = '';
+                        rerankEnabled = false;
+                        rerankMode = 'http';
+                        rerankFollow = true;
+                        rerankProviderId = '';
                         modelController.text = '';
+                        rerankModelController.text = '';
+                        rerankInstructionController.text = '';
                         targetController.text =
                             AiTextChunker.defaultTargetChars.toString();
                         maxController.text =
@@ -675,6 +839,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                         batchSizeController.text =
                             AiBookIndexer.defaultEmbeddingBatchSize.toString();
                         timeoutController.text = '60';
+                        rerankMaxCandidatesController.text = '40';
+                        rerankMaxDocumentCharsController.text = '1800';
+                        rerankTimeoutController.text = '20';
                       });
                     },
                     child: Text(l10n.commonReset),
@@ -715,11 +882,38 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                         timeoutController.text,
                         Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds,
                       );
+                      final rerankMaxCandidates = parseIntOr(
+                        rerankMaxCandidatesController.text,
+                        Prefs().aiLibraryIndexRerankMaxCandidates,
+                      );
+                      final rerankMaxDocumentChars = parseIntOr(
+                        rerankMaxDocumentCharsController.text,
+                        Prefs().aiLibraryIndexRerankMaxDocumentChars,
+                      );
+                      final rerankTimeoutSec = parseIntOr(
+                        rerankTimeoutController.text,
+                        Prefs().aiLibraryIndexRerankTimeoutSeconds,
+                      );
 
                       Prefs().aiLibraryIndexFollowSelectedProvider = follow;
                       Prefs().aiLibraryIndexProviderId = providerId;
                       Prefs().aiLibraryIndexEmbeddingModel =
                           modelController.text;
+                      Prefs().aiLibraryIndexRerankEnabled = rerankEnabled;
+                      Prefs().aiLibraryIndexRerankMode = rerankMode;
+                      Prefs().aiLibraryIndexRerankFollowIndexProvider =
+                          rerankFollow;
+                      Prefs().aiLibraryIndexRerankProviderId = rerankProviderId;
+                      Prefs().aiLibraryIndexRerankModel =
+                          rerankModelController.text;
+                      Prefs().aiLibraryIndexRerankInstruction =
+                          rerankInstructionController.text;
+                      Prefs().aiLibraryIndexRerankMaxCandidates =
+                          rerankMaxCandidates;
+                      Prefs().aiLibraryIndexRerankMaxDocumentChars =
+                          rerankMaxDocumentChars;
+                      Prefs().aiLibraryIndexRerankTimeoutSeconds =
+                          rerankTimeoutSec;
                       Prefs().aiLibraryIndexChunkTargetChars = target;
                       Prefs().aiLibraryIndexChunkMaxChars = maxChars;
                       Prefs().aiLibraryIndexChunkMinChars = minChars;
@@ -747,6 +941,8 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       );
     } finally {
       modelController.dispose();
+      rerankModelController.dispose();
+      rerankInstructionController.dispose();
       targetController.dispose();
       maxController.dispose();
       minController.dispose();
@@ -754,6 +950,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       maxChapterController.dispose();
       batchSizeController.dispose();
       timeoutController.dispose();
+      rerankMaxCandidatesController.dispose();
+      rerankMaxDocumentCharsController.dispose();
+      rerankTimeoutController.dispose();
     }
   }
 

@@ -109,6 +109,19 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
         prefs.aiLibraryIndexFollowSelectedProvider,
     'aiLibraryIndexProviderIdV1': prefs.aiLibraryIndexProviderId,
     'aiLibraryIndexEmbeddingModelV1': prefs.aiLibraryIndexEmbeddingModel,
+    'aiLibraryIndexRerankEnabledV1': prefs.aiLibraryIndexRerankEnabled,
+    'aiLibraryIndexRerankModeV1': prefs.aiLibraryIndexRerankMode,
+    'aiLibraryIndexRerankFollowIndexProviderV1':
+        prefs.aiLibraryIndexRerankFollowIndexProvider,
+    'aiLibraryIndexRerankProviderIdV1': prefs.aiLibraryIndexRerankProviderId,
+    'aiLibraryIndexRerankModelV1': prefs.aiLibraryIndexRerankModel,
+    'aiLibraryIndexRerankInstructionV1': prefs.aiLibraryIndexRerankInstruction,
+    'aiLibraryIndexRerankMaxCandidatesV1':
+        prefs.aiLibraryIndexRerankMaxCandidates,
+    'aiLibraryIndexRerankMaxDocumentCharsV1':
+        prefs.aiLibraryIndexRerankMaxDocumentChars,
+    'aiLibraryIndexRerankTimeoutSecV1':
+        prefs.aiLibraryIndexRerankTimeoutSeconds,
     'aiLibraryIndexChunkTargetCharsV1': prefs.aiLibraryIndexChunkTargetChars,
     'aiLibraryIndexChunkMaxCharsV1': prefs.aiLibraryIndexChunkMaxChars,
     'aiLibraryIndexChunkMinCharsV1': prefs.aiLibraryIndexChunkMinChars,
@@ -563,6 +576,70 @@ void applyAiSettingsJson(Map<String, dynamic> json) {
       final model = libraryIndex['aiLibraryIndexEmbeddingModelV1']?.toString();
       if (model != null) {
         prefs.aiLibraryIndexEmbeddingModel = model;
+      }
+
+      final rerankEnabled = libraryIndex['aiLibraryIndexRerankEnabledV1'];
+      if (rerankEnabled is bool) {
+        prefs.aiLibraryIndexRerankEnabled = rerankEnabled;
+      } else if (rerankEnabled is String) {
+        final v = rerankEnabled.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.aiLibraryIndexRerankEnabled = v == 'true';
+        }
+      }
+
+      final rerankMode = libraryIndex['aiLibraryIndexRerankModeV1']?.toString();
+      if (rerankMode != null) {
+        prefs.aiLibraryIndexRerankMode = rerankMode;
+      }
+
+      final rerankFollow =
+          libraryIndex['aiLibraryIndexRerankFollowIndexProviderV1'];
+      if (rerankFollow is bool) {
+        prefs.aiLibraryIndexRerankFollowIndexProvider = rerankFollow;
+      } else if (rerankFollow is String) {
+        final v = rerankFollow.trim().toLowerCase();
+        if (v == 'true' || v == 'false') {
+          prefs.aiLibraryIndexRerankFollowIndexProvider = v == 'true';
+        }
+      }
+
+      final rerankProvider =
+          libraryIndex['aiLibraryIndexRerankProviderIdV1']?.toString();
+      if (rerankProvider != null) {
+        prefs.aiLibraryIndexRerankProviderId = rerankProvider;
+      }
+
+      final rerankModel =
+          libraryIndex['aiLibraryIndexRerankModelV1']?.toString();
+      if (rerankModel != null) {
+        prefs.aiLibraryIndexRerankModel = rerankModel;
+      }
+
+      final rerankInstruction =
+          libraryIndex['aiLibraryIndexRerankInstructionV1']?.toString();
+      if (rerankInstruction != null) {
+        prefs.aiLibraryIndexRerankInstruction = rerankInstruction;
+      }
+
+      final rerankMaxCandidates =
+          (libraryIndex['aiLibraryIndexRerankMaxCandidatesV1'] as num?)
+              ?.toInt();
+      if (rerankMaxCandidates != null) {
+        prefs.aiLibraryIndexRerankMaxCandidates = rerankMaxCandidates;
+      }
+
+      final rerankMaxDocChars =
+          (libraryIndex['aiLibraryIndexRerankMaxDocumentCharsV1'] as num?)
+              ?.toInt();
+      if (rerankMaxDocChars != null) {
+        prefs.aiLibraryIndexRerankMaxDocumentChars = rerankMaxDocChars;
+      }
+
+      final rerankTimeout =
+          (libraryIndex['aiLibraryIndexRerankTimeoutSecV1'] as num?)?.toInt();
+      if (rerankTimeout != null) {
+        prefs.aiLibraryIndexRerankTimeoutSeconds = rerankTimeout;
       }
 
       final target =
