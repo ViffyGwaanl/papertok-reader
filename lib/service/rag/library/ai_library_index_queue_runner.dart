@@ -49,7 +49,27 @@ class AiLibraryIndexQueueRunner {
     await _repo.updateJob(jobId, status: AiLibraryIndexJobStatus.cancelled);
   }
 
-  Future<AiLibraryIndexJob?> runOnce() async {
+  Future<void> requeueRunningJobs() async {
+    for (final token in _tokens.values) {
+      token.cancel();
+    }
+
+    final jobs = await _repo.listJobs();
+    for (final job in jobs) {
+      if (job.status == AiLibraryIndexJobStatus.running) {
+        await _repo.updateJob(
+          job.id,
+          status: AiLibraryIndexJobStatus.queued,
+          progress: 0,
+          clearCurrentChapter: true,
+        );
+      }
+    }
+  }
+
+  Future<AiLibraryIndexJob?> runOnce({bool Function()? shouldRun}) async {
+    if (shouldRun != null && !shouldRun()) return null;
+
     final jobs = await _repo.listJobs();
     final next = jobs
         .where((j) => j.status == AiLibraryIndexJobStatus.queued)
@@ -58,12 +78,29 @@ class AiLibraryIndexQueueRunner {
 
     if (next == null) return null;
 
-    await _repo.updateJob(next.id, status: AiLibraryIndexJobStatus.running);
+    await _repo.updateJob(
+      next.id,
+      status: AiLibraryIndexJobStatus.running,
+      progress: 0,
+      clearCurrentChapter: true,
+      clearLastError: true,
+    );
 
     final token = AiIndexCancellationToken();
     _tokens[next.id] = token;
 
     try {
+      if (shouldRun != null && !shouldRun()) {
+        token.cancel();
+        await _repo.updateJob(
+          next.id,
+          status: AiLibraryIndexJobStatus.queued,
+          progress: 0,
+          clearCurrentChapter: true,
+        );
+        return null;
+      }
+
       await _executor(
         next.bookId,
         cancelToken: token,
@@ -80,24 +117,24 @@ class AiLibraryIndexQueueRunner {
       );
 
       if (token.cancelled) {
-        await _repo.updateJob(next.id,
-            status: AiLibraryIndexJobStatus.cancelled);
+        await _markCancelledUnlessRequeued(next.id);
       } else {
         await _repo.updateJob(next.id,
             status: AiLibraryIndexJobStatus.succeeded);
       }
     } catch (e, st) {
-      AnxLog.warning(
-        'AiLibraryIndexQueueRunner: job failed id=${next.id} $e',
-        st,
-      );
+      if (!token.cancelled) {
+        AnxLog.warning(
+          'AiLibraryIndexQueueRunner: job failed id=${next.id} $e',
+          st,
+        );
+      }
       final fresh = await _repo.getJob(next.id);
       final retryCount = fresh?.retryCount ?? next.retryCount;
       final maxRetries = fresh?.maxRetries ?? next.maxRetries;
 
       if (token.cancelled) {
-        await _repo.updateJob(next.id,
-            status: AiLibraryIndexJobStatus.cancelled);
+        await _markCancelledUnlessRequeued(next.id);
       } else if (retryCount < maxRetries) {
         await _repo.updateJob(
           next.id,
@@ -117,6 +154,12 @@ class AiLibraryIndexQueueRunner {
     }
 
     return _repo.getJob(next.id);
+  }
+
+  Future<void> _markCancelledUnlessRequeued(int jobId) async {
+    final fresh = await _repo.getJob(jobId);
+    if (fresh?.status == AiLibraryIndexJobStatus.queued) return;
+    await _repo.updateJob(jobId, status: AiLibraryIndexJobStatus.cancelled);
   }
 }
 

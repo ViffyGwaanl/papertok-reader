@@ -1095,15 +1095,9 @@ Requirements:
     final p = aiImageAnalysisPrompt.trim();
     if (p.isNotEmpty) return p;
 
-    return '''你是一个阅读器里的 AI 助手。请对用户点击的 EPUB 图片做“图注解析/图片解析”。
+    return '''$contentAnalysisKnowledgePromptBase
 
-要求：
-1) 先用 3-6 句话描述图片内容（对象/场景/图表/要点）。
-2) 如果是图表/流程图/信息图，请分点解释每个部分的含义。
-3) 结合上下文说明这张图在当前段落可能表达什么。
-4) 如果图片里包含文字/标题/坐标轴/图例，请尽量读出来并解释。
-
-已知元信息：
+你可以结合当前章节内容，当前阅读元数据和已知元信息：
 - alt: {{alt}}
 - title: {{title}}
 

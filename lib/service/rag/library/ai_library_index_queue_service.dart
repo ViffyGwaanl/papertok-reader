@@ -7,8 +7,10 @@ import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_queue_repository.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_queue_runner.dart';
-import 'package:papertok_reader/utils/log/common.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+const Object _unsetQueueStateField = Object();
 
 class AiLibraryIndexQueueState {
   const AiLibraryIndexQueueState({
@@ -32,25 +34,71 @@ class AiLibraryIndexQueueState {
     return null;
   }
 
+  int get totalJobCount => jobs.length;
+
+  int get queuedJobCount => _count(AiLibraryIndexJobStatus.queued);
+
+  int get runningJobCount => _count(AiLibraryIndexJobStatus.running);
+
+  int get pausedJobCount => _count(AiLibraryIndexJobStatus.paused);
+
+  int get succeededJobCount => _count(AiLibraryIndexJobStatus.succeeded);
+
+  int get failedJobCount => _count(AiLibraryIndexJobStatus.failed);
+
+  int get cancelledJobCount => _count(AiLibraryIndexJobStatus.cancelled);
+
+  int get finishedJobCount =>
+      succeededJobCount + failedJobCount + cancelledJobCount;
+
+  double get overallProgress {
+    if (jobs.isEmpty) return 0;
+
+    double completedWeight(AiLibraryIndexJob job) {
+      switch (job.status) {
+        case AiLibraryIndexJobStatus.succeeded:
+        case AiLibraryIndexJobStatus.failed:
+        case AiLibraryIndexJobStatus.cancelled:
+          return 1;
+        case AiLibraryIndexJobStatus.running:
+        case AiLibraryIndexJobStatus.paused:
+          return job.progress.clamp(0.0, 1.0).toDouble();
+        case AiLibraryIndexJobStatus.queued:
+          return 0;
+      }
+    }
+
+    final done = jobs.fold<double>(0, (sum, job) => sum + completedWeight(job));
+    return (done / jobs.length).clamp(0.0, 1.0).toDouble();
+  }
+
+  int _count(AiLibraryIndexJobStatus status) {
+    return jobs.where((job) => job.status == status).length;
+  }
+
   AiLibraryIndexQueueState copyWith({
     List<AiLibraryIndexJob>? jobs,
-    int? activeJobId,
+    Object? activeJobId = _unsetQueueStateField,
     bool? isPaused,
-    String? lastError,
+    Object? lastError = _unsetQueueStateField,
   }) {
     return AiLibraryIndexQueueState(
       jobs: jobs ?? this.jobs,
-      activeJobId: activeJobId ?? this.activeJobId,
+      activeJobId: activeJobId == _unsetQueueStateField
+          ? this.activeJobId
+          : activeJobId as int?,
       isPaused: isPaused ?? this.isPaused,
-      lastError: lastError,
+      lastError: lastError == _unsetQueueStateField
+          ? this.lastError
+          : lastError as String?,
     );
   }
 
   static const empty = AiLibraryIndexQueueState(jobs: <AiLibraryIndexJob>[]);
 }
 
-class AiLibraryIndexQueueService
-    extends StateNotifier<AiLibraryIndexQueueState> {
+class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
+    with WidgetsBindingObserver {
   AiLibraryIndexQueueService(
     this.ref, {
     AiIndexDatabase? database,
@@ -64,6 +112,7 @@ class AiLibraryIndexQueueService
       executor: _executeJob,
     );
 
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_init());
   }
 
@@ -75,7 +124,10 @@ class AiLibraryIndexQueueService
   late final AiLibraryIndexQueueRunner _runner;
 
   bool _running = false;
-  bool _paused = false;
+  bool _userPaused = false;
+  bool _lifecyclePaused = false;
+
+  bool get _paused => _userPaused || _lifecyclePaused;
 
   // UI refresh throttling while a job is running.
   int _lastProgressRefreshMs = 0;
@@ -84,6 +136,28 @@ class AiLibraryIndexQueueService
     await _runner.normalizeAfterRestart();
     await refresh();
     unawaited(_tick());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        unawaited(_pauseForLifecycle());
+        break;
+      case AppLifecycleState.resumed:
+        unawaited(_resumeFromLifecycle());
+        break;
+      case AppLifecycleState.inactive:
+        break;
+    }
   }
 
   Future<void> refresh() async {
@@ -119,14 +193,31 @@ class AiLibraryIndexQueueService
   }
 
   Future<void> pause() async {
-    _paused = true;
-    state = state.copyWith(isPaused: true);
+    _userPaused = true;
+    state = state.copyWith(isPaused: _paused);
   }
 
   Future<void> resume() async {
-    _paused = false;
-    state = state.copyWith(isPaused: false);
-    unawaited(_tick());
+    _userPaused = false;
+    state = state.copyWith(isPaused: _paused);
+    if (!_paused) unawaited(_tick());
+  }
+
+  Future<void> _pauseForLifecycle() async {
+    if (_lifecyclePaused) return;
+    _lifecyclePaused = true;
+    await _runner.requeueRunningJobs();
+    await refresh();
+  }
+
+  Future<void> _resumeFromLifecycle() async {
+    if (!_lifecyclePaused) return;
+    _lifecyclePaused = false;
+    if (!_running) {
+      await _runner.normalizeAfterRestart();
+    }
+    await refresh();
+    if (!_paused) unawaited(_tick());
   }
 
   Future<void> cancelJob(int jobId) async {
@@ -151,7 +242,7 @@ class AiLibraryIndexQueueService
     _running = true;
     try {
       while (!_paused) {
-        final executed = await _runner.runOnce();
+        final executed = await _runner.runOnce(shouldRun: () => !_paused);
         await refresh();
         if (executed == null) break;
       }
@@ -194,6 +285,7 @@ class AiLibraryIndexQueueService
       chunkMinChars: Prefs().aiLibraryIndexChunkMinChars,
       chunkOverlapChars: Prefs().aiLibraryIndexChunkOverlapChars,
       maxChapterCharacters: Prefs().aiLibraryIndexMaxChapterCharacters,
+      shouldCancel: () => cancelToken.cancelled,
       onProgress: (p) {
         if (cancelToken.cancelled) return;
         onProgress(p.progress, p.currentChapterHref, p.currentChapterTitle);

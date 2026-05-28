@@ -174,7 +174,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                 ),
               ),
             )
-          : null,
+          : _buildQueueBottomProgress(context, queue),
       child: SafeArea(
         bottom: false,
         child: ListView(
@@ -778,9 +778,8 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     final l10n = L10n.of(context);
 
     final active = queue.activeJob;
-    final queuedCount = queue.jobs
-        .where((j) => j.status == AiLibraryIndexJobStatus.queued)
-        .length;
+    final queuedCount = queue.queuedJobCount;
+    final totalCount = queue.totalJobCount;
 
     final recent = queue.jobs.take(6).toList(growable: false);
 
@@ -798,14 +797,19 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
         case AiLibraryIndexJobStatus.paused:
           label = l10n.aiLibraryIndexQueuePaused;
         case AiLibraryIndexJobStatus.queued:
-          label = 'queued';
+          label = _localizedQueuedLabel(context);
       }
 
-      final retry =
-          j.retryCount > 0 ? '  retry ${j.retryCount}/${j.maxRetries}' : '';
+      final retry = j.retryCount > 0
+          ? '  ${_localizedRetryLabel(context, j.retryCount, j.maxRetries)}'
+          : '';
+      final progress = j.status == AiLibraryIndexJobStatus.running ||
+              j.status == AiLibraryIndexJobStatus.paused
+          ? '  ${_formatPercent(j.progress)}'
+          : '';
 
       return Text(
-        '$label$retry',
+        '$label$progress$retry',
         style: Theme.of(context).textTheme.bodySmall,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -887,8 +891,21 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
             ],
           ),
           const SizedBox(height: 8),
+          if (totalCount > 0) ...[
+            Text(
+              _queueSummaryText(context, queue),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 6),
+            LinearProgressIndicator(value: queue.overallProgress),
+            const SizedBox(height: 8),
+          ],
           if (active == null) ...[
-            Text(l10n.aiLibraryIndexQueueEmpty),
+            Text(
+              totalCount == 0
+                  ? l10n.aiLibraryIndexQueueEmpty
+                  : _queueIdleText(context, queue),
+            ),
           ] else ...[
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
@@ -900,7 +917,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              '${l10n.aiLibraryIndexQueueRunning}: #${active.bookId}  ${(active.currentChapterTitle ?? '').trim()}',
+              '${l10n.aiLibraryIndexQueueRunning}: #${active.bookId}  '
+              '${_formatPercent(active.progress)}  '
+              '${(active.currentChapterTitle ?? '').trim()}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -987,6 +1006,121 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
         );
       },
     );
+  }
+
+  Widget? _buildQueueBottomProgress(
+    BuildContext context,
+    AiLibraryIndexQueueState queue,
+  ) {
+    if (queue.totalJobCount == 0) return null;
+    if (queue.queuedJobCount == 0 &&
+        queue.runningJobCount == 0 &&
+        queue.pausedJobCount == 0) {
+      return null;
+    }
+
+    final theme = Theme.of(context);
+    final active = queue.activeJob;
+
+    return SafeArea(
+      top: false,
+      child: Material(
+        color: theme.colorScheme.surface,
+        elevation: 8,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LinearProgressIndicator(value: queue.overallProgress),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    queue.isPaused
+                        ? Icons.pause_circle_outline
+                        : Icons.auto_awesome_motion_outlined,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _queueSummaryText(context, queue),
+                      style: theme.textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (active != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatPercent(active.progress),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _queueSummaryText(
+    BuildContext context,
+    AiLibraryIndexQueueState queue,
+  ) {
+    final code = Localizations.localeOf(context).languageCode;
+    final percent = _formatPercent(queue.overallProgress);
+    if (code == 'zh') {
+      return '队列处理 $percent · 已处理 ${queue.finishedJobCount}/${queue.totalJobCount} · '
+          '等待 ${queue.queuedJobCount} · 失败 ${queue.failedJobCount}';
+    }
+    return 'Queue $percent · handled ${queue.finishedJobCount}/${queue.totalJobCount} · '
+        'waiting ${queue.queuedJobCount} · failed ${queue.failedJobCount}';
+  }
+
+  String _localizedQueuedLabel(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'zh'
+        ? '等待中'
+        : 'Queued';
+  }
+
+  String _queueIdleText(BuildContext context, AiLibraryIndexQueueState queue) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    if (queue.queuedJobCount > 0) {
+      if (queue.isPaused) {
+        return zh ? '已暂停，等待继续处理' : 'Paused, waiting to continue';
+      }
+      return zh ? '准备继续处理' : 'Ready to continue';
+    }
+    if (queue.failedJobCount > 0) {
+      return zh ? '队列已处理，有任务失败' : 'Queue handled with failed jobs';
+    }
+    if (queue.cancelledJobCount > 0 && queue.succeededJobCount == 0) {
+      return zh ? '任务已取消' : 'Jobs cancelled';
+    }
+    return zh ? '队列已处理完成' : 'Queue handled';
+  }
+
+  String _localizedRetryLabel(
+    BuildContext context,
+    int retryCount,
+    int maxRetries,
+  ) {
+    return Localizations.localeOf(context).languageCode == 'zh'
+        ? '重试 $retryCount/$maxRetries'
+        : 'retry $retryCount/$maxRetries';
+  }
+
+  String _formatPercent(double value) {
+    final percent = (value.clamp(0.0, 1.0) * 100).round();
+    return '$percent%';
   }
 
   Widget _buildBookTile(BuildContext context, _BookRow r) {

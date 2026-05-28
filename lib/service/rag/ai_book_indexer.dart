@@ -13,7 +13,7 @@ import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
 import 'package:papertok_reader/service/rag/vector_math.dart';
 import 'package:papertok_reader/utils/log/common.dart';
 import 'package:papertok_reader/service/rag/library/ai_headless_reader_bridge_service.dart';
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 
 class AiBookIndexProgress {
@@ -43,6 +43,14 @@ class AiBookIndexProgress {
 }
 
 typedef AiBookIndexProgressCallback = void Function(AiBookIndexProgress p);
+typedef AiBookIndexCancellationCheck = bool Function();
+
+class AiBookIndexCancelledException implements Exception {
+  const AiBookIndexCancelledException();
+
+  @override
+  String toString() => 'AI book indexing was cancelled.';
+}
 
 class AiBookIndexer {
   AiBookIndexer(this.ref, {AiIndexDatabase? database})
@@ -76,6 +84,7 @@ class AiBookIndexer {
     int chunkMinChars = AiTextChunker.defaultMinChars,
     int chunkOverlapChars = AiTextChunker.defaultOverlapChars,
     int maxChapterCharacters = defaultMaxChapterCharacters,
+    AiBookIndexCancellationCheck? shouldCancel,
   }) async {
     final reading = ref.read(currentReadingProvider);
     if (!reading.isReading || reading.book == null) {
@@ -119,6 +128,7 @@ class AiBookIndexer {
       chunkOverlapChars: chunkOverlapChars,
       maxChapterCharacters: maxChapterCharacters,
       onProgress: onProgress,
+      shouldCancel: shouldCancel,
       chapters: targetChapters,
       fetchChapterByHref: (href) => handlers.fetchChapterByHref(
         href,
@@ -143,6 +153,7 @@ class AiBookIndexer {
     int chunkMinChars = AiTextChunker.defaultMinChars,
     int chunkOverlapChars = AiTextChunker.defaultOverlapChars,
     int maxChapterCharacters = defaultMaxChapterCharacters,
+    AiBookIndexCancellationCheck? shouldCancel,
   }) async {
     final bridgeService = ref.read(aiHeadlessReaderBridgeProvider);
     final bridge = await bridgeService.open(book.id);
@@ -167,6 +178,7 @@ class AiBookIndexer {
         chunkOverlapChars: chunkOverlapChars,
         maxChapterCharacters: maxChapterCharacters,
         onProgress: onProgress,
+        shouldCancel: shouldCancel,
         chapters: chapters,
         fetchChapterByHref: (href) => bridge.getChapterContentByHref(
           href,
@@ -193,6 +205,7 @@ class AiBookIndexer {
     required List<({String href, String title})> chapters,
     required Future<String> Function(String href) fetchChapterByHref,
     AiBookIndexProgressCallback? onProgress,
+    AiBookIndexCancellationCheck? shouldCancel,
   }) async {
     final bookId = book.id;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -238,7 +251,15 @@ class AiBookIndexer {
     var doneChunks = 0;
     var totalChunks = 0;
 
+    void throwIfCancelled() {
+      if (shouldCancel?.call() == true) {
+        throw const AiBookIndexCancelledException();
+      }
+    }
+
     for (final ch in chapters) {
+      throwIfCancelled();
+
       final href = ch.href;
       final title = ch.title;
 
@@ -256,8 +277,11 @@ class AiBookIndexer {
 
       String chapterText;
       try {
+        throwIfCancelled();
         chapterText = await fetchChapterByHref(href);
+        throwIfCancelled();
       } catch (e) {
+        if (e is AiBookIndexCancelledException) rethrow;
         AnxLog.warning('AiIndex: failed to fetch chapter href=$href error=$e');
         doneChapters++;
         continue;
@@ -301,14 +325,17 @@ class AiBookIndexer {
         );
 
         final texts = batch.map((c) => c.text).toList(growable: false);
+        throwIfCancelled();
         final vectors = await AiEmbeddingsService.embedDocuments(
           texts,
           model: embeddingModel,
           providerId: providerId,
           timeoutSeconds: embeddingsTimeoutSeconds,
         );
+        throwIfCancelled();
 
         await db.transaction((txn) async {
+          throwIfCancelled();
           for (var i = 0; i < batch.length; i++) {
             final c = batch[i];
             final v = vectors[i];
@@ -328,6 +355,7 @@ class AiBookIndexer {
             });
           }
         });
+        throwIfCancelled();
 
         doneChunks += batch.length;
       }
@@ -346,6 +374,7 @@ class AiBookIndexer {
       );
     }
 
+    throwIfCancelled();
     await db.update(
       'ai_book_index',
       {

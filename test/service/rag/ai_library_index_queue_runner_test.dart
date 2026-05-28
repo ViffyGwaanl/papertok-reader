@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_queue_repository.dart';
@@ -56,5 +58,70 @@ void main() {
     final refreshed = await repo.getJob(job.id);
     expect(refreshed, isNotNull);
     expect(refreshed!.status, AiLibraryIndexJobStatus.queued);
+  });
+
+  test('requeued active job stays queued after executor returns', () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final db = AiIndexDatabase.forTesting(path: ':memory:', factory: factory);
+    final repo = AiLibraryIndexQueueRepository(database: db);
+
+    final job = await repo.enqueueBook(3, maxRetries: 1);
+    final started = Completer<void>();
+    final release = Completer<void>();
+
+    final runner = AiLibraryIndexQueueRunner(
+      repository: repo,
+      executor: (bookId, {required cancelToken, required onProgress}) async {
+        started.complete();
+        await release.future;
+      },
+    );
+
+    final runFuture = runner.runOnce();
+    await started.future;
+
+    await runner.requeueRunningJobs();
+    final requeued = await repo.getJob(job.id);
+    expect(requeued!.status, AiLibraryIndexJobStatus.queued);
+
+    release.complete();
+    final result = await runFuture;
+
+    expect(result, isNotNull);
+    expect(result!.status, AiLibraryIndexJobStatus.queued);
+  });
+
+  test('runOnce requeues claimed job when shouldRun turns false', () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final db = AiIndexDatabase.forTesting(path: ':memory:', factory: factory);
+    final repo = AiLibraryIndexQueueRepository(database: db);
+
+    await repo.enqueueBook(4, maxRetries: 1);
+
+    var executorCalls = 0;
+    var shouldRunCalls = 0;
+    final runner = AiLibraryIndexQueueRunner(
+      repository: repo,
+      executor: (bookId, {required cancelToken, required onProgress}) async {
+        executorCalls += 1;
+      },
+    );
+
+    final result = await runner.runOnce(
+      shouldRun: () {
+        shouldRunCalls += 1;
+        return shouldRunCalls == 1;
+      },
+    );
+
+    expect(result, isNull);
+    expect(executorCalls, 0);
+
+    final jobs = await repo.listJobs();
+    final job = jobs.singleWhere((j) => j.bookId == 4);
+    expect(job.status, AiLibraryIndexJobStatus.queued);
+    expect(job.progress, 0);
   });
 }

@@ -37,4 +37,36 @@ void main() {
     final list = await repo.listJobs();
     expect(list.length, 1);
   });
+
+  test('AiLibraryIndexQueueRepository can clear transient job fields',
+      () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final db = AiIndexDatabase.forTesting(path: ':memory:', factory: factory);
+    final repo = AiLibraryIndexQueueRepository(database: db);
+
+    final job = await repo.enqueueBook(43, maxRetries: 1);
+    await repo.updateJob(
+      job.id,
+      status: AiLibraryIndexJobStatus.running,
+      progress: 0.75,
+      currentChapterHref: 'c1.xhtml',
+      currentChapterTitle: 'C1',
+      lastError: 'previous failure',
+    );
+
+    final cleared = await repo.updateJob(
+      job.id,
+      status: AiLibraryIndexJobStatus.queued,
+      progress: 0,
+      clearCurrentChapter: true,
+      clearLastError: true,
+    );
+
+    expect(cleared.status, AiLibraryIndexJobStatus.queued);
+    expect(cleared.progress, 0);
+    expect(cleared.currentChapterHref, isNull);
+    expect(cleared.currentChapterTitle, isNull);
+    expect(cleared.lastError, isNull);
+  });
 }

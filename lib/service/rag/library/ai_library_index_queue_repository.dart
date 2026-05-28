@@ -80,6 +80,8 @@ class AiLibraryIndexQueueRepository {
     String? currentChapterHref,
     String? currentChapterTitle,
     String? lastError,
+    bool clearCurrentChapter = false,
+    bool clearLastError = false,
   }) async {
     final db = await _db.database;
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -91,13 +93,20 @@ class AiLibraryIndexQueueRepository {
     }
     if (retryCount != null) values['retry_count'] = retryCount;
     if (progress != null) values['progress'] = progress;
-    if (currentChapterHref != null) {
+    if (clearCurrentChapter) {
+      values['current_chapter_href'] = null;
+      values['current_chapter_title'] = null;
+    } else if (currentChapterHref != null) {
       values['current_chapter_href'] = currentChapterHref;
     }
-    if (currentChapterTitle != null) {
+    if (!clearCurrentChapter && currentChapterTitle != null) {
       values['current_chapter_title'] = currentChapterTitle;
     }
-    if (lastError != null) values['last_error'] = lastError;
+    if (clearLastError) {
+      values['last_error'] = null;
+    } else if (lastError != null) {
+      values['last_error'] = lastError;
+    }
 
     await db.update('ai_index_jobs', values, where: 'id = ?', whereArgs: [id]);
     return (await getJob(id))!;
