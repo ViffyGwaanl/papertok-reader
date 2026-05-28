@@ -197,6 +197,55 @@ else
   echo "signing_patch: skipped (FORCE_MANUAL_SIGNING!=1)"
 fi
 
+# The sqlite3 native-assets hook downloads a prebuilt iOS dylib from GitHub at
+# archive time. If GitHub release assets are flaky, point the hook at a verified
+# local mirror for this ephemeral worktree instead.
+if [[ -n "${SQLITE3_PRECOMPILED_DIR:-}" ]]; then
+  sqlite3_dir="$(cd "$SQLITE3_PRECOMPILED_DIR" && pwd)"
+  sqlite3_ios_dylib="$sqlite3_dir/libsqlite3.arm64.ios.dylib"
+  sqlite3_expected_hash="81d4c606fecdd06cac958c7ed4420ea274d94bcbf13704f84271920be6b8313d"
+
+  if [[ ! -f "$sqlite3_ios_dylib" ]]; then
+    echo "sqlite3_precompiled: missing $sqlite3_ios_dylib" >&2
+    exit 2
+  fi
+
+  sqlite3_actual_hash="$(shasum -a 256 "$sqlite3_ios_dylib" | awk '{print $1}')"
+  if [[ "$sqlite3_actual_hash" != "$sqlite3_expected_hash" ]]; then
+    echo "sqlite3_precompiled: hash mismatch for $sqlite3_ios_dylib" >&2
+    echo "expected: $sqlite3_expected_hash" >&2
+    echo "actual:   $sqlite3_actual_hash" >&2
+    exit 2
+  fi
+
+  python3 - "$wt_dir/pubspec.yaml" "$sqlite3_dir" <<'PY'
+import pathlib
+import sys
+
+pubspec = pathlib.Path(sys.argv[1])
+sqlite3_dir = pathlib.Path(sys.argv[2])
+text = pubspec.read_text(encoding="utf-8")
+
+if "\nhooks:" in text or text.startswith("hooks:"):
+    raise SystemExit("sqlite3_precompiled: pubspec already has a hooks section")
+
+if not text.endswith("\n"):
+    text += "\n"
+
+text += f"""
+hooks:
+  user_defines:
+    sqlite3:
+      source: test-sqlite3
+      directory: {sqlite3_dir.as_posix()}/
+"""
+
+pubspec.write_text(text, encoding="utf-8")
+PY
+
+  echo "sqlite3_precompiled: using verified local sqlite3 iOS asset from $sqlite3_dir"
+fi
+
 # Copy local secrets if present (gitignored)
 if [[ -f "$repo_root/ios/fastlane/.env" ]]; then
   rsync -a "$repo_root/ios/fastlane/.env" "$wt_dir/ios/fastlane/.env"
