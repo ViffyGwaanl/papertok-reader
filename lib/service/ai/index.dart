@@ -12,13 +12,12 @@ import 'package:papertok_reader/service/ai/ai_usage_tracker.dart';
 import 'package:papertok_reader/service/ai/annotation_ledger.dart';
 import 'package:papertok_reader/service/ai/conversation_compressor.dart';
 import 'package:papertok_reader/service/ai/langchain_runner.dart';
-import 'package:papertok_reader/service/ai/tool_approval_delegate.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:papertok_reader/utils/log/common.dart';
 import 'package:papertok_reader/service/ai/api_key_rotation.dart';
 import 'package:papertok_reader/service/mcp/mcp_client_service.dart';
 import 'package:papertok_reader/widgets/ai/tool_approval_dialog.dart';
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
 
@@ -396,7 +395,8 @@ Stream<String> _generateStream({
       // messages via LLM before sending. Falls back to truncation after
       // 3 consecutive failures.
       var compressedHistory = historyMessages;
-      if (historyMessages.length > ConversationCompressor.keepRecentMessages + 2) {
+      if (historyMessages.length >
+          ConversationCompressor.keepRecentMessages + 2) {
         final convoId = conversationId ?? '';
         final failures = _compressionFailures[convoId] ?? 0;
         final estimated = historyMessages.fold<int>(
@@ -516,7 +516,7 @@ Stream<String> _generateStream({
       }
 
       AnxLog.severe('AI error: $mapped\n$stack');
-      yield mapped;
+      yield mergeStreamErrorWithPartial(buffer, mapped);
       return;
     } finally {
       try {
@@ -524,6 +524,18 @@ Stream<String> _generateStream({
       } catch (_) {}
     }
   }
+}
+
+String mergeStreamErrorWithPartial(String partial, String error) {
+  final normalizedError = error.trim();
+  final normalizedPartial = partial.trimRight();
+  if (normalizedPartial.isEmpty) {
+    return normalizedError;
+  }
+  if (normalizedError.isEmpty) {
+    return normalizedPartial;
+  }
+  return '$normalizedPartial\n\n$normalizedError';
 }
 
 String _mapError(Object error) {

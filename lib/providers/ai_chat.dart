@@ -49,6 +49,9 @@ class AiChat extends _$AiChat {
   String? _loadedHistoryEntryId;
   int? _loadedHistoryBookId;
   String? _loadedHistoryBookTitle;
+  int _lastDraftProgressPersistMs = 0;
+  String _lastDraftProgressContent = '';
+  Future<void> _draftPersistChain = Future<void>.value();
 
   String _draftModel = '';
   int _draftTokenInSnapshot = 0;
@@ -67,6 +70,9 @@ class AiChat extends _$AiChat {
     _loadedHistoryEntryId = null;
     _loadedHistoryBookId = null;
     _loadedHistoryBookTitle = null;
+    _lastDraftProgressPersistMs = 0;
+    _lastDraftProgressContent = '';
+    _draftPersistChain = Future<void>.value();
 
     return List<ChatMessage>.empty();
   }
@@ -90,6 +96,9 @@ class AiChat extends _$AiChat {
     _loadedHistoryEntryId = null;
     _loadedHistoryBookId = null;
     _loadedHistoryBookTitle = null;
+    _lastDraftProgressPersistMs = 0;
+    _lastDraftProgressContent = '';
+    _draftPersistChain = Future<void>.value();
     _tree = AiConversationTree.fromLinearMessages(history);
     _rebuildFromTree();
   }
@@ -292,7 +301,9 @@ class AiChat extends _$AiChat {
       conversationV2: _tree.toJson(),
     );
 
-    historyNotifier.upsert(_draftEntry!).catchError((_) {});
+    _lastDraftProgressPersistMs = now;
+    _lastDraftProgressContent = '';
+    _queueDraftHistoryUpsert(historyNotifier, _draftEntry!);
 
     // 4) Start generation.
     final promptMessages = _buildPromptMessagesForAssistantParent(parentId);
@@ -333,6 +344,11 @@ class AiChat extends _$AiChat {
         }
         _tree = _tree.updateNodeMessage(assistantId, ChatMessage.ai(chunk));
         _rebuildFromTree();
+        _persistDraftProgress(
+          historyNotifier,
+          completed: false,
+          force: _lastDraftProgressContent.isEmpty && chunk.trim().isNotEmpty,
+        );
       },
       onError: (Object error, StackTrace stack) {
         _generationSub = null;
@@ -414,12 +430,62 @@ class AiChat extends _$AiChat {
         completed: completed,
         conversationV2: _tree.toJson(),
       );
-      historyNotifier.upsert(finalEntry).catchError((_) {});
-      unawaited(_refreshGeneratedTitle(finalEntry, historyNotifier));
+      final persisted = _queueDraftHistoryUpsert(historyNotifier, finalEntry);
+      unawaited(
+        persisted.then(
+          (_) => _refreshGeneratedTitle(finalEntry, historyNotifier),
+        ),
+      );
     }
 
     _draftEntry = null;
     _draftAssistantNodeId = null;
+    _lastDraftProgressPersistMs = 0;
+    _lastDraftProgressContent = '';
+  }
+
+  void _persistDraftProgress(
+    AiHistoryNotifier historyNotifier, {
+    required bool completed,
+    bool force = false,
+  }) {
+    final draftEntry = _draftEntry;
+    if (draftEntry == null) return;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final assistantId = _draftAssistantNodeId;
+    final assistantMessage =
+        assistantId == null ? null : _tree.nodes[assistantId]?.toChatMessage();
+    final assistantContent = assistantMessage?.contentAsString ?? '';
+
+    if (!force) {
+      if (assistantContent == _lastDraftProgressContent) return;
+      if (now - _lastDraftProgressPersistMs < 1000) return;
+    }
+
+    _lastDraftProgressPersistMs = now;
+    _lastDraftProgressContent = assistantContent;
+
+    final updated = draftEntry.copyWith(
+      messages: List<ChatMessage>.from(state.value ?? const <ChatMessage>[]),
+      updatedAt: now,
+      completed: completed,
+      conversationV2: _tree.toJson(),
+    );
+    _draftEntry = updated;
+    _queueDraftHistoryUpsert(historyNotifier, updated);
+  }
+
+  Future<void> _queueDraftHistoryUpsert(
+    AiHistoryNotifier historyNotifier,
+    AiChatHistoryEntry entry,
+  ) {
+    final next = _draftPersistChain
+        .catchError((_) {})
+        .then((_) => historyNotifier.upsert(entry))
+        .catchError((_) {});
+    _draftPersistChain = next;
+    return next;
   }
 
   Future<void> _refreshGeneratedTitle(
@@ -467,6 +533,9 @@ class AiChat extends _$AiChat {
     _loadedHistoryEntryId = null;
     _loadedHistoryBookId = null;
     _loadedHistoryBookTitle = null;
+    _lastDraftProgressPersistMs = 0;
+    _lastDraftProgressContent = '';
+    _draftPersistChain = Future<void>.value();
     ref.read(aiChatContextNoticeProvider.notifier).state = null;
     ref.read(aiChatUsageSummaryProvider.notifier).state = null;
   }
@@ -493,6 +562,9 @@ class AiChat extends _$AiChat {
     _loadedHistoryEntryId = entry.id;
     _loadedHistoryBookId = entry.bookId;
     _loadedHistoryBookTitle = entry.bookTitle;
+    _lastDraftProgressPersistMs = 0;
+    _lastDraftProgressContent = '';
+    _draftPersistChain = Future<void>.value();
 
     final rawTree = entry.conversationV2;
     if (rawTree != null) {
