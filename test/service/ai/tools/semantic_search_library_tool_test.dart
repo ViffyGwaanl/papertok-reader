@@ -92,6 +92,7 @@ void main() {
     expect(e0, contains('anchor'));
     expect(e0, contains('snippet'));
     expect(e0, contains('score'));
+    expect(e0, contains('sourceRef'));
 
     final jumpLink = e0['jumpLink']?.toString() ?? '';
     expect(jumpLink, startsWith('paperreader://reader/open?'));
@@ -101,6 +102,13 @@ void main() {
     expect(uri.host, 'reader');
     expect(uri.path, '/open');
     expect(uri.queryParameters['bookId'], '1');
+
+    final sourceRef = Map<String, dynamic>.from(e0['sourceRef'] as Map);
+    expect(sourceRef, containsPair('bookId', 1));
+    expect(sourceRef, containsPair('href', 'Text/ch1.xhtml'));
+    expect(sourceRef['jumpLink'], jumpLink);
+    expect(sourceRef, containsPair('sourceKind', 'library-rag'));
+    expect(sourceRef, containsPair('derivedCacheHint', true));
 
     await aiDb.close();
   });

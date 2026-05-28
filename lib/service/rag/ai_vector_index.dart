@@ -47,11 +47,15 @@ SELECT
   c.text,
   c.raw_text,
   c.context_text,
+  c.embedding_input_hash,
+  c.context_version,
+  c.context_created_at,
   c.embedding_blob,
   c.embedding_json,
   c.embedding_norm,
   b.embedding_model,
-  b.provider_id
+  b.provider_id,
+  b.index_version
 FROM ai_chunks c
 JOIN ai_book_index b ON b.book_id = c.book_id
 WHERE ($indexedFilter)

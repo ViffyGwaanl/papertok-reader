@@ -154,6 +154,70 @@ void main() {
     expect(result.evidence.single.href, 'Text/ch1.xhtml');
   });
 
+  test('sourceRef keeps neighbor-expanded evidence safe for export', () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+
+    final db = await aiDb.database;
+    await _insertBook(db, 1);
+    await _insertChunk(
+      db,
+      bookId: 1,
+      href: 'Text/long.xhtml',
+      title: 'Long',
+      chunkIndex: 0,
+      text: List.filled(260, 'previous').join(' '),
+      embeddingJson: '[0.5,0.5]',
+    );
+    await _insertChunk(
+      db,
+      bookId: 1,
+      href: 'Text/long.xhtml',
+      title: 'Long',
+      chunkIndex: 1,
+      text: 'needle ${List.filled(260, 'central').join(' ')}',
+      embeddingJson: '[1,0]',
+    );
+    await _insertChunk(
+      db,
+      bookId: 1,
+      href: 'Text/long.xhtml',
+      title: 'Long',
+      chunkIndex: 2,
+      text: List.filled(260, 'next').join(' '),
+      embeddingJson: '[0.5,0.5]',
+    );
+
+    final service = SemanticSearchLibrary(
+      database: aiDb,
+      embedQuery: (q, {required model, providerId}) async => <double>[1, 0],
+    );
+
+    final result = await service.search(
+      query: 'needle',
+      maxResults: 1,
+      neighborWindow: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.snippet.length, greaterThan(500));
+    final json = result.evidence.single.toJson();
+    final sourceRef = Map<String, dynamic>.from(json['sourceRef'] as Map);
+    expect(
+      (sourceRef['sourceTextSnippet'] as String).length,
+      lessThanOrEqualTo(500),
+    );
+    expect(sourceRef['sourceKind'], 'library-rag');
+    expect(sourceRef['chunkId'], isA<int>());
+    expect(sourceRef['derivedCacheHint'], true);
+    expect(sourceRef, isNot(contains('rawText')));
+    expect(sourceRef, isNot(contains('contextText')));
+    expect(sourceRef, isNot(contains('fullText')));
+  });
+
   test('evidence snippets prefer raw text over contextual embedding text',
       () async {
     final aiDb = AiIndexDatabase.forTesting(
@@ -275,7 +339,18 @@ void main() {
     expect(result.ok, true);
     expect(result.usedVectorFallback, false);
     expect(result.evidence.single.href, 'Text/leaf.xhtml');
-    expect(result.evidence.single.snippet, contains('deep global theme'));
+    expect(result.evidence.single.snippet, contains('ordinary leaf passage'));
+    expect(
+        result.evidence.single.snippet, isNot(contains('deep global theme')));
+    expect(
+      result.evidence.single.derivedSummary,
+      contains('deep global theme'),
+    );
+    expect(result.evidence.single.derivedLayer, 'raptor');
+    expect(
+      result.evidence.single.sourceRef!.sourceTextSnippet,
+      contains('ordinary leaf passage'),
+    );
   });
 
   test('RAPTOR summaries are fused even when leaf chunks also match', () async {
@@ -341,7 +416,16 @@ void main() {
     expect(result.ok, true);
     expect(result.usedVectorFallback, false);
     expect(result.evidence.single.href, 'Text/global.xhtml');
-    expect(result.evidence.single.snippet, contains('atlas level synthesis'));
+    expect(result.evidence.single.snippet,
+        contains('source passage for global summary'));
+    expect(
+      result.evidence.single.snippet,
+      isNot(contains('atlas level synthesis')),
+    );
+    expect(
+      result.evidence.single.derivedSummary,
+      contains('atlas level synthesis'),
+    );
   });
 
   test('GraphRAG community summaries can retrieve mapped chunk evidence',
@@ -401,7 +485,13 @@ void main() {
     expect(result.ok, true);
     expect(result.usedVectorFallback, false);
     expect(result.evidence.single.href, 'Text/graph.xhtml');
-    expect(result.evidence.single.snippet, contains('hidden symbols'));
+    expect(result.evidence.single.snippet, contains('ordinary graph passage'));
+    expect(result.evidence.single.snippet, isNot(contains('hidden symbols')));
+    expect(
+      result.evidence.single.derivedSummary,
+      contains('hidden symbols'),
+    );
+    expect(result.evidence.single.derivedLayer, 'graph');
   });
 }
 

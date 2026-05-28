@@ -10,6 +10,7 @@ import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:papertok_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
 import 'package:papertok_reader/page/settings_page/ai_title_generation.dart';
 import 'package:papertok_reader/page/settings_page/ai_tools.dart';
+import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/theme/morandi_palette.dart';
@@ -362,17 +363,33 @@ class _AISettingsState extends ConsumerState<AISettings> {
             description: Text(
               Prefs().kairosLevel == 0
                   ? l10n.settingsAiKairosOff
-                  : ['', l10n.settingsAiKairosLevelLight, l10n.settingsAiKairosLevelMedium, l10n.settingsAiKairosLevelEager][Prefs().kairosLevel],
+                  : [
+                      '',
+                      l10n.settingsAiKairosLevelLight,
+                      l10n.settingsAiKairosLevelMedium,
+                      l10n.settingsAiKairosLevelEager
+                    ][Prefs().kairosLevel],
             ),
             onPressed: (context) {
               _showKairosLevelPicker(context);
             },
           ),
           SettingsTile.navigation(
+            leading: const Icon(Icons.fact_check_outlined),
+            title: Text(l10n.reviewInboxTitle),
+            description: Text(l10n.reviewInboxDescription),
+            onPressed: (context) {
+              Navigator.of(context).push(
+                CupertinoStyleRoute(page: const ReviewInboxPage()),
+              );
+            },
+          ),
+          SettingsTile.navigation(
             leading: const Icon(Icons.auto_fix_high),
             title: Text(l10n.settingsAiActiveSkill),
             description: Text(
-              _localizedSkillName(context, Prefs().activeAiSkillId) ?? l10n.settingsAiSkillNone,
+              _localizedSkillName(context, Prefs().activeAiSkillId) ??
+                  l10n.settingsAiSkillNone,
             ),
             onPressed: (context) {
               _showSkillPicker(context);
@@ -382,7 +399,9 @@ class _AISettingsState extends ConsumerState<AISettings> {
             leading: const Icon(Icons.search),
             title: Text(l10n.settingsAiWebSearch),
             description: Text(
-              _hasWebSearchApiKey() ? l10n.settingsAiWebSearchConfigured : l10n.settingsAiWebSearchDefault,
+              _hasWebSearchApiKey()
+                  ? l10n.settingsAiWebSearchConfigured
+                  : l10n.settingsAiWebSearchDefault,
             ),
             onPressed: (context) {
               _showWebSearchApiKeyDialog(context);
@@ -512,10 +531,14 @@ class _AISettingsState extends ConsumerState<AISettings> {
                 subtitle: Text(l.settingsAiKairosPickerDesc),
               ),
               const Divider(),
-              _kairosOption(context, 0, l.settingsAiKairosPickerOffTitle, l.settingsAiKairosPickerOffDesc),
-              _kairosOption(context, 1, l.settingsAiKairosPickerLightTitle, l.settingsAiKairosPickerLightDesc),
-              _kairosOption(context, 2, l.settingsAiKairosPickerMediumTitle, l.settingsAiKairosPickerMediumDesc),
-              _kairosOption(context, 3, l.settingsAiKairosPickerEagerTitle, l.settingsAiKairosPickerEagerDesc),
+              _kairosOption(context, 0, l.settingsAiKairosPickerOffTitle,
+                  l.settingsAiKairosPickerOffDesc),
+              _kairosOption(context, 1, l.settingsAiKairosPickerLightTitle,
+                  l.settingsAiKairosPickerLightDesc),
+              _kairosOption(context, 2, l.settingsAiKairosPickerMediumTitle,
+                  l.settingsAiKairosPickerMediumDesc),
+              _kairosOption(context, 3, l.settingsAiKairosPickerEagerTitle,
+                  l.settingsAiKairosPickerEagerDesc),
             ],
           ),
         );
@@ -581,7 +604,8 @@ class _AISettingsState extends ConsumerState<AISettings> {
                     Icons.auto_fix_high,
                     size: 20,
                   ),
-                  title: Text(_localizedSkillName(context, skill.id) ?? skill.name),
+                  title: Text(
+                      _localizedSkillName(context, skill.id) ?? skill.name),
                   subtitle: Text(
                     _localizedSkillDesc(context, skill.id) ?? skill.description,
                     maxLines: 1,
@@ -610,13 +634,20 @@ class _AISettingsState extends ConsumerState<AISettings> {
     if (id == null) return null;
     final l = L10n.of(context);
     switch (id) {
-      case 'paper_analyzer': return l.aiSkillPaperAnalyzerName;
-      case 'flashcard_generator': return l.aiSkillFlashcardGeneratorName;
-      case 'debate_partner': return l.aiSkillDebatePartnerName;
-      case 'vocab_extractor': return l.aiSkillVocabExtractorName;
-      case 'reading_companion': return l.aiSkillReadingCompanionName;
-      case 'seminar_mode': return l.aiSkillSeminarModeName;
-      default: return null;
+      case 'paper_analyzer':
+        return l.aiSkillPaperAnalyzerName;
+      case 'flashcard_generator':
+        return l.aiSkillFlashcardGeneratorName;
+      case 'debate_partner':
+        return l.aiSkillDebatePartnerName;
+      case 'vocab_extractor':
+        return l.aiSkillVocabExtractorName;
+      case 'reading_companion':
+        return l.aiSkillReadingCompanionName;
+      case 'seminar_mode':
+        return l.aiSkillSeminarModeName;
+      default:
+        return null;
     }
   }
 
@@ -624,13 +655,20 @@ class _AISettingsState extends ConsumerState<AISettings> {
     if (id == null) return null;
     final l = L10n.of(context);
     switch (id) {
-      case 'paper_analyzer': return l.aiSkillPaperAnalyzerDesc;
-      case 'flashcard_generator': return l.aiSkillFlashcardGeneratorDesc;
-      case 'debate_partner': return l.aiSkillDebatePartnerDesc;
-      case 'vocab_extractor': return l.aiSkillVocabExtractorDesc;
-      case 'reading_companion': return l.aiSkillReadingCompanionDesc;
-      case 'seminar_mode': return l.aiSkillSeminarModeDesc;
-      default: return null;
+      case 'paper_analyzer':
+        return l.aiSkillPaperAnalyzerDesc;
+      case 'flashcard_generator':
+        return l.aiSkillFlashcardGeneratorDesc;
+      case 'debate_partner':
+        return l.aiSkillDebatePartnerDesc;
+      case 'vocab_extractor':
+        return l.aiSkillVocabExtractorDesc;
+      case 'reading_companion':
+        return l.aiSkillReadingCompanionDesc;
+      case 'seminar_mode':
+        return l.aiSkillSeminarModeDesc;
+      default:
+        return null;
     }
   }
 

@@ -1,6 +1,6 @@
 # E00 Foundation: SourceRef And Provenance
 
-> 状态：Ready  
+> 状态：In Review
 > 目标：统一 PaperTok Reader 中所有 AI 学习产物的证据引用、数据归属和回跳原文能力。
 
 ## 1. 为什么先做
@@ -62,8 +62,11 @@ Seminar 结论、图谱节点、自动卡片和复习题默认是 `AI-generated-
 | --- | --- | --- | --- | --- |
 | E00-C01-T01 | 盘点现有 source/evidence 字段 | 无 | 字段映射表 | 覆盖 RAG evidence、note、highlight、memory、conversation。 |
 | E00-C01-T02 | 设计 SourceRef domain contract | E00-C01-T01 | SourceRef spec | 字段、可空规则、hash 规则、deep link 规则明确。 |
+| E00-C01-T03 | 接入 SourceRef runtime model 和 RAG adapter | E00-C01-T02 | `lib/models/source_ref.dart`, `lib/service/rag/source_ref_adapter.dart` | JSON 兼容、snippet 上限、hash-only draft、reader jump link 校验通过。 |
 | E00-C02-T01 | 定义 AI 内容归属枚举 | E00-C01-T02 | ownership spec | 每种归属有写入、同步、删除策略。 |
+| E00-C02-T02 | 接入 AI output provenance contract | E00-C02-T01 | `AiProvenance`, `AiOutputOwnership` | AI draft、approved user asset、derived cache 边界有模型测试。 |
 | E00-C03-T01 | 定义 provenance UI contract | E00-C01-T02 | UI contract | 用户能看到来源、证据状态和回跳动作。 |
+| E00-C03-T02 | 接入 source jump audit contract | E00-C03-T01, E07-C03-T01 | `PaperReaderSourceJumpAudit` | jumpable、unavailable、unresolved source refs 可区分。 |
 
 ## 4. Task Execution Defaults
 

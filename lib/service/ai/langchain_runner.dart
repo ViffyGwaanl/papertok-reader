@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
-import 'package:papertok_reader/enums/ai_tool_approval_policy.dart';
 import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
+import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/service/ai/ai_usage_tracker.dart';
 import 'package:papertok_reader/service/ai/tool_approval_delegate.dart';
 import 'package:papertok_reader/service/ai/tool_orchestrator.dart';
@@ -164,8 +164,8 @@ class CancelableLangchainRunner {
         _subscription = source.listen(
           (event) {
             final rawChunk = event.output.content;
-            final metaReasoning = (event.metadata?['reasoning_content'] ??
-                    event.metadata?['reasoning'])
+            final metaReasoning = (event.metadata['reasoning_content'] ??
+                    event.metadata['reasoning'])
                 ?.toString();
 
             if (_aiDebugEnabled) {
@@ -264,6 +264,7 @@ class CancelableLangchainRunner {
     ChatMessage? systemMessage,
     int maxIterations = 120,
     AiUsageTracker? usageTracker,
+    AiToolPermissionMatrix? toolPermissionMatrix,
   }) {
     _cancelRequested = false;
     _activeModel = model;
@@ -502,14 +503,17 @@ class CancelableLangchainRunner {
             // --- Approval check (sequential, interactive) ---
             final def = AiToolRegistry.byId(agentAction.tool);
             final riskLevel = def?.riskLevel ?? AiToolRiskLevel.destructive;
-            final alwaysRequireApproval =
-                def?.alwaysRequireApproval ?? false;
+            final alwaysRequireApproval = def?.alwaysRequireApproval ?? false;
+            final matrixRule = toolPermissionMatrix?.ruleFor(agentAction.tool);
+            final matrixRequiresApproval =
+                matrixRule?.requiresApproval ?? false;
 
             final policy = Prefs().aiToolApprovalPolicy;
             final forceConfirmDestructive =
                 Prefs().aiToolForceConfirmDestructive;
 
-            var shouldPrompt = alwaysRequireApproval ||
+            var shouldPrompt = matrixRequiresApproval ||
+                alwaysRequireApproval ||
                 ToolApprovalDecider.shouldPrompt(
                   policy: policy,
                   riskLevel: riskLevel,
@@ -527,14 +531,12 @@ class CancelableLangchainRunner {
             }
 
             if (shouldPrompt) {
-              var displayName =
-                  def?.displayNameOrDefault() ?? agentAction.tool;
+              var displayName = def?.displayNameOrDefault() ?? agentAction.tool;
               var description = def?.descriptionOrDefault() ?? '';
 
               if (def == null) {
                 try {
-                  final mcpDesc =
-                      McpToolRegistry.describe(agentAction.tool);
+                  final mcpDesc = McpToolRegistry.describe(agentAction.tool);
                   if (mcpDesc != null) {
                     displayName =
                         '${mcpDesc.serverName} · ${mcpDesc.displayName}';
@@ -581,7 +583,9 @@ class CancelableLangchainRunner {
 
           // === Phase 2: Execute approved tools (concurrent where safe) ===
           if (!shouldStop && approvedActions.isNotEmpty) {
-            const orchestrator = ToolOrchestrator();
+            final orchestrator = ToolOrchestrator(
+              permissionMatrix: toolPermissionMatrix,
+            );
 
             await for (final result in orchestrator.execute(
               approvedActions,

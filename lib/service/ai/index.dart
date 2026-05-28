@@ -296,7 +296,7 @@ Stream<String> _generateStream({
     return serviceCooldownMs;
   }
 
-  List<AiApiKeyEntry> _replaceEntry(
+  List<AiApiKeyEntry> replaceEntry(
     List<AiApiKeyEntry> list,
     AiApiKeyEntry entry,
   ) {
@@ -307,7 +307,7 @@ Stream<String> _generateStream({
     return next;
   }
 
-  void _persistManagedKeys(
+  void persistManagedKeys(
     List<AiApiKeyEntry> entries, {
     required String activeKey,
   }) {
@@ -440,6 +440,7 @@ Stream<String> _generateStream({
         conversationId: conversationId,
         systemMessage: pipeline.systemMessage,
         usageTracker: tracker,
+        toolPermissionMatrix: pipeline.permissionMatrix,
       );
     } else {
       final prompt = PromptValue.chat(sanitizedMessages);
@@ -468,8 +469,8 @@ Stream<String> _generateStream({
           disabledUntil: null,
           updatedAt: nowMs,
         );
-        final next = _replaceEntry(managedEntries, updated);
-        _persistManagedKeys(next, activeKey: attemptKey);
+        final next = replaceEntry(managedEntries, updated);
+        persistManagedKeys(next, activeKey: attemptKey);
       }
 
       return;
@@ -498,8 +499,8 @@ Stream<String> _generateStream({
           updatedAt: nowMs,
         );
 
-        final next = _replaceEntry(managedEntries, updated);
-        _persistManagedKeys(next, activeKey: attemptKey);
+        final next = replaceEntry(managedEntries, updated);
+        persistManagedKeys(next, activeKey: attemptKey);
       }
 
       // Retry only if:

@@ -1,0 +1,209 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:papertok_reader/models/ai_seminar.dart';
+import 'package:papertok_reader/models/source_ref.dart';
+
+void main() {
+  group('AiSeminarSessionContract', () {
+    test('uses the fixed default roles and keeps web disabled by default', () {
+      final session = AiSeminarSessionContract(
+        id: 's1',
+        question: 'What is the argument?',
+        bookId: 7,
+      );
+
+      expect(session.roles, AiSeminarRole.defaultRoles);
+      expect(session.hasVerifier, false);
+      expect(session.scopes, [AiSeminarEvidenceScope.currentBook]);
+      expect(session.allowWeb, false);
+      expect(session.writeRequiresApproval, true);
+    });
+
+    test('allows verifier but ignores unknown role wire values', () {
+      final restored = AiSeminarSessionContract.fromJson(const {
+        'id': 's2',
+        'question': 'Verify this claim',
+        'roles': ['verifier', 'invented-role'],
+        'scopes': ['library', 'future-scope'],
+        'allowWeb': true,
+        'writeRequiresApproval': false,
+        'maxRounds': 99,
+      });
+
+      expect(restored.roles, [
+        AiSeminarRole.critical,
+        AiSeminarRole.supportive,
+        AiSeminarRole.synthesizer,
+        AiSeminarRole.verifier,
+      ]);
+      expect(restored.scopes, [AiSeminarEvidenceScope.library]);
+      expect(restored.allowWeb, true);
+      expect(restored.writeRequiresApproval, false);
+      expect(restored.maxRounds, 5);
+    });
+  });
+
+  group('AiSeminarEvidenceBundle', () {
+    test('requires each evidence item to carry a traceable SourceRef', () {
+      final bundle = AiSeminarEvidenceBundle(
+        query: 'claim',
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'source text',
+            sourceRef: SourceRef(
+              bookId: 1,
+              href: 'Text/ch.xhtml',
+              sourceTextSnippet: 'source text',
+              sourceKind: SourceRefKind.currentBookRag,
+            ),
+          ),
+        ],
+      );
+
+      expect(bundle.allEvidenceTraceable, true);
+      final json = bundle.toJson();
+      final evidence = (json['evidence'] as List).single as Map;
+      expect(evidence['sourceRef'], isA<Map>());
+      expect(
+        (evidence['sourceRef'] as Map)['sourceTextSnippet'],
+        'source text',
+      );
+    });
+
+    test('detects evidence that cannot jump back or prove origin', () {
+      final bundle = AiSeminarEvidenceBundle(
+        query: 'claim',
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'untraceable',
+            sourceRef: SourceRef(sourceKind: SourceRefKind.currentBookRag),
+          ),
+        ],
+      );
+
+      expect(bundle.allEvidenceTraceable, false);
+    });
+  });
+
+  group('AiSeminarWhiteboardEntry', () {
+    test('claims and candidate cards must trace evidence refs', () {
+      const claim = AiSeminarWhiteboardEntry(
+        id: 'w1',
+        kind: AiSeminarWhiteboardKind.claim,
+        text: 'The author assumes X.',
+      );
+      const card = AiSeminarWhiteboardEntry(
+        id: 'w2',
+        kind: AiSeminarWhiteboardKind.candidateCard,
+        text: 'X as hidden premise',
+        evidenceRefIds: ['e1'],
+      );
+
+      expect(claim.isTraceable, false);
+      expect(card.isTraceable, true);
+      expect(card.requiresReview, true);
+    });
+  });
+
+  group('AiSeminarSynthesis', () {
+    test('handoff is review-ready but not auto-applied to user assets', () {
+      final synthesis = AiSeminarSynthesis(
+        summary: 'A balanced answer.',
+        supportiveView: 'The text supports the thesis.',
+        criticalView: 'The evidence is incomplete.',
+        candidateCards: const [
+          AiSeminarWhiteboardEntry(
+            id: 'card1',
+            kind: AiSeminarWhiteboardKind.candidateCard,
+            text: 'Candidate card',
+            evidenceRefIds: ['e1'],
+          ),
+        ],
+        candidateReviewQuestions: const [
+          'What is the strongest counterexample?',
+        ],
+        evidenceRefIds: const ['e1'],
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'source text',
+            sourceRef: SourceRef(
+              bookId: 1,
+              href: 'Text/ch.xhtml',
+              sourceTextSnippet: 'source text',
+              sourceKind: SourceRefKind.currentBookRag,
+            ),
+          ),
+        ],
+      );
+
+      expect(synthesis.readyForReview, true);
+      expect(synthesis.hasTraceableHandoff, true);
+      final restored = AiSeminarSynthesis.fromJson(synthesis.toJson());
+      expect(restored.candidateCards.single.requiresReview, true);
+      expect(restored.candidateReviewQuestions, isNotEmpty);
+    });
+
+    test('handoff rejects missing or hash-only evidence references', () {
+      final hashOnly = AiSeminarSynthesis(
+        summary: 'Summary',
+        supportiveView: 'Support',
+        criticalView: 'Critique',
+        candidateCards: const [
+          AiSeminarWhiteboardEntry(
+            id: 'card1',
+            kind: AiSeminarWhiteboardKind.candidateCard,
+            text: 'Candidate card',
+            evidenceRefIds: ['e1'],
+          ),
+        ],
+        evidenceRefIds: const ['e1'],
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'detached text',
+            sourceRef: SourceRef(
+              sourceTextSnippet: 'detached text',
+              sourceKind: SourceRefKind.external,
+            ),
+          ),
+        ],
+      );
+      final missing = AiSeminarSynthesis(
+        summary: 'Summary',
+        supportiveView: 'Support',
+        criticalView: 'Critique',
+        candidateCards: const [
+          AiSeminarWhiteboardEntry(
+            id: 'card1',
+            kind: AiSeminarWhiteboardKind.candidateCard,
+            text: 'Candidate card',
+            evidenceRefIds: ['missing'],
+          ),
+        ],
+        evidenceRefIds: const ['missing'],
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'source text',
+            sourceRef: SourceRef(
+              bookId: 1,
+              href: 'Text/ch.xhtml',
+              sourceTextSnippet: 'source text',
+              sourceKind: SourceRefKind.currentBookRag,
+            ),
+          ),
+        ],
+      );
+
+      expect(hashOnly.hasTraceableHandoff, false);
+      expect(missing.hasTraceableHandoff, false);
+    });
+  });
+}

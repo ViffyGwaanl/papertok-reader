@@ -1,6 +1,6 @@
 # E06 Agent Tools And Skills Platform
 
-> 状态：Ready  
+> 状态：In Review
 > 目标：把 Skills、工具权限、sub-agent 执行和成本治理改成可审计、可测试的平台能力。
 
 ## 1. 现有基础
@@ -74,6 +74,12 @@ Provider/model 需要声明：
 | E06-C02-T01 | 定义 sub-agent governance | E06-C01-T01 | governance spec | 禁止递归、取消、超时、预算可验证。 |
 | E06-C03-T01 | 拆分 custom skills 任务 | E06-C01-T01 | skills task set | schema/parser/validator/UI/runtime/tests 分开。 |
 | E06-C04-T01 | 定义 provider capability matrix | 无 | provider matrix | Seminar 可据此选择模型和预算。 |
+
+当前实现切片：
+
+- `CustomSkillContract` 已提供 schemaVersion `1`、JSON/Map parser、字段类型错误上报、unknown field 报错、unknown scene 报错、system scene 拦截、写工具拦截、`spawn_sub_agent` 拦截和 `canInject` runtime gate。
+- `AiToolPermissionMatrix`、`SubAgentGovernancePolicy`、`AiToolRegistry` governance filter、`SubAgentRunner.allowedToolIdsForAgent` 与 `ToolOrchestrator` 已有 focused tests 覆盖。
+- 导入 UI、fixture 管理、取消、超时和成本记录仍保留为本 Epic 的剩余 Agent Task，不在当前切片中冒充完成。
 
 ## 4. Task Execution Defaults
 

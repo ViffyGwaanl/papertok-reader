@@ -1,7 +1,9 @@
+import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
-import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/rag/ai_vector_codec.dart';
+import 'package:papertok_reader/service/rag/source_ref_adapter.dart';
 import 'package:papertok_reader/service/rag/vector_math.dart';
 
 class AiSemanticSearchEvidence {
@@ -11,6 +13,7 @@ class AiSemanticSearchEvidence {
     required this.anchor,
     required this.jumpLink,
     required this.score,
+    this.sourceRef,
   });
 
   final String text;
@@ -23,6 +26,7 @@ class AiSemanticSearchEvidence {
   final String jumpLink;
 
   final double score;
+  final SourceRef? sourceRef;
 
   Map<String, dynamic> toJson() => {
         'text': text,
@@ -30,6 +34,7 @@ class AiSemanticSearchEvidence {
         'anchor': anchor,
         'jumpLink': jumpLink,
         'score': score,
+        if (sourceRef != null) 'sourceRef': sourceRef!.toSafeJson(),
       };
 }
 
@@ -106,11 +111,15 @@ class SemanticSearchCurrentBook {
     final rows = await db.query(
       'ai_chunks',
       columns: [
+        'id',
         'chapter_href',
         'chapter_title',
         'chunk_index',
         'text',
         'raw_text',
+        'embedding_input_hash',
+        'context_version',
+        'context_created_at',
         'embedding_blob',
         'embedding_json',
         'embedding_norm',
@@ -189,6 +198,23 @@ class SemanticSearchCurrentBook {
         bookId: bookId,
         href: href,
       ).toUri().toString();
+      final sourceRef = RagSourceRefAdapter.currentBook(
+        bookId: bookId,
+        href: href,
+        text: snippet,
+        anchor: anchor,
+        jumpLink: jumpLink,
+        chunkId: (r['id'] as num?)?.toInt(),
+        sourceHash: r['embedding_input_hash']?.toString(),
+        providerId: effectiveProviderId,
+        model: effectiveModel,
+        indexVersion: info.indexVersion,
+        contextVersion: (r['context_version'] as num?)?.toInt(),
+        createdAt: (r['context_created_at'] as num?)?.toInt() ??
+            info.updatedAt ??
+            info.createdAt,
+        confidence: it.score,
+      );
 
       return AiSemanticSearchEvidence(
         text: snippet,
@@ -196,6 +222,7 @@ class SemanticSearchCurrentBook {
         anchor: anchor,
         jumpLink: jumpLink,
         score: it.score,
+        sourceRef: sourceRef,
       );
     }).toList(growable: false);
 

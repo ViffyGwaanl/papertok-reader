@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/log/common.dart';
 import 'package:langchain/langchain.dart';
@@ -28,9 +29,13 @@ class OrchestratedToolResult {
 ///
 /// Maximum concurrency is capped at [maxConcurrency].
 class ToolOrchestrator {
-  const ToolOrchestrator({this.maxConcurrency = 5});
+  const ToolOrchestrator({
+    this.maxConcurrency = 5,
+    this.permissionMatrix,
+  });
 
   final int maxConcurrency;
+  final AiToolPermissionMatrix? permissionMatrix;
 
   /// Execute [actions] using tools from [toolMap], respecting concurrency.
   ///
@@ -79,11 +84,12 @@ class ToolOrchestrator {
     bool? currentIsConcurrent;
 
     for (final action in actions) {
-      final isSafe = AiToolRegistry.isConcurrencySafeForId(action.tool);
+      final isSafe = AiToolRegistry.isConcurrencySafeForId(
+        action.tool,
+        permissionMatrix: permissionMatrix,
+      );
 
-      if (currentBatch == null ||
-          currentIsConcurrent != isSafe ||
-          !isSafe) {
+      if (currentBatch == null || currentIsConcurrent != isSafe || !isSafe) {
         // Start a new batch when:
         // - first action
         // - concurrency type changed

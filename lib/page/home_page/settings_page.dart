@@ -5,6 +5,7 @@ import 'package:papertok_reader/page/settings_page/ai_provider_center/ai_provide
 import 'package:papertok_reader/page/settings_page/ai_image_analysis.dart';
 import 'package:papertok_reader/page/settings_page/ai_tools.dart';
 import 'package:papertok_reader/page/settings_page/ai_library_index_page.dart';
+import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/memory.dart';
 import 'package:papertok_reader/page/settings_page/advanced.dart';
 import 'package:papertok_reader/page/settings_page/appearance.dart';
@@ -78,7 +79,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             icon: Icons.auto_awesome,
             tint: SettingsIconTints.sparkles,
             title: l10n.settingsAi,
-            onTap: () => _pushSubpage(context, l10n.settingsAi, const AISettings()),
+            onTap: () =>
+                _pushSubpage(context, l10n.settingsAi, const AISettings()),
+          ),
+          SettingsNavRow(
+            icon: Icons.fact_check_outlined,
+            tint: SettingsIconTints.memory,
+            title: l10n.reviewInboxTitle,
+            onTap: () => _push(context, const ReviewInboxPage()),
           ),
           SettingsNavRow(
             icon: Icons.handyman_outlined,
@@ -97,7 +105,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             icon: Icons.image_outlined,
             tint: SettingsIconTints.prompt,
             title: l10n.settingsAiImageAnalysisTitle,
-            onTap: () => _pushSubpage(context, l10n.settingsAiImageAnalysisTitle,
+            onTap: () => _pushSubpage(
+                context,
+                l10n.settingsAiImageAnalysisTitle,
                 const AiImageAnalysisSettingsPage()),
           ),
         ];
@@ -122,30 +132,33 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             icon: Icons.book_rounded,
                             tint: SettingsIconTints.reading,
                             title: l10n.settingsReading,
-                            onTap: () => _pushSubpage(
-                                context, l10n.settingsReading, const ReadingSettings()),
+                            onTap: () => _pushSubpage(context,
+                                l10n.settingsReading, const ReadingSettings()),
                           ),
                           if (EnvVar.enableAIFeature)
                             SettingsNavRow(
                               icon: Icons.translate_outlined,
                               tint: SettingsIconTints.translate,
                               title: l10n.settingsTranslate,
-                              onTap: () => _pushSubpage(context,
-                                  l10n.settingsTranslate, const TranslateSetting()),
+                              onTap: () => _pushSubpage(
+                                  context,
+                                  l10n.settingsTranslate,
+                                  const TranslateSetting()),
                             ),
                           SettingsNavRow(
                             icon: Icons.headphones,
                             tint: SettingsIconTints.tts,
                             title: l10n.settingsNarrate,
-                            onTap: () => _pushSubpage(
-                                context, l10n.settingsNarrate, const NarrateSettings()),
+                            onTap: () => _pushSubpage(context,
+                                l10n.settingsNarrate, const NarrateSettings()),
                           ),
                           if (EnvVar.enableAIFeature)
                             SettingsNavRow(
                               icon: Icons.psychology_outlined,
                               tint: SettingsIconTints.memory,
                               title: l10n.settingsMemory,
-                              onTap: () => _push(context, const MemorySettingsPage()),
+                              onTap: () =>
+                                  _push(context, const MemorySettingsPage()),
                             ),
                         ],
                       ),
@@ -165,8 +178,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             icon: Icons.sync_outlined,
                             tint: SettingsIconTints.sync,
                             title: l10n.settingsSync,
-                            onTap: () => _pushSubpage(
-                                context, l10n.settingsSync, const SyncSetting()),
+                            onTap: () => _pushSubpage(context,
+                                l10n.settingsSync, const SyncSetting()),
                           ),
                           SettingsNavRow(
                             icon: Icons.storage_outlined,
@@ -186,15 +199,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             icon: Icons.color_lens_outlined,
                             tint: SettingsIconTints.appearance,
                             title: l10n.settingsAppearance,
-                            onTap: () => _pushSubpage(context,
-                                l10n.settingsAppearance, const AppearanceSetting()),
+                            onTap: () => _pushSubpage(
+                                context,
+                                l10n.settingsAppearance,
+                                const AppearanceSetting()),
                           ),
                           SettingsNavRow(
                             icon: Icons.home_outlined,
                             tint: SettingsIconTints.homeNav,
                             title: l10n.settingsHomeNavigation,
-                            onTap: () =>
-                                _push(context, const HomeNavigationSettingsPage()),
+                            onTap: () => _push(
+                                context, const HomeNavigationSettingsPage()),
                           ),
                         ],
                       ),

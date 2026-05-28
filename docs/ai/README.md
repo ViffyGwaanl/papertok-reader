@@ -1,6 +1,6 @@
-# AI Panel UX / Config / Sync — Design & Implementation Notes
+# PaperTok Reader AI / RAG / Memory — Docs Index & Implementation Notes
 
-> Maintainer note: 本目录记录 **PaperTok Reader（papertok-reader）** 中 AI / 翻译相关的 UX、配置、同步与实现细节。
+> Maintainer note: 本目录记录 **PaperTok Reader（papertok-reader）** 中 AI / RAG / Memory / 翻译相关的 UX、配置、同步、备份、实现细节与未来升级规格。
 >
 > 上游贡献（Anx Reader）目前不是产品交付的必需项；如未来需要上游化，会单独整理成“干净的 contrib track”（不混入 PaperTok / 产品专属 UX）。
 
@@ -162,6 +162,7 @@ All AI / translation / multimodal / image-analysis changes are integrated into `
 ## Documents
 
 - [AI 改造：已完成 & 路线图（中文）](./ai_status_roadmap_zh.md)
+- [AI Agent 系统架构与优化记录（中文）](./agent_system_architecture_zh.md)
 - [Future Agentic Upgrade：AI-agent 可执行未来升级规格（中文）](./future_agentic_upgrade/README_zh.md)
 - [RAG + Memory（Phase 1-5）总体计划与状态（中文）](./rag_memory_plan_zh.md)
 - [RAG + Memory（Phase 1-5）任务清单（中文）](./rag_memory_tasks_zh.md)
@@ -173,6 +174,7 @@ All AI / translation / multimodal / image-analysis changes are integrated into `
 - [Backup / restore (Files / iCloud)](./backup_restore_icloud.md)
 - [iOS EventKit 系统工具（Reminders / Calendar）说明（中文）](./eventkit_tools_zh.md)
 - [iOS Shortcuts 工具：回到 App + 回传结果（中文）](./shortcuts_callback_zh.md)
+- [Memory 检索（对齐 OpenClaw）（中文）](./memory_search_openclaw_alignment_zh.md)
 - [Memory 工作流对齐 OpenClaw（中文）](./memory_workflow_openclaw_alignment_zh.md)
 - [PDF AI chaptering & OCR design](./pdf_ai_chaptering_and_ocr.md)
 - [AI translation design notes](./ai_translation_design.md)
@@ -180,6 +182,8 @@ All AI / translation / multimodal / image-analysis changes are integrated into `
 - [Test plan](./test_plan.md)
 - [Implementation plan](./implementation_plan.md)
 - [Release / Migration notes](./release_notes_migration_ai_sync_backup.md)
+- [PR-6 historical note: WebDAV AI settings sync](./pr_pr6_webdav_ai_settings.md)
+- [PR-7 historical note: Backup v4 encrypted keys](./pr_pr7_backup_v4_encrypted_keys.md)
 
 ---
 
@@ -210,5 +214,5 @@ dart run build_runner build --delete-conflicting-outputs
   - optional auto-daily
   - 更细策略开关与自动化边界
 - 详见：
-  - `docs/ai/memory_search_openclaw_alignment_zh.md`
-  - `docs/ai/memory_workflow_openclaw_alignment_zh.md`
+  - [Memory 检索（对齐 OpenClaw）](./memory_search_openclaw_alignment_zh.md)
+  - [Memory 工作流对齐 OpenClaw](./memory_workflow_openclaw_alignment_zh.md)

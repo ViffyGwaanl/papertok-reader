@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/enums/ai_thinking_mode.dart';
 import 'package:papertok_reader/enums/ai_tool_scene.dart';
+import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:papertok_reader/service/ai/annotation_ledger.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill.dart';
@@ -13,7 +14,6 @@ import 'package:riverpod/riverpod.dart';
 import 'package:langchain_anthropic/langchain_anthropic.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/tools.dart';
-import 'package:langchain_google/langchain_google.dart';
 import 'package:langchain_openai/langchain_openai.dart';
 
 import 'chat_deepseek.dart';
@@ -152,31 +152,53 @@ class LangchainAiRegistry {
 
     var tools = const <Tool>[];
     ChatMessage? systemMessage;
+    AiToolPermissionMatrix? permissionMatrix;
+    AiAgentScene? agentScene;
 
     if (useAgent) {
       final enabledIds = Prefs().enabledAiToolIds;
+      final activeSkillId = Prefs().activeAiSkillId;
+      final activeSkill = AiSkillRegistry.byId(activeSkillId);
+      final activeAgentScene = agentSceneFor(
+        toolScene: scene,
+        activeSkill: activeSkill,
+      );
+      agentScene = activeAgentScene;
+      permissionMatrix = isSeminarSkill(activeSkill)
+          ? seminarPermissionMatrixFor(toolScene: scene)
+          : null;
       final toolContext = AiToolContext(
         ref: ref!,
         externalAnnotationLedger: annotationLedger,
+        agentSceneOverride: activeAgentScene,
+        toolPermissionMatrix: permissionMatrix,
       );
 
       // Scene-aware filtering: only include tools relevant to the
       // current context (reading vs library), plus global tools.
-      final baseTools =
-          AiToolRegistry.buildToolsForScene(toolContext, enabledIds, scene);
+      final baseTools = AiToolRegistry.buildToolsForScene(
+        toolContext,
+        enabledIds,
+        scene,
+        permissionMatrix: permissionMatrix,
+        agentScene: activeAgentScene,
+      );
 
-      final mcp = McpToolRegistry.buildCachedTools();
+      final mcp = shouldIncludeMcpTools(activeAgentScene)
+          ? McpToolRegistry.buildCachedTools()
+          : (tools: const <Tool>[], descriptors: const <McpToolDescriptor>[]);
       // Sort tools alphabetically by name for stable prompt cache hits.
       // When the tool list is identical across requests, LLM providers
       // (Anthropic, OpenAI) can reuse cached system prompt tokens.
       tools = <Tool>[...baseTools, ...mcp.tools]
         ..sort((a, b) => a.name.compareTo(b.name));
 
-      final enabledDefs =
-          AiToolRegistry.definitionsForScene(enabledIds, scene);
-      // Apply active skill (if any) to system prompt.
-      final activeSkillId = Prefs().activeAiSkillId;
-      final activeSkill = AiSkillRegistry.byId(activeSkillId);
+      final enabledDefs = AiToolRegistry.definitionsForScene(
+        enabledIds,
+        scene,
+        permissionMatrix: permissionMatrix,
+        agentScene: activeAgentScene,
+      );
 
       systemMessage = _buildAgentSystemMessage(
         isReading: isReading,
@@ -191,7 +213,37 @@ class LangchainAiRegistry {
       model: model,
       tools: tools,
       systemMessage: systemMessage,
+      permissionMatrix: permissionMatrix,
+      agentScene: agentScene,
     );
+  }
+
+  static bool isSeminarSkill(AiSkill? activeSkill) =>
+      activeSkill?.id == 'seminar_mode';
+
+  static AiAgentScene agentSceneFor({
+    required AiToolScene toolScene,
+    AiSkill? activeSkill,
+  }) {
+    if (isSeminarSkill(activeSkill)) return AiAgentScene.seminar;
+    return AiToolRegistry.agentSceneForToolScene(toolScene);
+  }
+
+  static bool shouldIncludeMcpTools(AiAgentScene agentScene) {
+    return agentScene != AiAgentScene.seminar;
+  }
+
+  static AiToolPermissionMatrix seminarPermissionMatrixFor({
+    required AiToolScene toolScene,
+  }) {
+    return switch (toolScene) {
+      AiToolScene.library =>
+        AiToolPermissionMatrix.seminarLibraryFallbackMatrix,
+      AiToolScene.reading => AiToolPermissionMatrix.defaultMatrix,
+      AiToolScene.system ||
+      AiToolScene.global =>
+        AiToolPermissionMatrix.defaultMatrix,
+    };
   }
 
   ChatMessage _buildAgentSystemMessage({
@@ -352,9 +404,13 @@ class LangchainPipeline {
     required this.model,
     required this.tools,
     this.systemMessage,
+    this.permissionMatrix,
+    this.agentScene,
   });
 
   final BaseChatModel model;
   final List<Tool> tools;
   final ChatMessage? systemMessage;
+  final AiToolPermissionMatrix? permissionMatrix;
+  final AiAgentScene? agentScene;
 }

@@ -1,6 +1,6 @@
 # E05 Review Inbox And Spaced Review
 
-> 状态：Ready  
+> 状态：In Review
 > 目标：把现有 Memory Review Inbox 扩展为 PaperTok 的知识资产审批、复习和回溯中心。
 
 ## 1. 设计原则
@@ -40,7 +40,7 @@ draft -> pending -> approved/dismissed -> applied
 - lapses
 - reviewHistory
 
-算法实现可替换，但字段必须稳定。
+算法实现可替换，但字段必须保持兼容，并具备迁移策略。
 
 ### E05-C03 Weak Concept Feedback Loop
 
@@ -56,8 +56,9 @@ draft -> pending -> approved/dismissed -> applied
 | TaskID | Goal | Depends On | Output Artifact | Acceptance |
 | --- | --- | --- | --- | --- |
 | E05-C01-T01 | 定义 Unified ReviewItem | E00 Ready, E03 Ready | review contract | 每种来源有状态流和 source refs。 |
+| E05-C01-T02 | 接入 Unified Review Inbox runtime/UI | E05-C01-T01, E03-C01-T02 In Review slice | `ReviewInboxController`, `reviewInboxProvider`, `ReviewInboxPage` | UI 操作走统一控制层；KnowledgeCard 源资产验证失败时 ReviewItem 不推进；列表显示 source audit。 |
 | E05-C02-T01 | 定义 Spaced Review 字段 | E05-C01-T01 | review scheduler contract | 复习记录可追踪且可导出。 |
-| E05-C03-T01 | 定义错题反馈路径 | E05-C02-T01, E04-C01-T01 Accepted | feedback spec | 错题能回到卡片、原文、概念和 Seminar。 |
+| E05-C03-T01 | 定义错题反馈路径 | E05-C02-T01, E04-C01-T01 In Review slice 或通过 review/rescue 的 artifact | feedback spec | 错题能回到卡片、原文、概念和 Seminar。 |
 
 ## 4. Task Execution Defaults
 

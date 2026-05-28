@@ -11,8 +11,9 @@
 2. `01_current_capability_map_zh.md`：现有 PaperTok 能力、可复用模块和缺口。
 3. `02_agent_execution_model_zh.md`：AI agent 执行模型、任务模板和禁止写法。
 4. `03_epic_index_zh.md`：全部 Epic 的 DAG 依赖图。
-5. `epics/`：每条能力线的执行规格。
-6. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
+5. `implementation_status_zh.md`：本分支代码 artifact、gate 和验证证据。
+6. `epics/`：每条能力线的执行规格。
+7. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
 
 ## 2. 状态词
 

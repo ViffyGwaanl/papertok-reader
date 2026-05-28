@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | AI Chat streaming | `aiChatProvider` 已负责 streaming 生命周期，UI 最小化不应打断生成。 | Seminar session 需要结构化事件、角色输出和恢复状态。 | E01, E07 |
 | Provider Center | 已支持内置/自定义 provider、模型切换、Responses 兼容开关。 | Seminar 需要角色预算、成本上限、provider 能力矩阵。 | E01, E06 |
-| Skills | 已有 `seminar_mode`、reading companion、flashcard 等 prompt skill。 | `seminar_mode` 仍是 prompt-only，不是服务层 orchestrator。 | E01, E06 |
+| Skills | 已有 `seminar_mode`、reading companion、flashcard 等 prompt skill；本分支新增 AI Seminar 服务层编排切片和 `CustomSkillContract` strict JSON/Map schema parser。 | UI 入口、真实模型流式事件和自定义 Skill 导入界面还需要接入治理模型。 | E01, E06, E07 |
 
 锚点：
 
@@ -21,9 +21,9 @@
 
 | 项 | 当前可复用 | 缺口 | 下游 Epic |
 | --- | --- | --- | --- |
-| `SubAgentRunner` | 已有 `research / summarize / verify` 受限子 agent，禁止递归。 | Seminar 需要固定角色、白名单工具、预算和中间事件。 | E01, E06 |
+| `SubAgentRunner` | 已有 `research / summarize / verify` 受限子 agent，禁止递归；本分支新增 AI Seminar role executor 可注入服务，且服务层校验 role/evidence 合约。 | 真实 role executor 的流式事件、取消和预算记录仍需接入 UI/runtime。 | E01, E06 |
 | `spawn_sub_agent` | 主 agent 可委派聚焦任务。 | 默认无 UI 审批，不能直接写用户资产。 | E01, E06 |
-| `ToolOrchestrator` | 已有并发/串行工具调度。 | 需要明确 Seminar 中只读检索可并行，写入必须串行审批。 | E01, E06, E07 |
+| `ToolOrchestrator` | 已有并发/串行工具调度；本分支新增 permission matrix、sub-agent policy、custom skill runtime injection gate 的可测试模型。 | 取消、超时和成本记录还需要和真实运行时事件打通。 | E01, E06, E07 |
 
 锚点：
 
@@ -38,7 +38,8 @@
 | --- | --- | --- | --- |
 | `AnnotationLedger` | 能记录当前会话 AI 创建的高亮/笔记，防重复。 | Seminar 需要 Shared Whiteboard，记录 claim、evidence、disagreement、open question。 | E00, E01 |
 | Create Highlight/Note tools | AI 已能创建高亮和笔记，且有工具审批链路。 | KnowledgeCard 不应直接复用 note 作为唯一模型，需要独立 review 状态。 | E03, E05 |
-| Memory Review Inbox | 已有候选写入、rationale、源跳转思路。 | 需要扩展到 KnowledgeCard、复习题、ConceptGraph 用户确认关系。 | E03, E05 |
+| KnowledgeCard local store | 本分支新增 `KnowledgeCardStore`，可把 AI 候选卡持久化到 `.knowledge/knowledge_cards_v1.json`，重复候选不覆盖用户内容，ReviewItem 决策可回写 card；统一 Review Inbox UI 已能批准、忽略、应用 KnowledgeCard 审批项。 | 需要接入 reader selection、Seminar candidate handoff、spaced review scheduler 和导出入口。 | E03, E05, E08 |
+| Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项。 | Memory、Flashcard、Seminar source-specific apply adapter 尚未接到统一控制层；ReviewItem UI 已有入口但还未写入 spaced review scheduler。 | E03, E04, E05 |
 
 锚点：
 
@@ -51,8 +52,9 @@
 
 | 项 | 当前可复用 | 缺口 | 下游 Epic |
 | --- | --- | --- | --- |
-| Library RAG | `semantic_search_library` 已提供跨书库 hybrid retrieval 和 `paperreader://reader/open?...` 跳转。 | 需要把 evidence 结构作为 SourceRef 输入，统一供 Seminar/Card/Graph 使用。 | E00, E01, E02, E03 |
-| `ai_index.db` | 存放可重建索引、chunk、job、RAG/Graph 相关表。 | 用户资产不能放进可重建索引层；未来迁移必须从当前版本递增。 | E02, E04, E08 |
+| Library RAG | `semantic_search_library` 已提供跨书库 hybrid retrieval、`paperreader://reader/open?...` 跳转和 SourceRef evidence；RAPTOR/GraphRAG summary 只作为 `derivedSummary/derivedLayer` 检索提示，正式 evidence snippet 使用书内 chunk 原文。 | 需要把 derived summary 的 UI 展示和正式 evidence 视觉层级接入 AI 面板。 | E00, E01, E02, E03 |
+| `ai_index.db` | 存放可重建索引、chunk、job、RAG/Graph 相关表；当前分支事实为 `kAiIndexDbVersion = 10`。 | 用户资产不能放进可重建索引层；后续迁移必须从当前版本递增。 | E02, E04, E08 |
+| ConceptGraph local store | 本分支新增 `ConceptGraphStore`，可持久化 `.knowledge/concept_graph_v1.json`，构建 Concept Dossier，检测 orphan node / broken edge，并按 policy 限制局部探索深度和每层宽度；ConceptGraph relation 已能通过 ReviewItem apply 才进入正式 ownership。 | 需要接入 RAG/GraphRAG producer、KnowledgeCard relation handoff、真实概念页和 sync/export asset 边界。 | E04, E05, E07, E08 |
 | RAPTOR/GraphRAG 雏形 | 已有全局层表和 builder 方向。 | 需要产品化 Gate：证据、重建、旧 DB 升级、失败恢复。 | E02, E04 |
 
 锚点：
@@ -67,8 +69,9 @@
 
 | 项 | 当前可复用 | 缺口 | 下游 Epic |
 | --- | --- | --- | --- |
-| Reader deep link | `paperreader://reader/open?...` 已是书内跳转规范。 | 所有卡片、图节点、Seminar claim 都要统一 SourceRef。 | E00, E03, E04, E07 |
-| AI settings sync | WebDAV 同步 AI 设置，不包含 API key。 | Knowledge assets 需要 per-entity sync，而非 settings-style newer-wins。 | E08 |
+| Reader deep link | `paperreader://reader/open?...` 已是书内跳转规范；本分支新增 SourceRef -> `PaperReaderReaderIntent` 和 `PaperReaderSourceJumpAudit`，可统一检查 jumpable、unavailable、unresolved refs。 | 需要把 audit 结果接入 KnowledgeCard、ReviewItem、Seminar claim、Concept Dossier 和 UI 错误恢复。 | E00, E03, E04, E07 |
+| AI settings sync | WebDAV 同步 AI 设置，不包含 API key；KnowledgeSyncPolicy 已递归排除常见 secret-like payload keys。 | Knowledge assets 需要 per-entity sync，而非 settings-style newer-wins。 | E08 |
+| Knowledge asset sync boundary | `KnowledgeSyncEnvelope` 已区分 `ai-draft`、`knowledge-card`、`derived-index`；`KnowledgeSyncPolicy` 默认排除 draft、derived cache 和含 secret-like payload 的 envelope；`KnowledgeCardStore` 中 draft/pending 不按用户资产同步，applied 且有 evidence 的卡片才进入 knowledge-card envelope。 | 真正的同步/冲突恢复管线还需要 per-entity merge、Review 冲突 UI 和 export manifest 接入。 | E08 |
 | Backup/restore | 已支持 memory 和 `ai_index.db` 可选包含。 | 未来要区分用户资产、AI draft、派生索引和密钥策略。 | E05, E08 |
 
 锚点：
@@ -79,9 +82,9 @@
 
 ## 6. 全局缺口
 
-- 缺少统一 `SourceRef`，导致 RAG evidence、note、memory、card、conversation 的引用形态分散。
-- 缺少 KnowledgeCard 用户资产模型，AI 产出难以跨 chat、review、复习复用。
-- `seminar_mode` 仍是 prompt skill，不具备 OpenMAIC 式角色编排、whiteboard、action protocol。
-- ConceptGraph 还需要明确哪些是派生缓存、哪些是用户确认资产。
+- 统一 `SourceRef` 核心模型已存在；仍需把所有 UI 输出、sync/export manifest 和旧 note/memory 路径完全接到同一证据链。
+- KnowledgeCard 模型、本地 store、Review adapter 和统一 Review Inbox UI 已有可测试切片；仍需 reader selection 入口、Seminar candidate 持久化接入、spaced review scheduler 和导出。
+- `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、统一 ReviewItem 持久化入口和 KnowledgeCard 本地资产入口的可测试切片；仍需 UI 入口、真实模型流式事件和持久化恢复。
+- Custom Skill contract 已有 schema version、parser、validator、权限声明和 runtime injection gate；仍需导入 UI、fixture 管理和 provider 能力界面。
+- ConceptGraph 模型、本地 store、局部探索和统一 Review relation adapter 已有可测试切片；仍需 producer adapter、概念页 UI、sync/export asset 边界。
 - 文档中存在传统 phase/roadmap 混写，不能直接给 agent team 执行。
-

@@ -1,6 +1,7 @@
 import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
 import 'package:papertok_reader/enums/ai_tool_scene.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:papertok_reader/service/ai/annotation_ledger.dart';
 import 'package:papertok_reader/service/ai/book_content_cache.dart';
@@ -72,6 +73,8 @@ class AiToolContext {
     this.selectedText,
     this.conversationId,
     this.locale,
+    this.agentSceneOverride,
+    this.toolPermissionMatrix,
     AnnotationLedger? externalAnnotationLedger,
   }) : _externalAnnotationLedger = externalAnnotationLedger;
 
@@ -101,6 +104,12 @@ class AiToolContext {
   /// User's locale code (e.g. 'zh-CN', 'en').
   final String? locale;
 
+  /// Optional governance scene for agentic modes such as Seminar.
+  final AiAgentScene? agentSceneOverride;
+
+  /// Optional permission matrix applied by agentic runtime modes.
+  final AiToolPermissionMatrix? toolPermissionMatrix;
+
   late final NotesRepository notesRepository = NotesRepository();
   late final BooksRepository booksRepository = BooksRepository();
   late final BookContentSearchRepository bookContentSearchRepository =
@@ -125,6 +134,16 @@ class AiToolContext {
   /// Current scene derived from reading state.
   AiToolScene get currentScene =>
       isReading ? AiToolScene.reading : AiToolScene.library;
+
+  /// Current governance scene derived from reading state unless overridden.
+  AiAgentScene get agentScene =>
+      agentSceneOverride ??
+      switch (currentScene) {
+        AiToolScene.reading => AiAgentScene.reading,
+        AiToolScene.library => AiAgentScene.library,
+        AiToolScene.system => AiAgentScene.system,
+        AiToolScene.global => AiAgentScene.global,
+      };
 }
 
 /// AiToolRiskLevel is defined in lib/enums/ai_tool_risk_level.dart.
@@ -310,8 +329,14 @@ class AiToolRegistry {
       _sceneOverrides[id] ?? const {AiToolScene.global};
 
   /// Returns whether a tool is concurrency-safe.
-  static bool isConcurrencySafeForId(String id) =>
-      !_nonConcurrentTools.contains(id);
+  static bool isConcurrencySafeForId(
+    String id, {
+    AiToolPermissionMatrix? permissionMatrix,
+  }) {
+    final localSafe = !_nonConcurrentTools.contains(id);
+    final governedSafe = permissionMatrix?.ruleFor(id)?.concurrencySafe;
+    return localSafe && (governedSafe ?? true);
+  }
 
   static List<AiToolDefinition> get definitions =>
       List<AiToolDefinition>.unmodifiable(_definitions);
@@ -330,6 +355,17 @@ class AiToolRegistry {
       }
     }
     return filtered;
+  }
+
+  static List<String> sanitizeIdsForAgentScene(
+    List<String> ids,
+    AiAgentScene scene, {
+    AiToolPermissionMatrix permissionMatrix =
+        AiToolPermissionMatrix.defaultMatrix,
+  }) {
+    return sanitizeIds(ids)
+        .where((id) => permissionMatrix.isAllowed(scene: scene, toolId: id))
+        .toList(growable: false);
   }
 
   static List<Tool> buildTools(AiToolContext context, List<String> enabledIds) {
@@ -352,12 +388,30 @@ class AiToolRegistry {
   static List<Tool> buildToolsForScene(
     AiToolContext context,
     List<String> enabledIds,
-    AiToolScene scene,
-  ) {
+    AiToolScene scene, {
+    AiToolPermissionMatrix? permissionMatrix,
+    AiAgentScene? agentScene,
+  }) {
     final enabled = enabledIds.toSet();
     return _definitions
-        .where((def) =>
-            enabled.contains(def.id) && _isToolVisibleInScene(def.id, scene))
+        .where((def) {
+          if (!enabled.contains(def.id)) {
+            return false;
+          }
+          final governedVisible = permissionMatrix?.isAllowed(
+                scene: agentScene ?? agentSceneForToolScene(scene),
+                toolId: def.id,
+              ) ??
+              false;
+          if (!_isToolVisibleInScene(def.id, scene) && !governedVisible) {
+            return false;
+          }
+          return _isGovernanceAllowed(
+            def.id,
+            permissionMatrix: permissionMatrix,
+            agentScene: agentScene ?? agentSceneForToolScene(scene),
+          );
+        })
         .map((def) => def.build(context))
         .toList(growable: false);
   }
@@ -365,13 +419,47 @@ class AiToolRegistry {
   /// Returns definitions filtered by scene (for system prompt generation).
   static List<AiToolDefinition> definitionsForScene(
     List<String> enabledIds,
-    AiToolScene scene,
-  ) {
+    AiToolScene scene, {
+    AiToolPermissionMatrix? permissionMatrix,
+    AiAgentScene? agentScene,
+  }) {
     final enabled = enabledIds.toSet();
-    return _definitions
-        .where((def) =>
-            enabled.contains(def.id) && _isToolVisibleInScene(def.id, scene))
-        .toList(growable: false);
+    return _definitions.where((def) {
+      if (!enabled.contains(def.id)) {
+        return false;
+      }
+      final governedVisible = permissionMatrix?.isAllowed(
+            scene: agentScene ?? agentSceneForToolScene(scene),
+            toolId: def.id,
+          ) ??
+          false;
+      if (!_isToolVisibleInScene(def.id, scene) && !governedVisible) {
+        return false;
+      }
+      return _isGovernanceAllowed(
+        def.id,
+        permissionMatrix: permissionMatrix,
+        agentScene: agentScene ?? agentSceneForToolScene(scene),
+      );
+    }).toList(growable: false);
+  }
+
+  static AiAgentScene agentSceneForToolScene(AiToolScene scene) {
+    return switch (scene) {
+      AiToolScene.reading => AiAgentScene.reading,
+      AiToolScene.library => AiAgentScene.library,
+      AiToolScene.system => AiAgentScene.system,
+      AiToolScene.global => AiAgentScene.global,
+    };
+  }
+
+  static bool _isGovernanceAllowed(
+    String toolId, {
+    required AiToolPermissionMatrix? permissionMatrix,
+    required AiAgentScene agentScene,
+  }) {
+    if (permissionMatrix == null) return true;
+    return permissionMatrix.isAllowed(scene: agentScene, toolId: toolId);
   }
 
   static String displayNameForId(String id, {L10n? l10n}) =>

@@ -1,6 +1,6 @@
 # E01 OpenMAIC-Style Multi-Role Discussion
 
-> 状态：Ready  
+> 状态：In Review
 > 目标：把现有 prompt-only `seminar_mode` 升级为 PaperTok Reader 原生 AI Seminar。
 
 ## 1. 融合方式
@@ -71,10 +71,14 @@ Seminar 结束时输出：
 | TaskID | Goal | Depends On | Output Artifact | Acceptance |
 | --- | --- | --- | --- | --- |
 | E01-C01-T01 | 定义 Seminar session contract | E00-C01-T02 | session/role/round schema | 能表达 3 个默认角色和 verifier。 |
+| E01-C01-T02 | 接入 Seminar session runtime model | E01-C01-T01 | `lib/models/ai_seminar.dart` | 默认角色固定，verifier 受 contract 控制，unknown role 不进入执行。 |
 | E01-C02-T01 | 定义 evidence bundle contract | E00-C01-T02, E02 Ready | evidence schema | 每条 evidence 有 SourceRef。 |
+| E01-C02-T02 | 接入 current-book-first evidence broker | E01-C02-T01 | `AiSeminarEvidenceBroker` | 阅读场景优先 current book，证据不足或显式跨书才 fallback library。 |
 | E01-C03-T01 | 设计 Shared Whiteboard | E01-C02-T01 | whiteboard schema | claim/disagreement/candidateCard 可追溯 evidence。 |
+| E01-C03-T02 | 接入 role turn 和 whiteboard validation | E01-C03-T01 | `AiSeminarOrchestrationService` | role 输出必须匹配 roleId 且引用可追踪 evidence，不合格 turn 不污染后续上下文。 |
 | E01-C04-T01 | 定义 synthesis 输出 | E01-C03-T01 | synthesis schema | 可转 Review，不直接落盘。 |
 | E01-C04-T02 | 定义 UI 入口 | E01-C04-T01, E07 Ready | reading/AI panel UI spec | 阅读页 2 步内可开 Seminar。 |
+| E01-C04-T03 | 接入 synthesis Review handoff | E01-C04-T01, E05-C01-T01 | `SeminarSynthesisReviewAdapter` | readyForReview 且 traceable handoff 才能进入 pending Review。 |
 
 ## 5. Task Execution Defaults
 

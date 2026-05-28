@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/service/ai/langchain_ai_config.dart';
 import 'package:papertok_reader/service/ai/langchain_registry.dart';
 import 'package:papertok_reader/service/ai/langchain_runner.dart';
@@ -22,6 +23,7 @@ class SubAgentRunner {
       'fetch_url',
       'book_content_search',
       'semantic_search_current_book',
+      'semantic_search_library',
       'current_reading_metadata',
     ],
     'summarize': [
@@ -34,6 +36,7 @@ class SubAgentRunner {
     'verify': [
       'book_content_search',
       'semantic_search_current_book',
+      'semantic_search_library',
       'chapter_content_by_href',
       'notes_search',
       'fetch_url',
@@ -50,9 +53,19 @@ class SubAgentRunner {
     required String agentType,
     required AiToolContext toolContext,
     int maxSteps = 8,
+    SubAgentGovernancePolicy governancePolicy =
+        const SubAgentGovernancePolicy(),
+    AiToolPermissionMatrix permissionMatrix =
+        AiToolPermissionMatrix.defaultMatrix,
+    AiAgentScene agentScene = AiAgentScene.reading,
   }) async {
     final type = _agentToolSets.containsKey(agentType) ? agentType : 'research';
-    final toolIds = _agentToolSets[type]!;
+    final toolIds = allowedToolIdsForAgent(
+      agentType: type,
+      governancePolicy: governancePolicy,
+      permissionMatrix: permissionMatrix,
+      agentScene: agentScene,
+    );
 
     AnxLog.info('SubAgent: starting type=$type task="${_truncate(task, 80)}" '
         'maxSteps=$maxSteps tools=${toolIds.length}');
@@ -93,6 +106,7 @@ class SubAgentRunner {
       inputMessage: ChatMessage.humanText(task) as HumanChatMessage,
       systemMessage: systemPrompt,
       maxIterations: maxSteps.clamp(1, 15),
+      toolPermissionMatrix: permissionMatrix,
     );
 
     try {
@@ -108,9 +122,27 @@ class SubAgentRunner {
     }
 
     final result = buffer.toString().trim();
-    AnxLog.info(
-        'SubAgent: completed type=$type resultLen=${result.length}');
+    AnxLog.info('SubAgent: completed type=$type resultLen=${result.length}');
     return result.isEmpty ? 'Sub-agent produced no output.' : result;
+  }
+
+  static List<String> allowedToolIdsForAgent({
+    required String agentType,
+    SubAgentGovernancePolicy governancePolicy =
+        const SubAgentGovernancePolicy(),
+    AiToolPermissionMatrix permissionMatrix =
+        AiToolPermissionMatrix.defaultMatrix,
+    AiAgentScene agentScene = AiAgentScene.reading,
+  }) {
+    final type = _agentToolSets.containsKey(agentType) ? agentType : 'research';
+    return _agentToolSets[type]!
+        .where(governancePolicy.canUseToolInsideSubAgent)
+        .where((toolId) =>
+            permissionMatrix.isAllowed(scene: agentScene, toolId: toolId))
+        .where((toolId) {
+      final rule = permissionMatrix.ruleFor(toolId);
+      return rule != null && rule.readOnly && !rule.requiresApproval;
+    }).toList(growable: false);
   }
 
   static String _truncate(String s, int max) =>

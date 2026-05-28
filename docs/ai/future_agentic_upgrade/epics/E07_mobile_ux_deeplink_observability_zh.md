@@ -1,6 +1,6 @@
 # E07 Mobile UX, Deep Link, And Observability
 
-> 状态：Ready  
+> 状态：In Review
 > 目标：统一 AI 面板、Seminar 入口、索引进度、生成进度、deep link、错误恢复和成本可见性。
 
 ## 1. Capability
@@ -45,17 +45,19 @@
 - 本次使用了哪些资料范围。
 - 是否使用 library。
 - 是否使用 web。
-- 大致 token/成本。
+- `inputTokens`、`outputTokens`、`toolCalls`、`estimatedCostUsd`、`costPriceSource`；无法估算时显示 `costUnknownReason`。
 - 哪些内容是模型推断。
 
 ## 2. Agent Tasks
 
 | TaskID | Goal | Depends On | Output Artifact | Acceptance |
 | --- | --- | --- | --- | --- |
-| E07-C01-T01 | 定义阅读页入口矩阵 | E01-C01-T01 Accepted, E03-C01-T01 Accepted | UX entry matrix | 每个入口有输入、输出、回退。 |
+| E07-C01-T01 | 定义阅读页入口矩阵 | E01-C01-T01 In Review slice, E03-C01-T01 In Review slice | UX entry matrix | 每个入口有输入、输出、回退。 |
+| E07-C01-T02 | 接入 Review Inbox 设置入口 | E05-C01-T02 In Review slice | `ReviewInboxPage`, AI settings entry | 知识资产审批入口出现在设置导航和 AI 设置页，widget smoke 可编译。 |
 | E07-C02-T01 | 定义 progress contract | E02 Ready | progress spec | 书籍级索引和生成状态可见。 |
 | E07-C03-T01 | 定义 deep link 验收矩阵 | E00 Ready | deep link matrix | 所有输出可回跳或说明不可跳原因。 |
-| E07-C04-T01 | 定义 source/cost UI contract | E06-C04-T01 Accepted | transparency spec | 用户可见资料范围、web 状态、成本。 |
+| E07-C03-T02 | 接入 SourceRef reader intent audit | E07-C03-T01 | `PaperReaderReaderIntent`, `PaperReaderSourceJumpAudit` | SourceRef 生成 `paperreader://reader/open?...` intent，非法 link 不算 evidence。 |
+| E07-C04-T01 | 定义 source/cost UI contract | E06-C04-T01 In Review slice | transparency spec | 用户可见资料范围、web 状态、成本。 |
 
 ## 3. Task Execution Defaults
 

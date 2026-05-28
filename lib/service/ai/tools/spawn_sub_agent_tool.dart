@@ -1,3 +1,4 @@
+import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/service/ai/sub_agent_runner.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/service/ai/tools/input/spawn_sub_agent_input.dart';
@@ -29,13 +30,13 @@ class SpawnSubAgentTool
                 'type': 'string',
                 'description':
                     'Required. Clear description of what the sub-agent '
-                    'should accomplish.',
+                        'should accomplish.',
               },
               'agentType': {
                 'type': 'string',
                 'description':
                     'Required. Type of sub-agent: "research", "summarize", '
-                    'or "verify".',
+                        'or "verify".',
                 'enum': ['research', 'summarize', 'verify'],
               },
               'maxSteps': {
@@ -62,6 +63,9 @@ class SpawnSubAgentTool
       agentType: input.agentType,
       toolContext: _toolContext,
       maxSteps: input.maxSteps,
+      permissionMatrix: _toolContext.toolPermissionMatrix ??
+          AiToolPermissionMatrix.defaultMatrix,
+      agentScene: _toolContext.agentScene,
     );
 
     return {

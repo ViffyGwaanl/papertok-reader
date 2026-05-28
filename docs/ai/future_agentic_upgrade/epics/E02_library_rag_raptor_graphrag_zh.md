@@ -1,6 +1,6 @@
 # E02 Library RAG / RAPTOR / GraphRAG
 
-> 状态：Ready  
+> 状态：In Review
 > 目标：把 RAG/RAPTOR/GraphRAG 从技术路线图重构成可执行、可验证、可回滚的能力栈。
 
 ## 1. 当前事实
@@ -54,10 +54,13 @@ GraphRAG 的 node/edge/community 必须保留 chunk evidence。模型推断和�
 | TaskID | Goal | Depends On | Output Artifact | Acceptance |
 | --- | --- | --- | --- | --- |
 | E02-C01-T01 | 对齐 RAG evidence 到 SourceRef | E00 Ready | evidence contract | current/book/library/global evidence 字段一致。 |
+| E02-C01-T02 | 接入 library/current-book evidence SourceRef | E02-C01-T01 | RAG result `sourceRef`, `SourceRefAdapter` | RAG evidence 可回指 source ref，GraphRAG/RAPTOR summary 与书内 evidence 分离。 |
 | E02-C02-T01 | 拆分检索能力开关 | E02-C01-T01 | capability matrix | 每层有 enable/disable 和降级说明。 |
 | E02-C03-T01 | 定义索引生命周期测试矩阵 | E02-C02-T01 | test matrix | 覆盖旧 DB、删除、provider、FTS5、网络、重启。 |
 | E02-C03-T02 | 定义书籍级进度 contract | E02-C03-T01 | progress spec | UI 能显示当前书、章节、阶段、失败原因。 |
+| E02-C03-T03 | 接入 index schema/progress validation | E02-C03-T01, E02-C03-T02 | v10 migration/progress tests | DB version 从 main v8 递增，`force_rebuild` 和 detailed progress 可验证。 |
 | E02-C04-T01 | 定义 GraphRAG evidence policy | E02-C01-T01 | graph evidence policy | 无 chunk evidence 的 node/edge 只能是 draft。 |
+| E02-C04-T02 | 接入 live provider smoke harness | E02-C01-T02 | `live_rag_gateway_smoke_test.dart` | embedding/rerank gateway smoke 显式 opt-in，默认测试无网络依赖。 |
 
 ## 4. Task Execution Defaults
 

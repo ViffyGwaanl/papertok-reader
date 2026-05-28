@@ -1,6 +1,6 @@
 # E04 ConceptGraph And WikiLinks Explorer
 
-> 状态：Ready  
+> 状态：In Review
 > 目标：融合 Understand-Anything 的图谱理解思路和 WikiLinks 的局部概念探索，建立可证据追溯的 PaperTok ConceptGraph。
 
 ## 1. 融合方式
@@ -68,6 +68,7 @@ WikiLinks 式探索必须可控：
 | --- | --- | --- | --- | --- |
 | E04-C01-T01 | 定义 ConceptNode schema | E00 Ready, E02 Ready | node contract | 类型、source、draft 规则明确。 |
 | E04-C02-T01 | 定义 ConceptEdge schema | E04-C01-T01 | edge contract | 每条边能说明为什么相关。 |
+| E04-C02-T02 | 接入 ConceptGraph relation Review apply | E04-C02-T01, E05-C01-T02 In Review slice | `ConceptGraphReviewAdapter`, `ConceptGraphStore.applyReviewDecision` | approved 不进入正式图谱；applied 且有 evidence 的关系才升级 ownership。 |
 | E04-C03-T01 | 设计 Concept Dossier | E04-C02-T01 | dossier spec | 概念页可显示证据、相关路径、回跳。 |
 | E04-C04-T01 | 定义 exploration constraints | E04-C03-T01 | path policy | 限制深度、宽度、外部来源和返回路径。 |
 

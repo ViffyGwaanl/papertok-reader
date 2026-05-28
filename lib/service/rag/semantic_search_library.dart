@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/rag/ai_local_vector_index.dart';
 import 'package:papertok_reader/service/rag/ai_vector_codec.dart';
 import 'package:papertok_reader/service/rag/ai_vector_index.dart';
+import 'package:papertok_reader/service/rag/source_ref_adapter.dart';
 import 'package:papertok_reader/service/rag/vector_math.dart';
 import 'package:papertok_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
@@ -51,8 +53,14 @@ class AiSemanticSearchLibraryEvidence {
     required this.snippet,
     required this.jumpLink,
     required this.score,
+    this.chunkId,
+    this.modelId,
+    this.sourceRef,
+    this.derivedLayer,
+    this.derivedSummary,
   });
 
+  final int? chunkId;
   final int bookId;
   final String bookTitle;
   final String href;
@@ -65,6 +73,10 @@ class AiSemanticSearchLibraryEvidence {
   final String jumpLink;
 
   final double score;
+  final String? modelId;
+  final SourceRef? sourceRef;
+  final String? derivedLayer;
+  final String? derivedSummary;
 
   Map<String, dynamic> toJson() => {
         'bookId': bookId,
@@ -74,6 +86,10 @@ class AiSemanticSearchLibraryEvidence {
         'snippet': snippet,
         'jumpLink': jumpLink,
         'score': score,
+        if (modelId != null) 'modelId': modelId,
+        if (derivedLayer != null) 'derivedLayer': derivedLayer,
+        if (derivedSummary != null) 'derivedSummary': derivedSummary,
+        if (sourceRef != null) 'sourceRef': sourceRef!.toSafeJson(),
       };
 }
 
@@ -223,11 +239,15 @@ SELECT
   c.text,
   c.raw_text,
   c.context_text,
+  c.embedding_input_hash,
+  c.context_version,
+  c.context_created_at,
   c.embedding_blob,
   c.embedding_json,
   c.embedding_norm,
   b.embedding_model,
   b.provider_id,
+  b.index_version,
   bm25(ai_chunks_fts) AS bm25,
   snippet(ai_chunks_fts, 0, '', '', '…', 18) AS snippet
 FROM ai_chunks_fts
@@ -285,11 +305,15 @@ SELECT
   c.text,
   c.raw_text,
   c.context_text,
+  c.embedding_input_hash,
+  c.context_version,
+  c.context_created_at,
   c.embedding_blob,
   c.embedding_json,
   c.embedding_norm,
   b.embedding_model,
-  b.provider_id
+  b.provider_id,
+  b.index_version
 FROM ai_chunks c
 JOIN ai_book_index b ON b.book_id = c.book_id
 WHERE ($indexedFilter)
@@ -583,15 +607,44 @@ LIMIT 12
         bookId: c.bookId,
         href: href,
       ).toUri().toString();
+      final bookTitle = (titles[c.bookId] ?? '').trim();
+      final providerId = (r['provider_id']?.toString() ?? '').trim();
+      final derivedLayer = (r['global_layer']?.toString() ?? '').trim();
+      final derivedSummary = (r['derived_summary']?.toString() ?? '').trim();
+      final model =
+          (r['embedding_model']?.toString().trim().isNotEmpty ?? false)
+              ? r['embedding_model']!.toString().trim()
+              : c.model;
+      final sourceRef = RagSourceRefAdapter.library(
+        bookId: c.bookId,
+        href: href,
+        snippet: snippet,
+        bookTitle: bookTitle,
+        anchor: anchor,
+        jumpLink: jumpLink,
+        chunkId: c.chunkId,
+        sourceHash: r['embedding_input_hash']?.toString(),
+        providerId: providerId,
+        model: model,
+        indexVersion: (r['index_version'] as num?)?.toInt(),
+        contextVersion: (r['context_version'] as num?)?.toInt(),
+        createdAt: (r['context_created_at'] as num?)?.toInt(),
+        confidence: c.hybridScore,
+      );
 
       evidence.add(AiSemanticSearchLibraryEvidence(
+        chunkId: c.chunkId <= 0 ? null : c.chunkId,
         bookId: c.bookId,
-        bookTitle: (titles[c.bookId] ?? '').trim(),
+        bookTitle: bookTitle,
         href: href,
         anchor: anchor,
         snippet: snippet,
         jumpLink: jumpLink,
         score: c.hybridScore,
+        modelId: sourceRef.modelId,
+        sourceRef: sourceRef,
+        derivedLayer: derivedLayer.isEmpty ? null : derivedLayer,
+        derivedSummary: derivedSummary.isEmpty ? null : derivedSummary,
       ));
     }
 
@@ -735,14 +788,19 @@ SELECT
   c.chunk_index,
   c.start_char,
   c.end_char,
-  r.summary AS text,
-  r.summary AS raw_text,
+  c.text,
+  c.raw_text,
+  r.summary AS derived_summary,
   c.context_text,
+  c.embedding_input_hash,
+  c.context_version,
+  c.context_created_at,
   c.embedding_blob,
   c.embedding_json,
   c.embedding_norm,
   b.embedding_model,
   b.provider_id,
+  b.index_version,
   r.level AS global_level,
   'raptor' AS global_layer
 FROM ai_raptor_nodes r
@@ -771,14 +829,19 @@ SELECT
   c.chunk_index,
   c.start_char,
   c.end_char,
-  gc.summary AS text,
-  gc.summary AS raw_text,
+  c.text,
+  c.raw_text,
+  gc.summary AS derived_summary,
   c.context_text,
+  c.embedding_input_hash,
+  c.context_version,
+  c.context_created_at,
   c.embedding_blob,
   c.embedding_json,
   c.embedding_norm,
   b.embedding_model,
   b.provider_id,
+  b.index_version,
   gc.level AS global_level,
   'graph' AS global_layer
 FROM ai_graph_communities gc

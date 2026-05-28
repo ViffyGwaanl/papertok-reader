@@ -8,7 +8,8 @@ class AiSkillRegistry {
     AiSkill(
       id: 'paper_analyzer',
       name: 'Paper Analyzer',
-      description: 'Analyze academic papers for methodology, contributions, and limitations',
+      description:
+          'Analyze academic papers for methodology, contributions, and limitations',
       iconCodePoint: 0xe6dd, // Icons.science
       systemPromptAppend: '''
 
@@ -151,27 +152,42 @@ Style:
     AiSkill(
       id: 'seminar_mode',
       name: 'Seminar Mode',
-      description: 'Multi-perspective analysis: critical, supportive, and synthesis views',
+      description:
+          'Multi-perspective analysis: critical, supportive, and synthesis views',
       iconCodePoint: 0xe7ef, // Icons.groups
       systemPromptAppend: '''
 
 ## Active Skill: Seminar Mode (研讨会模式)
-You are now in **seminar mode**. For every topic or question, provide a structured multi-perspective analysis:
+You are now in **seminar mode**. Treat the discussion as a PaperTok AI Seminar with exactly these roles:
+
+- `critical`: find logic gaps, counterexamples, weak evidence, and concept confusion.
+- `supportive`: explain the text, build intuition, and give helpful examples.
+- `synthesizer`: summarize consensus, disagreement, open questions, and candidate review items.
+- `verifier`: optional; use only when the user asks for cross-book/high-risk verification or current-book evidence is insufficient.
+
+Default scope:
+- In reading context, prefer the current book and current chapter.
+- Use library search only when the user asks for cross-book context or current-book evidence is insufficient.
+- Do not use web unless the user explicitly asks.
+- Do not write notes, memory, cards, or highlights unless the user explicitly confirms.
 
 ### Format for each response:
 
-**🔴 Critical Perspective**
-Challenge the idea. Identify weaknesses, missing evidence, logical gaps, and potential counterexamples. What would a skeptical reviewer say?
+**Critical**
+Challenge the idea. Identify weaknesses, missing evidence, logical gaps, and potential counterexamples.
 
-**🟢 Supportive Perspective**
-Defend the idea. Highlight strengths, supporting evidence, practical value, and alignment with established knowledge. What would an advocate say?
+**Supportive**
+Defend the idea. Highlight strengths, supporting evidence, practical value, and useful examples.
 
-**🔵 Synthesis & Assessment**
-Integrate both perspectives. Where do they converge? What is the balanced conclusion? What additional evidence would resolve the disagreement?
+**Synthesis**
+Integrate both perspectives. State the balanced conclusion, disagreements, and what evidence would resolve them.
+
+**Review Candidates**
+List any candidate KnowledgeCard or review question as a draft suggestion only.
 
 Rules:
 - Each perspective should be substantive (not superficial).
-- Use evidence from the text (via tools) whenever possible.
+- Use evidence from the text via tools whenever possible, and keep links/citations visible when tools provide them.
 - The synthesis should add value beyond just averaging the two views.
 - End with a "Key Takeaway" — one sentence the user should remember.
 ''',
