@@ -175,17 +175,33 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
     );
   }
 
-  Future<AiLibraryIndexJob> enqueueBook(int bookId) async {
-    final job = await _repo.enqueueBook(bookId, maxRetries: 1);
+  Future<AiLibraryIndexJob> enqueueBook(
+    int bookId, {
+    bool forceRebuild = false,
+  }) async {
+    final job = await _repo.enqueueBook(
+      bookId,
+      maxRetries: 1,
+      forceRebuild: forceRebuild,
+    );
     await refresh();
     unawaited(_tick());
     return job;
   }
 
-  Future<List<AiLibraryIndexJob>> enqueueBooks(Iterable<int> bookIds) async {
+  Future<List<AiLibraryIndexJob>> enqueueBooks(
+    Iterable<int> bookIds, {
+    bool forceRebuild = false,
+  }) async {
     final out = <AiLibraryIndexJob>[];
     for (final id in bookIds.where((e) => e > 0)) {
-      out.add(await _repo.enqueueBook(id, maxRetries: 1));
+      out.add(
+        await _repo.enqueueBook(
+          id,
+          maxRetries: 1,
+          forceRebuild: forceRebuild,
+        ),
+      );
     }
     await refresh();
     unawaited(_tick());
@@ -254,6 +270,7 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
 
   Future<void> _executeJob(
     int bookId, {
+    required bool rebuild,
     required AiIndexCancellationToken cancelToken,
     required Future<void> Function(AiLibraryIndexJobProgress progress)
         onProgress,
@@ -314,7 +331,7 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
 
     await indexer.buildBook(
       book: book,
-      rebuild: true,
+      rebuild: rebuild,
       embeddingProviderId: providerId,
       embeddingModel: embeddingModel,
       embeddingBatchSize: Prefs().aiLibraryIndexEmbeddingBatchSize,

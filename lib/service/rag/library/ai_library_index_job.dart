@@ -48,6 +48,7 @@ class AiLibraryIndexJob {
     required this.status,
     required this.retryCount,
     required this.maxRetries,
+    this.forceRebuild = false,
     required this.progress,
     this.phase,
     this.doneChapters = 0,
@@ -72,6 +73,7 @@ class AiLibraryIndexJob {
   final AiLibraryIndexJobStatus status;
   final int retryCount;
   final int maxRetries;
+  final bool forceRebuild;
   final double progress;
   final String? phase;
   final int doneChapters;
@@ -94,6 +96,7 @@ class AiLibraryIndexJob {
     AiLibraryIndexJobStatus? status,
     int? retryCount,
     int? maxRetries,
+    bool? forceRebuild,
     double? progress,
     String? phase,
     int? doneChapters,
@@ -118,6 +121,7 @@ class AiLibraryIndexJob {
       status: status ?? this.status,
       retryCount: retryCount ?? this.retryCount,
       maxRetries: maxRetries ?? this.maxRetries,
+      forceRebuild: forceRebuild ?? this.forceRebuild,
       progress: progress ?? this.progress,
       phase: phase ?? this.phase,
       doneChapters: doneChapters ?? this.doneChapters,

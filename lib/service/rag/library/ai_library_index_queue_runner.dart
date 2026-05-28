@@ -12,6 +12,7 @@ class AiIndexCancellationToken {
 
 typedef AiLibraryIndexJobExecutor = Future<void> Function(
   int bookId, {
+  required bool rebuild,
   required AiIndexCancellationToken cancelToken,
   required Future<void> Function(AiLibraryIndexJobProgress progress) onProgress,
 });
@@ -105,6 +106,7 @@ class AiLibraryIndexQueueRunner {
 
       await _executor(
         next.bookId,
+        rebuild: next.forceRebuild,
         cancelToken: token,
         onProgress: (p) {
           return _repo.updateJob(

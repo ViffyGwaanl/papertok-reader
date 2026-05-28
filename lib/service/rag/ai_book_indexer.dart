@@ -11,6 +11,7 @@ import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
 import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
 import 'package:papertok_reader/service/rag/ai_index_chapter_plan.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/ai_index_resume_policy.dart';
 import 'package:papertok_reader/service/rag/ai_index_reuse_policy.dart';
 import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
 import 'package:papertok_reader/service/rag/ai_vector_codec.dart';
@@ -263,14 +264,54 @@ class AiBookIndexer {
     }
 
     final db = await _database.database;
+    final canResume = !rebuild &&
+        AiIndexResumePolicy.canResume(
+          existing,
+          bookMd5: book.md5 ?? '',
+          providerId: providerId,
+          embeddingModel: embeddingModel,
+          indexVersion: indexAlgorithmVersion,
+          chunkTargetChars: chunkTargetChars,
+          chunkMaxChars: chunkMaxChars,
+          chunkMinChars: chunkMinChars,
+          chunkOverlapChars: chunkOverlapChars,
+          maxChapterCharacters: maxChapterCharacters,
+        );
+    final shouldClearBeforeBuild = AiIndexResumePolicy.shouldClearBeforeBuild(
+      rebuild: rebuild,
+      existing: existing,
+      bookMd5: book.md5 ?? '',
+      providerId: providerId,
+      embeddingModel: embeddingModel,
+      indexVersion: indexAlgorithmVersion,
+      chunkTargetChars: chunkTargetChars,
+      chunkMaxChars: chunkMaxChars,
+      chunkMinChars: chunkMinChars,
+      chunkOverlapChars: chunkOverlapChars,
+      maxChapterCharacters: maxChapterCharacters,
+    );
 
     await db.transaction((txn) async {
-      await txn.delete('ai_chunks', where: 'book_id = ?', whereArgs: [bookId]);
+      if (shouldClearBeforeBuild) {
+        await _clearBookGeneratedIndex(txn, bookId);
+      }
 
       await txn.insert(
         'ai_book_index',
         {
           'book_id': bookId,
+          'created_at': nowMs,
+          'updated_at': nowMs,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+
+      final chunkCount =
+          shouldClearBeforeBuild ? 0 : await _countBookChunks(txn, bookId);
+
+      await txn.update(
+        'ai_book_index',
+        {
           'book_md5': book.md5 ?? '',
           'provider_id': providerId,
           'embedding_model': embeddingModel,
@@ -279,8 +320,7 @@ class AiBookIndexer {
           'chunk_min_chars': chunkMinChars,
           'chunk_overlap_chars': chunkOverlapChars,
           'max_chapter_characters': maxChapterCharacters,
-          'chunk_count': 0,
-          'created_at': nowMs,
+          'chunk_count': chunkCount,
           'updated_at': nowMs,
           // v2 columns
           'index_status': 'running',
@@ -288,244 +328,363 @@ class AiBookIndexer {
           'retry_count': 0,
           'index_version': indexAlgorithmVersion,
         },
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        where: 'book_id = ?',
+        whereArgs: [bookId],
       );
     });
 
-    var doneChapters = 0;
-    var doneChunks = 0;
-    var totalChunks = 0;
+    try {
+      var doneChapters = 0;
+      var doneChunks = 0;
+      var totalChunks = 0;
 
-    void throwIfCancelled() {
-      if (shouldCancel?.call() == true) {
-        throw const AiBookIndexCancelledException();
+      void throwIfCancelled() {
+        if (shouldCancel?.call() == true) {
+          throw const AiBookIndexCancelledException();
+        }
       }
-    }
 
-    for (final ch in chapters) {
-      throwIfCancelled();
-
-      final href = ch.href;
-      final title = ch.title;
-
-      onProgress?.call(
-        AiBookIndexProgress(
-          phase: 'fetch',
-          doneChapters: doneChapters,
-          totalChapters: chapters.length,
-          doneChunks: doneChunks,
-          totalChunks: totalChunks,
-          currentChapterDoneChunks: 0,
-          currentChapterTotalChunks: 0,
-          currentChapterHref: href,
-          currentChapterTitle: title,
-        ),
-      );
-
-      String chapterText;
-      try {
+      for (final ch in chapters) {
         throwIfCancelled();
-        chapterText = await fetchChapterByHref(href);
-        throwIfCancelled();
-      } catch (e) {
-        if (e is AiBookIndexCancelledException) rethrow;
-        AnxLog.warning('AiIndex: failed to fetch chapter href=$href error=$e');
-        doneChapters++;
-        continue;
-      }
 
-      final rawText = chapterText.trim();
-      if (rawText.isEmpty) {
-        doneChapters++;
-        continue;
-      }
-
-      final chunks = _chunker.chunk(
-        rawText,
-        targetChars: chunkTargetChars,
-        maxChars: chunkMaxChars,
-        minChars: chunkMinChars,
-        overlapChars: chunkOverlapChars,
-      );
-      if (chunks.isEmpty) {
-        doneChapters++;
-        continue;
-      }
-
-      totalChunks += chunks.length;
-      onProgress?.call(
-        AiBookIndexProgress(
-          phase: AiContextualChunkBuilder.progressPhase,
-          doneChapters: doneChapters,
-          totalChapters: chapters.length,
-          doneChunks: doneChunks,
-          totalChunks: totalChunks,
-          currentChapterDoneChunks: 0,
-          currentChapterTotalChunks: chunks.length,
-          currentChapterHref: href,
-          currentChapterTitle: title,
-        ),
-      );
-      final contextualChunks = [
-        for (var i = 0; i < chunks.length; i++)
-          (
-            chunk: chunks[i],
-            context: _contextBuilder.build(
-              bookTitle: book.title,
-              chapter: ch,
-              chunkText: chunks[i].text,
-              chunkIndex: i,
-              totalChunks: chunks.length,
-              embeddingModel: embeddingModel,
-            ),
-          ),
-      ];
-
-      final batchSize = embeddingBatchSize.clamp(1, 64);
-      final batchTotal =
-          ((contextualChunks.length + batchSize - 1) / batchSize).floor();
-      for (var offset = 0;
-          offset < contextualChunks.length;
-          offset += batchSize) {
-        final batchIndex = (offset ~/ batchSize) + 1;
-        final batch = contextualChunks
-            .skip(offset)
-            .take(batchSize)
-            .toList(growable: false);
+        final href = ch.href;
+        final title = ch.title;
 
         onProgress?.call(
           AiBookIndexProgress(
-            phase: 'embed',
+            phase: 'fetch',
             doneChapters: doneChapters,
             totalChapters: chapters.length,
             doneChunks: doneChunks,
             totalChunks: totalChunks,
-            currentChapterDoneChunks: offset,
-            currentChapterTotalChunks: chunks.length,
-            embeddingBatchIndex: batchIndex,
-            embeddingBatchTotal: batchTotal,
+            currentChapterDoneChunks: 0,
+            currentChapterTotalChunks: 0,
             currentChapterHref: href,
             currentChapterTitle: title,
           ),
         );
 
-        final texts = batch.map((c) => c.context.embeddingText).toList(
-              growable: false,
-            );
-        throwIfCancelled();
-        final vectors = await AiEmbeddingsService.embedDocuments(
-          texts,
-          model: embeddingModel,
-          providerId: providerId,
-          timeoutSeconds: embeddingsTimeoutSeconds,
-        );
-        throwIfCancelled();
-
-        await db.transaction((txn) async {
+        String chapterText;
+        try {
           throwIfCancelled();
-          for (var i = 0; i < batch.length; i++) {
-            final c = batch[i].chunk;
-            final context = batch[i].context;
-            final v = vectors[i];
-            final norm = VectorMath.l2Norm(v);
-            await txn.insert('ai_chunks', {
-              'book_id': bookId,
-              'chapter_href': href,
-              'chapter_title': title,
-              'chunk_index': offset + i,
-              'start_char': c.startChar,
-              'end_char': c.endChar,
-              'text': context.embeddingText,
-              'raw_text': context.rawText,
-              'context_text': context.contextText,
-              'embedding_input_hash': context.embeddingInputHash,
-              'context_model': AiContextualChunkBuilder.contextModel,
-              'context_version': AiContextualChunkBuilder.contextVersion,
-              'context_created_at': nowMs,
-              'chapter_order': ch.chapterOrder,
-              'toc_level': ch.tocLevel,
-              'toc_path': ch.tocPath,
-              'embedding_json': jsonEncode(v),
-              'embedding_blob': AiVectorCodec.encodeFloat32(v),
-              'embedding_dim': v.length,
-              'embedding_norm': norm,
-              'created_at': nowMs,
-            });
-          }
-        });
-        throwIfCancelled();
+          chapterText = await fetchChapterByHref(href);
+          throwIfCancelled();
+        } catch (e) {
+          if (e is AiBookIndexCancelledException) rethrow;
+          AnxLog.warning(
+              'AiIndex: failed to fetch chapter href=$href error=$e');
+          doneChapters++;
+          continue;
+        }
 
-        doneChunks += batch.length;
+        final rawText = chapterText.trim();
+        if (rawText.isEmpty) {
+          doneChapters++;
+          continue;
+        }
+
+        final chunks = _chunker.chunk(
+          rawText,
+          targetChars: chunkTargetChars,
+          maxChars: chunkMaxChars,
+          minChars: chunkMinChars,
+          overlapChars: chunkOverlapChars,
+        );
+        if (chunks.isEmpty) {
+          doneChapters++;
+          continue;
+        }
+
+        totalChunks += chunks.length;
         onProgress?.call(
           AiBookIndexProgress(
-            phase: 'embed',
+            phase: AiContextualChunkBuilder.progressPhase,
             doneChapters: doneChapters,
             totalChapters: chapters.length,
             doneChunks: doneChunks,
             totalChunks: totalChunks,
-            currentChapterDoneChunks: offset + batch.length > chunks.length
-                ? chunks.length
-                : offset + batch.length,
+            currentChapterDoneChunks: 0,
             currentChapterTotalChunks: chunks.length,
-            embeddingBatchIndex: batchIndex,
-            embeddingBatchTotal: batchTotal,
-            lastEmbeddingBatchSize: vectors.length,
-            lastEmbeddingDim: vectors.isEmpty ? 0 : vectors.first.length,
+            currentChapterHref: href,
+            currentChapterTitle: title,
+          ),
+        );
+        final contextualChunks = [
+          for (var i = 0; i < chunks.length; i++)
+            (
+              chunk: chunks[i],
+              context: _contextBuilder.build(
+                bookTitle: book.title,
+                chapter: ch,
+                chunkText: chunks[i].text,
+                chunkIndex: i,
+                totalChunks: chunks.length,
+                embeddingModel: embeddingModel,
+              ),
+            ),
+        ];
+
+        final batchSize = embeddingBatchSize.clamp(1, 64);
+        final resumeOffset = canResume
+            ? (await _countChapterChunks(db, bookId, href))
+                .clamp(0, contextualChunks.length)
+                .toInt()
+            : 0;
+        if (resumeOffset > 0) {
+          doneChunks += resumeOffset;
+          onProgress?.call(
+            AiBookIndexProgress(
+              phase: 'embed',
+              doneChapters: doneChapters,
+              totalChapters: chapters.length,
+              doneChunks: doneChunks,
+              totalChunks: totalChunks,
+              currentChapterDoneChunks: resumeOffset,
+              currentChapterTotalChunks: chunks.length,
+              currentChapterHref: href,
+              currentChapterTitle: title,
+            ),
+          );
+        }
+        if (resumeOffset >= contextualChunks.length) {
+          doneChapters++;
+          onProgress?.call(
+            AiBookIndexProgress(
+              phase: 'chapter_done',
+              doneChapters: doneChapters,
+              totalChapters: chapters.length,
+              doneChunks: doneChunks,
+              totalChunks: totalChunks,
+              currentChapterHref: href,
+              currentChapterTitle: title,
+            ),
+          );
+          continue;
+        }
+
+        final remainingChunks = contextualChunks.length - resumeOffset;
+        final batchTotal =
+            ((remainingChunks + batchSize - 1) / batchSize).floor();
+        for (var offset = resumeOffset;
+            offset < contextualChunks.length;
+            offset += batchSize) {
+          final batchIndex = ((offset - resumeOffset) ~/ batchSize) + 1;
+          final batch = contextualChunks
+              .skip(offset)
+              .take(batchSize)
+              .toList(growable: false);
+
+          onProgress?.call(
+            AiBookIndexProgress(
+              phase: 'embed',
+              doneChapters: doneChapters,
+              totalChapters: chapters.length,
+              doneChunks: doneChunks,
+              totalChunks: totalChunks,
+              currentChapterDoneChunks: offset,
+              currentChapterTotalChunks: chunks.length,
+              embeddingBatchIndex: batchIndex,
+              embeddingBatchTotal: batchTotal,
+              currentChapterHref: href,
+              currentChapterTitle: title,
+            ),
+          );
+
+          final texts = batch.map((c) => c.context.embeddingText).toList(
+                growable: false,
+              );
+          throwIfCancelled();
+          final vectors = await AiEmbeddingsService.embedDocuments(
+            texts,
+            model: embeddingModel,
+            providerId: providerId,
+            timeoutSeconds: embeddingsTimeoutSeconds,
+          );
+          throwIfCancelled();
+
+          await db.transaction((txn) async {
+            throwIfCancelled();
+            for (var i = 0; i < batch.length; i++) {
+              final c = batch[i].chunk;
+              final context = batch[i].context;
+              final v = vectors[i];
+              final norm = VectorMath.l2Norm(v);
+              await txn.insert('ai_chunks', {
+                'book_id': bookId,
+                'chapter_href': href,
+                'chapter_title': title,
+                'chunk_index': offset + i,
+                'start_char': c.startChar,
+                'end_char': c.endChar,
+                'text': context.embeddingText,
+                'raw_text': context.rawText,
+                'context_text': context.contextText,
+                'embedding_input_hash': context.embeddingInputHash,
+                'context_model': AiContextualChunkBuilder.contextModel,
+                'context_version': AiContextualChunkBuilder.contextVersion,
+                'context_created_at': nowMs,
+                'chapter_order': ch.chapterOrder,
+                'toc_level': ch.tocLevel,
+                'toc_path': ch.tocPath,
+                'embedding_json': jsonEncode(v),
+                'embedding_blob': AiVectorCodec.encodeFloat32(v),
+                'embedding_dim': v.length,
+                'embedding_norm': norm,
+                'created_at': nowMs,
+              });
+            }
+          });
+          throwIfCancelled();
+
+          doneChunks += batch.length;
+          onProgress?.call(
+            AiBookIndexProgress(
+              phase: 'embed',
+              doneChapters: doneChapters,
+              totalChapters: chapters.length,
+              doneChunks: doneChunks,
+              totalChunks: totalChunks,
+              currentChapterDoneChunks: offset + batch.length > chunks.length
+                  ? chunks.length
+                  : offset + batch.length,
+              currentChapterTotalChunks: chunks.length,
+              embeddingBatchIndex: batchIndex,
+              embeddingBatchTotal: batchTotal,
+              lastEmbeddingBatchSize: vectors.length,
+              lastEmbeddingDim: vectors.isEmpty ? 0 : vectors.first.length,
+              currentChapterHref: href,
+              currentChapterTitle: title,
+            ),
+          );
+        }
+
+        doneChapters++;
+        onProgress?.call(
+          AiBookIndexProgress(
+            phase: 'chapter_done',
+            doneChapters: doneChapters,
+            totalChapters: chapters.length,
+            doneChunks: doneChunks,
+            totalChunks: totalChunks,
             currentChapterHref: href,
             currentChapterTitle: title,
           ),
         );
       }
 
-      doneChapters++;
-      onProgress?.call(
-        AiBookIndexProgress(
-          phase: 'chapter_done',
-          doneChapters: doneChapters,
-          totalChapters: chapters.length,
-          doneChunks: doneChunks,
-          totalChunks: totalChunks,
-          currentChapterHref: href,
-          currentChapterTitle: title,
-        ),
-      );
-    }
-
-    throwIfCancelled();
-    if (doneChunks > 0) {
-      onProgress?.call(
-        AiBookIndexProgress(
-          phase: 'global',
-          doneChapters: doneChapters,
-          totalChapters: chapters.length,
-          doneChunks: doneChunks,
-          totalChunks: totalChunks,
-        ),
-      );
-      try {
-        await _globalIndexBuilder.rebuildBook(bookId: bookId);
-      } catch (e) {
-        AnxLog.warning(
-          'AiIndex: global layer build failed bookId=$bookId error=$e',
-        );
-      }
       throwIfCancelled();
-    }
+      if (doneChunks > 0) {
+        onProgress?.call(
+          AiBookIndexProgress(
+            phase: 'global',
+            doneChapters: doneChapters,
+            totalChapters: chapters.length,
+            doneChunks: doneChunks,
+            totalChunks: totalChunks,
+          ),
+        );
+        try {
+          await _globalIndexBuilder.rebuildBook(bookId: bookId);
+        } catch (e) {
+          AnxLog.warning(
+            'AiIndex: global layer build failed bookId=$bookId error=$e',
+          );
+        }
+        throwIfCancelled();
+      }
 
-    await db.update(
+      final indexedAt = DateTime.now().millisecondsSinceEpoch;
+      final actualChunkCount = await _countBookChunks(db, bookId);
+      await db.update(
+        'ai_book_index',
+        {
+          'chunk_count': actualChunkCount,
+          'updated_at': indexedAt,
+          'indexed_at': indexedAt,
+          'index_status': 'succeeded',
+          'failed_reason': null,
+        },
+        where: 'book_id = ?',
+        whereArgs: [bookId],
+      );
+
+      final info = await _database.getBookIndexInfo(bookId);
+      return info ??
+          AiBookIndexInfo(bookId: bookId, chunkCount: actualChunkCount);
+    } catch (e) {
+      await _markBookIndexFailed(db, bookId, e);
+      rethrow;
+    }
+  }
+
+  Future<void> _clearBookGeneratedIndex(
+    DatabaseExecutor executor,
+    int bookId,
+  ) async {
+    await executor.delete(
+      'ai_graph_edges',
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+    );
+    await executor.delete(
+      'ai_graph_communities',
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+    );
+    await executor.delete(
+      'ai_graph_nodes',
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+    );
+    await executor.delete(
+      'ai_raptor_nodes',
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+    );
+    await executor.delete(
+      'ai_chunks',
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+    );
+  }
+
+  Future<int> _countBookChunks(DatabaseExecutor executor, int bookId) async {
+    final rows = await executor.rawQuery(
+      'SELECT COUNT(*) AS c FROM ai_chunks WHERE book_id = ?',
+      [bookId],
+    );
+    return (rows.first['c'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<int> _countChapterChunks(
+    DatabaseExecutor executor,
+    int bookId,
+    String chapterHref,
+  ) async {
+    final rows = await executor.rawQuery(
+      'SELECT COUNT(*) AS c FROM ai_chunks WHERE book_id = ? AND chapter_href = ?',
+      [bookId, chapterHref],
+    );
+    return (rows.first['c'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<void> _markBookIndexFailed(
+    DatabaseExecutor executor,
+    int bookId,
+    Object error,
+  ) async {
+    final failedAt = DateTime.now().millisecondsSinceEpoch;
+    final chunkCount = await _countBookChunks(executor, bookId);
+    await executor.update(
       'ai_book_index',
       {
-        'chunk_count': doneChunks,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-        'indexed_at': DateTime.now().millisecondsSinceEpoch,
-        'index_status': 'succeeded',
-        'failed_reason': null,
+        'chunk_count': chunkCount,
+        'updated_at': failedAt,
+        'index_status': 'failed',
+        'failed_reason': error.toString(),
       },
       where: 'book_id = ?',
       whereArgs: [bookId],
     );
-
-    final info = await _database.getBookIndexInfo(bookId);
-    return info ?? AiBookIndexInfo(bookId: bookId, chunkCount: doneChunks);
   }
 }

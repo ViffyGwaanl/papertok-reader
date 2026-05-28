@@ -2,7 +2,7 @@ import 'package:papertok_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
 
 // NOTE: This DB is intended to be rebuildable. Keep migrations forward-only.
-const int kAiIndexDbVersion = 9;
+const int kAiIndexDbVersion = 10;
 
 class AiIndexMigrations {
   const AiIndexMigrations._();
@@ -40,6 +40,8 @@ class AiIndexMigrations {
           await _v8(db);
         case 9:
           await _v9(db);
+        case 10:
+          await _v10(db);
       }
     }
   }
@@ -453,6 +455,22 @@ CREATE TABLE IF NOT EXISTS ai_graph_community_nodes (
     );
     await addColumn(
       'ALTER TABLE ai_index_jobs ADD COLUMN last_embedding_dim INTEGER DEFAULT 0',
+    );
+  }
+
+  static Future<void> _v10(Database db) async {
+    // Keep whether a queued job should discard existing chunks first. This
+    // lets the same queue power both "build/resume" and explicit "rebuild".
+    Future<void> addColumn(String ddl) async {
+      try {
+        await db.execute(ddl);
+      } catch (_) {
+        // Ignore duplicate column errors.
+      }
+    }
+
+    await addColumn(
+      'ALTER TABLE ai_index_jobs ADD COLUMN force_rebuild INTEGER DEFAULT 0',
     );
   }
 }

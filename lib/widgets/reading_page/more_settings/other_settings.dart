@@ -6,6 +6,9 @@ import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/page/reading_page.dart';
 import 'package:papertok_reader/providers/ai_book_index.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_progress_text.dart';
+import 'package:papertok_reader/service/rag/library/ai_library_index_queue_service.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/utils/ui/status_bar.dart';
@@ -26,8 +29,44 @@ class OtherSettings extends ConsumerStatefulWidget {
 }
 
 class _OtherSettingsState extends ConsumerState<OtherSettings> {
+  AiLibraryIndexJob? _latestJobForBook(
+    List<AiLibraryIndexJob> jobs,
+    int bookId, {
+    bool activeOnly = false,
+  }) {
+    for (final job in jobs) {
+      if (job.bookId != bookId) continue;
+      if (activeOnly && !_isActiveIndexJob(job)) continue;
+      return job;
+    }
+    return null;
+  }
+
+  bool _isActiveIndexJob(AiLibraryIndexJob job) {
+    return job.status == AiLibraryIndexJobStatus.queued ||
+        job.status == AiLibraryIndexJobStatus.running ||
+        job.status == AiLibraryIndexJobStatus.paused;
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen<AiLibraryIndexQueueState>(
+      aiLibraryIndexQueueProvider,
+      (previous, next) {
+        final bookId = ref.read(currentReadingProvider).book?.id;
+        if (bookId == null) return;
+        final previousJob = _latestJobForBook(
+          previous?.jobs ?? const <AiLibraryIndexJob>[],
+          bookId,
+        );
+        final nextJob = _latestJobForBook(next.jobs, bookId);
+        if (previousJob?.status != nextJob?.status ||
+            previousJob?.updatedAt != nextJob?.updatedAt) {
+          ref.invalidate(currentBookAiIndexInfoProvider);
+        }
+      },
+    );
+
     Widget screenTimeout() {
       return ListTile(
         contentPadding: EdgeInsets.zero,
@@ -87,132 +126,132 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
       return StatefulBuilder(
         builder:
             (BuildContext context, void Function(void Function()) setState) {
-              void onTap(int index) {
-                setState(() {
-                  Prefs().pageTurningType = index;
-                  currentType = index;
-                });
-              }
+          void onTap(int index) {
+            setState(() {
+              Prefs().pageTurningType = index;
+              currentType = index;
+            });
+          }
 
-              void onModeChanged(Set<PageTurnMode> selected) {
-                setState(() {
-                  currentMode = selected.first;
-                  Prefs().pageTurnMode = selected.first.code;
-                });
-              }
+          void onModeChanged(Set<PageTurnMode> selected) {
+            setState(() {
+              currentMode = selected.first;
+              Prefs().pageTurnMode = selected.first.code;
+            });
+          }
 
-              void onCustomConfigChanged(int index, PageTurningType type) {
-                List<int> config = Prefs().customPageTurnConfig;
-                config[index] = type.index;
-                Prefs().customPageTurnConfig = config;
-              }
+          void onCustomConfigChanged(int index, PageTurningType type) {
+            List<int> config = Prefs().customPageTurnConfig;
+            config[index] = type.index;
+            Prefs().customPageTurnConfig = config;
+          }
 
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      L10n.of(context).readingPagePageTurningMethod,
-                      style: Theme.of(context).textTheme.titleMedium,
+          return ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  L10n.of(context).readingPagePageTurningMethod,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                AnxSegmentedButton<PageTurnMode>(
+                  segments: [
+                    SegmentButtonItem(
+                      value: PageTurnMode.simple,
+                      label: L10n.of(context).pageTurnModeSimple,
                     ),
-                    const Spacer(),
-                    AnxSegmentedButton<PageTurnMode>(
-                      segments: [
-                        SegmentButtonItem(
-                          value: PageTurnMode.simple,
-                          label: L10n.of(context).pageTurnModeSimple,
-                        ),
-                        SegmentButtonItem(
-                          value: PageTurnMode.custom,
-                          label: L10n.of(context).pageTurnModeCustom,
-                        ),
-                      ],
-                      selected: {currentMode},
-                      onSelectionChanged: onModeChanged,
+                    SegmentButtonItem(
+                      value: PageTurnMode.custom,
+                      label: L10n.of(context).pageTurnModeCustom,
                     ),
                   ],
+                  selected: {currentMode},
+                  onSelectionChanged: onModeChanged,
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
-                    if (currentMode == PageTurnMode.simple) ...[
-                      SizedBox(
-                        height: 120,
-                        child: ListView.builder(
-                          controller: scrollController,
-                          itemCount: pageTurningTypes.length,
-                          shrinkWrap: true,
-                          scrollDirection: Axis.horizontal,
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: getPageTurningDiagram(
-                                context,
-                                pageTurningTypes[index],
-                                pageTurningIcons[index],
-                                currentType == index,
-                                () {
-                                  onTap(index);
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ] else ...[
-                      Text(
-                        L10n.of(context).customPageTurnConfig,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Column(
-                        children: [
-                          for (int row = 0; row < 3; row++)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Row(
-                                children: [
-                                  for (int col = 0; col < 3; col++)
-                                    Expanded(
-                                      child: Padding(
-                                        padding: EdgeInsets.only(
-                                          right: col < 2 ? 8.0 : 0,
-                                        ),
-                                        child: Builder(
-                                          builder: (context) {
-                                            int index = row * 3 + col;
-                                            List<int> config =
-                                                Prefs().customPageTurnConfig;
-                                            return PageTurnDropdown(
-                                              value: PageTurningType
-                                                  .values[config[index]],
-                                              onChanged: (type) {
-                                                if (type != null) {
-                                                  setState(() {
-                                                    onCustomConfigChanged(
-                                                      index,
-                                                      type,
-                                                    );
-                                                  });
-                                                }
-                                              },
-                                            );
-                                          },
-                                        ),
-                                      ),
+              ],
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+                if (currentMode == PageTurnMode.simple) ...[
+                  SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      controller: scrollController,
+                      itemCount: pageTurningTypes.length,
+                      shrinkWrap: true,
+                      scrollDirection: Axis.horizontal,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: getPageTurningDiagram(
+                            context,
+                            pageTurningTypes[index],
+                            pageTurningIcons[index],
+                            currentType == index,
+                            () {
+                              onTap(index);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ] else ...[
+                  Text(
+                    L10n.of(context).customPageTurnConfig,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Column(
+                    children: [
+                      for (int row = 0; row < 3; row++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            children: [
+                              for (int col = 0; col < 3; col++)
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                      right: col < 2 ? 8.0 : 0,
                                     ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
+                                    child: Builder(
+                                      builder: (context) {
+                                        int index = row * 3 + col;
+                                        List<int> config =
+                                            Prefs().customPageTurnConfig;
+                                        return PageTurnDropdown(
+                                          value: PageTurningType
+                                              .values[config[index]],
+                                          onChanged: (type) {
+                                            if (type != null) {
+                                              setState(() {
+                                                onCustomConfigChanged(
+                                                  index,
+                                                  type,
+                                                );
+                                              });
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                     ],
-                  ],
-                ),
-              );
-            },
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
       );
     }
 
@@ -315,26 +354,80 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
       final reading = ref.watch(currentReadingProvider);
       final idxState = ref.watch(aiBookIndexingProvider);
       final notifier = ref.read(aiBookIndexingProvider.notifier);
+      final queue = ref.watch(aiLibraryIndexQueueProvider);
+      final queueNotifier = ref.read(aiLibraryIndexQueueProvider.notifier);
       final infoAsync = ref.watch(currentBookAiIndexInfoProvider);
+      final languageCode = Localizations.localeOf(context).languageCode;
+      final zh = languageCode == 'zh';
 
       final book = reading.book;
       final isReading = reading.isReading && book != null;
+      final activeJob = book == null
+          ? null
+          : _latestJobForBook(queue.jobs, book.id, activeOnly: true);
+      final latestBookJob =
+          book == null ? null : _latestJobForBook(queue.jobs, book.id);
 
-      final canRun = isReading && !idxState.isBusy;
+      final canRun = isReading && !idxState.isBusy && activeJob == null;
+      final canClear = canRun;
 
-      String statusText(AiBookIndexingState s) {
-        switch (s.status) {
-          case AiBookIndexingStatus.idle:
-            return 'Idle';
-          case AiBookIndexingStatus.indexing:
-            return 'Indexing…';
-          case AiBookIndexingStatus.clearing:
-            return 'Clearing…';
-          case AiBookIndexingStatus.done:
-            return 'Done';
-          case AiBookIndexingStatus.error:
-            return 'Error';
+      String indexInfoStatusLabel(String? status) {
+        return switch ((status ?? '').trim()) {
+          'succeeded' => zh ? '已完成' : 'succeeded',
+          'running' => zh ? '索引中' : 'running',
+          'failed' => zh ? '失败' : 'failed',
+          'idle' => zh ? '空闲' : 'idle',
+          _ => zh ? '未知' : 'unknown',
+        };
+      }
+
+      String jobStatusLabel(AiLibraryIndexJobStatus status) {
+        return switch (status) {
+          AiLibraryIndexJobStatus.queued => zh ? '等待中' : 'queued',
+          AiLibraryIndexJobStatus.running => zh ? '索引中' : 'indexing',
+          AiLibraryIndexJobStatus.paused => zh ? '已暂停' : 'paused',
+          AiLibraryIndexJobStatus.succeeded => zh ? '已完成' : 'done',
+          AiLibraryIndexJobStatus.failed => zh ? '失败' : 'failed',
+          AiLibraryIndexJobStatus.cancelled => zh ? '已取消' : 'cancelled',
+        };
+      }
+
+      String updatedText(int? updatedAt) {
+        if (updatedAt == null) return zh ? '暂无' : 'unknown';
+        return DateTime.fromMillisecondsSinceEpoch(updatedAt)
+            .toLocal()
+            .toString();
+      }
+
+      String? queueStatusText(AiLibraryIndexJob? job) {
+        if (job == null) return null;
+        final detail = AiLibraryIndexProgressText.detail(
+          job: job,
+          languageCode: languageCode,
+        );
+        final percent = AiLibraryIndexProgressText.formatPercent(job.progress);
+        final parts = <String>[
+          jobStatusLabel(job.status),
+          percent,
+          if (detail.isNotEmpty) detail,
+        ];
+        if (job.lastError != null && job.lastError!.trim().isNotEmpty) {
+          parts.add(zh ? '错误：${job.lastError}' : 'error: ${job.lastError}');
         }
+        return parts.join(' · ');
+      }
+
+      String? legacyStatusText(AiBookIndexingState s) {
+        if (s.message == null && !s.isBusy) return null;
+        return switch (s.status) {
+          AiBookIndexingStatus.idle => null,
+          AiBookIndexingStatus.indexing =>
+            zh ? '索引中 · ${s.message}' : 'indexing · ${s.message}',
+          AiBookIndexingStatus.clearing => zh ? '清除中' : 'clearing',
+          AiBookIndexingStatus.done => zh ? '索引已更新' : 'index updated',
+          AiBookIndexingStatus.error =>
+            zh ? '错误 · ${s.message}' : 'error · ${s.message}',
+        };
       }
 
       return Padding(
@@ -343,7 +436,7 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'AI Semantic Index (Current Book)',
+              zh ? 'AI 语义索引（当前书籍）' : 'AI Semantic Index (Current Book)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: ClaudePalette.fg(context),
                     fontWeight: FontWeight.w600,
@@ -353,20 +446,28 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  'Open a book to build a semantic index.',
+                  zh
+                      ? '打开一本书后，可以为当前书籍建立语义索引。'
+                      : 'Open a book to build a semantic index.',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
+                  )
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
               ),
             if (isReading)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  'Book: ${book!.title}',
+                  zh ? '书籍：${book.title}' : 'Book: ${book.title}',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
+                  )
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
               ),
             Padding(
@@ -374,48 +475,71 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
               child: infoAsync.when(
                 data: (info) {
                   final chunks = info?.chunkCount ?? 0;
-                  final updatedAt = info?.updatedAt;
-                  final updatedText = updatedAt == null
-                      ? 'unknown'
-                      : DateTime.fromMillisecondsSinceEpoch(
-                          updatedAt,
-                        ).toLocal().toString();
+                  final status = indexInfoStatusLabel(info?.indexStatus);
                   return Text(
-                    'Indexed chunks: $chunks (updated: $updatedText)',
+                    zh
+                        ? '已索引 chunks：$chunks · 状态：$status · 更新：${updatedText(info?.updatedAt)}'
+                        : 'Indexed chunks: $chunks · status: $status · updated: ${updatedText(info?.updatedAt)}',
                     style: Theme.of(
                       context,
-                    ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
+                    )
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: ClaudePalette.tertiary(context)),
                   );
                 },
                 loading: () => Text(
-                  'Loading index status…',
+                  zh ? '正在读取索引状态…' : 'Loading index status…',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
+                  )
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
                 error: (e, _) => Text(
-                  'Index status unavailable: $e',
+                  zh ? '索引状态不可用：$e' : 'Index status unavailable: $e',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
+                  )
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
               ),
             ),
-            if (idxState.message != null)
+            if (queueStatusText(activeJob ?? latestBookJob) != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  '${statusText(idxState)} · ${idxState.message}',
+                  queueStatusText(activeJob ?? latestBookJob)!,
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: ClaudePalette.tertiary(context)),
+                  )
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: ClaudePalette.tertiary(context)),
                 ),
               ),
-            if (idxState.isBusy)
+            if (legacyStatusText(idxState) != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  legacyStatusText(idxState)!,
+                  style: Theme.of(
+                    context,
+                  )
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: ClaudePalette.tertiary(context)),
+                ),
+              ),
+            if (activeJob != null || idxState.isBusy)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: LinearProgressIndicator(
-                  value: idxState.progress.clamp(0.0, 1.0),
+                  value: activeJob?.progress.clamp(0.0, 1.0) ??
+                      idxState.progress.clamp(0.0, 1.0),
                 ),
               ),
             Padding(
@@ -427,32 +551,48 @@ class _OtherSettingsState extends ConsumerState<OtherSettings> {
                   OutlinedButton.icon(
                     onPressed: canRun
                         ? () async {
-                            AnxToast.show('Building semantic index…');
-                            await notifier.buildIndex(rebuild: false);
+                            AnxToast.show(
+                              zh ? '已加入 AI 索引队列' : 'Added to AI index queue.',
+                            );
+                            await queueNotifier.enqueueBook(
+                              book.id,
+                              forceRebuild: false,
+                            );
+                            ref.invalidate(currentBookAiIndexInfoProvider);
                           }
                         : null,
                     icon: const Icon(Icons.auto_awesome_outlined, size: 18),
-                    label: const Text('Build'),
+                    label: Text(zh ? '构建' : 'Build'),
                   ),
                   OutlinedButton.icon(
                     onPressed: canRun
                         ? () async {
-                            AnxToast.show('Rebuilding semantic index…');
-                            await notifier.buildIndex(rebuild: true);
+                            AnxToast.show(
+                              zh ? '已加入重建队列' : 'Added rebuild job.',
+                            );
+                            await queueNotifier.enqueueBook(
+                              book.id,
+                              forceRebuild: true,
+                            );
+                            ref.invalidate(currentBookAiIndexInfoProvider);
                           }
                         : null,
                     icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('Rebuild'),
+                    label: Text(zh ? '重建' : 'Rebuild'),
                   ),
                   TextButton.icon(
-                    onPressed: canRun
+                    onPressed: canClear
                         ? () async {
-                            AnxToast.show('Clearing semantic index…');
+                            AnxToast.show(
+                              zh ? '正在清除语义索引…' : 'Clearing semantic index…',
+                            );
                             await notifier.clearIndex();
+                            await queueNotifier.refresh();
+                            ref.invalidate(currentBookAiIndexInfoProvider);
                           }
                         : null,
                     icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Clear'),
+                    label: Text(zh ? '清除' : 'Clear'),
                   ),
                 ],
               ),

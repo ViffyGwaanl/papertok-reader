@@ -13,9 +13,10 @@ void main() {
     final db = AiIndexDatabase.forTesting(path: ':memory:', factory: factory);
     final repo = AiLibraryIndexQueueRepository(database: db);
 
-    final job = await repo.enqueueBook(42, maxRetries: 1);
+    final job = await repo.enqueueBook(42, maxRetries: 1, forceRebuild: true);
     expect(job.bookId, 42);
     expect(job.status, AiLibraryIndexJobStatus.queued);
+    expect(job.forceRebuild, isTrue);
 
     final updated = await repo.updateJob(
       job.id,
@@ -55,6 +56,7 @@ void main() {
     expect(updated.currentChapterHref, 'c1.xhtml');
     expect(updated.currentChapterTitle, 'C1');
     expect(updated.lastError, 'boom');
+    expect(updated.forceRebuild, isTrue);
 
     final list = await repo.listJobs();
     expect(list.length, 1);

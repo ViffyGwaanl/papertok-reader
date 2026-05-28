@@ -8,8 +8,11 @@ class AiLibraryIndexQueueRepository {
 
   final AiIndexDatabase _db;
 
-  Future<AiLibraryIndexJob> enqueueBook(int bookId,
-      {int maxRetries = 1}) async {
+  Future<AiLibraryIndexJob> enqueueBook(
+    int bookId, {
+    int maxRetries = 1,
+    bool forceRebuild = false,
+  }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final db = await _db.database;
 
@@ -29,6 +32,7 @@ class AiLibraryIndexQueueRepository {
       'status': AiLibraryIndexJob.statusToDb(AiLibraryIndexJobStatus.queued),
       'retry_count': 0,
       'max_retries': maxRetries,
+      'force_rebuild': forceRebuild ? 1 : 0,
       'progress': 0,
       'done_chapters': 0,
       'total_chapters': 0,
@@ -186,6 +190,7 @@ class AiLibraryIndexQueueRepository {
       status: AiLibraryIndexJob.statusFromDb(statusRaw),
       retryCount: (r['retry_count'] as num?)?.toInt() ?? 0,
       maxRetries: (r['max_retries'] as num?)?.toInt() ?? 1,
+      forceRebuild: ((r['force_rebuild'] as num?)?.toInt() ?? 0) != 0,
       progress: (r['progress'] as num?)?.toDouble() ?? 0,
       phase: r['phase']?.toString(),
       doneChapters: (r['done_chapters'] as num?)?.toInt() ?? 0,

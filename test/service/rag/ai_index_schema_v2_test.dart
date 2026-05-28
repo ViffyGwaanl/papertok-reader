@@ -46,6 +46,7 @@ void main() {
     expect(jobNames, contains('embedding_batch_total'));
     expect(jobNames, contains('last_embedding_batch_size'));
     expect(jobNames, contains('last_embedding_dim'));
+    expect(jobNames, contains('force_rebuild'));
   });
 
   test('AiIndexDatabase upgrades v4 ai_index_jobs with progress columns',
@@ -91,6 +92,7 @@ void main() {
     expect(jobNames, contains('embedding_batch_total'));
     expect(jobNames, contains('last_embedding_batch_size'));
     expect(jobNames, contains('last_embedding_dim'));
+    expect(jobNames, contains('force_rebuild'));
   });
 
   test('AiIndexDatabase upgrades v5 ai_chunks with RAG structure columns',

@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_queue_repository.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_queue_runner.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -21,7 +23,8 @@ void main() {
     var calls = 0;
     final runner = AiLibraryIndexQueueRunner(
       repository: repo,
-      executor: (bookId, {required cancelToken, required onProgress}) async {
+      executor: (bookId,
+          {required rebuild, required cancelToken, required onProgress}) async {
         calls += 1;
         throw StateError('boom');
       },
@@ -50,7 +53,10 @@ void main() {
 
     final runner = AiLibraryIndexQueueRunner(
       repository: repo,
-      executor: (bookId, {required cancelToken, required onProgress}) async {},
+      executor: (bookId,
+          {required rebuild,
+          required cancelToken,
+          required onProgress}) async {},
     );
 
     await runner.normalizeAfterRestart();
@@ -72,7 +78,8 @@ void main() {
 
     final runner = AiLibraryIndexQueueRunner(
       repository: repo,
-      executor: (bookId, {required cancelToken, required onProgress}) async {
+      executor: (bookId,
+          {required rebuild, required cancelToken, required onProgress}) async {
         started.complete();
         await release.future;
       },
@@ -104,7 +111,8 @@ void main() {
     var shouldRunCalls = 0;
     final runner = AiLibraryIndexQueueRunner(
       repository: repo,
-      executor: (bookId, {required cancelToken, required onProgress}) async {
+      executor: (bookId,
+          {required rebuild, required cancelToken, required onProgress}) async {
         executorCalls += 1;
       },
     );
@@ -135,7 +143,8 @@ void main() {
 
     final runner = AiLibraryIndexQueueRunner(
       repository: repo,
-      executor: (bookId, {required cancelToken, required onProgress}) async {
+      executor: (bookId,
+          {required rebuild, required cancelToken, required onProgress}) async {
         await onProgress(
           const AiLibraryIndexJobProgress(
             progress: 0.42,
@@ -175,5 +184,42 @@ void main() {
     expect(result.lastEmbeddingDim, 1024);
     expect(result.currentChapterHref, 'chapter-2.xhtml');
     expect(result.currentChapterTitle, 'Chapter 2');
+  });
+
+  test('runner passes force rebuild flag to executor', () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final dir = await Directory.systemTemp.createTemp('ai_queue_rebuild_');
+    final db = AiIndexDatabase.forTesting(
+      path: p.join(dir.path, 'ai_index.db'),
+      factory: factory,
+    );
+    try {
+      final repo = AiLibraryIndexQueueRepository(database: db);
+
+      await repo.enqueueBook(6, maxRetries: 1, forceRebuild: true);
+
+      bool? seenRebuild;
+      final runner = AiLibraryIndexQueueRunner(
+        repository: repo,
+        executor: (
+          bookId, {
+          required cancelToken,
+          required onProgress,
+          required rebuild,
+        }) async {
+          seenRebuild = rebuild;
+        },
+      );
+
+      final result = await runner.runOnce();
+
+      expect(result, isNotNull);
+      expect(result!.status, AiLibraryIndexJobStatus.succeeded);
+      expect(seenRebuild, isTrue);
+    } finally {
+      await db.close();
+      if (dir.existsSync()) dir.deleteSync(recursive: true);
+    }
   });
 }
