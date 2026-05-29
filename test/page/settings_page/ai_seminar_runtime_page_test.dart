@@ -141,6 +141,9 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
+    expect(find.textContaining('Local token estimate'), findsOneWidget);
+    expect(find.textContaining('Provider billing may differ'), findsOneWidget);
+    expect(find.textContaining('local-char-estimate-v1'), findsOneWidget);
     expect(find.text('critical response'), findsOneWidget);
     expect(find.text('supportive response'), findsOneWidget);
     expect(find.text('synthesizer response'), findsWidgets);

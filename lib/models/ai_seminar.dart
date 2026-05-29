@@ -377,6 +377,81 @@ class AiSeminarWhiteboardEntry {
 }
 
 @immutable
+class AiSeminarTokenUsage {
+  const AiSeminarTokenUsage({
+    required this.inputTokens,
+    required this.outputTokens,
+    required this.isEstimated,
+    required this.estimationMethod,
+  });
+
+  final int inputTokens;
+  final int outputTokens;
+  final bool isEstimated;
+  final String estimationMethod;
+
+  int get totalTokens => inputTokens + outputTokens;
+
+  Map<String, dynamic> toJson() => {
+        'inputTokens': inputTokens,
+        'outputTokens': outputTokens,
+        'totalTokens': totalTokens,
+        'isEstimated': isEstimated,
+        'estimationMethod': estimationMethod,
+      };
+
+  factory AiSeminarTokenUsage.fromJson(Map<String, dynamic> json) {
+    final method = (json['estimationMethod'] ?? '').toString().trim();
+    return AiSeminarTokenUsage(
+      inputTokens: _nonNegativeInt(json['inputTokens']),
+      outputTokens: _nonNegativeInt(json['outputTokens']),
+      isEstimated: json['isEstimated'] != false,
+      estimationMethod: method.isEmpty ? 'unknown' : method,
+    );
+  }
+
+  static AiSeminarTokenUsage? aggregateRoleTurns(
+    List<AiSeminarRoleTurn> turns,
+  ) {
+    return aggregate(turns.map((turn) => turn.tokenUsage));
+  }
+
+  static AiSeminarTokenUsage? aggregate(
+    Iterable<AiSeminarTokenUsage?> usages,
+  ) {
+    var inputTokens = 0;
+    var outputTokens = 0;
+    var hasEstimated = false;
+    final methods = <String>{};
+    for (final usage in usages) {
+      if (usage == null) continue;
+      inputTokens += usage.inputTokens;
+      outputTokens += usage.outputTokens;
+      hasEstimated = hasEstimated || usage.isEstimated;
+      if (usage.estimationMethod.trim().isNotEmpty) {
+        methods.add(usage.estimationMethod);
+      }
+    }
+    if (inputTokens == 0 && outputTokens == 0) return null;
+    return AiSeminarTokenUsage(
+      inputTokens: inputTokens,
+      outputTokens: outputTokens,
+      isEstimated: hasEstimated,
+      estimationMethod: methods.length == 1
+          ? methods.single
+          : methods.isEmpty
+              ? 'unknown'
+              : 'mixed-local-estimate',
+    );
+  }
+
+  static int _nonNegativeInt(Object? value) {
+    final parsed = (value as num?)?.toInt() ?? 0;
+    return parsed < 0 ? 0 : parsed;
+  }
+}
+
+@immutable
 class AiSeminarRoleTurn {
   const AiSeminarRoleTurn({
     required this.id,
@@ -388,6 +463,7 @@ class AiSeminarRoleTurn {
     this.startedAt,
     this.completedAt,
     this.error,
+    this.tokenUsage,
   });
 
   final String id;
@@ -399,6 +475,7 @@ class AiSeminarRoleTurn {
   final int? startedAt;
   final int? completedAt;
   final String? error;
+  final AiSeminarTokenUsage? tokenUsage;
 
   bool get isFailed => error != null && error!.trim().isNotEmpty;
 
@@ -422,6 +499,7 @@ class AiSeminarRoleTurn {
         if (startedAt != null) 'startedAt': startedAt,
         if (completedAt != null) 'completedAt': completedAt,
         if (error != null) 'error': error,
+        if (tokenUsage != null) 'tokenUsage': tokenUsage!.toJson(),
       };
 
   factory AiSeminarRoleTurn.fromJson(Map<String, dynamic> json) {
@@ -442,6 +520,11 @@ class AiSeminarRoleTurn {
       startedAt: (json['startedAt'] as num?)?.toInt(),
       completedAt: (json['completedAt'] as num?)?.toInt(),
       error: json['error']?.toString(),
+      tokenUsage: json['tokenUsage'] is Map
+          ? AiSeminarTokenUsage.fromJson(
+              Map<String, dynamic>.from(json['tokenUsage'] as Map),
+            )
+          : null,
     );
   }
 }
@@ -546,6 +629,7 @@ class AiSeminarRun {
     this.startedAt,
     this.completedAt,
     this.message,
+    this.tokenUsage,
   });
 
   final AiSeminarSessionContract session;
@@ -556,6 +640,7 @@ class AiSeminarRun {
   final int? startedAt;
   final int? completedAt;
   final String? message;
+  final AiSeminarTokenUsage? tokenUsage;
 
   bool get readyForReview =>
       status == AiSeminarRunStatus.completed &&
@@ -572,6 +657,7 @@ class AiSeminarRun {
         if (startedAt != null) 'startedAt': startedAt,
         if (completedAt != null) 'completedAt': completedAt,
         if (message != null) 'message': message,
+        if (tokenUsage != null) 'tokenUsage': tokenUsage!.toJson(),
       };
 
   factory AiSeminarRun.fromJson(Map<String, dynamic> json) {
@@ -600,6 +686,11 @@ class AiSeminarRun {
       startedAt: (json['startedAt'] as num?)?.toInt(),
       completedAt: (json['completedAt'] as num?)?.toInt(),
       message: json['message']?.toString(),
+      tokenUsage: json['tokenUsage'] is Map
+          ? AiSeminarTokenUsage.fromJson(
+              Map<String, dynamic>.from(json['tokenUsage'] as Map),
+            )
+          : null,
     );
   }
 }

@@ -128,6 +128,9 @@ class AiSeminarRuntimeState {
 
   bool get canSendToReview => lastRun?.readyForReview == true;
 
+  AiSeminarTokenUsage? get tokenUsage =>
+      lastRun?.tokenUsage ?? AiSeminarTokenUsage.aggregateRoleTurns(turns);
+
   AiSeminarRuntimeState copyWith({
     AiSeminarRunStatus? status,
     AiSeminarSessionContract? session,
@@ -300,6 +303,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       turns: state.turns,
       startedAt: state.startedAt,
       completedAt: DateTime.now().millisecondsSinceEpoch,
+      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(state.turns),
       message: 'AI Seminar cancelled.',
     );
     state = state.copyWith(

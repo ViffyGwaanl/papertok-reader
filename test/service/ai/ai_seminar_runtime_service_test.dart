@@ -77,6 +77,80 @@ void main() {
     expect(completed.whiteboardEntries.single.id, 'w1');
   });
 
+  test('attaches local estimated token usage to completed role turns',
+      () async {
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(AiSeminarSessionContract(id: 's-usage', question: 'Usage?'))
+        .toList();
+    final completedTurn = events
+        .where((event) => event.type == AiSeminarRuntimeEventType.roleCompleted)
+        .first
+        .turn!;
+
+    expect(completedTurn.tokenUsage, isNotNull);
+    expect(completedTurn.tokenUsage!.inputTokens, greaterThan(0));
+    expect(completedTurn.tokenUsage!.outputTokens, greaterThan(0));
+    expect(
+      completedTurn.tokenUsage!.totalTokens,
+      completedTurn.tokenUsage!.inputTokens +
+          completedTurn.tokenUsage!.outputTokens,
+    );
+    expect(completedTurn.tokenUsage!.isEstimated, true);
+    expect(
+        completedTurn.tokenUsage!.estimationMethod, 'local-char-estimate-v1');
+  });
+
+  test('does not count executor-supplied token usage on failed role turns',
+      () async {
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: 'partial failure',
+            evidenceRefIds: const ['e1'],
+            error: 'model stopped',
+            tokenUsage: const AiSeminarTokenUsage(
+              inputTokens: 999,
+              outputTokens: 999,
+              isEstimated: true,
+              estimationMethod: 'executor-supplied',
+            ),
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(AiSeminarSessionContract(id: 's-failed-usage', question: 'Usage?'))
+        .toList();
+    final failed = events.last;
+
+    expect(failed.type, AiSeminarRuntimeEventType.failed);
+    expect(failed.run!.tokenUsage, isNull);
+    expect(failed.run!.turns.single.tokenUsage, isNull);
+  });
+
   test('cancel token stops before synthesis and emits cancelled event',
       () async {
     late AiSeminarCancellationToken token;

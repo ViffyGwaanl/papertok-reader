@@ -319,13 +319,49 @@ class _RolesSection extends StatelessWidget {
     final turns = state.turns;
     final activeRole = state.activeRole;
     final children = <Widget>[];
+    final tokenUsage = state.tokenUsage;
+    if (tokenUsage != null) {
+      children.add(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Local token estimate: ${_formatTokenCount(tokenUsage.totalTokens)} tokens '
+              '(${_formatTokenCount(tokenUsage.inputTokens)} in / '
+              '${_formatTokenCount(tokenUsage.outputTokens)} out)',
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Provider billing may differ · ${tokenUsage.estimationMethod}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: ClaudePalette.secondary(context),
+                  ),
+            ),
+          ],
+        ),
+      );
+    }
     for (final turn in turns) {
+      final usage = turn.tokenUsage;
       children.add(
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(_roleIcon(turn.role)),
           title: Text(turn.role.asString),
-          subtitle: Text(turn.responseText),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(turn.responseText),
+              if (usage != null)
+                Text(
+                  'Usage: ${_formatTokenCount(usage.inputTokens)} in / '
+                  '${_formatTokenCount(usage.outputTokens)} out tokens',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: ClaudePalette.secondary(context),
+                      ),
+                ),
+            ],
+          ),
         ),
       );
     }

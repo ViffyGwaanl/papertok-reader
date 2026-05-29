@@ -148,6 +148,8 @@ void main() {
       containsAll(['card-1', 'review-1']),
     );
     expect(state.synthesis!.summary, 'synthesizer response');
+    expect(state.turns.first.tokenUsage, isNotNull);
+    expect(state.lastRun!.tokenUsage!.totalTokens, greaterThan(0));
     expect(state.canRetry, false);
   });
 
@@ -225,6 +227,47 @@ void main() {
         costStatus: AiSeminarCostStatus.unknown,
         costUnknownReason: 'Provider pricing metadata is unavailable.',
       ),
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+          tokenUsage: AiSeminarTokenUsage(
+            inputTokens: 12,
+            outputTokens: 4,
+            isEstimated: true,
+            estimationMethod: 'local-char-estimate-v1',
+          ),
+        ),
+      ],
+      lastRun: AiSeminarRun(
+        session: AiSeminarSessionContract(id: 's3', question: 'Restore?'),
+        status: AiSeminarRunStatus.completed,
+        evidenceBundle: bundle(),
+        turns: const [
+          AiSeminarRoleTurn(
+            id: 'turn-critical',
+            role: AiSeminarRole.critical,
+            prompt: 'prompt',
+            responseText: 'critical response',
+            evidenceRefIds: ['e1'],
+            tokenUsage: AiSeminarTokenUsage(
+              inputTokens: 12,
+              outputTokens: 4,
+              isEstimated: true,
+              estimationMethod: 'local-char-estimate-v1',
+            ),
+          ),
+        ],
+        tokenUsage: AiSeminarTokenUsage(
+          inputTokens: 12,
+          outputTokens: 4,
+          isEstimated: true,
+          estimationMethod: 'local-char-estimate-v1',
+        ),
+      ),
     );
 
     final restored = AiSeminarRuntimeState.fromJson(state.toJson());
@@ -238,6 +281,8 @@ void main() {
     expect(restored.providerDiagnostics!.modelId, 'gpt-5.5');
     expect(restored.providerDiagnostics!.costUnknownReason,
         contains('pricing metadata'));
+    expect(restored.turns.single.tokenUsage!.totalTokens, 16);
+    expect(restored.lastRun!.tokenUsage!.totalTokens, 16);
   });
 
   test('sendToReview hands off synthesis candidate cards and flashcards',

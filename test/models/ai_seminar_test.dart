@@ -123,6 +123,48 @@ void main() {
     });
   });
 
+  group('AiSeminarTokenUsage', () {
+    test('role turn and run round-trip local estimated token usage', () {
+      const usage = AiSeminarTokenUsage(
+        inputTokens: 12,
+        outputTokens: 5,
+        isEstimated: true,
+        estimationMethod: 'local-char-estimate-v1',
+      );
+      const turn = AiSeminarRoleTurn(
+        id: 'turn-critical',
+        role: AiSeminarRole.critical,
+        prompt: 'prompt',
+        responseText: 'response',
+        evidenceRefIds: ['e1'],
+        tokenUsage: usage,
+      );
+
+      final restoredTurn = AiSeminarRoleTurn.fromJson(turn.toJson());
+
+      expect(restoredTurn.tokenUsage!.inputTokens, 12);
+      expect(restoredTurn.tokenUsage!.outputTokens, 5);
+      expect(restoredTurn.tokenUsage!.totalTokens, 17);
+      expect(
+          restoredTurn.tokenUsage!.estimationMethod, 'local-char-estimate-v1');
+
+      final run = AiSeminarRun(
+        session: AiSeminarSessionContract(id: 's-usage', question: 'Usage?'),
+        status: AiSeminarRunStatus.completed,
+        evidenceBundle: const AiSeminarEvidenceBundle(
+          query: 'Usage?',
+          evidence: [],
+        ),
+        turns: const [turn],
+        tokenUsage: usage,
+      );
+      final restoredRun = AiSeminarRun.fromJson(run.toJson());
+
+      expect(restoredRun.tokenUsage!.totalTokens, 17);
+      expect(restoredRun.turns.single.tokenUsage!.totalTokens, 17);
+    });
+  });
+
   group('AiSeminarSynthesis', () {
     test('handoff is review-ready but not auto-applied to user assets', () {
       final synthesis = AiSeminarSynthesis(

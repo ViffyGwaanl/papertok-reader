@@ -107,6 +107,7 @@ class AiSeminarRuntimeService {
   final AiSeminarEvidenceFetcher _fetchEvidence;
   final AiSeminarStreamingRoleExecutor _streamRole;
   final AiSeminarClock? _now;
+  static const String _localTokenEstimateMethod = 'local-char-estimate-v1';
 
   Stream<AiSeminarRuntimeEvent> run(
     AiSeminarSessionContract session, {
@@ -190,20 +191,21 @@ class AiSeminarRuntimeService {
       );
 
       AiSeminarRoleTurn? completedTurn;
+      final invocation = AiSeminarRoleInvocation(
+        session: session,
+        role: role,
+        evidenceBundle: evidenceBundle,
+        priorTurns: List.unmodifiable(turns),
+        prompt: AiSeminarOrchestrationService.promptForRole(
+          session: session,
+          role: role,
+          evidenceBundle: evidenceBundle,
+          priorTurns: turns,
+        ),
+      );
       try {
         await for (final chunk in _streamRole(
-          AiSeminarRoleInvocation(
-            session: session,
-            role: role,
-            evidenceBundle: evidenceBundle,
-            priorTurns: List.unmodifiable(turns),
-            prompt: AiSeminarOrchestrationService.promptForRole(
-              session: session,
-              role: role,
-              evidenceBundle: evidenceBundle,
-              priorTurns: turns,
-            ),
-          ),
+          invocation,
           token,
         )) {
           if (token.isCancelled) {
@@ -270,7 +272,7 @@ class AiSeminarRuntimeService {
           session: session,
           evidenceBundle: evidenceBundle,
           startedAt: startedAt,
-          turns: [...turns, turn],
+          turns: [...turns, _stripTokenUsage(turn)],
           message: turn.error,
         );
         return;
@@ -287,7 +289,11 @@ class AiSeminarRuntimeService {
         return;
       }
 
-      turns.add(turn);
+      final turnWithUsage = _attachEstimatedTokenUsage(
+        invocation: invocation,
+        turn: turn,
+      );
+      turns.add(turnWithUsage);
       final whiteboardEntries = _whiteboardEntries(turns);
       yield AiSeminarRuntimeEvent(
         type: AiSeminarRuntimeEventType.roleCompleted,
@@ -295,7 +301,7 @@ class AiSeminarRuntimeService {
         status: AiSeminarRunStatus.running,
         evidenceBundle: evidenceBundle,
         activeRole: role,
-        turn: turn,
+        turn: turnWithUsage,
         turns: List.unmodifiable(turns),
         whiteboardEntries: whiteboardEntries,
       );
@@ -335,6 +341,7 @@ class AiSeminarRuntimeService {
       synthesis: synthesis,
       startedAt: startedAt,
       completedAt: _nowMs(),
+      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
       message: status == AiSeminarRunStatus.needsEvidence
           ? 'AI Seminar synthesis is missing traceable handoff evidence.'
           : null,
@@ -368,6 +375,7 @@ class AiSeminarRuntimeService {
       turns: List.unmodifiable(turns),
       startedAt: startedAt,
       completedAt: _nowMs(),
+      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
       message: message,
     );
     return AiSeminarRuntimeEvent(
@@ -396,6 +404,7 @@ class AiSeminarRuntimeService {
       turns: List.unmodifiable(turns),
       startedAt: startedAt,
       completedAt: _nowMs(),
+      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
       message: message,
     );
     return AiSeminarRuntimeEvent(
@@ -423,6 +432,7 @@ class AiSeminarRuntimeService {
       turns: List.unmodifiable(turns),
       startedAt: startedAt,
       completedAt: _nowMs(),
+      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
       message: 'AI Seminar cancelled.',
     );
     return AiSeminarRuntimeEvent(
@@ -453,6 +463,72 @@ class AiSeminarRuntimeService {
     return turns
         .expand((turn) => turn.whiteboardEntries)
         .toList(growable: false);
+  }
+
+  static AiSeminarRoleTurn _attachEstimatedTokenUsage({
+    required AiSeminarRoleInvocation invocation,
+    required AiSeminarRoleTurn turn,
+  }) {
+    if (turn.tokenUsage != null) return turn;
+    final usage = AiSeminarTokenUsage(
+      inputTokens: _estimateTokenCount(_inputTextForInvocation(invocation)),
+      outputTokens: _estimateTokenCount(turn.responseText),
+      isEstimated: true,
+      estimationMethod: _localTokenEstimateMethod,
+    );
+    return AiSeminarRoleTurn(
+      id: turn.id,
+      role: turn.role,
+      prompt: turn.prompt,
+      responseText: turn.responseText,
+      evidenceRefIds: turn.evidenceRefIds,
+      whiteboardEntries: turn.whiteboardEntries,
+      startedAt: turn.startedAt,
+      completedAt: turn.completedAt,
+      error: turn.error,
+      tokenUsage: usage,
+    );
+  }
+
+  static AiSeminarRoleTurn _stripTokenUsage(AiSeminarRoleTurn turn) {
+    if (turn.tokenUsage == null) return turn;
+    return AiSeminarRoleTurn(
+      id: turn.id,
+      role: turn.role,
+      prompt: turn.prompt,
+      responseText: turn.responseText,
+      evidenceRefIds: turn.evidenceRefIds,
+      whiteboardEntries: turn.whiteboardEntries,
+      startedAt: turn.startedAt,
+      completedAt: turn.completedAt,
+      error: turn.error,
+    );
+  }
+
+  static String _inputTextForInvocation(AiSeminarRoleInvocation invocation) {
+    final evidenceText = invocation.evidenceBundle.evidence
+        .map((evidence) => '${evidence.id}: ${evidence.text}')
+        .join('\n');
+    return [
+      invocation.prompt,
+      if (evidenceText.trim().isNotEmpty) evidenceText,
+    ].join('\n');
+  }
+
+  static int _estimateTokenCount(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    var ascii = 0;
+    var nonAscii = 0;
+    for (final codePoint in trimmed.runes) {
+      if (codePoint <= 0x7F) {
+        ascii += 1;
+      } else {
+        nonAscii += 1;
+      }
+    }
+    final estimate = (ascii / 4) + (nonAscii / 2);
+    return estimate.ceil().clamp(1, 1 << 31);
   }
 }
 
