@@ -515,11 +515,13 @@ Schema:
       "id": "short-id",
       "kind": "claim|evidenceRef|disagreement|openQuestion|candidateCard|reviewSuggestion",
       "text": "entry text",
-      "evidenceRefIds": ["evidence-id"]
+      "evidenceRefIds": ["evidence-id"],
+      "conceptRefs": ["short concept label"]
     }
   ]
 }
 Every claim, disagreement, candidateCard, or reviewSuggestion must cite supplied evidence ids.
+For candidateCard entries, include 1-3 concise conceptRefs that can seed a draft concept graph after user Review.
 '''),
       ChatMessage.humanText('''
 ${invocation.prompt}

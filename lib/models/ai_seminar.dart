@@ -315,6 +315,7 @@ class AiSeminarWhiteboardEntry {
     required this.text,
     this.role,
     this.evidenceRefIds = const <String>[],
+    this.conceptRefs = const <String>[],
     this.createdAt,
     this.requiresReview = true,
   });
@@ -324,6 +325,7 @@ class AiSeminarWhiteboardEntry {
   final String text;
   final AiSeminarRole? role;
   final List<String> evidenceRefIds;
+  final List<String> conceptRefs;
   final int? createdAt;
   final bool requiresReview;
 
@@ -347,6 +349,7 @@ class AiSeminarWhiteboardEntry {
         'text': text,
         if (role != null) 'role': role!.asString,
         'evidenceRefIds': evidenceRefIds,
+        'conceptRefs': conceptRefs,
         if (createdAt != null) 'createdAt': createdAt,
         'requiresReview': requiresReview,
       };
@@ -358,6 +361,11 @@ class AiSeminarWhiteboardEntry {
       text: (json['text'] ?? '').toString(),
       role: AiSeminarRole.fromString(json['role']?.toString()),
       evidenceRefIds: (json['evidenceRefIds'] as List?)
+              ?.map((e) => e.toString())
+              .where((e) => e.trim().isNotEmpty)
+              .toList(growable: false) ??
+          const <String>[],
+      conceptRefs: (json['conceptRefs'] as List?)
               ?.map((e) => e.toString())
               .where((e) => e.trim().isNotEmpty)
               .toList(growable: false) ??

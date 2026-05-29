@@ -106,6 +106,21 @@ void main() {
       expect(card.isTraceable, true);
       expect(card.requiresReview, true);
     });
+
+    test('candidate cards round-trip concept refs', () {
+      const entry = AiSeminarWhiteboardEntry(
+        id: 'w3',
+        kind: AiSeminarWhiteboardKind.candidateCard,
+        text: 'Hidden premise card',
+        evidenceRefIds: ['e1'],
+        conceptRefs: ['Hidden premise', 'Argument structure'],
+      );
+
+      final restored = AiSeminarWhiteboardEntry.fromJson(entry.toJson());
+
+      expect(restored.conceptRefs, ['Hidden premise', 'Argument structure']);
+      expect(restored.hasTraceableEvidence({'e1'}), true);
+    });
   });
 
   group('AiSeminarSynthesis', () {

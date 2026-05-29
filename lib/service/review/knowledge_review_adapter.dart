@@ -188,6 +188,7 @@ class SeminarSynthesisReviewAdapter {
         quote: quote,
         explanation: entry.text,
         sourceRefs: sourceRefs,
+        conceptRefs: _candidateConceptRefs(entry),
         reviewState: KnowledgeCardReviewState.pending,
         origin: KnowledgeCardOrigin.seminar,
         ownership: AiOutputOwnership.aiGeneratedDraft,
@@ -222,6 +223,18 @@ class SeminarSynthesisReviewAdapter {
         .map((item) => item.sourceRef)
         .where((ref) => ref.hasEvidence)
         .toList(growable: false);
+  }
+
+  static List<String> _candidateConceptRefs(AiSeminarWhiteboardEntry entry) {
+    final seen = <String>{};
+    final concepts = <String>[];
+    for (final value in entry.conceptRefs) {
+      final concept = value.trim();
+      if (concept.isEmpty) continue;
+      final key = concept.toLowerCase();
+      if (seen.add(key)) concepts.add(concept);
+    }
+    return concepts;
   }
 }
 

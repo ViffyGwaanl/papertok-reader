@@ -90,6 +90,31 @@ void main() {
     expect(cards.single.sourceRefs.single.hasEvidence, true);
   });
 
+  test('carries seminar candidate concepts into KnowledgeCard candidates', () {
+    final cards = SeminarSynthesisReviewAdapter.knowledgeCardsFromSynthesis(
+      seminarId: 's1',
+      synthesis: synthesis(
+        candidateCards: const [
+          AiSeminarWhiteboardEntry(
+            id: 'card1',
+            kind: AiSeminarWhiteboardKind.candidateCard,
+            text: 'Hidden premise card',
+            evidenceRefIds: ['e1'],
+            conceptRefs: ['Hidden premise', 'Argument structure'],
+          ),
+        ],
+      ),
+      now: 100,
+    );
+
+    expect(cards.single.conceptRefs, [
+      'Hidden premise',
+      'Argument structure',
+    ]);
+    expect(cards.single.origin, KnowledgeCardOrigin.seminar);
+    expect(cards.single.isUserAsset, false);
+  });
+
   test('keeps explicitly not-ready synthesis in draft and creates no cards',
       () {
     final notReady = synthesis(readyForReview: false);

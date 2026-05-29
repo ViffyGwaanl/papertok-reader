@@ -2,13 +2,16 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
+import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
+import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 
 void main() {
@@ -59,6 +62,7 @@ void main() {
                   kind: AiSeminarWhiteboardKind.candidateCard,
                   text: 'Candidate card',
                   evidenceRefIds: ['e1'],
+                  conceptRefs: ['Seminar concept'],
                 ),
             ],
           ),
@@ -174,6 +178,56 @@ void main() {
     );
     expect(seminarCards.single.reviewState, KnowledgeCardReviewState.pending);
     expect(seminarCards.single.isUserAsset, false);
+    expect(seminarCards.single.conceptRefs, ['Seminar concept']);
+  });
+
+  test('seminar candidate concepts seed graph candidates after Review apply',
+      () async {
+    final tempRoot = await Directory.systemTemp.createTemp();
+    addTearDown(() => tempRoot.deleteSync(recursive: true));
+    final reviewStore = ReviewItemStore(rootDir: tempRoot);
+    final cardStore = KnowledgeCardStore(rootDir: tempRoot);
+    final graphStore = ConceptGraphStore(rootDir: tempRoot);
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        aiSeminarReviewItemStoreProvider.overrideWithValue(reviewStore),
+        aiSeminarKnowledgeCardStoreProvider.overrideWithValue(cardStore),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    await notifier.start(
+      AiSeminarSessionContract(id: 's6', question: 'Seed graph.'),
+    );
+    await notifier.sendToReview(now: 400);
+    final cardItem = (await reviewStore.list(
+      status: ReviewItemStatus.pending,
+      sourceType: ReviewItemSourceType.knowledgeCard,
+    ))
+        .single;
+    final controller = ReviewInboxController(
+      rootDir: tempRoot,
+      reviewStore: reviewStore,
+      knowledgeCardStore: cardStore,
+      conceptGraphStore: graphStore,
+      now: () => 401,
+    );
+
+    await controller.approve(cardItem.id);
+    await controller.apply(cardItem.id);
+
+    final conceptNodes = (await graphStore.listNodes())
+        .where((node) => node.type == ConceptNodeType.concept)
+        .toList(growable: false);
+    final relationItems = await reviewStore.list(
+      status: ReviewItemStatus.pending,
+      sourceType: ReviewItemSourceType.conceptGraphRelation,
+    );
+
+    expect(conceptNodes.map((node) => node.label), contains('Seminar concept'));
+    expect(relationItems, isNotEmpty);
   });
 
   test('sendToReview retry repairs candidate card review item', () async {

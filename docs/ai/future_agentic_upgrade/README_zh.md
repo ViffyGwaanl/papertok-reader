@@ -50,14 +50,14 @@
 
 ## 5. 当前用户可用性
 
-本目录不是说“所有 Epic 都已产品化”。本节只放用户入口摘要；完整任务状态、真实边界和验证命令以 `04_user_facing_activation_plan_zh.md` 为准。
+本目录不是说“所有 Epic 都已产品化”。本节只放用户入口摘要；完整的功能使用路径、入口缺口、agent 任务和验收边界以 `04_user_facing_activation_plan_zh.md` 为准；代码级完成状态和验证命令以 `implementation_status_zh.md` 为准。
 
 | 能力 | 用户怎么用 | 状态 |
 | --- | --- | --- |
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入。 |
 | 一键开启研讨 | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 AI Seminar runtime/UI：展示 evidence、role turns、Shared Whiteboard、synthesis，支持取消、失败重试，并可把 traceable synthesis 与候选卡送入 Review Inbox；不自动写长期资产。 |
 | Review Inbox | `Settings -> AI -> Review inbox`。 | 已有统一 UI；内容依赖 producer 写入。 |
-| 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer、阅读页选中文本入口和 KnowledgeCard -> draft ConceptGraph producer；可查看已有图谱、按选中文本筛选相关概念、查看局部路径、证据和 orphan/broken link。当前 producer 只从 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成待审图谱关系；RAG/GraphRAG/Seminar 自动抽概念仍在剩余任务中。 |
+| 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer、阅读页选中文本入口和 KnowledgeCard -> draft ConceptGraph producer；可查看已有图谱、按选中文本筛选相关概念、查看局部路径、证据和 orphan/broken link。当前 producer 从 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成待审图谱关系；Seminar candidate card 可携带 `conceptRefs`，经 Review apply 后进入同一图谱候选链路；RAG/GraphRAG 自动抽概念仍在剩余任务中。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；知识卡在 Review Inbox 中 `Apply` 后自动入队。 | 本分支已接入队列、复习页、Again/Hard/Good/Easy 评分和来源跳转状态；只接 KnowledgeCard apply。 |
 | Sync Export | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览和创建入口；默认只纳入已确认知识资产和复习历史，排除草稿、派生索引、API key 和待审冲突。完整云同步引擎仍在剩余任务中。 |
 
