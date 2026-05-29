@@ -10,6 +10,7 @@ import 'package:papertok_reader/service/ai/prompt_budgeting_service.dart';
 import 'package:papertok_reader/service/mcp/mcp_client_service.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:langchain_core/chat_models.dart';
@@ -115,6 +116,7 @@ class AiChat extends _$AiChat {
     int? regenerateFromUserIndex,
     bool replaceUserMessage = false,
     List<AttachmentItem>? attachments,
+    SourceRef? userSourceRef,
   }) {
     if (_generationSub != null) {
       return;
@@ -193,6 +195,7 @@ class AiChat extends _$AiChat {
       _tree = _tree.appendChild(
         parentId: parentId,
         message: ChatMessage.human(messageContent),
+        sourceRef: userSourceRef,
       );
       parentId = _tree.nodes[parentId]!.activeChildId!;
     } else {
@@ -578,6 +581,9 @@ class AiChat extends _$AiChat {
 
   String? get currentSessionId => _currentSessionId;
 
+  bool get isLoadedHistoryConversation =>
+      _currentSessionId != null && _loadedHistoryEntryId == _currentSessionId;
+
   String _ensureSessionId() {
     return _currentSessionId ??= _generateSessionId();
   }
@@ -735,6 +741,15 @@ class AiChat extends _$AiChat {
       return null;
     }
     return _tree.nodes[_activeNodeIds[messageIndex]]?.meta;
+  }
+
+  /// Returns the persisted reader/source provenance for the active-path message
+  /// at [messageIndex], or null for legacy entries without per-turn provenance.
+  SourceRef? sourceRefForMessageIndex(int messageIndex) {
+    if (messageIndex < 0 || messageIndex >= _activeNodeIds.length) {
+      return null;
+    }
+    return _tree.nodes[_activeNodeIds[messageIndex]]?.sourceRef;
   }
 
   void persistCurrentConversation(WidgetRef ref) {

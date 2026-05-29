@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:langchain_core/chat_models.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 
 void main() {
   group('AiSegmentMeta', () {
@@ -67,6 +69,67 @@ void main() {
         'updatedAt': 1,
       });
       expect(restored.meta, isNull);
+    });
+
+    test('reader SourceRef survives conversation tree json roundtrip', () {
+      final sourceRef = SourceRef(
+        bookId: 7,
+        cfi: 'epubcfi(/6/4[selection])',
+        jumpLink:
+            'paperreader://reader/open?bookId=7&cfi=epubcfi%28%2F6%2F4%5Bselection%5D%29',
+        sourceTitle: 'Scoped Book',
+        locationLabel: 'Chapter 1',
+        sourceTextSnippet: 'Attention needs exact evidence.',
+        sourceTextForHash: 'Attention needs exact evidence.',
+        sourceKind: SourceRefKind.reader,
+        createdAt: 1,
+      );
+
+      final tree = AiConversationTree.fromJson({
+        'schemaVersion': 2,
+        'rootId': 'root',
+        'nodes': {
+          'root': {
+            'parentId': null,
+            'children': ['user-1'],
+            'activeChildId': 'user-1',
+            'message': null,
+            'createdAt': 0,
+            'updatedAt': 0,
+          },
+          'user-1': {
+            'parentId': 'root',
+            'children': ['assistant-1'],
+            'activeChildId': 'assistant-1',
+            'message': ChatMessage.humanText(
+              'Attention needs exact evidence.',
+            ).toMap(),
+            'sourceRef': sourceRef.toJson(),
+            'createdAt': 1,
+            'updatedAt': 1,
+          },
+          'assistant-1': {
+            'parentId': 'user-1',
+            'children': <String>[],
+            'activeChildId': null,
+            'message': ChatMessage.ai(
+              'Attention weights context for the current passage.',
+            ).toMap(),
+            'createdAt': 2,
+            'updatedAt': 2,
+          },
+        },
+      });
+
+      final json = tree.toJson();
+      final nodes = json['nodes'] as Map<String, dynamic>;
+      final userNode = nodes['user-1'] as Map<String, dynamic>;
+      final restoredSourceRef = userNode['sourceRef'] as Map<String, dynamic>?;
+
+      expect(restoredSourceRef, isNotNull);
+      expect(restoredSourceRef!['bookId'], 7);
+      expect(restoredSourceRef['cfi'], 'epubcfi(/6/4[selection])');
+      expect(restoredSourceRef['sourceKind'], SourceRefKind.reader.asString);
     });
   });
 }

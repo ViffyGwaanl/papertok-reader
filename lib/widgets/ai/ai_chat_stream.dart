@@ -1272,6 +1272,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           message,
           false,
           attachments: attachments,
+          userSourceRef: draftSourceRef,
         );
     if (draftSourceRef != null) {
       final messages =
@@ -2318,10 +2319,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
 
     final l10n = L10n.of(context);
-    final conversationId = ref.read(aiChatProvider.notifier).currentSessionId;
-    ref.read(aiChatProvider.notifier).persistCurrentConversation(ref);
+    final chatNotifier = ref.read(aiChatProvider.notifier);
+    final conversationId = chatNotifier.currentSessionId;
+    final useCurrentReaderFallback =
+        readerSourceRef != null || !chatNotifier.isLoadedHistoryConversation;
+    chatNotifier.persistCurrentConversation(ref);
     final reading = ref.read(currentReadingProvider);
-    final book = reading.isReading ? reading.book : null;
+    final book =
+        useCurrentReaderFallback && reading.isReading ? reading.book : null;
 
     try {
       final result = await _chatKnowledgeCards.createFromAssistantAnswer(
@@ -2332,8 +2337,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         modelId: _modelLabel(_selectedProviderId),
         bookId: book?.id,
         bookTitle: book?.title,
-        cfi: reading.isReading ? reading.cfi : null,
-        chapterTitle: reading.isReading ? reading.chapterTitle : null,
+        cfi: useCurrentReaderFallback && reading.isReading ? reading.cfi : null,
+        chapterTitle: useCurrentReaderFallback && reading.isReading
+            ? reading.chapterTitle
+            : null,
         readerSourceRef: readerSourceRef,
       );
       if (!mounted) return;
@@ -2347,6 +2354,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       if (!mounted) return;
       AnxToast.show(l10n.knowledgeCardAddFailed);
     }
+  }
+
+  SourceRef? _readerSourceRefForUserIndex(int userIndex) {
+    return _sourceRefByUserIndex[userIndex] ??
+        ref.read(aiChatProvider.notifier).sourceRefForMessageIndex(userIndex);
   }
 
   Widget _buildMessageMemoryMenu({
@@ -3451,8 +3463,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                                       messageNodeId: 'assistant:$index',
                                       readerSourceRef: prevHumanIndex == null
                                           ? null
-                                          : _sourceRefByUserIndex[
-                                              prevHumanIndex],
+                                          : _readerSourceRefForUserIndex(
+                                              prevHumanIndex,
+                                            ),
                                     ),
                             child:
                                 Text(L10n.of(context).contextMenuKnowledgeCard),
@@ -3623,7 +3636,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                               'assistant-group:${item.groupKey}:$selected',
                           readerSourceRef: item.userIndex == null
                               ? null
-                              : _sourceRefByUserIndex[item.userIndex!],
+                              : _readerSourceRefForUserIndex(item.userIndex!),
                         ),
                 child: Text(L10n.of(context).contextMenuKnowledgeCard),
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:langchain_core/chat_models.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 
 /// A persistent conversation tree that supports branching edits and per-turn
 /// variants (Cherry-style).
@@ -221,6 +222,7 @@ class AiConversationTree {
   AiConversationTree appendChild({
     required String parentId,
     required ChatMessage message,
+    SourceRef? sourceRef,
   }) {
     final parent = nodes[parentId];
     if (parent == null) return this;
@@ -235,6 +237,7 @@ class AiConversationTree {
       message: message.toMap(),
       createdAt: now,
       updatedAt: now,
+      sourceRef: sourceRef,
     );
 
     final updatedParent = parent.copyWith(
@@ -276,6 +279,7 @@ class AiConversationNode {
     required this.createdAt,
     required this.updatedAt,
     this.meta,
+    this.sourceRef,
   });
 
   final String id;
@@ -293,6 +297,10 @@ class AiConversationNode {
   /// and legacy data created before this field existed.
   final AiSegmentMeta? meta;
 
+  /// Optional reader provenance for a user turn. Stored on the user node so
+  /// assistant actions can recover the exact selected text after history reload.
+  final SourceRef? sourceRef;
+
   ChatMessage? toChatMessage() {
     final msg = message;
     if (msg == null) return null;
@@ -308,6 +316,7 @@ class AiConversationNode {
       'createdAt': createdAt,
       'updatedAt': updatedAt,
       if (meta != null) 'meta': meta!.toJson(),
+      if (sourceRef != null) 'sourceRef': sourceRef!.toJson(),
     };
   }
 
@@ -334,6 +343,14 @@ class AiConversationNode {
       );
     }
 
+    SourceRef? sourceRef;
+    final rawSourceRef = json['sourceRef'];
+    if (rawSourceRef is Map) {
+      sourceRef = SourceRef.fromJson(
+        rawSourceRef.map((k, v) => MapEntry(k.toString(), v)),
+      );
+    }
+
     return AiConversationNode(
       id: id,
       parentId: json['parentId']?.toString(),
@@ -347,6 +364,7 @@ class AiConversationNode {
           ? json['updatedAt'] as int
           : DateTime.now().millisecondsSinceEpoch,
       meta: meta,
+      sourceRef: sourceRef,
     );
   }
 
@@ -358,6 +376,7 @@ class AiConversationNode {
     int? createdAt,
     int? updatedAt,
     AiSegmentMeta? meta,
+    SourceRef? sourceRef,
   }) {
     return AiConversationNode(
       id: id,
@@ -368,6 +387,7 @@ class AiConversationNode {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       meta: meta ?? this.meta,
+      sourceRef: sourceRef ?? this.sourceRef,
     );
   }
 }
