@@ -22,16 +22,19 @@ void main() {
 
   testWidgets('shows concepts, local relationships, and integrity status',
       (tester) async {
+    final opened = <Uri>[];
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           conceptGraphStoreProvider.overrideWithValue(store),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           locale: Locale('en'),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: ConceptGraphExplorerPage(),
+          home: ConceptGraphExplorerPage(
+            sourceOpener: (_, uri) async => opened.add(uri),
+          ),
         ),
       ),
     );
@@ -54,6 +57,17 @@ void main() {
     expect(find.text('reinforces'), findsWidgets);
     expect(find.text('Local path'), findsOneWidget);
     expect(find.text('Open source'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Open source'));
+    await tester.tap(find.text('Open source'));
+    await tester.pump();
+
+    expect(opened, hasLength(1));
+    expect(opened.single.scheme, 'paperreader');
+    expect(opened.single.host, 'reader');
+    expect(opened.single.path, '/open');
+    expect(opened.single.queryParameters['bookId'], '7');
+    expect(opened.single.queryParameters['cfi'], 'epubcfi(/6/8)');
   });
 
   testWidgets('selected concept shows a local graph map summary',
@@ -89,6 +103,44 @@ void main() {
     expect(find.text('4 draft items'), findsOneWidget);
     expect(find.text('Attention -> Memory'), findsWidgets);
     expect(find.text('Recall'), findsWidgets);
+  });
+
+  testWidgets('Open source explains concept without jumpable evidence',
+      (tester) async {
+    final opened = <Uri>[];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(
+            sourceOpener: (_, uri) async => opened.add(uri),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Orphan'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.ensureVisible(find.text('Open source'));
+
+    await tester.tap(find.text('Open source'));
+    await tester.pump();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('No source evidence available.'), findsWidgets);
+    expect(opened, isEmpty);
   });
 
   testWidgets('initial selection query filters related concepts',
@@ -439,6 +491,9 @@ class _FakeConceptGraphStore extends ConceptGraphStore {
 
   @override
   Future<ConceptDossier?> buildDossier(String nodeId) async {
+    if (nodeId == 'orphan') {
+      return ConceptDossier(node: orphan);
+    }
     if (nodeId != 'attention') return null;
     return ConceptDossier(
       node: attention,
@@ -456,6 +511,14 @@ class _FakeConceptGraphStore extends ConceptGraphStore {
     int requestedDepth = 2,
     ConceptExplorationPolicy policy = const ConceptExplorationPolicy(),
   }) async {
+    if (startNodeId == 'orphan') {
+      return ConceptExplorationPath(
+        startNodeId: startNodeId,
+        nodeIds: const ['orphan'],
+        returnPath: const ['orphan'],
+        policy: policy,
+      );
+    }
     return ConceptExplorationPath(
       startNodeId: startNodeId,
       nodeIds: ['attention', 'memory', 'recall'],

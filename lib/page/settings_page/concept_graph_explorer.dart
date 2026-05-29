@@ -5,17 +5,19 @@ import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
-import 'package:papertok_reader/service/deeplink/paperreader_deeplink_handler.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 
 class ConceptGraphExplorerPage extends ConsumerStatefulWidget {
   const ConceptGraphExplorerPage({
     super.key,
     this.initialQuery,
+    this.sourceOpener,
   });
 
   final String? initialQuery;
+  final PaperReaderSourceOpener? sourceOpener;
 
   @override
   ConsumerState<ConceptGraphExplorerPage> createState() =>
@@ -69,6 +71,7 @@ class _ConceptGraphExplorerPageState
                 initialQuery: initialQuery == null || initialQuery.isEmpty
                     ? null
                     : initialQuery,
+                sourceOpener: widget.sourceOpener ?? openPaperReaderSource,
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => _ConceptGraphError(error: error),
@@ -85,11 +88,13 @@ class _ConceptGraphBody extends StatelessWidget {
     required this.nodes,
     required this.state,
     required this.initialQuery,
+    required this.sourceOpener,
   });
 
   final List<ConceptNode> nodes;
   final ConceptGraphExplorerState state;
   final String? initialQuery;
+  final PaperReaderSourceOpener sourceOpener;
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +127,12 @@ class _ConceptGraphBody extends StatelessWidget {
                       ),
                     ),
                     const VerticalDivider(width: 1),
-                    Expanded(child: _DossierPane(state: state)),
+                    Expanded(
+                      child: _DossierPane(
+                        state: state,
+                        sourceOpener: sourceOpener,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -143,7 +153,10 @@ class _ConceptGraphBody extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _DossierPane(state: state),
+            _DossierPane(
+              state: state,
+              sourceOpener: sourceOpener,
+            ),
           ],
         );
       },
@@ -257,9 +270,13 @@ class _NodeList extends ConsumerWidget {
 }
 
 class _DossierPane extends ConsumerWidget {
-  const _DossierPane({required this.state});
+  const _DossierPane({
+    required this.state,
+    required this.sourceOpener,
+  });
 
   final ConceptGraphExplorerState state;
+  final PaperReaderSourceOpener sourceOpener;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -271,7 +288,11 @@ class _DossierPane extends ConsumerWidget {
         }
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: _DossierContent(selection: selection, state: state),
+          child: _DossierContent(
+            selection: selection,
+            state: state,
+            sourceOpener: sourceOpener,
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -284,21 +305,24 @@ class _DossierContent extends ConsumerWidget {
   const _DossierContent({
     required this.selection,
     required this.state,
+    required this.sourceOpener,
   });
 
   final ConceptGraphExplorerSelection selection;
   final ConceptGraphExplorerState state;
+  final PaperReaderSourceOpener sourceOpener;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final dossier = selection.dossier;
-    final firstIntent = _firstIntent([
+    final sourceRefs = [
       ...dossier.node.sourceRefs,
       ...dossier.appearances,
       ...dossier.supportingEvidence,
       ...dossier.contradictingEvidence,
-    ]);
+    ];
+    final firstIntent = _firstIntent(sourceRefs);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,8 +416,12 @@ class _DossierContent extends ConsumerWidget {
             icon: const Icon(Icons.open_in_new),
             label: Text(l10n.reviewInboxOpenSourceAction),
             onPressed: firstIntent == null
-                ? null
-                : () => PaperReaderDeepLinkHandler.handleIncomingUri(
+                ? () => showPaperReaderSourceUnavailable(
+                      context,
+                      sourceRefs,
+                      l10n.conceptGraphNoEvidence,
+                    )
+                : () => sourceOpener(
                       ref,
                       firstIntent.toUri(),
                     ),

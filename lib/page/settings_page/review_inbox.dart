@@ -3,14 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/providers/review_inbox.dart';
-import 'package:papertok_reader/service/deeplink/paperreader_deeplink_handler.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/knowledge/source_ref_evidence_list.dart';
 
 class ReviewInboxPage extends ConsumerStatefulWidget {
-  const ReviewInboxPage({super.key});
+  const ReviewInboxPage({
+    super.key,
+    this.sourceOpener,
+  });
+
+  final PaperReaderSourceOpener? sourceOpener;
 
   @override
   ConsumerState<ReviewInboxPage> createState() => _ReviewInboxPageState();
@@ -43,7 +48,10 @@ class _ReviewInboxPageState extends ConsumerState<ReviewInboxPage> {
           _ReviewInboxHeader(state: state),
           Expanded(
             child: state.items.when(
-              data: (items) => _ReviewInboxList(items: items),
+              data: (items) => _ReviewInboxList(
+                items: items,
+                sourceOpener: widget.sourceOpener ?? openPaperReaderSource,
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => _ReviewInboxError(error: error),
             ),
@@ -117,9 +125,13 @@ class _ReviewInboxHeader extends ConsumerWidget {
 }
 
 class _ReviewInboxList extends ConsumerWidget {
-  const _ReviewInboxList({required this.items});
+  const _ReviewInboxList({
+    required this.items,
+    required this.sourceOpener,
+  });
 
   final List<ReviewItem> items;
+  final PaperReaderSourceOpener sourceOpener;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -157,16 +169,23 @@ class _ReviewInboxList extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, index) => _ReviewInboxCard(item: items[index]),
+        itemBuilder: (context, index) => _ReviewInboxCard(
+          item: items[index],
+          sourceOpener: sourceOpener,
+        ),
       ),
     );
   }
 }
 
 class _ReviewInboxCard extends ConsumerWidget {
-  const _ReviewInboxCard({required this.item});
+  const _ReviewInboxCard({
+    required this.item,
+    required this.sourceOpener,
+  });
 
   final ReviewItem item;
+  final PaperReaderSourceOpener sourceOpener;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -258,8 +277,12 @@ class _ReviewInboxCard extends ConsumerWidget {
                   icon: const Icon(Icons.open_in_new),
                   label: Text(l10n.reviewInboxOpenSourceAction),
                   onPressed: firstIntent == null
-                      ? null
-                      : () => PaperReaderDeepLinkHandler.handleIncomingUri(
+                      ? () => showPaperReaderSourceUnavailable(
+                            context,
+                            item.sourceRefs,
+                            l10n.conceptGraphNoEvidence,
+                          )
+                      : () => sourceOpener(
                             ref,
                             firstIntent.toUri(),
                           ),

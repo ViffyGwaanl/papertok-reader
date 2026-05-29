@@ -3,15 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/providers/spaced_review.dart';
-import 'package:papertok_reader/service/deeplink/paperreader_deeplink_handler.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/knowledge/source_ref_evidence_list.dart';
 
 class SpacedReviewPage extends ConsumerStatefulWidget {
-  const SpacedReviewPage({super.key});
+  const SpacedReviewPage({
+    super.key,
+    this.sourceOpener,
+  });
+
+  final PaperReaderSourceOpener? sourceOpener;
 
   @override
   ConsumerState<SpacedReviewPage> createState() => _SpacedReviewPageState();
@@ -44,7 +49,10 @@ class _SpacedReviewPageState extends ConsumerState<SpacedReviewPage> {
           _SpacedReviewHeader(state: state),
           Expanded(
             child: state.items.when(
-              data: (items) => _SpacedReviewList(items: items),
+              data: (items) => _SpacedReviewList(
+                items: items,
+                sourceOpener: widget.sourceOpener ?? openPaperReaderSource,
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => _SpacedReviewError(error: error),
             ),
@@ -100,9 +108,13 @@ class _SpacedReviewHeader extends ConsumerWidget {
 }
 
 class _SpacedReviewList extends ConsumerWidget {
-  const _SpacedReviewList({required this.items});
+  const _SpacedReviewList({
+    required this.items,
+    required this.sourceOpener,
+  });
 
   final List<SpacedReviewItem> items;
+  final PaperReaderSourceOpener sourceOpener;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -140,16 +152,23 @@ class _SpacedReviewList extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, index) => _SpacedReviewCard(item: items[index]),
+        itemBuilder: (context, index) => _SpacedReviewCard(
+          item: items[index],
+          sourceOpener: sourceOpener,
+        ),
       ),
     );
   }
 }
 
 class _SpacedReviewCard extends ConsumerWidget {
-  const _SpacedReviewCard({required this.item});
+  const _SpacedReviewCard({
+    required this.item,
+    required this.sourceOpener,
+  });
 
   final SpacedReviewItem item;
+  final PaperReaderSourceOpener sourceOpener;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -245,8 +264,12 @@ class _SpacedReviewCard extends ConsumerWidget {
                   icon: const Icon(Icons.open_in_new),
                   label: Text(l10n.reviewInboxOpenSourceAction),
                   onPressed: firstIntent == null
-                      ? null
-                      : () => PaperReaderDeepLinkHandler.handleIncomingUri(
+                      ? () => showPaperReaderSourceUnavailable(
+                            context,
+                            item.sourceRefs,
+                            l10n.conceptGraphNoEvidence,
+                          )
+                      : () => sourceOpener(
                             ref,
                             firstIntent.toUri(),
                           ),

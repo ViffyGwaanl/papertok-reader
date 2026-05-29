@@ -64,7 +64,6 @@
 | ImageViewer 点击级知识卡写入 | 图片解析 sheet 的 `Card` action 和 producer 服务测试已覆盖。 | 补 `ImageViewer -> AI Image Analysis -> Card -> KnowledgeCardStore/ReviewItemStore` 点击级测试和可注入分析流。 |
 | 阅读页真实选中文本 fallback | `ExcerptMenu` 注入 reader context 的 `Card` 点击测试已覆盖。 | 补不注入 creator/context 时走真实 `epubPlayerKey` fallback 的 widget 证据。 |
 | Export conflict 到 Review Inbox 用户流 | service/provider/page 按分层证明可提交待审冲突。 | 补从导出页点击 `Send conflicts to Review` 后打开 Review Inbox 并 approve/apply 安全冲突的集成式测试。 |
-| 打开来源点击级 handoff | SourceRef deep-link parser、页面来源状态和 `Open source` 可见性已覆盖。 | 补 Review Inbox、Spaced Review、ConceptGraph 的可注入 source opener 和点击 URI 断言。 |
 | AI Chat 流式中不自动生成知识资产 | 回答完成后的显式 `知识卡` action 和 source grounding 已覆盖。 | 补 streaming 中按钮不可用且 producer 调用数为零的 UI gate 测试。 |
 
 | 能力 | 用户怎么用 | 状态 |

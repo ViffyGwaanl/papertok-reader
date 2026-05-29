@@ -14,6 +14,7 @@ import 'package:papertok_reader/service/review/spaced_review_store.dart';
 
 void main() {
   testWidgets('shows due review items and records ratings', (tester) async {
+    final opened = <Uri>[];
     final store = _FakeSpacedReviewStore([
       SpacedReviewItem(
         id: 'spaced-review:knowledge-card:kc-1',
@@ -48,11 +49,13 @@ void main() {
             _FakeKnowledgeCardStore(),
           ),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           locale: Locale('en'),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: SpacedReviewPage(),
+          home: SpacedReviewPage(
+            sourceOpener: (_, uri) async => opened.add(uri),
+          ),
         ),
       ),
     );
@@ -71,10 +74,72 @@ void main() {
     expect(find.text('The source book was deleted.'), findsOneWidget);
     expect(find.text('Open source'), findsOneWidget);
 
+    await tester.tap(find.text('Open source'));
+    await tester.pump();
+
+    expect(opened, hasLength(1));
+    expect(opened.single.scheme, 'paperreader');
+    expect(opened.single.host, 'reader');
+    expect(opened.single.path, '/open');
+    expect(opened.single.queryParameters['bookId'], '7');
+    expect(opened.single.queryParameters['cfi'], 'epubcfi(/6/8)');
+
     await tester.tap(find.text('Good'));
     await tester.pump();
 
     expect(store.recordedRatings, ['good']);
+  });
+
+  testWidgets('Open source explains unavailable review source', (tester) async {
+    final opened = <Uri>[];
+    final store = _FakeSpacedReviewStore([
+      SpacedReviewItem(
+        id: 'spaced-review:missing-source',
+        cardId: 'missing-source',
+        prompt: 'Missing source',
+        answer: 'This review item can explain why source jump is unavailable.',
+        dueAt: 1000,
+        sourceRefs: [
+          SourceRef(
+            unavailableReason: 'The source book was deleted.',
+            sourceKind: SourceRefKind.reader,
+          ),
+        ],
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spacedReviewStoreProvider.overrideWithValue(store),
+          spacedReviewKnowledgeCardStoreProvider.overrideWithValue(
+            _FakeKnowledgeCardStore(),
+          ),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: SpacedReviewPage(
+            sourceOpener: (_, uri) async => opened.add(uri),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.drag(find.byType(ListView), const Offset(0, -360));
+    await tester.pump();
+
+    await tester.tap(find.text('Open source'));
+    await tester.pump();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('The source book was deleted.'), findsWidgets);
+    expect(opened, isEmpty);
   });
 }
 

@@ -50,6 +50,67 @@ void main() {
     expect(find.text('Dismiss'), findsOneWidget);
   });
 
+  testWidgets('Open source emits reader URI through injected opener',
+      (tester) async {
+    final opened = <Uri>[];
+
+    await _pumpPage(
+      tester,
+      controller,
+      sourceOpener: (_, uri) async => opened.add(uri),
+    );
+
+    await tester.tap(find.text('Open source'));
+    await tester.pump();
+
+    expect(opened, hasLength(1));
+    expect(opened.single.scheme, 'paperreader');
+    expect(opened.single.host, 'reader');
+    expect(opened.single.path, '/open');
+    expect(opened.single.queryParameters['bookId'], '9');
+    expect(opened.single.queryParameters['cfi'], 'epubcfi(/6/12)');
+    expect(opened.single.queryParameters['href'], 'Text/chapter.xhtml');
+  });
+
+  testWidgets('Open source explains unavailable provenance without opening',
+      (tester) async {
+    final opened = <Uri>[];
+    final conflictController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'sync-conflict:missing-source',
+        sourceType: ReviewItemSourceType.syncConflict,
+        sourceId: 'missing-source',
+        title: 'Sync conflict: missing-source',
+        body: 'Conflict reason: source-missing',
+        status: ReviewItemStatus.pending,
+        sourceRefs: [
+          SourceRef(
+            sourceKind: SourceRefKind.unknown,
+            unavailableReason: 'sync-conflict-no-source',
+          ),
+        ],
+      ),
+    ]);
+
+    await _pumpPage(
+      tester,
+      conflictController,
+      sourceOpener: (_, uri) async => opened.add(uri),
+    );
+
+    expect(find.text('Sync conflict: missing-source'), findsOneWidget);
+    expect(find.text('sync-conflict-no-source'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -360));
+    await tester.pump();
+
+    await tester.tap(find.text('Open source'));
+    await tester.pump();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('sync-conflict-no-source'), findsWidgets);
+    expect(opened, isEmpty);
+  });
+
   testWidgets('evidence preview fits a narrow review list surface',
       (tester) async {
     tester.view.physicalSize = const Size(320, 900);
@@ -234,10 +295,8 @@ class _FakeReviewInboxController extends ReviewInboxController {
   }
 }
 
-Future<void> _pumpPage(
-  WidgetTester tester,
-  ReviewInboxController controller,
-) async {
+Future<void> _pumpPage(WidgetTester tester, ReviewInboxController controller,
+    {Future<void> Function(WidgetRef ref, Uri uri)? sourceOpener}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -247,7 +306,7 @@ Future<void> _pumpPage(
         localizationsDelegates: L10n.localizationsDelegates,
         supportedLocales: L10n.supportedLocales,
         locale: const Locale('en'),
-        home: const ReviewInboxPage(),
+        home: ReviewInboxPage(sourceOpener: sourceOpener),
       ),
     ),
   );
