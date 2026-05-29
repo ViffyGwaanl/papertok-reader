@@ -885,6 +885,14 @@
       }
     }
   },
+  "knowledgeExportAnkiPath": "Anki TSV：{path}",
+  "@knowledgeExportAnkiPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "knowledgeExportSafeDefault": "默认排除草稿、派生索引、API key 和待审冲突。",
   "knowledgeExportLoadFailed": "无法加载知识导出计划",
   "reviewInboxActionFailed": "审核操作失败",

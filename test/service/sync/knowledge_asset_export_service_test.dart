@@ -51,17 +51,23 @@ void main() {
 
   KnowledgeCard card({
     required String id,
+    String? title,
     KnowledgeCardReviewState reviewState = KnowledgeCardReviewState.pending,
     AiOutputOwnership ownership = AiOutputOwnership.aiGeneratedDraft,
     List<SourceRef>? sourceRefs,
     String quote = 'Traceable export evidence.',
+    String explanation = 'Export should preserve source refs safely.',
+    String? userNote,
+    List<String> conceptRefs = const <String>[],
   }) =>
       KnowledgeCard(
         id: id,
-        title: 'Exportable card $id',
+        title: title ?? 'Exportable card $id',
         quote: quote,
-        explanation: 'Export should preserve source refs safely.',
+        explanation: explanation,
+        userNote: userNote,
         sourceRefs: sourceRefs ?? [traceableRef()],
+        conceptRefs: conceptRefs,
         reviewState: reviewState,
         ownership: ownership,
         createdAt: 100,
@@ -130,6 +136,7 @@ void main() {
       snapshot.manifest.formats,
       contains(KnowledgeExportFormat.sourceCitationManifest),
     );
+    expect(snapshot.manifest.formats, contains(KnowledgeExportFormat.anki));
     expect(
       snapshot.manifest.sourceRefs.first.sourceTextSnippet!.length,
       lessThanOrEqualTo(SourceRef.maxSnippetChars),
@@ -190,7 +197,111 @@ void main() {
     expect(markdown, isNot(contains('ai_index.db')));
   });
 
-  test('markdown ignores excluded conflict secret and derived cache envelopes',
+  test('writes anki compatible tsv for included user assets only', () async {
+    final applied = await stageAppliedCard('kc-export');
+    final review = await spacedReviewStore.upsertFromKnowledgeCard(
+      applied,
+      now: 400,
+    );
+    await spacedReviewStore.recordReview(
+      review.id,
+      rating: SpacedReviewRating.good,
+      now: 500,
+    );
+    await cardStore.upsertCandidate(
+      card(
+        id: 'kc-draft',
+        quote: 'Draft-only evidence should not export.',
+        sourceRefs: [
+          traceableRef(
+            cfi: 'epubcfi(/6/20)',
+            snippet: 'Draft-only evidence should not export.',
+          ),
+        ],
+      ),
+    );
+
+    final result = await service.writeManifest();
+
+    expect(result.ankiFile, isNotNull);
+    expect(result.ankiFile!.path, endsWith('knowledge_export_anki.tsv'));
+    final anki = await result.ankiFile!.readAsString();
+    expect(anki, startsWith('#separator:tab\n#html:true'));
+    expect(anki, contains('Front\tBack\tSource'));
+    expect(anki, contains('Exportable card kc-export'));
+    expect(anki, contains('Traceable export evidence.'));
+    expect(anki, contains('Export should preserve source refs safely.'));
+    expect(anki, contains('paperreader://reader/open?bookId=7'));
+    expect(anki, isNot(contains('kc-draft')));
+    expect(anki, isNot(contains('Draft-only evidence should not export')));
+    expect(anki, isNot(contains('apiKey')));
+    expect(anki, isNot(contains('ai_index.db')));
+  });
+
+  test('anki export escapes html tabs and newlines without breaking columns',
+      () async {
+    final specialCard = card(
+      id: 'kc-special',
+      title: 'Front\t<title>&',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Quote\tline <one>\nline & two',
+      explanation: 'Explain > result',
+      userNote: 'User\tnote',
+      conceptRefs: const ['Graph <RAG>'],
+      sourceRefs: [
+        traceableRef(
+          snippet: 'Snippet\twith <html>\nsecond & line',
+        ),
+      ],
+    );
+    final snapshot = KnowledgeAssetExportSnapshot(
+      manifest: KnowledgeExportManifest(
+        id: 'knowledge-export-test',
+        createdAt: 1000,
+        formats: const [
+          KnowledgeExportFormat.markdown,
+          KnowledgeExportFormat.anki,
+          KnowledgeExportFormat.sourceCitationManifest,
+        ],
+        entityIds: [specialCard.id],
+        sourceRefs: specialCard.sourceRefs,
+      ),
+      included: [
+        KnowledgeSyncEnvelope(
+          id: specialCard.id,
+          entityType: KnowledgeSyncEntityType.knowledgeCard,
+          schemaVersion: 1,
+          updatedAt: 1000,
+          sourceRefs: specialCard.sourceRefs,
+          payload: specialCard.toJson(),
+        ),
+      ],
+      excluded: const [],
+      excludedReasons: const {},
+    );
+    final fakeService = _SnapshotKnowledgeAssetExportService(
+      rootDir: tempRoot,
+      snapshot: snapshot,
+    );
+
+    final result = await fakeService.writeManifest();
+    final lines = (await result.ankiFile!.readAsString()).trim().split('\n');
+    final row = lines.singleWhere((line) => line.startsWith('Front '));
+    final columns = row.split('\t');
+
+    expect(columns, hasLength(3));
+    expect(columns[0], 'Front &lt;title&gt;&amp;');
+    expect(columns[1], contains('Quote line &lt;one&gt;<br>line &amp; two'));
+    expect(columns[1], contains('Explain &gt; result'));
+    expect(columns[1], contains('User note'));
+    expect(columns[1], contains('Concepts: Graph &lt;RAG&gt;'));
+    expect(columns[2], contains('Snippet with &lt;html&gt;'));
+    expect(columns[2], contains('second &amp; line'));
+    expect(row, isNot(contains('<title>&')));
+  });
+
+  test('exports ignore excluded conflict secret and derived cache envelopes',
       () async {
     final includedCard = card(
       id: 'kc-included',
@@ -266,6 +377,12 @@ void main() {
     expect(markdown, isNot(contains('super-secret-value')));
     expect(markdown, isNot(contains('ai_index.db')));
     expect(markdown, isNot(contains('derived-cache')));
+    final anki = await result.ankiFile!.readAsString();
+    expect(anki, contains('Included card evidence.'));
+    expect(anki, isNot(contains('Conflict should stay out')));
+    expect(anki, isNot(contains('super-secret-value')));
+    expect(anki, isNot(contains('ai_index.db')));
+    expect(anki, isNot(contains('derived-cache')));
   });
 
   test('holds persisted conflict envelopes out of export manifest', () async {

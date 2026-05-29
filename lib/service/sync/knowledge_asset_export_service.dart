@@ -40,11 +40,13 @@ class KnowledgeAssetExportManifestResult {
   const KnowledgeAssetExportManifestResult({
     required this.file,
     this.markdownFile,
+    this.ankiFile,
     required this.snapshot,
   });
 
   final File file;
   final File? markdownFile;
+  final File? ankiFile;
   final KnowledgeAssetExportSnapshot snapshot;
 }
 
@@ -71,6 +73,8 @@ class KnowledgeAssetExportService {
       File(p.join(knowledgeDir.path, 'knowledge_export_manifest_v1.json'));
   File get markdownFile =>
       File(p.join(knowledgeDir.path, 'knowledge_export_v1.md'));
+  File get ankiFile =>
+      File(p.join(knowledgeDir.path, 'knowledge_export_anki.tsv'));
 
   Future<KnowledgeAssetExportSnapshot> buildSnapshot({
     bool includeDrafts = false,
@@ -103,6 +107,7 @@ class KnowledgeAssetExportService {
         createdAt: timestamp,
         formats: const [
           KnowledgeExportFormat.markdown,
+          KnowledgeExportFormat.anki,
           KnowledgeExportFormat.sourceCitationManifest,
         ],
         entityIds: includedIds,
@@ -135,9 +140,11 @@ class KnowledgeAssetExportService {
       const JsonEncoder.withIndent('  ').convert(snapshot.manifest.toJson()),
     );
     await markdownFile.writeAsString(_buildMarkdown(snapshot));
+    await ankiFile.writeAsString(_buildAnkiTsv(snapshot));
     return KnowledgeAssetExportManifestResult(
       file: manifestFile,
       markdownFile: markdownFile,
+      ankiFile: ankiFile,
       snapshot: snapshot,
     );
   }
@@ -222,6 +229,66 @@ class KnowledgeAssetExportService {
     return buffer.toString();
   }
 
+  String _buildAnkiTsv(KnowledgeAssetExportSnapshot snapshot) {
+    final buffer = StringBuffer()
+      ..writeln('#separator:tab')
+      ..writeln('#html:true')
+      ..writeln('Front\tBack\tSource');
+
+    for (final envelope in snapshot.included) {
+      switch (envelope.entityType) {
+        case KnowledgeSyncEntityType.knowledgeCard:
+          final card = KnowledgeCard.fromJson(envelope.payload);
+          _writeAnkiRow(
+            buffer,
+            front: card.title,
+            back: [
+              card.quote,
+              card.explanation,
+              if ((card.userNote ?? '').trim().isNotEmpty) card.userNote!,
+              if (card.conceptRefs.isNotEmpty)
+                'Concepts: ${card.conceptRefs.join(', ')}',
+            ].join('\n\n'),
+            sourceRefs: card.sourceRefs,
+          );
+        case KnowledgeSyncEntityType.reviewHistory:
+          final item = SpacedReviewItem.fromJson(envelope.payload);
+          _writeAnkiRow(
+            buffer,
+            front: item.prompt,
+            back: item.answer,
+            sourceRefs: item.sourceRefs,
+          );
+        case KnowledgeSyncEntityType.reviewItem:
+        case KnowledgeSyncEntityType.aiDraft:
+        case KnowledgeSyncEntityType.derivedIndex:
+        case KnowledgeSyncEntityType.secret:
+        case KnowledgeSyncEntityType.unknown:
+          break;
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  void _writeAnkiRow(
+    StringBuffer buffer, {
+    required String front,
+    required String back,
+    required List<SourceRef> sourceRefs,
+  }) {
+    final normalizedFront = _paragraph(front);
+    final normalizedBack = _paragraph(back);
+    if (normalizedFront.isEmpty || normalizedBack.isEmpty) return;
+
+    buffer
+      ..write(_ankiField(normalizedFront))
+      ..write('\t')
+      ..write(_ankiField(normalizedBack))
+      ..write('\t')
+      ..writeln(_ankiField(_sourceSummary(sourceRefs)));
+  }
+
   void _writeCard(StringBuffer buffer, KnowledgeCard card) {
     buffer
       ..writeln('## ${_heading(card.title)}')
@@ -287,6 +354,29 @@ class KnowledgeAssetExportService {
     }
   }
 
+  String _sourceSummary(List<SourceRef> refs) {
+    final evidenceRefs = refs.where((ref) => ref.hasEvidence).toList();
+    if (evidenceRefs.isEmpty) return '';
+    return evidenceRefs.map((ref) {
+      final parts = <String>[
+        [
+          ref.sourceTitle,
+          ref.locationLabel,
+          ref.sourceKind.asString,
+        ]
+            .whereType<String>()
+            .where((part) => part.trim().isNotEmpty)
+            .join(' · '),
+        if ((ref.jumpLink ?? '').trim().isNotEmpty) ref.jumpLink!.trim(),
+        if ((ref.sourceTextSnippet ?? '').trim().isNotEmpty)
+          ref.sourceTextSnippet!.trim(),
+        if ((ref.unavailableReason ?? '').trim().isNotEmpty)
+          ref.unavailableReason!.trim(),
+      ].where((part) => part.trim().isNotEmpty).toList(growable: false);
+      return parts.join('\n');
+    }).join('\n\n');
+  }
+
   String _heading(String value) {
     final normalized = _paragraph(value).replaceAll('\n', ' ').trim();
     return normalized.isEmpty ? 'Untitled' : normalized.replaceAll('#', r'\#');
@@ -304,5 +394,22 @@ class KnowledgeAssetExportService {
 
   String _inline(String value) {
     return _paragraph(value).replaceAll('\n', ' ').trim();
+  }
+
+  String _ankiField(String value) {
+    final normalized = _paragraph(value)
+        .replaceAll('\t', ' ')
+        .split('\n')
+        .map((line) => _htmlEscape(line.trim()))
+        .where((line) => line.isNotEmpty)
+        .join('<br>');
+    return normalized;
+  }
+
+  String _htmlEscape(String value) {
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
   }
 }
