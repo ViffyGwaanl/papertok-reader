@@ -42,6 +42,38 @@ void main() {
     expect(calls, 2);
   });
 
+  test('queue runner respects larger retry budgets', () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final db = AiIndexDatabase.forTesting(path: ':memory:', factory: factory);
+    final repo = AiLibraryIndexQueueRepository(database: db);
+
+    await repo.enqueueBook(7, maxRetries: 3);
+
+    var calls = 0;
+    final runner = AiLibraryIndexQueueRunner(
+      repository: repo,
+      executor: (bookId,
+          {required rebuild, required cancelToken, required onProgress}) async {
+        calls += 1;
+        throw StateError('network closed');
+      },
+    );
+
+    for (var expectedRetry = 1; expectedRetry <= 3; expectedRetry++) {
+      final job = await runner.runOnce();
+      expect(job, isNotNull);
+      expect(job!.status, AiLibraryIndexJobStatus.queued);
+      expect(job.retryCount, expectedRetry);
+    }
+
+    final failed = await runner.runOnce();
+    expect(failed, isNotNull);
+    expect(failed!.status, AiLibraryIndexJobStatus.failed);
+    expect(failed.retryCount, 3);
+    expect(calls, 4);
+  });
+
   test('normalizeAfterRestart converts running to queued', () async {
     sqfliteFfiInit();
     final factory = databaseFactoryFfi;

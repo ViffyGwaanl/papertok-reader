@@ -242,6 +242,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     final rerankProviderName =
         Prefs().getAiProviderMeta(rerankProviderId)?.name ?? rerankProviderId;
     final rerankModel = Prefs().aiLibraryIndexRerankModelEffective;
+    final retryCount = Prefs().aiLibraryIndexQueueMaxRetries;
 
     final chunkTargetChars = Prefs().aiLibraryIndexChunkTargetChars;
     final chunkMaxChars = Prefs().aiLibraryIndexChunkMaxChars;
@@ -261,13 +262,14 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       chunkOverlapChars,
       maxChapterChars,
     );
-    final line3 = _rerankSummaryText(
+    final line3 = '${_retrySummaryText(context, retryCount)} · '
+        '${_rerankSummaryText(
       context,
       enabled: rerankEnabled,
       mode: Prefs().aiLibraryIndexRerankMode,
       providerName: rerankProviderName,
       model: rerankModel,
-    );
+    )}';
 
     return ListTile(
       leading: const Icon(Icons.tune),
@@ -297,6 +299,11 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     return zh
         ? '重排：$modeLabel · $providerName · $model'
         : 'Rerank: $modeLabel · $providerName · $model';
+  }
+
+  String _retrySummaryText(BuildContext context, int retryCount) {
+    final zh = _isZh(context);
+    return zh ? '失败重试：$retryCount 次' : 'Retries: $retryCount';
   }
 
   String _rerankEnabledTitle(BuildContext context) =>
@@ -340,6 +347,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   String _rerankTimeoutLabel(BuildContext context) =>
       _isZh(context) ? '重排超时（秒）' : 'Rerank timeout (sec)';
 
+  String _retryCountLabel(BuildContext context) =>
+      _isZh(context) ? '失败重试次数' : 'Failed job retries';
+
   Future<void> _showIndexConfigDialog(BuildContext context) async {
     final l10n = L10n.of(context);
 
@@ -381,6 +391,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     );
     final timeoutController = TextEditingController(
       text: Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds.toString(),
+    );
+    final retryController = TextEditingController(
+      text: Prefs().aiLibraryIndexQueueMaxRetries.toString(),
     );
     final rerankMaxCandidatesController = TextEditingController(
       text: Prefs().aiLibraryIndexRerankMaxCandidates.toString(),
@@ -741,6 +754,15 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                               labelText: l10n.aiLibraryIndexConfigTimeoutLabel,
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: retryController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              labelText: _retryCountLabel(context),
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           SwitchListTile.adaptive(
                             contentPadding: EdgeInsets.zero,
@@ -903,6 +925,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                         batchSizeController.text =
                             AiBookIndexer.defaultEmbeddingBatchSize.toString();
                         timeoutController.text = '60';
+                        retryController.text = '3';
                         rerankMaxCandidatesController.text = '40';
                         rerankMaxDocumentCharsController.text = '1800';
                         rerankTimeoutController.text = '20';
@@ -946,6 +969,10 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                         timeoutController.text,
                         Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds,
                       );
+                      final retryCount = parseIntOr(
+                        retryController.text,
+                        Prefs().aiLibraryIndexQueueMaxRetries,
+                      );
                       final rerankMaxCandidates = parseIntOr(
                         rerankMaxCandidatesController.text,
                         Prefs().aiLibraryIndexRerankMaxCandidates,
@@ -986,6 +1013,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                       Prefs().aiLibraryIndexEmbeddingBatchSize = batch;
                       Prefs().aiLibraryIndexEmbeddingsTimeoutSeconds =
                           timeoutSec;
+                      Prefs().aiLibraryIndexQueueMaxRetries = retryCount;
 
                       Navigator.of(ctx).pop();
 
@@ -1014,6 +1042,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       maxChapterController.dispose();
       batchSizeController.dispose();
       timeoutController.dispose();
+      retryController.dispose();
       rerankMaxCandidatesController.dispose();
       rerankMaxDocumentCharsController.dispose();
       rerankTimeoutController.dispose();
@@ -1283,6 +1312,13 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                         tooltip: l10n.aiLibraryIndexActionCancel,
                         onPressed: () => queueSvc.cancelJob(j.id),
                         icon: const Icon(Icons.cancel_outlined),
+                      )
+                    else if (j.status == AiLibraryIndexJobStatus.failed ||
+                        j.status == AiLibraryIndexJobStatus.cancelled)
+                      IconButton(
+                        tooltip: _localizedRetryActionLabel(context),
+                        onPressed: () => queueSvc.retryJob(j.id),
+                        icon: const Icon(Icons.replay_outlined),
                       ),
                   ],
                 ),
@@ -1500,6 +1536,56 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
         : 'retry $retryCount/$maxRetries';
   }
 
+  String _localizedRetryActionLabel(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'zh'
+        ? '继续索引'
+        : 'Continue indexing';
+  }
+
+  String _localizedIncompleteIndexText(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'zh'
+        ? '未完成，可继续'
+        : 'Incomplete, can continue';
+  }
+
+  String _localizedFailedIndexText(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'zh'
+        ? '索引中断，可继续'
+        : 'Index failed, can continue';
+  }
+
+  String _localizedChunkCountText(BuildContext context, int chunkCount) {
+    return Localizations.localeOf(context).languageCode == 'zh'
+        ? 'chunks: $chunkCount'
+        : 'chunks: $chunkCount';
+  }
+
+  String? _chapterProgressText(BuildContext context, AiBookIndexInfo? info) {
+    final total = info?.totalChapters ?? 0;
+    if (total <= 0) return null;
+    final done = (info?.doneChapters ?? 0).clamp(0, total);
+    final percent = ((done / total) * 100).round();
+    return Localizations.localeOf(context).languageCode == 'zh'
+        ? '章节 $done/$total ($percent%)'
+        : 'chapters $done/$total ($percent%)';
+  }
+
+  bool _canContinueIndex(AiBookIndexInfo? info) {
+    if (info == null || info.chunkCount <= 0) return false;
+    final status = (info.indexStatus ?? '').trim();
+    if (status == 'failed' || status == 'running') return true;
+    final total = info.totalChapters ?? 0;
+    final done = info.doneChapters ?? 0;
+    return total > 0 && done < total;
+  }
+
+  String? _indexContinuationText(BuildContext context, AiBookIndexInfo? info) {
+    if (!_canContinueIndex(info)) return null;
+    final status = (info?.indexStatus ?? '').trim();
+    if (status == 'failed') return _localizedFailedIndexText(context);
+    return _localizedIncompleteIndexText(context);
+  }
+
   String _formatPercent(double value) {
     return AiLibraryIndexProgressText.formatPercent(value);
   }
@@ -1507,9 +1593,11 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   Widget _buildBookTile(BuildContext context, _BookRow r) {
     final book = r.result.book;
     final selected = _selectedBookIds.contains(book.id);
+    final queueSvc = ref.read(aiLibraryIndexQueueProvider.notifier);
 
     IconData statusIcon = Icons.book_outlined;
     Color? statusColor;
+    final canContinue = _canContinueIndex(r.indexInfo);
 
     switch (r.status) {
       case _BookIndexStatus.unindexed:
@@ -1518,11 +1606,17 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
         statusIcon = Icons.error_outline;
         statusColor = Theme.of(context).colorScheme.tertiary;
       case _BookIndexStatus.indexed:
-        statusIcon = Icons.check_circle_outline;
-        statusColor = Theme.of(context).colorScheme.primary;
+        statusIcon = canContinue
+            ? Icons.warning_amber_outlined
+            : Icons.check_circle_outline;
+        statusColor = canContinue
+            ? Theme.of(context).colorScheme.tertiary
+            : Theme.of(context).colorScheme.primary;
     }
 
     final chunkCount = r.indexInfo?.chunkCount ?? 0;
+    final chapterProgress = _chapterProgressText(context, r.indexInfo);
+    final continuationText = _indexContinuationText(context, r.indexInfo);
 
     return ListTile(
       leading: _selecting
@@ -1543,11 +1637,25 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       subtitle: Text(
         [
           book.author,
-          if (!_selecting && chunkCount > 0) 'chunks: $chunkCount',
+          if (!_selecting && chapterProgress != null) chapterProgress,
+          if (!_selecting && chunkCount > 0)
+            _localizedChunkCountText(context, chunkCount),
+          if (!_selecting && continuationText != null) continuationText,
         ].where((e) => e.trim().isNotEmpty).join(' · '),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
+      trailing: !_selecting && canContinue
+          ? IconButton(
+              tooltip: _localizedRetryActionLabel(context),
+              icon: const Icon(Icons.replay_outlined),
+              onPressed: () async {
+                AnxToast.show(_localizedRetryActionLabel(context));
+                await queueSvc.enqueueBook(book.id);
+                _scheduleBooksRefresh(const Duration(milliseconds: 500));
+              },
+            )
+          : null,
       onTap: _selecting
           ? () {
               setState(() {

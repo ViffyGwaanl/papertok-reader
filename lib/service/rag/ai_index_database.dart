@@ -4,7 +4,6 @@ import 'package:papertok_reader/utils/get_path/databases_path.dart';
 import 'package:papertok_reader/utils/log/common.dart';
 import 'package:papertok_reader/utils/platform_utils.dart';
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'ai_index_schema.dart';
@@ -23,6 +22,8 @@ class AiBookIndexInfo {
     this.chunkMinChars,
     this.chunkOverlapChars,
     this.maxChapterCharacters,
+    this.doneChapters,
+    this.totalChapters,
     this.createdAt,
     this.updatedAt,
   });
@@ -43,6 +44,10 @@ class AiBookIndexInfo {
   final int? chunkMinChars;
   final int? chunkOverlapChars;
   final int? maxChapterCharacters;
+
+  /// Persisted book-level progress, including failed/partial indexes.
+  final int? doneChapters;
+  final int? totalChapters;
 
   final int? createdAt;
   final int? updatedAt;
@@ -198,6 +203,8 @@ class AiIndexDatabase {
       chunkMinChars: (r['chunk_min_chars'] as num?)?.toInt(),
       chunkOverlapChars: (r['chunk_overlap_chars'] as num?)?.toInt(),
       maxChapterCharacters: (r['max_chapter_characters'] as num?)?.toInt(),
+      doneChapters: (r['done_chapters'] as num?)?.toInt(),
+      totalChapters: (r['total_chapters'] as num?)?.toInt(),
       createdAt: (r['created_at'] as num?)?.toInt(),
       updatedAt: (r['updated_at'] as num?)?.toInt(),
     );

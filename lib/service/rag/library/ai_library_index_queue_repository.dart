@@ -72,6 +72,19 @@ class AiLibraryIndexQueueRepository {
     return rows.map(_map).toList(growable: false);
   }
 
+  Future<AiLibraryIndexJob?> getLatestJobForBook(int bookId) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'ai_index_jobs',
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+      orderBy: 'created_at DESC, id DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return _map(rows.first);
+  }
+
   Future<List<AiLibraryIndexJob>> listRunnableJobs() async {
     final db = await _db.database;
     final rows = await db.query(
@@ -90,6 +103,7 @@ class AiLibraryIndexQueueRepository {
     int id, {
     AiLibraryIndexJobStatus? status,
     int? retryCount,
+    int? maxRetries,
     double? progress,
     String? phase,
     int? doneChapters,
@@ -118,6 +132,7 @@ class AiLibraryIndexQueueRepository {
       values['status'] = AiLibraryIndexJob.statusToDb(status);
     }
     if (retryCount != null) values['retry_count'] = retryCount;
+    if (maxRetries != null) values['max_retries'] = maxRetries;
     if (progress != null) values['progress'] = progress;
     if (clearProgressDetails) {
       values['phase'] = null;
@@ -173,6 +188,22 @@ class AiLibraryIndexQueueRepository {
 
     await db.update('ai_index_jobs', values, where: 'id = ?', whereArgs: [id]);
     return (await getJob(id))!;
+  }
+
+  Future<AiLibraryIndexJob> requeueJob(
+    int id, {
+    required int maxRetries,
+  }) {
+    return updateJob(
+      id,
+      status: AiLibraryIndexJobStatus.queued,
+      retryCount: 0,
+      maxRetries: maxRetries,
+      progress: 0,
+      clearCurrentChapter: true,
+      clearProgressDetails: true,
+      clearLastError: true,
+    );
   }
 
   Future<void> deleteJob(int id) async {

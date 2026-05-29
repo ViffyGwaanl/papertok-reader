@@ -1163,6 +1163,8 @@ Requirements:
       'aiLibraryIndexEmbeddingBatchSizeV1';
   static const String _aiLibraryIndexEmbeddingsTimeoutSecKey =
       'aiLibraryIndexEmbeddingsTimeoutSecV1';
+  static const String _aiLibraryIndexQueueMaxRetriesKey =
+      'aiLibraryIndexQueueMaxRetriesV1';
 
   static const String _memorySemanticSearchEnabledV1Key =
       'memorySemanticSearchEnabledV1';
@@ -1521,6 +1523,21 @@ Requirements:
       touchAiSettingsUpdatedAt();
     }
     prefs.setInt(_aiLibraryIndexEmbeddingsTimeoutSecKey, v);
+    notifyListeners();
+  }
+
+  /// Automatic retry attempts after a library indexing job fails.
+  int get aiLibraryIndexQueueMaxRetries {
+    final v = prefs.getInt(_aiLibraryIndexQueueMaxRetriesKey) ?? 3;
+    return v.clamp(0, 10);
+  }
+
+  set aiLibraryIndexQueueMaxRetries(int value) {
+    final v = value.clamp(0, 10);
+    if (aiLibraryIndexQueueMaxRetries != v) {
+      touchAiSettingsUpdatedAt();
+    }
+    prefs.setInt(_aiLibraryIndexQueueMaxRetriesKey, v);
     notifyListeners();
   }
 

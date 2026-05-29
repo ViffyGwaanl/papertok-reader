@@ -31,6 +31,8 @@ void main() {
     expect(names, contains('failed_reason'));
     expect(names, contains('retry_count'));
     expect(names, contains('index_version'));
+    expect(names, contains('done_chapters'));
+    expect(names, contains('total_chapters'));
 
     final jobCols = await handle.rawQuery('PRAGMA table_info(ai_index_jobs)');
     final jobNames = jobCols.map((c) => c['name']?.toString()).toList();
@@ -47,6 +49,31 @@ void main() {
     expect(jobNames, contains('last_embedding_batch_size'));
     expect(jobNames, contains('last_embedding_dim'));
     expect(jobNames, contains('force_rebuild'));
+  });
+
+  test('AiIndexDatabase maps persisted chapter progress on book index info',
+      () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+
+    final db = AiIndexDatabase.forTesting(path: ':memory:', factory: factory);
+    addTearDown(db.close);
+    final handle = await db.database;
+
+    await handle.insert('ai_book_index', {
+      'book_id': 88,
+      'chunk_count': 321,
+      'done_chapters': 10,
+      'total_chapters': 1000,
+      'created_at': 1,
+      'updated_at': 2,
+    });
+
+    final info = await db.getBookIndexInfo(88);
+    expect(info, isNotNull);
+    expect(info!.chunkCount, 321);
+    expect(info.doneChapters, 10);
+    expect(info.totalChapters, 1000);
   });
 
   test('AiIndexDatabase upgrades v4 ai_index_jobs with progress columns',
@@ -93,6 +120,11 @@ void main() {
     expect(jobNames, contains('last_embedding_batch_size'));
     expect(jobNames, contains('last_embedding_dim'));
     expect(jobNames, contains('force_rebuild'));
+
+    final indexCols = await handle.rawQuery('PRAGMA table_info(ai_book_index)');
+    final indexNames = indexCols.map((c) => c['name']?.toString()).toList();
+    expect(indexNames, contains('done_chapters'));
+    expect(indexNames, contains('total_chapters'));
   });
 
   test('AiIndexDatabase upgrades v5 ai_chunks with RAG structure columns',

@@ -132,6 +132,8 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
   // UI refresh throttling while a job is running.
   int _lastProgressRefreshMs = 0;
 
+  int get _maxRetries => Prefs().aiLibraryIndexQueueMaxRetries;
+
   Future<void> _init() async {
     await _runner.normalizeAfterRestart();
     await refresh();
@@ -179,9 +181,35 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
     int bookId, {
     bool forceRebuild = false,
   }) async {
+    final maxRetries = _maxRetries;
+    if (!forceRebuild) {
+      final existing = await _repo.getLatestJobForBook(bookId);
+      if (existing != null) {
+        switch (existing.status) {
+          case AiLibraryIndexJobStatus.queued:
+          case AiLibraryIndexJobStatus.running:
+          case AiLibraryIndexJobStatus.paused:
+            await refresh();
+            unawaited(_tick());
+            return existing;
+          case AiLibraryIndexJobStatus.failed:
+          case AiLibraryIndexJobStatus.cancelled:
+            final job = await _repo.requeueJob(
+              existing.id,
+              maxRetries: maxRetries,
+            );
+            await refresh();
+            unawaited(_tick());
+            return job;
+          case AiLibraryIndexJobStatus.succeeded:
+            break;
+        }
+      }
+    }
+
     final job = await _repo.enqueueBook(
       bookId,
-      maxRetries: 1,
+      maxRetries: maxRetries,
       forceRebuild: forceRebuild,
     );
     await refresh();
@@ -195,13 +223,7 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
   }) async {
     final out = <AiLibraryIndexJob>[];
     for (final id in bookIds.where((e) => e > 0)) {
-      out.add(
-        await _repo.enqueueBook(
-          id,
-          maxRetries: 1,
-          forceRebuild: forceRebuild,
-        ),
-      );
+      out.add(await enqueueBook(id, forceRebuild: forceRebuild));
     }
     await refresh();
     unawaited(_tick());
@@ -239,6 +261,12 @@ class AiLibraryIndexQueueService extends StateNotifier<AiLibraryIndexQueueState>
   Future<void> cancelJob(int jobId) async {
     await _runner.cancelJob(jobId);
     await refresh();
+  }
+
+  Future<void> retryJob(int jobId) async {
+    await _repo.requeueJob(jobId, maxRetries: _maxRetries);
+    await refresh();
+    unawaited(_tick());
   }
 
   Future<void> clearFinishedJobs() async {

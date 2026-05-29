@@ -321,6 +321,9 @@ class AiBookIndexer {
           'chunk_overlap_chars': chunkOverlapChars,
           'max_chapter_characters': maxChapterCharacters,
           'chunk_count': chunkCount,
+          'done_chapters':
+              shouldClearBeforeBuild ? 0 : (existing?.doneChapters ?? 0),
+          'total_chapters': chapters.length,
           'updated_at': nowMs,
           // v2 columns
           'index_status': 'running',
@@ -333,11 +336,11 @@ class AiBookIndexer {
       );
     });
 
-    try {
-      var doneChapters = 0;
-      var doneChunks = 0;
-      var totalChunks = 0;
+    var doneChapters = 0;
+    var doneChunks = 0;
+    var totalChunks = 0;
 
+    try {
       void throwIfCancelled() {
         if (shouldCancel?.call() == true) {
           throw const AiBookIndexCancelledException();
@@ -374,12 +377,26 @@ class AiBookIndexer {
           AnxLog.warning(
               'AiIndex: failed to fetch chapter href=$href error=$e');
           doneChapters++;
+          await _updateBookIndexChapterProgress(
+            db,
+            bookId,
+            doneChapters: doneChapters,
+            totalChapters: chapters.length,
+            doneChunks: doneChunks,
+          );
           continue;
         }
 
         final rawText = chapterText.trim();
         if (rawText.isEmpty) {
           doneChapters++;
+          await _updateBookIndexChapterProgress(
+            db,
+            bookId,
+            doneChapters: doneChapters,
+            totalChapters: chapters.length,
+            doneChunks: doneChunks,
+          );
           continue;
         }
 
@@ -392,6 +409,13 @@ class AiBookIndexer {
         );
         if (chunks.isEmpty) {
           doneChapters++;
+          await _updateBookIndexChapterProgress(
+            db,
+            bookId,
+            doneChapters: doneChapters,
+            totalChapters: chapters.length,
+            doneChunks: doneChunks,
+          );
           continue;
         }
 
@@ -458,6 +482,13 @@ class AiBookIndexer {
               currentChapterHref: href,
               currentChapterTitle: title,
             ),
+          );
+          await _updateBookIndexChapterProgress(
+            db,
+            bookId,
+            doneChapters: doneChapters,
+            totalChapters: chapters.length,
+            doneChunks: doneChunks,
           );
           continue;
         }
@@ -570,6 +601,13 @@ class AiBookIndexer {
             currentChapterTitle: title,
           ),
         );
+        await _updateBookIndexChapterProgress(
+          db,
+          bookId,
+          doneChapters: doneChapters,
+          totalChapters: chapters.length,
+          doneChunks: doneChunks,
+        );
       }
 
       throwIfCancelled();
@@ -599,6 +637,8 @@ class AiBookIndexer {
         'ai_book_index',
         {
           'chunk_count': actualChunkCount,
+          'done_chapters': chapters.length,
+          'total_chapters': chapters.length,
           'updated_at': indexedAt,
           'indexed_at': indexedAt,
           'index_status': 'succeeded',
@@ -612,7 +652,13 @@ class AiBookIndexer {
       return info ??
           AiBookIndexInfo(bookId: bookId, chunkCount: actualChunkCount);
     } catch (e) {
-      await _markBookIndexFailed(db, bookId, e);
+      await _markBookIndexFailed(
+        db,
+        bookId,
+        e,
+        doneChapters: doneChapters,
+        totalChapters: chapters.length,
+      );
       rethrow;
     }
   }
@@ -671,17 +717,41 @@ class AiBookIndexer {
   Future<void> _markBookIndexFailed(
     DatabaseExecutor executor,
     int bookId,
-    Object error,
-  ) async {
+    Object error, {
+    required int doneChapters,
+    required int totalChapters,
+  }) async {
     final failedAt = DateTime.now().millisecondsSinceEpoch;
     final chunkCount = await _countBookChunks(executor, bookId);
     await executor.update(
       'ai_book_index',
       {
         'chunk_count': chunkCount,
+        'done_chapters': doneChapters,
+        'total_chapters': totalChapters,
         'updated_at': failedAt,
         'index_status': 'failed',
         'failed_reason': error.toString(),
+      },
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+    );
+  }
+
+  Future<void> _updateBookIndexChapterProgress(
+    DatabaseExecutor executor,
+    int bookId, {
+    required int doneChapters,
+    required int totalChapters,
+    required int doneChunks,
+  }) async {
+    await executor.update(
+      'ai_book_index',
+      {
+        'done_chapters': doneChapters,
+        'total_chapters': totalChapters,
+        'chunk_count': doneChunks,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
       },
       where: 'book_id = ?',
       whereArgs: [bookId],

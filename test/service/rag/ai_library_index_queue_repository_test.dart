@@ -16,6 +16,7 @@ void main() {
     final job = await repo.enqueueBook(42, maxRetries: 1, forceRebuild: true);
     expect(job.bookId, 42);
     expect(job.status, AiLibraryIndexJobStatus.queued);
+    expect(job.maxRetries, 1);
     expect(job.forceRebuild, isTrue);
 
     final updated = await repo.updateJob(
@@ -60,6 +61,52 @@ void main() {
 
     final list = await repo.listJobs();
     expect(list.length, 1);
+  });
+
+  test('AiLibraryIndexQueueRepository can requeue a failed job', () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final db = AiIndexDatabase.forTesting(path: ':memory:', factory: factory);
+    final repo = AiLibraryIndexQueueRepository(database: db);
+
+    final job = await repo.enqueueBook(44, maxRetries: 1);
+    await repo.updateJob(
+      job.id,
+      status: AiLibraryIndexJobStatus.failed,
+      retryCount: 1,
+      progress: 0.4,
+      phase: 'embed',
+      doneChapters: 10,
+      totalChapters: 1000,
+      lastError: 'network failed',
+    );
+
+    final requeued = await repo.requeueJob(job.id, maxRetries: 4);
+
+    expect(requeued.status, AiLibraryIndexJobStatus.queued);
+    expect(requeued.retryCount, 0);
+    expect(requeued.maxRetries, 4);
+    expect(requeued.progress, 0);
+    expect(requeued.phase, isNull);
+    expect(requeued.doneChapters, 0);
+    expect(requeued.totalChapters, 0);
+    expect(requeued.lastError, isNull);
+  });
+
+  test('AiLibraryIndexQueueRepository returns latest job for a book', () async {
+    sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final db = AiIndexDatabase.forTesting(path: ':memory:', factory: factory);
+    final repo = AiLibraryIndexQueueRepository(database: db);
+
+    final first = await repo.enqueueBook(45, maxRetries: 1);
+    final second = await repo.enqueueBook(45, maxRetries: 3);
+
+    final latest = await repo.getLatestJobForBook(45);
+
+    expect(latest, isNotNull);
+    expect(latest!.id, second.id);
+    expect(latest.id, isNot(first.id));
   });
 
   test('AiLibraryIndexQueueRepository can clear transient job fields',
