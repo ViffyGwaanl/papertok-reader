@@ -1,6 +1,7 @@
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_quick_prompt_chip.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/providers/ai_chat.dart';
 import 'package:papertok_reader/providers/ai_draft_input.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
@@ -28,6 +29,7 @@ class AiMultiTabChat extends StatefulWidget {
     this.resizeToAvoidBottomInset = true,
     this.emptyStateBuilder,
     this.onTapTabBar,
+    this.initialSourceRef,
   });
 
   final String? initialMessage;
@@ -40,6 +42,7 @@ class AiMultiTabChat extends StatefulWidget {
   final bool inputSafeAreaBottom;
   final bool resizeToAvoidBottomInset;
   final Widget Function(BuildContext, void Function(String))? emptyStateBuilder;
+  final SourceRef? initialSourceRef;
 
   /// Called when the user taps the empty background of the tab bar strip.
   /// In lock mode (reading page bottom sheet) this should close the sheet;
@@ -62,20 +65,23 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
 
   // ── External interface (used by ReadingPage / ExcerptMenu) ────────────────
 
-  TextEditingController? get inputController =>
-      _tabs.isEmpty ? null : _tabs[_activeTab].chatKey.currentState?.inputController;
+  TextEditingController? get inputController => _tabs.isEmpty
+      ? null
+      : _tabs[_activeTab].chatKey.currentState?.inputController;
 
   void prefillDraft({
     String? message,
     List<AttachmentItem>? attachments,
     bool replaceAttachments = false,
+    SourceRef? sourceRef,
   }) {
     if (_tabs.isEmpty) return;
     _tabs[_activeTab].chatKey.currentState?.prefillDraft(
-      message: message,
-      attachments: attachments,
-      replaceAttachments: replaceAttachments,
-    );
+          message: message,
+          attachments: attachments,
+          replaceAttachments: replaceAttachments,
+          sourceRef: sourceRef,
+        );
   }
 
   void sendDraft() {
@@ -132,6 +138,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
                       // initialMessage in initState so subsequent rebuilds with
                       // the same parameter are safe.
                       initialMessage: i == 0 ? widget.initialMessage : null,
+                      initialSourceRef: i == 0 ? widget.initialSourceRef : null,
                       sendImmediate: i == 0 ? widget.sendImmediate : false,
                       quickPromptChips: widget.quickPromptChips,
                       // Only the active tab gets the shared scroll controller
@@ -167,42 +174,42 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
       onTap: widget.onTapTabBar,
       behavior: HitTestBehavior.translucent,
       child: SizedBox(
-      height: 40,
-      child: Row(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              itemCount: _tabs.length,
-              itemBuilder: (context, i) {
-                final isActive = i == _activeTab;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: _TabChip(
-                    label: '${l10n.aiTabNewChat} ${i + 1}',
-                    isActive: isActive,
-                    canClose: _tabs.length > 1,
-                    activeColor: colorScheme.primaryContainer,
-                    activeFg: colorScheme.onPrimaryContainer,
-                    inactiveFg: fg.withValues(alpha: 0.6),
-                    closeTooltip: l10n.aiTabClose,
-                    onTap: () => _switchTab(i),
-                    onClose: () => _closeTab(i),
-                  ),
-                );
-              },
+        height: 40,
+        child: Row(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                itemCount: _tabs.length,
+                itemBuilder: (context, i) {
+                  final isActive = i == _activeTab;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: _TabChip(
+                      label: '${l10n.aiTabNewChat} ${i + 1}',
+                      isActive: isActive,
+                      canClose: _tabs.length > 1,
+                      activeColor: colorScheme.primaryContainer,
+                      activeFg: colorScheme.onPrimaryContainer,
+                      inactiveFg: fg.withValues(alpha: 0.6),
+                      closeTooltip: l10n.aiTabClose,
+                      onTap: () => _switchTab(i),
+                      onClose: () => _closeTab(i),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-          IconButton(
-            icon: Icon(Icons.add, size: 18, color: fg.withValues(alpha: 0.7)),
-            tooltip: l10n.aiTabNew,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
-            onPressed: _addTab,
-          ),
-        ],
-      ),
+            IconButton(
+              icon: Icon(Icons.add, size: 18, color: fg.withValues(alpha: 0.7)),
+              tooltip: l10n.aiTabNew,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
+              onPressed: _addTab,
+            ),
+          ],
+        ),
       ), // SizedBox
     ); // GestureDetector
   }
@@ -224,7 +231,8 @@ class _TabSlot {
       aiChatStreamingProvider.overrideWith(AiChatStreaming.new),
       aiChatContextNoticeProvider.overrideWith((ref) => null),
       aiChatUsageSummaryProvider.overrideWith((ref) => null),
-      aiChatDraftInputProvider.overrideWith((ref) => AiChatDraftInputNotifier()),
+      aiChatDraftInputProvider
+          .overrideWith((ref) => AiChatDraftInputNotifier()),
     ];
   }
 }

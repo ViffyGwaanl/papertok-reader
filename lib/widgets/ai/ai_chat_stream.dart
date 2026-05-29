@@ -33,8 +33,10 @@ import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
+import 'package:papertok_reader/service/knowledge/ai_chat_knowledge_card_producer.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
 import 'package:papertok_reader/models/book_import_item.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/book.dart';
 import 'package:papertok_reader/service/receive_file/share_inbox_cleanup_service.dart';
 import 'package:papertok_reader/service/receive_file/share_inbox_paths.dart';
@@ -67,6 +69,8 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.inputSafeAreaBottom = true,
     this.resizeToAvoidBottomInset = true,
     this.emptyStateBuilder,
+    this.chatKnowledgeCardProducer,
+    this.initialSourceRef,
   });
 
   final String? initialMessage;
@@ -107,6 +111,9 @@ class AiChatStream extends ConsumerStatefulWidget {
           BuildContext context, void Function(String prompt) send)?
       emptyStateBuilder;
 
+  final AiChatKnowledgeCardProducer? chatKnowledgeCardProducer;
+  final SourceRef? initialSourceRef;
+
   @override
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
 }
@@ -121,11 +128,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final TextEditingController inputController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final MemoryWorkflowService _memoryWorkflow = MemoryWorkflowService();
+  late final AiChatKnowledgeCardProducer _chatKnowledgeCards =
+      widget.chatKnowledgeCardProducer ?? AiChatKnowledgeCardProducer();
 
   bool _suppressDraftSync = false;
 
   void _onDraftInputChanged() {
     if (_suppressDraftSync) return;
+    if (inputController.text.trim().isEmpty) {
+      _draftSourceRef = null;
+    }
     try {
       ref.read(aiChatDraftInputProvider.notifier).set(inputController.text);
     } catch (_) {
@@ -149,6 +161,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   // For each user turn, the assistant may have multiple generated variants.
   // We keep a lightweight UI-only selection index per turn.
   final Map<int, int> _selectedVariantByUserIndex = {};
+  final Map<int, SourceRef> _sourceRefByUserIndex = {};
+  SourceRef? _draftSourceRef;
   AiHistoryScope _historyScope = AiHistoryScope.currentBook;
   int? _historyScopeBookId;
 
@@ -262,6 +276,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final draft = ref.read(aiChatDraftInputProvider);
     final initial = draft.isNotEmpty ? draft : (widget.initialMessage ?? '');
     inputController.text = initial;
+    _draftSourceRef = widget.initialSourceRef;
     ref.read(aiChatDraftInputProvider.notifier).set(initial);
     inputController.addListener(_onDraftInputChanged);
 
@@ -570,26 +585,40 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   String _localizedSkillName(BuildContext context, AiSkill skill) {
     final l = L10n.of(context);
     switch (skill.id) {
-      case 'paper_analyzer': return l.aiSkillPaperAnalyzerName;
-      case 'flashcard_generator': return l.aiSkillFlashcardGeneratorName;
-      case 'debate_partner': return l.aiSkillDebatePartnerName;
-      case 'vocab_extractor': return l.aiSkillVocabExtractorName;
-      case 'reading_companion': return l.aiSkillReadingCompanionName;
-      case 'seminar_mode': return l.aiSkillSeminarModeName;
-      default: return skill.name;
+      case 'paper_analyzer':
+        return l.aiSkillPaperAnalyzerName;
+      case 'flashcard_generator':
+        return l.aiSkillFlashcardGeneratorName;
+      case 'debate_partner':
+        return l.aiSkillDebatePartnerName;
+      case 'vocab_extractor':
+        return l.aiSkillVocabExtractorName;
+      case 'reading_companion':
+        return l.aiSkillReadingCompanionName;
+      case 'seminar_mode':
+        return l.aiSkillSeminarModeName;
+      default:
+        return skill.name;
     }
   }
 
   String _localizedSkillDesc(BuildContext context, AiSkill skill) {
     final l = L10n.of(context);
     switch (skill.id) {
-      case 'paper_analyzer': return l.aiSkillPaperAnalyzerDesc;
-      case 'flashcard_generator': return l.aiSkillFlashcardGeneratorDesc;
-      case 'debate_partner': return l.aiSkillDebatePartnerDesc;
-      case 'vocab_extractor': return l.aiSkillVocabExtractorDesc;
-      case 'reading_companion': return l.aiSkillReadingCompanionDesc;
-      case 'seminar_mode': return l.aiSkillSeminarModeDesc;
-      default: return skill.description;
+      case 'paper_analyzer':
+        return l.aiSkillPaperAnalyzerDesc;
+      case 'flashcard_generator':
+        return l.aiSkillFlashcardGeneratorDesc;
+      case 'debate_partner':
+        return l.aiSkillDebatePartnerDesc;
+      case 'vocab_extractor':
+        return l.aiSkillVocabExtractorDesc;
+      case 'reading_companion':
+        return l.aiSkillReadingCompanionDesc;
+      case 'seminar_mode':
+        return l.aiSkillSeminarModeDesc;
+      default:
+        return skill.description;
     }
   }
 
@@ -607,9 +636,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       icon: Icon(
         isActive ? Icons.auto_fix_high : Icons.auto_fix_high_outlined,
         size: 18,
-        color: isActive
-            ? Theme.of(context).colorScheme.primary
-            : null,
+        color: isActive ? Theme.of(context).colorScheme.primary : null,
       ),
       tooltip: L10n.of(context).aiSkillsTooltip,
       onSelected: (value) {
@@ -624,7 +651,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             value: _noSkillSentinel,
             child: Row(
               children: [
-                Icon(Icons.block, size: 16,
+                Icon(Icons.block,
+                    size: 16,
                     color: !isActive
                         ? Theme.of(context).colorScheme.primary
                         : null),
@@ -632,8 +660,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 Text(L10n.of(context).aiSkillNone),
                 if (!isActive) ...[
                   const Spacer(),
-                  Icon(Icons.check, size: 16,
-                      color: Theme.of(context).colorScheme.primary),
+                  Icon(Icons.check,
+                      size: 16, color: Theme.of(context).colorScheme.primary),
                 ],
               ],
             ),
@@ -648,9 +676,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   Icon(
                     Icons.auto_fix_high,
                     size: 16,
-                    color: selected
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
+                    color:
+                        selected ? Theme.of(context).colorScheme.primary : null,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -672,8 +699,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                   ),
                   if (selected)
-                    Icon(Icons.check, size: 16,
-                        color: Theme.of(context).colorScheme.primary),
+                    Icon(Icons.check,
+                        size: 16, color: Theme.of(context).colorScheme.primary),
                 ],
               ),
             );
@@ -703,8 +730,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               children: [
                 if (provider.type == AiProviderType.gemini)
                   SwitchListTile.adaptive(
-                    title: Text(
-                        l10n.settingsAiProviderCenterIncludeThoughtsTitle),
+                    title:
+                        Text(l10n.settingsAiProviderCenterIncludeThoughtsTitle),
                     subtitle:
                         Text(l10n.settingsAiProviderCenterIncludeThoughtsDesc),
                     value: _includeThoughtsForProvider(provider),
@@ -777,8 +804,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   if (cached.isNotEmpty) ...[
                     ConstrainedBox(
                       constraints: BoxConstraints(
-                        maxHeight:
-                            MediaQuery.of(ctx).size.height * 0.45,
+                        maxHeight: MediaQuery.of(ctx).size.height * 0.45,
                       ),
                       child: ListView(
                         shrinkWrap: true,
@@ -1037,15 +1063,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         return true;
       },
       child: Material(
-        color: isSelected
-            ? ClaudePalette.accentTint(context)
-            : Colors.transparent,
+        color:
+            isSelected ? ClaudePalette.accentTint(context) : Colors.transparent,
         child: InkWell(
           onTap: () => _handleHistoryTap(context, entry),
           onLongPress: () => _renameHistoryEntry(context, entry),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1141,6 +1165,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (mounted) {
       setState(() {
         _selectedProviderId = entry.serviceId;
+        _sourceRefByUserIndex.clear();
+        _draftSourceRef = null;
       });
     }
 
@@ -1173,8 +1199,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         PTDialogAction(
           label: L10n.of(context).commonSave,
           isDefault: true,
-          onPressed: () =>
-              Navigator.of(context).pop(controller.text.trim()),
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
         ),
       ],
     );
@@ -1207,6 +1232,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Future<void> _confirmClearHistory(BuildContext context) async {
     await ref.read(aiHistoryProvider.notifier).clear();
     ref.read(aiChatProvider.notifier).clear();
+    if (mounted) {
+      setState(() {
+        _sourceRefByUserIndex.clear();
+        _draftSourceRef = null;
+      });
+    }
   }
 
   // Streaming lifecycle is managed by [aiChatProvider] so UI minimize/close
@@ -1223,8 +1254,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     final message = inputController.text.trim();
     if (message.isEmpty && _attachments.isEmpty) return;
+    final draftSourceRef = _draftSourceRef;
 
     inputController.clear();
+    _draftSourceRef = null;
 
     final attachments =
         _attachments.isEmpty ? null : List<AttachmentItem>.from(_attachments);
@@ -1240,6 +1273,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           false,
           attachments: attachments,
         );
+    if (draftSourceRef != null) {
+      final messages =
+          ref.read(aiChatProvider).asData?.value ?? const <ChatMessage>[];
+      final userIndex = _findLastHumanIndex(messages);
+      if (userIndex != null) {
+        _sourceRefByUserIndex[userIndex] = draftSourceRef;
+      }
+    }
     _scrollToBottom(force: true);
   }
 
@@ -1359,9 +1400,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          for (var i = 0;
-                              i < editableAttachments.length;
-                              i++)
+                          for (var i = 0; i < editableAttachments.length; i++)
                             _buildEditableAttachmentChip(
                               editableAttachments[i],
                               onRemove: () {
@@ -1385,8 +1424,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                                           imageIndexes.indexOf(i);
                                       final images = editableAttachments
                                           .where((a) =>
-                                              a.type ==
-                                              AttachmentType.image)
+                                              a.type == AttachmentType.image)
                                           .map((a) => a.bytes)
                                           .toList(growable: false);
                                       _showImageGallery(
@@ -1419,8 +1457,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               Navigator.of(context).pop(
                 _EditUserMessageResult(
                   text: controller.text.trim(),
-                  attachments:
-                      List<AttachmentItem>.from(editableAttachments),
+                  attachments: List<AttachmentItem>.from(editableAttachments),
                 ),
               );
             },
@@ -1502,8 +1539,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final prompt = quickPrompts[index];
-          final icon = _quickSuggestionIcons[
-              index % _quickSuggestionIcons.length];
+          final icon =
+              _quickSuggestionIcons[index % _quickSuggestionIcons.length];
           return Material(
             color: Colors.transparent,
             shape: const StadiumBorder(),
@@ -1611,8 +1648,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon,
-                        size: 26, color: ClaudePalette.accent(context)),
+                    Icon(icon, size: 26, color: ClaudePalette.accent(context)),
                     const SizedBox(height: 8),
                     Text(
                       label,
@@ -1674,12 +1710,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
             child: Row(
               children: [
-                Icon(icon,
-                    size: 20, color: ClaudePalette.secondary(context)),
+                Icon(icon, size: 20, color: ClaudePalette.secondary(context)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
@@ -1754,8 +1788,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Divider(
-                    height: 1, color: ClaudePalette.divider(context)),
+                Divider(height: 1, color: ClaudePalette.divider(context)),
                 const SizedBox(height: 6),
                 toggleRow(
                   icon: Icons.travel_explore_outlined,
@@ -1783,8 +1816,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   },
                 ),
                 const SizedBox(height: 6),
-                Divider(
-                    height: 1, color: ClaudePalette.divider(context)),
+                Divider(height: 1, color: ClaudePalette.divider(context)),
                 const SizedBox(height: 6),
                 navRow(
                   icon: Icons.style_outlined,
@@ -1809,8 +1841,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 navRow(
                   icon: Icons.psychology_alt_outlined,
                   title: l10n.aiThinkingTitle,
-                  trailingValue:
-                      _thinkingModeLabel(thinkingMode, l10n),
+                  trailingValue: _thinkingModeLabel(thinkingMode, l10n),
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _editThinkingMode();
@@ -1876,8 +1907,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     String? message,
     List<AttachmentItem>? attachments,
     bool replaceAttachments = false,
+    SourceRef? sourceRef,
   }) {
     if (message != null) {
+      _draftSourceRef = sourceRef;
       _suppressDraftSync = true;
       inputController.text = message;
       inputController.selection = TextSelection.fromPosition(
@@ -2180,6 +2213,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   void _clearCurrentConversationState() {
     ref.read(aiChatProvider.notifier).clear();
     setState(() {
+      _sourceRefByUserIndex.clear();
+      _draftSourceRef = null;
       _suggestedPrompts = _pickSuggestedPrompts();
     });
   }
@@ -2267,6 +2302,50 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     } catch (e) {
       if (!mounted) return;
       AnxToast.show('${l10n.memoryWorkflowActionFailed}: $e');
+    }
+  }
+
+  Future<void> _handleAssistantKnowledgeCardAction({
+    required String answer,
+    String? userPrompt,
+    required String messageNodeId,
+    SourceRef? readerSourceRef,
+  }) async {
+    final normalizedAnswer = answer.trim();
+    if (normalizedAnswer.isEmpty) {
+      AnxToast.show(L10n.of(context).knowledgeCardAddFailed);
+      return;
+    }
+
+    final l10n = L10n.of(context);
+    final conversationId = ref.read(aiChatProvider.notifier).currentSessionId;
+    ref.read(aiChatProvider.notifier).persistCurrentConversation(ref);
+    final reading = ref.read(currentReadingProvider);
+    final book = reading.isReading ? reading.book : null;
+
+    try {
+      final result = await _chatKnowledgeCards.createFromAssistantAnswer(
+        assistantAnswer: normalizedAnswer,
+        userPrompt: userPrompt,
+        conversationId: conversationId,
+        messageNodeId: messageNodeId,
+        modelId: _modelLabel(_selectedProviderId),
+        bookId: book?.id,
+        bookTitle: book?.title,
+        cfi: reading.isReading ? reading.cfi : null,
+        chapterTitle: reading.isReading ? reading.chapterTitle : null,
+        readerSourceRef: readerSourceRef,
+      );
+      if (!mounted) return;
+      final message = result.addedToReviewInbox
+          ? (result.inserted
+              ? l10n.knowledgeCardAddedToReviewInbox
+              : l10n.knowledgeCardAlreadyInReviewInbox)
+          : l10n.knowledgeCardAlreadySaved;
+      AnxToast.show(message);
+    } catch (_) {
+      if (!mounted) return;
+      AnxToast.show(l10n.knowledgeCardAddFailed);
     }
   }
 
@@ -2475,8 +2554,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         boxShadow: isDarkMode
             ? [
                 BoxShadow(
-                  color:
-                      ClaudePalette.divider(context).withValues(alpha: 0.2),
+                  color: ClaudePalette.divider(context).withValues(alpha: 0.2),
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                 ),
@@ -2569,7 +2647,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         child: Icon(
                           Icons.keyboard_arrow_down_rounded,
                           size: 22,
-                          color: ClaudePalette.fg(context).withValues(alpha: 0.6),
+                          color:
+                              ClaudePalette.fg(context).withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -2668,8 +2747,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(10),
@@ -3275,8 +3354,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           isLastAssistant && (usageSummary ?? '').trim().isNotEmpty
               ? '会话累计 $usageSummary'
               : '';
-      final pieces =
-          [segText, cumulative].where((s) => s.isNotEmpty).toList();
+      final pieces = [segText, cumulative].where((s) => s.isNotEmpty).toList();
       if (pieces.isNotEmpty) {
         footer = Padding(
           padding: const EdgeInsets.only(top: 2, left: 2),
@@ -3308,8 +3386,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   maxWidth: isUser ? maxBubbleWidth : double.infinity),
               child: Container(
                 padding: isUser
-                    ? const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10)
+                    ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
                     : EdgeInsets.zero,
                 decoration: isUser
                     ? BoxDecoration(
@@ -3318,59 +3395,79 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       )
                     : null,
                 child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildScaledMessageContent(
-                    isUser
-                        ? _buildHumanMessageBody(message)
-                        : _buildAssistantSections(content, isStreaming),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _buildVariantSwitcher(index, isStreaming),
-                      const SizedBox(width: 4),
-                      if (isUser) ...[
-                        TextButton(
-                          onPressed: () => _showEditUserMessageDialog(
-                            index,
-                            message,
-                          ),
-                          child: Text(L10n.of(context).commonEdit),
-                        ),
-                        TextButton(
-                          onPressed: () => _copyPlainText(content),
-                          child: Text(L10n.of(context).commonCopy),
-                        ),
-                        _buildMessageMemoryMenu(
-                          text: content,
-                          sourceType: 'chat',
-                          messageNodeId: 'user:$index',
-                        ),
-                      ] else ...[
-                        if (prevHumanIndex != null)
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildScaledMessageContent(
+                      isUser
+                          ? _buildHumanMessageBody(message)
+                          : _buildAssistantSections(content, isStreaming),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _buildVariantSwitcher(index, isStreaming),
+                        const SizedBox(width: 4),
+                        if (isUser) ...[
                           TextButton(
-                            onPressed: () => _confirmRegenerateFromUserIndex(
-                              prevHumanIndex,
-                              isLastTurn: isLastTurn,
+                            onPressed: () => _showEditUserMessageDialog(
+                              index,
+                              message,
                             ),
-                            child: Text(L10n.of(context).aiRegenerate),
+                            child: Text(L10n.of(context).commonEdit),
                           ),
-                        TextButton(
-                          onPressed: () => _copyMessageContent(content),
-                          child: Text(L10n.of(context).commonCopy),
-                        ),
-                        _buildMessageMemoryMenu(
-                          text: _assistantMemoryText(content),
-                          sourceType: 'chat',
-                          messageNodeId: 'assistant:$index',
-                        ),
+                          TextButton(
+                            onPressed: () => _copyPlainText(content),
+                            child: Text(L10n.of(context).commonCopy),
+                          ),
+                          _buildMessageMemoryMenu(
+                            text: content,
+                            sourceType: 'chat',
+                            messageNodeId: 'user:$index',
+                          ),
+                        ] else ...[
+                          if (prevHumanIndex != null)
+                            TextButton(
+                              onPressed: () => _confirmRegenerateFromUserIndex(
+                                prevHumanIndex,
+                                isLastTurn: isLastTurn,
+                              ),
+                              child: Text(L10n.of(context).aiRegenerate),
+                            ),
+                          TextButton(
+                            onPressed: () => _copyMessageContent(content),
+                            child: Text(L10n.of(context).commonCopy),
+                          ),
+                          TextButton(
+                            onPressed: isStreaming
+                                ? null
+                                : () => _handleAssistantKnowledgeCardAction(
+                                      answer: _assistantMemoryText(content),
+                                      userPrompt: prevHumanIndex == null
+                                          ? null
+                                          : _humanTextAt(
+                                              allMessages,
+                                              prevHumanIndex,
+                                            ),
+                                      messageNodeId: 'assistant:$index',
+                                      readerSourceRef: prevHumanIndex == null
+                                          ? null
+                                          : _sourceRefByUserIndex[
+                                              prevHumanIndex],
+                                    ),
+                            child:
+                                Text(L10n.of(context).contextMenuKnowledgeCard),
+                          ),
+                          _buildMessageMemoryMenu(
+                            text: _assistantMemoryText(content),
+                            sourceType: 'chat',
+                            messageNodeId: 'assistant:$index',
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                  if (footer != null) footer,
-                ],
-              ),
+                    ),
+                    if (footer != null) footer,
+                  ],
+                ),
               ),
             ),
           ),
@@ -3393,8 +3490,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxBubbleWidth),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: ClaudePalette.accentTint(context),
                   borderRadius: BorderRadius.circular(18),
@@ -3465,59 +3562,78 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             _buildAssistantSections(content, isStreaming),
           ),
           Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (item.variants.length > 1)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.chevron_left, size: 18),
-                              onPressed: canNavigateVariants && selected > 0
-                                  ? () {
-                                      setState(() {
-                                        _selectedVariantByUserIndex[
-                                            item.groupKey] = selected - 1;
-                                      });
-                                    }
-                                  : null,
-                            ),
-                            Text('${selected + 1}/${item.variants.length}'),
-                            IconButton(
-                              icon: const Icon(Icons.chevron_right, size: 18),
-                              onPressed: canNavigateVariants &&
-                                      selected < item.variants.length - 1
-                                  ? () {
-                                      setState(() {
-                                        _selectedVariantByUserIndex[
-                                            item.groupKey] = selected + 1;
-                                      });
-                                    }
-                                  : null,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                        ),
-                      if (item.userIndex != null)
-                        TextButton(
-                          onPressed: () => _confirmRegenerateFromUserIndex(
-                            item.userIndex!,
-                            isLastTurn: isLastTurn,
-                          ),
-                          child: Text(L10n.of(context).aiRegenerate),
-                        ),
-                      TextButton(
-                        onPressed: () => _copyMessageContent(content),
-                        child: Text(L10n.of(context).commonCopy),
-                      ),
-                      _buildMessageMemoryMenu(
-                        text: _assistantMemoryText(content),
-                        sourceType: 'chat',
-                        messageNodeId:
-                            'assistant-group:${item.groupKey}:$selected',
-                      ),
-                    ],
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (item.variants.length > 1)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left, size: 18),
+                      onPressed: canNavigateVariants && selected > 0
+                          ? () {
+                              setState(() {
+                                _selectedVariantByUserIndex[item.groupKey] =
+                                    selected - 1;
+                              });
+                            }
+                          : null,
+                    ),
+                    Text('${selected + 1}/${item.variants.length}'),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right, size: 18),
+                      onPressed: canNavigateVariants &&
+                              selected < item.variants.length - 1
+                          ? () {
+                              setState(() {
+                                _selectedVariantByUserIndex[item.groupKey] =
+                                    selected + 1;
+                              });
+                            }
+                          : null,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                ),
+              if (item.userIndex != null)
+                TextButton(
+                  onPressed: () => _confirmRegenerateFromUserIndex(
+                    item.userIndex!,
+                    isLastTurn: isLastTurn,
                   ),
+                  child: Text(L10n.of(context).aiRegenerate),
+                ),
+              TextButton(
+                onPressed: () => _copyMessageContent(content),
+                child: Text(L10n.of(context).commonCopy),
+              ),
+              TextButton(
+                onPressed: isStreaming
+                    ? null
+                    : () => _handleAssistantKnowledgeCardAction(
+                          answer: _assistantMemoryText(content),
+                          userPrompt: item.userIndex == null
+                              ? null
+                              : _humanTextAt(
+                                  ref.read(aiChatProvider).asData?.value ??
+                                      const <ChatMessage>[],
+                                  item.userIndex!,
+                                ),
+                          messageNodeId:
+                              'assistant-group:${item.groupKey}:$selected',
+                          readerSourceRef: item.userIndex == null
+                              ? null
+                              : _sourceRefByUserIndex[item.userIndex!],
+                        ),
+                child: Text(L10n.of(context).contextMenuKnowledgeCard),
+              ),
+              _buildMessageMemoryMenu(
+                text: _assistantMemoryText(content),
+                sourceType: 'chat',
+                messageNodeId: 'assistant-group:${item.groupKey}:$selected',
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -3634,8 +3750,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             children.add(
               PTCollapsibleCard(
                 icon: Icons.build_outlined,
-                title: AiToolRegistry.displayNameForId(
-                    step.name, l10n: L10n.of(context)),
+                title: AiToolRegistry.displayNameForId(step.name,
+                    l10n: L10n.of(context)),
                 subtitle: step.name,
                 iconTint: ToolTileBase.statusColorFor(step.status, context),
                 body: _buildToolTile(step),
@@ -3779,6 +3895,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     // Image-only message.
     return '';
+  }
+
+  String? _humanTextAt(List<ChatMessage> messages, int index) {
+    if (index < 0 || index >= messages.length) return null;
+    final message = messages[index];
+    if (message is! HumanChatMessage) return null;
+    final text = _extractUserTextFromHuman(message).trim();
+    return text.isEmpty ? null : text;
   }
 
   List<_TextFileAttachmentInfo> _extractTextFilesFromHuman(

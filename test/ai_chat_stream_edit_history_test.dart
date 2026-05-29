@@ -75,13 +75,13 @@ void main() {
 
     // Edit dialog (avoid matching the main chat input TextField).
     final dialogTextField = find.descendant(
-      of: find.byType(AlertDialog),
+      of: find.byType(Dialog),
       matching: find.byType(TextField),
     );
     await tester.enterText(dialogTextField, 'New question');
     await tester.tap(
       find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(Dialog),
         matching: find.text('保存'),
       ),
     );
@@ -91,7 +91,7 @@ void main() {
     expect(find.text('从这里创建分支？'), findsOneWidget);
     await tester.tap(
       find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(Dialog),
         matching: find.text('确认'),
       ),
     );

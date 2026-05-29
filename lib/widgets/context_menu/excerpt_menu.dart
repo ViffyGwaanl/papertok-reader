@@ -3,9 +3,11 @@ import 'package:papertok_reader/constants/note_annotations.dart';
 import 'package:papertok_reader/dao/book_note.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/book_note.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/reading_page.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/knowledge/selection_knowledge_card_producer.dart';
 import 'package:papertok_reader/service/reading/epub_player_key.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
@@ -276,6 +278,25 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     );
   }
 
+  SourceRef? _selectionSourceRef() {
+    final player = epubPlayerKey.currentState;
+    if (player == null) return null;
+    final bookId = player.widget.book.id;
+    final cfi = widget.annoCfi.trim();
+    final intent = PaperReaderReaderIntent(bookId: bookId, cfi: cfi);
+    return SourceRef(
+      bookId: bookId,
+      cfi: cfi,
+      jumpLink: intent.hasTarget ? intent.toUri().toString() : null,
+      sourceTitle: player.book.title,
+      locationLabel: player.chapterTitle,
+      sourceTextSnippet: widget.annoContent,
+      sourceTextForHash: widget.annoContent,
+      sourceKind: SourceRefKind.reader,
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
   Widget _actionButton({
     required BuildContext context,
     required IconData icon,
@@ -505,12 +526,15 @@ class ExcerptMenuState extends State<ExcerptMenu> {
             widget.onClose();
             final key = readingPageKey.currentState;
             if (key != null) {
+              final sourceRef = _selectionSourceRef();
               key.showAiChat(
                 content: widget.annoContent,
                 sendImmediate: false,
+                sourceRef: sourceRef,
               );
               key.aiChatKey.currentState?.prefillDraft(
                 message: widget.annoContent,
+                sourceRef: sourceRef,
               );
             }
           },

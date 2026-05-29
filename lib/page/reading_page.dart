@@ -16,6 +16,7 @@ import 'package:papertok_reader/models/ai_quick_prompt_chip.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
 import 'package:papertok_reader/models/book.dart';
 import 'package:papertok_reader/models/read_theme.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/book_player/epub_player.dart';
 import 'package:papertok_reader/service/reading/epub_player_key.dart';
 import 'package:papertok_reader/providers/sync.dart';
@@ -102,11 +103,13 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   Widget? _aiChat;
   final aiChatKey = GlobalKey<AiMultiTabChatState>();
   bool _aiChatVisible = false;
+
   /// Whether the persistent AI bottom-sheet panel has been created at least
   /// once. Once true the widget stays in the tree (via Offstage) so that
   /// ProviderScopes survive minimize/restore and streaming is never interrupted.
   bool _aiChatCreated = false;
   String? _aiInitialMessage;
+  SourceRef? _aiInitialSourceRef;
   bool _aiSendImmediate = false;
   static const double _aiChatMinWidth = 240;
   double _aiChatWidth = 300;
@@ -529,6 +532,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
           child: AiMultiTabChat(
             key: aiChatKey,
             initialMessage: null,
+            initialSourceRef: _aiInitialSourceRef,
             sendImmediate: false,
             quickPromptChips: _getAiQuickPromptChips(),
             trailing: _buildAiChatTrailing(context),
@@ -649,7 +653,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.auto_awesome, size: 16,
+                              Icon(Icons.auto_awesome,
+                                  size: 16,
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSecondaryContainer),
@@ -675,7 +680,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                                   ref.read(kairosHintProvider.notifier).state =
                                       null;
                                 },
-                                child: Icon(Icons.close, size: 14,
+                                child: Icon(Icons.close,
+                                    size: 14,
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSecondaryContainer),
@@ -846,6 +852,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   Future<void> showAiChat({
     String? content,
     bool sendImmediate = false,
+    SourceRef? sourceRef,
   }) async {
     List<AiQuickPromptChip> quickPrompts = _getAiQuickPromptChips();
     final useBottomSheet =
@@ -856,7 +863,10 @@ class ReadingPageState extends ConsumerState<ReadingPage>
         // Panel already in the tree — just reveal it.
         setState(() => _aiChatVisible = true);
         if (content != null) {
-          aiChatKey.currentState?.prefillDraft(message: content);
+          aiChatKey.currentState?.prefillDraft(
+            message: content,
+            sourceRef: sourceRef,
+          );
         }
         if (sendImmediate) {
           aiChatKey.currentState?.sendDraft();
@@ -867,12 +877,14 @@ class ReadingPageState extends ConsumerState<ReadingPage>
       // First creation: store initial parameters and make visible.
       setState(() {
         _aiInitialMessage = content;
+        _aiInitialSourceRef = sourceRef;
         _aiSendImmediate = sendImmediate;
         _aiChatCreated = true;
         _aiChatVisible = true;
       });
     } else {
       setState(() {
+        _aiInitialSourceRef = sourceRef;
         final maxWidth = _aiChatMaxWidth(navigatorKey.currentContext!);
         final maxHeight = _aiChatMaxHeight(navigatorKey.currentContext!);
         _aiChatWidth = _aiChatWidth.clamp(_aiChatMinWidth, maxWidth);
@@ -884,6 +896,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
               child: AiMultiTabChat(
                 key: aiChatKey,
                 initialMessage: content,
+                initialSourceRef: sourceRef,
                 sendImmediate: sendImmediate,
                 quickPromptChips: quickPrompts,
                 trailing: _buildAiChatTrailing(navigatorKey.currentContext!),
@@ -899,13 +912,15 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     String? content,
     List<AttachmentItem>? attachments,
     bool replaceAttachments = false,
+    SourceRef? sourceRef,
   }) async {
-    showAiChat(content: content, sendImmediate: false);
+    showAiChat(content: content, sendImmediate: false, sourceRef: sourceRef);
     await Future<void>.delayed(const Duration(milliseconds: 16));
     aiChatKey.currentState?.prefillDraft(
       message: content,
       attachments: attachments,
       replaceAttachments: replaceAttachments,
+      sourceRef: sourceRef,
     );
   }
 
@@ -1155,9 +1170,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                 if (_aiChatCreated)
                   Positioned.fill(
                     child: AnimatedSlide(
-                      offset: _aiChatVisible
-                          ? Offset.zero
-                          : const Offset(0, 1),
+                      offset: _aiChatVisible ? Offset.zero : const Offset(0, 1),
                       duration: const Duration(milliseconds: 280),
                       curve: Curves.easeOutCubic,
                       child: IgnorePointer(
@@ -1166,12 +1179,13 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                           child: Material(
                             clipBehavior: Clip.antiAlias,
                             borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(
-                                  AppSpacing.cornerRadiusLarge),
+                              top:
+                                  Radius.circular(AppSpacing.cornerRadiusLarge),
                             ),
                             child: AiMultiTabChat(
                               key: aiChatKey,
                               initialMessage: _aiInitialMessage,
+                              initialSourceRef: _aiInitialSourceRef,
                               sendImmediate: _aiSendImmediate,
                               quickPromptChips: _getAiQuickPromptChips(),
                               inputSafeAreaBottom: false,
@@ -1190,8 +1204,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                                   icon: const Icon(Icons.close),
                                   onPressed: () {
                                     if (mounted) {
-                                      setState(
-                                          () => _aiChatVisible = false);
+                                      setState(() => _aiChatVisible = false);
                                     }
                                   },
                                 ),
