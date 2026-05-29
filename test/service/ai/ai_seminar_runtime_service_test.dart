@@ -116,6 +116,135 @@ void main() {
         completedTurn.tokenUsage!.estimationMethod, 'local-char-estimate-v1');
   });
 
+  test('stops before synthesis when role output budget is exceeded', () async {
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                'This role answer is intentionally long enough to exceed one local token.',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(
+          AiSeminarSessionContract(
+            id: 's-role-budget',
+            question: 'Budget?',
+            budgetPolicy: const AiSeminarBudgetPolicy(
+              maxRoleOutputTokens: 1,
+            ),
+          ),
+        )
+        .toList();
+
+    expect(events.last.type, AiSeminarRuntimeEventType.failed);
+    expect(events.last.message, contains('role output token budget'));
+    expect(events.last.run!.turns, hasLength(1));
+    expect(
+        events.last.run!.turns.single.tokenUsage!.outputTokens, greaterThan(1));
+    expect(
+      events.any(
+          (event) => event.type == AiSeminarRuntimeEventType.synthesisReady),
+      isFalse,
+    );
+  });
+
+  test('cancels active role stream when local role output budget is exceeded',
+      () async {
+    late AiSeminarCancellationToken token;
+    var emittedAfterBudget = false;
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, cancelToken) async* {
+        token = cancelToken;
+        yield const AiSeminarRoleStreamChunk(
+          partialText:
+              'This partial response is intentionally long enough to exceed one local token.',
+        );
+        emittedAfterBudget = !cancelToken.isCancelled;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(
+          AiSeminarSessionContract(
+            id: 's-partial-budget',
+            question: 'Budget?',
+            budgetPolicy: const AiSeminarBudgetPolicy(
+              maxRoleOutputTokens: 1,
+            ),
+          ),
+        )
+        .toList();
+
+    expect(token.isCancelled, true);
+    expect(emittedAfterBudget, false);
+    expect(events.last.type, AiSeminarRuntimeEventType.failed);
+    expect(events.last.message, contains('role output token budget'));
+    expect(events.last.run!.turns, isEmpty);
+    expect(
+      events.any(
+          (event) => event.type == AiSeminarRuntimeEventType.roleCompleted),
+      isFalse,
+    );
+  });
+
+  test('stops before synthesis when run token budget is exceeded', () async {
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(
+          AiSeminarSessionContract(
+            id: 's-run-budget',
+            question: 'Budget?',
+            budgetPolicy: const AiSeminarBudgetPolicy(maxRunTokens: 1),
+          ),
+        )
+        .toList();
+
+    expect(events.last.type, AiSeminarRuntimeEventType.failed);
+    expect(events.last.message, contains('run token budget'));
+    expect(events.last.run!.tokenUsage!.totalTokens, greaterThan(1));
+    expect(
+      events.any(
+          (event) => event.type == AiSeminarRuntimeEventType.synthesisReady),
+      isFalse,
+    );
+  });
+
   test('does not count executor-supplied token usage on failed role turns',
       () async {
     final service = AiSeminarRuntimeService(

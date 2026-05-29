@@ -40,6 +40,23 @@ void main() {
       expect(restored.writeRequiresApproval, false);
       expect(restored.maxRounds, 5);
     });
+
+    test('round-trips local budget policy', () {
+      final session = AiSeminarSessionContract(
+        id: 's-budget',
+        question: 'Keep this bounded.',
+        budgetPolicy: const AiSeminarBudgetPolicy(
+          maxRoleOutputTokens: 120,
+          maxRunTokens: 500,
+        ),
+      );
+
+      final restored = AiSeminarSessionContract.fromJson(session.toJson());
+
+      expect(restored.budgetPolicy!.maxRoleOutputTokens, 120);
+      expect(restored.budgetPolicy!.maxRunTokens, 500);
+      expect(restored.budgetPolicy!.hasTokenLimits, true);
+    });
   });
 
   group('AiSeminarEvidenceBundle', () {

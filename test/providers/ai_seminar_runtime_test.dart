@@ -392,6 +392,53 @@ void main() {
     expect(restored.providerDiagnostics?.modelId, 'original-model');
   });
 
+  test('restored seminar keeps session budget policy for retry', () async {
+    configureProvider();
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-budget-retry',
+        question: 'Retry budget?',
+        budgetPolicy: const AiSeminarBudgetPolicy(
+          maxRoleOutputTokens: 1,
+          maxRunTokens: 50,
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      evidenceBundle: bundle(),
+      activeRole: AiSeminarRole.critical,
+      partialRoleText: 'partial answer',
+      turns: const [],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    expect(
+      container
+          .read(aiSeminarRuntimeProvider)
+          .session!
+          .budgetPolicy!
+          .maxRoleOutputTokens,
+      1,
+    );
+
+    await notifier.retry();
+    final retried = container.read(aiSeminarRuntimeProvider);
+
+    expect(retried.status, AiSeminarRunStatus.failed);
+    expect(retried.error, contains('role output token budget'));
+    expect(retried.session!.budgetPolicy!.maxRoleOutputTokens, 1);
+  });
+
   test('sendToReview hands off synthesis candidate cards and flashcards',
       () async {
     final tempRoot = await Directory.systemTemp.createTemp();

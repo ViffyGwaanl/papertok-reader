@@ -409,9 +409,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Seminar Mode'), findsOneWidget);
-    expect(find.text('Start Seminar'), findsOneWidget);
     expect(find.textContaining('Evidence-backed learning needs jump links.'),
         findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Start Seminar'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Start Seminar'), findsOneWidget);
   });
 }
 

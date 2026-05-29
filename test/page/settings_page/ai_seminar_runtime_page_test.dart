@@ -109,6 +109,22 @@ void main() {
     );
   }
 
+  Finder textFieldWithLabel(String label) {
+    return find.byWidgetPredicate(
+      (widget) => widget is TextField && widget.decoration?.labelText == label,
+      description: 'TextField with label "$label"',
+    );
+  }
+
+  Future<void> scrollToStartSeminar(WidgetTester tester) async {
+    await tester.scrollUntilVisible(
+      find.text('Start Seminar'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+  }
+
   testWidgets(
       'shows structured seminar roles evidence whiteboard and synthesis',
       (tester) async {
@@ -128,7 +144,11 @@ void main() {
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
-    await tester.enterText(find.byType(TextField), 'What is the claim?');
+    await tester.enterText(
+      textFieldWithLabel('Seminar question'),
+      'What is the claim?',
+    );
+    await scrollToStartSeminar(tester);
     await tester.tap(find.text('Start Seminar'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
@@ -192,7 +212,44 @@ void main() {
     expect(find.textContaining('Streaming unknown'), findsOneWidget);
     expect(find.text('Streaming'), findsNothing);
     expect(find.textContaining('Cost: unknown'), findsOneWidget);
-    expect(find.textContaining('pricing metadata'), findsOneWidget);
+    expect(
+      find.textContaining('Seminar streaming token usage cannot estimate cost'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('local token budget fields stop an over-budget seminar',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(find.text('Local budget guardrails'), findsOneWidget);
+    expect(textFieldWithLabel('Role output token budget'), findsOneWidget);
+    expect(textFieldWithLabel('Run token budget'), findsOneWidget);
+    expect(find.textContaining('Cost cap unavailable'), findsOneWidget);
+
+    await tester.enterText(textFieldWithLabel('Role output token budget'), '1');
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.textContaining('role output token budget'), findsOneWidget);
+    expect(find.text('Send to Review'), findsNothing);
   });
 
   testWidgets('shows a recovered local state banner for restored seminars',
@@ -272,8 +329,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
+    await tester.scrollUntilVisible(
+      find.textContaining('Recovered local Seminar state'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(
-        find.textContaining('Recovered local Seminar state'), findsOneWidget);
+      find.textContaining('Recovered local Seminar state'),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.text('critical restored response'),
       220,
@@ -326,6 +391,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     expect(tester.takeException(), isNull);
+    await scrollToStartSeminar(tester);
     expect(find.text('Start Seminar'), findsOneWidget);
     expect(find.textContaining('Recovered local Seminar state'), findsNothing);
     expect(find.text('old restored response'), findsNothing);
@@ -360,7 +426,10 @@ void main() {
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
-    await tester.enterText(find.byType(TextField), 'What is the claim?');
+    await tester.enterText(
+      textFieldWithLabel('Seminar question'),
+      'What is the claim?',
+    );
     await tester.tap(find.text('Start Seminar'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));

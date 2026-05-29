@@ -219,6 +219,22 @@ class AiSeminarRuntimeService {
           }
           final partialText = chunk.partialText;
           if (partialText != null) {
+            final roleOutputLimit = session.budgetPolicy?.maxRoleOutputTokens;
+            final partialOutputTokens = _estimateTokenCount(partialText);
+            if (roleOutputLimit != null &&
+                partialOutputTokens > roleOutputLimit) {
+              token.cancel();
+              yield _failedEvent(
+                session: session,
+                evidenceBundle: evidenceBundle,
+                startedAt: startedAt,
+                turns: turns,
+                message:
+                    'AI Seminar role ${role.asString} exceeded local role output token budget '
+                    '($partialOutputTokens > $roleOutputLimit).',
+              );
+              return;
+            }
             yield AiSeminarRuntimeEvent(
               type: AiSeminarRuntimeEventType.roleDelta,
               session: session,
@@ -293,6 +309,23 @@ class AiSeminarRuntimeService {
         invocation: invocation,
         turn: turn,
       );
+      final nextTurns = [...turns, turnWithUsage];
+      final budgetFailure = _budgetFailureMessage(
+        session.budgetPolicy,
+        turnWithUsage,
+        nextTurns,
+      );
+      if (budgetFailure != null) {
+        yield _failedEvent(
+          session: session,
+          evidenceBundle: evidenceBundle,
+          startedAt: startedAt,
+          turns: nextTurns,
+          message: budgetFailure,
+        );
+        return;
+      }
+
       turns.add(turnWithUsage);
       final whiteboardEntries = _whiteboardEntries(turns);
       yield AiSeminarRuntimeEvent(
@@ -503,6 +536,29 @@ class AiSeminarRuntimeService {
       completedAt: turn.completedAt,
       error: turn.error,
     );
+  }
+
+  static String? _budgetFailureMessage(
+    AiSeminarBudgetPolicy? policy,
+    AiSeminarRoleTurn turn,
+    List<AiSeminarRoleTurn> nextTurns,
+  ) {
+    if (policy == null || !policy.hasTokenLimits) return null;
+    final usage = turn.tokenUsage;
+    final roleLimit = policy.maxRoleOutputTokens;
+    if (usage != null && roleLimit != null && usage.outputTokens > roleLimit) {
+      return 'AI Seminar role ${turn.role.asString} exceeded local role output token budget '
+          '(${usage.outputTokens} > $roleLimit).';
+    }
+    final runLimit = policy.maxRunTokens;
+    final runUsage = AiSeminarTokenUsage.aggregateRoleTurns(nextTurns);
+    if (runUsage != null &&
+        runLimit != null &&
+        runUsage.totalTokens > runLimit) {
+      return 'AI Seminar exceeded local run token budget '
+          '(${runUsage.totalTokens} > $runLimit).';
+    }
+    return null;
   }
 
   static String _inputTextForInvocation(AiSeminarRoleInvocation invocation) {

@@ -33,7 +33,7 @@
 - 阅读页内优先 current book。
 - 只有用户选择跨书或当前书证据不足时才用 library。
 - 默认不调用 web。
-- 每场讨论有 token/成本预算。
+- 每场讨论先有本地 token budget guardrail；真实 provider usage 和美元成本预算必须等 provider usage/pricing metadata 接入后再启用。
 
 ### E01-C02 Evidence Broker
 
@@ -82,6 +82,7 @@ Seminar 结束时输出：
 | E01-C04-T04 | 接入 Seminar provider readiness | E06-C04-T01, E07 Ready | `AiSeminarProviderContextService`、`AiSeminarRuntimeState.providerDiagnostics`、`AiSeminarRuntimePage` readiness UI | 启动前显示当前 provider/model/capability cache 和成本未知原因；缺少 pricing/usage metadata 时不伪造成本估算。 |
 | E01-C04-T05 | 接入 Seminar local token usage | E01-C04-T02, E01-C04-T04 | `AiSeminarTokenUsage`、`AiSeminarRuntimeService` local estimator、`AiSeminarRuntimePage` usage UI | 每个完成角色 turn 记录 input/output 本地估算，run 聚合 usage，页面显示 `Provider billing may differ`；不得当作 provider 账单或美元成本。 |
 | E01-C04-T06 | 接入 Seminar local recovery | E01-C04-T02, E07 Ready | `aiSeminarRuntimeStateV1`, `AiSeminarRuntimeNotifier` restore, `AiSeminarRuntimePage` recovered banner | completed/cancelled/failed state 可在同一书籍/同一入口问题本机恢复；换书或换选区清除旧 runtime/cache；running state 重启后降级为 interrupted/retryable 并回写清理 partial；恢复缓存不进普通 prefs backup。 |
+| E01-C04-T07 | 接入 Seminar local token budget | E01-C04-T05, E07 Ready | `AiSeminarBudgetPolicy`, `AiSeminarRuntimeService` budget gate, `AiSeminarRuntimePage` budget UI | 用户可设置 role output/run token budget；超出本地估算时停止后续步骤、保留失败原因并可重试；不得当作 provider 账单或美元成本上限。 |
 
 ## 5. Task Execution Defaults
 

@@ -26,6 +26,8 @@ class AiSeminarRuntimePage extends ConsumerStatefulWidget {
 
 class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
   late final TextEditingController _questionController;
+  late final TextEditingController _roleOutputBudgetController;
+  late final TextEditingController _runBudgetController;
   bool _autoStarted = false;
   bool _discardedMismatchedEntryState = false;
 
@@ -35,6 +37,8 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
     _questionController = TextEditingController(
       text: widget.initialQuestion?.trim() ?? '',
     );
+    _roleOutputBudgetController = TextEditingController();
+    _runBudgetController = TextEditingController();
     if (widget.autoStart && _questionController.text.trim().isNotEmpty) {
       Future.microtask(_start);
     }
@@ -43,6 +47,8 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
   @override
   void dispose() {
     _questionController.dispose();
+    _roleOutputBudgetController.dispose();
+    _runBudgetController.dispose();
     super.dispose();
   }
 
@@ -56,6 +62,7 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
             id: 'seminar-${DateTime.now().millisecondsSinceEpoch}',
             question: question,
             bookId: widget.bookId,
+            budgetPolicy: _budgetPolicyFromInputs(),
           ),
         );
   }
@@ -119,6 +126,12 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
             diagnostics: state.providerDiagnostics,
           ),
           const SizedBox(height: 10),
+          _BudgetSection(
+            roleOutputBudgetController: _roleOutputBudgetController,
+            runBudgetController: _runBudgetController,
+            enabled: !busy,
+          ),
+          const SizedBox(height: 10),
           Row(
             children: [
               FilledButton.icon(
@@ -164,6 +177,23 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
     );
   }
 
+  AiSeminarBudgetPolicy? _budgetPolicyFromInputs() {
+    final maxRoleOutputTokens =
+        _positiveIntOrNull(_roleOutputBudgetController.text);
+    final maxRunTokens = _positiveIntOrNull(_runBudgetController.text);
+    final policy = AiSeminarBudgetPolicy(
+      maxRoleOutputTokens: maxRoleOutputTokens,
+      maxRunTokens: maxRunTokens,
+    ).normalized;
+    return policy.hasTokenLimits ? policy : null;
+  }
+
+  int? _positiveIntOrNull(String value) {
+    final parsed = int.tryParse(value.trim());
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
+  }
+
   bool _hasMismatchedEntryState(AiSeminarRuntimeState state) {
     if (state.session == null) return false;
     final entryQuestion = widget.initialQuestion?.trim();
@@ -189,6 +219,69 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
       if (!mounted) return;
       ref.read(aiSeminarRuntimeProvider.notifier).discardLocalRuntimeState();
     });
+  }
+}
+
+class _BudgetSection extends StatelessWidget {
+  const _BudgetSection({
+    required this.roleOutputBudgetController,
+    required this.runBudgetController,
+    required this.enabled,
+  });
+
+  final TextEditingController roleOutputBudgetController;
+  final TextEditingController runBudgetController;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: 'Local budget guardrails',
+      icon: Icons.speed_outlined,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: roleOutputBudgetController,
+                enabled: enabled,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Role output token budget',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: runBudgetController,
+                enabled: enabled,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Run token budget',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Uses local token estimates to stop the next Seminar step; provider billing may differ.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: ClaudePalette.secondary(context),
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Cost cap unavailable until provider usage and pricing metadata are connected.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: ClaudePalette.secondary(context),
+              ),
+        ),
+      ],
+    );
   }
 }
 

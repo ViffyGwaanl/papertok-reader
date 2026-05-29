@@ -97,6 +97,50 @@ enum AiSeminarRunStatus {
 }
 
 @immutable
+class AiSeminarBudgetPolicy {
+  const AiSeminarBudgetPolicy({
+    this.maxRoleOutputTokens,
+    this.maxRunTokens,
+  });
+
+  final int? maxRoleOutputTokens;
+  final int? maxRunTokens;
+
+  bool get hasTokenLimits =>
+      (maxRoleOutputTokens != null && maxRoleOutputTokens! > 0) ||
+      (maxRunTokens != null && maxRunTokens! > 0);
+
+  AiSeminarBudgetPolicy get normalized => AiSeminarBudgetPolicy(
+        maxRoleOutputTokens: _positiveOrNull(maxRoleOutputTokens),
+        maxRunTokens: _positiveOrNull(maxRunTokens),
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (_positiveOrNull(maxRoleOutputTokens) != null)
+          'maxRoleOutputTokens': _positiveOrNull(maxRoleOutputTokens),
+        if (_positiveOrNull(maxRunTokens) != null)
+          'maxRunTokens': _positiveOrNull(maxRunTokens),
+      };
+
+  factory AiSeminarBudgetPolicy.fromJson(Map<String, dynamic> json) {
+    return AiSeminarBudgetPolicy(
+      maxRoleOutputTokens: _positiveInt(json['maxRoleOutputTokens']),
+      maxRunTokens: _positiveInt(json['maxRunTokens']),
+    );
+  }
+
+  static int? _positiveInt(Object? value) {
+    final parsed = (value as num?)?.toInt();
+    return _positiveOrNull(parsed);
+  }
+
+  static int? _positiveOrNull(int? value) {
+    if (value == null || value <= 0) return null;
+    return value;
+  }
+}
+
+@immutable
 class AiSeminarSessionContract {
   factory AiSeminarSessionContract({
     required String id,
@@ -109,10 +153,12 @@ class AiSeminarSessionContract {
     bool allowWeb = false,
     bool writeRequiresApproval = true,
     int maxRounds = 2,
+    AiSeminarBudgetPolicy? budgetPolicy,
     int? createdAt,
   }) {
     final normalizedRoles = _normalizeRoles(roles);
     final normalizedScopes = _dedupeScopes(scopes);
+    final normalizedBudget = budgetPolicy?.normalized;
     return AiSeminarSessionContract._(
       id: id.trim(),
       question: question.trim(),
@@ -126,6 +172,8 @@ class AiSeminarSessionContract {
       allowWeb: allowWeb,
       writeRequiresApproval: writeRequiresApproval,
       maxRounds: maxRounds.clamp(1, 5),
+      budgetPolicy:
+          normalizedBudget?.hasTokenLimits == true ? normalizedBudget : null,
       createdAt: createdAt,
     );
   }
@@ -139,6 +187,7 @@ class AiSeminarSessionContract {
     required this.allowWeb,
     required this.writeRequiresApproval,
     required this.maxRounds,
+    required this.budgetPolicy,
     required this.createdAt,
   });
 
@@ -150,6 +199,7 @@ class AiSeminarSessionContract {
   final bool allowWeb;
   final bool writeRequiresApproval;
   final int maxRounds;
+  final AiSeminarBudgetPolicy? budgetPolicy;
   final int? createdAt;
 
   bool get hasVerifier => roles.contains(AiSeminarRole.verifier);
@@ -164,6 +214,8 @@ class AiSeminarSessionContract {
         'allowWeb': allowWeb,
         'writeRequiresApproval': writeRequiresApproval,
         'maxRounds': maxRounds,
+        if (budgetPolicy?.hasTokenLimits == true)
+          'budgetPolicy': budgetPolicy!.toJson(),
         if (createdAt != null) 'createdAt': createdAt,
       };
 
@@ -187,6 +239,11 @@ class AiSeminarSessionContract {
       allowWeb: json['allowWeb'] == true,
       writeRequiresApproval: json['writeRequiresApproval'] != false,
       maxRounds: (json['maxRounds'] as num?)?.toInt() ?? 2,
+      budgetPolicy: json['budgetPolicy'] is Map
+          ? AiSeminarBudgetPolicy.fromJson(
+              Map<String, dynamic>.from(json['budgetPolicy'] as Map),
+            )
+          : null,
       createdAt: (json['createdAt'] as num?)?.toInt(),
     );
   }
