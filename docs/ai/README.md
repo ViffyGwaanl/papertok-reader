@@ -126,6 +126,7 @@ Docs:
 - [Phase 3：全书库 RAG + 批量索引队列（中文）](./rag_phase3_library_rag_zh.md)
 - [Future Agentic Upgrade：AI-agent 可执行未来升级规格（中文）](./future_agentic_upgrade/README_zh.md)
 - [Future Agentic Upgrade：用户入口激活计划（中文）](./future_agentic_upgrade/04_user_facing_activation_plan_zh.md)
+- [Future Agentic Upgrade：实现状态与验证证据（中文）](./future_agentic_upgrade/implementation_status_zh.md)
 - [MCP Servers（外部工具）说明（中文）](./mcp_servers_zh.md)
 
 ---
@@ -166,6 +167,7 @@ All AI / translation / multimodal / image-analysis changes are integrated into `
 - [AI Agent 系统架构与优化记录（中文）](./agent_system_architecture_zh.md)
 - [Future Agentic Upgrade：AI-agent 可执行未来升级规格（中文）](./future_agentic_upgrade/README_zh.md)
 - [Future Agentic Upgrade：用户入口激活计划（中文）](./future_agentic_upgrade/04_user_facing_activation_plan_zh.md)
+- [Future Agentic Upgrade：实现状态与验证证据（中文）](./future_agentic_upgrade/implementation_status_zh.md)
 - [RAG + Memory（Phase 1-5）总体计划与状态（中文）](./rag_memory_plan_zh.md)
 - [RAG + Memory（Phase 1-5）任务清单（中文）](./rag_memory_tasks_zh.md)
 - [Phase 3：全书库 RAG + 批量索引队列（中文）](./rag_phase3_library_rag_zh.md)

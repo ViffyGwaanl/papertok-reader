@@ -39,7 +39,7 @@
 | `AnnotationLedger` | 能记录当前会话 AI 创建的高亮/笔记，防重复。 | Seminar 需要 Shared Whiteboard，记录 claim、evidence、disagreement、open question。 | E00, E01 |
 | Create Highlight/Note tools | AI 已能创建高亮和笔记，且有工具审批链路。 | KnowledgeCard 不应直接复用 note 作为唯一模型，需要独立 review 状态。 | E03, E05 |
 | KnowledgeCard local store | 本分支新增 `KnowledgeCardStore`，可把 AI 候选卡持久化到 `.knowledge/knowledge_cards_v1.json`，重复候选不覆盖用户内容，ReviewItem 决策可回写 card；统一 Review Inbox UI 已能批准、忽略、应用 KnowledgeCard 审批项；阅读页选中文本、图片解析结果、RAG/GraphRAG evidence、AI Chat 回答和 Seminar candidate card 都可写入待审卡；Seminar candidate card 和 reader-grounded AI Chat card 可携带 `conceptRefs`，用户 Apply 后进入 ConceptGraph 候选链路。 | AI Chat 回答必须由用户点击回答旁 `知识卡` 才写入；回答旁已显示可跳转/不可用来源状态；从选中文本打开 AI 时可保留精确 reader SourceRef，并随 `conversationV2` 历史持久化；如果用户把预填草稿改成无关问题，或只是碰巧包含短公共片段，则本轮不保存旧 reader SourceRef；没有该字段的旧历史只保留 conversation provenance，不用当前阅读位置伪造 reader grounding；纯聊天 card 不生成 `conceptRefs`，AI Chat 不直接写 ConceptGraph。 | E03, E05, E08 |
-| Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项；选中文本 KnowledgeCard、Seminar synthesis、Seminar candidate card 和 Seminar reviewSuggestion flashcard 已能进入统一 Review Inbox；flashcard candidate Apply 后可进入 Spaced Review；Memory source-specific apply/dismiss adapter 已接入本地 Markdown memory 写入边界；旧 BookNote/highlight 列表和搜索结果已接 SourceRef audit UI。 | Seminar synthesis 本身只支持 approve/dismiss，不做泛型 apply；Memory home、daily memory、long-term memory 独立浏览页还需要接 source-specific SourceRef 审计。 | E03, E04, E05 |
+| Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项；选中文本 KnowledgeCard、Seminar synthesis、Seminar candidate card 和 Seminar reviewSuggestion flashcard 已能进入统一 Review Inbox；flashcard candidate Apply 后可进入 Spaced Review；Memory source-specific apply/dismiss adapter 已接入本地 Markdown memory 写入边界；Memory home、daily memory、long-term memory 独立浏览页已接只读 SourceRef 投影、evidence list、jump audit 和不可跳原因；旧 BookNote/highlight 列表和搜索结果已接 SourceRef audit UI。 | Seminar synthesis 本身只支持 approve/dismiss，不做泛型 apply；Memory browse SourceRef 是从已应用 MemoryCandidate 只读投影，不把来源 metadata 写回 Markdown。 | E03, E04, E05 |
 
 锚点：
 
@@ -69,7 +69,7 @@
 
 | 项 | 当前可复用 | 缺口 | 下游 Epic |
 | --- | --- | --- | --- |
-| Reader deep link | `paperreader://reader/open?...` 已是书内跳转规范；本分支新增 SourceRef -> `PaperReaderReaderIntent` 和 `PaperReaderSourceJumpAudit`，可统一检查 jumpable、unavailable、unresolved refs；BookNote/highlight tile 已复用 jump audit，缺失 CFI 时显示不可跳原因。 | Memory 独立浏览页仍需接入同一 audit；新增 UI 输出必须先定义 source-specific unavailable/unresolved 状态。 | E00, E03, E04, E07 |
+| Reader deep link | `paperreader://reader/open?...` 已是书内跳转规范；本分支新增 SourceRef -> `PaperReaderReaderIntent` 和 `PaperReaderSourceJumpAudit`，可统一检查 jumpable、unavailable、unresolved refs；Review Inbox、Spaced Review、ConceptGraph、BookNote/highlight tile 和 Memory 独立浏览页已复用 jump audit，缺失书内锚点时显示不可跳原因。 | 新增 UI 输出必须先定义 source-specific unavailable/unresolved 状态。 | E00, E03, E04, E07 |
 | AI settings sync | WebDAV 同步 AI 设置，不包含 API key；KnowledgeSyncPolicy 已递归排除常见 secret-like payload keys。 | Knowledge assets 需要 per-entity sync，而非 settings-style newer-wins。 | E08 |
 | Knowledge asset sync boundary | `KnowledgeSyncEnvelope` 已区分 `ai-draft`、`knowledge-card`、`derived-index`；`KnowledgeSyncPolicy` 默认排除 draft、derived cache 和含 secret-like payload 的 envelope；`KnowledgeCardStore` 中 draft/pending 不按用户资产同步，applied 且有 evidence 的卡片才进入 knowledge-card envelope。 | 真正的同步/冲突恢复管线还需要 per-entity merge、Review 冲突 UI 和 export manifest 接入。 | E08 |
 | Backup/restore | 已支持 memory 和 `ai_index.db` 可选包含。 | 未来要区分用户资产、AI draft、派生索引和密钥策略。 | E05, E08 |
@@ -82,8 +82,8 @@
 
 ## 6. 全局缺口
 
-- 统一 `SourceRef` 核心模型已存在；仍需把所有 UI 输出、sync/export manifest 和 Memory 独立浏览页完全接到同一证据链。
-- KnowledgeCard 模型、本地 store、Review adapter、统一 Review Inbox UI、reader selection 入口、图片分析结果入口、RAG/GraphRAG evidence 入口、AI Chat 回答显性 `知识卡` handoff、AI Chat 回答旁来源状态提示、AI Chat reader SourceRef 历史持久化、AI Chat 无关改写和短公共片段 SourceRef 降级、AI Chat reader-grounded `conceptRefs` handoff、Seminar candidate handoff、Seminar flashcard handoff、spaced review scheduler、旧 BookNote/highlight SourceRef audit UI 和导出入口已有可测试切片；仍需把 Memory 独立浏览页接到同一 SourceRef 审计 UI。
+- 统一 `SourceRef` 核心模型已存在；Review Inbox、Spaced Review、ConceptGraph、BookNote/highlight、Memory 独立浏览页和 sync/export manifest 已接到同一证据链；新增 UI 输出仍必须显式定义 source-specific unavailable/unresolved 状态。
+- KnowledgeCard 模型、本地 store、Review adapter、统一 Review Inbox UI、reader selection 入口、图片分析结果入口、RAG/GraphRAG evidence 入口、AI Chat 回答显性 `知识卡` handoff、AI Chat 回答旁来源状态提示、AI Chat reader SourceRef 历史持久化、AI Chat 无关改写和短公共片段 SourceRef 降级、AI Chat reader-grounded `conceptRefs` handoff、Seminar candidate handoff、Seminar flashcard handoff、spaced review scheduler、Memory 独立浏览 SourceRef audit、旧 BookNote/highlight SourceRef audit UI 和导出入口已有可测试切片。
 - `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、结构化 runtime UI、真实模型流式事件、取消/重试、Review handoff、provider readiness/cost unknown UI、provider token usage 记录和显示、本地 token usage fallback、本地 role/run token budget、pricing metadata 驱动的估算美元成本 cap、同书/同问题本机 state 恢复和阅读页选中入口；仍需后台任务队列、重启续跑和真实账单对账。
 - Custom Skill contract 已有 schema version、parser、validator、权限声明、导入 UI、fixture 示例、Active Skill 合并和 runtime injection gate；仍需 provider 能力界面。
 - ConceptGraph 模型、本地 store、KnowledgeCard producer、Seminar candidate conceptRefs handoff、reader-grounded AI Chat conceptRefs handoff、RAG/GraphRAG derived result producer、空态显性 action、局部探索、局部图谱摘要、统一 Review relation adapter、Explorer UI 和阅读页选中文本入口已有可测试切片；复杂无限画布、缩放手势和跨书外部知识扩展不在本切片。

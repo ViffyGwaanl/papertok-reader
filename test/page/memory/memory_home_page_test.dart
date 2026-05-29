@@ -37,6 +37,7 @@ void main() {
     // _SectionHeader, so the matchers compare to the upper-case form.
     expect(find.textContaining('INBOX', findRichText: true), findsOneWidget);
     expect(find.textContaining('TODAY', findRichText: true), findsOneWidget);
-    expect(find.textContaining('LONG-TERM', findRichText: true), findsOneWidget);
+    expect(
+        find.textContaining('LONG-TERM', findRichText: true), findsOneWidget);
   });
 }

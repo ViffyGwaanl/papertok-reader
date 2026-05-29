@@ -34,6 +34,8 @@ class _HomeNavigationSettingsPageState
               return L10n.of(context).navBarAI;
             case Prefs.homeTabNotes:
               return L10n.of(context).navBarNotes;
+            case Prefs.homeTabMemory:
+              return L10n.of(context).navBarMemory;
             case Prefs.homeTabSettings:
               return L10n.of(context).navBarSettings;
             default:
@@ -53,6 +55,8 @@ class _HomeNavigationSettingsPageState
               return Icons.auto_awesome;
             case Prefs.homeTabNotes:
               return Icons.note_outlined;
+            case Prefs.homeTabMemory:
+              return Icons.psychology_outlined;
             case Prefs.homeTabSettings:
               return Icons.settings_outlined;
             default:

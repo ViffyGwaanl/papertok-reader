@@ -8,6 +8,8 @@ class MemoryEntryRef {
   final String title;
   final String path;
   final String preview;
+  final String body;
+  final bool supportsBulkActions;
   final DateTime? modified;
 
   const MemoryEntryRef({
@@ -15,6 +17,8 @@ class MemoryEntryRef {
     required this.path,
     required this.preview,
     required this.modified,
+    this.body = '',
+    this.supportsBulkActions = true,
   });
 }
 
@@ -205,7 +209,8 @@ extension MarkdownMemoryStoreBrowse on MarkdownMemoryStore {
   /// section, in document order. Returns an empty list if the file is
   /// missing or has no H1 headings.
   Future<List<MemoryEntryRef>> listLongTermEntries() async {
-    final file = File(p.join(rootDir.path, MarkdownMemoryStore.longTermFileName));
+    final file =
+        File(p.join(rootDir.path, MarkdownMemoryStore.longTermFileName));
     if (!file.existsSync()) return const <MemoryEntryRef>[];
     final raw = await file.readAsString();
     final modified = file.lastModifiedSync();
@@ -216,11 +221,14 @@ extension MarkdownMemoryStoreBrowse on MarkdownMemoryStore {
     final buf = StringBuffer();
 
     void flush() {
-      if (currentTitle == null) return;
+      final title = currentTitle;
+      if (title == null) return;
       entries.add(MemoryEntryRef(
-        title: currentTitle!,
+        title: title,
         path: file.path,
         preview: _browsePreview(buf.toString()),
+        body: buf.toString(),
+        supportsBulkActions: false,
         modified: modified,
       ));
       buf.clear();
@@ -258,6 +266,7 @@ extension MarkdownMemoryStoreBrowse on MarkdownMemoryStore {
         title: p.basenameWithoutExtension(f.path),
         path: f.path,
         preview: _browsePreview(body),
+        body: body,
         modified: f.lastModifiedSync(),
       ));
     }
@@ -281,8 +290,8 @@ extension MarkdownMemoryStoreTags on MarkdownMemoryStore {
     final content = await file.readAsString();
     final fm = _extractFrontMatterBlock(content);
     if (fm == null) return const <String>[];
-    final tagMatch = RegExp(r'^tags:\s*\[(.*)\]\s*$', multiLine: true)
-        .firstMatch(fm);
+    final tagMatch =
+        RegExp(r'^tags:\s*\[(.*)\]\s*$', multiLine: true).firstMatch(fm);
     if (tagMatch == null) return const <String>[];
     return tagMatch
         .group(1)!

@@ -18,23 +18,31 @@ void main() {
 
   test('listLongTermEntries splits MEMORY.md by top-level headings', () async {
     final f = File(p.join(tempRoot.path, 'MEMORY.md'));
-    await f.writeAsString('# Alpha\n\nbody a\nmore body a\n\n# Beta\n\nbody b\n');
+    await f
+        .writeAsString('# Alpha\n\nbody a\nmore body a\n\n# Beta\n\nbody b\n');
     final store = MarkdownMemoryStore(rootDir: tempRoot);
     final list = await store.listLongTermEntries();
     expect(list.length, 2);
     expect(list.first.title, 'Alpha');
     expect(list.first.preview, contains('body a'));
+    expect(list.first.body, contains('body a'));
+    expect(list.first.body, isNot(contains('body b')));
+    expect(list.first.supportsBulkActions, isFalse);
     expect(list.last.title, 'Beta');
     expect(list.last.preview, contains('body b'));
+    expect(list.last.body, contains('body b'));
   });
 
-  test('listLongTermEntries returns empty list when MEMORY.md is absent', () async {
+  test('listLongTermEntries returns empty list when MEMORY.md is absent',
+      () async {
     final store = MarkdownMemoryStore(rootDir: tempRoot);
     final list = await store.listLongTermEntries();
     expect(list, isEmpty);
   });
 
-  test('listLongTermEntries returns empty list when MEMORY.md has no H1 headings', () async {
+  test(
+      'listLongTermEntries returns empty list when MEMORY.md has no H1 headings',
+      () async {
     final f = File(p.join(tempRoot.path, 'MEMORY.md'));
     await f.writeAsString('Just a plain body\nwith no heading\n');
     final store = MarkdownMemoryStore(rootDir: tempRoot);
@@ -42,7 +50,9 @@ void main() {
     expect(list, isEmpty);
   });
 
-  test('listRecentDailyNotes returns files sorted newest first and caps to count', () async {
+  test(
+      'listRecentDailyNotes returns files sorted newest first and caps to count',
+      () async {
     for (final date in [
       '2026-04-10',
       '2026-04-11',
@@ -57,11 +67,14 @@ void main() {
     final list = await store.listRecentDailyNotes(count: 3);
     expect(list.length, 3);
     expect(list[0].title, '2026-04-14');
+    expect(list[0].body, 'content for 2026-04-14');
+    expect(list[0].supportsBulkActions, isTrue);
     expect(list[1].title, '2026-04-13');
     expect(list[2].title, '2026-04-12');
   });
 
-  test('listRecentDailyNotes ignores files that are not daily-format', () async {
+  test('listRecentDailyNotes ignores files that are not daily-format',
+      () async {
     File(p.join(tempRoot.path, 'MEMORY.md')).writeAsStringSync('long term');
     File(p.join(tempRoot.path, 'notes.md')).writeAsStringSync('random');
     File(p.join(tempRoot.path, '2026-04-14.md'))

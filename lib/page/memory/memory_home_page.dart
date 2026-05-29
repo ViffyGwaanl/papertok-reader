@@ -1,12 +1,16 @@
 import 'dart:io';
 
 import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/memory/memory_bulk_selection_controller.dart';
 import 'package:papertok_reader/page/memory/memory_detail_page.dart';
 import 'package:papertok_reader/page/memory/widgets/memory_row.dart';
 import 'package:papertok_reader/page/memory/widgets/tag_editor.dart';
 import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_candidate.dart';
+import 'package:papertok_reader/service/memory/memory_candidate_store.dart';
 import 'package:papertok_reader/service/memory/memory_pending_count_provider.dart';
+import 'package:papertok_reader/service/memory/memory_source_ref_adapter.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:papertok_reader/widgets/common/pt_dialog.dart';
@@ -109,8 +113,7 @@ class _MemoryHomePageState extends ConsumerState<MemoryHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount =
-        ref.watch(memoryPendingCountProvider).valueOrNull ?? 0;
+    final pendingCount = ref.watch(memoryPendingCountProvider).valueOrNull ?? 0;
     final l10n = L10n.of(context);
     final effectiveStore = widget.store ?? MarkdownMemoryStore();
 
@@ -132,15 +135,13 @@ class _MemoryHomePageState extends ConsumerState<MemoryHomePage> {
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
                   tooltip: l10n.memoryBulkDeleteTooltip,
-                  onPressed:
-                      _bulk.selectionCount == 0 ? null : _confirmDelete,
+                  onPressed: _bulk.selectionCount == 0 ? null : _confirmDelete,
                 ),
                 IconButton(
                   icon: const Icon(Icons.label_outline),
                   tooltip: l10n.memoryBulkAddTagTooltip,
-                  onPressed: _bulk.selectionCount == 0
-                      ? null
-                      : _showAddTagSheet,
+                  onPressed:
+                      _bulk.selectionCount == 0 ? null : _showAddTagSheet,
                 ),
               ]
             : null,
@@ -204,12 +205,63 @@ class _MemoryEntriesCard extends StatelessWidget {
     required this.bulk,
   });
 
+  Future<_MemoryEntriesSnapshot> _loadEntries() async {
+    final entries = await future;
+    if (entries.isEmpty) {
+      return const _MemoryEntriesSnapshot(
+        entries: <MemoryEntryRef>[],
+        sourceRefsByIndex: <int, List<SourceRef>>{},
+      );
+    }
+
+    final candidates = await MemoryCandidateStore(
+      rootDir: store.rootDir,
+    ).list(status: MemoryCandidateStatus.applied);
+    if (candidates.isEmpty) {
+      return _MemoryEntriesSnapshot(
+        entries: entries,
+        sourceRefsByIndex: const <int, List<SourceRef>>{},
+      );
+    }
+
+    final sourceRefsByIndex = <int, List<SourceRef>>{};
+    for (var i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      final body = await _readEntryBody(entry);
+      final sourceRefs = MemoryEntrySourceRefAdapter.sourceRefsForEntry(
+        entry: entry,
+        body: body,
+        candidates: candidates,
+      );
+      if (sourceRefs.isNotEmpty) {
+        sourceRefsByIndex[i] = sourceRefs;
+      }
+    }
+
+    return _MemoryEntriesSnapshot(
+      entries: entries,
+      sourceRefsByIndex: sourceRefsByIndex,
+    );
+  }
+
+  Future<String> _readEntryBody(MemoryEntryRef entry) async {
+    if (entry.body.trim().isNotEmpty) return entry.body;
+    final file = File(entry.path);
+    if (!file.existsSync()) return '';
+    try {
+      return file.readAsString();
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<MemoryEntryRef>>(
-      future: future,
+    return FutureBuilder<_MemoryEntriesSnapshot>(
+      future: _loadEntries(),
       builder: (context, snapshot) {
-        final entries = snapshot.data ?? const <MemoryEntryRef>[];
+        final state = snapshot.data;
+        final entries = state?.entries ?? const <MemoryEntryRef>[];
         final loading = snapshot.connectionState != ConnectionState.done;
 
         if (loading) {
@@ -249,17 +301,22 @@ class _MemoryEntriesCard extends StatelessWidget {
               for (var i = 0; i < entries.length; i++) ...[
                 MemoryRow(
                   entry: entries[i],
-                  selectionMode: bulk.inSelectionMode,
-                  selected: bulk.selected.contains(entries[i].path),
+                  sourceRefs:
+                      state?.sourceRefsByIndex[i] ?? const <SourceRef>[],
+                  selectionMode:
+                      bulk.inSelectionMode && entries[i].supportsBulkActions,
+                  selected: entries[i].supportsBulkActions &&
+                      bulk.selected.contains(entries[i].path),
                   onTap: () async {
                     if (bulk.inSelectionMode) {
-                      bulk.toggle(entries[i].path);
+                      if (entries[i].supportsBulkActions) {
+                        bulk.toggle(entries[i].path);
+                      }
                       return;
                     }
                     final allKnownTags = <String>{};
                     for (final e in entries) {
-                      allKnownTags
-                          .addAll(await store.readEntryTags(e.path));
+                      allKnownTags.addAll(await store.readEntryTags(e.path));
                     }
                     if (!context.mounted) return;
                     await Navigator.of(context).push(
@@ -272,10 +329,12 @@ class _MemoryEntriesCard extends StatelessWidget {
                       ),
                     );
                   },
-                  onLongPress: () {
-                    HapticFeedback.mediumImpact();
-                    bulk.enter(seedId: entries[i].path);
-                  },
+                  onLongPress: entries[i].supportsBulkActions
+                      ? () {
+                          HapticFeedback.mediumImpact();
+                          bulk.enter(seedId: entries[i].path);
+                        }
+                      : null,
                 ),
                 if (i < entries.length - 1)
                   Padding(
@@ -293,6 +352,16 @@ class _MemoryEntriesCard extends StatelessWidget {
       },
     );
   }
+}
+
+class _MemoryEntriesSnapshot {
+  final List<MemoryEntryRef> entries;
+  final Map<int, List<SourceRef>> sourceRefsByIndex;
+
+  const _MemoryEntriesSnapshot({
+    required this.entries,
+    required this.sourceRefsByIndex,
+  });
 }
 
 class _InboxSummaryCard extends StatelessWidget {
@@ -328,8 +397,8 @@ class _InboxSummaryCard extends StatelessWidget {
               ),
               if (pendingCount > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: ClaudePalette.accent(context),
                     borderRadius: BorderRadius.circular(10),

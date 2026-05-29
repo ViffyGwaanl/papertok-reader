@@ -19,6 +19,7 @@
 | 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 runtime：用户可启动 role-by-role Seminar，查看 evidence、角色输出、Shared Whiteboard、synthesis，并把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox；Seminar 页面会在启动前显示 `Provider readiness`，列出当前 provider、model、context/max output、Tools/Vision/Thinking 能力、Streaming 状态未知提示和成本状态；角色完成后优先显示 provider 返回的 `Provider reported usage`，没有 provider usage metadata 时显示 `Local token estimate`、input/output 估算和 `Provider billing may differ` 提示；页面提供本地 `Role output token budget`、`Run token budget`，当 provider capability cache 带 pricing metadata 时还启用估算 `Run cost cap USD`；页面可在同一书籍/同一入口问题恢复本机保存的 completed/cancelled/failed Seminar state，并显示 `Recovered local Seminar state`。 | 阅读页优先 current book evidence；Settings 独立入口没有 current book 时会走 library fallback。Seminar synthesis 本身只进入 Review，不自动应用；候选卡和候选 flashcard 仍需用户在 Review Inbox 中批准/应用后才成为长期资产或复习项；provider readiness 只读本地 Provider Center 配置和 capability cache，不记录 API key；provider token usage 只表示 provider/SDK 回传的 token metadata；估算美元成本来自 pricing metadata 与 token usage，不等于真实 provider 发票；缺少 pricing metadata 时继续显示成本未知原因且禁用美元 cap；重启前仍在 running 的 Seminar 只恢复为 interrupted/retryable，不伪装继续后台生成；换书或换选区打开 Seminar 会丢弃旧 runtime/cache，不显示不属于当前入口的旧研讨。 |
 | AI Chat 普通解释 -> KnowledgeCard | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡`。 | 本分支已接入 `AiChatKnowledgeCardProducer` 和回答旁显性 `知识卡` action；streaming 中 `知识卡` 按钮禁用且不会调用 producer；回答旁显示 `可跳转来源` 或 `已标记不可用` 来源状态，tooltip 解释是否能跳回原文；选中文本进入 AI 草稿时会带上精确 reader SourceRef，并随 `conversationV2` 历史持久化，点击后写入 KnowledgeCard store 与 Review Inbox；reader-grounded card 会带保守 `conceptRefs`。 | 必须用户显式点击；不会在回答生成时直接写 KnowledgeCard 或 ConceptGraph；如果用户把预填草稿改成不包含原选中文本或 SourceRef snippet 的无关问题，本轮 user node 不保存旧 reader SourceRef；短公共片段只靠碰巧包含不会保留精确 reader grounding；用户在 Review Inbox 中 Apply 后，带 `conceptRefs` 的 reader-grounded AI Chat card 才会生成 draft ConceptGraph relation 和 pending relation ReviewItem；纯聊天 card 不生成 `conceptRefs`；没有持久化 reader SourceRef 的旧历史只保留 conversation provenance，不用当前阅读位置伪造 reader grounding。 |
 | AI Chat -> Memory 候选审核 | AI Chat 回答旁 `Memory actions` -> `Add to Review inbox` -> `Settings -> AI -> Review inbox`。 | 本分支已接入 MemoryCandidate 到统一 ReviewItem 的 handoff、Memory source-specific apply/dismiss adapter 和 Review Inbox Apply UI。 | Memory 候选必须经用户批准和应用；Apply 先追加到目标 daily/long-term Markdown，再推进 ReviewItem；Dismiss 不写 memory；无书内跳转的 conversation memory 会显示证据摘录和不可跳原因；不写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。 |
+| Memory 独立浏览 SourceRef 审计 | 首页底部 `Memory / 记忆` tab 打开 daily/long-term memory 列表，再进入条目详情；该 tab 默认隐藏，可先到 `Settings -> Home navigation / 首页导航` 打开。 | 本分支已接入 `MemoryEntrySourceRefAdapter`、Memory home row source audit chips、Memory detail `SourceRefEvidenceList` 和 `Open source` action；只从已应用 MemoryCandidate 只读投影 SourceRef，按目标文档与条目 body 匹配，long-term `MEMORY.md` 按 H1 分段 body 匹配。 | 匹配只认实际写入 memory 的 `text/displayText`，不能只靠 summary 命中；不往 Markdown memory 写隐藏来源字段；没有 book anchor 的 conversation memory 只显示 unavailable/unresolved；可跳来源只使用合法 `paperreader://reader/open?...`；long-term H1 分段不能被批量删除/打标签，避免误操作整份 `MEMORY.md`；浏览页不创建 KnowledgeCard、ReviewItem、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | 旧划线/笔记 SourceRef 审计 | 书籍笔记列表或搜索结果里的笔记条目。 | 本分支已接入 `BookNoteSourceRefAdapter`、`BookNoteTile` source audit、`SourceRefEvidenceList` 和 `PaperReaderSourceJumpAudit`；条目显示 Evidence、可跳转/不可跳状态、来源书名/章节和不可跳原因。 | 有有效 `bookId + cfi` 的条目保持原文跳转；无有效 book anchor 的旧条目点击时显示不可跳原因，不调用阅读页空 CFI 或无效 book anchor 跳转；不写 KnowledgeCard、ReviewItem、Memory、ConceptGraph、SpacedReview 或 Sync。 |
 | Custom Skill 导入 | `Settings -> AI -> Custom skills` 粘贴 governed JSON -> `Import skill`，再到 `Active Skill` 选择启用后的自定义 skill。 | 本分支已接入导入页面、`CustomSkillStore`、Settings 入口、`AiSkillRegistry` 合并和 LangChain runtime 工具收窄。 | 只接受 `CustomSkillContract(schemaVersion=1)`；unsafe JSON 不落库、不激活；禁用 skill 不进入 Active Skill 列表；运行时只保留自定义 skill 声明过、当前 scene 可用、permission matrix 允许的只读工具；custom skill 激活时不加载 MCP 工具。 |
 | ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入 Explorer、Settings 点击入口、选中文本入口、KnowledgeCard -> draft ConceptGraph producer、Seminar candidate card -> conceptRefs -> KnowledgeCard -> ConceptGraph 候选链路、reader-grounded AI Chat card -> conceptRefs -> KnowledgeCard -> ConceptGraph 候选链路，以及空态 `Create draft candidate` 显性 action：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部图谱摘要、局部路径、draft/formal 状态、evidence 状态和 orphan/broken link，并可把 derived RAG/GraphRAG result 写成待审图谱候选；空态动作会显示已进入 Review 或跳过原因。 | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard，或带 `derivedLayer/derivedSummary + traceable chunk SourceRef` 的 library RAG result，会生成 draft node/edge 和 pending relation ReviewItem；空态草稿入口使用本地文本检索，关闭 query embedding、vector fallback 和 rerank；AI Chat 不直接调用 RAG/GraphRAG producer，不自动创建正式节点。 |
@@ -176,7 +177,44 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.5 旧划线/笔记 SourceRef 审计
+### 2.5 Memory 独立浏览 SourceRef 审计
+
+用户路径：
+
+1. 用户在 `Settings -> Home navigation / 首页导航` 打开默认隐藏的 `Memory / 记忆` tab。
+2. 用户从首页底部导航进入 `Memory / 记忆` tab。
+3. 页面加载 daily memory 和 long-term memory 条目。
+4. 系统用已应用的 `MemoryCandidate` 按目标文档和条目 body 只读投影 SourceRef。
+5. 条目行显示 `traceable/unavailable/unresolved` 来源状态。
+6. 用户点击一条 memory 进入详情页。
+7. 详情页显示 `Evidence`、证据摘录、来源标题/位置和不可跳原因。
+8. 如果 SourceRef 可解析为 `paperreader://reader/open?...`，用户点击 `Open source` 回到原文。
+9. 如果来源没有 book anchor，用户点击 `Open source` 时看到不可跳原因，不触发空跳转。
+
+Gate：
+
+- Memory 独立浏览页只能读取已应用 MemoryCandidate 生成 SourceRef，不写新的 ReviewItem 或知识资产。
+- SourceRef 投影必须匹配 `daily/longTerm` 目标文档和条目正文；只能用实际写入 memory 的 `text/displayText` 证明归属，不能只靠 summary 命中；long-term `MEMORY.md` 使用 H1 分段 body，不能把整文件来源全部挂到每个分段。
+- 不往 Markdown memory 文件写隐藏 metadata；旧 Markdown 仍可正常打开。
+- long-term H1 分段不可批量删除/打标签，避免把一个分段的操作变成整份 `MEMORY.md` 的资产修改。
+- 有效来源必须通过 `PaperReaderReaderIntent.fromSourceRef` 生成 reader intent；非法 jump link 不能算 traceable。
+- conversation-only memory 保留 evidence snippet、source hash 和 `memory-source-not-jumpable` 不可跳原因。
+- 详情页只展示已裁剪 evidence，不读取整章正文、图片原文、OCR 长文本或派生索引。
+
+验证命令：
+
+```bash
+flutter test --no-pub \
+  test/page/memory/memory_home_page_test.dart \
+  test/service/memory/markdown_memory_store_test.dart \
+  test/service/memory/memory_source_ref_adapter_test.dart \
+  test/page/memory/memory_row_test.dart \
+  test/page/memory/memory_detail_page_test.dart \
+  test/page/settings_page/settings_navigation_compile_test.dart \
+  -r compact
+```
+
+### 2.6 旧划线/笔记 SourceRef 审计
 
 用户路径：
 
@@ -203,7 +241,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.6 图片解析生成知识卡
+### 2.7 图片解析生成知识卡
 
 用户路径：
 
@@ -234,7 +272,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.7 概念图谱探索
+### 2.8 概念图谱探索
 
 用户路径：
 
@@ -280,7 +318,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.8 RAG / GraphRAG 结果生成知识卡
+### 2.9 RAG / GraphRAG 结果生成知识卡
 
 用户路径：
 
@@ -314,7 +352,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.9 间隔复习
+### 2.10 间隔复习
 
 用户路径：
 
@@ -348,7 +386,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.10 知识同步 / 导出
+### 2.11 知识同步 / 导出
 
 用户路径：
 
@@ -396,7 +434,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.11 Custom Skill 导入
+### 2.12 Custom Skill 导入
 
 用户路径：
 
@@ -438,7 +476,6 @@ flutter test --no-pub \
 | 能力 | 当前边界 | 下一步 Agent Task | Gate |
 | --- | --- | --- | --- |
 | 完整云同步引擎 | 当前只有本地导出、安全冲突 Review handoff 和安全 KnowledgeCard 冲突本地恢复。 | 设计并实现 per-entity remote sync、远端冲突合并器、远端写回和回滚。 | API key 永不同步；冲突进入 Review；不得使用 whole-file newer-wins 覆盖用户资产。 |
-| 旧 Memory 独立页面 SourceRef 审计 | AI Chat Memory 候选经 Review Inbox 已有 SourceRef 证据和不可跳原因；daily/long-term Memory 独立浏览页还没有同等来源审计入口。 | 为 Memory home、daily memory、long-term memory 浏览 UI 增加 source-specific SourceRef 投影、证据列表、jump audit 和不可跳提示。 | 不用当前阅读位置伪造来源；无 book anchor 的 memory 只能显示 unavailable/unresolved；Memory 浏览页不得绕过 Review 写入长期资产。 |
 | Seminar 后台续跑和真实账单对账 | Seminar runtime 已能流式、取消、重试、Review handoff，并显示 provider readiness、capability cache、成本未知原因、provider token usage、本地 token 估算 fallback、本地 role/run token budget、pricing metadata 驱动的估算 `Run cost cap USD` 和本机 state 恢复；running state 重启后恢复为 interrupted/retryable。未接真正后台任务续跑，也不做 provider invoice reconciliation。 | 接入后台任务队列、重启续跑、移动资源 gate 和真实账单/价格版本对账说明。 | 移动资源 gate；长任务可取消、失败可恢复或重试；无 pricing metadata 时继续显示成本未知原因并禁用美元 cap；估算美元成本不等于 provider 发票；本地 token budget 不得声明为 provider billing cap；不能把本机 recovery cache 当作同步资产。 |
 | 复杂无限画布式 ConceptGraph | 当前是局部图谱、dossier、路径和摘要，不做无限画布、缩放手势或跨书外部知识扩展。 | 如需画布，先定义移动端资源、证据可见性和 graph ownership gate。 | 关系必须有 evidence；正式关系必须 Review apply。 |
 | 发布版可用 | 本文件描述 `codex/future-agentic-upgrade` 分支；不代表 `main`、TestFlight 或已安装版本。 | 走 release promotion gate，完成合并、构建、回归、发布说明和用户迁移说明。 | 发布前必须重跑权威验证命令并记录 commit。 |
@@ -471,6 +508,7 @@ flutter test --no-pub \
 | UFA-C04-T02 | Accepted | Flashcard Review apply | 待审 flashcard 应用后进入 Spaced Review。 | E05 controller, UFA-C02-T04 | `SpacedReviewStore.reviewIdForFlashcard`, `upsertFromFlashcardReviewItem`, `ReviewInboxPage` Apply gate | pending/approved flashcard 不直接入队；只有用户在 Review Inbox 点击 enabled `Apply` 后，applied 且 traceable 的 flashcard 才能入队；重复入队不制造重复复习项。 |
 | UFA-C04-T03 | Accepted | Memory Review apply | 待审 MemoryCandidate 通过统一 Review Inbox 应用到本地 Markdown memory。 | E05 controller, MemoryWorkflowService, MemoryCandidateReviewAdapter | `MemoryWorkflowService.addToReviewInbox` -> `ReviewItemStore` handoff, `ReviewInboxController` memory source-specific apply/dismiss adapter, `ReviewInboxPage` Apply gate | AI Chat memory action 创建 pending MemoryCandidate 时同步创建 pending ReviewItem；conversation-only memory SourceRef 带 evidence snippet、source hash 和不可跳原因；Review Inbox `Approve -> Apply` 先调用 MemoryWorkflowService 追加到目标 daily/long-term Markdown，再推进 ReviewItem；`Dismiss` 同步 MemoryCandidate 且不写 memory；source candidate 缺失不推进 ReviewItem；不写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | UFA-C04-T04 | Accepted | BookNote SourceRef audit | 旧划线/笔记条目显示来源证据和可跳/不可跳状态。 | E00 SourceRef, E07 deep link, BookNote UI | `BookNoteSourceRefAdapter`, `BookNoteTile`, `BookNotesList`, search note result, `SourceRefEvidenceList` | Notes 列表和搜索结果传入 source title；BookNoteTile 显示 evidence、traceable/unavailable chip、来源位置和不可跳原因；有有效 `bookId + cfi` 的条目保持原文跳转；无有效 book anchor 条目点击只显示不可跳 snackbar，不触发空 CFI 或无效 book anchor 跳转；测试覆盖 adapter 和 widget。 |
+| UFA-C04-T05 | Accepted | Memory browse SourceRef audit | Memory home、daily memory、long-term memory 浏览 UI 显示来源证据和可跳/不可跳状态。 | E00 SourceRef, E05 MemoryCandidate, E07 deep link, Memory browse UI | `MemoryEntrySourceRefAdapter`, `MemoryEntryRef.body/supportsBulkActions`, `MemoryRow` source audit chips, `MemoryDetailPage` source evidence/open source, Home navigation Memory label/icon | 只读投影已应用 MemoryCandidate；按目标文档和条目 body 匹配，summary-only 不归因，long-term H1 分段不共享整文件来源；列表显示 traceable/unavailable/unresolved chip；详情页显示 Evidence 和 `Open source`；可跳来源交给 reader opener，不可跳来源显示原因且不调用 opener；long-term H1 分段不允许批量删除/打标签，详情页也不显示会写整份 `MEMORY.md` 的 tag editor；不写 Markdown metadata、不写任何新知识资产。 |
 | UFA-C05-T01 | Accepted | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | `KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI entry、export manifest、Markdown export、HTML study report、Anki TSV export、sync-conflict ReviewItem handoff | API key 不同步；派生索引不当作 source-of-truth；冲突被排除并显性显示；当前创建本地 manifest、Markdown 学习导出、HTML study report 和 Anki TSV，并能把待审冲突送入 Review Inbox；导出页在发送成功后显示 `Review inbox` 直达入口；provider 级测试覆盖 `KnowledgeAssetExportNotifier -> ReviewInboxNotifier -> ReviewInboxController -> KnowledgeCardStore/ReviewItemStore` 的安全 KnowledgeCard 冲突 approve/apply 闭环，解除 pending conflict 并重新进入导出集合；不执行远端同步或自动跨设备合并。 |
 | UFA-C06-T01 | Accepted | Custom Skill 导入 | 用户从 Settings 导入 governed JSON skill，并在 Active Skill 中启用。 | E06 CustomSkillContract, AiSkillRegistry, LangChain runtime | `CustomSkillStore`、`CustomSkillsPage`、Settings AI entry、`AiSkill.allowedToolIds/sceneIds`、`LangchainAiRegistry.enabledToolIdsForActiveSkill` | 有效 `CustomSkillContract(schemaVersion=1)` 可导入、upsert、禁用和删除；危险工具、递归 sub-agent、unknown scene/field 和类型错误不落库不激活；禁用 skill 不进入 Active Skill；运行时只保留 custom skill 声明过且当前 scene/permission matrix 允许的只读工具；custom skill 激活时不加载 MCP 工具；widget 覆盖 `Settings -> AI -> Custom skills` 导航和粘贴 JSON 导入。 |
 

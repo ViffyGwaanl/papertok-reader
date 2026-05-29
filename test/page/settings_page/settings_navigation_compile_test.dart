@@ -11,6 +11,7 @@ import 'package:papertok_reader/page/settings_page/ai.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/settings_page/custom_skills.dart';
+import 'package:papertok_reader/page/settings_page/home_navigation.dart';
 import 'package:papertok_reader/page/settings_page/knowledge_asset_export.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/spaced_review.dart';
@@ -245,6 +246,26 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('home navigation exposes Memory tab toggle', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: L10n.localizationsDelegates,
+        supportedLocales: L10n.supportedLocales,
+        home: HomeNavigationSettingsPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Memory'), findsOneWidget);
+    expect(find.byType(Switch), findsWidgets);
   });
 }
 

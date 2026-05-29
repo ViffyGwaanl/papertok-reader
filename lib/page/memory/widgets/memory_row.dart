@@ -1,5 +1,7 @@
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/knowledge/source_ref_audit_chips.dart';
 import 'package:flutter/material.dart';
 
 class MemoryRow extends StatelessWidget {
@@ -8,6 +10,7 @@ class MemoryRow extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool selectionMode;
   final bool selected;
+  final List<SourceRef> sourceRefs;
 
   const MemoryRow({
     super.key,
@@ -16,14 +19,13 @@ class MemoryRow extends StatelessWidget {
     this.onLongPress,
     this.selectionMode = false,
     this.selected = false,
+    this.sourceRefs = const <SourceRef>[],
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected
-          ? ClaudePalette.accentTint(context)
-          : Colors.transparent,
+      color: selected ? ClaudePalette.accentTint(context) : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
@@ -69,6 +71,10 @@ class MemoryRow extends StatelessWidget {
                           color: ClaudePalette.secondary(context),
                         ),
                       ),
+                    ],
+                    if (sourceRefs.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      SourceRefAuditChips(sourceRefs: sourceRefs),
                     ],
                   ],
                 ),
