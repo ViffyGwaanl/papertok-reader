@@ -1,0 +1,415 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/ai_seminar.dart';
+import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
+import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
+import 'package:papertok_reader/theme/claude_palette.dart';
+
+class AiSeminarRuntimePage extends ConsumerStatefulWidget {
+  const AiSeminarRuntimePage({
+    super.key,
+    this.initialQuestion,
+    this.bookId,
+    this.autoStart = false,
+  });
+
+  final String? initialQuestion;
+  final int? bookId;
+  final bool autoStart;
+
+  @override
+  ConsumerState<AiSeminarRuntimePage> createState() =>
+      _AiSeminarRuntimePageState();
+}
+
+class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
+  late final TextEditingController _questionController;
+  bool _autoStarted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _questionController = TextEditingController(
+      text: widget.initialQuestion?.trim() ?? '',
+    );
+    if (widget.autoStart && _questionController.text.trim().isNotEmpty) {
+      Future.microtask(_start);
+    }
+  }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _start() async {
+    if (_autoStarted && widget.autoStart) return;
+    _autoStarted = true;
+    final question = _questionController.text.trim();
+    if (question.isEmpty) return;
+    await ref.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(
+            id: 'seminar-${DateTime.now().millisecondsSinceEpoch}',
+            question: question,
+            bookId: widget.bookId,
+          ),
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final state = ref.watch(aiSeminarRuntimeProvider);
+    final busy = state.status == AiSeminarRunStatus.running;
+
+    return SettingsSubpageScaffold(
+      title: l10n.aiSkillSeminarModeName,
+      actions: [
+        if (state.canCancel)
+          IconButton(
+            tooltip: l10n.commonCancel,
+            icon: const Icon(Icons.stop_circle_outlined),
+            onPressed: () =>
+                ref.read(aiSeminarRuntimeProvider.notifier).cancel(),
+          ),
+        if (state.canRetry)
+          IconButton(
+            tooltip: l10n.commonRetry,
+            icon: const Icon(Icons.refresh),
+            onPressed: () =>
+                ref.read(aiSeminarRuntimeProvider.notifier).retry(),
+          ),
+      ],
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          Text(
+            l10n.aiSkillSeminarModeDesc,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _questionController,
+            minLines: 2,
+            maxLines: 5,
+            enabled: !busy,
+            decoration: const InputDecoration(
+              labelText: 'Seminar question',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              FilledButton.icon(
+                icon: busy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.groups_2_outlined),
+                label: const Text('Start Seminar'),
+                onPressed: busy ? null : _start,
+              ),
+              const SizedBox(width: 8),
+              if (state.canRetry)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: Text(l10n.commonRetry),
+                  onPressed: () =>
+                      ref.read(aiSeminarRuntimeProvider.notifier).retry(),
+                ),
+              if (state.canCancel)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.stop_circle_outlined),
+                  label: Text(l10n.commonCancel),
+                  onPressed: () =>
+                      ref.read(aiSeminarRuntimeProvider.notifier).cancel(),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _StatusBanner(state: state),
+          const SizedBox(height: 12),
+          _EvidenceSection(state: state),
+          const SizedBox(height: 12),
+          _RolesSection(state: state),
+          const SizedBox(height: 12),
+          _WhiteboardSection(entries: state.whiteboardEntries),
+          const SizedBox(height: 12),
+          _SynthesisSection(state: state),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({required this.state});
+
+  final AiSeminarRuntimeState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final error = state.error?.trim();
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ClaudePalette.card(context),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(_statusIcon(state.status)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                error == null || error.isEmpty
+                    ? 'Status: ${state.status.asString}'
+                    : error,
+              ),
+            ),
+            _TinyChip(label: state.status.asString),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EvidenceSection extends StatelessWidget {
+  const _EvidenceSection({required this.state});
+
+  final AiSeminarRuntimeState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final evidence = state.evidenceBundle?.evidence ?? const [];
+    return _Section(
+      title: l10n.conceptGraphEvidenceTitle,
+      icon: Icons.link_outlined,
+      children: evidence.isEmpty
+          ? [Text(l10n.conceptGraphNoEvidence)]
+          : [
+              for (final item in evidence)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.article_outlined),
+                  title: Text(item.text),
+                  subtitle: Text('${item.id} · ${item.scope.asString}'),
+                ),
+            ],
+    );
+  }
+}
+
+class _RolesSection extends StatelessWidget {
+  const _RolesSection({required this.state});
+
+  final AiSeminarRuntimeState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final turns = state.turns;
+    final activeRole = state.activeRole;
+    final children = <Widget>[];
+    for (final turn in turns) {
+      children.add(
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(_roleIcon(turn.role)),
+          title: Text(turn.role.asString),
+          subtitle: Text(turn.responseText),
+        ),
+      );
+    }
+    if (activeRole != null) {
+      children.add(
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          title: Text(activeRole.asString),
+          subtitle: Text(state.partialRoleText ?? ''),
+        ),
+      );
+    }
+    return _Section(
+      title: 'Roles',
+      icon: Icons.groups_2_outlined,
+      children:
+          children.isEmpty ? [const Text('No role turns yet.')] : children,
+    );
+  }
+}
+
+class _WhiteboardSection extends StatelessWidget {
+  const _WhiteboardSection({required this.entries});
+
+  final List<AiSeminarWhiteboardEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: 'Shared whiteboard',
+      icon: Icons.dashboard_customize_outlined,
+      children: entries.isEmpty
+          ? [const Text('No whiteboard entries yet.')]
+          : [
+              for (final entry in entries)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.sticky_note_2_outlined),
+                  title: Text(entry.text),
+                  subtitle: Text(entry.kind.asString),
+                ),
+            ],
+    );
+  }
+}
+
+class _SynthesisSection extends ConsumerWidget {
+  const _SynthesisSection({required this.state});
+
+  final AiSeminarRuntimeState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final synthesis = state.synthesis;
+    return _Section(
+      title: 'Synthesis',
+      icon: Icons.auto_awesome_outlined,
+      children: [
+        if (synthesis == null)
+          const Text('No synthesis yet.')
+        else ...[
+          Text(synthesis.summary),
+          const SizedBox(height: 8),
+          Text('Supportive: ${synthesis.supportiveView}'),
+          const SizedBox(height: 4),
+          Text('Critical: ${synthesis.criticalView}'),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            icon: const Icon(Icons.fact_check_outlined),
+            label: const Text('Send to Review'),
+            onPressed: state.canSendToReview
+                ? () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      final result = await ref
+                          .read(aiSeminarRuntimeProvider.notifier)
+                          .sendToReview();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Sent synthesis and ${result.knowledgeCardIds.length} card(s) to Review.',
+                          ),
+                        ),
+                      );
+                    } catch (error) {
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(error.toString())),
+                      );
+                    }
+                  }
+                : null,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ClaudePalette.card(context),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TinyChip extends StatelessWidget {
+  const _TinyChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+      ),
+    );
+  }
+}
+
+IconData _statusIcon(AiSeminarRunStatus status) {
+  return switch (status) {
+    AiSeminarRunStatus.draft => Icons.edit_note_outlined,
+    AiSeminarRunStatus.running => Icons.play_circle_outline,
+    AiSeminarRunStatus.completed => Icons.check_circle_outline,
+    AiSeminarRunStatus.needsEvidence => Icons.link_off_outlined,
+    AiSeminarRunStatus.cancelled => Icons.stop_circle_outlined,
+    AiSeminarRunStatus.failed => Icons.error_outline,
+  };
+}
+
+IconData _roleIcon(AiSeminarRole role) {
+  return switch (role) {
+    AiSeminarRole.critical => Icons.report_problem_outlined,
+    AiSeminarRole.supportive => Icons.thumb_up_alt_outlined,
+    AiSeminarRole.synthesizer => Icons.auto_awesome_outlined,
+    AiSeminarRole.verifier => Icons.verified_outlined,
+  };
+}

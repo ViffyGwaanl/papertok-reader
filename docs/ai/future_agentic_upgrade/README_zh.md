@@ -50,12 +50,12 @@
 
 ## 5. 当前用户可用性
 
-本目录不是说“所有 Epic 都已产品化”。当前用户可用入口如下：
+本目录不是说“所有 Epic 都已产品化”。本节只放用户入口摘要；完整任务状态、真实边界和验证命令以 `04_user_facing_activation_plan_zh.md` 为准。
 
 | 能力 | 用户怎么用 | 状态 |
 | --- | --- | --- |
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入。 |
-| 一键开启研讨 | 阅读页选中文本 -> `研讨` -> AI 面板以 `seminar_mode` 草稿打开。 | 本分支已接入最小可用入口；结构化多 agent runtime/UI 仍在剩余任务中。 |
+| 一键开启研讨 | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 AI Seminar runtime/UI：展示 evidence、role turns、Shared Whiteboard、synthesis，支持取消、失败重试，并可把 traceable synthesis 与候选卡送入 Review Inbox；不自动写长期资产。 |
 | Review Inbox | `Settings -> AI -> Review inbox`。 | 已有统一 UI；内容依赖 producer 写入。 |
 | 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer、阅读页选中文本入口和 KnowledgeCard -> draft ConceptGraph producer；可查看已有图谱、按选中文本筛选相关概念、查看局部路径、证据和 orphan/broken link。当前 producer 只从 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成待审图谱关系；RAG/GraphRAG/Seminar 自动抽概念仍在剩余任务中。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；知识卡在 Review Inbox 中 `Apply` 后自动入队。 | 本分支已接入队列、复习页、Again/Hard/Good/Easy 评分和来源跳转状态；只接 KnowledgeCard apply。 |

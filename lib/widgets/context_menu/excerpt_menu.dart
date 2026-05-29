@@ -3,6 +3,7 @@ import 'package:papertok_reader/constants/note_annotations.dart';
 import 'package:papertok_reader/dao/book_note.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/book_note.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/reading_page.dart';
 import 'package:papertok_reader/service/knowledge/selection_knowledge_card_producer.dart';
@@ -245,20 +246,22 @@ class ExcerptMenuState extends State<ExcerptMenu> {
   }
 
   Future<void> _openSeminarFromSelection() async {
-    final key = readingPageKey.currentState;
     final l10n = L10n.of(context);
-    if (key == null) {
-      AnxToast.show(l10n.contextMenuSeminarOpenFailed);
-      return;
-    }
-
     final prompt = l10n.contextMenuSeminarPrompt(
       widget.annoContent.trim(),
     );
+    final bookId = epubPlayerKey.currentState?.widget.book.id;
     widget.onClose();
     Prefs().activeAiSkillId = 'seminar_mode';
-    await key.showAiChat(content: prompt, sendImmediate: false);
-    key.aiChatKey.currentState?.prefillDraft(message: prompt);
+    if (!mounted) return;
+    Navigator.of(context).push(
+      CupertinoStyleRoute(
+        page: AiSeminarRuntimePage(
+          initialQuestion: prompt,
+          bookId: bookId,
+        ),
+      ),
+    );
   }
 
   void _openConceptGraphFromSelection() {

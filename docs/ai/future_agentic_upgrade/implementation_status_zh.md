@@ -14,7 +14,7 @@
 | Epic | 当前代码 artifact | Gate 证据 | 状态 |
 | --- | --- | --- | --- |
 | E00 SourceRef & Provenance | `lib/models/source_ref.dart`、`lib/service/rag/source_ref_adapter.dart`、current-book/library RAG evidence `sourceRef` | SourceRef safe JSON、derived chunk hint、reader jump link、hash-only fingerprint 不算正式 evidence | In Review slice |
-| E01 AI Seminar | `lib/models/ai_seminar.dart`、`AiSeminarOrchestrationService`、`AiSeminarEvidenceBroker`、`SeminarSynthesisReviewAdapter`、Seminar runtime governance scene、`ExcerptMenu` selection seminar launcher | fixed roles、role turn contract validation、current book first、library fallback service rule、Shared Whiteboard handoff、ReviewItem/KnowledgeCard candidates 不直接写用户资产；阅读页 `研讨` 入口降级到 prompt skill flow | In Review slice |
+| E01 AI Seminar | `lib/models/ai_seminar.dart`、`AiSeminarOrchestrationService`、`AiSeminarEvidenceBroker`、`AiSeminarRuntimeService`、`aiSeminarRuntimeProvider`、`AiSeminarRuntimePage`、`SeminarSynthesisReviewAdapter`、Seminar runtime governance scene、`ExcerptMenu` selection seminar launcher | fixed roles、role turn contract validation、current book first、library fallback service rule、Shared Whiteboard handoff、流式 role runtime、取消、失败重试、可序列化 runtime state、Settings AI 与阅读页入口、ReviewItem/KnowledgeCard candidates 不直接写用户资产 | In Review slice |
 | E02 RAG / RAPTOR / GraphRAG | RAG evidence SourceRef alignment、`live_rag_gateway_smoke_test.dart` opt-in provider smoke、current branch `kAiIndexDbVersion = 10` | schema migration increments from main v8 through detailed progress and `force_rebuild`, embedding/rerank endpoint smoke isolated from normal CI | In Review slice |
 | E03 KnowledgeCard | `lib/models/knowledge_card.dart`、`KnowledgeCardReviewAdapter`、`KnowledgeCardStore`、`SelectionKnowledgeCardProducer`、`ExcerptMenu` KnowledgeCard action | draft/pending boundary, duplicate candidate guard, source-required apply, card-to-review tests, reader selection SourceRef, `.knowledge/knowledge_cards_v1.json` local persistence, Review Inbox write | In Review slice |
 | E04 ConceptGraph | `lib/models/concept_graph.dart`、`ConceptGraphStore`、`ConceptGraphProducer`、`ConceptGraphReviewAdapter`、`ConceptGraphExplorerPage`、`conceptGraphExplorerProvider`、`ExcerptMenu` graph action | node/edge evidence, KnowledgeCard apply -> draft graph candidates + pending relation ReviewItem, only `applied + traceable + conceptRefs` cards seed graph candidates, producer failure does not roll back apply, draft-only store writes, relation apply via ReviewItem, dossier assembly via traceable edges, orphan/broken link detection, local exploration depth/width limits, malformed graph degrade, Settings AI and reader-selection visible Explorer | In Review slice |
@@ -47,6 +47,9 @@ flutter test --no-pub \
   test/service/ai/tool_orchestrator_governance_test.dart \
   test/service/ai/ai_seminar_evidence_broker_test.dart \
   test/service/ai/ai_seminar_orchestration_service_test.dart \
+  test/service/ai/ai_seminar_runtime_service_test.dart \
+  test/providers/ai_seminar_runtime_test.dart \
+  test/page/settings_page/ai_seminar_runtime_page_test.dart \
   test/service/knowledge/concept_graph_store_test.dart \
   test/service/knowledge/concept_graph_producer_test.dart \
   test/providers/concept_graph_explorer_test.dart \
@@ -193,6 +196,12 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - `2026-05-29 03:17 EDT`：`dart analyze --no-fatal-warnings lib/service/knowledge/concept_graph_producer.dart lib/service/review/review_inbox_controller.dart test/service/knowledge/concept_graph_producer_test.dart test/service/review/review_inbox_controller_test.dart` 仍被 analyzer plugin setup 阻塞，原因是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；该命令未返回代码诊断。
 - `2026-05-29 03:17 EDT`：独立 rescue reviewer 初审指出中文/ASCII 混合 concept label ID 碰撞 blocker；修复后 re-review 确认 no blockers。残余风险：12 字符 SHA-1 后缀仍有理论碰撞概率；纯 ASCII label 仍按可读 slug 归一化，大小写和标点差异会合并。
 - `2026-05-29 03:17 EDT`：`git diff --check` 通过；README / user-facing activation / implementation status 禁用词扫描无命中；用户提供的本地 gateway API key 明文扫描无命中。
+- `2026-05-29 03:54 EDT`：AI Seminar runtime 用户入口切片通过，`flutter test --no-pub test/service/ai/ai_seminar_runtime_service_test.dart test/providers/ai_seminar_runtime_test.dart test/page/settings_page/ai_seminar_runtime_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart test/widgets/context_menu/excerpt_menu_actions_test.dart -r compact` 结果为 `15 passed`；覆盖 evidence/role/whiteboard/synthesis stream events、取消、失败重试、state serialization、Settings AI 入口、阅读页选中 `Seminar` 入口、`Send to Review` handoff、role 字段缺失或未知时拒绝、候选卡 ReviewItem 写入失败后的重试修复。
+- `2026-05-29 03:54 EDT`：独立 rescue reviewer 复核 AI Seminar runtime，结论为 no P1 blockers；指出的两个 P2 已修复：role 缺失/未知不再静默兜底，Review handoff 重试会补回已写入候选卡的 ReviewItem。
+- `2026-05-29 03:56 EDT`：独立 rescue re-review 确认 no blockers；复核点包括 role 缺失/未知拒绝、Review handoff 重试补回 ReviewItem、文档仍保持 `In Review` 口径且没有误标 Accepted。
+- `2026-05-29 03:54 EDT`：agentic focused suite 通过，加入 AI Seminar runtime 和 rescue P2 修复后结果为 `193 passed, 2 skipped`；两个 skipped 均为 opt-in live RAG gateway smoke。
+- `2026-05-29 03:54 EDT`：`git diff --check` 通过；README / user-facing activation / implementation status 禁用词扫描无命中；用户提供的本地 gateway API key 明文扫描无命中。
+- `2026-05-29 03:49 EDT`：`dart analyze --no-fatal-warnings lib/service/ai/ai_seminar_runtime_service.dart lib/providers/ai_seminar_runtime.dart lib/page/settings_page/ai_seminar_runtime.dart lib/page/settings_page/ai.dart lib/widgets/context_menu/excerpt_menu.dart test/service/ai/ai_seminar_runtime_service_test.dart test/providers/ai_seminar_runtime_test.dart test/page/settings_page/ai_seminar_runtime_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart test/widgets/context_menu/excerpt_menu_actions_test.dart` 被 analyzer plugin setup 阻塞，原因仍是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；未返回代码诊断。
 
 ## 4. Rescue Review Checklist
 
@@ -218,6 +227,6 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - AI Seminar role executor 的返回值必须匹配当前 role，且每个非失败 role turn 必须引用可追踪 evidence；不合格 turn 不进入后续 `priorTurns`。
 - AI Seminar evidence broker 默认 current book first；只有 current-book evidence 不足或 session 明确包含 library scope 时才使用 library evidence。
 - Seminar synthesis 只有同时满足 `readyForReview` 和 traceable handoff 才能进入 pending Review；候选 KnowledgeCard ID 必须处理空 ID 和重复 ID。
-- 阅读页 `研讨` 入口当前只打开 `seminar_mode` 草稿，不等同于结构化多 agent runtime，也不自动写 ReviewItem。
+- 阅读页 `研讨` 入口进入结构化 `AiSeminarRuntimePage`，并把选中文本预填为 Seminar question；只有用户点击 `Send to Review` 且 synthesis 满足 traceable handoff 时才写 pending ReviewItem 和 pending KnowledgeCard。
 - API key 不同步、不导出、不写测试文件。
 - Live smoke 是显式 opt-in，不进入默认 `flutter test` 网络依赖。

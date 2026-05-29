@@ -8,6 +8,7 @@ import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/knowledge_sync.dart';
 import 'package:papertok_reader/page/home_page/settings_page.dart';
 import 'package:papertok_reader/page/settings_page/ai.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/settings_page/knowledge_asset_export.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
@@ -20,6 +21,7 @@ void main() {
   test('AI settings navigation widgets compile', () {
     expect(const SettingsPage(), isA<SettingsPage>());
     expect(const AISettings(), isA<AISettings>());
+    expect(const AiSeminarRuntimePage(), isA<AiSeminarRuntimePage>());
     expect(const ReviewInboxPage(), isA<ReviewInboxPage>());
     expect(const ConceptGraphExplorerPage(), isA<ConceptGraphExplorerPage>());
     expect(const SpacedReviewPage(), isA<SpacedReviewPage>());
@@ -27,6 +29,34 @@ void main() {
       const KnowledgeAssetExportPage(),
       isA<KnowledgeAssetExportPage>(),
     );
+  });
+
+  testWidgets('AI settings opens structured Seminar runtime entry',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AISettings(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Seminar Mode'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Seminar Mode'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AiSeminarRuntimePage), findsOneWidget);
+    expect(find.text('Start Seminar'), findsOneWidget);
   });
 
   testWidgets('AI settings opens knowledge sync export entry', (tester) async {

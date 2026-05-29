@@ -6,9 +6,9 @@
 
 | 项 | 当前可复用 | 缺口 | 下游 Epic |
 | --- | --- | --- | --- |
-| AI Chat streaming | `aiChatProvider` 已负责 streaming 生命周期，UI 最小化不应打断生成。 | Seminar session 需要结构化事件、角色输出和恢复状态。 | E01, E07 |
+| AI Chat streaming | `aiChatProvider` 已负责通用聊天 streaming 生命周期；本分支新增 `AiSeminarRuntimeService`，可把 role-by-role Seminar 输出为 evidence、role turn、whiteboard、synthesis 事件。 | Seminar 的成本记录、后台持久续跑和更细粒度 provider capability matrix 仍需接入。 | E01, E07 |
 | Provider Center | 已支持内置/自定义 provider、模型切换、Responses 兼容开关。 | Seminar 需要角色预算、成本上限、provider 能力矩阵。 | E01, E06 |
-| Skills | 已有 `seminar_mode`、reading companion、flashcard 等 prompt skill；本分支新增 AI Seminar 服务层编排切片、`CustomSkillContract` strict JSON/Map schema parser，以及阅读页选中文本 -> `研讨` 的最小入口。 | 真实模型流式 role runtime、Shared Whiteboard UI、Seminar Review handoff 和自定义 Skill 导入界面还需要接入治理模型。 | E01, E06, E07 |
+| Skills | 已有 `seminar_mode`、reading companion、flashcard 等 prompt skill；本分支新增 AI Seminar 服务层编排、真实模型流式 role runtime、Shared Whiteboard UI、Review handoff、`CustomSkillContract` strict JSON/Map schema parser，以及阅读页选中文本 -> `研讨` 的结构化入口。 | 自定义 Skill 导入界面、角色预算和 provider 能力矩阵还需要接入治理模型。 | E01, E06, E07 |
 
 锚点：
 
@@ -21,7 +21,7 @@
 
 | 项 | 当前可复用 | 缺口 | 下游 Epic |
 | --- | --- | --- | --- |
-| `SubAgentRunner` | 已有 `research / summarize / verify` 受限子 agent，禁止递归；本分支新增 AI Seminar role executor 可注入服务，且服务层校验 role/evidence 合约。 | 真实 role executor 的流式事件、取消和预算记录仍需接入 UI/runtime。 | E01, E06 |
+| `SubAgentRunner` | 已有 `research / summarize / verify` 受限子 agent，禁止递归；本分支新增 AI Seminar role executor 可注入服务，且服务层校验 role/evidence 合约，runtime UI 已能取消和重试。 | 预算记录和跨 provider capability matrix 仍需接入 UI/runtime。 | E01, E06 |
 | `spawn_sub_agent` | 主 agent 可委派聚焦任务。 | 默认无 UI 审批，不能直接写用户资产。 | E01, E06 |
 | `ToolOrchestrator` | 已有并发/串行工具调度；本分支新增 permission matrix、sub-agent policy、custom skill runtime injection gate 的可测试模型。 | 取消、超时和成本记录还需要和真实运行时事件打通。 | E01, E06, E07 |
 
@@ -38,8 +38,8 @@
 | --- | --- | --- | --- |
 | `AnnotationLedger` | 能记录当前会话 AI 创建的高亮/笔记，防重复。 | Seminar 需要 Shared Whiteboard，记录 claim、evidence、disagreement、open question。 | E00, E01 |
 | Create Highlight/Note tools | AI 已能创建高亮和笔记，且有工具审批链路。 | KnowledgeCard 不应直接复用 note 作为唯一模型，需要独立 review 状态。 | E03, E05 |
-| KnowledgeCard local store | 本分支新增 `KnowledgeCardStore`，可把 AI 候选卡持久化到 `.knowledge/knowledge_cards_v1.json`，重复候选不覆盖用户内容，ReviewItem 决策可回写 card；统一 Review Inbox UI 已能批准、忽略、应用 KnowledgeCard 审批项；阅读页选中文本已通过 `SelectionKnowledgeCardProducer` 写入待审卡。 | 需要接入 Seminar candidate handoff、spaced review scheduler 和导出入口。 | E03, E05, E08 |
-| Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项；选中文本生成的 KnowledgeCard 已能进入统一 Review Inbox。 | Memory、Flashcard、Seminar source-specific apply adapter 尚未接到统一控制层；ReviewItem UI 已有入口但还未写入 spaced review scheduler。 | E03, E04, E05 |
+| KnowledgeCard local store | 本分支新增 `KnowledgeCardStore`，可把 AI 候选卡持久化到 `.knowledge/knowledge_cards_v1.json`，重复候选不覆盖用户内容，ReviewItem 决策可回写 card；统一 Review Inbox UI 已能批准、忽略、应用 KnowledgeCard 审批项；阅读页选中文本和 Seminar candidate card 都可写入待审卡。 | 图片分析、RAG 摘要和 GraphRAG producer 仍需接入同一 KnowledgeCard 候选边界。 | E03, E05, E08 |
+| Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项；选中文本 KnowledgeCard、Seminar synthesis 和 Seminar candidate card 已能进入统一 Review Inbox。 | Seminar synthesis 本身只支持 approve/dismiss，不做泛型 apply；Memory、Flashcard 等 source-specific apply adapter 后续需要逐项接入。 | E03, E04, E05 |
 
 锚点：
 
@@ -54,7 +54,7 @@
 | --- | --- | --- | --- |
 | Library RAG | `semantic_search_library` 已提供跨书库 hybrid retrieval、`paperreader://reader/open?...` 跳转和 SourceRef evidence；RAPTOR/GraphRAG summary 只作为 `derivedSummary/derivedLayer` 检索提示，正式 evidence snippet 使用书内 chunk 原文。 | 需要把 derived summary 的 UI 展示和正式 evidence 视觉层级接入 AI 面板。 | E00, E01, E02, E03 |
 | `ai_index.db` | 存放可重建索引、chunk、job、RAG/Graph 相关表；当前分支事实为 `kAiIndexDbVersion = 10`。 | 用户资产不能放进可重建索引层；后续迁移必须从当前版本递增。 | E02, E04, E08 |
-| ConceptGraph local store | 本分支新增 `ConceptGraphStore`，可持久化 `.knowledge/concept_graph_v1.json`，构建 Concept Dossier，检测 orphan node / broken edge，并按 policy 限制局部探索深度和每层宽度；ConceptGraph relation 已能通过 ReviewItem apply 才进入正式 ownership；`ConceptGraphExplorerPage` 已提供 Settings -> AI 和阅读页选中文本 -> `图谱/Graph` 可见入口。 | 需要接入 RAG/GraphRAG producer、KnowledgeCard relation handoff 和 sync/export asset 边界。 | E04, E05, E07, E08 |
+| ConceptGraph local store | 本分支新增 `ConceptGraphStore`，可持久化 `.knowledge/concept_graph_v1.json`，构建 Concept Dossier，检测 orphan node / broken edge，并按 policy 限制局部探索深度和每层宽度；ConceptGraph relation 已能通过 ReviewItem apply 才进入正式 ownership；`ConceptGraphExplorerPage` 已提供 Settings -> AI 和阅读页选中文本 -> `图谱/Graph` 可见入口；KnowledgeCard apply 可生成 draft graph candidates。 | 需要接入 RAG/GraphRAG/Seminar concept producer 和更强可视化布局。 | E04, E05, E07, E08 |
 | RAPTOR/GraphRAG 雏形 | 已有全局层表和 builder 方向。 | 需要产品化 Gate：证据、重建、旧 DB 升级、失败恢复。 | E02, E04 |
 
 锚点：
@@ -83,8 +83,8 @@
 ## 6. 全局缺口
 
 - 统一 `SourceRef` 核心模型已存在；仍需把所有 UI 输出、sync/export manifest 和旧 note/memory 路径完全接到同一证据链。
-- KnowledgeCard 模型、本地 store、Review adapter、统一 Review Inbox UI 和 reader selection 入口已有可测试切片；仍需 Seminar candidate 持久化接入、spaced review scheduler 和导出。
-- `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、统一 ReviewItem 持久化入口、KnowledgeCard 本地资产入口和阅读页最小研讨入口的可测试切片；仍需结构化 role runtime UI、真实模型流式事件和持久化恢复。
+- KnowledgeCard 模型、本地 store、Review adapter、统一 Review Inbox UI、reader selection 入口、Seminar candidate handoff、spaced review scheduler 和导出入口已有可测试切片；仍需图片分析、RAG 摘要和 GraphRAG producer 接入。
+- `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、结构化 runtime UI、真实模型流式事件、取消/重试、Review handoff 和阅读页选中入口；仍需成本记录、后台持久续跑和更强 provider capability matrix。
 - Custom Skill contract 已有 schema version、parser、validator、权限声明和 runtime injection gate；仍需导入 UI、fixture 管理和 provider 能力界面。
-- ConceptGraph 模型、本地 store、局部探索、统一 Review relation adapter、最小 Explorer UI 和阅读页选中文本入口已有可测试切片；仍需 producer adapter、sync/export asset 边界。
+- ConceptGraph 模型、本地 store、KnowledgeCard producer、局部探索、统一 Review relation adapter、最小 Explorer UI 和阅读页选中文本入口已有可测试切片；仍需 RAG/GraphRAG/Seminar concept producer 和更强可视化布局。
 - 文档中存在传统 phase/roadmap 混写，不能直接给 agent team 执行。

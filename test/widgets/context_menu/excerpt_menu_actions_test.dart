@@ -116,6 +116,59 @@ void main() {
     expect(find.text('No related concepts yet'), findsOneWidget);
     expect(find.text('Create draft candidate'), findsOneWidget);
   });
+
+  testWidgets('selected-text Seminar action opens structured runtime page',
+      (tester) async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider
+              .overrideWithValue(_EmptyConceptGraphStore()),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: Scaffold(
+            body: Center(
+              child: ExcerptMenu(
+                annoCfi: 'epubcfi(/6/4)',
+                annoContent: 'Evidence-backed learning needs jump links.',
+                onClose: () {},
+                footnote: false,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black12),
+                ),
+                onTranslate: () async {},
+                toggleReaderNoteMenu: ({bool? show}) {},
+                openReaderNoteMenu: (_) async {},
+                onNoteCreated: (_) {},
+                axis: Axis.horizontal,
+                reverse: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Seminar', skipOffstage: false));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seminar Mode'), findsOneWidget);
+    expect(find.text('Start Seminar'), findsOneWidget);
+    expect(find.textContaining('Evidence-backed learning needs jump links.'),
+        findsOneWidget);
+  });
 }
 
 class _EmptyConceptGraphStore extends ConceptGraphStore {

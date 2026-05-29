@@ -77,8 +77,8 @@ Seminar 结束时输出：
 | E01-C03-T01 | 设计 Shared Whiteboard | E01-C02-T01 | whiteboard schema | claim/disagreement/candidateCard 可追溯 evidence。 |
 | E01-C03-T02 | 接入 role turn 和 whiteboard validation | E01-C03-T01 | `AiSeminarOrchestrationService` | role 输出必须匹配 roleId 且引用可追踪 evidence，不合格 turn 不污染后续上下文。 |
 | E01-C04-T01 | 定义 synthesis 输出 | E01-C03-T01 | synthesis schema | 可转 Review，不直接落盘。 |
-| E01-C04-T02 | 定义 UI 入口 | E01-C04-T01, E07 Ready | reading/AI panel UI spec | 阅读页 2 步内可开 Seminar。 |
-| E01-C04-T03 | 接入 synthesis Review handoff | E01-C04-T01, E05-C01-T01 | `SeminarSynthesisReviewAdapter` | readyForReview 且 traceable handoff 才能进入 pending Review。 |
+| E01-C04-T02 | 接入结构化 UI 入口 | E01-C04-T01, E07 Ready | `AiSeminarRuntimePage`、Settings AI entry、reader selection entry | 阅读页 2 步内可开 Seminar，并可看到 evidence、role turns、Shared Whiteboard、synthesis。 |
+| E01-C04-T03 | 接入 synthesis Review handoff | E01-C04-T01, E05-C01-T01 | `SeminarSynthesisReviewAdapter`、`AiSeminarRuntimeNotifier.sendToReview` | readyForReview 且 traceable handoff 才能进入 pending Review；候选卡保持 draft/pending。 |
 
 ## 5. Task Execution Defaults
 
@@ -87,7 +87,7 @@ Seminar 结束时输出：
 | Input Truth | `seminar_mode` skill、`SubAgentRunner`、`spawn_sub_agent`、`ToolOrchestrator`、current book/RAG tools、AnnotationLedger。 |
 | Allowed Modules | `lib/service/ai/skills`, `lib/service/ai/sub_agent_runner.dart`, AI tool orchestration, AI chat UI entry points, tests/docs. |
 | Forbidden Changes | 不复制 OpenMAIC 代码；不新增无权限写工具；不绕过 Review 写 notes/memory/cards；不默认 web。 |
-| Verification Commands | Focused agent/tool tests for role whitelist, no recursion, timeout/cancel, evidence refs; `git diff --check`。 |
+| Verification Commands | Focused agent/tool tests for role whitelist, no recursion, timeout/cancel, evidence refs, runtime UI, Review handoff; `git diff --check`。 |
 | Reviewer Gate | Mobile Resource Gate + Agent Safety And Privacy Gate + Retrieval Quality Gate + Review And Rescue Gate。 |
 | Rollback / Degrade Path | Seminar orchestrator 可关闭并降级回 prompt-only `seminar_mode`。 |
 
