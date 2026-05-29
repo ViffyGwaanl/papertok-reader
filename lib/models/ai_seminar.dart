@@ -101,18 +101,51 @@ class AiSeminarBudgetPolicy {
   const AiSeminarBudgetPolicy({
     this.maxRoleOutputTokens,
     this.maxRunTokens,
+    this.maxRunCostUsd,
+    this.inputCostPerMillionTokens,
+    this.outputCostPerMillionTokens,
+    this.cacheReadCostPerMillionTokens,
+    this.cacheWriteCostPerMillionTokens,
+    this.costPriceSource,
   });
 
   final int? maxRoleOutputTokens;
   final int? maxRunTokens;
+  final double? maxRunCostUsd;
+  final double? inputCostPerMillionTokens;
+  final double? outputCostPerMillionTokens;
+  final double? cacheReadCostPerMillionTokens;
+  final double? cacheWriteCostPerMillionTokens;
+  final String? costPriceSource;
 
   bool get hasTokenLimits =>
       (maxRoleOutputTokens != null && maxRoleOutputTokens! > 0) ||
       (maxRunTokens != null && maxRunTokens! > 0);
 
+  bool get hasPricingMetadata =>
+      inputCostPerMillionTokens != null &&
+      inputCostPerMillionTokens! > 0 &&
+      outputCostPerMillionTokens != null &&
+      outputCostPerMillionTokens! > 0;
+
+  bool get hasCostLimit =>
+      maxRunCostUsd != null && maxRunCostUsd! > 0 && hasPricingMetadata;
+
+  bool get hasLimits => hasTokenLimits || hasCostLimit;
+
   AiSeminarBudgetPolicy get normalized => AiSeminarBudgetPolicy(
         maxRoleOutputTokens: _positiveOrNull(maxRoleOutputTokens),
         maxRunTokens: _positiveOrNull(maxRunTokens),
+        maxRunCostUsd: _positiveDoubleOrNull(maxRunCostUsd),
+        inputCostPerMillionTokens:
+            _positiveDoubleOrNull(inputCostPerMillionTokens),
+        outputCostPerMillionTokens:
+            _positiveDoubleOrNull(outputCostPerMillionTokens),
+        cacheReadCostPerMillionTokens:
+            _nonNegativeDoubleOrNull(cacheReadCostPerMillionTokens),
+        cacheWriteCostPerMillionTokens:
+            _nonNegativeDoubleOrNull(cacheWriteCostPerMillionTokens),
+        costPriceSource: _trimmedOrNull(costPriceSource),
       );
 
   Map<String, dynamic> toJson() => {
@@ -120,12 +153,38 @@ class AiSeminarBudgetPolicy {
           'maxRoleOutputTokens': _positiveOrNull(maxRoleOutputTokens),
         if (_positiveOrNull(maxRunTokens) != null)
           'maxRunTokens': _positiveOrNull(maxRunTokens),
+        if (_positiveDoubleOrNull(maxRunCostUsd) != null)
+          'maxRunCostUsd': _positiveDoubleOrNull(maxRunCostUsd),
+        if (_positiveDoubleOrNull(inputCostPerMillionTokens) != null)
+          'inputCostPerMillionTokens':
+              _positiveDoubleOrNull(inputCostPerMillionTokens),
+        if (_positiveDoubleOrNull(outputCostPerMillionTokens) != null)
+          'outputCostPerMillionTokens':
+              _positiveDoubleOrNull(outputCostPerMillionTokens),
+        if (_nonNegativeDoubleOrNull(cacheReadCostPerMillionTokens) != null)
+          'cacheReadCostPerMillionTokens':
+              _nonNegativeDoubleOrNull(cacheReadCostPerMillionTokens),
+        if (_nonNegativeDoubleOrNull(cacheWriteCostPerMillionTokens) != null)
+          'cacheWriteCostPerMillionTokens':
+              _nonNegativeDoubleOrNull(cacheWriteCostPerMillionTokens),
+        if (_trimmedOrNull(costPriceSource) != null)
+          'costPriceSource': _trimmedOrNull(costPriceSource),
       };
 
   factory AiSeminarBudgetPolicy.fromJson(Map<String, dynamic> json) {
     return AiSeminarBudgetPolicy(
       maxRoleOutputTokens: _positiveInt(json['maxRoleOutputTokens']),
       maxRunTokens: _positiveInt(json['maxRunTokens']),
+      maxRunCostUsd: _positiveDouble(json['maxRunCostUsd']),
+      inputCostPerMillionTokens:
+          _positiveDouble(json['inputCostPerMillionTokens']),
+      outputCostPerMillionTokens:
+          _positiveDouble(json['outputCostPerMillionTokens']),
+      cacheReadCostPerMillionTokens:
+          _nonNegativeDouble(json['cacheReadCostPerMillionTokens']),
+      cacheWriteCostPerMillionTokens:
+          _nonNegativeDouble(json['cacheWriteCostPerMillionTokens']),
+      costPriceSource: _trimmedOrNull(json['costPriceSource']),
     );
   }
 
@@ -137,6 +196,32 @@ class AiSeminarBudgetPolicy {
   static int? _positiveOrNull(int? value) {
     if (value == null || value <= 0) return null;
     return value;
+  }
+
+  static double? _positiveDouble(Object? value) {
+    final parsed = (value as num?)?.toDouble();
+    return _positiveDoubleOrNull(parsed);
+  }
+
+  static double? _positiveDoubleOrNull(double? value) {
+    if (value == null || value <= 0) return null;
+    return value;
+  }
+
+  static double? _nonNegativeDouble(Object? value) {
+    final parsed = (value as num?)?.toDouble();
+    return _nonNegativeDoubleOrNull(parsed);
+  }
+
+  static double? _nonNegativeDoubleOrNull(double? value) {
+    if (value == null || value < 0) return null;
+    return value;
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
   }
 }
 
@@ -173,7 +258,7 @@ class AiSeminarSessionContract {
       writeRequiresApproval: writeRequiresApproval,
       maxRounds: maxRounds.clamp(1, 5),
       budgetPolicy:
-          normalizedBudget?.hasTokenLimits == true ? normalizedBudget : null,
+          normalizedBudget?.hasLimits == true ? normalizedBudget : null,
       createdAt: createdAt,
     );
   }
@@ -214,7 +299,7 @@ class AiSeminarSessionContract {
         'allowWeb': allowWeb,
         'writeRequiresApproval': writeRequiresApproval,
         'maxRounds': maxRounds,
-        if (budgetPolicy?.hasTokenLimits == true)
+        if (budgetPolicy?.hasLimits == true)
           'budgetPolicy': budgetPolicy!.toJson(),
         if (createdAt != null) 'createdAt': createdAt,
       };
@@ -739,6 +824,8 @@ class AiSeminarRun {
     this.completedAt,
     this.message,
     this.tokenUsage,
+    this.estimatedCostUsd,
+    this.costPriceSource,
   });
 
   final AiSeminarSessionContract session;
@@ -750,6 +837,8 @@ class AiSeminarRun {
   final int? completedAt;
   final String? message;
   final AiSeminarTokenUsage? tokenUsage;
+  final double? estimatedCostUsd;
+  final String? costPriceSource;
 
   bool get readyForReview =>
       status == AiSeminarRunStatus.completed &&
@@ -767,6 +856,8 @@ class AiSeminarRun {
         if (completedAt != null) 'completedAt': completedAt,
         if (message != null) 'message': message,
         if (tokenUsage != null) 'tokenUsage': tokenUsage!.toJson(),
+        if (estimatedCostUsd != null) 'estimatedCostUsd': estimatedCostUsd,
+        if (costPriceSource != null) 'costPriceSource': costPriceSource,
       };
 
   factory AiSeminarRun.fromJson(Map<String, dynamic> json) {
@@ -800,6 +891,8 @@ class AiSeminarRun {
               Map<String, dynamic>.from(json['tokenUsage'] as Map),
             )
           : null,
+      estimatedCostUsd: (json['estimatedCostUsd'] as num?)?.toDouble(),
+      costPriceSource: json['costPriceSource']?.toString(),
     );
   }
 }

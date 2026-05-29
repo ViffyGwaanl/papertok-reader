@@ -38,6 +38,11 @@ class AiSeminarProviderDiagnostics {
     this.costStatus = AiSeminarCostStatus.unknown,
     this.costUnknownReason,
     this.estimatedCostUsd,
+    this.inputCostPerMillionTokens,
+    this.outputCostPerMillionTokens,
+    this.cacheReadCostPerMillionTokens,
+    this.cacheWriteCostPerMillionTokens,
+    this.costPriceSource,
     this.warnings = const <String>[],
   });
 
@@ -57,7 +62,18 @@ class AiSeminarProviderDiagnostics {
   final AiSeminarCostStatus costStatus;
   final String? costUnknownReason;
   final double? estimatedCostUsd;
+  final double? inputCostPerMillionTokens;
+  final double? outputCostPerMillionTokens;
+  final double? cacheReadCostPerMillionTokens;
+  final double? cacheWriteCostPerMillionTokens;
+  final String? costPriceSource;
   final List<String> warnings;
+
+  bool get hasPricingMetadata =>
+      inputCostPerMillionTokens != null &&
+      inputCostPerMillionTokens! > 0 &&
+      outputCostPerMillionTokens != null &&
+      outputCostPerMillionTokens! > 0;
 
   Map<String, dynamic> toJson() => {
         'providerId': providerId,
@@ -76,17 +92,33 @@ class AiSeminarProviderDiagnostics {
         'costStatus': costStatus.asString,
         if (costUnknownReason != null) 'costUnknownReason': costUnknownReason,
         if (estimatedCostUsd != null) 'estimatedCostUsd': estimatedCostUsd,
+        if (inputCostPerMillionTokens != null)
+          'inputCostPerMillionTokens': inputCostPerMillionTokens,
+        if (outputCostPerMillionTokens != null)
+          'outputCostPerMillionTokens': outputCostPerMillionTokens,
+        if (cacheReadCostPerMillionTokens != null)
+          'cacheReadCostPerMillionTokens': cacheReadCostPerMillionTokens,
+        if (cacheWriteCostPerMillionTokens != null)
+          'cacheWriteCostPerMillionTokens': cacheWriteCostPerMillionTokens,
+        if (costPriceSource != null) 'costPriceSource': costPriceSource,
         'warnings': warnings,
       };
 
   factory AiSeminarProviderDiagnostics.fromJson(Map<String, dynamic> json) {
     final estimatedCost = (json['estimatedCostUsd'] as num?)?.toDouble();
+    final inputCost = (json['inputCostPerMillionTokens'] as num?)?.toDouble();
+    final outputCost = (json['outputCostPerMillionTokens'] as num?)?.toDouble();
+    final hasPricing = inputCost != null &&
+        inputCost > 0 &&
+        outputCost != null &&
+        outputCost > 0;
     final rawCostStatus =
         AiSeminarCostStatus.fromString(json['costStatus']?.toString());
-    final costStatus =
-        rawCostStatus == AiSeminarCostStatus.estimated && estimatedCost == null
-            ? AiSeminarCostStatus.unknown
-            : rawCostStatus;
+    final costStatus = rawCostStatus == AiSeminarCostStatus.estimated &&
+            estimatedCost == null &&
+            !hasPricing
+        ? AiSeminarCostStatus.unknown
+        : rawCostStatus;
     final costUnknownReason = json['costUnknownReason']?.toString() ??
         (costStatus == AiSeminarCostStatus.unknown
             ? 'Provider pricing or Seminar usage metadata is unavailable.'
@@ -111,6 +143,13 @@ class AiSeminarProviderDiagnostics {
       costStatus: costStatus,
       costUnknownReason: costUnknownReason,
       estimatedCostUsd: estimatedCost,
+      inputCostPerMillionTokens: inputCost,
+      outputCostPerMillionTokens: outputCost,
+      cacheReadCostPerMillionTokens:
+          (json['cacheReadCostPerMillionTokens'] as num?)?.toDouble(),
+      cacheWriteCostPerMillionTokens:
+          (json['cacheWriteCostPerMillionTokens'] as num?)?.toDouble(),
+      costPriceSource: json['costPriceSource']?.toString(),
       warnings: (json['warnings'] as List?)
               ?.map((e) => e.toString())
               .where((e) => e.trim().isNotEmpty)
@@ -159,8 +198,9 @@ class AiSeminarProviderContextService {
     final hasProviderConfig = config.isNotEmpty && modelId.isNotEmpty;
     final seminarReady =
         providerEnabled && hasProviderConfig && !contextTooSmall;
+    final hasPricing = capability?.hasPricingMetadata == true;
     const costUnknownReason =
-        'Provider pricing metadata is unavailable; Seminar streaming token usage cannot estimate cost yet.';
+        'Provider pricing metadata is unavailable; Seminar token usage cannot estimate cost yet.';
 
     return AiSeminarProviderDiagnostics(
       providerId: providerId,
@@ -177,8 +217,16 @@ class AiSeminarProviderContextService {
       supportsTools: capability?.supportsTools,
       supportsImages: capability?.supportsImages,
       supportsThinking: capability?.supportsThinking,
-      costStatus: AiSeminarCostStatus.unknown,
-      costUnknownReason: costUnknownReason,
+      costStatus: hasPricing
+          ? AiSeminarCostStatus.estimated
+          : AiSeminarCostStatus.unknown,
+      costUnknownReason: hasPricing ? null : costUnknownReason,
+      inputCostPerMillionTokens: capability?.inputCostPerMillionTokens,
+      outputCostPerMillionTokens: capability?.outputCostPerMillionTokens,
+      cacheReadCostPerMillionTokens: capability?.cacheReadCostPerMillionTokens,
+      cacheWriteCostPerMillionTokens:
+          capability?.cacheWriteCostPerMillionTokens,
+      costPriceSource: capability?.pricingSource,
       warnings: List.unmodifiable(warnings),
     );
   }

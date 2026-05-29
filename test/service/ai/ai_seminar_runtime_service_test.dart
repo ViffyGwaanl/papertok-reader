@@ -288,6 +288,56 @@ void main() {
     expect(events.last.run!.tokenUsage!.source, 'provider-reported');
   });
 
+  test('stops before synthesis when run cost cap is exceeded', () async {
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: 'costly response',
+            evidenceRefIds: const ['e1'],
+            tokenUsage: const AiSeminarTokenUsage(
+              inputTokens: 1000,
+              outputTokens: 1000,
+              isEstimated: false,
+              estimationMethod: 'provider-usage-tracker-v1',
+              source: 'provider-reported',
+            ),
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(
+          AiSeminarSessionContract(
+            id: 's-cost-cap',
+            question: 'Budget?',
+            budgetPolicy: const AiSeminarBudgetPolicy(
+              maxRunCostUsd: 0.001,
+              inputCostPerMillionTokens: 1,
+              outputCostPerMillionTokens: 1,
+              costPriceSource: 'test-pricing-v1',
+            ),
+          ),
+        )
+        .toList();
+
+    expect(events.last.type, AiSeminarRuntimeEventType.failed);
+    expect(events.last.message, contains('run cost cap'));
+    expect(events.last.run!.turns, hasLength(1));
+    expect(events.last.run!.estimatedCostUsd, greaterThan(0.001));
+    expect(
+      events.any(
+          (event) => event.type == AiSeminarRuntimeEventType.synthesisReady),
+      isFalse,
+    );
+  });
+
   test('does not count executor-supplied token usage on failed role turns',
       () async {
     final service = AiSeminarRuntimeService(

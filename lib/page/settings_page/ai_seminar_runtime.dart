@@ -28,6 +28,7 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
   late final TextEditingController _questionController;
   late final TextEditingController _roleOutputBudgetController;
   late final TextEditingController _runBudgetController;
+  late final TextEditingController _runCostCapController;
   bool _autoStarted = false;
   bool _discardedMismatchedEntryState = false;
 
@@ -39,6 +40,7 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
     );
     _roleOutputBudgetController = TextEditingController();
     _runBudgetController = TextEditingController();
+    _runCostCapController = TextEditingController();
     if (widget.autoStart && _questionController.text.trim().isNotEmpty) {
       Future.microtask(_start);
     }
@@ -49,6 +51,7 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
     _questionController.dispose();
     _roleOutputBudgetController.dispose();
     _runBudgetController.dispose();
+    _runCostCapController.dispose();
     super.dispose();
   }
 
@@ -57,12 +60,13 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
     _autoStarted = true;
     final question = _questionController.text.trim();
     if (question.isEmpty) return;
+    final diagnostics = ref.read(aiSeminarRuntimeProvider).providerDiagnostics;
     await ref.read(aiSeminarRuntimeProvider.notifier).start(
           AiSeminarSessionContract(
             id: 'seminar-${DateTime.now().millisecondsSinceEpoch}',
             question: question,
             bookId: widget.bookId,
-            budgetPolicy: _budgetPolicyFromInputs(),
+            budgetPolicy: _budgetPolicyFromInputs(diagnostics),
           ),
         );
   }
@@ -129,6 +133,8 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
           _BudgetSection(
             roleOutputBudgetController: _roleOutputBudgetController,
             runBudgetController: _runBudgetController,
+            runCostCapController: _runCostCapController,
+            diagnostics: state.providerDiagnostics,
             enabled: !busy,
           ),
           const SizedBox(height: 10),
@@ -177,19 +183,39 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
     );
   }
 
-  AiSeminarBudgetPolicy? _budgetPolicyFromInputs() {
+  AiSeminarBudgetPolicy? _budgetPolicyFromInputs(
+    AiSeminarProviderDiagnostics? diagnostics,
+  ) {
     final maxRoleOutputTokens =
         _positiveIntOrNull(_roleOutputBudgetController.text);
     final maxRunTokens = _positiveIntOrNull(_runBudgetController.text);
+    final maxRunCostUsd = _positiveDoubleOrNull(_runCostCapController.text);
+    final hasPricing = diagnostics?.hasPricingMetadata == true;
     final policy = AiSeminarBudgetPolicy(
       maxRoleOutputTokens: maxRoleOutputTokens,
       maxRunTokens: maxRunTokens,
+      maxRunCostUsd: hasPricing ? maxRunCostUsd : null,
+      inputCostPerMillionTokens:
+          hasPricing ? diagnostics!.inputCostPerMillionTokens : null,
+      outputCostPerMillionTokens:
+          hasPricing ? diagnostics!.outputCostPerMillionTokens : null,
+      cacheReadCostPerMillionTokens:
+          hasPricing ? diagnostics!.cacheReadCostPerMillionTokens : null,
+      cacheWriteCostPerMillionTokens:
+          hasPricing ? diagnostics!.cacheWriteCostPerMillionTokens : null,
+      costPriceSource: hasPricing ? diagnostics!.costPriceSource : null,
     ).normalized;
-    return policy.hasTokenLimits ? policy : null;
+    return policy.hasLimits ? policy : null;
   }
 
   int? _positiveIntOrNull(String value) {
     final parsed = int.tryParse(value.trim());
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
+  }
+
+  double? _positiveDoubleOrNull(String value) {
+    final parsed = double.tryParse(value.trim());
     if (parsed == null || parsed <= 0) return null;
     return parsed;
   }
@@ -226,23 +252,30 @@ class _BudgetSection extends StatelessWidget {
   const _BudgetSection({
     required this.roleOutputBudgetController,
     required this.runBudgetController,
+    required this.runCostCapController,
+    required this.diagnostics,
     required this.enabled,
   });
 
   final TextEditingController roleOutputBudgetController;
   final TextEditingController runBudgetController;
+  final TextEditingController runCostCapController;
+  final AiSeminarProviderDiagnostics? diagnostics;
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    final hasPricing = diagnostics?.hasPricingMetadata == true;
+    final pricingSource = diagnostics?.costPriceSource?.trim();
     return _Section(
       title: 'Local budget guardrails',
       icon: Icons.speed_outlined,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final narrow = constraints.maxWidth < 560;
+            final fields = <Widget>[
+              TextField(
                 controller: roleOutputBudgetController,
                 enabled: enabled,
                 keyboardType: TextInputType.number,
@@ -251,10 +284,7 @@ class _BudgetSection extends StatelessWidget {
                   border: OutlineInputBorder(),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
+              TextField(
                 controller: runBudgetController,
                 enabled: enabled,
                 keyboardType: TextInputType.number,
@@ -263,23 +293,63 @@ class _BudgetSection extends StatelessWidget {
                   border: OutlineInputBorder(),
                 ),
               ),
-            ),
-          ],
+              TextField(
+                controller: runCostCapController,
+                enabled: enabled && hasPricing,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Run cost cap USD',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ];
+            if (narrow) {
+              return Column(
+                children: [
+                  for (var i = 0; i < fields.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 8),
+                    fields[i],
+                  ],
+                ],
+              );
+            }
+            return Row(
+              children: [
+                for (var i = 0; i < fields.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Expanded(child: fields[i]),
+                ],
+              ],
+            );
+          },
         ),
         const SizedBox(height: 8),
         Text(
-          'Uses local token estimates to stop the next Seminar step; provider billing may differ.',
+          hasPricing
+              ? 'Uses provider-reported token usage when available and pricing metadata for estimated USD caps; provider invoices may differ.'
+              : 'Uses local token estimates to stop the next Seminar step; provider billing may differ.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: ClaudePalette.secondary(context),
               ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Cost cap unavailable until pricing metadata and USD limits are connected.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: ClaudePalette.secondary(context),
-              ),
-        ),
+        if (hasPricing) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Pricing: ${pricingSource?.isNotEmpty == true ? pricingSource : 'provider capability metadata'}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          ),
+        ] else ...[
+          const SizedBox(height: 4),
+          Text(
+            'Cost cap unavailable until pricing metadata is available.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          ),
+        ],
       ],
     );
   }
@@ -348,12 +418,7 @@ class _ProviderReadinessSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Text(
-          d.costStatus == AiSeminarCostStatus.estimated &&
-                  d.estimatedCostUsd != null
-              ? 'Cost: \$${d.estimatedCostUsd!.toStringAsFixed(4)}'
-              : 'Cost: unknown',
-        ),
+        Text(_providerCostLine(d)),
         if (d.costUnknownReason?.trim().isNotEmpty == true) ...[
           const SizedBox(height: 4),
           Text(
@@ -469,6 +534,8 @@ class _RolesSection extends StatelessWidget {
     final tokenUsage = state.tokenUsage;
     if (tokenUsage != null) {
       final summary = _tokenUsageSummary(tokenUsage);
+      final estimatedCost = state.lastRun?.estimatedCostUsd;
+      final priceSource = state.lastRun?.costPriceSource?.trim();
       children.add(
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,6 +552,16 @@ class _RolesSection extends StatelessWidget {
                     color: ClaudePalette.secondary(context),
                   ),
             ),
+            if (estimatedCost != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Estimated cost: \$${estimatedCost.toStringAsFixed(4)}'
+                '${priceSource?.isNotEmpty == true ? ' · $priceSource' : ''}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
+              ),
+            ],
           ],
         ),
       );
@@ -701,6 +778,16 @@ String _capabilityLabel(String label, bool? value) {
   if (value == true) return label;
   if (value == false) return 'No $label';
   return '$label unknown';
+}
+
+String _providerCostLine(AiSeminarProviderDiagnostics diagnostics) {
+  if (diagnostics.estimatedCostUsd != null) {
+    return 'Cost: \$${diagnostics.estimatedCostUsd!.toStringAsFixed(4)}';
+  }
+  if (diagnostics.hasPricingMetadata) {
+    return 'Cost: pricing ready for estimated USD caps';
+  }
+  return 'Cost: unknown';
 }
 
 ({String title, String subtitle}) _tokenUsageSummary(

@@ -271,11 +271,15 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     final generation = ++_generation;
     final token = AiSeminarCancellationToken();
     final providerDiagnostics = _providerContext.resolve();
+    final resolvedSession = _sessionWithCurrentProviderBudget(
+      session,
+      providerDiagnostics,
+    );
     _activeToken = token;
     state = AiSeminarRuntimeState.initial(
       providerDiagnostics: providerDiagnostics,
     ).copyWith(
-      session: session,
+      session: resolvedSession,
       status: AiSeminarRunStatus.running,
       clearError: true,
       activeRole: null,
@@ -287,7 +291,10 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     );
     await _persistState();
 
-    await for (final event in _service.run(session, cancelToken: token)) {
+    await for (final event in _service.run(
+      resolvedSession,
+      cancelToken: token,
+    )) {
       if (generation != _generation) return;
       _applyEvent(event);
       if (event.type != AiSeminarRuntimeEventType.roleDelta) {
@@ -315,6 +322,11 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       startedAt: state.startedAt,
       completedAt: DateTime.now().millisecondsSinceEpoch,
       tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(state.turns),
+      estimatedCostUsd: _estimatedRunCostUsd(
+        session.budgetPolicy,
+        state.turns,
+      ),
+      costPriceSource: _costPriceSource(session.budgetPolicy, state.turns),
       message: 'AI Seminar cancelled.',
     );
     state = state.copyWith(
@@ -553,6 +565,88 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     } catch (_) {
       // Best-effort local recovery cache cleanup.
     }
+  }
+
+  static AiSeminarSessionContract _sessionWithCurrentProviderBudget(
+    AiSeminarSessionContract session,
+    AiSeminarProviderDiagnostics diagnostics,
+  ) {
+    final budgetPolicy = _budgetPolicyWithCurrentProviderPricing(
+      session.budgetPolicy,
+      diagnostics,
+    );
+    return AiSeminarSessionContract(
+      id: session.id,
+      question: session.question,
+      bookId: session.bookId,
+      roles: session.roles,
+      scopes: session.scopes,
+      allowWeb: session.allowWeb,
+      writeRequiresApproval: session.writeRequiresApproval,
+      maxRounds: session.maxRounds,
+      budgetPolicy: budgetPolicy,
+      createdAt: session.createdAt,
+    );
+  }
+
+  static AiSeminarBudgetPolicy? _budgetPolicyWithCurrentProviderPricing(
+    AiSeminarBudgetPolicy? policy,
+    AiSeminarProviderDiagnostics diagnostics,
+  ) {
+    if (policy == null) return null;
+    final hasCurrentPricing = diagnostics.hasPricingMetadata;
+    final hasCostCap = policy.maxRunCostUsd != null &&
+        policy.maxRunCostUsd! > 0 &&
+        hasCurrentPricing;
+    final resolved = AiSeminarBudgetPolicy(
+      maxRoleOutputTokens: policy.maxRoleOutputTokens,
+      maxRunTokens: policy.maxRunTokens,
+      maxRunCostUsd: hasCostCap ? policy.maxRunCostUsd : null,
+      inputCostPerMillionTokens:
+          hasCostCap ? diagnostics.inputCostPerMillionTokens : null,
+      outputCostPerMillionTokens:
+          hasCostCap ? diagnostics.outputCostPerMillionTokens : null,
+      cacheReadCostPerMillionTokens:
+          hasCostCap ? diagnostics.cacheReadCostPerMillionTokens : null,
+      cacheWriteCostPerMillionTokens:
+          hasCostCap ? diagnostics.cacheWriteCostPerMillionTokens : null,
+      costPriceSource: hasCostCap ? diagnostics.costPriceSource : null,
+    ).normalized;
+    return resolved.hasLimits ? resolved : null;
+  }
+
+  static double? _estimatedRunCostUsd(
+    AiSeminarBudgetPolicy? policy,
+    List<AiSeminarRoleTurn> turns,
+  ) {
+    if (policy == null || !policy.hasPricingMetadata) return null;
+    final usage = AiSeminarTokenUsage.aggregateRoleTurns(turns);
+    if (usage == null) return null;
+    final inputTokens =
+        usage.inputTokens - usage.cacheReadTokens - usage.cacheWriteTokens;
+    final billableInputTokens = inputTokens < 0 ? 0 : inputTokens;
+    final inputCost =
+        billableInputTokens * (policy.inputCostPerMillionTokens ?? 0) / 1000000;
+    final outputCost =
+        usage.outputTokens * (policy.outputCostPerMillionTokens ?? 0) / 1000000;
+    final cacheReadCost = usage.cacheReadTokens *
+        (policy.cacheReadCostPerMillionTokens ?? 0) /
+        1000000;
+    final cacheWriteCost = usage.cacheWriteTokens *
+        (policy.cacheWriteCostPerMillionTokens ?? 0) /
+        1000000;
+    final cost = inputCost + outputCost + cacheReadCost + cacheWriteCost;
+    if (cost <= 0) return null;
+    return cost;
+  }
+
+  static String? _costPriceSource(
+    AiSeminarBudgetPolicy? policy,
+    List<AiSeminarRoleTurn> turns,
+  ) {
+    if (turns.isEmpty) return null;
+    if (policy == null || !policy.hasPricingMetadata) return null;
+    return policy.costPriceSource;
   }
 }
 

@@ -42,6 +42,11 @@ void main() {
             supportsTools: true,
             supportsImages: true,
             supportsThinking: true,
+            inputCostPerMillionTokens: 2,
+            outputCostPerMillionTokens: 8,
+            cacheReadCostPerMillionTokens: 0.2,
+            cacheWriteCostPerMillionTokens: 1,
+            pricingSource: 'test-pricing-v1',
           ),
         ],
       );
@@ -69,13 +74,27 @@ void main() {
   });
 
   test('reports cost unknown when pricing metadata is unavailable', () {
-    configureProvider();
+    configureProvider(withCapability: false);
 
     final diagnostics = const AiSeminarProviderContextService().resolve();
 
     expect(diagnostics.costStatus, AiSeminarCostStatus.unknown);
     expect(diagnostics.costUnknownReason, contains('pricing metadata'));
     expect(diagnostics.estimatedCostUsd, isNull);
+  });
+
+  test('exposes pricing metadata for Seminar cost caps', () {
+    configureProvider();
+
+    final diagnostics = const AiSeminarProviderContextService().resolve();
+
+    expect(diagnostics.costStatus, AiSeminarCostStatus.estimated);
+    expect(diagnostics.inputCostPerMillionTokens, 2);
+    expect(diagnostics.outputCostPerMillionTokens, 8);
+    expect(diagnostics.cacheReadCostPerMillionTokens, 0.2);
+    expect(diagnostics.cacheWriteCostPerMillionTokens, 1);
+    expect(diagnostics.costPriceSource, 'test-pricing-v1');
+    expect(diagnostics.costUnknownReason, isNull);
   });
 
   test('keeps model visible while warning when capability cache is missing',

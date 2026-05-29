@@ -8,6 +8,11 @@ class AiModelCapability {
     this.supportsTools,
     this.supportsImages,
     this.supportsThinking,
+    this.inputCostPerMillionTokens,
+    this.outputCostPerMillionTokens,
+    this.cacheReadCostPerMillionTokens,
+    this.cacheWriteCostPerMillionTokens,
+    this.pricingSource,
   });
 
   final String id;
@@ -16,6 +21,17 @@ class AiModelCapability {
   final bool? supportsTools;
   final bool? supportsImages;
   final bool? supportsThinking;
+  final double? inputCostPerMillionTokens;
+  final double? outputCostPerMillionTokens;
+  final double? cacheReadCostPerMillionTokens;
+  final double? cacheWriteCostPerMillionTokens;
+  final String? pricingSource;
+
+  bool get hasPricingMetadata =>
+      inputCostPerMillionTokens != null &&
+      inputCostPerMillionTokens! > 0 &&
+      outputCostPerMillionTokens != null &&
+      outputCostPerMillionTokens! > 0;
 
   Map<String, dynamic> toJson() {
     return {
@@ -25,6 +41,11 @@ class AiModelCapability {
       'supportsTools': supportsTools,
       'supportsImages': supportsImages,
       'supportsThinking': supportsThinking,
+      'inputCostPerMillionTokens': inputCostPerMillionTokens,
+      'outputCostPerMillionTokens': outputCostPerMillionTokens,
+      'cacheReadCostPerMillionTokens': cacheReadCostPerMillionTokens,
+      'cacheWriteCostPerMillionTokens': cacheWriteCostPerMillionTokens,
+      'pricingSource': pricingSource,
     };
   }
 
@@ -36,6 +57,15 @@ class AiModelCapability {
       supportsTools: json['supportsTools'] as bool?,
       supportsImages: json['supportsImages'] as bool?,
       supportsThinking: json['supportsThinking'] as bool?,
+      inputCostPerMillionTokens:
+          _positiveDouble(json['inputCostPerMillionTokens']),
+      outputCostPerMillionTokens:
+          _positiveDouble(json['outputCostPerMillionTokens']),
+      cacheReadCostPerMillionTokens:
+          _nonNegativeDouble(json['cacheReadCostPerMillionTokens']),
+      cacheWriteCostPerMillionTokens:
+          _nonNegativeDouble(json['cacheWriteCostPerMillionTokens']),
+      pricingSource: _trimmedOrNull(json['pricingSource']),
     );
   }
 
@@ -46,6 +76,11 @@ class AiModelCapability {
     bool? supportsTools,
     bool? supportsImages,
     bool? supportsThinking,
+    double? inputCostPerMillionTokens,
+    double? outputCostPerMillionTokens,
+    double? cacheReadCostPerMillionTokens,
+    double? cacheWriteCostPerMillionTokens,
+    String? pricingSource,
   }) {
     return AiModelCapability(
       id: id ?? this.id,
@@ -54,6 +89,15 @@ class AiModelCapability {
       supportsTools: supportsTools ?? this.supportsTools,
       supportsImages: supportsImages ?? this.supportsImages,
       supportsThinking: supportsThinking ?? this.supportsThinking,
+      inputCostPerMillionTokens:
+          inputCostPerMillionTokens ?? this.inputCostPerMillionTokens,
+      outputCostPerMillionTokens:
+          outputCostPerMillionTokens ?? this.outputCostPerMillionTokens,
+      cacheReadCostPerMillionTokens:
+          cacheReadCostPerMillionTokens ?? this.cacheReadCostPerMillionTokens,
+      cacheWriteCostPerMillionTokens:
+          cacheWriteCostPerMillionTokens ?? this.cacheWriteCostPerMillionTokens,
+      pricingSource: pricingSource ?? this.pricingSource,
     );
   }
 
@@ -74,5 +118,23 @@ class AiModelCapability {
 
   static String encodeList(List<AiModelCapability> models) {
     return jsonEncode(models.map((e) => e.toJson()).toList(growable: false));
+  }
+
+  static double? _positiveDouble(Object? value) {
+    final parsed = (value as num?)?.toDouble();
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
+  }
+
+  static double? _nonNegativeDouble(Object? value) {
+    final parsed = (value as num?)?.toDouble();
+    if (parsed == null || parsed < 0) return null;
+    return parsed;
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
   }
 }

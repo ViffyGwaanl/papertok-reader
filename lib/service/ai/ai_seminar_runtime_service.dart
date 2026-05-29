@@ -336,6 +336,22 @@ class AiSeminarRuntimeService {
         invocation: invocation,
         turn: turn,
       );
+      final nextTurns = [...turns, turnWithUsage];
+      final costFailure = _costBudgetFailureMessage(
+        session.budgetPolicy,
+        nextTurns,
+      );
+      if (costFailure != null) {
+        yield _failedEvent(
+          session: session,
+          evidenceBundle: evidenceBundle,
+          startedAt: startedAt,
+          turns: nextTurns,
+          message: costFailure,
+        );
+        return;
+      }
+
       turns.add(turnWithUsage);
       localBudgetTurns.add(localBudgetTurn);
       final whiteboardEntries = _whiteboardEntries(turns);
@@ -386,6 +402,8 @@ class AiSeminarRuntimeService {
       startedAt: startedAt,
       completedAt: _nowMs(),
       tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
+      estimatedCostUsd: _estimatedRunCostUsd(session.budgetPolicy, turns),
+      costPriceSource: _costPriceSource(session.budgetPolicy, turns),
       message: status == AiSeminarRunStatus.needsEvidence
           ? 'AI Seminar synthesis is missing traceable handoff evidence.'
           : null,
@@ -420,6 +438,8 @@ class AiSeminarRuntimeService {
       startedAt: startedAt,
       completedAt: _nowMs(),
       tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
+      estimatedCostUsd: _estimatedRunCostUsd(session.budgetPolicy, turns),
+      costPriceSource: _costPriceSource(session.budgetPolicy, turns),
       message: message,
     );
     return AiSeminarRuntimeEvent(
@@ -449,6 +469,8 @@ class AiSeminarRuntimeService {
       startedAt: startedAt,
       completedAt: _nowMs(),
       tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
+      estimatedCostUsd: _estimatedRunCostUsd(session.budgetPolicy, turns),
+      costPriceSource: _costPriceSource(session.budgetPolicy, turns),
       message: message,
     );
     return AiSeminarRuntimeEvent(
@@ -477,6 +499,8 @@ class AiSeminarRuntimeService {
       startedAt: startedAt,
       completedAt: _nowMs(),
       tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
+      estimatedCostUsd: _estimatedRunCostUsd(session.budgetPolicy, turns),
+      costPriceSource: _costPriceSource(session.budgetPolicy, turns),
       message: 'AI Seminar cancelled.',
     );
     return AiSeminarRuntimeEvent(
@@ -587,6 +611,55 @@ class AiSeminarRuntimeService {
           '(${runUsage.totalTokens} > $runLimit).';
     }
     return null;
+  }
+
+  static String? _costBudgetFailureMessage(
+    AiSeminarBudgetPolicy? policy,
+    List<AiSeminarRoleTurn> nextTurns,
+  ) {
+    if (policy == null || !policy.hasCostLimit) return null;
+    final estimatedCost = _estimatedRunCostUsd(policy, nextTurns);
+    final limit = policy.maxRunCostUsd;
+    if (estimatedCost == null || limit == null || estimatedCost <= limit) {
+      return null;
+    }
+    return 'AI Seminar exceeded estimated run cost cap '
+        '(\$${estimatedCost.toStringAsFixed(4)} > '
+        '\$${limit.toStringAsFixed(4)}).';
+  }
+
+  static double? _estimatedRunCostUsd(
+    AiSeminarBudgetPolicy? policy,
+    List<AiSeminarRoleTurn> turns,
+  ) {
+    if (policy == null || !policy.hasPricingMetadata) return null;
+    final usage = AiSeminarTokenUsage.aggregateRoleTurns(turns);
+    if (usage == null) return null;
+    final inputTokens =
+        usage.inputTokens - usage.cacheReadTokens - usage.cacheWriteTokens;
+    final billableInputTokens = inputTokens < 0 ? 0 : inputTokens;
+    final inputCost =
+        billableInputTokens * (policy.inputCostPerMillionTokens ?? 0) / 1000000;
+    final outputCost =
+        usage.outputTokens * (policy.outputCostPerMillionTokens ?? 0) / 1000000;
+    final cacheReadCost = usage.cacheReadTokens *
+        (policy.cacheReadCostPerMillionTokens ?? 0) /
+        1000000;
+    final cacheWriteCost = usage.cacheWriteTokens *
+        (policy.cacheWriteCostPerMillionTokens ?? 0) /
+        1000000;
+    final cost = inputCost + outputCost + cacheReadCost + cacheWriteCost;
+    if (cost <= 0) return null;
+    return cost;
+  }
+
+  static String? _costPriceSource(
+    AiSeminarBudgetPolicy? policy,
+    List<AiSeminarRoleTurn> turns,
+  ) {
+    if (turns.isEmpty) return null;
+    if (policy == null || !policy.hasPricingMetadata) return null;
+    return policy.costPriceSource;
   }
 
   static String _inputTextForInvocation(AiSeminarRoleInvocation invocation) {

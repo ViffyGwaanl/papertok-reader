@@ -47,7 +47,7 @@
 - 是否使用 web。
 - 已接入 provider usage metadata 时，必须显示 provider-reported `inputTokens` / `outputTokens`、估算来源和方法。
 - 未接入 provider usage metadata 时，必须显示本地 `inputTokens` / `outputTokens` 估算、估算方法和 `Provider billing may differ`。
-- 接入 pricing metadata 后，才能显示 `estimatedCostUsd`、`costPriceSource` 和美元成本上限；无法估算时显示 `costUnknownReason`。
+- 接入 pricing metadata 后，才能显示 `estimatedCostUsd`、`costPriceSource` 和估算美元成本上限；无法估算时显示 `costUnknownReason`；估算值不得声明为真实 provider 发票。
 - 哪些内容是模型推断。
 
 ## 2. Agent Tasks
@@ -59,7 +59,7 @@
 | E07-C02-T01 | 定义 progress contract | E02 Ready | progress spec | 书籍级索引和生成状态可见。 |
 | E07-C03-T01 | 定义 deep link 验收矩阵 | E00 Ready | deep link matrix | 所有输出可回跳或说明不可跳原因。 |
 | E07-C03-T02 | 接入 SourceRef reader intent audit | E07-C03-T01 | `PaperReaderReaderIntent`, `PaperReaderSourceJumpAudit` | SourceRef 生成 `paperreader://reader/open?...` intent，非法 link 不算 evidence。 |
-| E07-C04-T01 | 定义 source/cost UI contract | E06-C04-T01 In Review slice | transparency spec | 用户可见资料范围、web 状态、provider token usage、本地 token 估算 fallback 和成本未知原因；真实美元成本只在 pricing metadata 可用后显示。 |
+| E07-C04-T01 | 定义 source/cost UI contract | E06-C04-T01 In Review slice | transparency spec | 用户可见资料范围、web 状态、provider token usage、本地 token 估算 fallback、成本未知原因、pricing metadata 可用时的 estimated USD cap；估算美元成本必须标为 estimate，不得声明为真实 provider 发票。 |
 
 ## 3. Task Execution Defaults
 

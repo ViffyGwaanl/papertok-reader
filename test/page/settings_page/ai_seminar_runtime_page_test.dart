@@ -145,6 +145,27 @@ void main() {
     );
   }
 
+  void configurePricingCapability() {
+    Prefs().saveAiModelCapabilitiesCacheV1(
+      'local-gateway',
+      const [
+        AiModelCapability(
+          id: 'gpt-5.5',
+          contextWindow: 128000,
+          maxOutputTokens: 8192,
+          supportsTools: true,
+          supportsImages: true,
+          supportsThinking: true,
+          inputCostPerMillionTokens: 2,
+          outputCostPerMillionTokens: 8,
+          cacheReadCostPerMillionTokens: 0.2,
+          cacheWriteCostPerMillionTokens: 1,
+          pricingSource: 'test-pricing-v1',
+        ),
+      ],
+    );
+  }
+
   Finder textFieldWithLabel(String label) {
     return find.byWidgetPredicate(
       (widget) => widget is TextField && widget.decoration?.labelText == label,
@@ -291,7 +312,7 @@ void main() {
     expect(find.text('Streaming'), findsNothing);
     expect(find.textContaining('Cost: unknown'), findsOneWidget);
     expect(
-      find.textContaining('Seminar streaming token usage cannot estimate cost'),
+      find.textContaining('Provider pricing metadata is unavailable'),
       findsOneWidget,
     );
   });
@@ -328,6 +349,37 @@ void main() {
 
     expect(find.textContaining('role output token budget'), findsOneWidget);
     expect(find.text('Send to Review'), findsNothing);
+  });
+
+  testWidgets('pricing metadata enables USD run cost cap field',
+      (tester) async {
+    configurePricingCapability();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(
+            providerUsageService(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(textFieldWithLabel('Run cost cap USD'), findsOneWidget);
+    expect(find.textContaining('Pricing: test-pricing-v1'), findsOneWidget);
+    expect(
+      find.textContaining('Cost cap unavailable until pricing metadata'),
+      findsNothing,
+    );
   });
 
   testWidgets('shows a recovered local state banner for restored seminars',

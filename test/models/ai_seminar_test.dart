@@ -48,6 +48,12 @@ void main() {
         budgetPolicy: const AiSeminarBudgetPolicy(
           maxRoleOutputTokens: 120,
           maxRunTokens: 500,
+          maxRunCostUsd: 0.05,
+          inputCostPerMillionTokens: 2,
+          outputCostPerMillionTokens: 8,
+          cacheReadCostPerMillionTokens: 0.2,
+          cacheWriteCostPerMillionTokens: 1,
+          costPriceSource: 'test-pricing-v1',
         ),
       );
 
@@ -56,6 +62,13 @@ void main() {
       expect(restored.budgetPolicy!.maxRoleOutputTokens, 120);
       expect(restored.budgetPolicy!.maxRunTokens, 500);
       expect(restored.budgetPolicy!.hasTokenLimits, true);
+      expect(restored.budgetPolicy!.maxRunCostUsd, 0.05);
+      expect(restored.budgetPolicy!.inputCostPerMillionTokens, 2);
+      expect(restored.budgetPolicy!.outputCostPerMillionTokens, 8);
+      expect(restored.budgetPolicy!.cacheReadCostPerMillionTokens, 0.2);
+      expect(restored.budgetPolicy!.cacheWriteCostPerMillionTokens, 1);
+      expect(restored.budgetPolicy!.costPriceSource, 'test-pricing-v1');
+      expect(restored.budgetPolicy!.hasCostLimit, true);
     });
   });
 

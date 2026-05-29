@@ -26,7 +26,7 @@ void main() {
     await Prefs().initPrefs();
   });
 
-  void configureProvider() {
+  void configureProvider({bool withPricing = false}) {
     const now = 1000;
     Prefs().aiProvidersV1 = const [
       AiProviderMeta(
@@ -46,7 +46,7 @@ void main() {
     });
     Prefs().saveAiModelCapabilitiesCacheV1(
       'local-gateway',
-      const [
+      [
         AiModelCapability(
           id: 'gpt-5.5',
           contextWindow: 128000,
@@ -54,6 +54,11 @@ void main() {
           supportsTools: true,
           supportsImages: true,
           supportsThinking: true,
+          inputCostPerMillionTokens: withPricing ? 2 : null,
+          outputCostPerMillionTokens: withPricing ? 8 : null,
+          cacheReadCostPerMillionTokens: withPricing ? 0.2 : null,
+          cacheWriteCostPerMillionTokens: withPricing ? 1 : null,
+          pricingSource: withPricing ? 'current-pricing-v1' : null,
         ),
       ],
     );
@@ -437,6 +442,89 @@ void main() {
     expect(retried.status, AiSeminarRunStatus.failed);
     expect(retried.error, contains('role output token budget'));
     expect(retried.session!.budgetPolicy!.maxRoleOutputTokens, 1);
+  });
+
+  test(
+      'retry strips stale restored cost cap when current provider lacks pricing',
+      () async {
+    configureProvider();
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-stale-cost-retry',
+        question: 'Retry cost?',
+        budgetPolicy: const AiSeminarBudgetPolicy(
+          maxRunCostUsd: 0.000001,
+          inputCostPerMillionTokens: 2,
+          outputCostPerMillionTokens: 8,
+          costPriceSource: 'stale-pricing-v0',
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      evidenceBundle: bundle(),
+      activeRole: AiSeminarRole.critical,
+      partialRoleText: 'partial answer',
+      turns: const [],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    expect(container.read(aiSeminarRuntimeProvider).canRetry, true);
+
+    await notifier.retry();
+    final retried = container.read(aiSeminarRuntimeProvider);
+
+    expect(retried.status, AiSeminarRunStatus.completed);
+    expect(retried.session!.budgetPolicy, isNull);
+    expect(retried.lastRun!.estimatedCostUsd, isNull);
+  });
+
+  test('cost cap failure cannot be sent to Review and leaves stores empty',
+      () async {
+    configureProvider(withPricing: true);
+    final tempRoot = await Directory.systemTemp.createTemp();
+    addTearDown(() => tempRoot.deleteSync(recursive: true));
+    final reviewStore = ReviewItemStore(rootDir: tempRoot);
+    final cardStore = KnowledgeCardStore(rootDir: tempRoot);
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        aiSeminarReviewItemStoreProvider.overrideWithValue(reviewStore),
+        aiSeminarKnowledgeCardStoreProvider.overrideWithValue(cardStore),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    await notifier.start(
+      AiSeminarSessionContract(
+        id: 's-cost-review-block',
+        question: 'Cost cap?',
+        budgetPolicy: const AiSeminarBudgetPolicy(
+          maxRunCostUsd: 0.000001,
+          inputCostPerMillionTokens: 1,
+          outputCostPerMillionTokens: 1,
+          costPriceSource: 'stale-pricing-v0',
+        ),
+      ),
+    );
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(state.status, AiSeminarRunStatus.failed);
+    expect(state.error, contains('run cost cap'));
+    expect(state.canSendToReview, false);
+    await expectLater(notifier.sendToReview(), throwsStateError);
+    expect(await reviewStore.list(), isEmpty);
+    expect(await cardStore.list(), isEmpty);
   });
 
   test('sendToReview hands off synthesis candidate cards and flashcards',

@@ -80,12 +80,12 @@ Provider/model 需要声明：
 - `CustomSkillContract` 已提供 schemaVersion `1`、JSON/Map parser、字段类型错误上报、unknown field 报错、unknown scene 报错、system scene 拦截、写工具拦截、`spawn_sub_agent` 拦截和 `canInject` runtime gate。
 - `CustomSkillStore` 和 `CustomSkillsPage` 已提供 Settings -> AI 导入入口、safe fixture 示例、valid contract upsert、禁用/删除、unsafe JSON 拦截、Installed skills runtime 状态展示和 Active Skill 合并。
 - `AiSkill.allowedToolIds/sceneIds` 与 `LangchainAiRegistry.enabledToolIdsForActiveSkill` 已把 active custom skill 的 runtime 工具集收窄到 contract 声明过且当前 scene/permission matrix 允许的只读工具；custom skill 激活时不加载 MCP 工具。
-- `AiSeminarProviderContextService` 已把 Provider Center 当前 provider/model、本地 `AiModelCapability` cache、context/max output、Tools/Vision/Thinking 状态投影到 Seminar runtime state 和 `Provider readiness` UI；当前 schema 没有 streaming 字段时显示 `Streaming unknown`，缺少 pricing/usage metadata 时只显示成本未知原因。
-- `AiSeminarTokenUsage` 已把 Seminar completed role turn 的 provider-reported token usage 写入 runtime state 和页面；没有 provider usage metadata 时降级为 `local-char-estimate-v1` 本地 input/output token 估算；两者都不展示美元成本。
-- `AiSeminarBudgetPolicy` 已把 Seminar role output / run token budget 放入 session contract；runtime 使用 `local-char-estimate-v1` 在流式 partial 或 completed turn 超限时停止后续步骤，页面显示本地 budget guardrails 和 cost cap unavailable 说明。
+- `AiSeminarProviderContextService` 已把 Provider Center 当前 provider/model、本地 `AiModelCapability` cache、context/max output、Tools/Vision/Thinking 状态和 pricing metadata 投影到 Seminar runtime state 和 `Provider readiness` UI；当前 schema 没有 streaming 字段时显示 `Streaming unknown`，缺少 pricing metadata 时显示成本未知原因。
+- `AiSeminarTokenUsage` 已把 Seminar completed role turn 的 provider-reported token usage 写入 runtime state 和页面；没有 provider usage metadata 时降级为 `local-char-estimate-v1` 本地 input/output token 估算；两者都可作为 estimated USD cost cap 的 usage 输入，但不等于真实 provider 发票。
+- `AiSeminarBudgetPolicy` 已把 Seminar role output / run token budget 和 estimated USD run cost cap 放入 session contract；runtime 使用 `local-char-estimate-v1` 在流式 partial 或 completed turn 超限时停止后续步骤，并在有 pricing metadata 时用 provider/local usage 聚合估算美元成本、超出 cap 时停止后续步骤；页面显示本地 budget guardrails、`Run cost cap USD` 和 pricing source。
 - `AiSeminarRuntimeNotifier` 已把 Seminar completed/cancelled/failed state 保存为 `aiSeminarRuntimeStateV1` 本机恢复缓存；恢复只在同一书籍/同一入口问题显示，换书或换选区会清理旧 runtime/cache；restored running state 只恢复为 interrupted/retryable 并回写清理 partial，不继续旧 stream；该 key 被普通 prefs backup 排除。
 - `AiToolPermissionMatrix`、`SubAgentGovernancePolicy`、`AiToolRegistry` governance filter、`SubAgentRunner.allowedToolIdsForAgent` 与 `ToolOrchestrator` 已有 focused tests 覆盖。
-- sub-agent 取消/超时、pricing metadata、美元成本上限和后台任务队列仍保留为本 Epic 的剩余 Agent Task，不在当前切片中冒充完成。
+- sub-agent 取消/超时、价格版本/真实账单对账和后台任务队列仍保留为本 Epic 的剩余 Agent Task，不在当前切片中冒充完成。
 
 ## 4. Task Execution Defaults
 
