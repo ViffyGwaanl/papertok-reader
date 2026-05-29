@@ -100,30 +100,39 @@ class _ConceptGraphBody extends StatelessWidget {
         state: state,
       );
     }
+    final actionFeedback = _conceptGraphActionFeedback(context, state);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 720;
         if (wide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          return Column(
             children: [
-              SizedBox(
-                width: 300,
-                child: _NodeListPane(
-                  nodes: visibleNodes,
-                  selectedId: state.selectedNodeId,
-                  selectionQuery: initialQuery,
+              ...actionFeedback,
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: 300,
+                      child: _NodeListPane(
+                        nodes: visibleNodes,
+                        selectedId: state.selectedNodeId,
+                        selectionQuery: initialQuery,
+                      ),
+                    ),
+                    const VerticalDivider(width: 1),
+                    Expanded(child: _DossierPane(state: state)),
+                  ],
                 ),
               ),
-              const VerticalDivider(width: 1),
-              Expanded(child: _DossierPane(state: state)),
             ],
           );
         }
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
+            ...actionFeedback,
             SizedBox(
               height: 300,
               child: _NodeListPane(
@@ -816,7 +825,7 @@ class _EmptyGraph extends ConsumerWidget {
                   ),
                 ],
               ),
-              ..._emptyGraphActionFeedback(context, state),
+              ..._conceptGraphActionFeedback(context, state),
             ],
           ],
         ),
@@ -847,7 +856,7 @@ class _SelectPrompt extends StatelessWidget {
   }
 }
 
-List<Widget> _emptyGraphActionFeedback(
+List<Widget> _conceptGraphActionFeedback(
   BuildContext context,
   ConceptGraphExplorerState state,
 ) {

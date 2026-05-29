@@ -11,6 +11,8 @@
 
 ## 2. Epic Evidence Ledger
 
+本表按 Epic 记录代码证据，不等同于 `04_user_facing_activation_plan_zh.md` 的单个 UFA 任务验收状态。`In Review slice` 表示该 Epic 在当前分支已有可测试切片，但完整 Epic 仍未经过 release promotion，且可能还有 `04_user_facing_activation_plan_zh.md#当前还不能用` 中列出的产品化任务。
+
 | Epic | 当前代码 artifact | Gate 证据 | 状态 |
 | --- | --- | --- | --- |
 | E00 SourceRef & Provenance | `lib/models/source_ref.dart`、`lib/service/rag/source_ref_adapter.dart`、current-book/library RAG evidence `sourceRef` | SourceRef safe JSON、derived chunk hint、reader jump link、hash-only fingerprint 不算正式 evidence | In Review slice |
@@ -20,10 +22,60 @@
 | E04 ConceptGraph | `lib/models/concept_graph.dart`、`ConceptGraphStore`、`ConceptGraphProducer`、`ConceptGraphReviewAdapter`、`ConceptGraphExplorerPage`、`conceptGraphExplorerProvider`、`ConceptGraphExplorerNotifier.createDraftCandidateFromLibrarySearch`、`ConceptGraphExplorerNotifier.createKnowledgeCardFromLibrarySearch`、`ExcerptMenu` graph action | node/edge evidence, KnowledgeCard apply -> draft graph candidates + pending relation ReviewItem, Seminar candidate card conceptRefs -> KnowledgeCard -> Review apply -> draft graph candidates, reader-grounded AI Chat card conceptRefs -> KnowledgeCard -> Review apply -> draft graph candidates, library RAG derived result -> draft graph candidates + pending relation ReviewItem, Explorer empty-state explicit action -> local text-only library RAG with query embedding/vector fallback/rerank disabled -> graph producer or RAG KnowledgeCard producer -> ReviewItem handoff + inline feedback, only `applied + traceable + conceptRefs` cards or `derivedLayer/derivedSummary + traceable chunk SourceRef` RAG results seed graph candidates, producer failure does not roll back apply, draft-only store writes, relation apply via ReviewItem, dossier assembly via traceable edges, orphan/broken link detection, local exploration depth/width limits, selected concept local map summary with center/direct/two-hop/evidence/draft status, malformed graph degrade, Settings AI and reader-selection visible Explorer | In Review slice |
 | E05 Review Inbox / Spaced Review | `lib/models/review_item.dart`、`ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider`、`ReviewInboxPage`、`SpacedReviewStore`、`spacedReviewProvider`、`SpacedReviewPage`、`SourceRefEvidenceList`、`MemoryCandidateReviewAdapter`、`FlashcardReviewAdapter`、`ConceptGraphReviewAdapter` | strict status transitions, versioned local inbox persistence, source-required apply, apply/dismiss traceability, KnowledgeCard and ConceptGraph decision mirror, KnowledgeCard apply -> spaced review queue, flashcard candidate Review Inbox Apply UI -> spaced review queue, source jump audit UI, evidence snippet/source location/unavailable reason preview, spaced review history/sourceRefs | In Review slice |
 | E06 Agent Tools / Skills Platform | `lib/models/ai_agent_governance.dart`、`AiToolRegistry` governance filters、`SubAgentRunner.allowedToolIdsForAgent`、`ToolOrchestrator` permission matrix | whitelist, no recursion, read-only Seminar sub-agent filtering, execution-time concurrency safety, `CustomSkillContract` strict schema/parser/validator/runtime injection gate | In Review slice |
-| E07 Mobile UX / Deep Link / Observability | SourceRef jump links, reader intent reuse, `PaperReaderSourceJumpAudit`, deep-link evidence tests, `SourceRefEvidenceList`, selected-text `知识卡` / `AI` / `研讨` / `图谱` menu entries, image analysis `Card` action, AI Chat answer `知识卡` action, AI Chat source-status chip, ConceptGraph empty-state `Card` action, Settings AI `Concept graph` and `Spaced review` entries | formal knowledge objects carry jump-capable SourceRef, book anchor, or unavailable reason; source jump audit identifies jumpable, unavailable, and unresolved refs; Review Inbox and Spaced Review show evidence snippets/source location/unavailable reason before user decisions; user-facing activation tests cover visible menu actions, selected-text Card click, Seminar `Send to Review` click, image analysis Card action, AI Chat Card action, AI Chat source availability label, AI Chat history SourceRef restore, AI Chat unrelated rewrite and short-snippet SourceRef downgrade, RAG Card action, graph explorer entry, and spaced review entry | In Review slice |
+| E07 Mobile UX / Deep Link / Observability | SourceRef jump links, reader intent reuse, `PaperReaderSourceJumpAudit`, deep-link evidence tests, `SourceRefEvidenceList`, selected-text `知识卡` / `AI` / `研讨` / `图谱` menu entries, image analysis `Card` action, AI Chat answer `知识卡` action, AI Chat source-status chip, ConceptGraph empty-state `Card` action, Settings AI `Concept graph` and `Spaced review` entries | formal knowledge objects carry jump-capable SourceRef, book anchor, or unavailable reason; source jump audit identifies jumpable, unavailable, and unresolved refs; Review Inbox and Spaced Review show evidence snippets/source location/unavailable reason before user decisions; user-facing activation tests cover visible menu actions, selected-text Card click, Seminar `Send to Review` click, image analysis Card action, AI Chat Card action, AI Chat source availability label, AI Chat history SourceRef restore, AI Chat unrelated rewrite and short-snippet SourceRef downgrade, RAG Card action, ConceptGraph page/provider flows, and Spaced Review page/provider flows; click-level Settings coverage for Review Inbox、ConceptGraph、Spaced Review remains listed in the user-facing activation In Review evidence | In Review slice |
 | E08 Sync / Backup / Export | `lib/models/knowledge_sync.dart`、`KnowledgeCardStore.listSyncEnvelopes`、`KnowledgeCardStore.resolveSyncConflict`、`ReviewItemStore.applyResolvedSyncConflict`、`KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI `Knowledge sync/export` entry、`ReviewItemSourceType.syncConflict` | user asset vs derived cache boundary, default sync policy, secret payload exclusion, draft/export defaults, persisted conflict metadata preservation, safe local manifest preview/write, safe Markdown study export write, safe HTML study report write, safe Anki TSV export write, sync-conflict Review handoff, safe KnowledgeCard conflict approve/apply gate, generic ReviewItemStore apply rejects sync-conflict, no API key or `ai_index.db` in export manifest/Markdown/HTML/Anki/ReviewItem payload | In Review slice |
 
-## 3. Verification Commands
+## 3. 当前权威验证
+
+当前分支的用户入口回归命令：
+
+```bash
+flutter test --no-pub \
+  test/models/source_ref_test.dart \
+  test/models/ai_conversation_tree_meta_test.dart \
+  test/models/knowledge_card_test.dart \
+  test/models/review_item_test.dart \
+  test/models/knowledge_sync_test.dart \
+  test/service/deeplink/paperreader_reader_intent_test.dart \
+  test/service/knowledge/selection_knowledge_card_producer_test.dart \
+  test/service/knowledge/image_analysis_knowledge_card_producer_test.dart \
+  test/service/knowledge/rag_evidence_knowledge_card_producer_test.dart \
+  test/service/knowledge/ai_chat_knowledge_card_producer_test.dart \
+  test/service/knowledge/knowledge_card_store_test.dart \
+  test/service/knowledge/concept_graph_producer_test.dart \
+  test/service/review/knowledge_review_adapter_test.dart \
+  test/service/review/review_item_store_test.dart \
+  test/service/review/review_inbox_controller_test.dart \
+  test/service/review/spaced_review_store_test.dart \
+  test/providers/review_inbox_test.dart \
+  test/providers/spaced_review_test.dart \
+  test/providers/concept_graph_explorer_test.dart \
+  test/providers/knowledge_asset_export_test.dart \
+  test/providers/ai_seminar_runtime_test.dart \
+  test/page/settings_page/ai_seminar_runtime_page_test.dart \
+  test/page/settings_page/concept_graph_explorer_page_test.dart \
+  test/page/settings_page/review_inbox_page_test.dart \
+  test/page/settings_page/spaced_review_page_test.dart \
+  test/page/settings_page/knowledge_asset_export_page_test.dart \
+  test/page/settings_page/settings_navigation_compile_test.dart \
+  test/ai_chat_stream_knowledge_card_test.dart \
+  test/ai_chat_stream_edit_history_test.dart \
+  test/ai_chat_stream_history_scope_test.dart \
+  test/widgets/context_menu/excerpt_menu_actions_test.dart \
+  test/service/sync/knowledge_asset_export_service_test.dart \
+  -r compact
+```
+
+当前记录：
+
+- `2026-05-29 10:50 EDT`：用户入口宽回归通过，结果为 `188 passed`；覆盖 SourceRef、KnowledgeCard、Review Inbox、AI Seminar、ConceptGraph、Spaced Review、Knowledge Sync/Export、AI Chat 选中来源、阅读页选中菜单和相关页面入口。
+- `2026-05-29 10:50 EDT`：ConceptGraph 空态创建草稿后的反馈已补强；成功写入 pending relation ReviewItem 后，即使页面从空态刷新为非空图谱，也继续显示 `Added to Review inbox`。
+- `2026-05-29 10:50 EDT`：`git diff --check` 通过；README、当前能力图、用户入口计划、implementation status 禁用词扫描无命中；触及文件密钥扫描无命中；触及 ConceptGraph 文件调试 `print/debugPrint` 扫描无命中。
+- `2026-05-29 10:50 EDT`：`dart analyze --no-fatal-warnings lib/page/settings_page/concept_graph_explorer.dart test/page/settings_page/concept_graph_explorer_page_test.dart` 被 analyzer plugin setup 阻塞，原因是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；该命令未返回代码诊断。
+- `2026-05-29 10:56 EDT`：rescue reviewer 未发现代码 P1 blocker；指出 README 缺少用户入口 In Review 证据表、E07 测试证据措辞偏满。已在 README 增加入口证据表，并把 E07 gate 证据改为页面/provider flows 与 Settings click 证据分开描述。
+- `2026-05-29 10:56 EDT`：post-rescue 扫描通过：`git diff --check` 通过；触及文档禁用词扫描无命中；触及文件密钥扫描无命中；触及 ConceptGraph 文件调试 `print/debugPrint` 扫描无命中。
+
+## 4. 参考验证命令
 
 Focused model, adapter, tool-governance, RAG evidence and live-smoke skip tests:
 
@@ -101,7 +153,7 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 
 安全要求：`PAPERTOK_LIVE_RAG_API_KEY` 只从环境变量读取，不进入仓库、fixture、golden、日志或同步数据。
 
-最近验证记录：
+历史验证记录：
 
 - `2026-05-28 12:13 EDT`：focused suite 通过，`flutter test --no-pub ... -r compact` 结果为 `91 passed, 2 skipped`；两个 skipped 均为 opt-in live RAG gateway smoke。
 - `2026-05-28 12:13 EDT`：`git diff --check` 通过。
@@ -293,7 +345,7 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - `2026-05-29 10:34 EDT`：用户入口证据补强完成 TDD 红绿循环：选中文本菜单 `Card` 点击测试先失败为缺少 `ExcerptKnowledgeCardReaderContext` 和可注入 creator，再实现可测试 handoff seam；AI Seminar 页面级 `Send to Review` 测试先从真实文件 store 挂起定位到 widget test 存储边界，再改为内存 store 并按用户路径点击 `Start Seminar` 和 `Send to Review`。focused 验证 `flutter test --no-pub test/widgets/context_menu/excerpt_menu_actions_test.dart test/page/settings_page/ai_seminar_runtime_page_test.dart -r compact` 结果为 `6 passed`；新增覆盖 selection Card producer/feedback/menu close、Seminar synthesis/KnowledgeCard/flashcard pending handoff 和不自动 applied。
 - `2026-05-29 10:37 EDT`：入口证据补强相邻回归通过，`flutter test --no-pub test/widgets/context_menu/excerpt_menu_actions_test.dart test/page/settings_page/ai_seminar_runtime_page_test.dart test/providers/ai_seminar_runtime_test.dart test/service/knowledge/selection_knowledge_card_producer_test.dart test/service/knowledge/knowledge_card_store_test.dart test/service/review/knowledge_review_adapter_test.dart test/service/review/review_item_store_test.dart test/service/review/review_inbox_controller_test.dart -r compact` 结果为 `61 passed`；宽回归通过，`flutter test --no-pub test/models/source_ref_test.dart test/models/ai_conversation_tree_meta_test.dart test/models/knowledge_card_test.dart test/models/review_item_test.dart test/models/knowledge_sync_test.dart test/service/deeplink/paperreader_reader_intent_test.dart test/service/knowledge/selection_knowledge_card_producer_test.dart test/service/knowledge/image_analysis_knowledge_card_producer_test.dart test/service/knowledge/rag_evidence_knowledge_card_producer_test.dart test/service/knowledge/ai_chat_knowledge_card_producer_test.dart test/service/knowledge/knowledge_card_store_test.dart test/service/knowledge/concept_graph_producer_test.dart test/service/review/knowledge_review_adapter_test.dart test/service/review/review_item_store_test.dart test/service/review/review_inbox_controller_test.dart test/service/review/spaced_review_store_test.dart test/providers/review_inbox_test.dart test/providers/spaced_review_test.dart test/providers/concept_graph_explorer_test.dart test/providers/knowledge_asset_export_test.dart test/providers/ai_seminar_runtime_test.dart test/page/settings_page/ai_seminar_runtime_page_test.dart test/page/settings_page/concept_graph_explorer_page_test.dart test/page/settings_page/review_inbox_page_test.dart test/page/settings_page/spaced_review_page_test.dart test/page/settings_page/knowledge_asset_export_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart test/ai_chat_stream_knowledge_card_test.dart test/ai_chat_stream_edit_history_test.dart test/ai_chat_stream_history_scope_test.dart test/widgets/context_menu/excerpt_menu_actions_test.dart test/service/sync/knowledge_asset_export_service_test.dart -r compact` 结果为 `188 passed`；`git diff --check` 通过；触及文档禁用词扫描无命中；触及文件密钥和调试 `print/debugPrint` 扫描无命中；独立 rescue reviewer 确认 no P1/P2 findings。`dart analyze --no-fatal-warnings lib/widgets/context_menu/excerpt_menu.dart test/widgets/context_menu/excerpt_menu_actions_test.dart test/page/settings_page/ai_seminar_runtime_page_test.dart` 仍被 `custom_lint` 从 pub.dev 获取时的 TLS error 阻塞，未返回代码诊断。
 
-## 4. Rescue Review Checklist
+## 5. Rescue Review Checklist
 
 - AI 生成内容默认 draft 或 pending，不自动写长期记忆、笔记或正式知识资产；只有用户在 Review Inbox 中 `Apply` 后，KnowledgeCard 才会进入 spaced review 队列。
 - KnowledgeCardStore 只持久化卡片资产状态，不写长期记忆、笔记、高亮或 spaced review；`upsertCandidate` 会把 Review 前候选保持为 draft/pending + `AI-generated-draft`，raw `upsert` 只接受 draft/pending AI candidates，draft/pending envelope 使用 `ai-draft`，只有 Review apply 后的 user asset 才使用 `knowledge-card`。

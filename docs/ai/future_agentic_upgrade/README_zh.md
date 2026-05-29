@@ -12,7 +12,7 @@
 3. `02_agent_execution_model_zh.md`：AI agent 执行模型、任务模板和禁止写法。
 4. `03_epic_index_zh.md`：全部 Epic 的 DAG 依赖图。
 5. `implementation_status_zh.md`：本分支代码 artifact、gate 和验证证据。
-6. `04_user_facing_activation_plan_zh.md`：用户现在从哪里用、哪些还没有入口、剩余入口任务怎样交给 agent。
+6. `04_user_facing_activation_plan_zh.md`：用户现在从哪里用、当前还不能用什么、入口任务验收状态和下一步 agent task。
 7. `epics/`：每条能力线的执行规格。
 8. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
 
@@ -57,6 +57,16 @@
 - 用户要找入口：看本节表格的“用户怎么用”列。
 - agent 要继续接产品闭环：看 `04_user_facing_activation_plan_zh.md` 的每条用户路径、Gate、验证命令和 `UFA-*` task。
 
+仍在 `In Review` 的用户入口证据不要解读成发布版完成项：
+
+| In Review 入口证据 | 现在已有 | 还要补的 agent task |
+| --- | --- | --- |
+| ImageViewer 点击级知识卡写入 | 图片解析 sheet 的 `Card` action 和 producer 服务测试已覆盖。 | 补 `ImageViewer -> AI Image Analysis -> Card -> KnowledgeCardStore/ReviewItemStore` 点击级测试和可注入分析流。 |
+| 阅读页真实选中文本 fallback | `ExcerptMenu` 注入 reader context 的 `Card` 点击测试已覆盖。 | 补不注入 creator/context 时走真实 `epubPlayerKey` fallback 的 widget 证据。 |
+| Export conflict 到 Review Inbox 用户流 | service/provider/page 按分层证明可提交待审冲突。 | 补从导出页点击 `Send conflicts to Review` 后打开 Review Inbox 并 approve/apply 安全冲突的集成式测试。 |
+| 打开来源点击级 handoff | SourceRef deep-link parser、页面来源状态和 `Open source` 可见性已覆盖。 | 补 Review Inbox、Spaced Review、ConceptGraph 的可注入 source opener 和点击 URI 断言。 |
+| AI Chat 流式中不自动生成知识资产 | 回答完成后的显式 `知识卡` action 和 source grounding 已覆盖。 | 补 streaming 中按钮不可用且 producer 调用数为零的 UI gate 测试。 |
+
 | 能力 | 用户怎么用 | 状态 |
 | --- | --- | --- |
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入；widget 覆盖菜单入口可见、点击 `Card` 后调用 producer、显示 Review feedback 并关闭菜单。 |
@@ -69,9 +79,23 @@
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；知识卡或 Seminar 候选 flashcard 在 Review Inbox 中 `Apply` 后入队。 | 本分支已接入队列、复习页、证据摘录预览、Again/Hard/Good/Easy 评分和来源跳转状态；已接 KnowledgeCard apply 和 Seminar reviewSuggestion -> flashcard candidate -> Review Inbox Apply UI -> Spaced Review。 |
 | Sync Export | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览、Markdown 学习导出、HTML study report、Anki TSV 导出、创建入口和待审冲突发送到 Review Inbox 的入口；默认只纳入已确认知识资产和复习历史，排除草稿、派生索引、API key 和待审冲突；安全的 KnowledgeCard 冲突可在 Review Inbox 中由用户 approve/apply 后解除 pending conflict，含 secret、未知 schema、无可追踪来源或非 KnowledgeCard 的冲突仍只能 dismiss/triage。完整云同步引擎、per-entity remote sync 和远端冲突合并器仍在剩余任务中。 |
 
+## 6. 当前还不能用
+
+下表是本分支没有产品化的边界。它们不是“隐藏入口”，也不应被解释成当前用户已经可以使用。
+
+| 还不能用的能力 | 当前边界 | 下一步 agent task |
+| --- | --- | --- |
+| 完整云同步引擎 | 目前只有本地安全 manifest、Markdown、HTML、Anki TSV 导出，以及安全 KnowledgeCard 冲突的本地 Review 恢复。 | 设计 per-entity remote sync、远端冲突合并器、回滚和冲突 Review UI。 |
+| Memory source-specific apply adapter | Review Inbox 能展示 memory 类来源，但 Memory 专属 apply 仍未接到统一控制层。 | 为 Memory candidate 接入 source-specific adapter，要求 SourceRef 审计和 apply/dismiss 可追踪。 |
+| 自定义 Skill 导入 UI | `CustomSkillContract` 已有 schema/parser/validator/runtime gate，但还没有用户导入界面。 | 接入导入 UI、fixture 管理、provider capability 显示和 runtime 注入验收。 |
+| Seminar 成本、后台续跑、provider capability matrix | Seminar runtime 已能流式、取消、重试和送 Review，但未做角色预算、成本上限、后台持久续跑。 | 接入成本记录、后台恢复状态、provider 能力矩阵和移动资源 gate。 |
+| 旧 note/memory 全量 SourceRef 审计 | 新 KnowledgeCard/ReviewItem/SpacedReview 路径已有 SourceRef 审计，旧 note/memory 路径还没有完全统一。 | 把旧 note/memory 输出接到 `SourceRefEvidenceList` 和 jump audit。 |
+| 复杂无限画布式图谱 | 当前 ConceptGraph 是局部探索、dossier 和本地摘要，不做无限画布、缩放手势或跨书外部知识扩展。 | 若要做画布，先定义移动端资源 gate、证据可见性和 graph asset ownership。 |
+| 发布版可用 | 本表描述 `codex/future-agentic-upgrade` 分支，不代表 `main`、TestFlight 或用户已安装版本。 | 走 release promotion gate：合并、构建、回归、发布说明和用户迁移说明。 |
+
 入口计划以 `04_user_facing_activation_plan_zh.md` 为准；`implementation_status_zh.md` 只记录代码和验证证据。
 
-## 6. 历史锚点
+## 7. 历史锚点
 
 旧文档保留为历史事实，不在本目录内重写：
 

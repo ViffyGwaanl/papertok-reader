@@ -209,6 +209,18 @@ void main() {
     expect(find.text('No related concepts yet'), findsNothing);
     expect(find.text('attention memory'), findsWidgets);
     expect(find.text('Attention'), findsWidgets);
+    expect(find.text('Added to Review inbox'), findsOneWidget);
+    expect(
+      reviewStore.items.where(
+        (item) => item.sourceType == ReviewItemSourceType.conceptGraphRelation,
+      ),
+      hasLength(2),
+    );
+    expect(
+      reviewStore.items
+          .every((item) => item.status == ReviewItemStatus.pending),
+      true,
+    );
   });
 
   testWidgets('empty state draft action explains skipped handoff',

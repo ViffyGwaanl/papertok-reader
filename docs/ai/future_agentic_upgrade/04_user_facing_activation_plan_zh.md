@@ -322,27 +322,46 @@ flutter test --no-pub \
   -r compact
 ```
 
-## 3. 剩余用户入口任务
+## 3. 当前还不能用
+
+这些能力没有产品入口或没有完成端到端验收，不应在用户沟通中描述为已经可用：
+
+| 能力 | 当前边界 | 下一步 Agent Task | Gate |
+| --- | --- | --- | --- |
+| 完整云同步引擎 | 当前只有本地导出、安全冲突 Review handoff 和安全 KnowledgeCard 冲突本地恢复。 | 设计并实现 per-entity remote sync、远端冲突合并器、远端写回和回滚。 | API key 永不同步；冲突进入 Review；不得使用 whole-file newer-wins 覆盖用户资产。 |
+| ImageViewer 真实点击级 KnowledgeCard 写入证据 | `AiImageAnalysisSheet` 的 `Card` callback 已有 widget 覆盖，producer 也有服务测试；完整 `ImageViewer -> AI Image Analysis -> Card -> stores` 还缺可注入流和点击级测试。 | 为 `ImageViewer` 增加可测试的 analysis stream / card producer seam，验证 book/cfi/href SourceRef、pending KnowledgeCard、pending ReviewItem、重复点击和不保存图片本体。 | 图片解析结果只进入 Review；SourceRef 使用当前阅读位置；图片本体不进 card payload。 |
+| 阅读页真实 fallback 选中文本 KnowledgeCard 证据 | `ExcerptMenu` 点击级测试覆盖注入 context/creator；生产路径依赖 `epubPlayerKey` fallback 和默认 producer，还缺无注入路径的 widget 证据。 | 抽出 reader context lookup adapter/provider，添加不注入 creator 的菜单测试，验证 pending card/review item。 | 不绕过 Review；相同 book/cfi/text 不重复写。 |
+| Export conflict -> Review Inbox 用户工作流 | Page test 证明按钮调用 service，service test 证明 ReviewItem 安全 payload；还缺用户从 export 页发送冲突后在 Review Inbox 看到并 apply 的集成式 widget/provider 测试。 | 用 temp stores seed pending conflict，点击 `Send conflicts to Review`，打开 Review Inbox，断言 safe conflict approve/apply 可见且 unsafe conflict 只能 dismiss。 | raw payload/secret 不进 ReviewItem；safe conflict apply 只解除本地 KnowledgeCard conflict metadata。 |
+| SourceRef 打开来源点击级验证 | Review Inbox、Spaced Review、ConceptGraph 都显示 `Open source`，deep-link parser 已有服务测试；页面层还缺点击后 URI handoff 的断言。 | 为这些页面引入可注入 source opener，覆盖 jumpable、unavailable、unresolved refs 的点击/禁用状态。 | 不可跳来源必须解释原因；jump URI 必须是 `paperreader://reader/open?...`。 |
+| Memory source-specific apply adapter | Review Inbox 能展示 memory 类型候选，但 Memory 专属 apply 还未接到统一控制层。 | 接入 Memory candidate adapter，确保 apply/dismiss 可追踪且不覆盖用户 memory。 | Memory 写入必须 source-specific，不得走泛型 apply。 |
+| Custom Skill 导入 UI | 已有 `CustomSkillContract` schema/parser/validator/runtime gate，没有用户导入界面。 | 接入导入 UI、fixture 管理、provider capability 展示和 runtime injection 验收。 | 禁止写工具越权、递归 sub-agent 和 unknown scene。 |
+| Seminar 成本、后台续跑、provider matrix | Seminar runtime 已能流式、取消、重试、Review handoff；未接角色预算、成本上限、后台恢复和 provider capability matrix。 | 接入成本记录、后台恢复状态和 provider 能力矩阵。 | 移动资源 gate；长任务可取消、失败可恢复或重试。 |
+| 复杂无限画布式 ConceptGraph | 当前是局部图谱、dossier、路径和摘要，不做无限画布、缩放手势或跨书外部知识扩展。 | 如需画布，先定义移动端资源、证据可见性和 graph ownership gate。 | 关系必须有 evidence；正式关系必须 Review apply。 |
+| 发布版可用 | 本文件描述 `codex/future-agentic-upgrade` 分支；不代表 `main`、TestFlight 或已安装版本。 | 走 release promotion gate，完成合并、构建、回归、发布说明和用户迁移说明。 | 发布前必须重跑权威验证命令并记录 commit。 |
+
+## 4. 用户入口任务验收状态
+
+这张表是分支内的 agent task 台账，不是发布排期。`Accepted` 表示在当前分支已有代码和测试证据；`In Review` 表示已有切片但仍有上表列出的用户证据或发布 gate 未完成。
 
 | TaskID | 状态 | Parent Capability | Goal | Depends On | Output Artifact | Acceptance |
 | --- | --- | --- | --- | --- | --- | --- |
-| UFA-C01-T01 | In Review | Selection KnowledgeCard | 选中文本生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore | `SelectionKnowledgeCardProducer` | 已通过 producer 测试，重复点击不重复写入。 |
-| UFA-C01-T02 | In Review | Selection KnowledgeCard | 阅读页选中菜单显示 `知识卡`。 | UFA-C01-T01, E07 menu | `ExcerptMenu` action, l10n keys | widget 覆盖 `Card/Seminar/Graph` 入口可见；点击 `Card` 调用 selection KnowledgeCard producer，传入 book/cfi/选中文本/标题上下文，显示 Review feedback 并关闭菜单。 |
-| UFA-C01-T03 | In Review | Image Analysis KnowledgeCard | 图片解析结果生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore, E07 image analysis sheet | `ImageAnalysisKnowledgeCardProducer`, `AiImageAnalysisSheet` Card action | 图片解析结果弹层显示 `Card` 入口；点击后写 pending KnowledgeCard 和 pending ReviewItem；重复点击不制造重复卡；不自动写长期资产。 |
-| UFA-C01-T04 | In Review | RAG Evidence KnowledgeCard | 本地 RAG/GraphRAG evidence 生成待审 KnowledgeCard。 | E00 SourceRef, E02 RAG evidence, E03 store, E05 ReviewItemStore, E07 ConceptGraph empty state | `RagEvidenceKnowledgeCardProducer`, `ConceptGraphExplorerNotifier.createKnowledgeCardFromLibrarySearch`, 空态 `Card` action | 只有 traceable chunk SourceRef 且带可保存 chunk snippet 的 RAG evidence 能写 pending KnowledgeCard 和 pending ReviewItem；derived summary 不替代书内 chunk evidence；不写正式图谱或长期资产；写入后页面显示 Review inbox 反馈。 |
+| UFA-C01-T01 | Accepted | Selection KnowledgeCard | 选中文本生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore | `SelectionKnowledgeCardProducer` | 已通过 producer 测试，重复点击不重复写入。 |
+| UFA-C01-T02 | In Review | Selection KnowledgeCard | 阅读页选中菜单显示 `知识卡`。 | UFA-C01-T01, E07 menu | `ExcerptMenu` action, l10n keys | widget 覆盖 `Card/Seminar/Graph` 入口可见；点击 `Card` 调用 selection KnowledgeCard producer，传入 book/cfi/选中文本/标题上下文，显示 Review feedback 并关闭菜单；真实 `epubPlayerKey` fallback 仍需补点击级证据。 |
+| UFA-C01-T03 | In Review | Image Analysis KnowledgeCard | 图片解析结果生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore, E07 image analysis sheet | `ImageAnalysisKnowledgeCardProducer`, `AiImageAnalysisSheet` Card action | 图片解析结果弹层显示 `Card` 入口；producer 覆盖 pending KnowledgeCard 和 pending ReviewItem、重复点击和不自动写长期资产；完整 `ImageViewer` 工具栏到 store 的点击级测试仍需补。 |
+| UFA-C01-T04 | Accepted | RAG Evidence KnowledgeCard | 本地 RAG/GraphRAG evidence 生成待审 KnowledgeCard。 | E00 SourceRef, E02 RAG evidence, E03 store, E05 ReviewItemStore, E07 ConceptGraph empty state | `RagEvidenceKnowledgeCardProducer`, `ConceptGraphExplorerNotifier.createKnowledgeCardFromLibrarySearch`, 空态 `Card` action | 只有 traceable chunk SourceRef 且带可保存 chunk snippet 的 RAG evidence 能写 pending KnowledgeCard 和 pending ReviewItem；derived summary 不替代书内 chunk evidence；不写正式图谱或长期资产；写入后页面显示 Review inbox 反馈。 |
 | UFA-C01-T05 | In Review | AI Chat KnowledgeCard | AI Chat 回答显式生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore, E07 AI Chat message action | `AiChatKnowledgeCardProducer`, `AiChatStream` 回答旁 `知识卡` action, answer-side source status chip, `ExcerptMenu` AI sourceRef handoff, `conversationV2` user-node SourceRef persistence | 回答完成后才可点击 `知识卡`；回答旁显示可跳转或不可用来源状态；选中文本进入 AI 草稿且发送内容仍包含原选中文本或 SourceRef snippet 时，才保留并持久化精确 reader SourceRef；历史重载后 `知识卡` 仍优先使用原始 reader SourceRef；无关改写不保存旧 reader SourceRef；短公共片段碰巧命中不保存旧 reader SourceRef；reader-grounded card 带保守 `conceptRefs`，纯聊天 card 不带；重复点击不制造重复卡；不直接写 ConceptGraph、长期记忆、笔记或 spaced review。 |
-| UFA-C02-T01 | In Review | Seminar launcher | 阅读页选中菜单显示 `研讨`，打开结构化 Seminar runtime page。 | AI Seminar runtime, E07 menu | `ExcerptMenu` action | 入口可见；选中文本预填；不自动写用户资产。 |
-| UFA-C02-T02 | In Review | Structured Seminar runtime UI | 把 `AiSeminarOrchestrationService` 接入真实模型流式事件。 | E01 services, E06 governance, E07 progress UI | `AiSeminarRuntimeService`、`aiSeminarRuntimeProvider`、`AiSeminarRuntimePage` | 角色 turn、evidence、whiteboard、synthesis 进入可序列化 runtime state；失败可重试，运行可取消。 |
-| UFA-C02-T03 | In Review | Seminar Review handoff | Seminar synthesis 和候选卡进入 Review Inbox。 | UFA-C02-T02, E05 controller | `AiSeminarRuntimeNotifier.sendToReview` + `SeminarSynthesisReviewAdapter` | 只有 `readyForReview + traceable handoff` 的 synthesis 进入 pending Review；候选卡保持 AI draft/pending，不直接应用；页面级 widget 覆盖用户点击 `Start Seminar` 后再点击 `Send to Review`，并断言 synthesis、KnowledgeCard ReviewItem 和 seminar KnowledgeCard 均为 pending/draft 边界。 |
-| UFA-C02-T04 | In Review | Seminar Flashcard handoff | Seminar reviewSuggestion 进入 flashcard Review。 | UFA-C02-T03, UFA-C04-T01 | `SeminarSynthesisReviewAdapter.flashcardsFromSynthesis`, `FlashcardReviewAdapter`, `ReviewInboxController` | 只有 traceable synthesis 的 candidate review question 会生成 pending flashcard；页面级 widget 覆盖 `Send to Review` 后 flashcard candidate 进入 pending ReviewItem；用户 Apply 后进入 Spaced Review；不绕过 Review。 |
-| UFA-C03-T01 | In Review | Concept producer | 从 KnowledgeCard、Seminar candidate concept refs、reader-grounded AI Chat concept refs 和 derived RAG/GraphRAG search result 提取有证据的 ConceptNode/Edge 候选。 | E03, E04 store, E05 controller, UFA-C01-T05, UFA-C02-T03, E02 SourceRef evidence | `ConceptGraphProducer`, ReviewInboxController apply hook, Seminar candidate `conceptRefs` handoff, AI Chat card `conceptRefs` handoff, `createFromLibrarySearchResult`, `ConceptGraphExplorerNotifier.createDraftCandidateFromLibrarySearch` | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard，或 `derivedLayer/derivedSummary + traceable chunk SourceRef` 的 library RAG result，生成 draft node/edge；Seminar candidate card 和 reader-grounded AI Chat card 可携带 conceptRefs 并在用户 Apply 后进入同一链路；relation 进入 pending Review；ConceptGraph 空态显性 action 已接，并展示 Review/skip feedback。 |
-| UFA-C03-T02 | In Review | Concept Explorer page | 提供局部图谱探索入口。 | E04 dossier/explore | `ConceptGraphExplorerPage`, provider, Settings AI entry, local graph map summary | 用户能打开概念页、看中心概念、直接关系、二跳节点、evidence link 数量、draft/formal 状态、局部路径、原文跳转和 orphan/broken link。 |
-| UFA-C03-T03 | In Review | Reader concept entry | 阅读页选中文本可进入概念探索。 | UFA-C03-T02 | `ExcerptMenu` graph action, `ConceptGraphExplorerPage.initialQuery` | 选中文本可打开图谱页并筛选相关概念；没有相关概念时展示空态和草稿候选入口，不生成无证据正式节点。 |
-| UFA-C04-T01 | In Review | Spaced Review | Review apply 后生成复习队列。 | E03, E05 | `SpacedReviewStore`, `spacedReviewProvider`, `SpacedReviewPage`, `SourceRefEvidenceList`, Settings AI entry | 复习项可回溯到卡片和原文；页面显示证据摘录和不可用来源原因；删除书后显示可解释状态；评分记录下一次到期时间。 |
-| UFA-C04-T02 | In Review | Flashcard Review apply | 待审 flashcard 应用后进入 Spaced Review。 | E05 controller, UFA-C02-T04 | `SpacedReviewStore.reviewIdForFlashcard`, `upsertFromFlashcardReviewItem`, `ReviewInboxPage` Apply gate | pending/approved flashcard 不直接入队；只有用户在 Review Inbox 点击 enabled `Apply` 后，applied 且 traceable 的 flashcard 才能入队；重复入队不制造重复复习项。 |
-| UFA-C05-T01 | In Review | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | `KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI entry、export manifest、Markdown export、HTML study report、Anki TSV export、sync-conflict ReviewItem handoff | API key 不同步；派生索引不当作 source-of-truth；冲突被排除并显性显示；当前创建本地 manifest、Markdown 学习导出、HTML study report 和 Anki TSV，并能把待审冲突送入 Review Inbox；安全 KnowledgeCard 冲突可由用户 approve/apply 后解除 pending conflict，其他冲突只允许 triage/dismiss；不执行远端同步或自动跨设备合并。 |
+| UFA-C02-T01 | Accepted | Seminar launcher | 阅读页选中菜单显示 `研讨`，打开结构化 Seminar runtime page。 | AI Seminar runtime, E07 menu | `ExcerptMenu` action | 入口可见；选中文本预填；不自动写用户资产。 |
+| UFA-C02-T02 | Accepted | Structured Seminar runtime UI | 把 `AiSeminarOrchestrationService` 接入真实模型流式事件。 | E01 services, E06 governance, E07 progress UI | `AiSeminarRuntimeService`、`aiSeminarRuntimeProvider`、`AiSeminarRuntimePage` | 角色 turn、evidence、whiteboard、synthesis 进入可序列化 runtime state；失败可重试，运行可取消。 |
+| UFA-C02-T03 | Accepted | Seminar Review handoff | Seminar synthesis 和候选卡进入 Review Inbox。 | UFA-C02-T02, E05 controller | `AiSeminarRuntimeNotifier.sendToReview` + `SeminarSynthesisReviewAdapter` | 只有 `readyForReview + traceable handoff` 的 synthesis 进入 pending Review；候选卡保持 AI draft/pending，不直接应用；页面级 widget 覆盖用户点击 `Start Seminar` 后再点击 `Send to Review`，并断言 synthesis、KnowledgeCard ReviewItem 和 seminar KnowledgeCard 均为 pending/draft 边界。 |
+| UFA-C02-T04 | Accepted | Seminar Flashcard handoff | Seminar reviewSuggestion 进入 flashcard Review。 | UFA-C02-T03, UFA-C04-T01 | `SeminarSynthesisReviewAdapter.flashcardsFromSynthesis`, `FlashcardReviewAdapter`, `ReviewInboxController` | 只有 traceable synthesis 的 candidate review question 会生成 pending flashcard；页面级 widget 覆盖 `Send to Review` 后 flashcard candidate 进入 pending ReviewItem；用户 Apply 后进入 Spaced Review；不绕过 Review。 |
+| UFA-C03-T01 | Accepted | Concept producer | 从 KnowledgeCard、Seminar candidate concept refs、reader-grounded AI Chat concept refs 和 derived RAG/GraphRAG search result 提取有证据的 ConceptNode/Edge 候选。 | E03, E04 store, E05 controller, UFA-C01-T05, UFA-C02-T03, E02 SourceRef evidence | `ConceptGraphProducer`, ReviewInboxController apply hook, Seminar candidate `conceptRefs` handoff, AI Chat card `conceptRefs` handoff, `createFromLibrarySearchResult`, `ConceptGraphExplorerNotifier.createDraftCandidateFromLibrarySearch` | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard，或 `derivedLayer/derivedSummary + traceable chunk SourceRef` 的 library RAG result，生成 draft node/edge；Seminar candidate card 和 reader-grounded AI Chat card 可携带 conceptRefs 并在用户 Apply 后进入同一链路；relation 进入 pending Review；ConceptGraph 空态显性 action 已接，并展示 Review/skip feedback。 |
+| UFA-C03-T02 | In Review | Concept Explorer page | 提供局部图谱探索入口。 | E04 dossier/explore | `ConceptGraphExplorerPage`, provider, Settings AI entry, local graph map summary | 用户能打开概念页、看中心概念、直接关系、二跳节点、evidence link 数量、draft/formal 状态、局部路径、原文跳转和 orphan/broken link；`Open source` 点击级 source opener 仍需补。 |
+| UFA-C03-T03 | Accepted | Reader concept entry | 阅读页选中文本可进入概念探索。 | UFA-C03-T02 | `ExcerptMenu` graph action, `ConceptGraphExplorerPage.initialQuery` | 选中文本可打开图谱页并筛选相关概念；没有相关概念时展示空态和草稿候选入口，不生成无证据正式节点。 |
+| UFA-C04-T01 | In Review | Spaced Review | Review apply 后生成复习队列。 | E03, E05 | `SpacedReviewStore`, `spacedReviewProvider`, `SpacedReviewPage`, `SourceRefEvidenceList`, Settings AI entry | 复习项可回溯到卡片和原文；页面显示证据摘录和不可用来源原因；删除书后显示可解释状态；评分记录下一次到期时间；`Open source` 点击级 source opener 仍需补。 |
+| UFA-C04-T02 | Accepted | Flashcard Review apply | 待审 flashcard 应用后进入 Spaced Review。 | E05 controller, UFA-C02-T04 | `SpacedReviewStore.reviewIdForFlashcard`, `upsertFromFlashcardReviewItem`, `ReviewInboxPage` Apply gate | pending/approved flashcard 不直接入队；只有用户在 Review Inbox 点击 enabled `Apply` 后，applied 且 traceable 的 flashcard 才能入队；重复入队不制造重复复习项。 |
+| UFA-C05-T01 | In Review | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | `KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI entry、export manifest、Markdown export、HTML study report、Anki TSV export、sync-conflict ReviewItem handoff | API key 不同步；派生索引不当作 source-of-truth；冲突被排除并显性显示；当前创建本地 manifest、Markdown 学习导出、HTML study report 和 Anki TSV，并能把待审冲突送入 Review Inbox；安全 KnowledgeCard 冲突可由用户 approve/apply 后解除 pending conflict；Export -> Review Inbox 集成式用户测试仍需补；不执行远端同步或自动跨设备合并。 |
 
-## 4. Agent 执行约束
+## 5. Agent 执行约束
 
 每个剩余任务必须使用 `02_agent_execution_model_zh.md` 的 Agent Task 模板，并附加这些约束：
 
@@ -353,7 +372,7 @@ flutter test --no-pub \
 - UI 入口要能在移动端触达，不把核心阅读内容遮住。
 - 长任务必须有取消、失败提示、重启恢复或可重试路径。
 
-## 5. Rescue Review 要点
+## 6. Rescue Review 要点
 
 执行完成前，reviewer/rescue agent 必须逐项检查：
 

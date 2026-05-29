@@ -87,4 +87,4 @@
 - `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、结构化 runtime UI、真实模型流式事件、取消/重试、Review handoff 和阅读页选中入口；仍需成本记录、后台持久续跑和更强 provider capability matrix。
 - Custom Skill contract 已有 schema version、parser、validator、权限声明和 runtime injection gate；仍需导入 UI、fixture 管理和 provider 能力界面。
 - ConceptGraph 模型、本地 store、KnowledgeCard producer、Seminar candidate conceptRefs handoff、reader-grounded AI Chat conceptRefs handoff、RAG/GraphRAG derived result producer、空态显性 action、局部探索、局部图谱摘要、统一 Review relation adapter、Explorer UI 和阅读页选中文本入口已有可测试切片；复杂无限画布、缩放手势和跨书外部知识扩展不在本切片。
-- 文档中存在传统 phase/roadmap 混写，不能直接给 agent team 执行。
+- 旧历史文档中仍存在传统 phase/roadmap 混写；agent team 应以本目录的 `Epic -> Capability -> Agent Task -> Gate -> Acceptance` 文档为执行入口，旧文档只作为历史锚点。
