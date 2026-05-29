@@ -27,6 +27,8 @@ void main() {
             cfi: 'epubcfi(/6/8)',
             jumpLink:
                 'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/8%29',
+            sourceTitle: 'Review Book',
+            locationLabel: 'Chapter 4',
             sourceTextSnippet: 'Traceable evidence.',
             sourceKind: SourceRefKind.highlight,
           ),
@@ -63,6 +65,10 @@ void main() {
     expect(find.text('Attention bottleneck'), findsOneWidget);
     expect(find.text('1 traceable'), findsOneWidget);
     expect(find.text('1 unavailable'), findsOneWidget);
+    expect(find.text('Evidence'), findsOneWidget);
+    expect(find.text('Traceable evidence.'), findsOneWidget);
+    expect(find.text('Review Book · Chapter 4'), findsOneWidget);
+    expect(find.text('The source book was deleted.'), findsOneWidget);
     expect(find.text('Open source'), findsOneWidget);
 
     await tester.tap(find.text('Good'));

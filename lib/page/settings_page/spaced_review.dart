@@ -8,6 +8,7 @@ import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart'
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/knowledge/source_ref_evidence_list.dart';
 
 class SpacedReviewPage extends ConsumerStatefulWidget {
   const SpacedReviewPage({super.key});
@@ -230,6 +231,10 @@ class _SpacedReviewCard extends ConsumerWidget {
               maxLines: 5,
               overflow: TextOverflow.ellipsis,
             ),
+            if (item.sourceRefs.any((ref) => ref.hasEvidence)) ...[
+              const SizedBox(height: 10),
+              SourceRefEvidenceList(sourceRefs: item.sourceRefs),
+            ],
             const SizedBox(height: 12),
             OverflowBar(
               alignment: MainAxisAlignment.end,

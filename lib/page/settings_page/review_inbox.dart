@@ -7,6 +7,7 @@ import 'package:papertok_reader/service/deeplink/paperreader_deeplink_handler.da
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/knowledge/source_ref_evidence_list.dart';
 
 class ReviewInboxPage extends ConsumerStatefulWidget {
   const ReviewInboxPage({super.key});
@@ -233,6 +234,10 @@ class _ReviewInboxCard extends ConsumerWidget {
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
             ),
+            if (item.sourceRefs.any((ref) => ref.hasEvidence)) ...[
+              const SizedBox(height: 10),
+              SourceRefEvidenceList(sourceRefs: item.sourceRefs),
+            ],
             const SizedBox(height: 12),
             OverflowBar(
               alignment: MainAxisAlignment.end,

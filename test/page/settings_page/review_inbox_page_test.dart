@@ -25,6 +25,8 @@ void main() {
             bookId: 9,
             href: 'Text/chapter.xhtml',
             cfi: 'epubcfi(/6/12)',
+            sourceTitle: 'Widget Book',
+            locationLabel: 'Chapter 2',
             sourceTextSnippet: 'A visible evidence quote.',
             sourceKind: SourceRefKind.highlight,
           ),
@@ -41,8 +43,47 @@ void main() {
     expect(find.text('Widget review card'), findsOneWidget);
     expect(find.text('Knowledge card'), findsOneWidget);
     expect(find.text('Pending'), findsWidgets);
+    expect(find.text('Evidence'), findsOneWidget);
+    expect(find.text('A visible evidence quote.'), findsOneWidget);
+    expect(find.text('Widget Book · Chapter 2'), findsOneWidget);
     expect(find.text('Approve'), findsOneWidget);
     expect(find.text('Dismiss'), findsOneWidget);
+  });
+
+  testWidgets('evidence preview fits a narrow review list surface',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final narrowController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'knowledge-card:kc-narrow',
+        sourceType: ReviewItemSourceType.knowledgeCard,
+        sourceId: 'kc-narrow',
+        title: 'Very long review card title that should wrap inside the card',
+        body: 'The body also needs to fit before the evidence preview.',
+        status: ReviewItemStatus.pending,
+        sourceRefs: [
+          SourceRef(
+            bookId: 10,
+            href: 'Text/narrow.xhtml',
+            cfi: 'epubcfi(/6/18)',
+            sourceTitle: 'Long Source Title For A Small Phone Width',
+            locationLabel: 'A deeply nested chapter location label',
+            sourceTextSnippet: List.filled(30, 'Narrow evidence').join(' '),
+            sourceKind: SourceRefKind.highlight,
+          ),
+        ],
+      ),
+    ]);
+
+    await _pumpPage(tester, narrowController);
+
+    expect(find.text('Evidence'), findsOneWidget);
+    expect(find.textContaining('Narrow evidence'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 
