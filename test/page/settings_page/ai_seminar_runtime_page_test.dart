@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -191,6 +193,144 @@ void main() {
     expect(find.text('Streaming'), findsNothing);
     expect(find.textContaining('Cost: unknown'), findsOneWidget);
     expect(find.textContaining('pricing metadata'), findsOneWidget);
+  });
+
+  testWidgets('shows a recovered local state banner for restored seminars',
+      (tester) async {
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode({
+            'status': 'completed',
+            'session': {
+              'id': 's-restored-page',
+              'question': 'Restored question?',
+            },
+            'evidenceBundle': {
+              'query': 'Restored question?',
+              'evidence': [
+                {
+                  'id': 'e1',
+                  'scope': 'current-book',
+                  'text': 'The source passage.',
+                  'sourceRef': traceableRef().toSafeJson(),
+                },
+              ],
+            },
+            'turns': [
+              {
+                'id': 'turn-critical',
+                'role': 'critical',
+                'prompt': 'prompt',
+                'responseText': 'critical restored response',
+                'evidenceRefIds': ['e1'],
+              },
+            ],
+            'lastRun': {
+              'session': {
+                'id': 's-restored-page',
+                'question': 'Restored question?',
+              },
+              'status': 'completed',
+              'evidenceBundle': {
+                'query': 'Restored question?',
+                'evidence': [
+                  {
+                    'id': 'e1',
+                    'scope': 'current-book',
+                    'text': 'The source passage.',
+                    'sourceRef': traceableRef().toSafeJson(),
+                  },
+                ],
+              },
+              'turns': [
+                {
+                  'id': 'turn-critical',
+                  'role': 'critical',
+                  'prompt': 'prompt',
+                  'responseText': 'critical restored response',
+                  'evidenceRefIds': ['e1'],
+                },
+              ],
+            },
+          }),
+        );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(
+        find.textContaining('Recovered local Seminar state'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('critical restored response'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('critical restored response'), findsOneWidget);
+  });
+
+  testWidgets('does not show recovered state for a different book selection',
+      (tester) async {
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode({
+            'status': 'completed',
+            'session': {
+              'id': 's-old-book',
+              'question': 'Old selected passage?',
+              'bookId': 7,
+            },
+            'turns': [
+              {
+                'id': 'turn-critical',
+                'role': 'critical',
+                'prompt': 'prompt',
+                'responseText': 'old restored response',
+                'evidenceRefIds': ['e1'],
+              },
+            ],
+          }),
+        );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(
+            initialQuestion: 'New selected passage?',
+            bookId: 8,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(tester.takeException(), isNull);
+    expect(find.text('Start Seminar'), findsOneWidget);
+    expect(find.textContaining('Recovered local Seminar state'), findsNothing);
+    expect(find.text('old restored response'), findsNothing);
+    await tester.pump();
+    expect(Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey), isNull);
   });
 
   testWidgets(

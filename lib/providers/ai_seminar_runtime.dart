@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_evidence_broker.dart';
@@ -93,6 +97,7 @@ class AiSeminarRuntimeState {
     this.startedAt,
     this.completedAt,
     this.providerDiagnostics,
+    this.restoredFromLocalCache = false,
   });
 
   factory AiSeminarRuntimeState.initial({
@@ -117,6 +122,7 @@ class AiSeminarRuntimeState {
   final int? startedAt;
   final int? completedAt;
   final AiSeminarProviderDiagnostics? providerDiagnostics;
+  final bool restoredFromLocalCache;
 
   bool get canCancel => status == AiSeminarRunStatus.running;
 
@@ -146,6 +152,7 @@ class AiSeminarRuntimeState {
     int? startedAt,
     int? completedAt,
     AiSeminarProviderDiagnostics? providerDiagnostics,
+    bool? restoredFromLocalCache,
   }) {
     return AiSeminarRuntimeState(
       status: status ?? this.status,
@@ -168,6 +175,8 @@ class AiSeminarRuntimeState {
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       providerDiagnostics: providerDiagnostics ?? this.providerDiagnostics,
+      restoredFromLocalCache:
+          restoredFromLocalCache ?? this.restoredFromLocalCache,
     );
   }
 
@@ -248,9 +257,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     this._knowledgeCardStore,
     this._providerContext,
   ) : super(
-          AiSeminarRuntimeState.initial(
-            providerDiagnostics: _providerContext.resolve(),
-          ),
+          _initialState(_providerContext),
         );
 
   final AiSeminarRuntimeService _service;
@@ -278,10 +285,14 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       turns: const <AiSeminarRoleTurn>[],
       whiteboardEntries: const <AiSeminarWhiteboardEntry>[],
     );
+    await _persistState();
 
     await for (final event in _service.run(session, cancelToken: token)) {
       if (generation != _generation) return;
       _applyEvent(event);
+      if (event.type != AiSeminarRuntimeEventType.roleDelta) {
+        await _persistState();
+      }
       if (event.status?.isTerminal == true) {
         _activeToken = null;
       }
@@ -314,6 +325,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       error: run.message,
       completedAt: run.completedAt,
     );
+    _persistState();
   }
 
   Future<void> retry() async {
@@ -327,6 +339,21 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     _activeToken = null;
     _generation += 1;
     state = restored;
+    _persistState();
+  }
+
+  Future<void> discardLocalRuntimeState() async {
+    _activeToken?.cancel();
+    _activeToken = null;
+    _generation += 1;
+    try {
+      await Prefs().prefs.remove(aiSeminarRuntimeStateV1PrefsKey);
+    } catch (_) {
+      // Best-effort local recovery cache cleanup.
+    }
+    state = AiSeminarRuntimeState.initial(
+      providerDiagnostics: _providerContext.resolve(),
+    );
   }
 
   Future<AiSeminarReviewHandoffResult> sendToReview({int? now}) async {
@@ -376,6 +403,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       }
 
       state = state.copyWith(clearError: true);
+      await _persistState();
       return AiSeminarReviewHandoffResult(
         reviewItemId: reviewItem.id,
         knowledgeCardIds: insertedCardIds,
@@ -385,6 +413,21 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     } catch (error) {
       state = state.copyWith(error: error.toString());
       rethrow;
+    }
+  }
+
+  Future<void> _persistState() async {
+    try {
+      if (state.session == null && state.status == AiSeminarRunStatus.draft) {
+        await Prefs().prefs.remove(aiSeminarRuntimeStateV1PrefsKey);
+        return;
+      }
+      await Prefs().prefs.setString(
+            aiSeminarRuntimeStateV1PrefsKey,
+            jsonEncode(state.toJson()),
+          );
+    } catch (_) {
+      // Best-effort local recovery cache; runtime must continue without it.
     }
   }
 
@@ -456,6 +499,59 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           completedAt: event.run?.completedAt,
         );
         break;
+    }
+  }
+
+  static AiSeminarRuntimeState _initialState(
+    AiSeminarProviderContextService providerContext,
+  ) {
+    final diagnostics = providerContext.resolve();
+    final raw = Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey);
+    if (raw == null || raw.trim().isEmpty) {
+      return AiSeminarRuntimeState.initial(providerDiagnostics: diagnostics);
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        Prefs().prefs.remove(aiSeminarRuntimeStateV1PrefsKey);
+        return AiSeminarRuntimeState.initial(providerDiagnostics: diagnostics);
+      }
+      final decodedState = AiSeminarRuntimeState.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+      final restored = decodedState.copyWith(
+        providerDiagnostics: decodedState.providerDiagnostics ?? diagnostics,
+        restoredFromLocalCache: true,
+      );
+      if (restored.status == AiSeminarRunStatus.running) {
+        final interrupted = restored.copyWith(
+          status: AiSeminarRunStatus.cancelled,
+          activeRole: null,
+          partialRoleText: null,
+          error:
+              'AI Seminar was interrupted before it could finish. Retry to run it again.',
+          completedAt: DateTime.now().millisecondsSinceEpoch,
+        );
+        _rewriteLocalRecoveryCache(interrupted);
+        return interrupted;
+      }
+      return restored;
+    } catch (_) {
+      Prefs().prefs.remove(aiSeminarRuntimeStateV1PrefsKey);
+      return AiSeminarRuntimeState.initial(providerDiagnostics: diagnostics);
+    }
+  }
+
+  static void _rewriteLocalRecoveryCache(AiSeminarRuntimeState state) {
+    try {
+      unawaited(
+        Prefs().prefs.setString(
+              aiSeminarRuntimeStateV1PrefsKey,
+              jsonEncode(state.toJson()),
+            ),
+      );
+    } catch (_) {
+      // Best-effort local recovery cache cleanup.
     }
   }
 }

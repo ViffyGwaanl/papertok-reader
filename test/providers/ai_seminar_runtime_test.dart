@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -283,6 +284,112 @@ void main() {
         contains('pricing metadata'));
     expect(restored.turns.single.tokenUsage!.totalTokens, 16);
     expect(restored.lastRun!.tokenUsage!.totalTokens, 16);
+  });
+
+  test('completed seminar runtime state is persisted and restored', () async {
+    configureProvider();
+    final firstContainer = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+
+    await firstContainer.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(
+            id: 's-persisted',
+            question: 'Persist this seminar.',
+          ),
+        );
+    firstContainer.dispose();
+
+    final secondContainer = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(secondContainer.dispose);
+    final restored = secondContainer.read(aiSeminarRuntimeProvider);
+
+    expect(restored.status, AiSeminarRunStatus.completed);
+    expect(restored.session!.id, 's-persisted');
+    expect(restored.turns, hasLength(3));
+    expect(restored.lastRun!.readyForReview, true);
+    expect(restored.lastRun!.tokenUsage!.totalTokens, greaterThan(0));
+  });
+
+  test('running seminar runtime state restores as interrupted retryable state',
+      () async {
+    configureProvider();
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(id: 's-running', question: 'Resume?'),
+      status: AiSeminarRunStatus.running,
+      evidenceBundle: bundle(),
+      activeRole: AiSeminarRole.critical,
+      partialRoleText: 'partial answer',
+      turns: const [],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(restored.status, AiSeminarRunStatus.cancelled);
+    expect(restored.canRetry, true);
+    expect(restored.activeRole, isNull);
+    expect(restored.partialRoleText, isNull);
+    expect(restored.error, contains('interrupted'));
+    await Future<void>.delayed(Duration.zero);
+    final persisted = jsonDecode(
+      Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey)!,
+    ) as Map<String, dynamic>;
+    expect(persisted['status'], AiSeminarRunStatus.cancelled.asString);
+    expect(persisted.containsKey('activeRole'), isFalse);
+    expect(persisted.containsKey('partialRoleText'), isFalse);
+  });
+
+  test('restored seminar keeps persisted provider diagnostics', () async {
+    configureProvider();
+    final state = AiSeminarRuntimeState.initial(
+      providerDiagnostics: const AiSeminarProviderDiagnostics(
+        providerId: 'original-provider',
+        providerName: 'Original Provider',
+        providerType: 'openai',
+        modelId: 'original-model',
+        hasProviderConfig: true,
+        hasCapabilityCache: true,
+        seminarReady: true,
+        costStatus: AiSeminarCostStatus.unknown,
+        costUnknownReason: 'Provider pricing metadata is unavailable.',
+      ),
+    ).copyWith(
+      session: AiSeminarSessionContract(id: 's-provider', question: 'Restore?'),
+      status: AiSeminarRunStatus.completed,
+      evidenceBundle: bundle(),
+      turns: const [],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(state.toJson()),
+        );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(restored.providerDiagnostics?.providerName, 'Original Provider');
+    expect(restored.providerDiagnostics?.modelId, 'original-model');
   });
 
   test('sendToReview hands off synthesis candidate cards and flashcards',

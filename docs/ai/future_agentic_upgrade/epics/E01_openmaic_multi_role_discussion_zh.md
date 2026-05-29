@@ -81,6 +81,7 @@ Seminar 结束时输出：
 | E01-C04-T03 | 接入 synthesis Review handoff | E01-C04-T01, E05-C01-T01 | `SeminarSynthesisReviewAdapter`、`AiSeminarRuntimeNotifier.sendToReview` | readyForReview 且 traceable handoff 才能进入 pending Review；候选卡保持 draft/pending。 |
 | E01-C04-T04 | 接入 Seminar provider readiness | E06-C04-T01, E07 Ready | `AiSeminarProviderContextService`、`AiSeminarRuntimeState.providerDiagnostics`、`AiSeminarRuntimePage` readiness UI | 启动前显示当前 provider/model/capability cache 和成本未知原因；缺少 pricing/usage metadata 时不伪造成本估算。 |
 | E01-C04-T05 | 接入 Seminar local token usage | E01-C04-T02, E01-C04-T04 | `AiSeminarTokenUsage`、`AiSeminarRuntimeService` local estimator、`AiSeminarRuntimePage` usage UI | 每个完成角色 turn 记录 input/output 本地估算，run 聚合 usage，页面显示 `Provider billing may differ`；不得当作 provider 账单或美元成本。 |
+| E01-C04-T06 | 接入 Seminar local recovery | E01-C04-T02, E07 Ready | `aiSeminarRuntimeStateV1`, `AiSeminarRuntimeNotifier` restore, `AiSeminarRuntimePage` recovered banner | completed/cancelled/failed state 可在同一书籍/同一入口问题本机恢复；换书或换选区清除旧 runtime/cache；running state 重启后降级为 interrupted/retryable 并回写清理 partial；恢复缓存不进普通 prefs backup。 |
 
 ## 5. Task Execution Defaults
 

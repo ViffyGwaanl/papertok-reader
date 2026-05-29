@@ -144,5 +144,34 @@ void main() {
       expect(decoded.containsKey('api_keys'), isFalse);
       expect(decoded['model'], 'gpt-4o-mini');
     });
+
+    test('does not include local seminar runtime recovery cache', () async {
+      SharedPreferences.setMockInitialValues({
+        'aiSeminarRuntimeStateV1': jsonEncode({
+          'status': 'completed',
+          'session': {
+            'id': 's1',
+            'question': 'private seminar question',
+          },
+          'turns': [
+            {
+              'id': 'turn-critical',
+              'role': 'critical',
+              'prompt': 'private prompt',
+              'responseText': 'private role answer',
+            },
+          ],
+        }),
+      });
+
+      final sp = await SharedPreferences.getInstance();
+      Prefs().prefs = sp;
+
+      final backup = await Prefs().buildPrefsBackupMap();
+
+      expect(backup.containsKey('aiSeminarRuntimeStateV1'), isFalse);
+      expect(jsonEncode(backup), isNot(contains('private seminar question')));
+      expect(jsonEncode(backup), isNot(contains('private role answer')));
+    });
   });
 }

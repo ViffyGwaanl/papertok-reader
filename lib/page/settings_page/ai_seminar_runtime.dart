@@ -27,6 +27,7 @@ class AiSeminarRuntimePage extends ConsumerStatefulWidget {
 class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
   late final TextEditingController _questionController;
   bool _autoStarted = false;
+  bool _discardedMismatchedEntryState = false;
 
   @override
   void initState() {
@@ -62,7 +63,17 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final state = ref.watch(aiSeminarRuntimeProvider);
+    final rawState = ref.watch(aiSeminarRuntimeProvider);
+    final hasMismatchedEntryState = _hasMismatchedEntryState(rawState);
+    if (hasMismatchedEntryState) {
+      _scheduleDiscardMismatchedEntryState();
+    }
+    final state = hasMismatchedEntryState
+        ? AiSeminarRuntimeState.initial(
+            providerDiagnostics:
+                ref.watch(aiSeminarProviderContextServiceProvider).resolve(),
+          )
+        : rawState;
     final busy = state.status == AiSeminarRunStatus.running;
 
     return SettingsSubpageScaffold(
@@ -151,6 +162,33 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
         ],
       ),
     );
+  }
+
+  bool _hasMismatchedEntryState(AiSeminarRuntimeState state) {
+    if (state.session == null) return false;
+    final entryQuestion = widget.initialQuestion?.trim();
+    final hasScopedEntry =
+        widget.bookId != null || (entryQuestion?.isNotEmpty ?? false);
+    if (!hasScopedEntry) return false;
+    final session = state.session!;
+    if (widget.bookId != null && session.bookId != widget.bookId) {
+      return true;
+    }
+    if (entryQuestion != null &&
+        entryQuestion.isNotEmpty &&
+        session.question.trim() != entryQuestion) {
+      return true;
+    }
+    return false;
+  }
+
+  void _scheduleDiscardMismatchedEntryState() {
+    if (_discardedMismatchedEntryState) return;
+    _discardedMismatchedEntryState = true;
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(aiSeminarRuntimeProvider.notifier).discardLocalRuntimeState();
+    });
   }
 }
 
@@ -262,18 +300,34 @@ class _StatusBanner extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(_statusIcon(state.status)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                error == null || error.isEmpty
-                    ? 'Status: ${state.status.asString}'
-                    : error,
-              ),
+            Row(
+              children: [
+                Icon(_statusIcon(state.status)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    error == null || error.isEmpty
+                        ? 'Status: ${state.status.asString}'
+                        : error,
+                  ),
+                ),
+                _TinyChip(label: state.status.asString),
+              ],
             ),
-            _TinyChip(label: state.status.asString),
+            if (state.restoredFromLocalCache) ...[
+              const SizedBox(height: 6),
+              Text(
+                state.status == AiSeminarRunStatus.cancelled
+                    ? 'Recovered interrupted local Seminar state. Retry to run it again.'
+                    : 'Recovered local Seminar state from this device.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
+              ),
+            ],
           ],
         ),
       ),
