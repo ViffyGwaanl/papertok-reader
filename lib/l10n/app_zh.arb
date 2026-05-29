@@ -868,8 +868,17 @@
     }
   },
   "knowledgeExportCreateManifest": "创建 manifest",
+  "knowledgeExportCreateBundle": "创建导出",
   "knowledgeExportManifestPath": "Manifest：{path}",
   "@knowledgeExportManifestPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportMarkdownPath": "Markdown：{path}",
+  "@knowledgeExportMarkdownPath": {
     "placeholders": {
       "path": {
         "type": "String"

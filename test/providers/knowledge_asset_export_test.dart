@@ -23,6 +23,25 @@ void main() {
     expect(state.snapshot.value!.excludedCount, 1);
     expect(state.snapshot.value!.conflictCount, 1);
   });
+
+  test('createManifest exposes manifest and markdown paths', () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .createManifest();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(state.lastManifestPath, '/tmp/knowledge_export_manifest_v1.json');
+    expect(state.lastMarkdownPath, '/tmp/knowledge_export_v1.md');
+    expect(state.snapshot.value!.includedCount, 1);
+  });
 }
 
 class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
@@ -65,6 +84,18 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       excludedReasons: const {
         'conflict1': 'pending-conflict-review',
       },
+    );
+  }
+
+  @override
+  Future<KnowledgeAssetExportManifestResult> writeManifest({
+    bool includeDrafts = false,
+    bool includeFullEvidenceText = false,
+  }) async {
+    return KnowledgeAssetExportManifestResult(
+      file: File('/tmp/knowledge_export_manifest_v1.json'),
+      markdownFile: File('/tmp/knowledge_export_v1.md'),
+      snapshot: await buildSnapshot(),
     );
   }
 }

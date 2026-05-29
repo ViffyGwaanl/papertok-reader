@@ -36,11 +36,12 @@ void main() {
     expect(find.text('1 excluded'), findsWidgets);
     expect(find.text('1 conflict'), findsOneWidget);
 
-    await tester.tap(find.text('Create manifest'));
+    await tester.tap(find.text('Create export'));
     await tester.pump();
 
     expect(service.createdManifest, true);
     expect(find.textContaining('knowledge_export_manifest_v1.json'), findsOne);
+    expect(find.textContaining('knowledge_export_v1.md'), findsOne);
   });
 }
 
@@ -97,6 +98,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     createdManifest = true;
     return KnowledgeAssetExportManifestResult(
       file: File('/tmp/knowledge_export_manifest_v1.json'),
+      markdownFile: File('/tmp/knowledge_export_v1.md'),
       snapshot: await buildSnapshot(),
     );
   }

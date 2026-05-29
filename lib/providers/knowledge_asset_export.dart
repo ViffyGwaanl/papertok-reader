@@ -19,6 +19,7 @@ class KnowledgeAssetExportState {
     required this.snapshot,
     this.busy = false,
     this.lastManifestPath,
+    this.lastMarkdownPath,
     this.lastError,
   });
 
@@ -42,12 +43,14 @@ class KnowledgeAssetExportState {
   final AsyncValue<KnowledgeAssetExportSnapshot> snapshot;
   final bool busy;
   final String? lastManifestPath;
+  final String? lastMarkdownPath;
   final String? lastError;
 
   KnowledgeAssetExportState copyWith({
     AsyncValue<KnowledgeAssetExportSnapshot>? snapshot,
     bool? busy,
     String? lastManifestPath,
+    String? lastMarkdownPath,
     String? lastError,
     bool clearError = false,
   }) {
@@ -55,6 +58,7 @@ class KnowledgeAssetExportState {
       snapshot: snapshot ?? this.snapshot,
       busy: busy ?? this.busy,
       lastManifestPath: lastManifestPath ?? this.lastManifestPath,
+      lastMarkdownPath: lastMarkdownPath ?? this.lastMarkdownPath,
       lastError: clearError ? null : lastError ?? this.lastError,
     );
   }
@@ -99,6 +103,7 @@ class KnowledgeAssetExportNotifier
           result.snapshot,
         ),
         lastManifestPath: result.file.path,
+        lastMarkdownPath: result.markdownFile?.path,
         clearError: true,
       );
     } catch (error, stackTrace) {

@@ -971,8 +971,17 @@
     }
   },
   "knowledgeExportCreateManifest": "Create manifest",
+  "knowledgeExportCreateBundle": "Create export",
   "knowledgeExportManifestPath": "Manifest: {path}",
   "@knowledgeExportManifestPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportMarkdownPath": "Markdown: {path}",
+  "@knowledgeExportMarkdownPath": {
     "placeholders": {
       "path": {
         "type": "String"

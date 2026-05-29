@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/knowledge_sync.dart';
+import 'package:papertok_reader/models/review_item.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
@@ -37,10 +39,12 @@ class KnowledgeAssetExportSnapshot {
 class KnowledgeAssetExportManifestResult {
   const KnowledgeAssetExportManifestResult({
     required this.file,
+    this.markdownFile,
     required this.snapshot,
   });
 
   final File file;
+  final File? markdownFile;
   final KnowledgeAssetExportSnapshot snapshot;
 }
 
@@ -65,6 +69,8 @@ class KnowledgeAssetExportService {
   Directory get knowledgeDir => Directory(p.join(rootDir.path, '.knowledge'));
   File get manifestFile =>
       File(p.join(knowledgeDir.path, 'knowledge_export_manifest_v1.json'));
+  File get markdownFile =>
+      File(p.join(knowledgeDir.path, 'knowledge_export_v1.md'));
 
   Future<KnowledgeAssetExportSnapshot> buildSnapshot({
     bool includeDrafts = false,
@@ -128,8 +134,10 @@ class KnowledgeAssetExportService {
     await manifestFile.writeAsString(
       const JsonEncoder.withIndent('  ').convert(snapshot.manifest.toJson()),
     );
+    await markdownFile.writeAsString(_buildMarkdown(snapshot));
     return KnowledgeAssetExportManifestResult(
       file: manifestFile,
+      markdownFile: markdownFile,
       snapshot: snapshot,
     );
   }
@@ -170,5 +178,131 @@ class KnowledgeAssetExportService {
         payload: item.toJson(),
       );
     }).toList(growable: false);
+  }
+
+  String _buildMarkdown(KnowledgeAssetExportSnapshot snapshot) {
+    final buffer = StringBuffer()
+      ..writeln('# PaperTok Knowledge Export')
+      ..writeln()
+      ..writeln('- Export id: ${snapshot.manifest.id}')
+      ..writeln('- Created at: ${snapshot.manifest.createdAt}')
+      ..writeln('- Included assets: ${snapshot.includedCount}')
+      ..writeln('- Held out assets: ${snapshot.excludedCount}')
+      ..writeln();
+
+    final knowledgeCards = snapshot.included.where(
+      (envelope) =>
+          envelope.entityType == KnowledgeSyncEntityType.knowledgeCard,
+    );
+    final reviewHistory = snapshot.included.where(
+      (envelope) =>
+          envelope.entityType == KnowledgeSyncEntityType.reviewHistory,
+    );
+
+    if (knowledgeCards.isNotEmpty) {
+      buffer
+        ..writeln('## Knowledge Cards')
+        ..writeln();
+      for (final envelope in knowledgeCards) {
+        final card = KnowledgeCard.fromJson(envelope.payload);
+        _writeCard(buffer, card);
+      }
+    }
+
+    if (reviewHistory.isNotEmpty) {
+      buffer
+        ..writeln('## Review History')
+        ..writeln();
+      for (final envelope in reviewHistory) {
+        final item = SpacedReviewItem.fromJson(envelope.payload);
+        _writeReviewHistory(buffer, item);
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  void _writeCard(StringBuffer buffer, KnowledgeCard card) {
+    buffer
+      ..writeln('## ${_heading(card.title)}')
+      ..writeln()
+      ..writeln('Origin: ${card.origin.asString}')
+      ..writeln()
+      ..writeln('Quote:')
+      ..writeln(_blockquote(card.quote))
+      ..writeln()
+      ..writeln('Explanation:')
+      ..writeln(_paragraph(card.explanation));
+
+    if ((card.userNote ?? '').trim().isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln('User note:')
+        ..writeln(_paragraph(card.userNote!));
+    }
+    if (card.conceptRefs.isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln('Concepts: ${card.conceptRefs.map(_inline).join(', ')}');
+    }
+    _writeSources(buffer, card.sourceRefs);
+    buffer.writeln();
+  }
+
+  void _writeReviewHistory(StringBuffer buffer, SpacedReviewItem item) {
+    buffer
+      ..writeln('### ${_heading(item.prompt)}')
+      ..writeln()
+      ..writeln('Answer:')
+      ..writeln(_paragraph(item.answer))
+      ..writeln()
+      ..writeln('History entries: ${item.reviewHistory.length}');
+    _writeSources(buffer, item.sourceRefs);
+    buffer.writeln();
+  }
+
+  void _writeSources(StringBuffer buffer, List<SourceRef> refs) {
+    final evidenceRefs = refs.where((ref) => ref.hasEvidence).toList();
+    if (evidenceRefs.isEmpty) return;
+    buffer
+      ..writeln()
+      ..writeln('Sources:');
+    for (var i = 0; i < evidenceRefs.length; i++) {
+      final ref = evidenceRefs[i];
+      final label = [
+        ref.sourceTitle,
+        ref.locationLabel,
+        ref.sourceKind.asString,
+      ].whereType<String>().where((part) => part.trim().isNotEmpty).join(' · ');
+      buffer.writeln('${i + 1}. ${_inline(label.isEmpty ? 'Source' : label)}');
+      if ((ref.jumpLink ?? '').trim().isNotEmpty) {
+        buffer.writeln('   - Link: ${ref.jumpLink!.trim()}');
+      }
+      if ((ref.sourceTextSnippet ?? '').trim().isNotEmpty) {
+        buffer.writeln('   - Snippet: ${_inline(ref.sourceTextSnippet!)}');
+      }
+      if ((ref.unavailableReason ?? '').trim().isNotEmpty) {
+        buffer.writeln('   - Status: ${_inline(ref.unavailableReason!)}');
+      }
+    }
+  }
+
+  String _heading(String value) {
+    final normalized = _paragraph(value).replaceAll('\n', ' ').trim();
+    return normalized.isEmpty ? 'Untitled' : normalized.replaceAll('#', r'\#');
+  }
+
+  String _paragraph(String value) {
+    return value.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+  }
+
+  String _blockquote(String value) {
+    final paragraph = _paragraph(value);
+    if (paragraph.isEmpty) return '>';
+    return paragraph.split('\n').map((line) => '> $line').join('\n');
+  }
+
+  String _inline(String value) {
+    return _paragraph(value).replaceAll('\n', ' ').trim();
   }
 }

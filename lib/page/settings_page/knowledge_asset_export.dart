@@ -109,6 +109,10 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
             const SizedBox(height: 12),
             _PolicyNote(text: l10n.knowledgeExportManifestPath(path)),
           ],
+          if (state.lastMarkdownPath case final path?) ...[
+            const SizedBox(height: 6),
+            _PolicyNote(text: l10n.knowledgeExportMarkdownPath(path)),
+          ],
           const SizedBox(height: 16),
           FilledButton.icon(
             icon: state.busy
@@ -118,7 +122,7 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.description_outlined),
-            label: Text(l10n.knowledgeExportCreateManifest),
+            label: Text(l10n.knowledgeExportCreateBundle),
             onPressed: state.busy
                 ? null
                 : () => ref

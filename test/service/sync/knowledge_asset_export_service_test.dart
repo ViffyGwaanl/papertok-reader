@@ -153,6 +153,121 @@ void main() {
     expect(jsonEncode(decoded), isNot(contains('ai_index.db')));
   });
 
+  test('writes readable markdown export for included user assets only',
+      () async {
+    await stageAppliedCard('kc-export');
+    await cardStore.upsertCandidate(
+      card(
+        id: 'kc-draft',
+        quote: 'Draft-only evidence should not export.',
+        sourceRefs: [
+          traceableRef(
+            cfi: 'epubcfi(/6/20)',
+            snippet: 'Draft-only evidence should not export.',
+          ),
+        ],
+      ),
+    );
+
+    final result = await service.writeManifest();
+
+    expect(result.markdownFile, isNotNull);
+    expect(result.markdownFile!.path, endsWith('knowledge_export_v1.md'));
+    final markdown = await result.markdownFile!.readAsString();
+    expect(markdown, contains('# PaperTok Knowledge Export'));
+    expect(markdown, contains('## Exportable card kc-export'));
+    expect(markdown, contains('> Traceable export evidence.'));
+    expect(markdown, contains('Export should preserve source refs safely.'));
+    expect(markdown, contains('paperreader://reader/open?bookId=7'));
+    final snippetLine = markdown
+        .split('\n')
+        .firstWhere((line) => line.trimLeft().startsWith('- Snippet:'));
+    final snippet = snippetLine.substring(snippetLine.indexOf(':') + 1).trim();
+    expect(snippet.length, lessThanOrEqualTo(SourceRef.maxSnippetChars));
+    expect(markdown, isNot(contains('kc-draft')));
+    expect(markdown, isNot(contains('Draft-only evidence should not export')));
+    expect(markdown, isNot(contains('apiKey')));
+    expect(markdown, isNot(contains('ai_index.db')));
+  });
+
+  test('markdown ignores excluded conflict secret and derived cache envelopes',
+      () async {
+    final includedCard = card(
+      id: 'kc-included',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Included card evidence.',
+    );
+    final snapshot = KnowledgeAssetExportSnapshot(
+      manifest: const KnowledgeExportManifest(
+        id: 'knowledge-export-test',
+        createdAt: 1000,
+        formats: [
+          KnowledgeExportFormat.markdown,
+          KnowledgeExportFormat.sourceCitationManifest,
+        ],
+        entityIds: ['kc-included'],
+      ),
+      included: [
+        KnowledgeSyncEnvelope(
+          id: includedCard.id,
+          entityType: KnowledgeSyncEntityType.knowledgeCard,
+          schemaVersion: 1,
+          updatedAt: 1000,
+          sourceRefs: includedCard.sourceRefs,
+          payload: includedCard.toJson(),
+        ),
+      ],
+      excluded: [
+        KnowledgeSyncEnvelope(
+          id: 'kc-conflict',
+          entityType: KnowledgeSyncEntityType.knowledgeCard,
+          schemaVersion: 1,
+          updatedAt: 1000,
+          conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+          conflictReason: 'content-conflict',
+          sourceRefs: [traceableRef(snippet: 'Conflict should stay out.')],
+          payload: card(
+            id: 'kc-conflict',
+            quote: 'Conflict should stay out.',
+          ).toJson(),
+        ),
+        const KnowledgeSyncEnvelope(
+          id: 'secret-envelope',
+          entityType: KnowledgeSyncEntityType.secret,
+          schemaVersion: 1,
+          updatedAt: 1000,
+          payload: {'apiKey': 'super-secret-value'},
+        ),
+        const KnowledgeSyncEnvelope(
+          id: 'derived-cache',
+          entityType: KnowledgeSyncEntityType.derivedIndex,
+          schemaVersion: 1,
+          updatedAt: 1000,
+          payload: {'path': 'ai_index.db'},
+        ),
+      ],
+      excludedReasons: const {
+        'kc-conflict': 'pending-conflict-review',
+        'secret-envelope': 'contains-secret',
+        'derived-cache': 'not-default-sync-entity',
+      },
+    );
+    final fakeService = _SnapshotKnowledgeAssetExportService(
+      rootDir: tempRoot,
+      snapshot: snapshot,
+    );
+
+    final result = await fakeService.writeManifest();
+    final markdown = await result.markdownFile!.readAsString();
+
+    expect(markdown, contains('Included card evidence.'));
+    expect(markdown, isNot(contains('Conflict should stay out')));
+    expect(markdown, isNot(contains('super-secret-value')));
+    expect(markdown, isNot(contains('ai_index.db')));
+    expect(markdown, isNot(contains('derived-cache')));
+  });
+
   test('holds persisted conflict envelopes out of export manifest', () async {
     final conflictCard = card(
       id: 'kc-conflict',
@@ -187,4 +302,21 @@ void main() {
     );
     expect(snapshot.manifest.entityIds, isNot(contains('kc-conflict')));
   });
+}
+
+class _SnapshotKnowledgeAssetExportService extends KnowledgeAssetExportService {
+  _SnapshotKnowledgeAssetExportService({
+    required Directory rootDir,
+    required this.snapshot,
+  }) : super(rootDir: rootDir);
+
+  final KnowledgeAssetExportSnapshot snapshot;
+
+  @override
+  Future<KnowledgeAssetExportSnapshot> buildSnapshot({
+    bool includeDrafts = false,
+    bool includeFullEvidenceText = false,
+  }) async {
+    return snapshot;
+  }
 }
