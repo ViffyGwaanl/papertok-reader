@@ -54,7 +54,7 @@
 | --- | --- | --- | --- |
 | Library RAG | `semantic_search_library` 已提供跨书库 hybrid retrieval、`paperreader://reader/open?...` 跳转和 SourceRef evidence；RAPTOR/GraphRAG summary 只作为 `derivedSummary/derivedLayer` 检索提示，正式 evidence snippet 使用书内 chunk 原文。 | 需要把 derived summary 的 UI 展示和正式 evidence 视觉层级接入 AI 面板。 | E00, E01, E02, E03 |
 | `ai_index.db` | 存放可重建索引、chunk、job、RAG/Graph 相关表；当前分支事实为 `kAiIndexDbVersion = 10`。 | 用户资产不能放进可重建索引层；后续迁移必须从当前版本递增。 | E02, E04, E08 |
-| ConceptGraph local store | 本分支新增 `ConceptGraphStore`，可持久化 `.knowledge/concept_graph_v1.json`，构建 Concept Dossier，检测 orphan node / broken edge，并按 policy 限制局部探索深度和每层宽度；ConceptGraph relation 已能通过 ReviewItem apply 才进入正式 ownership；`ConceptGraphExplorerPage` 已提供 Settings -> AI 可见入口。 | 需要接入 RAG/GraphRAG producer、KnowledgeCard relation handoff、阅读页选中入口和 sync/export asset 边界。 | E04, E05, E07, E08 |
+| ConceptGraph local store | 本分支新增 `ConceptGraphStore`，可持久化 `.knowledge/concept_graph_v1.json`，构建 Concept Dossier，检测 orphan node / broken edge，并按 policy 限制局部探索深度和每层宽度；ConceptGraph relation 已能通过 ReviewItem apply 才进入正式 ownership；`ConceptGraphExplorerPage` 已提供 Settings -> AI 和阅读页选中文本 -> `图谱/Graph` 可见入口。 | 需要接入 RAG/GraphRAG producer、KnowledgeCard relation handoff 和 sync/export asset 边界。 | E04, E05, E07, E08 |
 | RAPTOR/GraphRAG 雏形 | 已有全局层表和 builder 方向。 | 需要产品化 Gate：证据、重建、旧 DB 升级、失败恢复。 | E02, E04 |
 
 锚点：
@@ -86,5 +86,5 @@
 - KnowledgeCard 模型、本地 store、Review adapter、统一 Review Inbox UI 和 reader selection 入口已有可测试切片；仍需 Seminar candidate 持久化接入、spaced review scheduler 和导出。
 - `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、统一 ReviewItem 持久化入口、KnowledgeCard 本地资产入口和阅读页最小研讨入口的可测试切片；仍需结构化 role runtime UI、真实模型流式事件和持久化恢复。
 - Custom Skill contract 已有 schema version、parser、validator、权限声明和 runtime injection gate；仍需导入 UI、fixture 管理和 provider 能力界面。
-- ConceptGraph 模型、本地 store、局部探索、统一 Review relation adapter 和最小 Explorer UI 已有可测试切片；仍需 producer adapter、阅读页选中入口、sync/export asset 边界。
+- ConceptGraph 模型、本地 store、局部探索、统一 Review relation adapter、最小 Explorer UI 和阅读页选中文本入口已有可测试切片；仍需 producer adapter、sync/export asset 边界。
 - 文档中存在传统 phase/roadmap 混写，不能直接给 agent team 执行。

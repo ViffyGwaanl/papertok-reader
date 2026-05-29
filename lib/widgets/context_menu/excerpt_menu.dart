@@ -3,12 +3,14 @@ import 'package:papertok_reader/constants/note_annotations.dart';
 import 'package:papertok_reader/dao/book_note.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/book_note.dart';
+import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/reading_page.dart';
 import 'package:papertok_reader/service/knowledge/selection_knowledge_card_producer.dart';
 import 'package:papertok_reader/service/reading/epub_player_key.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/theme/morandi_palette.dart';
 import 'package:papertok_reader/utils/env_var.dart';
+import 'package:papertok_reader/utils/page_transitions.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/widgets/book_share/excerpt_share_service.dart';
 import 'package:flutter/material.dart';
@@ -259,6 +261,18 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     key.aiChatKey.currentState?.prefillDraft(message: prompt);
   }
 
+  void _openConceptGraphFromSelection() {
+    final query = widget.annoContent.trim();
+    widget.onClose();
+    Navigator.of(context).push(
+      CupertinoStyleRoute(
+        page: ConceptGraphExplorerPage(
+          initialQuery: query.isEmpty ? null : query,
+        ),
+      ),
+    );
+  }
+
   Widget _actionButton({
     required BuildContext context,
     required IconData icon,
@@ -471,6 +485,13 @@ class ExcerptMenuState extends State<ExcerptMenu> {
           onTap: () {
             _openSeminarFromSelection();
           },
+        ),
+      if (EnvVar.enableAIFeature)
+        _actionButton(
+          context: context,
+          icon: Icons.account_tree_outlined,
+          label: L10n.of(context).contextMenuConceptGraph,
+          onTap: _openConceptGraphFromSelection,
         ),
       if (EnvVar.enableAIFeature)
         _actionButton(

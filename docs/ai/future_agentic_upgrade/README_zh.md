@@ -57,7 +57,7 @@
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入。 |
 | 一键开启研讨 | 阅读页选中文本 -> `研讨` -> AI 面板以 `seminar_mode` 草稿打开。 | 本分支已接入最小可用入口；结构化多 agent runtime/UI 仍在剩余任务中。 |
 | Review Inbox | `Settings -> AI -> Review inbox`。 | 已有统一 UI；内容依赖 producer 写入。 |
-| 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`。 | 本分支已接入最小 Explorer，可查看已有图谱、局部路径、证据和 orphan/broken link；producer 与阅读页入口仍在剩余任务中。 |
+| 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer 和阅读页选中文本入口，可查看已有图谱、按选中文本筛选相关概念、查看局部路径、证据和 orphan/broken link；producer 仍在剩余任务中。 |
 | Spaced Review / Sync Export | 当前没有正式入口。 | 模型和策略已有切片；产品入口见 `04_user_facing_activation_plan_zh.md`。 |
 
 入口计划以 `04_user_facing_activation_plan_zh.md` 为准；`implementation_status_zh.md` 只记录代码和验证证据。

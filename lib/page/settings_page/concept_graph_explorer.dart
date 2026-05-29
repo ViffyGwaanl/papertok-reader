@@ -10,7 +10,12 @@ import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart'
 import 'package:papertok_reader/theme/claude_palette.dart';
 
 class ConceptGraphExplorerPage extends ConsumerStatefulWidget {
-  const ConceptGraphExplorerPage({super.key});
+  const ConceptGraphExplorerPage({
+    super.key,
+    this.initialQuery,
+  });
+
+  final String? initialQuery;
 
   @override
   ConsumerState<ConceptGraphExplorerPage> createState() =>
@@ -31,6 +36,7 @@ class _ConceptGraphExplorerPageState
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final state = ref.watch(conceptGraphExplorerProvider);
+    final initialQuery = widget.initialQuery?.trim();
 
     return SettingsSubpageScaffold(
       title: l10n.conceptGraphTitle,
@@ -57,7 +63,13 @@ class _ConceptGraphExplorerPageState
           _IntegrityBanner(state: state),
           Expanded(
             child: state.nodes.when(
-              data: (nodes) => _ConceptGraphBody(nodes: nodes, state: state),
+              data: (nodes) => _ConceptGraphBody(
+                nodes: nodes,
+                state: state,
+                initialQuery: initialQuery == null || initialQuery.isEmpty
+                    ? null
+                    : initialQuery,
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => _ConceptGraphError(error: error),
             ),
@@ -72,15 +84,18 @@ class _ConceptGraphBody extends StatelessWidget {
   const _ConceptGraphBody({
     required this.nodes,
     required this.state,
+    required this.initialQuery,
   });
 
   final List<ConceptNode> nodes;
   final ConceptGraphExplorerState state;
+  final String? initialQuery;
 
   @override
   Widget build(BuildContext context) {
-    if (nodes.isEmpty) {
-      return const _EmptyGraph();
+    final visibleNodes = _filterNodesForQuery(nodes, initialQuery);
+    if (visibleNodes.isEmpty) {
+      return _EmptyGraph(selectionQuery: initialQuery);
     }
 
     return LayoutBuilder(
@@ -92,8 +107,11 @@ class _ConceptGraphBody extends StatelessWidget {
             children: [
               SizedBox(
                 width: 300,
-                child:
-                    _NodeList(nodes: nodes, selectedId: state.selectedNodeId),
+                child: _NodeListPane(
+                  nodes: visibleNodes,
+                  selectedId: state.selectedNodeId,
+                  selectionQuery: initialQuery,
+                ),
               ),
               const VerticalDivider(width: 1),
               Expanded(child: _DossierPane(state: state)),
@@ -104,10 +122,11 @@ class _ConceptGraphBody extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
             SizedBox(
-              height: 260,
-              child: _NodeList(
-                nodes: nodes,
+              height: 300,
+              child: _NodeListPane(
+                nodes: visibleNodes,
                 selectedId: state.selectedNodeId,
+                selectionQuery: initialQuery,
                 padding: EdgeInsets.zero,
               ),
             ),
@@ -120,21 +139,77 @@ class _ConceptGraphBody extends StatelessWidget {
   }
 }
 
-class _NodeList extends ConsumerWidget {
-  const _NodeList({
+class _NodeListPane extends StatelessWidget {
+  const _NodeListPane({
     required this.nodes,
     required this.selectedId,
+    required this.selectionQuery,
     this.padding = const EdgeInsets.fromLTRB(16, 0, 12, 24),
   });
 
   final List<ConceptNode> nodes;
   final String? selectedId;
+  final String? selectionQuery;
   final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasQuery =
+        selectionQuery != null && selectionQuery!.trim().isNotEmpty;
+    if (!hasQuery) {
+      return _NodeList(
+        nodes: nodes,
+        selectedId: selectedId,
+        padding: padding,
+      );
+    }
+
+    final l10n = L10n.of(context);
+    return ListView(
+      padding: padding,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            l10n.conceptGraphRelatedToSelection,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          ),
+        ),
+        _NodeList(
+          nodes: nodes,
+          selectedId: selectedId,
+          padding: EdgeInsets.zero,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+        ),
+      ],
+    );
+  }
+}
+
+class _NodeList extends ConsumerWidget {
+  const _NodeList({
+    required this.nodes,
+    required this.selectedId,
+    this.padding = const EdgeInsets.fromLTRB(16, 0, 12, 24),
+    this.shrinkWrap = false,
+    this.physics,
+  });
+
+  final List<ConceptNode> nodes;
+  final String? selectedId;
+  final EdgeInsets padding;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView.separated(
       padding: padding,
+      shrinkWrap: shrinkWrap,
+      physics: physics,
       itemCount: nodes.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
@@ -415,11 +490,15 @@ class _IntegrityBanner extends StatelessWidget {
 }
 
 class _EmptyGraph extends StatelessWidget {
-  const _EmptyGraph();
+  const _EmptyGraph({this.selectionQuery});
+
+  final String? selectionQuery;
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
+    final hasQuery =
+        selectionQuery != null && selectionQuery!.trim().isNotEmpty;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -429,17 +508,29 @@ class _EmptyGraph extends StatelessWidget {
             const Icon(Icons.account_tree_outlined, size: 42),
             const SizedBox(height: 12),
             Text(
-              l10n.conceptGraphEmptyTitle,
+              hasQuery
+                  ? l10n.conceptGraphNoRelatedTitle
+                  : l10n.conceptGraphEmptyTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 6),
             Text(
-              l10n.conceptGraphEmptyBody,
+              hasQuery
+                  ? l10n.conceptGraphNoRelatedBody
+                  : l10n.conceptGraphEmptyBody,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: ClaudePalette.secondary(context),
                   ),
             ),
+            if (hasQuery) ...[
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.add_link_outlined),
+                label: Text(l10n.conceptGraphCreateDraftCandidate),
+                onPressed: null,
+              ),
+            ],
           ],
         ),
       ),
@@ -541,4 +632,39 @@ PaperReaderReaderIntent? _firstIntent(Iterable<SourceRef> refs) {
     if (intent != null) return intent;
   }
   return null;
+}
+
+List<ConceptNode> _filterNodesForQuery(
+  List<ConceptNode> nodes,
+  String? query,
+) {
+  final normalizedQuery = _normalizeSearchText(query ?? '');
+  if (normalizedQuery.isEmpty) return nodes;
+
+  final terms = normalizedQuery
+      .split(' ')
+      .where((term) => term.length >= 3)
+      .toList(growable: false);
+  if (terms.isEmpty) return nodes;
+
+  return nodes.where((node) {
+    final haystack = _normalizeSearchText([
+      node.label,
+      node.summary,
+      ...node.sourceRefs.map((ref) => ref.sourceTextSnippet),
+      ...node.sourceRefs.map((ref) => ref.sourceTitle),
+    ].whereType<String>().join(' '));
+    if (haystack.contains(normalizedQuery)) return true;
+    final matchedTerms = terms.where((term) => haystack.contains(term)).length;
+    final minMatches = terms.length <= 2 ? 1 : (terms.length / 2).ceil();
+    return matchedTerms >= minMatches;
+  }).toList(growable: false);
+}
+
+String _normalizeSearchText(String value) {
+  return value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9\u4e00-\u9fff]+'), ' ')
+      .trim()
+      .replaceAll(RegExp(r'\s+'), ' ');
 }

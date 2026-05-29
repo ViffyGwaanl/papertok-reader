@@ -34,6 +34,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Concept graph'), findsWidgets);
     expect(find.text('Attention'), findsOneWidget);
@@ -42,11 +43,65 @@ void main() {
     await tester.tap(find.text('Attention'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Selective focus in a reading argument.'), findsWidgets);
     expect(find.text('reinforces'), findsOneWidget);
     expect(find.text('Local path'), findsOneWidget);
     expect(find.text('Open source'), findsOneWidget);
+  });
+
+  testWidgets('initial selection query filters related concepts',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(
+            initialQuery: 'retention after reading',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Memory'), findsOneWidget);
+    expect(find.text('Attention'), findsNothing);
+    expect(find.text('Related to selection'), findsOneWidget);
+  });
+
+  testWidgets('initial selection query shows candidate empty state',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(
+            initialQuery: 'brand new idea without graph evidence',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('No related concepts yet'), findsOneWidget);
+    expect(find.text('Create draft candidate'), findsOneWidget);
+    expect(find.text('Attention'), findsNothing);
   });
 }
 
