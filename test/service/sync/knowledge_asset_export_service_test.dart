@@ -629,11 +629,86 @@ void main() {
     expect(items.single.sourceRefs.single.sourceTextSnippet, isNotEmpty);
     expect(items.single.payload['entityId'], 'kc-conflict');
     expect(items.single.payload['entityType'], 'knowledge-card');
+    expect(items.single.payload['canApply'], false);
     expect(items.single.payload['payloadKeys'], contains('apiKey'));
     expect(
       jsonEncode(items.single.payload),
       isNot(contains('redacted-sentinel')),
     );
+  });
+
+  test('marks safe knowledge card sync conflicts as applyable', () async {
+    final conflictCard = card(
+      id: 'kc-safe-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Traceable safe conflict evidence.',
+    );
+    final conflict = KnowledgeSyncEnvelope(
+      id: conflictCard.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      sourceRefs: conflictCard.sourceRefs,
+      payload: conflictCard.toJson(),
+    );
+    await cardStore.ensureInitialized();
+    await cardStore.cardsFile.writeAsString(
+      jsonEncode({
+        'version': 1,
+        'cards': [conflict.toJson()],
+      }),
+    );
+
+    await service.submitConflictsToReview();
+    final item = (await reviewStore.list(
+      sourceType: ReviewItemSourceType.syncConflict,
+    ))
+        .single;
+
+    expect(item.payload['canApply'], true);
+    expect(item.payload['entityType'], 'knowledge-card');
+    expect(item.sourceRefs.single.hasBookAnchor, true);
+  });
+
+  test('uses safe payload card source refs for applyable sync conflicts',
+      () async {
+    final conflictCard = card(
+      id: 'kc-payload-ref-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Payload carries source refs.',
+      sourceRefs: [traceableRef(snippet: 'Payload carries source refs.')],
+    );
+    final conflict = KnowledgeSyncEnvelope(
+      id: conflictCard.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      payload: conflictCard.toJson(),
+    );
+    await cardStore.ensureInitialized();
+    await cardStore.cardsFile.writeAsString(
+      jsonEncode({
+        'version': 1,
+        'cards': [conflict.toJson()],
+      }),
+    );
+
+    await service.submitConflictsToReview();
+    final item = (await reviewStore.list(
+      sourceType: ReviewItemSourceType.syncConflict,
+    ))
+        .single;
+
+    expect(item.payload['canApply'], true);
+    expect(item.sourceRefs.single.hasBookAnchor, true);
+    expect(item.sourceRefs.single.sourceTextSnippet,
+        startsWith('Payload carries source refs.'));
   });
 
   test('submitting sync conflicts to review is idempotent', () async {

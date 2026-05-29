@@ -32,6 +32,7 @@ void main() {
     List<SourceRef>? sourceRefs,
     int createdAt = 100,
     ReviewItemSourceType sourceType = ReviewItemSourceType.knowledgeCard,
+    Map<String, dynamic> payload = const <String, dynamic>{},
   }) {
     return ReviewItem(
       id: id,
@@ -43,6 +44,7 @@ void main() {
       sourceRefs: sourceRefs ?? [traceableRef()],
       createdAt: createdAt,
       updatedAt: createdAt,
+      payload: payload,
     );
   }
 
@@ -153,6 +155,28 @@ void main() {
     );
 
     final restored = await store.getById('seminar');
+    expect(restored!.status, ReviewItemStatus.approved);
+    expect(restored.appliedAt, isNull);
+  });
+
+  test('generic store apply rejects sync conflict even with canApply gate',
+      () async {
+    final store = ReviewItemStore(rootDir: tempRoot);
+    await store.upsert(
+      item(
+        id: 'sync-conflict:unsafe',
+        sourceType: ReviewItemSourceType.syncConflict,
+        payload: const {'canApply': true},
+      ),
+    );
+    await store.approve('sync-conflict:unsafe', now: 200);
+
+    expect(
+      () => store.apply('sync-conflict:unsafe', now: 300),
+      throwsUnsupportedError,
+    );
+
+    final restored = await store.getById('sync-conflict:unsafe');
     expect(restored!.status, ReviewItemStatus.approved);
     expect(restored.appliedAt, isNull);
   });

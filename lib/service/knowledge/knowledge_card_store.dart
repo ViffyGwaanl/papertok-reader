@@ -149,6 +149,66 @@ class KnowledgeCardStore {
     });
   }
 
+  Future<KnowledgeCard> resolveSyncConflict(
+    String id, {
+    int? now,
+  }) {
+    return _enqueue(() async {
+      final entries = await _readStoredEntriesUnlocked();
+      final index = entries.indexWhere((entry) {
+        final envelope = _envelopeFromStoredEntry(entry);
+        return envelope?.id == id;
+      });
+      if (index < 0) {
+        throw StateError('KnowledgeCard sync conflict not found: $id');
+      }
+
+      final envelope = _envelopeFromStoredEntry(entries[index]);
+      if (envelope == null || !envelope.requiresConflictReview) {
+        throw StateError('KnowledgeCard sync conflict is not pending: $id');
+      }
+      if (envelope.entityType != KnowledgeSyncEntityType.knowledgeCard) {
+        throw StateError(
+          'Sync conflict is not a KnowledgeCard: '
+          '${envelope.entityType.asString}',
+        );
+      }
+      if (envelope.schemaVersion != 1) {
+        throw StateError(
+          'Unsupported KnowledgeCard sync schema: ${envelope.schemaVersion}',
+        );
+      }
+      if (KnowledgeSyncPolicy.containsSecretPayload(envelope.payload)) {
+        throw StateError(
+            'KnowledgeCard sync conflict contains secret payload.');
+      }
+
+      final card = KnowledgeCard.fromJson(envelope.payload);
+      final sourceRefs =
+          card.sourceRefs.isNotEmpty ? card.sourceRefs : envelope.sourceRefs;
+      if (!_hasTraceableSyncSource(sourceRefs)) {
+        throw StateError(
+          'KnowledgeCard sync conflict cannot be resolved without source refs.',
+        );
+      }
+
+      final resolved = card.copyWith(
+        id: envelope.id,
+        sourceRefs: sourceRefs,
+        reviewState: KnowledgeCardReviewState.applied,
+        ownership: AiOutputOwnership.aiGeneratedApproved,
+        updatedAt: now ?? envelope.updatedAt,
+      );
+      if (!resolved.isUserAsset) {
+        throw StateError('Resolved KnowledgeCard is not a user asset.');
+      }
+
+      entries[index] = _envelopeForCard(resolved).toJson();
+      await _writeStoredEntriesUnlocked(entries);
+      return resolved;
+    });
+  }
+
   Future<List<KnowledgeCard>> _readAllUnlocked() async {
     final entries = await _readStoredEntriesUnlocked();
     return entries
@@ -183,8 +243,22 @@ class KnowledgeCardStore {
   }
 
   Future<void> _writeAllUnlocked(List<KnowledgeCard> cards) async {
+    await _writeStoredEntriesUnlocked(
+      cards.map((card) => _envelopeForCard(card).toJson()).toList(),
+    );
+  }
+
+  Future<void> _writeStoredEntriesUnlocked(
+    List<Map<String, dynamic>> entries,
+  ) async {
     await ensureInitialized();
-    await cardsFile.writeAsString(_encode(cards));
+    final payload = <String, dynamic>{
+      'version': 1,
+      'cards': entries.map(Map<String, dynamic>.from).toList(growable: false),
+    };
+    await cardsFile.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(payload),
+    );
   }
 
   String _encode(List<KnowledgeCard> cards) {
@@ -286,6 +360,10 @@ class KnowledgeCardStore {
 
   int _sortTimestamp(KnowledgeCard card) {
     return card.createdAt ?? card.updatedAt ?? 0;
+  }
+
+  bool _hasTraceableSyncSource(List<SourceRef> refs) {
+    return refs.any((ref) => ref.hasBookAnchor || ref.canJumpBack);
   }
 
   Future<T> _enqueue<T>(Future<T> Function() action) {

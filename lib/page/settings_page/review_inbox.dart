@@ -173,7 +173,15 @@ class _ReviewInboxCard extends ConsumerWidget {
     final l10n = L10n.of(context);
     final state = ref.watch(reviewInboxProvider);
     final busy = state.isBusy(item.id);
-    final canApprove = item.sourceType != ReviewItemSourceType.syncConflict;
+    final canResolveSyncConflict =
+        item.sourceType == ReviewItemSourceType.syncConflict &&
+            item.payload['canApply'] == true;
+    final canApprove = item.sourceType != ReviewItemSourceType.syncConflict ||
+        canResolveSyncConflict;
+    final canApplySource =
+        item.sourceType == ReviewItemSourceType.knowledgeCard ||
+            item.sourceType == ReviewItemSourceType.conceptGraphRelation ||
+            canResolveSyncConflict;
     final audit = ref.read(reviewInboxControllerProvider).sourceJumpAudit(item);
     final firstIntent = item.sourceRefs
         .map(PaperReaderReaderIntent.fromSourceRef)
@@ -292,12 +300,7 @@ class _ReviewInboxCard extends ConsumerWidget {
                           )
                         : const Icon(Icons.done_all),
                     label: Text(l10n.reviewInboxApplyAction),
-                    onPressed: busy ||
-                            !item.canApply ||
-                            (item.sourceType !=
-                                    ReviewItemSourceType.knowledgeCard &&
-                                item.sourceType !=
-                                    ReviewItemSourceType.conceptGraphRelation)
+                    onPressed: busy || !item.canApply || !canApplySource
                         ? null
                         : () => ref
                             .read(reviewInboxProvider.notifier)

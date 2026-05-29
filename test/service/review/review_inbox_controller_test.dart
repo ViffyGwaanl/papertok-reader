@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
+import 'package:papertok_reader/models/knowledge_sync.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
@@ -303,6 +305,59 @@ void main() {
     final unchanged = await reviewStore.getById('sync-conflict:kc-conflict');
     expect(unchanged!.status, ReviewItemStatus.pending);
     expect(unchanged.decidedAt, isNull);
+  });
+
+  test('safe sync conflict approve and apply resolves knowledge card',
+      () async {
+    final conflictCard = card(
+      id: 'kc-safe-conflict',
+      sourceRefs: [traceableRef()],
+    ).copyWith(
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+    );
+    await cardStore.ensureInitialized();
+    await cardStore.cardsFile.writeAsString(
+      jsonEncode({
+        'version': 1,
+        'cards': [
+          KnowledgeSyncEnvelope(
+            id: conflictCard.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 200,
+            conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+            conflictReason: 'content-conflict',
+            sourceRefs: conflictCard.sourceRefs,
+            payload: conflictCard.toJson(),
+          ).toJson(),
+        ],
+      }),
+    );
+    final item = ReviewItem(
+      id: 'sync-conflict:kc-safe-conflict',
+      sourceType: ReviewItemSourceType.syncConflict,
+      sourceId: 'kc-safe-conflict',
+      title: 'Sync conflict: kc-safe-conflict',
+      body: 'Conflict reason: content-conflict',
+      status: ReviewItemStatus.pending,
+      sourceRefs: conflictCard.sourceRefs,
+      payload: const {'canApply': true},
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    await reviewStore.upsert(item);
+
+    final approved = await controller.approve(item.id);
+    final applied = await controller.apply(item.id);
+    final envelopes = await cardStore.listSyncEnvelopes();
+
+    expect(approved.status, ReviewItemStatus.approved);
+    expect(applied.status, ReviewItemStatus.applied);
+    expect(envelopes.single.requiresConflictReview, false);
+    expect(envelopes.single.entityType, KnowledgeSyncEntityType.knowledgeCard);
+    expect(await spacedReviewStore.list(), isEmpty);
+    expect(await graphStore.listEdges(), isEmpty);
   });
 
   test('apply mirrors concept graph relation source state', () async {

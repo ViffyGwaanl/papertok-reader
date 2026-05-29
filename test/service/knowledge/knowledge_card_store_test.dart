@@ -326,6 +326,84 @@ void main() {
     expect(envelopes.single.conflictReason, 'content-conflict');
   });
 
+  test('resolves safe knowledge card sync conflict as a user asset', () async {
+    final conflictCard = card(
+      id: 'kc-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+    );
+    final envelope = KnowledgeSyncEnvelope(
+      id: conflictCard.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      sourceRefs: conflictCard.sourceRefs,
+      payload: conflictCard.toJson(),
+    );
+    final file = File(
+      p.join(tempRoot.path, '.knowledge', 'knowledge_cards_v1.json'),
+    );
+    file.createSync(recursive: true);
+    file.writeAsStringSync(
+      jsonEncode({
+        'version': 1,
+        'cards': [envelope.toJson()],
+      }),
+    );
+
+    final store = KnowledgeCardStore(rootDir: tempRoot);
+    final resolved = await store.resolveSyncConflict('kc-conflict', now: 300);
+    final envelopes = await store.listSyncEnvelopes();
+
+    expect(resolved.isUserAsset, true);
+    expect(resolved.updatedAt, 300);
+    expect(envelopes.single.requiresConflictReview, false);
+    expect(envelopes.single.entityType, KnowledgeSyncEntityType.knowledgeCard);
+    expect(envelopes.single.conflictReason, isNull);
+  });
+
+  test('does not resolve sync conflict with secret payload', () async {
+    final conflictCard = card(
+      id: 'kc-secret-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+    );
+    final envelope = KnowledgeSyncEnvelope(
+      id: conflictCard.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      sourceRefs: conflictCard.sourceRefs,
+      payload: {
+        ...conflictCard.toJson(),
+        'apiKey': 'redacted-sentinel',
+      },
+    );
+    final file = File(
+      p.join(tempRoot.path, '.knowledge', 'knowledge_cards_v1.json'),
+    );
+    file.createSync(recursive: true);
+    file.writeAsStringSync(
+      jsonEncode({
+        'version': 1,
+        'cards': [envelope.toJson()],
+      }),
+    );
+
+    final store = KnowledgeCardStore(rootDir: tempRoot);
+
+    expect(
+      () => store.resolveSyncConflict('kc-secret-conflict', now: 300),
+      throwsStateError,
+    );
+    expect(
+        (await store.listSyncEnvelopes()).single.requiresConflictReview, true);
+  });
+
   test('malformed card file degrades to an empty card list', () async {
     final file = File(
       p.join(tempRoot.path, '.knowledge', 'knowledge_cards_v1.json'),

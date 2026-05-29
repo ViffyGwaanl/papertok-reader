@@ -119,7 +119,8 @@ class ReviewInboxController {
       throw StateError('Review item not found: $id');
     }
     if (next == ReviewItemStatus.approved &&
-        item.sourceType == ReviewItemSourceType.syncConflict) {
+        item.sourceType == ReviewItemSourceType.syncConflict &&
+        !_canResolveSyncConflict(item)) {
       throw UnsupportedError(
         'Sync conflict review cannot be approved without a resolution adapter.',
       );
@@ -132,7 +133,15 @@ class ReviewInboxController {
       decisionSource: decisionSource,
     );
     final mirrorResult = await _mirrorSourceDecision(planned, now: timestamp);
-    final persisted = await persist(timestamp);
+    final persisted = next == ReviewItemStatus.applied &&
+            item.sourceType == ReviewItemSourceType.syncConflict &&
+            _canResolveSyncConflict(item)
+        ? await reviewStore.applyResolvedSyncConflict(
+            id,
+            now: timestamp,
+            decisionSource: decisionSource ?? 'user_apply',
+          )
+        : await persist(timestamp);
     if (mirrorResult.knowledgeCardForReview case final card?) {
       await spacedReviewStore.upsertFromKnowledgeCard(card, now: timestamp);
       try {
@@ -178,10 +187,23 @@ class ReviewInboxController {
           flashcardForReview:
               item.status == ReviewItemStatus.applied ? item : null,
         );
+      case ReviewItemSourceType.syncConflict:
+        if (!_canResolveSyncConflict(item)) {
+          if (item.status == ReviewItemStatus.approved ||
+              item.status == ReviewItemStatus.applied) {
+            throw UnsupportedError(
+              'Review apply is not implemented for this sync conflict.',
+            );
+          }
+          return const _ReviewSourceMirrorResult();
+        }
+        if (item.status == ReviewItemStatus.applied) {
+          await knowledgeCardStore.resolveSyncConflict(item.sourceId, now: now);
+        }
+        return const _ReviewSourceMirrorResult();
       case ReviewItemSourceType.memoryCandidate:
       case ReviewItemSourceType.seminarSynthesis:
       case ReviewItemSourceType.imageAnalysisCard:
-      case ReviewItemSourceType.syncConflict:
       case ReviewItemSourceType.unknown:
         if (item.status == ReviewItemStatus.applied) {
           throw UnsupportedError(
@@ -191,6 +213,11 @@ class ReviewInboxController {
         }
         return const _ReviewSourceMirrorResult();
     }
+  }
+
+  bool _canResolveSyncConflict(ReviewItem item) {
+    return item.sourceType == ReviewItemSourceType.syncConflict &&
+        item.payload['canApply'] == true;
   }
 }
 

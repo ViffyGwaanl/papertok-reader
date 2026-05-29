@@ -114,6 +114,58 @@ void main() {
     expect(find.text('Apply'), findsNothing);
     expect(find.text('sync-conflict-no-source'), findsOneWidget);
   });
+
+  testWidgets('safe sync conflict exposes approve and apply actions',
+      (tester) async {
+    final safeSource = SourceRef(
+      bookId: 9,
+      href: 'Text/chapter.xhtml',
+      cfi: 'epubcfi(/6/12)',
+      sourceTitle: 'Widget Book',
+      locationLabel: 'Chapter 2',
+      sourceTextSnippet: 'A visible evidence quote.',
+      sourceKind: SourceRefKind.highlight,
+    );
+    final pendingController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'sync-conflict:kc-safe',
+        sourceType: ReviewItemSourceType.syncConflict,
+        sourceId: 'kc-safe',
+        title: 'Sync conflict: kc-safe',
+        body: 'Conflict reason: content-conflict',
+        status: ReviewItemStatus.pending,
+        sourceRefs: [safeSource],
+        payload: const {'canApply': true},
+      ),
+    ]);
+
+    await _pumpPage(tester, pendingController);
+
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Dismiss'), findsOneWidget);
+    expect(find.text('Apply'), findsNothing);
+
+    final approvedController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'sync-conflict:kc-safe',
+        sourceType: ReviewItemSourceType.syncConflict,
+        sourceId: 'kc-safe',
+        title: 'Sync conflict: kc-safe',
+        body: 'Conflict reason: content-conflict',
+        status: ReviewItemStatus.approved,
+        sourceRefs: [safeSource],
+        payload: const {'canApply': true},
+      ),
+    ]);
+
+    await _pumpPage(tester, approvedController);
+    await tester.tap(find.text('Approved').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Apply'), findsOneWidget);
+    expect(find.text('Approve'), findsNothing);
+  });
 }
 
 class _FakeReviewInboxController extends ReviewInboxController {

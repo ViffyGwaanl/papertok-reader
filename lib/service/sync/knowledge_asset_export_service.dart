@@ -274,6 +274,7 @@ class KnowledgeAssetExportService {
         if (envelope.deletedAt != null) 'deletedAt': envelope.deletedAt,
         'conflictStatus': envelope.conflictStatus.asString,
         'conflictReason': conflictReason,
+        'canApply': _canResolveConflict(envelope),
         if (excludedReason != null) 'excludedReason': excludedReason,
         'payloadKeys': envelope.payload.keys
             .map((key) => key.toString())
@@ -284,8 +285,25 @@ class KnowledgeAssetExportService {
     );
   }
 
+  bool _canResolveConflict(KnowledgeSyncEnvelope envelope) {
+    if (!envelope.requiresConflictReview) return false;
+    if (envelope.entityType != KnowledgeSyncEntityType.knowledgeCard) {
+      return false;
+    }
+    if (envelope.schemaVersion != 1) return false;
+    if (KnowledgeSyncPolicy.containsSecretPayload(envelope.payload)) {
+      return false;
+    }
+    try {
+      final refs = _candidateSourceRefsForConflict(envelope);
+      return refs.any((ref) => ref.hasBookAnchor || ref.canJumpBack);
+    } catch (_) {
+      return false;
+    }
+  }
+
   List<SourceRef> _safeSourceRefsForConflict(KnowledgeSyncEnvelope envelope) {
-    final refs = envelope.sourceRefs
+    final refs = _candidateSourceRefsForConflict(envelope)
         .map((ref) => SourceRef.fromJson(ref.toSafeJson()))
         .toList(growable: false);
     if (refs.isNotEmpty) return refs;
@@ -296,6 +314,20 @@ class KnowledgeAssetExportService {
         createdAt: envelope.updatedAt,
       ),
     ];
+  }
+
+  List<SourceRef> _candidateSourceRefsForConflict(
+    KnowledgeSyncEnvelope envelope,
+  ) {
+    if (!KnowledgeSyncPolicy.containsSecretPayload(envelope.payload)) {
+      try {
+        final card = KnowledgeCard.fromJson(envelope.payload);
+        if (card.sourceRefs.isNotEmpty) return card.sourceRefs;
+      } catch (_) {
+        // Fall back to envelope-level source refs for malformed payloads.
+      }
+    }
+    return envelope.sourceRefs;
   }
 
   String _buildMarkdown(KnowledgeAssetExportSnapshot snapshot) {
