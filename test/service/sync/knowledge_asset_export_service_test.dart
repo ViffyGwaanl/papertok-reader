@@ -8,12 +8,14 @@ import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
+import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/service/sync/knowledge_asset_export_service.dart';
 
 void main() {
   late Directory tempRoot;
   late KnowledgeCardStore cardStore;
+  late ReviewItemStore reviewStore;
   late SpacedReviewStore spacedReviewStore;
   late KnowledgeAssetExportService service;
 
@@ -22,10 +24,12 @@ void main() {
       'knowledge_asset_export_',
     );
     cardStore = KnowledgeCardStore(rootDir: tempRoot);
+    reviewStore = ReviewItemStore(rootDir: tempRoot);
     spacedReviewStore = SpacedReviewStore(rootDir: tempRoot);
     service = KnowledgeAssetExportService(
       rootDir: tempRoot,
       knowledgeCardStore: cardStore,
+      reviewStore: reviewStore,
       spacedReviewStore: spacedReviewStore,
       now: () => 1000,
     );
@@ -578,6 +582,134 @@ void main() {
       'pending-conflict-review',
     );
     expect(snapshot.manifest.entityIds, isNot(contains('kc-conflict')));
+  });
+
+  test('submits pending sync conflicts to review without raw payload secrets',
+      () async {
+    final conflictCard = card(
+      id: 'kc-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Conflict evidence.',
+    );
+    final conflict = KnowledgeSyncEnvelope(
+      id: conflictCard.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      sourceRefs: conflictCard.sourceRefs,
+      payload: {
+        ...conflictCard.toJson(),
+        'apiKey': 'redacted-sentinel-must-not-enter-review',
+      },
+    );
+    await cardStore.ensureInitialized();
+    await cardStore.cardsFile.writeAsString(
+      jsonEncode({
+        'version': 1,
+        'cards': [conflict.toJson()],
+      }),
+    );
+
+    final result = await service.submitConflictsToReview();
+    final items = await reviewStore.list(
+      sourceType: ReviewItemSourceType.syncConflict,
+    );
+
+    expect(result.submittedCount, 1);
+    expect(result.skippedCount, 0);
+    expect(items, hasLength(1));
+    expect(items.single.id, 'sync-conflict:kc-conflict');
+    expect(items.single.status, ReviewItemStatus.pending);
+    expect(items.single.sourceId, 'kc-conflict');
+    expect(items.single.title, contains('kc-conflict'));
+    expect(items.single.body, contains('content-conflict'));
+    expect(items.single.sourceRefs.single.sourceTextSnippet, isNotEmpty);
+    expect(items.single.payload['entityId'], 'kc-conflict');
+    expect(items.single.payload['entityType'], 'knowledge-card');
+    expect(items.single.payload['payloadKeys'], contains('apiKey'));
+    expect(
+      jsonEncode(items.single.payload),
+      isNot(contains('redacted-sentinel')),
+    );
+  });
+
+  test('submitting sync conflicts to review is idempotent', () async {
+    final conflictCard = card(
+      id: 'kc-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+    );
+    final conflict = KnowledgeSyncEnvelope(
+      id: conflictCard.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      sourceRefs: conflictCard.sourceRefs,
+      payload: conflictCard.toJson(),
+    );
+    await cardStore.ensureInitialized();
+    await cardStore.cardsFile.writeAsString(
+      jsonEncode({
+        'version': 1,
+        'cards': [conflict.toJson()],
+      }),
+    );
+
+    final first = await service.submitConflictsToReview();
+    final second = await service.submitConflictsToReview();
+
+    expect(first.submittedCount, 1);
+    expect(second.submittedCount, 0);
+    expect(second.skippedCount, 1);
+    expect(
+      await reviewStore.list(sourceType: ReviewItemSourceType.syncConflict),
+      hasLength(1),
+    );
+  });
+
+  test('submits sync conflict without source refs with unavailable provenance',
+      () async {
+    final conflictCard = card(
+      id: 'kc-conflict-no-source',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      sourceRefs: const <SourceRef>[],
+    );
+    final conflict = KnowledgeSyncEnvelope(
+      id: conflictCard.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'unknown-schema-version',
+      payload: conflictCard.toJson(),
+    );
+    await cardStore.ensureInitialized();
+    await cardStore.cardsFile.writeAsString(
+      jsonEncode({
+        'version': 1,
+        'cards': [conflict.toJson()],
+      }),
+    );
+
+    await service.submitConflictsToReview();
+    final item = (await reviewStore.list(
+      sourceType: ReviewItemSourceType.syncConflict,
+    ))
+        .single;
+
+    expect(item.sourceRefs, hasLength(1));
+    expect(item.sourceRefs.single.hasUnavailableReason, true);
+    expect(
+      item.sourceRefs.single.unavailableReason,
+      'sync-conflict-no-source',
+    );
+    expect(item.sourceRefs.single.sourceKind, SourceRefKind.unknown);
   });
 }
 

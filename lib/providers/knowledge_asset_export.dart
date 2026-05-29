@@ -22,6 +22,7 @@ class KnowledgeAssetExportState {
     this.lastMarkdownPath,
     this.lastHtmlReportPath,
     this.lastAnkiPath,
+    this.lastConflictReviewCount,
     this.lastError,
   });
 
@@ -48,6 +49,7 @@ class KnowledgeAssetExportState {
   final String? lastMarkdownPath;
   final String? lastHtmlReportPath;
   final String? lastAnkiPath;
+  final int? lastConflictReviewCount;
   final String? lastError;
 
   KnowledgeAssetExportState copyWith({
@@ -57,6 +59,7 @@ class KnowledgeAssetExportState {
     String? lastMarkdownPath,
     String? lastHtmlReportPath,
     String? lastAnkiPath,
+    int? lastConflictReviewCount,
     String? lastError,
     bool clearError = false,
   }) {
@@ -67,6 +70,8 @@ class KnowledgeAssetExportState {
       lastMarkdownPath: lastMarkdownPath ?? this.lastMarkdownPath,
       lastHtmlReportPath: lastHtmlReportPath ?? this.lastHtmlReportPath,
       lastAnkiPath: lastAnkiPath ?? this.lastAnkiPath,
+      lastConflictReviewCount:
+          lastConflictReviewCount ?? this.lastConflictReviewCount,
       lastError: clearError ? null : lastError ?? this.lastError,
     );
   }
@@ -114,6 +119,30 @@ class KnowledgeAssetExportNotifier
         lastMarkdownPath: result.markdownFile?.path,
         lastHtmlReportPath: result.htmlReportFile?.path,
         lastAnkiPath: result.ankiFile?.path,
+        clearError: true,
+      );
+    } catch (error, stackTrace) {
+      state = state.copyWith(
+        busy: false,
+        snapshot: AsyncValue<KnowledgeAssetExportSnapshot>.error(
+          error,
+          stackTrace,
+        ),
+        lastError: error.toString(),
+      );
+    }
+  }
+
+  Future<void> submitConflictsToReview() async {
+    state = state.copyWith(busy: true, clearError: true);
+    try {
+      final result = await _service.submitConflictsToReview();
+      state = state.copyWith(
+        busy: false,
+        snapshot: AsyncValue<KnowledgeAssetExportSnapshot>.data(
+          result.snapshot,
+        ),
+        lastConflictReviewCount: result.submittedCount,
         clearError: true,
       );
     } catch (error, stackTrace) {

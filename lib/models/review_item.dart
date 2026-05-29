@@ -41,6 +41,7 @@ enum ReviewItemSourceType {
   conceptGraphRelation('concept-graph-relation'),
   flashcardCandidate('flashcard-candidate'),
   imageAnalysisCard('image-analysis-card'),
+  syncConflict('sync-conflict'),
   unknown('unknown');
 
   const ReviewItemSourceType(this.asString);

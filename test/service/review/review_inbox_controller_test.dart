@@ -281,6 +281,30 @@ void main() {
     expect(unchanged.appliedAt, isNull);
   });
 
+  test('sync conflict review cannot be approved without a resolution adapter',
+      () async {
+    final item = ReviewItem(
+      id: 'sync-conflict:kc-conflict',
+      sourceType: ReviewItemSourceType.syncConflict,
+      sourceId: 'kc-conflict',
+      title: 'Sync conflict: kc-conflict',
+      body: 'Conflict reason: content-conflict',
+      status: ReviewItemStatus.pending,
+      sourceRefs: [traceableRef()],
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    await reviewStore.upsert(item);
+
+    expect(
+      () => controller.approve('sync-conflict:kc-conflict'),
+      throwsUnsupportedError,
+    );
+    final unchanged = await reviewStore.getById('sync-conflict:kc-conflict');
+    expect(unchanged!.status, ReviewItemStatus.pending);
+    expect(unchanged.decidedAt, isNull);
+  });
+
   test('apply mirrors concept graph relation source state', () async {
     await stageConceptRelationForReview('edge-apply');
 

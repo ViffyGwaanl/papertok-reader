@@ -825,6 +825,7 @@
   "reviewInboxSourceConceptGraphRelation": "Concept graph",
   "reviewInboxSourceFlashcardCandidate": "Flashcard",
   "reviewInboxSourceImageAnalysisCard": "Image analysis",
+  "reviewInboxSourceSyncConflict": "Sync conflict",
   "reviewInboxSourceUnknown": "Unknown source",
   "reviewInboxApproveAction": "Approve",
   "reviewInboxDismissAction": "Dismiss",
@@ -972,6 +973,15 @@
   },
   "knowledgeExportCreateManifest": "Create manifest",
   "knowledgeExportCreateBundle": "Create export",
+  "knowledgeExportSendConflictsToReview": "Send conflicts to Review",
+  "knowledgeExportConflictReviewSent": "{count} conflict sent to Review inbox",
+  "@knowledgeExportConflictReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgeExportManifestPath": "Manifest: {path}",
   "@knowledgeExportManifestPath": {
     "placeholders": {

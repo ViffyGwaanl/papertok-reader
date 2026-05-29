@@ -36,6 +36,12 @@ void main() {
     expect(find.text('1 excluded'), findsWidgets);
     expect(find.text('1 conflict'), findsOneWidget);
 
+    await tester.tap(find.text('Send conflicts to Review'));
+    await tester.pump();
+
+    expect(service.submittedConflictsToReview, true);
+    expect(find.text('1 conflict sent to Review inbox'), findsOneWidget);
+
     await tester.tap(find.text('Create export'));
     await tester.pump();
 
@@ -55,6 +61,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       : super(rootDir: Directory.systemTemp.createTempSync());
 
   bool createdManifest = false;
+  bool submittedConflictsToReview = false;
 
   @override
   Future<KnowledgeAssetExportSnapshot> buildSnapshot({
@@ -108,6 +115,16 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       markdownFile: File('/tmp/knowledge_export_v1.md'),
       htmlReportFile: File('/tmp/knowledge_export_study_report.html'),
       ankiFile: File('/tmp/knowledge_export_anki.tsv'),
+      snapshot: await buildSnapshot(),
+    );
+  }
+
+  @override
+  Future<KnowledgeAssetConflictReviewResult> submitConflictsToReview() async {
+    submittedConflictsToReview = true;
+    return KnowledgeAssetConflictReviewResult(
+      submittedCount: 1,
+      skippedCount: 0,
       snapshot: await buildSnapshot(),
     );
   }

@@ -48,11 +48,32 @@ void main() {
     expect(state.lastAnkiPath, '/tmp/knowledge_export_anki.tsv');
     expect(state.snapshot.value!.includedCount, 1);
   });
+
+  test('submitConflictsToReview exposes submitted conflict count', () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .submitConflictsToReview();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(service.submittedConflictsToReview, true);
+    expect(state.lastConflictReviewCount, 1);
+    expect(state.snapshot.value!.conflictCount, 1);
+  });
 }
 
 class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   _FakeKnowledgeAssetExportService()
       : super(rootDir: Directory.systemTemp.createTempSync());
+
+  bool submittedConflictsToReview = false;
 
   @override
   Future<KnowledgeAssetExportSnapshot> buildSnapshot({
@@ -105,6 +126,16 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       markdownFile: File('/tmp/knowledge_export_v1.md'),
       htmlReportFile: File('/tmp/knowledge_export_study_report.html'),
       ankiFile: File('/tmp/knowledge_export_anki.tsv'),
+      snapshot: await buildSnapshot(),
+    );
+  }
+
+  @override
+  Future<KnowledgeAssetConflictReviewResult> submitConflictsToReview() async {
+    submittedConflictsToReview = true;
+    return KnowledgeAssetConflictReviewResult(
+      submittedCount: 1,
+      skippedCount: 0,
       snapshot: await buildSnapshot(),
     );
   }

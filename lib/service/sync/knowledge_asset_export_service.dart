@@ -7,6 +7,7 @@ import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:path/path.dart' as p;
 
@@ -52,21 +53,36 @@ class KnowledgeAssetExportManifestResult {
   final KnowledgeAssetExportSnapshot snapshot;
 }
 
+class KnowledgeAssetConflictReviewResult {
+  const KnowledgeAssetConflictReviewResult({
+    required this.submittedCount,
+    required this.skippedCount,
+    required this.snapshot,
+  });
+
+  final int submittedCount;
+  final int skippedCount;
+  final KnowledgeAssetExportSnapshot snapshot;
+}
+
 class KnowledgeAssetExportService {
   KnowledgeAssetExportService({
     Directory? rootDir,
     KnowledgeCardStore? knowledgeCardStore,
+    ReviewItemStore? reviewStore,
     SpacedReviewStore? spacedReviewStore,
     KnowledgeAssetExportClock? now,
   })  : rootDir = rootDir ?? MarkdownMemoryStore().rootDir,
         knowledgeCardStore =
             knowledgeCardStore ?? KnowledgeCardStore(rootDir: rootDir),
+        reviewStore = reviewStore ?? ReviewItemStore(rootDir: rootDir),
         spacedReviewStore =
             spacedReviewStore ?? SpacedReviewStore(rootDir: rootDir),
         _now = now ?? (() => DateTime.now().millisecondsSinceEpoch);
 
   final Directory rootDir;
   final KnowledgeCardStore knowledgeCardStore;
+  final ReviewItemStore reviewStore;
   final SpacedReviewStore spacedReviewStore;
   final KnowledgeAssetExportClock _now;
 
@@ -156,6 +172,34 @@ class KnowledgeAssetExportService {
     );
   }
 
+  Future<KnowledgeAssetConflictReviewResult> submitConflictsToReview() async {
+    final snapshot = await buildSnapshot();
+    final timestamp = _now();
+    var submitted = 0;
+    var skipped = 0;
+
+    for (final envelope in snapshot.excluded.where(_isPendingConflict)) {
+      final item = _reviewItemForConflict(
+        envelope,
+        excludedReason: snapshot.excludedReasonFor(envelope.id),
+        timestamp: timestamp,
+      );
+      final existing = await reviewStore.getById(item.id);
+      if (existing != null) {
+        skipped++;
+        continue;
+      }
+      await reviewStore.upsert(item);
+      submitted++;
+    }
+
+    return KnowledgeAssetConflictReviewResult(
+      submittedCount: submitted,
+      skippedCount: skipped,
+      snapshot: snapshot,
+    );
+  }
+
   Future<List<KnowledgeSyncEnvelope>> _cardEnvelopes(int fallbackNow) async {
     final envelopes = await knowledgeCardStore.listSyncEnvelopes();
     return envelopes.map((envelope) {
@@ -192,6 +236,66 @@ class KnowledgeAssetExportService {
         payload: item.toJson(),
       );
     }).toList(growable: false);
+  }
+
+  bool _isPendingConflict(KnowledgeSyncEnvelope envelope) {
+    return envelope.requiresConflictReview ||
+        KnowledgeSyncPolicy.exclusionReason(envelope) ==
+            'pending-conflict-review';
+  }
+
+  ReviewItem _reviewItemForConflict(
+    KnowledgeSyncEnvelope envelope, {
+    required String? excludedReason,
+    required int timestamp,
+  }) {
+    final conflictReason =
+        envelope.conflictReason ?? excludedReason ?? 'pending-conflict-review';
+    final safeSourceRefs = _safeSourceRefsForConflict(envelope);
+    return ReviewItem(
+      id: 'sync-conflict:${envelope.id}',
+      sourceType: ReviewItemSourceType.syncConflict,
+      sourceId: envelope.id,
+      title: 'Sync conflict: ${envelope.id}',
+      body: [
+        'Entity type: ${envelope.entityType.asString}',
+        'Conflict reason: $conflictReason',
+        'Excluded from export until reviewed.',
+      ].join('\n'),
+      status: ReviewItemStatus.pending,
+      sourceRefs: safeSourceRefs,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      payload: {
+        'entityId': envelope.id,
+        'entityType': envelope.entityType.asString,
+        'schemaVersion': envelope.schemaVersion,
+        'updatedAt': envelope.updatedAt,
+        if (envelope.deletedAt != null) 'deletedAt': envelope.deletedAt,
+        'conflictStatus': envelope.conflictStatus.asString,
+        'conflictReason': conflictReason,
+        if (excludedReason != null) 'excludedReason': excludedReason,
+        'payloadKeys': envelope.payload.keys
+            .map((key) => key.toString())
+            .toList(growable: false)
+          ..sort(),
+        'sourceRefCount': safeSourceRefs.length,
+      },
+    );
+  }
+
+  List<SourceRef> _safeSourceRefsForConflict(KnowledgeSyncEnvelope envelope) {
+    final refs = envelope.sourceRefs
+        .map((ref) => SourceRef.fromJson(ref.toSafeJson()))
+        .toList(growable: false);
+    if (refs.isNotEmpty) return refs;
+    return [
+      SourceRef(
+        sourceKind: SourceRefKind.unknown,
+        unavailableReason: 'sync-conflict-no-source',
+        createdAt: envelope.updatedAt,
+      ),
+    ];
   }
 
   String _buildMarkdown(KnowledgeAssetExportSnapshot snapshot) {

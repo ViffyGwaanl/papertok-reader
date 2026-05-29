@@ -722,6 +722,7 @@
   "reviewInboxSourceConceptGraphRelation": "概念图谱",
   "reviewInboxSourceFlashcardCandidate": "复习卡",
   "reviewInboxSourceImageAnalysisCard": "图片分析",
+  "reviewInboxSourceSyncConflict": "同步冲突",
   "reviewInboxSourceUnknown": "未知来源",
   "reviewInboxApproveAction": "批准",
   "reviewInboxDismissAction": "忽略",
@@ -869,6 +870,15 @@
   },
   "knowledgeExportCreateManifest": "创建 manifest",
   "knowledgeExportCreateBundle": "创建导出",
+  "knowledgeExportSendConflictsToReview": "发送冲突到 Review",
+  "knowledgeExportConflictReviewSent": "{count} 个冲突已发送到 Review inbox",
+  "@knowledgeExportConflictReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgeExportManifestPath": "Manifest：{path}",
   "@knowledgeExportManifestPath": {
     "placeholders": {

@@ -118,6 +118,12 @@ class ReviewInboxController {
     if (item == null) {
       throw StateError('Review item not found: $id');
     }
+    if (next == ReviewItemStatus.approved &&
+        item.sourceType == ReviewItemSourceType.syncConflict) {
+      throw UnsupportedError(
+        'Sync conflict review cannot be approved without a resolution adapter.',
+      );
+    }
 
     final timestamp = _now();
     final planned = item.transitionTo(
@@ -175,6 +181,7 @@ class ReviewInboxController {
       case ReviewItemSourceType.memoryCandidate:
       case ReviewItemSourceType.seminarSynthesis:
       case ReviewItemSourceType.imageAnalysisCard:
+      case ReviewItemSourceType.syncConflict:
       case ReviewItemSourceType.unknown:
         if (item.status == ReviewItemStatus.applied) {
           throw UnsupportedError(

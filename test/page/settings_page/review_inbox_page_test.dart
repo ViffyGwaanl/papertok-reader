@@ -85,6 +85,35 @@ void main() {
     expect(find.textContaining('Narrow evidence'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('sync conflict review item exposes dismiss but not approve',
+      (tester) async {
+    final conflictController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'sync-conflict:kc-conflict',
+        sourceType: ReviewItemSourceType.syncConflict,
+        sourceId: 'kc-conflict',
+        title: 'Sync conflict: kc-conflict',
+        body: 'Conflict reason: content-conflict',
+        status: ReviewItemStatus.pending,
+        sourceRefs: [
+          SourceRef(
+            sourceKind: SourceRefKind.unknown,
+            unavailableReason: 'sync-conflict-no-source',
+          ),
+        ],
+      ),
+    ]);
+
+    await _pumpPage(tester, conflictController);
+
+    expect(find.text('Sync conflict: kc-conflict'), findsOneWidget);
+    expect(find.text('Sync conflict'), findsOneWidget);
+    expect(find.text('Dismiss'), findsOneWidget);
+    expect(find.text('Approve'), findsNothing);
+    expect(find.text('Apply'), findsNothing);
+    expect(find.text('sync-conflict-no-source'), findsOneWidget);
+  });
 }
 
 class _FakeReviewInboxController extends ReviewInboxController {

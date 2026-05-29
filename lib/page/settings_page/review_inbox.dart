@@ -173,6 +173,7 @@ class _ReviewInboxCard extends ConsumerWidget {
     final l10n = L10n.of(context);
     final state = ref.watch(reviewInboxProvider);
     final busy = state.isBusy(item.id);
+    final canApprove = item.sourceType != ReviewItemSourceType.syncConflict;
     final audit = ref.read(reviewInboxControllerProvider).sourceJumpAudit(item);
     final firstIntent = item.sourceRefs
         .map(PaperReaderReaderIntent.fromSourceRef)
@@ -264,21 +265,22 @@ class _ReviewInboxCard extends ConsumerWidget {
                             .read(reviewInboxProvider.notifier)
                             .dismiss(item.id),
                   ),
-                  FilledButton.icon(
-                    icon: busy
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.check),
-                    label: Text(l10n.reviewInboxApproveAction),
-                    onPressed: busy
-                        ? null
-                        : () => ref
-                            .read(reviewInboxProvider.notifier)
-                            .approve(item.id),
-                  ),
+                  if (canApprove)
+                    FilledButton.icon(
+                      icon: busy
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check),
+                      label: Text(l10n.reviewInboxApproveAction),
+                      onPressed: busy
+                          ? null
+                          : () => ref
+                              .read(reviewInboxProvider.notifier)
+                              .approve(item.id),
+                    ),
                 ],
                 if (item.status == ReviewItemStatus.approved)
                   FilledButton.icon(
@@ -392,6 +394,7 @@ String _sourceTypeLabel(L10n l10n, ReviewItemSourceType type) {
       l10n.reviewInboxSourceFlashcardCandidate,
     ReviewItemSourceType.imageAnalysisCard =>
       l10n.reviewInboxSourceImageAnalysisCard,
+    ReviewItemSourceType.syncConflict => l10n.reviewInboxSourceSyncConflict,
     ReviewItemSourceType.unknown => l10n.reviewInboxSourceUnknown,
   };
 }

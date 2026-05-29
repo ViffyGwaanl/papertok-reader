@@ -137,6 +137,22 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
                     .read(knowledgeAssetExportProvider.notifier)
                     .createManifest(),
           ),
+          if (snapshot.conflictCount > 0) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.rate_review_outlined),
+              label: Text(l10n.knowledgeExportSendConflictsToReview),
+              onPressed: state.busy
+                  ? null
+                  : () => ref
+                      .read(knowledgeAssetExportProvider.notifier)
+                      .submitConflictsToReview(),
+            ),
+          ],
+          if (state.lastConflictReviewCount case final count?) ...[
+            const SizedBox(height: 8),
+            _PolicyNote(text: l10n.knowledgeExportConflictReviewSent(count)),
+          ],
           const SizedBox(height: 16),
           _EnvelopeSection(
             title: l10n.knowledgeExportIncludedCount(snapshot.includedCount),
