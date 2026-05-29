@@ -7,6 +7,7 @@ import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
+import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 
@@ -147,6 +148,133 @@ class ConceptGraphProducer {
     );
   }
 
+  Future<ConceptGraphProducerResult> createFromLibrarySearchResult(
+    AiSemanticSearchLibraryResult result, {
+    List<String> conceptRefs = const <String>[],
+    int maxConcepts = 4,
+  }) async {
+    if (!result.ok) {
+      return const ConceptGraphProducerResult(
+        skippedReason: 'library-rag-not-ok',
+      );
+    }
+
+    final derivedEvidence =
+        result.evidence.where(_hasDerivedRagLayer).toList(growable: false);
+    if (derivedEvidence.isEmpty) {
+      return const ConceptGraphProducerResult(
+        skippedReason: 'missing-derived-rag-layer',
+      );
+    }
+
+    final evidenceRefs = _traceableLibraryRefs(derivedEvidence);
+    if (evidenceRefs.isEmpty) {
+      return const ConceptGraphProducerResult(
+        skippedReason: 'missing-traceable-source',
+      );
+    }
+
+    final conceptLabels = _conceptLabelsFromLibrarySearch(
+      result,
+      derivedEvidence: derivedEvidence,
+      conceptRefs: conceptRefs,
+      maxConcepts: maxConcepts,
+    );
+    if (conceptLabels.isEmpty) {
+      return const ConceptGraphProducerResult(
+        skippedReason: 'library-rag-has-no-concepts',
+      );
+    }
+
+    final query = result.query.trim();
+    if (query.isEmpty) {
+      return const ConceptGraphProducerResult(
+        skippedReason: 'library-rag-query-empty',
+      );
+    }
+
+    final timestamp = _now();
+    final existingNodes = {
+      for (final node in await graphStore.listNodes()) node.id: node,
+    };
+    final existingEdges = {
+      for (final edge in await graphStore.listEdges()) edge.id: edge,
+    };
+    final producedNodes = <ConceptNode>[];
+    final producedEdges = <ConceptEdge>[];
+    final producedReviewItems = <ReviewItem>[];
+
+    final ragNodeId = _libraryRagNodeId(query);
+    final ragNode = await _upsertDraftNode(
+      existingNodes: existingNodes,
+      candidate: ConceptNode(
+        id: ragNodeId,
+        type: ConceptNodeType.claim,
+        label: query,
+        summary: _derivedSummary(derivedEvidence),
+        sourceRefs: evidenceRefs,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      ),
+    );
+    producedNodes.add(ragNode);
+    existingNodes[ragNode.id] = ragNode;
+
+    for (final label in conceptLabels) {
+      final conceptNodeId = _conceptNodeId(label);
+      final conceptNode = await _upsertDraftNode(
+        existingNodes: existingNodes,
+        candidate: ConceptNode(
+          id: conceptNodeId,
+          type: ConceptNodeType.concept,
+          label: label,
+          sourceRefs: evidenceRefs,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        ),
+      );
+      producedNodes.add(conceptNode);
+      existingNodes[conceptNode.id] = conceptNode;
+
+      final relation = await _upsertDraftEdge(
+        existingEdges: existingEdges,
+        candidate: ConceptEdge(
+          id: _libraryRagConceptEdgeId(
+            query: query,
+            conceptNodeId: conceptNodeId,
+          ),
+          sourceNodeId: conceptNodeId,
+          targetNodeId: ragNodeId,
+          type: ConceptEdgeType.relatedTo,
+          label: '$label related to $query',
+          evidenceRefs: evidenceRefs,
+          confidence: _confidence(derivedEvidence),
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        ),
+      );
+      if (relation.isFormal) {
+        continue;
+      }
+      producedEdges.add(relation);
+      existingEdges[relation.id] = relation;
+
+      final reviewItem = await _upsertReviewItemForRelation(
+        relation,
+        now: timestamp,
+      );
+      if (reviewItem != null) {
+        producedReviewItems.add(reviewItem);
+      }
+    }
+
+    return ConceptGraphProducerResult(
+      nodes: producedNodes,
+      edges: producedEdges,
+      reviewItems: producedReviewItems,
+    );
+  }
+
   Future<ConceptNode> _upsertDraftNode({
     required Map<String, ConceptNode> existingNodes,
     required ConceptNode candidate,
@@ -218,15 +346,102 @@ class ConceptGraphProducer {
   }
 
   List<String> _conceptLabels(KnowledgeCard card) {
+    return _uniqueLabels(card.conceptRefs);
+  }
+
+  List<String> _conceptLabelsFromLibrarySearch(
+    AiSemanticSearchLibraryResult result, {
+    required List<AiSemanticSearchLibraryEvidence> derivedEvidence,
+    required List<String> conceptRefs,
+    required int maxConcepts,
+  }) {
+    final safeLimit = maxConcepts.clamp(1, 12);
+    final labels = <String>[];
+    final seen = <String>{};
+
+    void addLabel(String value) {
+      if (labels.length >= safeLimit) return;
+      final label = value.trim();
+      if (label.length < 2 || label.length > 80) return;
+      final key = label.toLowerCase();
+      if (seen.add(key)) labels.add(label);
+    }
+
+    for (final label in conceptRefs) {
+      addLabel(label);
+    }
+    for (final evidence in derivedEvidence) {
+      for (final label in _extractKeyThemeLabels(evidence.derivedSummary)) {
+        addLabel(label);
+      }
+    }
+    if (labels.isEmpty) {
+      addLabel(result.query);
+    }
+    return labels;
+  }
+
+  List<String> _uniqueLabels(Iterable<String> values) {
     final seen = <String>{};
     final labels = <String>[];
-    for (final value in card.conceptRefs) {
+    for (final value in values) {
       final label = value.trim();
       if (label.isEmpty) continue;
       final key = label.toLowerCase();
       if (seen.add(key)) labels.add(label);
     }
     return labels;
+  }
+
+  bool _hasDerivedRagLayer(AiSemanticSearchLibraryEvidence evidence) {
+    return (evidence.derivedLayer?.trim().isNotEmpty ?? false) ||
+        (evidence.derivedSummary?.trim().isNotEmpty ?? false);
+  }
+
+  List<SourceRef> _traceableLibraryRefs(
+    Iterable<AiSemanticSearchLibraryEvidence> evidence,
+  ) {
+    return _mergeSourceRefs(
+      const <SourceRef>[],
+      evidence
+          .map((item) => item.sourceRef)
+          .whereType<SourceRef>()
+          .where((ref) => ref.hasEvidence && ref.hasDerivedChunkHint)
+          .toList(growable: false),
+    );
+  }
+
+  List<String> _extractKeyThemeLabels(String? summary) {
+    final text = summary?.trim() ?? '';
+    if (text.isEmpty) return const <String>[];
+    final match = RegExp(
+      r'key themes?\s*:\s*([^\.。;；]+)',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (match == null) return const <String>[];
+    return _uniqueLabels(
+      match.group(1)!.split(RegExp(r'[,，/、]')).map((value) => value.trim()),
+    );
+  }
+
+  String? _derivedSummary(List<AiSemanticSearchLibraryEvidence> evidence) {
+    for (final item in evidence) {
+      final summary = item.derivedSummary?.trim() ?? '';
+      if (summary.isNotEmpty) return summary;
+    }
+    for (final item in evidence) {
+      final snippet = item.snippet.trim();
+      if (snippet.isNotEmpty) return snippet;
+    }
+    return null;
+  }
+
+  double _confidence(List<AiSemanticSearchLibraryEvidence> evidence) {
+    if (evidence.isEmpty) return 0.6;
+    final maxScore = evidence
+        .map((item) => item.score)
+        .fold<double>(0, (prev, score) => score > prev ? score : prev);
+    return maxScore.clamp(0.1, 1.0);
   }
 
   List<SourceRef> _mergeSourceRefs(
@@ -267,11 +482,20 @@ class ConceptGraphProducer {
 
   String _conceptNodeId(String label) => 'concept:${_stableIdPart(label)}';
 
+  String _libraryRagNodeId(String query) => 'rag:${_stableIdPart(query)}';
+
   String _cardConceptEdgeId({
     required String cardId,
     required String conceptNodeId,
   }) {
     return 'knowledge-card:${_stableIdPart(cardId)}:$conceptNodeId';
+  }
+
+  String _libraryRagConceptEdgeId({
+    required String query,
+    required String conceptNodeId,
+  }) {
+    return 'library-rag:${_stableIdPart(query)}:$conceptNodeId';
   }
 
   String _stableIdPart(String value) {
