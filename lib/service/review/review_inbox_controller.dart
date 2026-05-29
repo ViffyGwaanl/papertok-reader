@@ -6,6 +6,7 @@ import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart'
 import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 
@@ -135,6 +136,12 @@ class ReviewInboxController {
         // apply. The applied card and spaced review item remain authoritative.
       }
     }
+    if (mirrorResult.flashcardForReview case final flashcard?) {
+      await spacedReviewStore.upsertFromFlashcardReviewItem(
+        flashcard,
+        now: timestamp,
+      );
+    }
     return persisted;
   }
 
@@ -155,9 +162,18 @@ class ReviewInboxController {
       case ReviewItemSourceType.conceptGraphRelation:
         await conceptGraphStore.applyReviewDecision(item, now: now);
         return const _ReviewSourceMirrorResult();
+      case ReviewItemSourceType.flashcardCandidate:
+        FlashcardReviewAdapter.toSpacedReviewItem(
+          item,
+          id: SpacedReviewStore.reviewIdForFlashcard(item.sourceId),
+          dueAt: now,
+        );
+        return _ReviewSourceMirrorResult(
+          flashcardForReview:
+              item.status == ReviewItemStatus.applied ? item : null,
+        );
       case ReviewItemSourceType.memoryCandidate:
       case ReviewItemSourceType.seminarSynthesis:
-      case ReviewItemSourceType.flashcardCandidate:
       case ReviewItemSourceType.imageAnalysisCard:
       case ReviewItemSourceType.unknown:
         if (item.status == ReviewItemStatus.applied) {
@@ -172,7 +188,11 @@ class ReviewInboxController {
 }
 
 class _ReviewSourceMirrorResult {
-  const _ReviewSourceMirrorResult({this.knowledgeCardForReview});
+  const _ReviewSourceMirrorResult({
+    this.knowledgeCardForReview,
+    this.flashcardForReview,
+  });
 
   final KnowledgeCard? knowledgeCardForReview;
+  final ReviewItem? flashcardForReview;
 }

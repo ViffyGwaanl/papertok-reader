@@ -53,6 +53,14 @@ void main() {
                 role: AiSeminarRole.synthesizer,
                 evidenceRefIds: ['e1'],
               ),
+            if (invocation.role == AiSeminarRole.synthesizer)
+              const AiSeminarWhiteboardEntry(
+                id: 'review-hidden-premise',
+                kind: AiSeminarWhiteboardKind.reviewSuggestion,
+                text: 'What premise should be reviewed later?',
+                role: AiSeminarRole.synthesizer,
+                evidenceRefIds: ['e1'],
+              ),
           ],
         );
       },
@@ -77,6 +85,8 @@ void main() {
     expect(run.synthesis!.criticalView, 'critical response');
     expect(run.synthesis!.supportiveView, 'supportive response');
     expect(run.synthesis!.candidateCards.single.id, 'card-hidden-premise');
+    expect(run.synthesis!.candidateReviewQuestions,
+        ['What premise should be reviewed later?']);
     expect(run.synthesis!.evidence.single.sourceRef.hasEvidence, true);
   });
 

@@ -28,6 +28,10 @@ class SpacedReviewStore {
     return 'spaced-review:knowledge-card:$cardId';
   }
 
+  static String reviewIdForFlashcard(String flashcardId) {
+    return 'spaced-review:flashcard:$flashcardId';
+  }
+
   final Directory rootDir;
   Future<void> _tail = Future<void>.value();
 
@@ -97,6 +101,38 @@ class SpacedReviewStore {
       }
       await _writeAllUnlocked(items);
       return item;
+    });
+  }
+
+  Future<SpacedReviewItem> upsertFromFlashcardReviewItem(
+    ReviewItem item, {
+    int? now,
+  }) {
+    if (item.sourceType != ReviewItemSourceType.flashcardCandidate ||
+        item.status != ReviewItemStatus.applied) {
+      throw StateError(
+        'Only applied traceable flashcard candidates can enter spaced review.',
+      );
+    }
+    return _enqueue(() async {
+      final items = await _readAllUnlocked();
+      final id = reviewIdForFlashcard(item.sourceId);
+      final dueAt = now ?? DateTime.now().millisecondsSinceEpoch;
+      final candidate = FlashcardReviewAdapter.toSpacedReviewItem(
+        item,
+        id: id,
+        dueAt: dueAt,
+      );
+      final index = items.indexWhere((entry) => entry.id == id);
+      final next =
+          index >= 0 ? _mergeExisting(items[index], candidate) : candidate;
+      if (index >= 0) {
+        items[index] = next;
+      } else {
+        items.add(next);
+      }
+      await _writeAllUnlocked(items);
+      return next;
     });
   }
 

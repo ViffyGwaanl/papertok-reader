@@ -13,12 +13,12 @@
 
 | 能力 | 用户入口 | 当前状态 | 真实边界 |
 | --- | --- | --- | --- |
-| Review Inbox | `Settings -> AI -> Review inbox`，以及 Settings 顶层知识审核入口。 | 已接入 UI，可展示、批准、忽略、应用 KnowledgeCard 和 ConceptGraph relation 类型审批项。 | 只有 producer 写入 `ReviewItemStore` 后，用户才会看到内容。 |
+| Review Inbox | `Settings -> AI -> Review inbox`，以及 Settings 顶层知识审核入口。 | 已接入 UI，可展示、批准、忽略、应用 KnowledgeCard、ConceptGraph relation 和 flashcard candidate 类型审批项。 | 只有 producer 写入 `ReviewItemStore` 后，用户才会看到内容。 |
 | 选中文本 -> KnowledgeCard | 阅读页选中文本 -> `知识卡`。 | 本分支已接入 `SelectionKnowledgeCardProducer` 和选中菜单入口，选中文本会进入 KnowledgeCard store 与 Review Inbox。 | 默认只进入 Review，不写长期记忆、不写笔记、不写 spaced review。 |
-| 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 runtime：用户可启动 role-by-role Seminar，查看 evidence、角色输出、Shared Whiteboard、synthesis，并把 traceable synthesis 与候选卡送入 Review Inbox。 | 阅读页优先 current book evidence；Settings 独立入口没有 current book 时会走 library fallback。Seminar synthesis 本身只进入 Review，不自动应用；候选卡仍需用户在 Review Inbox 中批准/应用后才成为长期资产。 |
+| 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 runtime：用户可启动 role-by-role Seminar，查看 evidence、角色输出、Shared Whiteboard、synthesis，并把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox。 | 阅读页优先 current book evidence；Settings 独立入口没有 current book 时会走 library fallback。Seminar synthesis 本身只进入 Review，不自动应用；候选卡和候选 flashcard 仍需用户在 Review Inbox 中批准/应用后才成为长期资产或复习项。 |
 | AI Chat 普通解释 | 阅读页选中文本 -> `AI`。 | 仍可用，保留原行为。 | 不自动生成 KnowledgeCard 或 ConceptGraph。 |
 | ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer、选中文本入口、KnowledgeCard -> draft ConceptGraph producer、Seminar candidate card -> conceptRefs -> KnowledgeCard -> ConceptGraph 候选链路：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部路径、显示 orphan/broken link。 | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard 会生成 draft node/edge 和 pending relation ReviewItem；RAG/GraphRAG 自动抽概念 producer 和更强可视化布局还没接，不自动创建正式节点。 |
-| Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；KnowledgeCard 在 Review Inbox 中 `Apply` 后自动入队。 | 本分支已接入 `.knowledge/spaced_review_items_v1.json`、复习页、Again/Hard/Good/Easy 评分、来源跳转状态。 | 当前只接 KnowledgeCard apply；Seminar 候选卡先作为 KnowledgeCard 进入 Review，用户应用后可入队。Flashcard producer 和跨设备同步还没接。 |
+| Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；KnowledgeCard 或 Seminar 候选 flashcard 在 Review Inbox 中 `Apply` 后入队。 | 本分支已接入 `.knowledge/spaced_review_items_v1.json`、复习页、Again/Hard/Good/Easy 评分、来源跳转状态；Seminar 的 `reviewSuggestion` 会作为 flashcard candidate 进入 Review。 | KnowledgeCard apply 和 flashcard candidate apply 已接入；跨设备同步还没接。 |
 | Sync / Export 知识资产 | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览和创建入口；只纳入已应用 KnowledgeCard 和复习历史，显性显示排除项和待审冲突。 | 目前是本地 manifest 导出入口，不是完整云同步引擎；per-entity remote sync 和冲突 Review UI 仍在剩余任务中。 |
 
 ## 2. 已接入的用户路径
@@ -64,14 +64,14 @@ flutter test --no-pub \
 7. 系统按 `critical -> supportive -> synthesizer` 串行执行角色，页面展示 role turn、evidence、Shared Whiteboard 和 synthesis。
 8. 用户可以取消运行；失败或证据不足时可以重试。
 9. synthesis 满足 `readyForReview + traceable handoff` 后，用户点击 `Send to Review`。
-10. 系统把 Seminar synthesis 写成 pending ReviewItem，把候选卡写成 pending KnowledgeCard + ReviewItem。
+10. 系统把 Seminar synthesis 写成 pending ReviewItem，把候选卡写成 pending KnowledgeCard + ReviewItem，把 `reviewSuggestion` 写成 pending flashcard ReviewItem。
 
 Gate：
 
 - 默认使用 current book 语境。
 - 默认不开 web。
 - 研讨结果不自动写 KnowledgeCard、Memory、Note 或 Sync asset。
-- synthesis 和候选卡只进入 Review；用户必须在 Review Inbox 中批准或应用，才会进入长期知识资产或复习队列。
+- synthesis、候选卡和候选 flashcard 只进入 Review；用户必须在 Review Inbox 中批准或应用，才会进入长期知识资产或复习队列。
 - 当前入口必须保留降级路径：用户仍可用普通 `AI` 按钮解释选中文本。
 
 验证命令：
@@ -133,10 +133,10 @@ flutter test --no-pub \
 
 用户路径：
 
-1. 阅读页选中文本生成 `KnowledgeCard`，或其他 producer 写入待审知识卡。
+1. 阅读页选中文本生成 `KnowledgeCard`，Seminar 生成 `reviewSuggestion`，或其他 producer 写入待审知识卡/复习卡。
 2. 用户进入 `Settings -> AI -> Review inbox`。
 3. 用户先批准，再点击 `Apply`。
-4. 系统把已应用且有 SourceRef 的 KnowledgeCard 写入 `.knowledge/spaced_review_items_v1.json`。
+4. 系统把已应用且有 SourceRef 的 KnowledgeCard 或 flashcard candidate 写入 `.knowledge/spaced_review_items_v1.json`。
 5. 用户进入 `Settings -> AI -> Spaced review / 间隔复习`。
 6. 页面刷新时会对账已应用 KnowledgeCard，补齐缺失的复习队列项。
 7. 页面显示到期复习项、答案、可跳转来源、不可用来源和未解析来源计数。
@@ -144,9 +144,9 @@ flutter test --no-pub \
 
 Gate：
 
-- 只有 `applied + traceable + user asset` 的 KnowledgeCard 能进入复习队列。
-- 同一 KnowledgeCard 重复入队不会制造重复复习项。
-- 如果 Review apply 已成功但队列写入曾失败，复习页刷新会按已应用 KnowledgeCard 对账恢复。
+- 只有 `applied + traceable + user asset` 的 KnowledgeCard，或 `applied + traceable + flashcard candidate`，能进入复习队列。
+- 同一 KnowledgeCard 或同一 flashcard candidate 重复入队不会制造重复复习项。
+- 如果 KnowledgeCard Review apply 已成功但队列写入曾失败，复习页刷新会按已应用 KnowledgeCard 对账恢复；flashcard candidate 需要重新 Apply 或由后续对账任务补齐。
 - 复习项必须保留 SourceRef；可跳转、不可用、未解析来源都要显性展示。
 - 复习记录只更新 spaced review 队列，不写长期记忆、不写笔记、不写同步资产。
 - 删除书或恢复备份导致来源不可跳时，页面显示不可用或未解析状态，而不是静默丢失。
@@ -204,10 +204,12 @@ flutter test --no-pub \
 | UFA-C02-T01 | In Review | Seminar launcher | 阅读页选中菜单显示 `研讨`，打开结构化 Seminar runtime page。 | AI Seminar runtime, E07 menu | `ExcerptMenu` action | 入口可见；选中文本预填；不自动写用户资产。 |
 | UFA-C02-T02 | In Review | Structured Seminar runtime UI | 把 `AiSeminarOrchestrationService` 接入真实模型流式事件。 | E01 services, E06 governance, E07 progress UI | `AiSeminarRuntimeService`、`aiSeminarRuntimeProvider`、`AiSeminarRuntimePage` | 角色 turn、evidence、whiteboard、synthesis 进入可序列化 runtime state；失败可重试，运行可取消。 |
 | UFA-C02-T03 | In Review | Seminar Review handoff | Seminar synthesis 和候选卡进入 Review Inbox。 | UFA-C02-T02, E05 controller | `AiSeminarRuntimeNotifier.sendToReview` + `SeminarSynthesisReviewAdapter` | 只有 `readyForReview + traceable handoff` 的 synthesis 进入 pending Review；候选卡保持 AI draft/pending，不直接应用。 |
+| UFA-C02-T04 | In Review | Seminar Flashcard handoff | Seminar reviewSuggestion 进入 flashcard Review。 | UFA-C02-T03, UFA-C04-T01 | `SeminarSynthesisReviewAdapter.flashcardsFromSynthesis`, `FlashcardReviewAdapter`, `ReviewInboxController` | 只有 traceable synthesis 的 candidate review question 会生成 pending flashcard；用户 Apply 后进入 Spaced Review；不绕过 Review。 |
 | UFA-C03-T01 | In Review | Concept producer | 从 KnowledgeCard 和 Seminar candidate concept refs 提取有证据的 ConceptNode/Edge 候选。 | E03, E04 store, E05 controller, UFA-C02-T03 | `ConceptGraphProducer`, ReviewInboxController apply hook, Seminar candidate `conceptRefs` handoff | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成 draft node/edge；Seminar candidate card 可携带 conceptRefs 并在用户 Apply 后进入同一链路；relation 进入 pending Review；RAG/GraphRAG 自动抽概念 producer 还没接。 |
 | UFA-C03-T02 | In Review | Concept Explorer page | 提供局部图谱探索入口。 | E04 dossier/explore | `ConceptGraphExplorerPage`, provider, Settings AI entry | 用户能打开概念页、看 1-2 层关系、跳回原文、检测 orphan/broken link。 |
 | UFA-C03-T03 | In Review | Reader concept entry | 阅读页选中文本可进入概念探索。 | UFA-C03-T02 | `ExcerptMenu` graph action, `ConceptGraphExplorerPage.initialQuery` | 选中文本可打开图谱页并筛选相关概念；没有相关概念时展示空态和草稿候选入口，不生成无证据正式节点。 |
 | UFA-C04-T01 | In Review | Spaced Review | Review apply 后生成复习队列。 | E03, E05 | `SpacedReviewStore`, `spacedReviewProvider`, `SpacedReviewPage`, Settings AI entry | 复习项可回溯到卡片和原文；删除书后显示可解释状态；评分记录下一次到期时间。 |
+| UFA-C04-T02 | In Review | Flashcard Review apply | 待审 flashcard 应用后进入 Spaced Review。 | E05 controller, UFA-C02-T04 | `SpacedReviewStore.reviewIdForFlashcard`, `upsertFromFlashcardReviewItem` | pending/approved flashcard 不直接入队；只有 applied 且 traceable 才能入队；重复入队不制造重复复习项。 |
 | UFA-C05-T01 | In Review | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | `KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI entry、export manifest | API key 不同步；派生索引不当作 source-of-truth；冲突被排除并显性显示；当前只创建本地 manifest，不执行远端同步。 |
 
 ## 4. Agent 执行约束

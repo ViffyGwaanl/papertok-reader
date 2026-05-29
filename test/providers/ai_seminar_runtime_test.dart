@@ -64,6 +64,13 @@ void main() {
                   evidenceRefIds: ['e1'],
                   conceptRefs: ['Seminar concept'],
                 ),
+              if (invocation.role == AiSeminarRole.synthesizer)
+                const AiSeminarWhiteboardEntry(
+                  id: 'review-1',
+                  kind: AiSeminarWhiteboardKind.reviewSuggestion,
+                  text: 'What should be reviewed later?',
+                  evidenceRefIds: ['e1'],
+                ),
             ],
           ),
         );
@@ -92,7 +99,10 @@ void main() {
       AiSeminarRole.supportive,
       AiSeminarRole.synthesizer,
     ]);
-    expect(state.whiteboardEntries.single.id, 'card-1');
+    expect(
+      state.whiteboardEntries.map((entry) => entry.id),
+      containsAll(['card-1', 'review-1']),
+    );
     expect(state.synthesis!.summary, 'synthesizer response');
     expect(state.canRetry, false);
   });
@@ -142,7 +152,8 @@ void main() {
     expect(restored.partialRoleText, 'critical partial');
   });
 
-  test('sendToReview hands off synthesis and candidate cards', () async {
+  test('sendToReview hands off synthesis candidate cards and flashcards',
+      () async {
     final tempRoot = await Directory.systemTemp.createTemp();
     addTearDown(() => tempRoot.deleteSync(recursive: true));
     final reviewStore = ReviewItemStore(rootDir: tempRoot);
@@ -169,11 +180,13 @@ void main() {
 
     expect(result.reviewItemId, 'seminar-synthesis:s4');
     expect(result.knowledgeCardIds, ['seminar:s4:card-1']);
+    expect(result.flashcardIds, ['seminar:s4:question-1']);
     expect(
       pendingItems.map((item) => item.sourceType).toSet(),
       containsAll({
         ReviewItemSourceType.seminarSynthesis,
         ReviewItemSourceType.knowledgeCard,
+        ReviewItemSourceType.flashcardCandidate,
       }),
     );
     expect(seminarCards.single.reviewState, KnowledgeCardReviewState.pending);

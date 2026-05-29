@@ -63,10 +63,12 @@ class AiSeminarReviewHandoffResult {
   const AiSeminarReviewHandoffResult({
     required this.reviewItemId,
     required this.knowledgeCardIds,
+    required this.flashcardIds,
   });
 
   final String reviewItemId;
   final List<String> knowledgeCardIds;
+  final List<String> flashcardIds;
 }
 
 class AiSeminarRuntimeState {
@@ -328,11 +330,21 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           await _reviewStore.upsert(cardReviewItem);
         }
       }
+      final flashcards = SeminarSynthesisReviewAdapter.flashcardsFromSynthesis(
+        seminarId: run.session.id,
+        synthesis: synthesis,
+        now: now,
+      );
+      for (final flashcard in flashcards) {
+        await _reviewStore.upsert(flashcard);
+      }
 
       state = state.copyWith(clearError: true);
       return AiSeminarReviewHandoffResult(
         reviewItemId: reviewItem.id,
         knowledgeCardIds: insertedCardIds,
+        flashcardIds:
+            flashcards.map((flashcard) => flashcard.sourceId).toList(),
       );
     } catch (error) {
       state = state.copyWith(error: error.toString());

@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
+import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 
 void main() {
@@ -95,6 +97,44 @@ void main() {
     expect(dueLater.single.id, item.id);
   });
 
+  test('upsert from applied flashcard candidate creates one review item',
+      () async {
+    final pending = FlashcardReviewAdapter.fromFlashcardCandidate(
+      id: 'flash-spaced',
+      prompt: 'What should be reviewed?',
+      answer: 'Traceable evidence.',
+      sourceRefs: [traceableRef()],
+      now: 100,
+    );
+    final approved = pending.transitionTo(
+      ReviewItemStatus.approved,
+      now: 200,
+      decisionSource: 'user_approve',
+    );
+    final applied = approved.transitionTo(
+      ReviewItemStatus.applied,
+      now: 300,
+      decisionSource: 'user_apply',
+    );
+
+    final first = await store.upsertFromFlashcardReviewItem(
+      applied,
+      now: 1000,
+    );
+    final duplicate = await store.upsertFromFlashcardReviewItem(
+      applied,
+      now: 2000,
+    );
+    final allItems = await store.list();
+
+    expect(first.id, SpacedReviewStore.reviewIdForFlashcard('flash-spaced'));
+    expect(first.cardId, 'flash-spaced');
+    expect(first.prompt, 'What should be reviewed?');
+    expect(duplicate.id, first.id);
+    expect(allItems, hasLength(1));
+    expect(allItems.single.sourceRefs.single.hasEvidence, true);
+  });
+
   test('again rating increments lapses and keeps source provenance', () async {
     final item = await store.upsertFromKnowledgeCard(
       appliedCard(),
@@ -131,6 +171,35 @@ void main() {
     );
     expect(
       () => store.upsertFromKnowledgeCard(approved, now: 1000),
+      throwsStateError,
+    );
+  });
+
+  test('rejects flashcard candidates that are not applied traceable items',
+      () async {
+    final pending = FlashcardReviewAdapter.fromFlashcardCandidate(
+      id: 'flash-pending',
+      prompt: 'Pending?',
+      answer: 'No.',
+      sourceRefs: [traceableRef()],
+      now: 100,
+    );
+    final untraceable = ReviewItem(
+      id: 'flashcard:flash-untraceable',
+      sourceType: ReviewItemSourceType.flashcardCandidate,
+      sourceId: 'flash-untraceable',
+      title: 'No source',
+      body: 'No source.',
+      status: ReviewItemStatus.applied,
+      sourceRefs: const [],
+    );
+
+    expect(
+      () => store.upsertFromFlashcardReviewItem(pending, now: 1000),
+      throwsStateError,
+    );
+    expect(
+      () => store.upsertFromFlashcardReviewItem(untraceable, now: 1000),
       throwsStateError,
     );
   });

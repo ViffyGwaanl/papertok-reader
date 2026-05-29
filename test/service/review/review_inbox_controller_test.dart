@@ -153,6 +153,32 @@ void main() {
     expect(reviewItems.single.sourceRefs.single.hasEvidence, true);
   });
 
+  test('flashcard candidate apply creates a spaced review item', () async {
+    final item = FlashcardReviewAdapter.fromFlashcardCandidate(
+      id: 'flash-apply',
+      prompt: 'What makes evidence durable?',
+      answer: 'A SourceRef and jump link.',
+      sourceRefs: [traceableRef()],
+      now: 100,
+    );
+    await reviewStore.upsert(item);
+
+    await controller.approve('flashcard:flash-apply');
+    final applied = await controller.apply('flashcard:flash-apply');
+    final reviewItems = await spacedReviewStore.list();
+
+    expect(applied.status, ReviewItemStatus.applied);
+    expect(reviewItems, hasLength(1));
+    expect(
+      reviewItems.single.id,
+      SpacedReviewStore.reviewIdForFlashcard('flash-apply'),
+    );
+    expect(reviewItems.single.cardId, 'flash-apply');
+    expect(reviewItems.single.prompt, 'What makes evidence durable?');
+    expect(reviewItems.single.answer, 'A SourceRef and jump link.');
+    expect(reviewItems.single.sourceRefs.single.hasEvidence, true);
+  });
+
   test('knowledge card apply creates draft concept graph candidates', () async {
     await stageCardForReview(
       'kc-graph',

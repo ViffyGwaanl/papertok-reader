@@ -198,6 +198,44 @@ class SeminarSynthesisReviewAdapter {
     }).toList(growable: false);
   }
 
+  static List<ReviewItem> flashcardsFromSynthesis({
+    required String seminarId,
+    required AiSeminarSynthesis synthesis,
+    int? now,
+  }) {
+    if (!synthesis.readyForReview || !synthesis.hasTraceableHandoff) {
+      return const <ReviewItem>[];
+    }
+    final timestamp = now ?? DateTime.now().millisecondsSinceEpoch;
+    final sourceRefs = _sourceRefsForIds(
+      synthesis.evidenceRefIds,
+      synthesis.evidence,
+    );
+    if (sourceRefs.isEmpty) return const <ReviewItem>[];
+    final answer = synthesis.summary.trim().isEmpty
+        ? 'Review the cited evidence before answering.'
+        : synthesis.summary.trim();
+    final flashcards = <ReviewItem>[];
+    final seenQuestions = <String>{};
+    for (final indexedQuestion in synthesis.candidateReviewQuestions.indexed) {
+      final index = indexedQuestion.$1;
+      final question = indexedQuestion.$2.trim();
+      if (question.isEmpty) continue;
+      final key = question.toLowerCase();
+      if (!seenQuestions.add(key)) continue;
+      flashcards.add(
+        FlashcardReviewAdapter.fromFlashcardCandidate(
+          id: 'seminar:$seminarId:question-${index + 1}',
+          prompt: question,
+          answer: answer,
+          sourceRefs: sourceRefs,
+          now: timestamp,
+        ),
+      );
+    }
+    return flashcards;
+  }
+
   static String _candidateCardId({
     required String seminarId,
     required String entryId,
@@ -367,9 +405,11 @@ class FlashcardReviewAdapter {
     if (item.sourceType != ReviewItemSourceType.flashcardCandidate) {
       throw ArgumentError('Review item is not a flashcard candidate.');
     }
-    if (item.status != ReviewItemStatus.approved || !item.hasTraceableSource) {
+    final reviewReady = item.status == ReviewItemStatus.approved ||
+        item.status == ReviewItemStatus.applied;
+    if (!reviewReady || !item.hasTraceableSource) {
       throw StateError(
-        'Only approved traceable flashcards can become spaced review items.',
+        'Only approved or applied traceable flashcards can become spaced review items.',
       );
     }
     return SpacedReviewItem(

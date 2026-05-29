@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/book_note.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
@@ -177,6 +178,45 @@ void main() {
       expect(spaced.cardId, 'flash-1');
       expect(spaced.prompt, 'What should RAG evidence include?');
       expect(spaced.sourceRefs.single.hasEvidence, isTrue);
+    });
+  });
+
+  group('Seminar flashcard handoff', () {
+    test('projects candidate review questions into flashcard review items', () {
+      final synthesis = AiSeminarSynthesis(
+        summary: 'Use SourceRef-backed evidence.',
+        supportiveView: 'The evidence is actionable.',
+        criticalView: 'The evidence can be stale.',
+        evidenceRefIds: const ['e1'],
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'Evidence text',
+            sourceRef: ref(),
+          ),
+        ],
+        candidateReviewQuestions: const [
+          'What does every RAG answer need?',
+          'What should stay out of formal knowledge?',
+        ],
+        readyForReview: true,
+      );
+
+      final flashcards = SeminarSynthesisReviewAdapter.flashcardsFromSynthesis(
+        seminarId: 's1',
+        synthesis: synthesis,
+        now: 100,
+      );
+
+      expect(flashcards, hasLength(2));
+      expect(flashcards.first.id, 'flashcard:seminar:s1:question-1');
+      expect(
+          flashcards.first.sourceType, ReviewItemSourceType.flashcardCandidate);
+      expect(flashcards.first.status, ReviewItemStatus.pending);
+      expect(flashcards.first.title, 'What does every RAG answer need?');
+      expect(flashcards.first.body, 'Use SourceRef-backed evidence.');
+      expect(flashcards.first.hasTraceableSource, true);
     });
   });
 

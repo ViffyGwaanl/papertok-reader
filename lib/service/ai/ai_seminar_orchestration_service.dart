@@ -206,6 +206,12 @@ class AiSeminarOrchestrationService {
           .where((entry) => entry.kind == AiSeminarWhiteboardKind.openQuestion)
           .map((entry) => entry.text)
           .toList(growable: false),
+      candidateReviewQuestions: entries
+          .where(
+              (entry) => entry.kind == AiSeminarWhiteboardKind.reviewSuggestion)
+          .map((entry) => entry.text.trim())
+          .where((text) => text.isNotEmpty)
+          .toList(growable: false),
       candidateCards: entries
           .where((entry) => entry.kind == AiSeminarWhiteboardKind.candidateCard)
           .toList(growable: false),

@@ -13,6 +13,7 @@ class ReviewItemStore {
   static const _sourceTypesWithApplyAdapters = {
     ReviewItemSourceType.knowledgeCard,
     ReviewItemSourceType.conceptGraphRelation,
+    ReviewItemSourceType.flashcardCandidate,
   };
 
   final Directory rootDir;
