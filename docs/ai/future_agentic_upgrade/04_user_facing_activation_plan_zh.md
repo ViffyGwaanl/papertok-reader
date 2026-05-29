@@ -19,6 +19,7 @@
 | 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 runtime：用户可启动 role-by-role Seminar，查看 evidence、角色输出、Shared Whiteboard、synthesis，并把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox。 | 阅读页优先 current book evidence；Settings 独立入口没有 current book 时会走 library fallback。Seminar synthesis 本身只进入 Review，不自动应用；候选卡和候选 flashcard 仍需用户在 Review Inbox 中批准/应用后才成为长期资产或复习项。 |
 | AI Chat 普通解释 | 阅读页选中文本 -> `AI`。 | 仍可用，保留原行为。 | 不自动生成 KnowledgeCard 或 ConceptGraph。 |
 | ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer、选中文本入口、KnowledgeCard -> draft ConceptGraph producer、Seminar candidate card -> conceptRefs -> KnowledgeCard -> ConceptGraph 候选链路，以及空态 `Create draft candidate` 显性 action：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部路径、显示 orphan/broken link，并可把 derived RAG/GraphRAG result 写成待审图谱候选。 | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard，或带 `derivedLayer/derivedSummary + traceable chunk SourceRef` 的 library RAG result，会生成 draft node/edge 和 pending relation ReviewItem；空态草稿入口使用本地文本检索，关闭 query embedding、vector fallback 和 rerank；AI Chat 普通对话尚未自动触发 RAG/GraphRAG producer，更强可视化布局还没接，不自动创建正式节点。 |
+| RAG/GraphRAG -> KnowledgeCard | 阅读页选中文本 -> `图谱/Graph` -> 无相关概念空态 -> `Card / 知识卡`。 | 本分支已接入 `RagEvidenceKnowledgeCardProducer` 和 ConceptGraph 空态 Card action；本地 RAG/GraphRAG 结果可进入 KnowledgeCard store 与 Review Inbox。 | 只接受带 traceable chunk SourceRef 和可保存 chunk snippet 的 RAG evidence；derived summary 只作为 explanation，正式 quote/evidence 使用书内 chunk snippet；不自动写图谱、长期记忆、笔记或 spaced review。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；KnowledgeCard 或 Seminar 候选 flashcard 在 Review Inbox 中 `Apply` 后入队。 | 本分支已接入 `.knowledge/spaced_review_items_v1.json`、复习页、Again/Hard/Good/Easy 评分、来源跳转状态；Seminar 的 `reviewSuggestion` 会作为 flashcard candidate 进入 Review。 | KnowledgeCard apply 和 flashcard candidate apply 已接入；跨设备同步还没接。 |
 | Sync / Export 知识资产 | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览和创建入口；只纳入已应用 KnowledgeCard 和复习历史，显性显示排除项和待审冲突。 | 目前是本地 manifest 导出入口，不是完整云同步引擎；per-entity remote sync 和冲突 Review UI 仍在剩余任务中。 |
 
@@ -164,7 +165,41 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.5 间隔复习
+### 2.5 RAG / GraphRAG 结果生成知识卡
+
+用户路径：
+
+1. 打开一本书。
+2. 选中一段文本。
+3. 点击选中菜单里的 `图谱/Graph`。
+4. 如果没有匹配到已有概念，页面展示空态。
+5. 用户点击空态里的 `Card / 知识卡`。
+6. 系统执行本地文本 library RAG search，并关闭 query embedding、vector fallback、rerank。
+7. 系统只从带 traceable chunk SourceRef 的 RAG evidence 创建 `KnowledgeCard(origin=rag-evidence)`。
+8. 系统创建对应 `ReviewItem(sourceType=knowledge-card)`。
+9. 用户进入 `Settings -> AI -> Review inbox` 审核这张卡。
+10. 用户可以批准、忽略、应用，并通过 SourceRef 跳回原文 chunk。
+
+Gate：
+
+- 入口必须是用户显式点击 `Card / 知识卡`。
+- 本入口不调用 LLM、embedding、rerank 或 web provider，不外发正文。
+- 只有 `SourceRef.hasDerivedChunkHint`、可追踪回书内 chunk、且带可保存 chunk snippet 的 evidence 能进入卡片。
+- `derivedSummary` 只作为 explanation，不作为 formal evidence snippet；quote 使用书内 chunk snippet。
+- Producer 只写 pending KnowledgeCard 和 pending ReviewItem，不写 ConceptGraph node/edge、Memory、Note 或 Spaced Review。
+- 重复点击同一 query 和同一 evidence 不制造重复卡。
+
+验证命令：
+
+```bash
+flutter test --no-pub \
+  test/service/knowledge/rag_evidence_knowledge_card_producer_test.dart \
+  test/providers/concept_graph_explorer_test.dart \
+  test/page/settings_page/concept_graph_explorer_page_test.dart \
+  -r compact
+```
+
+### 2.6 间隔复习
 
 用户路径：
 
@@ -198,7 +233,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.6 知识同步 / 导出
+### 2.7 知识同步 / 导出
 
 用户路径：
 
@@ -237,6 +272,7 @@ flutter test --no-pub \
 | UFA-C01-T01 | In Review | Selection KnowledgeCard | 选中文本生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore | `SelectionKnowledgeCardProducer` | 已通过 producer 测试，重复点击不重复写入。 |
 | UFA-C01-T02 | In Review | Selection KnowledgeCard | 阅读页选中菜单显示 `知识卡`。 | UFA-C01-T01, E07 menu | `ExcerptMenu` action, l10n keys | widget smoke 能看到 `Card/Seminar` 入口。 |
 | UFA-C01-T03 | In Review | Image Analysis KnowledgeCard | 图片解析结果生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore, E07 image analysis sheet | `ImageAnalysisKnowledgeCardProducer`, `AiImageAnalysisSheet` Card action | 图片解析结果弹层显示 `Card` 入口；点击后写 pending KnowledgeCard 和 pending ReviewItem；重复点击不制造重复卡；不自动写长期资产。 |
+| UFA-C01-T04 | In Review | RAG Evidence KnowledgeCard | 本地 RAG/GraphRAG evidence 生成待审 KnowledgeCard。 | E00 SourceRef, E02 RAG evidence, E03 store, E05 ReviewItemStore, E07 ConceptGraph empty state | `RagEvidenceKnowledgeCardProducer`, `ConceptGraphExplorerNotifier.createKnowledgeCardFromLibrarySearch`, 空态 `Card` action | 只有 traceable chunk SourceRef 且带可保存 chunk snippet 的 RAG evidence 能写 pending KnowledgeCard 和 pending ReviewItem；derived summary 不替代书内 chunk evidence；不写正式图谱或长期资产。 |
 | UFA-C02-T01 | In Review | Seminar launcher | 阅读页选中菜单显示 `研讨`，打开结构化 Seminar runtime page。 | AI Seminar runtime, E07 menu | `ExcerptMenu` action | 入口可见；选中文本预填；不自动写用户资产。 |
 | UFA-C02-T02 | In Review | Structured Seminar runtime UI | 把 `AiSeminarOrchestrationService` 接入真实模型流式事件。 | E01 services, E06 governance, E07 progress UI | `AiSeminarRuntimeService`、`aiSeminarRuntimeProvider`、`AiSeminarRuntimePage` | 角色 turn、evidence、whiteboard、synthesis 进入可序列化 runtime state；失败可重试，运行可取消。 |
 | UFA-C02-T03 | In Review | Seminar Review handoff | Seminar synthesis 和候选卡进入 Review Inbox。 | UFA-C02-T02, E05 controller | `AiSeminarRuntimeNotifier.sendToReview` + `SeminarSynthesisReviewAdapter` | 只有 `readyForReview + traceable handoff` 的 synthesis 进入 pending Review；候选卡保持 AI draft/pending，不直接应用。 |

@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
+import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
+import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 
@@ -172,6 +174,83 @@ void main() {
     expect(find.text('No related concepts yet'), findsNothing);
     expect(find.text('attention memory'), findsWidgets);
     expect(find.text('Attention'), findsWidgets);
+  });
+
+  testWidgets('empty state Card action creates RAG KnowledgeCard review item',
+      (tester) async {
+    final mutableStore = _MutableConceptGraphStore();
+    final cardStore = _MemoryKnowledgeCardStore();
+    final reviewStore = _MemoryReviewItemStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphKnowledgeCardStoreProvider.overrideWithValue(cardStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphLibrarySearchProvider.overrideWithValue(
+            (query) async => AiSemanticSearchLibraryResult(
+              ok: true,
+              query: query,
+              evidence: [
+                AiSemanticSearchLibraryEvidence(
+                  chunkId: 77,
+                  bookId: 7,
+                  bookTitle: 'Graph Notes',
+                  href: 'Text/rag.xhtml',
+                  anchor: 'Chunk 77',
+                  snippet: 'Book chunk evidence for attention and memory.',
+                  jumpLink:
+                      'paperreader://reader/open?bookId=7&href=Text/rag.xhtml',
+                  score: 0.91,
+                  sourceRef: SourceRef(
+                    bookId: 7,
+                    href: 'Text/rag.xhtml',
+                    chunkId: 77,
+                    jumpLink:
+                        'paperreader://reader/open?bookId=7&href=Text/rag.xhtml',
+                    sourceTextSnippet:
+                        'Book chunk evidence for attention and memory.',
+                    sourceKind: SourceRefKind.libraryRag,
+                  ),
+                  derivedLayer: 'graph',
+                  derivedSummary:
+                      'GraphRAG community: Key themes: Attention, Memory.',
+                ),
+              ],
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(
+            initialQuery: 'attention memory',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('No related concepts yet'), findsOneWidget);
+    expect(find.text('Card'), findsOneWidget);
+
+    await tester.tap(find.text('Card'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(
+      reviewStore.items
+          .where(
+              (item) => item.sourceType == ReviewItemSourceType.knowledgeCard)
+          .length,
+      1,
+    );
+    expect(cardStore.cards.single.origin, KnowledgeCardOrigin.ragEvidence);
+    expect(mutableStore.nodes, isEmpty);
   });
 }
 
@@ -397,6 +476,8 @@ class _MutableConceptGraphStore extends ConceptGraphStore {
 class _MemoryReviewItemStore extends ReviewItemStore {
   final _items = <String, ReviewItem>{};
 
+  Iterable<ReviewItem> get items => _items.values;
+
   @override
   Future<ReviewItem?> getById(String id) async => _items[id];
 
@@ -404,5 +485,33 @@ class _MemoryReviewItemStore extends ReviewItemStore {
   Future<ReviewItem> upsert(ReviewItem item) async {
     _items[item.id] = item;
     return item;
+  }
+}
+
+class _MemoryKnowledgeCardStore extends KnowledgeCardStore {
+  final cards = <KnowledgeCard>[];
+
+  @override
+  Future<KnowledgeCardStoreUpsertResult> upsertCandidate(
+    KnowledgeCard candidate,
+  ) async {
+    for (final card in cards) {
+      if (card.id == candidate.id ||
+          KnowledgeCardDedupe.isLikelyDuplicate(card, candidate)) {
+        return KnowledgeCardStoreUpsertResult(
+          card: card,
+          inserted: false,
+          duplicateOfId: card.id,
+        );
+      }
+    }
+    final staged = candidate.copyWith(
+      reviewState: candidate.reviewState == KnowledgeCardReviewState.draft
+          ? KnowledgeCardReviewState.draft
+          : KnowledgeCardReviewState.pending,
+      ownership: AiOutputOwnership.aiGeneratedDraft,
+    );
+    cards.add(staged);
+    return KnowledgeCardStoreUpsertResult(card: staged, inserted: true);
   }
 }

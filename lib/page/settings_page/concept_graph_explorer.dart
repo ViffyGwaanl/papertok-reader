@@ -507,6 +507,7 @@ class _EmptyGraph extends ConsumerWidget {
     final hasQuery =
         selectionQuery != null && selectionQuery!.trim().isNotEmpty;
     final isCreating = state.isCreatingDraftCandidate;
+    final isCreatingCard = state.isCreatingRagKnowledgeCard;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -533,22 +534,46 @@ class _EmptyGraph extends ConsumerWidget {
             ),
             if (hasQuery) ...[
               const SizedBox(height: 14),
-              OutlinedButton.icon(
-                icon: isCreating
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.add_link_outlined),
-                label: Text(l10n.conceptGraphCreateDraftCandidate),
-                onPressed: isCreating
-                    ? null
-                    : () => ref
-                        .read(conceptGraphExplorerProvider.notifier)
-                        .createDraftCandidateFromLibrarySearch(
-                          selectionQuery!,
-                        ),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    icon: isCreating
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.add_link_outlined),
+                    label: Text(l10n.conceptGraphCreateDraftCandidate),
+                    onPressed: isCreating
+                        ? null
+                        : () => ref
+                            .read(conceptGraphExplorerProvider.notifier)
+                            .createDraftCandidateFromLibrarySearch(
+                              selectionQuery!,
+                            ),
+                  ),
+                  OutlinedButton.icon(
+                    icon: isCreatingCard
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.style_outlined),
+                    label: Text(l10n.contextMenuKnowledgeCard),
+                    onPressed: isCreatingCard
+                        ? null
+                        : () => ref
+                            .read(conceptGraphExplorerProvider.notifier)
+                            .createKnowledgeCardFromLibrarySearch(
+                              selectionQuery!,
+                            ),
+                  ),
+                ],
               ),
             ],
           ],

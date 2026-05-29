@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
+import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/knowledge/rag_evidence_knowledge_card_producer.dart';
 import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 
@@ -16,9 +18,22 @@ final conceptGraphReviewItemStoreProvider = Provider<ReviewItemStore>((ref) {
   return ReviewItemStore();
 });
 
+final conceptGraphKnowledgeCardStoreProvider =
+    Provider<KnowledgeCardStore>((ref) {
+  return KnowledgeCardStore();
+});
+
 final conceptGraphProducerProvider = Provider<ConceptGraphProducer>((ref) {
   return ConceptGraphProducer(
     graphStore: ref.watch(conceptGraphStoreProvider),
+    reviewStore: ref.watch(conceptGraphReviewItemStoreProvider),
+  );
+});
+
+final conceptGraphRagCardProducerProvider =
+    Provider<RagEvidenceKnowledgeCardProducer>((ref) {
+  return RagEvidenceKnowledgeCardProducer(
+    cardStore: ref.watch(conceptGraphKnowledgeCardStoreProvider),
     reviewStore: ref.watch(conceptGraphReviewItemStoreProvider),
   );
 });
@@ -41,6 +56,7 @@ final conceptGraphExplorerProvider = StateNotifierProvider<
   return ConceptGraphExplorerNotifier(
     ref.watch(conceptGraphStoreProvider),
     ref.watch(conceptGraphProducerProvider),
+    ref.watch(conceptGraphRagCardProducerProvider),
     ref.watch(conceptGraphLibrarySearchProvider),
   );
 });
@@ -60,6 +76,7 @@ class ConceptGraphExplorerState {
     required this.nodes,
     required this.selection,
     required this.draftCandidate,
+    required this.ragKnowledgeCard,
     this.selectedNodeId,
     this.integrity,
     this.lastError,
@@ -70,17 +87,21 @@ class ConceptGraphExplorerState {
       nodes: AsyncValue<List<ConceptNode>>.data(<ConceptNode>[]),
       selection: AsyncValue<ConceptGraphExplorerSelection?>.data(null),
       draftCandidate: AsyncValue<ConceptGraphProducerResult?>.data(null),
+      ragKnowledgeCard:
+          AsyncValue<RagEvidenceKnowledgeCardProducerResult?>.data(null),
     );
   }
 
   final AsyncValue<List<ConceptNode>> nodes;
   final AsyncValue<ConceptGraphExplorerSelection?> selection;
   final AsyncValue<ConceptGraphProducerResult?> draftCandidate;
+  final AsyncValue<RagEvidenceKnowledgeCardProducerResult?> ragKnowledgeCard;
   final String? selectedNodeId;
   final ConceptGraphIntegrityReport? integrity;
   final String? lastError;
 
   bool get isCreatingDraftCandidate => draftCandidate.isLoading;
+  bool get isCreatingRagKnowledgeCard => ragKnowledgeCard.isLoading;
 
   Map<String, ConceptNode> get nodesById {
     return {
@@ -93,6 +114,7 @@ class ConceptGraphExplorerState {
     AsyncValue<List<ConceptNode>>? nodes,
     AsyncValue<ConceptGraphExplorerSelection?>? selection,
     AsyncValue<ConceptGraphProducerResult?>? draftCandidate,
+    AsyncValue<RagEvidenceKnowledgeCardProducerResult?>? ragKnowledgeCard,
     Object? selectedNodeId = _unset,
     ConceptGraphIntegrityReport? integrity,
     String? lastError,
@@ -102,6 +124,7 @@ class ConceptGraphExplorerState {
       nodes: nodes ?? this.nodes,
       selection: selection ?? this.selection,
       draftCandidate: draftCandidate ?? this.draftCandidate,
+      ragKnowledgeCard: ragKnowledgeCard ?? this.ragKnowledgeCard,
       selectedNodeId: identical(selectedNodeId, _unset)
           ? this.selectedNodeId
           : selectedNodeId as String?,
@@ -116,11 +139,13 @@ class ConceptGraphExplorerNotifier
   ConceptGraphExplorerNotifier(
     this._store,
     this._producer,
+    this._ragCardProducer,
     this._librarySearch,
   ) : super(ConceptGraphExplorerState.initial());
 
   final ConceptGraphStore _store;
   final ConceptGraphProducer _producer;
+  final RagEvidenceKnowledgeCardProducer _ragCardProducer;
   final ConceptGraphLibrarySearch _librarySearch;
 
   Future<void> refresh() async {
@@ -222,6 +247,35 @@ class ConceptGraphExplorerNotifier
       state = state.copyWith(
         draftCandidate:
             AsyncValue<ConceptGraphProducerResult?>.error(error, stackTrace),
+        lastError: error.toString(),
+      );
+    }
+  }
+
+  Future<void> createKnowledgeCardFromLibrarySearch(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    state = state.copyWith(
+      ragKnowledgeCard:
+          const AsyncValue<RagEvidenceKnowledgeCardProducerResult?>.loading(),
+      clearError: true,
+    );
+    try {
+      final searchResult = await _librarySearch(trimmed);
+      final result =
+          await _ragCardProducer.createFromLibrarySearchResult(searchResult);
+      state = state.copyWith(
+        ragKnowledgeCard:
+            AsyncValue<RagEvidenceKnowledgeCardProducerResult?>.data(result),
+        clearError: true,
+      );
+    } catch (error, stackTrace) {
+      state = state.copyWith(
+        ragKnowledgeCard:
+            AsyncValue<RagEvidenceKnowledgeCardProducerResult?>.error(
+          error,
+          stackTrace,
+        ),
         lastError: error.toString(),
       );
     }

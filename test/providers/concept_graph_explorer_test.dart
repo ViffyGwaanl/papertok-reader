@@ -3,26 +3,31 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
+import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
+import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 
 void main() {
   late Directory tempRoot;
   late ConceptGraphStore store;
+  late KnowledgeCardStore cardStore;
   late ReviewItemStore reviewStore;
   late ProviderContainer container;
 
   setUp(() async {
     tempRoot = await Directory.systemTemp.createTemp('concept_graph_page_');
     store = ConceptGraphStore(rootDir: tempRoot);
+    cardStore = KnowledgeCardStore(rootDir: tempRoot);
     reviewStore = ReviewItemStore(rootDir: tempRoot);
     container = ProviderContainer(
       overrides: [
         conceptGraphStoreProvider.overrideWithValue(store),
+        conceptGraphKnowledgeCardStoreProvider.overrideWithValue(cardStore),
         conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
       ],
     );
@@ -229,5 +234,34 @@ void main() {
         state.draftCandidate.value?.skippedReason, 'missing-derived-rag-layer');
     expect(await store.listNodes(), isEmpty);
     expect(await reviewStore.list(), isEmpty);
+  });
+
+  test('create knowledge card from library RAG result leaves graph untouched',
+      () async {
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        conceptGraphStoreProvider.overrideWithValue(store),
+        conceptGraphKnowledgeCardStoreProvider.overrideWithValue(cardStore),
+        conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+        conceptGraphLibrarySearchProvider.overrideWithValue(
+          (query) async => derivedSearchResult(query),
+        ),
+      ],
+    );
+
+    final notifier = container.read(conceptGraphExplorerProvider.notifier);
+    await notifier.createKnowledgeCardFromLibrarySearch('attention memory');
+
+    final state = container.read(conceptGraphExplorerProvider);
+    expect(state.ragKnowledgeCard.value?.card.origin,
+        KnowledgeCardOrigin.ragEvidence);
+
+    final reviewItems = await reviewStore.list(
+      sourceType: ReviewItemSourceType.knowledgeCard,
+    );
+    expect(reviewItems, hasLength(1));
+    expect(reviewItems.single.status, ReviewItemStatus.pending);
+    expect(await store.listNodes(), isEmpty);
   });
 }
