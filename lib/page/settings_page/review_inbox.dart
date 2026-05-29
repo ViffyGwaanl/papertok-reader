@@ -180,6 +180,7 @@ class _ReviewInboxCard extends ConsumerWidget {
         canResolveSyncConflict;
     final canApplySource =
         item.sourceType == ReviewItemSourceType.knowledgeCard ||
+            item.sourceType == ReviewItemSourceType.flashcardCandidate ||
             item.sourceType == ReviewItemSourceType.conceptGraphRelation ||
             canResolveSyncConflict;
     final audit = ref.read(reviewInboxControllerProvider).sourceJumpAudit(item);

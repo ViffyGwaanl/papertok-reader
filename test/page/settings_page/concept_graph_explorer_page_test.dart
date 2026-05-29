@@ -211,6 +211,66 @@ void main() {
     expect(find.text('Attention'), findsWidgets);
   });
 
+  testWidgets('empty state draft action explains skipped handoff',
+      (tester) async {
+    final mutableStore = _MutableConceptGraphStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphLibrarySearchProvider.overrideWithValue(
+            (query) async => AiSemanticSearchLibraryResult(
+              ok: true,
+              query: query,
+              evidence: [
+                AiSemanticSearchLibraryEvidence(
+                  chunkId: 77,
+                  bookId: 7,
+                  bookTitle: 'Graph Notes',
+                  href: 'Text/rag.xhtml',
+                  anchor: 'Chunk 77',
+                  snippet: 'Book chunk evidence without graph layer.',
+                  jumpLink:
+                      'paperreader://reader/open?bookId=7&href=Text/rag.xhtml',
+                  score: 0.91,
+                  sourceRef: SourceRef(
+                    bookId: 7,
+                    href: 'Text/rag.xhtml',
+                    chunkId: 77,
+                    jumpLink:
+                        'paperreader://reader/open?bookId=7&href=Text/rag.xhtml',
+                    sourceTextSnippet:
+                        'Book chunk evidence without graph layer.',
+                    sourceKind: SourceRefKind.libraryRag,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(
+            initialQuery: 'attention without graph layer',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Create draft candidate'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('No related concepts yet'), findsOneWidget);
+    expect(find.textContaining('missing-derived-rag-layer'), findsOneWidget);
+  });
+
   testWidgets('empty state Card action creates RAG KnowledgeCard review item',
       (tester) async {
     final mutableStore = _MutableConceptGraphStore();
@@ -286,6 +346,7 @@ void main() {
     );
     expect(cardStore.cards.single.origin, KnowledgeCardOrigin.ragEvidence);
     expect(mutableStore.nodes, isEmpty);
+    expect(find.text('Added to Review inbox'), findsOneWidget);
   });
 }
 

@@ -166,12 +166,52 @@ void main() {
     expect(find.text('Apply'), findsOneWidget);
     expect(find.text('Approve'), findsNothing);
   });
+
+  testWidgets('approved flashcard candidate can be applied from inbox',
+      (tester) async {
+    final flashcardController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'flashcard:seminar-review',
+        sourceType: ReviewItemSourceType.flashcardCandidate,
+        sourceId: 'seminar-review',
+        title: 'Flashcard: evidence check',
+        body: 'Q: What should be remembered?\nA: The source-backed claim.',
+        status: ReviewItemStatus.approved,
+        sourceRefs: [
+          SourceRef(
+            bookId: 11,
+            href: 'Text/seminar.xhtml',
+            cfi: 'epubcfi(/6/20)',
+            sourceTitle: 'Seminar Book',
+            locationLabel: 'Chapter 3',
+            sourceTextSnippet: 'A traceable seminar flashcard source.',
+            sourceKind: SourceRefKind.reader,
+          ),
+        ],
+      ),
+    ]);
+
+    await _pumpPage(tester, flashcardController);
+    await tester.tap(find.text('Approved').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Flashcard: evidence check'), findsOneWidget);
+    expect(find.text('Flashcard'), findsOneWidget);
+    expect(find.text('Apply'), findsOneWidget);
+
+    await tester.tap(find.text('Apply'));
+    await tester.pump();
+
+    expect(flashcardController.appliedIds, ['flashcard:seminar-review']);
+  });
 }
 
 class _FakeReviewInboxController extends ReviewInboxController {
   _FakeReviewInboxController(this._items);
 
   final List<ReviewItem> _items;
+  final appliedIds = <String>[];
 
   @override
   Future<List<ReviewItem>> list({
@@ -183,6 +223,14 @@ class _FakeReviewInboxController extends ReviewInboxController {
       if (sourceType != null && item.sourceType != sourceType) return false;
       return true;
     }).toList(growable: false);
+  }
+
+  @override
+  Future<ReviewItem> apply(String id, {int? now}) async {
+    appliedIds.add(id);
+    return _items.firstWhere((item) => item.id == id).copyWith(
+          status: ReviewItemStatus.applied,
+        );
   }
 }
 

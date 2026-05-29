@@ -816,6 +816,7 @@ class _EmptyGraph extends ConsumerWidget {
                   ),
                 ],
               ),
+              ..._emptyGraphActionFeedback(context, state),
             ],
           ],
         ),
@@ -840,6 +841,70 @@ class _SelectPrompt extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: ClaudePalette.secondary(context),
               ),
+        ),
+      ),
+    );
+  }
+}
+
+List<Widget> _emptyGraphActionFeedback(
+  BuildContext context,
+  ConceptGraphExplorerState state,
+) {
+  final l10n = L10n.of(context);
+  final feedback = <Widget>[];
+  final draftResult = state.draftCandidate.valueOrNull;
+  if (!state.isCreatingDraftCandidate && draftResult != null) {
+    final skippedReason = draftResult.skippedReason;
+    final text = draftResult.createdAny
+        ? l10n.knowledgeCardAddedToReviewInbox
+        : skippedReason == null
+            ? l10n.conceptGraphNoEvidence
+            : '${l10n.conceptGraphNoEvidence}: $skippedReason';
+    feedback.add(_ActionFeedback(text: text));
+  }
+
+  final cardResult = state.ragKnowledgeCard.valueOrNull;
+  if (!state.isCreatingRagKnowledgeCard && cardResult != null) {
+    final text = cardResult.addedToReviewInbox
+        ? (cardResult.inserted
+            ? l10n.knowledgeCardAddedToReviewInbox
+            : l10n.knowledgeCardAlreadyInReviewInbox)
+        : l10n.knowledgeCardAlreadySaved;
+    feedback.add(_ActionFeedback(text: text));
+  }
+
+  if (feedback.isEmpty) return const <Widget>[];
+  return [
+    const SizedBox(height: 12),
+    ...feedback,
+  ];
+}
+
+class _ActionFeedback extends StatelessWidget {
+  const _ActionFeedback({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: ClaudePalette.elevated(context),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.24),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ),
       ),
     );
