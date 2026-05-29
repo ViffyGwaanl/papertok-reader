@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/service/ai/index.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_orchestration_service.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
 
@@ -245,6 +246,48 @@ void main() {
     );
   });
 
+  test('budget gate uses local estimate when provider usage is present',
+      () async {
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: 'ok',
+            evidenceRefIds: const ['e1'],
+            tokenUsage: const AiSeminarTokenUsage(
+              inputTokens: 1000,
+              outputTokens: 1000,
+              isEstimated: false,
+              estimationMethod: 'provider-usage-tracker-v1',
+              source: 'provider-reported',
+            ),
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(
+          AiSeminarSessionContract(
+            id: 's-provider-usage-budget',
+            question: 'Budget?',
+            budgetPolicy: const AiSeminarBudgetPolicy(
+              maxRoleOutputTokens: 10,
+              maxRunTokens: 10000,
+            ),
+          ),
+        )
+        .toList();
+
+    expect(events.last.type, AiSeminarRuntimeEventType.synthesisReady);
+    expect(events.last.run!.tokenUsage!.source, 'provider-reported');
+  });
+
   test('does not count executor-supplied token usage on failed role turns',
       () async {
     final service = AiSeminarRuntimeService(
@@ -360,6 +403,43 @@ void main() {
           )
           .toList(),
       throwsFormatException,
+    );
+  });
+
+  test('model role executor attaches provider usage delta to completed turn',
+      () async {
+    final executor = AiSeminarModelRoleExecutor(
+      generateStream: (_, {conversationId}) async* {
+        final tracker = ensureAiUsageTracker(conversationId);
+        tracker.recordApiCall(inputTokens: 9, outputTokens: 4);
+        yield '{"role":"critical","responseText":"critical response","evidenceRefIds":["e1"]}';
+      },
+    );
+
+    final chunks = await executor
+        .streamRole(
+          AiSeminarRoleInvocation(
+            session: AiSeminarSessionContract(
+              id: 's-provider-delta',
+              question: 'Usage?',
+            ),
+            role: AiSeminarRole.critical,
+            evidenceBundle: bundle(),
+            priorTurns: const [],
+            prompt: 'prompt',
+          ),
+          AiSeminarCancellationToken(),
+        )
+        .toList();
+    final completedTurn = chunks.last.completedTurn!;
+
+    expect(completedTurn.tokenUsage!.source, 'provider-reported');
+    expect(completedTurn.tokenUsage!.inputTokens, 9);
+    expect(completedTurn.tokenUsage!.outputTokens, 4);
+    expect(completedTurn.tokenUsage!.isEstimated, false);
+    expect(
+      completedTurn.tokenUsage!.estimationMethod,
+      'provider-usage-tracker-v1',
     );
   });
 }

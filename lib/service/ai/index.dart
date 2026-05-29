@@ -50,6 +50,10 @@ AiUsageTracker _trackerForSession(String? id) =>
 AiUsageTracker? getUsageTracker(String? conversationId) =>
     _sessionTrackers[conversationId ?? ''];
 
+/// Returns the usage tracker for a conversation, creating it if necessary.
+AiUsageTracker ensureAiUsageTracker(String? conversationId) =>
+    _trackerForSession(conversationId);
+
 CancelableLangchainRunner _runnerForScope(AiRequestScope scope) {
   return switch (scope) {
     AiRequestScope.chat => _chatRunner,
@@ -444,7 +448,13 @@ Stream<String> _generateStream({
       );
     } else {
       final prompt = PromptValue.chat(sanitizedMessages);
-      stream = runner.stream(model: model, prompt: prompt);
+      final tracker =
+          conversationId == null ? null : _trackerForSession(conversationId);
+      stream = runner.stream(
+        model: model,
+        prompt: prompt,
+        usageTracker: tracker,
+      );
     }
 
     var buffer = '';

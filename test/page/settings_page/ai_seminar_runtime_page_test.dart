@@ -109,6 +109,42 @@ void main() {
     );
   }
 
+  AiSeminarRuntimeService providerUsageService() {
+    final bundle = AiSeminarEvidenceBundle(
+      query: 'What is the claim?',
+      evidence: [
+        AiSeminarEvidence(
+          id: 'e1',
+          scope: AiSeminarEvidenceScope.currentBook,
+          text: 'The source passage.',
+          sourceRef: traceableRef(),
+        ),
+      ],
+    );
+    return AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle,
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+            tokenUsage: const AiSeminarTokenUsage(
+              inputTokens: 9,
+              outputTokens: 4,
+              isEstimated: false,
+              estimationMethod: 'provider-usage-tracker-v1',
+              source: 'provider-reported',
+            ),
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+  }
+
   Finder textFieldWithLabel(String label) {
     return find.byWidgetPredicate(
       (widget) => widget is TextField && widget.decoration?.labelText == label,
@@ -179,6 +215,48 @@ void main() {
     expect(find.text('Candidate card'), findsOneWidget);
     expect(find.text('Synthesis'), findsOneWidget);
     expect(find.text('Send to Review'), findsOneWidget);
+  });
+
+  testWidgets('shows provider reported token usage when available',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(
+            providerUsageService(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.scrollUntilVisible(
+      find.textContaining('Provider reported usage'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Provider reported usage'), findsOneWidget);
+    expect(
+      find.textContaining('Stored from provider usage metadata'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('provider-usage-tracker-v1'), findsOneWidget);
+    expect(find.textContaining('Provider usage'), findsWidgets);
   });
 
   testWidgets(

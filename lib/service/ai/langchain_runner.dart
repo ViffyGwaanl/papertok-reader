@@ -144,11 +144,14 @@ class CancelableLangchainRunner {
   Stream<String> stream({
     required BaseChatModel model,
     required PromptValue prompt,
+    AiUsageTracker? usageTracker,
   }) {
     String thinkBuffer = '';
     String answerBuffer = '';
     bool reasoningDetected = false;
     bool answerPhaseStarted = false;
+    ChatResult? aggregatedResult;
+    var streamFailed = false;
 
     late StreamController<String> controller;
     controller = StreamController<String>(
@@ -163,6 +166,9 @@ class CancelableLangchainRunner {
         final source = model.stream(prompt);
         _subscription = source.listen(
           (event) {
+            aggregatedResult = aggregatedResult == null
+                ? event
+                : aggregatedResult!.concat(event);
             final rawChunk = event.output.content;
             final metaReasoning = (event.metadata['reasoning_content'] ??
                     event.metadata['reasoning'])
@@ -223,11 +229,18 @@ class CancelableLangchainRunner {
             }
           },
           onError: (Object error, StackTrace stackTrace) {
+            streamFailed = true;
             if (!controller.isClosed) {
               controller.addError(error, stackTrace);
             }
           },
           onDone: () async {
+            if (!streamFailed && aggregatedResult != null) {
+              usageTracker?.recordApiCall(
+                inputTokens: aggregatedResult!.usage.promptTokens ?? 0,
+                outputTokens: aggregatedResult!.usage.responseTokens ?? 0,
+              );
+            }
             await _closeModel(model);
             if (!controller.isClosed) {
               await controller.close();

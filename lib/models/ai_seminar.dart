@@ -440,14 +440,27 @@ class AiSeminarTokenUsage {
     required this.outputTokens,
     required this.isEstimated,
     required this.estimationMethod,
+    this.source = sourceLocalEstimate,
+    this.cacheReadTokens = 0,
+    this.cacheWriteTokens = 0,
+    this.apiCalls,
   });
+
+  static const String sourceLocalEstimate = 'local-estimate';
+  static const String sourceProviderReported = 'provider-reported';
+  static const String sourceMixed = 'mixed';
 
   final int inputTokens;
   final int outputTokens;
   final bool isEstimated;
   final String estimationMethod;
+  final String source;
+  final int cacheReadTokens;
+  final int cacheWriteTokens;
+  final int? apiCalls;
 
   int get totalTokens => inputTokens + outputTokens;
+  bool get isProviderReported => source == sourceProviderReported;
 
   Map<String, dynamic> toJson() => {
         'inputTokens': inputTokens,
@@ -455,15 +468,29 @@ class AiSeminarTokenUsage {
         'totalTokens': totalTokens,
         'isEstimated': isEstimated,
         'estimationMethod': estimationMethod,
+        'source': source,
+        if (cacheReadTokens > 0) 'cacheReadTokens': cacheReadTokens,
+        if (cacheWriteTokens > 0) 'cacheWriteTokens': cacheWriteTokens,
+        if (apiCalls != null && apiCalls! > 0) 'apiCalls': apiCalls,
       };
 
   factory AiSeminarTokenUsage.fromJson(Map<String, dynamic> json) {
     final method = (json['estimationMethod'] ?? '').toString().trim();
+    final estimated = json['isEstimated'] != false;
+    final source = (json['source'] ?? '').toString().trim();
     return AiSeminarTokenUsage(
       inputTokens: _nonNegativeInt(json['inputTokens']),
       outputTokens: _nonNegativeInt(json['outputTokens']),
-      isEstimated: json['isEstimated'] != false,
+      isEstimated: estimated,
       estimationMethod: method.isEmpty ? 'unknown' : method,
+      source: source.isEmpty
+          ? estimated
+              ? sourceLocalEstimate
+              : sourceProviderReported
+          : source,
+      cacheReadTokens: _nonNegativeInt(json['cacheReadTokens']),
+      cacheWriteTokens: _nonNegativeInt(json['cacheWriteTokens']),
+      apiCalls: _positiveInt(json['apiCalls']),
     );
   }
 
@@ -478,33 +505,58 @@ class AiSeminarTokenUsage {
   ) {
     var inputTokens = 0;
     var outputTokens = 0;
+    var cacheReadTokens = 0;
+    var cacheWriteTokens = 0;
+    var apiCalls = 0;
     var hasEstimated = false;
     final methods = <String>{};
+    final sources = <String>{};
     for (final usage in usages) {
       if (usage == null) continue;
       inputTokens += usage.inputTokens;
       outputTokens += usage.outputTokens;
+      cacheReadTokens += usage.cacheReadTokens;
+      cacheWriteTokens += usage.cacheWriteTokens;
+      apiCalls += usage.apiCalls ?? 0;
       hasEstimated = hasEstimated || usage.isEstimated;
       if (usage.estimationMethod.trim().isNotEmpty) {
         methods.add(usage.estimationMethod);
       }
+      if (usage.source.trim().isNotEmpty) {
+        sources.add(usage.source);
+      }
     }
     if (inputTokens == 0 && outputTokens == 0) return null;
+    final mixed = methods.length > 1 || sources.length > 1;
     return AiSeminarTokenUsage(
       inputTokens: inputTokens,
       outputTokens: outputTokens,
       isEstimated: hasEstimated,
-      estimationMethod: methods.length == 1
+      estimationMethod: methods.length == 1 && !mixed
           ? methods.single
           : methods.isEmpty
               ? 'unknown'
-              : 'mixed-local-estimate',
+              : 'mixed-token-usage',
+      source: sources.length == 1 && !mixed
+          ? sources.single
+          : sources.isEmpty
+              ? sourceLocalEstimate
+              : sourceMixed,
+      cacheReadTokens: cacheReadTokens,
+      cacheWriteTokens: cacheWriteTokens,
+      apiCalls: apiCalls > 0 ? apiCalls : null,
     );
   }
 
   static int _nonNegativeInt(Object? value) {
     final parsed = (value as num?)?.toInt() ?? 0;
     return parsed < 0 ? 0 : parsed;
+  }
+
+  static int? _positiveInt(Object? value) {
+    final parsed = (value as num?)?.toInt();
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
   }
 }
 

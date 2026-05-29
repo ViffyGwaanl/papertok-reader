@@ -180,6 +180,82 @@ void main() {
       expect(restoredRun.tokenUsage!.totalTokens, 17);
       expect(restoredRun.turns.single.tokenUsage!.totalTokens, 17);
     });
+
+    test('role turn and run round-trip provider-reported token usage', () {
+      const providerUsage = AiSeminarTokenUsage(
+        inputTokens: 20,
+        outputTokens: 8,
+        isEstimated: false,
+        estimationMethod: 'provider-usage-tracker-v1',
+        source: 'provider-reported',
+        cacheReadTokens: 3,
+        cacheWriteTokens: 2,
+      );
+      const turn = AiSeminarRoleTurn(
+        id: 'turn-critical',
+        role: AiSeminarRole.critical,
+        prompt: 'prompt',
+        responseText: 'response',
+        evidenceRefIds: ['e1'],
+        tokenUsage: providerUsage,
+      );
+
+      final restoredTurn = AiSeminarRoleTurn.fromJson(turn.toJson());
+
+      expect(restoredTurn.tokenUsage!.source, 'provider-reported');
+      expect(restoredTurn.tokenUsage!.inputTokens, 20);
+      expect(restoredTurn.tokenUsage!.outputTokens, 8);
+      expect(restoredTurn.tokenUsage!.cacheReadTokens, 3);
+      expect(restoredTurn.tokenUsage!.cacheWriteTokens, 2);
+      expect(restoredTurn.tokenUsage!.isEstimated, false);
+
+      final run = AiSeminarRun(
+        session: AiSeminarSessionContract(
+          id: 's-provider-usage',
+          question: 'Usage?',
+        ),
+        status: AiSeminarRunStatus.completed,
+        evidenceBundle: const AiSeminarEvidenceBundle(
+          query: 'Usage?',
+          evidence: [],
+        ),
+        turns: const [turn],
+        tokenUsage: providerUsage,
+      );
+      final restoredRun = AiSeminarRun.fromJson(run.toJson());
+
+      expect(restoredRun.tokenUsage!.totalTokens, 28);
+      expect(restoredRun.tokenUsage!.source, 'provider-reported');
+      expect(
+        restoredRun.turns.single.tokenUsage!.estimationMethod,
+        'provider-usage-tracker-v1',
+      );
+    });
+
+    test('aggregates mixed local and provider usage with neutral method', () {
+      final usage = AiSeminarTokenUsage.aggregate(const [
+        AiSeminarTokenUsage(
+          inputTokens: 10,
+          outputTokens: 5,
+          isEstimated: false,
+          estimationMethod: 'provider-usage-tracker-v1',
+          source: 'provider-reported',
+        ),
+        AiSeminarTokenUsage(
+          inputTokens: 4,
+          outputTokens: 2,
+          isEstimated: true,
+          estimationMethod: 'local-char-estimate-v1',
+          source: 'local-estimate',
+        ),
+      ]);
+
+      expect(usage!.inputTokens, 14);
+      expect(usage.outputTokens, 7);
+      expect(usage.isEstimated, true);
+      expect(usage.source, 'mixed');
+      expect(usage.estimationMethod, 'mixed-token-usage');
+    });
   });
 
   group('AiSeminarSynthesis', () {

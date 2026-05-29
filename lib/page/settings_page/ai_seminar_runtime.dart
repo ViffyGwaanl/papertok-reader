@@ -275,7 +275,7 @@ class _BudgetSection extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Cost cap unavailable until provider usage and pricing metadata are connected.',
+          'Cost cap unavailable until pricing metadata and USD limits are connected.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: ClaudePalette.secondary(context),
               ),
@@ -468,18 +468,19 @@ class _RolesSection extends StatelessWidget {
     final children = <Widget>[];
     final tokenUsage = state.tokenUsage;
     if (tokenUsage != null) {
+      final summary = _tokenUsageSummary(tokenUsage);
       children.add(
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Local token estimate: ${_formatTokenCount(tokenUsage.totalTokens)} tokens '
+              '${summary.title}: ${_formatTokenCount(tokenUsage.totalTokens)} tokens '
               '(${_formatTokenCount(tokenUsage.inputTokens)} in / '
               '${_formatTokenCount(tokenUsage.outputTokens)} out)',
             ),
             const SizedBox(height: 4),
             Text(
-              'Provider billing may differ · ${tokenUsage.estimationMethod}',
+              '${summary.subtitle} · ${tokenUsage.estimationMethod}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: ClaudePalette.secondary(context),
                   ),
@@ -490,6 +491,7 @@ class _RolesSection extends StatelessWidget {
     }
     for (final turn in turns) {
       final usage = turn.tokenUsage;
+      final usagePrefix = usage == null ? null : _roleUsagePrefix(usage);
       children.add(
         ListTile(
           contentPadding: EdgeInsets.zero,
@@ -501,7 +503,7 @@ class _RolesSection extends StatelessWidget {
               Text(turn.responseText),
               if (usage != null)
                 Text(
-                  'Usage: ${_formatTokenCount(usage.inputTokens)} in / '
+                  '$usagePrefix: ${_formatTokenCount(usage.inputTokens)} in / '
                   '${_formatTokenCount(usage.outputTokens)} out tokens',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: ClaudePalette.secondary(context),
@@ -699,6 +701,33 @@ String _capabilityLabel(String label, bool? value) {
   if (value == true) return label;
   if (value == false) return 'No $label';
   return '$label unknown';
+}
+
+({String title, String subtitle}) _tokenUsageSummary(
+  AiSeminarTokenUsage usage,
+) {
+  return switch (usage.source) {
+    AiSeminarTokenUsage.sourceProviderReported => (
+        title: 'Provider reported usage',
+        subtitle: 'Stored from provider usage metadata',
+      ),
+    AiSeminarTokenUsage.sourceMixed => (
+        title: 'Token usage',
+        subtitle: 'Mixed provider usage and local estimates',
+      ),
+    _ => (
+        title: 'Local token estimate',
+        subtitle: 'Provider billing may differ',
+      ),
+  };
+}
+
+String _roleUsagePrefix(AiSeminarTokenUsage usage) {
+  return switch (usage.source) {
+    AiSeminarTokenUsage.sourceProviderReported => 'Provider usage',
+    AiSeminarTokenUsage.sourceMixed => 'Mixed usage',
+    _ => 'Local estimate',
+  };
 }
 
 String _formatTokenCount(int count) {

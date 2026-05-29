@@ -33,7 +33,7 @@
 - 阅读页内优先 current book。
 - 只有用户选择跨书或当前书证据不足时才用 library。
 - 默认不调用 web。
-- 每场讨论先有本地 token budget guardrail；真实 provider usage 和美元成本预算必须等 provider usage/pricing metadata 接入后再启用。
+- 每场讨论先有本地 token budget guardrail；provider token usage 只在 provider/SDK 回传 metadata 时记录和展示；美元成本预算必须等 pricing metadata 接入后再启用。
 
 ### E01-C02 Evidence Broker
 
@@ -83,6 +83,7 @@ Seminar 结束时输出：
 | E01-C04-T05 | 接入 Seminar local token usage | E01-C04-T02, E01-C04-T04 | `AiSeminarTokenUsage`、`AiSeminarRuntimeService` local estimator、`AiSeminarRuntimePage` usage UI | 每个完成角色 turn 记录 input/output 本地估算，run 聚合 usage，页面显示 `Provider billing may differ`；不得当作 provider 账单或美元成本。 |
 | E01-C04-T06 | 接入 Seminar local recovery | E01-C04-T02, E07 Ready | `aiSeminarRuntimeStateV1`, `AiSeminarRuntimeNotifier` restore, `AiSeminarRuntimePage` recovered banner | completed/cancelled/failed state 可在同一书籍/同一入口问题本机恢复；换书或换选区清除旧 runtime/cache；running state 重启后降级为 interrupted/retryable 并回写清理 partial；恢复缓存不进普通 prefs backup。 |
 | E01-C04-T07 | 接入 Seminar local token budget | E01-C04-T05, E07 Ready | `AiSeminarBudgetPolicy`, `AiSeminarRuntimeService` budget gate, `AiSeminarRuntimePage` budget UI | 用户可设置 role output/run token budget；超出本地估算时停止后续步骤、保留失败原因并可重试；不得当作 provider 账单或美元成本上限。 |
+| E01-C04-T08 | 接入 Seminar provider token usage | E01-C04-T05, E01-C04-T07 | `CancelableLangchainRunner.stream` usage tracker、`AiSeminarModelRoleExecutor` usage delta、`AiSeminarRuntimePage` provider usage UI | provider/SDK 返回 usage metadata 时，role turn 和 run 保存 `provider-reported` token usage；无 usage metadata 时降级本地估算；local budget gate 仍只使用本地估算，不把 provider usage 当作实时账单或美元成本。 |
 
 ## 5. Task Execution Defaults
 

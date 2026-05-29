@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:langchain_core/chat_models.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_orchestration_service.dart';
+import 'package:papertok_reader/service/ai/ai_usage_tracker.dart';
 import 'package:papertok_reader/service/ai/index.dart';
 import 'package:papertok_reader/service/ai/tools/util/json_repair.dart';
 
@@ -166,6 +167,7 @@ class AiSeminarRuntimeService {
 
     final traceableEvidenceIds = _traceableEvidenceIds(evidenceBundle);
     final turns = <AiSeminarRoleTurn>[];
+    final localBudgetTurns = <AiSeminarRoleTurn>[];
 
     for (final role in AiSeminarOrchestrationService.executionOrder(
       session.roles,
@@ -305,28 +307,37 @@ class AiSeminarRuntimeService {
         return;
       }
 
-      final turnWithUsage = _attachEstimatedTokenUsage(
+      final localBudgetUsage = _estimatedTokenUsage(
         invocation: invocation,
         turn: turn,
       );
-      final nextTurns = [...turns, turnWithUsage];
+      final localBudgetTurn = _copyTurnWithTokenUsage(
+        turn,
+        localBudgetUsage,
+      );
+      final nextBudgetTurns = [...localBudgetTurns, localBudgetTurn];
       final budgetFailure = _budgetFailureMessage(
         session.budgetPolicy,
-        turnWithUsage,
-        nextTurns,
+        localBudgetTurn,
+        nextBudgetTurns,
       );
       if (budgetFailure != null) {
         yield _failedEvent(
           session: session,
           evidenceBundle: evidenceBundle,
           startedAt: startedAt,
-          turns: nextTurns,
+          turns: nextBudgetTurns,
           message: budgetFailure,
         );
         return;
       }
 
+      final turnWithUsage = _attachEstimatedTokenUsage(
+        invocation: invocation,
+        turn: turn,
+      );
       turns.add(turnWithUsage);
+      localBudgetTurns.add(localBudgetTurn);
       final whiteboardEntries = _whiteboardEntries(turns);
       yield AiSeminarRuntimeEvent(
         type: AiSeminarRuntimeEventType.roleCompleted,
@@ -503,12 +514,29 @@ class AiSeminarRuntimeService {
     required AiSeminarRoleTurn turn,
   }) {
     if (turn.tokenUsage != null) return turn;
-    final usage = AiSeminarTokenUsage(
+    return _copyTurnWithTokenUsage(
+      turn,
+      _estimatedTokenUsage(invocation: invocation, turn: turn),
+    );
+  }
+
+  static AiSeminarTokenUsage _estimatedTokenUsage({
+    required AiSeminarRoleInvocation invocation,
+    required AiSeminarRoleTurn turn,
+  }) {
+    return AiSeminarTokenUsage(
       inputTokens: _estimateTokenCount(_inputTextForInvocation(invocation)),
       outputTokens: _estimateTokenCount(turn.responseText),
       isEstimated: true,
       estimationMethod: _localTokenEstimateMethod,
+      source: AiSeminarTokenUsage.sourceLocalEstimate,
     );
+  }
+
+  static AiSeminarRoleTurn _copyTurnWithTokenUsage(
+    AiSeminarRoleTurn turn,
+    AiSeminarTokenUsage usage,
+  ) {
     return AiSeminarRoleTurn(
       id: turn.id,
       role: turn.role,
@@ -600,6 +628,9 @@ class AiSeminarModelRoleExecutor {
   ) async* {
     cancelToken.onCancel(cancelActiveAiRequest);
     var latest = '';
+    final beforeUsage = _UsageSnapshot.capture(
+      getUsageTracker(invocation.session.id),
+    );
     final stream = (_generateStream ?? _defaultGenerateStream)(
       _messagesForInvocation(invocation),
       conversationId: invocation.session.id,
@@ -611,8 +642,45 @@ class AiSeminarModelRoleExecutor {
       yield AiSeminarRoleStreamChunk(partialText: chunk);
     }
     if (cancelToken.isCancelled) return;
+    final parsedTurn = _parseTurn(invocation: invocation, raw: latest);
+    final providerUsage = _providerUsageDelta(
+      beforeUsage,
+      _UsageSnapshot.capture(getUsageTracker(invocation.session.id)),
+    );
     yield AiSeminarRoleStreamChunk(
-      completedTurn: _parseTurn(invocation: invocation, raw: latest),
+      completedTurn: parsedTurn.isFailed || providerUsage == null
+          ? parsedTurn
+          : AiSeminarRuntimeService._copyTurnWithTokenUsage(
+              parsedTurn,
+              providerUsage,
+            ),
+    );
+  }
+
+  static AiSeminarTokenUsage? _providerUsageDelta(
+    _UsageSnapshot before,
+    _UsageSnapshot after,
+  ) {
+    final inputTokens = after.inputTokens - before.inputTokens;
+    final outputTokens = after.outputTokens - before.outputTokens;
+    final cacheReadTokens = after.cacheReadTokens - before.cacheReadTokens;
+    final cacheWriteTokens = after.cacheWriteTokens - before.cacheWriteTokens;
+    final apiCalls = after.apiCalls - before.apiCalls;
+    if (inputTokens <= 0 &&
+        outputTokens <= 0 &&
+        cacheReadTokens <= 0 &&
+        cacheWriteTokens <= 0) {
+      return null;
+    }
+    return AiSeminarTokenUsage(
+      inputTokens: inputTokens < 0 ? 0 : inputTokens,
+      outputTokens: outputTokens < 0 ? 0 : outputTokens,
+      cacheReadTokens: cacheReadTokens < 0 ? 0 : cacheReadTokens,
+      cacheWriteTokens: cacheWriteTokens < 0 ? 0 : cacheWriteTokens,
+      apiCalls: apiCalls > 0 ? apiCalls : null,
+      isEstimated: false,
+      estimationMethod: 'provider-usage-tracker-v1',
+      source: AiSeminarTokenUsage.sourceProviderReported,
     );
   }
 
@@ -706,4 +774,39 @@ $evidenceLines
       completedAt: DateTime.now().millisecondsSinceEpoch,
     );
   }
+}
+
+class _UsageSnapshot {
+  const _UsageSnapshot({
+    required this.inputTokens,
+    required this.outputTokens,
+    required this.cacheReadTokens,
+    required this.cacheWriteTokens,
+    required this.apiCalls,
+  });
+
+  factory _UsageSnapshot.capture(AiUsageTracker? tracker) {
+    if (tracker == null) {
+      return const _UsageSnapshot(
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        apiCalls: 0,
+      );
+    }
+    return _UsageSnapshot(
+      inputTokens: tracker.inputTokens,
+      outputTokens: tracker.outputTokens,
+      cacheReadTokens: tracker.cacheReadTokens,
+      cacheWriteTokens: tracker.cacheWriteTokens,
+      apiCalls: tracker.apiCalls,
+    );
+  }
+
+  final int inputTokens;
+  final int outputTokens;
+  final int cacheReadTokens;
+  final int cacheWriteTokens;
+  final int apiCalls;
 }
