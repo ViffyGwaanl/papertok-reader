@@ -15,6 +15,7 @@ import 'package:papertok_reader/service/ai/ai_services.dart';
 import 'package:papertok_reader/service/ai/ai_history.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/enums/ai_thinking_mode.dart';
+import 'package:papertok_reader/models/current_reading_state.dart';
 import 'package:papertok_reader/service/memory/memory_candidate.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_policy.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
@@ -2365,12 +2366,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final l10n = L10n.of(context);
     final chatNotifier = ref.read(aiChatProvider.notifier);
     final conversationId = chatNotifier.currentSessionId;
-    final useCurrentReaderFallback =
-        readerSourceRef != null || !chatNotifier.isLoadedHistoryConversation;
     chatNotifier.persistCurrentConversation(ref);
     final reading = ref.read(currentReadingProvider);
-    final book =
-        useCurrentReaderFallback && reading.isReading ? reading.book : null;
+    final useCurrentReaderFallback = readerSourceRef == null &&
+        !chatNotifier.isLoadedHistoryConversation &&
+        _readingCanCreateReaderSourceRef(reading);
+    final book = useCurrentReaderFallback ? reading.book : null;
 
     try {
       final result = await _chatKnowledgeCards.createFromAssistantAnswer(
@@ -2381,10 +2382,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         modelId: _modelLabel(_selectedProviderId),
         bookId: book?.id,
         bookTitle: book?.title,
-        cfi: useCurrentReaderFallback && reading.isReading ? reading.cfi : null,
-        chapterTitle: useCurrentReaderFallback && reading.isReading
-            ? reading.chapterTitle
-            : null,
+        cfi: useCurrentReaderFallback ? reading.cfi?.trim() : null,
+        chapterTitle: useCurrentReaderFallback ? reading.chapterTitle : null,
         readerSourceRef: readerSourceRef,
       );
       if (!mounted) return;
@@ -2403,6 +2402,92 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   SourceRef? _readerSourceRefForUserIndex(int userIndex) {
     return _sourceRefByUserIndex[userIndex] ??
         ref.read(aiChatProvider.notifier).sourceRefForMessageIndex(userIndex);
+  }
+
+  bool _readingCanCreateReaderSourceRef(CurrentReadingState reading) {
+    final bookId = reading.book?.id;
+    final cfi = reading.cfi?.trim() ?? '';
+    return reading.isReading && bookId != null && bookId > 0 && cfi.isNotEmpty;
+  }
+
+  _AiChatKnowledgeSourceStatus _knowledgeCardSourceStatus({
+    required SourceRef? readerSourceRef,
+  }) {
+    final l10n = L10n.of(context);
+    if (readerSourceRef != null &&
+        (readerSourceRef.canJumpBack || readerSourceRef.hasBookAnchor)) {
+      return _AiChatKnowledgeSourceStatus(
+        label: l10n.reviewInboxTraceableSources(1),
+        tooltip: _localizedSourceStatusText(
+          zh: '可跳回原文',
+          en: 'Can jump back to the source text',
+        ),
+        traceable: true,
+      );
+    }
+
+    final reading = ref.watch(currentReadingProvider);
+    final canUseCurrentReaderFallback =
+        !ref.read(aiChatProvider.notifier).isLoadedHistoryConversation &&
+            _readingCanCreateReaderSourceRef(reading);
+    if (canUseCurrentReaderFallback) {
+      return _AiChatKnowledgeSourceStatus(
+        label: l10n.reviewInboxTraceableSources(1),
+        tooltip: _localizedSourceStatusText(
+          zh: '将使用当前阅读位置作为来源',
+          en: 'Will use the current reading position as source',
+        ),
+        traceable: true,
+      );
+    }
+
+    return _AiChatKnowledgeSourceStatus(
+      label: l10n.reviewInboxUnavailableSources(1),
+      tooltip: _localizedSourceStatusText(
+        zh: '仅保留会话来源，不能跳回原文',
+        en: 'Conversation source only; no reader deep link',
+      ),
+      traceable: false,
+    );
+  }
+
+  String _localizedSourceStatusText({
+    required String zh,
+    required String en,
+  }) {
+    final language = Localizations.localeOf(context).languageCode;
+    return language == 'zh' ? zh : en;
+  }
+
+  Widget _buildKnowledgeCardSourceStatusChip(
+    _AiChatKnowledgeSourceStatus status,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final foreground =
+        status.traceable ? colorScheme.primary : colorScheme.outline;
+    final background = status.traceable
+        ? colorScheme.primary.withValues(alpha: 0.08)
+        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.72);
+
+    return Tooltip(
+      message: status.tooltip,
+      child: Container(
+        margin: const EdgeInsets.only(right: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: foreground.withValues(alpha: 0.24)),
+        ),
+        child: Text(
+          status.label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: foreground,
+                fontSize: 11,
+              ),
+        ),
+      ),
+    );
   }
 
   Widget _buildMessageMemoryMenu({
@@ -3395,6 +3480,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         isUser ? index : _findPrevHumanIndex(allMessages, index);
     final isLastTurn =
         prevHumanIndex != null && prevHumanIndex == lastHumanIndex;
+    final assistantReaderSourceRef = !isUser && prevHumanIndex != null
+        ? _readerSourceRefForUserIndex(prevHumanIndex)
+        : null;
+    final assistantSourceStatus = isUser
+        ? null
+        : _knowledgeCardSourceStatus(
+            readerSourceRef: assistantReaderSourceRef,
+          );
 
     final maxBubbleWidth = MediaQuery.sizeOf(context).width * 0.8;
 
@@ -3458,11 +3551,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           ? _buildHumanMessageBody(message)
                           : _buildAssistantSections(content, isStreaming),
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 4,
                       children: [
                         _buildVariantSwitcher(index, isStreaming),
-                        const SizedBox(width: 4),
                         if (isUser) ...[
                           TextButton(
                             onPressed: () => _showEditUserMessageDialog(
@@ -3493,6 +3587,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                             onPressed: () => _copyMessageContent(content),
                             child: Text(L10n.of(context).commonCopy),
                           ),
+                          if (assistantSourceStatus != null)
+                            _buildKnowledgeCardSourceStatusChip(
+                              assistantSourceStatus,
+                            ),
                           TextButton(
                             onPressed: isStreaming
                                 ? null
@@ -3505,11 +3603,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                                               prevHumanIndex,
                                             ),
                                       messageNodeId: 'assistant:$index',
-                                      readerSourceRef: prevHumanIndex == null
-                                          ? null
-                                          : _readerSourceRefForUserIndex(
-                                              prevHumanIndex,
-                                            ),
+                                      readerSourceRef: assistantReaderSourceRef,
                                     ),
                             child:
                                 Text(L10n.of(context).contextMenuKnowledgeCard),
@@ -3609,6 +3703,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     final isLastTurn =
         item.userIndex != null && item.userIndex == lastHumanIndex;
+    final assistantReaderSourceRef = item.userIndex == null
+        ? null
+        : _readerSourceRefForUserIndex(item.userIndex!);
+    final assistantSourceStatus = _knowledgeCardSourceStatus(
+      readerSourceRef: assistantReaderSourceRef,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
@@ -3618,8 +3718,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           _buildScaledMessageContent(
             _buildAssistantSections(content, isStreaming),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          Wrap(
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
             children: [
               if (item.variants.length > 1)
                 Row(
@@ -3649,7 +3751,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                             }
                           : null,
                     ),
-                    const SizedBox(width: 4),
                   ],
                 ),
               if (item.userIndex != null)
@@ -3664,6 +3765,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 onPressed: () => _copyMessageContent(content),
                 child: Text(L10n.of(context).commonCopy),
               ),
+              _buildKnowledgeCardSourceStatusChip(assistantSourceStatus),
               TextButton(
                 onPressed: isStreaming
                     ? null
@@ -3678,9 +3780,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                                 ),
                           messageNodeId:
                               'assistant-group:${item.groupKey}:$selected',
-                          readerSourceRef: item.userIndex == null
-                              ? null
-                              : _readerSourceRefForUserIndex(item.userIndex!),
+                          readerSourceRef: assistantReaderSourceRef,
                         ),
                 child: Text(L10n.of(context).contextMenuKnowledgeCard),
               ),
@@ -4472,6 +4572,18 @@ class _AssistantGroupChatItem extends _ChatItem {
   final int? userIndex;
 
   final List<AIChatMessage> variants;
+}
+
+class _AiChatKnowledgeSourceStatus {
+  const _AiChatKnowledgeSourceStatus({
+    required this.label,
+    required this.tooltip,
+    required this.traceable,
+  });
+
+  final String label;
+  final String tooltip;
+  final bool traceable;
 }
 
 class _CollapsibleText extends StatefulWidget {

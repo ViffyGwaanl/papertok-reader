@@ -481,6 +481,8 @@ void main() {
         );
     await tester.pump(const Duration(milliseconds: 100));
 
+    expect(find.text('1 个可跳转来源'), findsOneWidget);
+    expect(find.byTooltip('可跳回原文'), findsOneWidget);
     await tester.tap(find.text('知识卡'));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 2100));
@@ -554,6 +556,8 @@ void main() {
         );
     await tester.pump(const Duration(milliseconds: 100));
 
+    expect(find.text('1 个已标记不可用'), findsOneWidget);
+    expect(find.byTooltip('仅保留会话来源，不能跳回原文'), findsOneWidget);
     await tester.tap(find.text('知识卡'));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 2100));
@@ -561,6 +565,78 @@ void main() {
     expect(fakeProducer.calls, hasLength(1));
     expect(fakeProducer.calls.single.conversationId, 'legacy-history');
     expect(fakeProducer.calls.single.readerSourceRef, isNull);
+    expect(fakeProducer.calls.single.bookId, isNull);
+    expect(fakeProducer.calls.single.cfi, isNull);
+  });
+
+  testWidgets('current reading fallback without cfi is marked unavailable',
+      (tester) async {
+    const providerId = 'openai';
+    final fakeProducer = _FakeAiChatKnowledgeCardProducer();
+    final providers = [
+      AiProviderMeta(
+        id: providerId,
+        name: 'OpenAI',
+        type: AiProviderType.openaiCompatible,
+        enabled: true,
+        isBuiltIn: true,
+        createdAt: 1,
+        updatedAt: 1,
+      ),
+    ];
+
+    SharedPreferences.setMockInitialValues({
+      'selectedAiService': providerId,
+      'aiProvidersV1': AiProviderMeta.encodeList(providers),
+      'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+    });
+
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          locale: const Locale('zh', 'CN'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiChatStream(
+            chatKnowledgeCardProducer: fakeProducer,
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    AnxToast.init(tester.element(find.byType(AiChatStream)));
+    await tester.pump();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiChatStream)),
+    );
+    await container.read(aiChatProvider.future);
+    container.read(currentReadingProvider.notifier).start(
+          CurrentReadingState(
+            book: Book.mock().copyWith(id: 7, title: 'No CFI Book'),
+            chapterTitle: 'Chapter without location',
+          ),
+        );
+    container.read(aiChatProvider.notifier).restore(
+      [
+        ChatMessage.humanText('Explain the current idea.'),
+        ChatMessage.ai('The answer needs a real reader anchor.'),
+      ],
+      sessionId: 'chat-ui-no-cfi',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('1 个已标记不可用'), findsOneWidget);
+    expect(find.byTooltip('仅保留会话来源，不能跳回原文'), findsOneWidget);
+    await tester.tap(find.text('知识卡'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 2100));
+
+    expect(fakeProducer.calls, hasLength(1));
+    expect(fakeProducer.calls.single.conversationId, 'chat-ui-no-cfi');
     expect(fakeProducer.calls.single.bookId, isNull);
     expect(fakeProducer.calls.single.cfi, isNull);
   });
