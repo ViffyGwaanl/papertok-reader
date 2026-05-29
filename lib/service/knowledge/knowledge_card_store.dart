@@ -62,6 +62,16 @@ class KnowledgeCardStore {
     });
   }
 
+  Future<List<KnowledgeSyncEnvelope>> listSyncEnvelopes() {
+    return _enqueue(() async {
+      final entries = await _readStoredEntriesUnlocked();
+      return entries
+          .map(_envelopeFromStoredEntry)
+          .whereType<KnowledgeSyncEnvelope>()
+          .toList(growable: false);
+    });
+  }
+
   Future<KnowledgeCard?> getById(String id) {
     return _enqueue(() async {
       final cards = await _readAllUnlocked();
@@ -140,9 +150,17 @@ class KnowledgeCardStore {
   }
 
   Future<List<KnowledgeCard>> _readAllUnlocked() async {
+    final entries = await _readStoredEntriesUnlocked();
+    return entries
+        .map(_cardFromStoredEntry)
+        .whereType<KnowledgeCard>()
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _readStoredEntriesUnlocked() async {
     await ensureInitialized();
     final raw = await cardsFile.readAsString();
-    if (raw.trim().isEmpty) return <KnowledgeCard>[];
+    if (raw.trim().isEmpty) return <Map<String, dynamic>>[];
 
     try {
       final decoded = jsonDecode(raw);
@@ -151,17 +169,17 @@ class KnowledgeCardStore {
         if (list is List) {
           return list
               .whereType<Map>()
-              .map((entry) => _cardFromStoredEntry(
+              .map(
+                (entry) =>
                     Map<String, dynamic>.from(entry.cast<String, dynamic>()),
-                  ))
-              .whereType<KnowledgeCard>()
+              )
               .toList();
         }
       }
     } catch (_) {
       // Treat malformed local knowledge state as an empty card list.
     }
-    return <KnowledgeCard>[];
+    return <Map<String, dynamic>>[];
   }
 
   Future<void> _writeAllUnlocked(List<KnowledgeCard> cards) async {
@@ -201,6 +219,21 @@ class KnowledgeCardStore {
       return KnowledgeCard.fromJson(Map<String, dynamic>.from(payload));
     }
     return KnowledgeCard.fromJson(entry);
+  }
+
+  KnowledgeSyncEnvelope? _envelopeFromStoredEntry(Map<String, dynamic> entry) {
+    final payload = entry['payload'];
+    if (payload is Map) {
+      final envelope = KnowledgeSyncEnvelope.fromJson(entry);
+      if (envelope.requiresConflictReview) {
+        return envelope;
+      }
+      final card = KnowledgeCard.fromJson(Map<String, dynamic>.from(payload));
+      return _envelopeForCard(card);
+    }
+
+    final card = KnowledgeCard.fromJson(entry);
+    return _envelopeForCard(card);
   }
 
   KnowledgeCard? _findDuplicate(

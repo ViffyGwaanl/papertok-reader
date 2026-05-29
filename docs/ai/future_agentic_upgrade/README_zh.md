@@ -59,7 +59,7 @@
 | Review Inbox | `Settings -> AI -> Review inbox`。 | 已有统一 UI；内容依赖 producer 写入。 |
 | 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer 和阅读页选中文本入口，可查看已有图谱、按选中文本筛选相关概念、查看局部路径、证据和 orphan/broken link；producer 仍在剩余任务中。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；知识卡在 Review Inbox 中 `Apply` 后自动入队。 | 本分支已接入队列、复习页、Again/Hard/Good/Easy 评分和来源跳转状态；只接 KnowledgeCard apply。 |
-| Sync Export | 当前没有正式入口。 | 策略已有切片；产品入口见 `04_user_facing_activation_plan_zh.md`。 |
+| Sync Export | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览和创建入口；默认只纳入已确认知识资产和复习历史，排除草稿、派生索引、API key 和待审冲突。完整云同步引擎仍在剩余任务中。 |
 
 入口计划以 `04_user_facing_activation_plan_zh.md` 为准；`implementation_status_zh.md` 只记录代码和验证证据。
 

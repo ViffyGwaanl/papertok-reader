@@ -178,6 +178,9 @@ class KnowledgeSyncPolicy {
   }
 
   static String? exclusionReason(KnowledgeSyncEnvelope envelope) {
+    if (envelope.requiresConflictReview) {
+      return 'pending-conflict-review';
+    }
     if (!envelope.shouldSyncByDefault) {
       return 'not-default-sync-entity';
     }
@@ -206,6 +209,9 @@ class KnowledgeSyncPolicy {
     if (normalized.isEmpty) return false;
     return normalized == 'token' ||
         normalized == 'secret' ||
+        normalized == 'auth' ||
+        normalized == 'bearer' ||
+        normalized == 'xauth' ||
         normalized == 'authorization' ||
         normalized == 'password' ||
         normalized == 'passwd' ||

@@ -132,6 +132,44 @@ void main() {
     expect(plan.excludedReasonFor('index1'), 'not-default-sync-entity');
   });
 
+  test('secret payload detector rejects exact auth and bearer aliases', () {
+    for (final key in const ['auth', 'bearer', 'x-auth']) {
+      final envelope = KnowledgeSyncEnvelope(
+        id: 'secret-$key',
+        entityType: KnowledgeSyncEntityType.knowledgeCard,
+        schemaVersion: 1,
+        updatedAt: 100,
+        payload: {
+          'provider': {key: 'must-not-sync'},
+        },
+      );
+
+      final plan = KnowledgeSyncPolicy.planDefaultSync([envelope]);
+
+      expect(plan.included, isEmpty, reason: key);
+      expect(plan.excluded.single.id, 'secret-$key', reason: key);
+      expect(plan.excludedReasonFor('secret-$key'), 'contains-secret');
+    }
+  });
+
+  test('default sync set holds conflict envelopes for review', () {
+    const conflict = KnowledgeSyncEnvelope(
+      id: 'conflict1',
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 100,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      payload: {'title': 'Conflicting Card'},
+    );
+
+    final plan = KnowledgeSyncPolicy.planDefaultSync([conflict]);
+
+    expect(plan.included, isEmpty);
+    expect(plan.excluded.single.id, 'conflict1');
+    expect(plan.excludedReasonFor('conflict1'), 'pending-conflict-review');
+  });
+
   test('incoming schema and delete-modify conflicts enter review', () {
     const local = KnowledgeSyncEnvelope(
       id: 'card1',

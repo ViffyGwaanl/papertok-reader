@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
+import 'package:papertok_reader/models/knowledge_sync.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
@@ -287,6 +288,42 @@ void main() {
 
     expect(restored!.reviewState, KnowledgeCardReviewState.approved);
     expect(restored.isUserAsset, false);
+  });
+
+  test('sync envelopes preserve pending conflict metadata on read', () async {
+    final conflictCard = card(
+      id: 'kc-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+    );
+    final envelope = KnowledgeSyncEnvelope(
+      id: conflictCard.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      sourceRefs: conflictCard.sourceRefs,
+      payload: conflictCard.toJson(),
+    );
+    final file = File(
+      p.join(tempRoot.path, '.knowledge', 'knowledge_cards_v1.json'),
+    );
+    file.createSync(recursive: true);
+    file.writeAsStringSync(
+      jsonEncode({
+        'version': 1,
+        'cards': [envelope.toJson()],
+      }),
+    );
+
+    final store = KnowledgeCardStore(rootDir: tempRoot);
+    final cards = await store.list();
+    final envelopes = await store.listSyncEnvelopes();
+
+    expect(cards.single.isUserAsset, true);
+    expect(envelopes.single.requiresConflictReview, true);
+    expect(envelopes.single.conflictReason, 'content-conflict');
   });
 
   test('malformed card file degrades to an empty card list', () async {

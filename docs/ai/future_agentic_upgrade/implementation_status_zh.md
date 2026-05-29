@@ -21,7 +21,7 @@
 | E05 Review Inbox / Spaced Review | `lib/models/review_item.dart`、`ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider`、`ReviewInboxPage`、`SpacedReviewStore`、`spacedReviewProvider`、`SpacedReviewPage`、`MemoryCandidateReviewAdapter`、`FlashcardReviewAdapter`、`ConceptGraphReviewAdapter` | strict status transitions, versioned local inbox persistence, source-required apply, apply/dismiss traceability, KnowledgeCard and ConceptGraph decision mirror, KnowledgeCard apply -> spaced review queue, source jump audit UI, spaced review history/sourceRefs | In Review slice |
 | E06 Agent Tools / Skills Platform | `lib/models/ai_agent_governance.dart`、`AiToolRegistry` governance filters、`SubAgentRunner.allowedToolIdsForAgent`、`ToolOrchestrator` permission matrix | whitelist, no recursion, read-only Seminar sub-agent filtering, execution-time concurrency safety, `CustomSkillContract` strict schema/parser/validator/runtime injection gate | In Review slice |
 | E07 Mobile UX / Deep Link / Observability | SourceRef jump links, reader intent reuse, `PaperReaderSourceJumpAudit`, deep-link evidence tests, selected-text `知识卡` / `研讨` / `图谱` menu entries, Settings AI `Concept graph` and `Spaced review` entries | formal knowledge objects carry jump-capable SourceRef, book anchor, or unavailable reason; source jump audit identifies jumpable, unavailable, and unresolved refs; user-facing activation tests cover visible menu actions, graph explorer entry, and spaced review entry | In Review slice |
-| E08 Sync / Backup / Export | `lib/models/knowledge_sync.dart` | user asset vs derived cache boundary, default sync policy, secret payload exclusion, draft/export defaults, conflict review status | In Review slice |
+| E08 Sync / Backup / Export | `lib/models/knowledge_sync.dart`、`KnowledgeCardStore.listSyncEnvelopes`、`KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI `Knowledge sync/export` entry | user asset vs derived cache boundary, default sync policy, secret payload exclusion, draft/export defaults, persisted conflict metadata preservation, safe local manifest preview/write, no API key or `ai_index.db` in export manifest | In Review slice |
 
 ## 3. Verification Commands
 
@@ -59,10 +59,13 @@ flutter test --no-pub \
   test/service/review/spaced_review_store_test.dart \
   test/providers/review_inbox_test.dart \
   test/providers/spaced_review_test.dart \
+  test/providers/knowledge_asset_export_test.dart \
   test/page/settings_page/review_inbox_page_test.dart \
   test/page/settings_page/spaced_review_page_test.dart \
+  test/page/settings_page/knowledge_asset_export_page_test.dart \
   test/page/settings_page/settings_navigation_compile_test.dart \
   test/widgets/context_menu/excerpt_menu_actions_test.dart \
+  test/service/sync/knowledge_asset_export_service_test.dart \
   test/service/rag/live_rag_gateway_smoke_test.dart \
   -r compact
 ```
@@ -178,6 +181,12 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - `2026-05-29 02:13 EDT`：agentic focused suite 通过，加入 Spaced Review 入口后结果为 `165 passed, 2 skipped`；两个 skipped 均为 opt-in live RAG gateway smoke。
 - `2026-05-29 02:13 EDT`：`dart analyze --no-fatal-warnings lib/service/review/spaced_review_store.dart lib/service/review/review_inbox_controller.dart lib/service/review/knowledge_review_adapter.dart lib/providers/spaced_review.dart lib/page/settings_page/spaced_review.dart lib/page/settings_page/ai.dart test/service/review/spaced_review_store_test.dart test/service/review/review_inbox_controller_test.dart test/providers/spaced_review_test.dart test/page/settings_page/spaced_review_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart` 仍被 analyzer plugin setup 阻塞，原因是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；该命令未返回代码诊断。
 - `2026-05-29 02:14 EDT`：独立 rescue reviewer 复核 Spaced Review 入口切片，结论为 no blockers；确认 raw `SpacedReviewStore.upsert` 已移除、只能通过 `upsertFromKnowledgeCard` 写入 `applied + traceable + user asset`，approved 未 applied 卡不能入队，复习页刷新会对账 applied KnowledgeCard 并幂等修复缺失队列项。
+- `2026-05-29 02:44 EDT`：Sync / Export 用户入口局部验证通过，`flutter test --no-pub test/models/knowledge_sync_test.dart test/service/knowledge/knowledge_card_store_test.dart test/service/sync/knowledge_asset_export_service_test.dart test/providers/knowledge_asset_export_test.dart test/page/settings_page/knowledge_asset_export_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart -r compact` 结果为 `26 passed`；覆盖 `auth/bearer/x-auth` secret alias 排除、持久化 pending conflict envelope 不进入 manifest、已应用 KnowledgeCard + review history manifest、草稿不导出、manifest 不含 API key/`ai_index.db`、Settings AI 导出入口点击进入导出页和创建 manifest UI。
+- `2026-05-29 02:52 EDT`：agentic focused suite 通过，加入 Sync / Export 用户入口和 rescue blocker 修复后结果为 `174 passed, 2 skipped`；两个 skipped 均为 opt-in live RAG gateway smoke。
+- `2026-05-29 02:52 EDT`：E02 schema/progress focused tests 通过，`flutter test --no-pub test/service/rag/ai_index_schema_v2_test.dart test/service/rag/ai_library_index_queue_repository_test.dart test/service/rag/ai_library_index_queue_runner_test.dart test/service/rag/ai_library_index_progress_text_test.dart test/service/rag/ai_book_indexer_progress_test.dart -r compact` 结果为 `18 passed`。
+- `2026-05-29 02:52 EDT`：`git diff --check` 通过；README / user-facing activation / implementation status 禁用词扫描无命中；用户提供的本地 gateway API key 明文扫描无命中。
+- `2026-05-29 02:52 EDT`：`dart analyze --no-fatal-warnings lib/models/knowledge_sync.dart lib/service/knowledge/knowledge_card_store.dart lib/service/sync/knowledge_asset_export_service.dart lib/providers/knowledge_asset_export.dart lib/page/settings_page/knowledge_asset_export.dart lib/page/settings_page/ai.dart test/models/knowledge_sync_test.dart test/service/knowledge/knowledge_card_store_test.dart test/service/sync/knowledge_asset_export_service_test.dart test/providers/knowledge_asset_export_test.dart test/page/settings_page/knowledge_asset_export_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart` 被 analyzer plugin setup 阻塞，原因仍是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；未返回代码诊断。
+- `2026-05-29 02:52 EDT`：独立 rescue reviewer 复核 Sync / Export 用户入口切片，初审指出 `auth/bearer/x-auth` secret alias 和持久化 pending conflict metadata 两个 blocker；修复后 re-review 确认 no blockers。残余风险：`includeDrafts` 仍是 service 级参数，未来若暴露到 UI 必须重新审查草稿与 secret 组合行为。
 
 ## 4. Rescue Review Checklist
 
@@ -185,6 +194,7 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - KnowledgeCardStore 只持久化卡片资产状态，不写长期记忆、笔记、高亮或 spaced review；`upsertCandidate` 会把 Review 前候选保持为 draft/pending + `AI-generated-draft`，raw `upsert` 只接受 draft/pending AI candidates，draft/pending envelope 使用 `ai-draft`，只有 Review apply 后的 user asset 才使用 `knowledge-card`。
 - SelectionKnowledgeCardProducer 只把选中文本写成待审 KnowledgeCard 和 ReviewItem；重复选中复用已有卡，不写长期记忆、笔记、高亮或 spaced review。
 - SpacedReviewStore 不暴露 raw asset upsert，只接受 `applied + traceable + user asset` 的 KnowledgeCard，复习记录只更新 `.knowledge/spaced_review_items_v1.json`，并保留 SourceRef 供回跳、不可用来源和未解析来源审计。
+- KnowledgeAssetExportService 只生成本地 `.knowledge/knowledge_export_manifest_v1.json`；默认纳入已确认知识资产和 review history，排除草稿、派生索引、密钥 payload 和待审冲突，不执行远端上传或自动冲突解决；从 KnowledgeCard 文件读取时必须保留 envelope 级 conflict metadata。
 - KnowledgeCardStore 的候选写入把同 ID 视为冲突，不用生成内容覆盖已有用户 note、quote 或 title；显式修改必须走 source-specific apply/update 路径。
 - 正式 KnowledgeCard、ReviewItem、Seminar synthesis、ConceptNode、ConceptEdge 必须有 SourceRef book anchor、jump link 或不可跳原因；hash-only fingerprint 只能保留为 draft/unapplied。
 - ConceptGraphStore 只写 `.knowledge/concept_graph_v1.json`，node/edge 写入保持 draft ownership；dossier 和局部探索只走有 traceable evidence 的边，并按 depth 和每层 width clamp；orphan node 与 broken edge 必须可报告，不把图谱推断自动写成用户确认资产。

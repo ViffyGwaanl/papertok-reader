@@ -19,7 +19,7 @@
 | AI Chat 普通解释 | 阅读页选中文本 -> `AI`。 | 仍可用，保留原行为。 | 不自动生成 KnowledgeCard 或 ConceptGraph。 |
 | ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer 和选中文本入口：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部路径、显示 orphan/broken link。 | 缺 RAG/GraphRAG producer 和更强的可视化布局；当前只探索已有 `ConceptGraphStore` 数据，不自动创建正式节点。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；KnowledgeCard 在 Review Inbox 中 `Apply` 后自动入队。 | 本分支已接入 `.knowledge/spaced_review_items_v1.json`、复习页、Again/Hard/Good/Easy 评分、来源跳转状态。 | 当前只接 KnowledgeCard apply；Seminar/Flashcard producer 和跨设备同步仍在后续任务中。 |
-| Sync / Export 知识资产 | 无正式用户入口。 | `KnowledgeSyncEnvelope` 和 policy 已定义 asset/cache/secret 边界。 | 缺 per-entity sync、冲突 Review UI、导出 manifest。 |
+| Sync / Export 知识资产 | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览和创建入口；只纳入已应用 KnowledgeCard 和复习历史，显性显示排除项和待审冲突。 | 目前是本地 manifest 导出入口，不是完整云同步引擎；per-entity remote sync 和冲突 Review UI 仍在剩余任务中。 |
 
 ## 2. 已接入的用户路径
 
@@ -140,6 +140,38 @@ flutter test --no-pub \
   -r compact
 ```
 
+### 2.5 知识同步 / 导出
+
+用户路径：
+
+1. 用户先在 Review Inbox 中 `Apply` KnowledgeCard，或完成间隔复习记录。
+2. 用户进入 `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。
+3. 页面展示本次默认纳入的知识资产数量、默认排除项数量和待审冲突数量。
+4. 用户可以刷新计划，确认哪些 envelope 会进入导出，哪些因草稿、派生缓存、密钥或冲突被排除。
+5. 用户点击 `Create manifest / 创建 manifest`。
+6. 系统写入 `.knowledge/knowledge_export_manifest_v1.json`，其中只包含安全的实体 ID、格式、时间戳和裁剪后的 SourceRef 引用。
+
+Gate：
+
+- 默认只纳入 `applied + user asset` 的 KnowledgeCard 和 review history。
+- `ai-draft`、`derived-index`、包含 API key/token/secret/auth/authorization/bearer/private-key/credential/password 的 payload 默认排除。
+- 待审冲突显示为排除项，不进入 manifest。
+- manifest 不写 `ai_index.db`，不把派生索引当作 source-of-truth。
+- SourceRef 文本片段必须使用现有裁剪规则，不导出无限正文。
+- 当前入口只创建本地 manifest；不执行远端上传、不解决冲突、不自动同步备份。
+
+验证命令：
+
+```bash
+flutter test --no-pub \
+  test/models/knowledge_sync_test.dart \
+  test/service/sync/knowledge_asset_export_service_test.dart \
+  test/providers/knowledge_asset_export_test.dart \
+  test/page/settings_page/knowledge_asset_export_page_test.dart \
+  test/page/settings_page/settings_navigation_compile_test.dart \
+  -r compact
+```
+
 ## 3. 剩余用户入口任务
 
 | TaskID | 状态 | Parent Capability | Goal | Depends On | Output Artifact | Acceptance |
@@ -153,7 +185,7 @@ flutter test --no-pub \
 | UFA-C03-T02 | In Review | Concept Explorer page | 提供局部图谱探索入口。 | E04 dossier/explore | `ConceptGraphExplorerPage`, provider, Settings AI entry | 用户能打开概念页、看 1-2 层关系、跳回原文、检测 orphan/broken link。 |
 | UFA-C03-T03 | In Review | Reader concept entry | 阅读页选中文本可进入概念探索。 | UFA-C03-T02 | `ExcerptMenu` graph action, `ConceptGraphExplorerPage.initialQuery` | 选中文本可打开图谱页并筛选相关概念；没有相关概念时展示空态和草稿候选入口，不生成无证据正式节点。 |
 | UFA-C04-T01 | In Review | Spaced Review | Review apply 后生成复习队列。 | E03, E05 | `SpacedReviewStore`, `spacedReviewProvider`, `SpacedReviewPage`, Settings AI entry | 复习项可回溯到卡片和原文；删除书后显示可解释状态；评分记录下一次到期时间。 |
-| UFA-C05-T01 | Ready | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | export manifest, conflict Review UI | API key 不同步；派生索引不当作 source-of-truth；冲突进入 Review。 |
+| UFA-C05-T01 | In Review | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | `KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI entry、export manifest | API key 不同步；派生索引不当作 source-of-truth；冲突被排除并显性显示；当前只创建本地 manifest，不执行远端同步。 |
 
 ## 4. Agent 执行约束
 

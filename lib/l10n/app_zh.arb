@@ -801,6 +801,45 @@
       }
     }
   },
+  "knowledgeExportTitle": "知识同步 / 导出",
+  "knowledgeExportDescription": "预览已确认知识资产、待审冲突和安全的来源引用 manifest。",
+  "knowledgeExportEmptyTitle": "还没有已确认知识资产",
+  "knowledgeExportEmptyBody": "应用后的知识卡和复习记录会先出现在这里，再进入导出。",
+  "knowledgeExportIncludedCount": "{count} 个纳入",
+  "@knowledgeExportIncludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportExcludedCount": "{count} 个排除",
+  "@knowledgeExportExcludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportConflictCount": "{count} 个冲突",
+  "@knowledgeExportConflictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportCreateManifest": "创建 manifest",
+  "knowledgeExportManifestPath": "Manifest：{path}",
+  "@knowledgeExportManifestPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportSafeDefault": "默认排除草稿、派生索引、API key 和待审冲突。",
+  "knowledgeExportLoadFailed": "无法加载知识导出计划",
   "reviewInboxActionFailed": "审核操作失败",
   "memoryReviewInboxTargetDaily": "今日日记",
   "memoryReviewInboxTargetLongTerm": "长期记忆",

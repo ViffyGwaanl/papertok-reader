@@ -904,6 +904,45 @@
       }
     }
   },
+  "knowledgeExportTitle": "Knowledge sync/export",
+  "knowledgeExportDescription": "Preview confirmed knowledge assets, held conflicts, and a safe source-citation manifest.",
+  "knowledgeExportEmptyTitle": "No confirmed knowledge assets yet",
+  "knowledgeExportEmptyBody": "Applied knowledge cards and review history will appear here before export.",
+  "knowledgeExportIncludedCount": "{count} included",
+  "@knowledgeExportIncludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportExcludedCount": "{count} excluded",
+  "@knowledgeExportExcludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportConflictCount": "{count} conflict",
+  "@knowledgeExportConflictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportCreateManifest": "Create manifest",
+  "knowledgeExportManifestPath": "Manifest: {path}",
+  "@knowledgeExportManifestPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportSafeDefault": "Drafts, derived indexes, API keys, and conflicts are excluded by default.",
+  "knowledgeExportLoadFailed": "Could not load knowledge export plan",
   "reviewInboxActionFailed": "Review action failed",
   "memoryReviewInboxTargetDaily": "Daily",
   "memoryReviewInboxTargetLongTerm": "Long-term",

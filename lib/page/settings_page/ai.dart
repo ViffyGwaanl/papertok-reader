@@ -11,6 +11,7 @@ import 'package:papertok_reader/page/settings_page/ai_provider_center/ai_provide
 import 'package:papertok_reader/page/settings_page/ai_title_generation.dart';
 import 'package:papertok_reader/page/settings_page/ai_tools.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
+import 'package:papertok_reader/page/settings_page/knowledge_asset_export.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/spaced_review.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
@@ -403,6 +404,16 @@ class _AISettingsState extends ConsumerState<AISettings> {
             onPressed: (context) {
               Navigator.of(context).push(
                 CupertinoStyleRoute(page: const SpacedReviewPage()),
+              );
+            },
+          ),
+          SettingsTile.navigation(
+            leading: const Icon(Icons.ios_share_outlined),
+            title: Text(l10n.knowledgeExportTitle),
+            description: Text(l10n.knowledgeExportDescription),
+            onPressed: (context) {
+              Navigator.of(context).push(
+                CupertinoStyleRoute(page: const KnowledgeAssetExportPage()),
               );
             },
           ),
