@@ -30,6 +30,13 @@ typedef ExcerptKnowledgeCardCreator
   String? bookTitle,
 });
 
+typedef ExcerptKnowledgeCardReaderContextResolver
+    = ExcerptKnowledgeCardReaderContext? Function();
+
+@visibleForTesting
+ExcerptKnowledgeCardReaderContextResolver?
+    debugExcerptKnowledgeCardReaderContextResolverOverride;
+
 class ExcerptKnowledgeCardReaderContext {
   const ExcerptKnowledgeCardReaderContext({
     required this.bookId,
@@ -292,6 +299,11 @@ class ExcerptMenuState extends State<ExcerptMenu> {
   ExcerptKnowledgeCardReaderContext? _knowledgeCardReaderContext() {
     if (widget.knowledgeCardReaderContext case final injected?) {
       return injected;
+    }
+    final resolverOverride =
+        debugExcerptKnowledgeCardReaderContextResolverOverride;
+    if (resolverOverride != null) {
+      return resolverOverride();
     }
     final player = epubPlayerKey.currentState;
     if (player == null) return null;
