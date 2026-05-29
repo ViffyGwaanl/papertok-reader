@@ -4,9 +4,10 @@ import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/book.dart';
 import 'package:papertok_reader/models/book_note.dart';
 import 'package:papertok_reader/models/book_notes_state.dart';
-import 'package:papertok_reader/page/reading_page.dart';
 import 'package:papertok_reader/providers/book_notes.dart';
 import 'package:papertok_reader/service/book.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
+import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/theme/morandi_palette.dart';
 import 'package:papertok_reader/widgets/book_notes/book_note_tile.dart';
@@ -126,8 +127,8 @@ class BookNotesList extends ConsumerWidget {
               }
             },
             deleteIcon: Icon(EvaIcons.trash_2, color: buttonColor),
-            confirmIcon:
-                Icon(EvaIcons.close_circle, color: MorandiPalette.error(context)),
+            confirmIcon: Icon(EvaIcons.close_circle,
+                color: MorandiPalette.error(context)),
           ),
           if (!reading && exportNotes != null)
             IconButton(
@@ -331,16 +332,33 @@ class BookNotesList extends ConsumerWidget {
     final isSelected = state.selectedNoteIds.contains(bookNote.id);
     return BookNoteTile(
       note: bookNote,
+      sourceTitle: book.title,
       backgroundColor: isSelected ? ClaudePalette.accentTint(context) : null,
       onTap: () {
         if (state.isSelecting) {
           notifier.toggleSelection(bookNote);
+          return;
+        }
+        final sourceRef = BookNoteSourceRefAdapter.fromBookNote(
+          bookNote,
+          sourceTitle: book.title,
+        );
+        final sourceIntent = BookNoteSourceRefAdapter.readerIntentForBookNote(
+          bookNote,
+          sourceTitle: book.title,
+        );
+        if (sourceIntent == null) {
+          showPaperReaderSourceUnavailable(
+            context,
+            [sourceRef],
+            L10n.of(context).conceptGraphNoEvidence,
+          );
+          return;
+        }
+        if (reading) {
+          epubPlayerKey.currentState?.goToCfi(bookNote.cfi);
         } else {
-          if (reading) {
-            epubPlayerKey.currentState?.goToCfi(bookNote.cfi);
-          } else {
-            pushToReadingPage(ref, context, book, cfi: bookNote.cfi);
-          }
+          pushToReadingPage(ref, context, book, cfi: bookNote.cfi);
         }
       },
       onLongPress: () {
@@ -428,8 +446,7 @@ class BookNotesList extends ConsumerWidget {
                       ? TextField(
                           controller: contentController,
                           decoration: InputDecoration(
-                            hintText:
-                                L10n.of(context).contextMenuAddNoteTips,
+                            hintText: L10n.of(context).contextMenuAddNoteTips,
                           ),
                           maxLines: 3,
                         )

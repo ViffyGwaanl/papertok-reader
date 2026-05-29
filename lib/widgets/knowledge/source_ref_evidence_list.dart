@@ -115,9 +115,12 @@ class _SourceRefEvidenceTile extends StatelessWidget {
   }
 
   String _subtitle(SourceRef sourceRef) {
+    final hasSnippet = sourceRef.sourceTextSnippet != null &&
+        sourceRef.sourceTextSnippet!.trim().isNotEmpty;
     return [
       sourceRef.sourceTitle,
       sourceRef.locationLabel,
+      if (hasSnippet && !sourceRef.canJumpBack) sourceRef.unavailableReason,
     ].whereType<String>().where((part) => part.trim().isNotEmpty).join(' · ');
   }
 }

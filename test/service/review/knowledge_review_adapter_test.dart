@@ -165,6 +165,55 @@ void main() {
       expect(sourceRef.bookId, 3);
       expect(sourceRef.sourceTextSnippet, 'A useful highlighted paragraph');
       expect(sourceRef.jumpLink, startsWith('paperreader://reader/open?'));
+      expect(sourceRef.hasEvidence, isTrue);
+      expect(sourceRef.canJumpBack, isTrue);
+    });
+
+    test('marks old notes without cfi as unavailable instead of jumpable', () {
+      final note = BookNote(
+        id: 10,
+        bookId: 3,
+        content: 'A migrated reader note without location',
+        cfi: '',
+        chapter: 'Migrated notes',
+        type: 'note',
+        color: 'ffff00',
+        updateTime: DateTime.fromMillisecondsSinceEpoch(400),
+      );
+
+      final sourceRef = BookNoteSourceRefAdapter.fromBookNote(
+        note,
+        sourceTitle: 'PaperTok Notes',
+      );
+
+      expect(sourceRef.sourceKind, SourceRefKind.note);
+      expect(sourceRef.canJumpBack, isFalse);
+      expect(sourceRef.jumpLink, isNull);
+      expect(sourceRef.hasUnavailableReason, isTrue);
+      expect(sourceRef.unavailableReason,
+          contains('book-note-source-not-jumpable'));
+      expect(sourceRef.hasEvidence, isTrue);
+    });
+
+    test('does not build reader intent for notes with invalid book anchors',
+        () {
+      final note = BookNote(
+        id: 11,
+        bookId: 0,
+        content: 'A migrated note with stale cfi',
+        cfi: 'epubcfi(/6/8)',
+        chapter: 'Migrated notes',
+        type: 'highlight',
+        color: 'ffff00',
+        updateTime: DateTime.fromMillisecondsSinceEpoch(500),
+      );
+
+      final sourceRef = BookNoteSourceRefAdapter.fromBookNote(note);
+      final intent = BookNoteSourceRefAdapter.readerIntentForBookNote(note);
+
+      expect(sourceRef.canJumpBack, isFalse);
+      expect(sourceRef.hasUnavailableReason, isTrue);
+      expect(intent, isNull);
     });
   });
 

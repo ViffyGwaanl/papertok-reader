@@ -359,11 +359,11 @@ class BookNoteSourceRefAdapter {
       'highlight' || 'underline' => SourceRefKind.highlight,
       _ => SourceRefKind.note,
     };
-    final hasCfi = note.cfi.trim().isNotEmpty;
+    final hasBookAnchor = note.bookId > 0 && note.cfi.trim().isNotEmpty;
     return SourceRef(
       bookId: note.bookId,
       cfi: note.cfi,
-      jumpLink: hasCfi
+      jumpLink: hasBookAnchor
           ? PaperReaderReaderIntent(bookId: note.bookId, cfi: note.cfi)
               .toUri()
               .toString()
@@ -375,7 +375,22 @@ class BookNoteSourceRefAdapter {
           '${note.id ?? ''}|${note.content}|${note.readerNote ?? ''}',
       sourceKind: kind,
       createdAt: note.createTime?.millisecondsSinceEpoch,
+      unavailableReason:
+          hasBookAnchor ? null : _bookNoteUnavailableReason(note),
     );
+  }
+
+  static PaperReaderReaderIntent? readerIntentForBookNote(
+    BookNote note, {
+    String? sourceTitle,
+  }) {
+    return PaperReaderReaderIntent.fromSourceRef(
+      fromBookNote(note, sourceTitle: sourceTitle),
+    );
+  }
+
+  static String _bookNoteUnavailableReason(BookNote note) {
+    return 'book-note-source-not-jumpable';
   }
 }
 

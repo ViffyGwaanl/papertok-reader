@@ -6,6 +6,8 @@ import 'package:papertok_reader/models/book.dart';
 import 'package:papertok_reader/models/search_note_group.dart';
 import 'package:papertok_reader/providers/search.dart';
 import 'package:papertok_reader/service/book.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
+import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
 import 'package:papertok_reader/utils/error_handler.dart';
 import 'package:papertok_reader/widgets/book_notes/book_note_tile.dart';
 import 'package:papertok_reader/widgets/bookshelf/book_item.dart';
@@ -239,8 +241,27 @@ class _SearchNoteResult extends ConsumerWidget {
                             backgroundColor:
                                 Theme.of(context).scaffoldBackgroundColor,
                             note: note,
+                            sourceTitle: item.book.title,
                             margin: EdgeInsets.zero,
                             onTap: () {
+                              final sourceRef =
+                                  BookNoteSourceRefAdapter.fromBookNote(
+                                note,
+                                sourceTitle: item.book.title,
+                              );
+                              final sourceIntent = BookNoteSourceRefAdapter
+                                  .readerIntentForBookNote(
+                                note,
+                                sourceTitle: item.book.title,
+                              );
+                              if (sourceIntent == null) {
+                                showPaperReaderSourceUnavailable(
+                                  context,
+                                  [sourceRef],
+                                  L10n.of(context).conceptGraphNoEvidence,
+                                );
+                                return;
+                              }
                               pushToReadingPage(ref, context, item.book,
                                   cfi: note.cfi);
                             },
