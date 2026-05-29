@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/ai_model_capability.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
@@ -11,8 +14,44 @@ import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+    const now = 1000;
+    Prefs().aiProvidersV1 = const [
+      AiProviderMeta(
+        id: 'local-gateway',
+        name: 'Local Gateway',
+        type: AiProviderType.openaiCompatible,
+        enabled: true,
+        isBuiltIn: false,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ];
+    Prefs().selectedAiService = 'local-gateway';
+    Prefs().saveAiConfig('local-gateway', const {
+      'model': 'gpt-5.5',
+      'url': 'http://localhost:3003/v1/',
+    });
+    Prefs().saveAiModelCapabilitiesCacheV1(
+      'local-gateway',
+      const [
+        AiModelCapability(
+          id: 'gpt-5.5',
+          contextWindow: 128000,
+          maxOutputTokens: 8192,
+          supportsTools: true,
+          supportsImages: true,
+          supportsThinking: true,
+        ),
+      ],
+    );
+  });
+
   SourceRef traceableRef() => SourceRef(
         bookId: 7,
         href: 'Text/ch.xhtml',
@@ -96,6 +135,12 @@ void main() {
     expect(find.text('Seminar Mode'), findsWidgets);
     expect(find.text('Evidence'), findsOneWidget);
     expect(find.text('The source passage.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('critical response'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('critical response'), findsOneWidget);
     expect(find.text('supportive response'), findsOneWidget);
     expect(find.text('synthesizer response'), findsWidgets);
@@ -109,6 +154,40 @@ void main() {
     expect(find.text('Candidate card'), findsOneWidget);
     expect(find.text('Synthesis'), findsOneWidget);
     expect(find.text('Send to Review'), findsOneWidget);
+  });
+
+  testWidgets(
+      'shows provider model capability and cost transparency before Start Seminar',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Provider readiness'), findsOneWidget);
+    expect(find.textContaining('Local Gateway'), findsOneWidget);
+    expect(find.textContaining('gpt-5.5'), findsOneWidget);
+    expect(find.textContaining('Context: 128K'), findsOneWidget);
+    expect(find.textContaining('Max output: 8.2K'), findsOneWidget);
+    expect(find.textContaining('Tools'), findsOneWidget);
+    expect(find.textContaining('Vision'), findsOneWidget);
+    expect(find.textContaining('Thinking'), findsOneWidget);
+    expect(find.textContaining('Streaming unknown'), findsOneWidget);
+    expect(find.text('Streaming'), findsNothing);
+    expect(find.textContaining('Cost: unknown'), findsOneWidget);
+    expect(find.textContaining('pricing metadata'), findsOneWidget);
   });
 
   testWidgets(

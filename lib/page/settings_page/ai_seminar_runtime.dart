@@ -4,6 +4,7 @@ import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
+import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 
 class AiSeminarRuntimePage extends ConsumerStatefulWidget {
@@ -102,6 +103,10 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
               border: OutlineInputBorder(),
             ),
           ),
+          const SizedBox(height: 12),
+          _ProviderReadinessSection(
+            diagnostics: state.providerDiagnostics,
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -145,6 +150,99 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
           _SynthesisSection(state: state),
         ],
       ),
+    );
+  }
+}
+
+class _ProviderReadinessSection extends StatelessWidget {
+  const _ProviderReadinessSection({required this.diagnostics});
+
+  final AiSeminarProviderDiagnostics? diagnostics;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = diagnostics;
+    if (d == null) {
+      return const _Section(
+        title: 'Provider readiness',
+        icon: Icons.memory_outlined,
+        children: [
+          Text('Provider diagnostics are not available yet.'),
+        ],
+      );
+    }
+
+    final capabilityLine = [
+      if (d.contextWindow != null)
+        'Context: ${_formatTokenCount(d.contextWindow!)}',
+      if (d.maxOutputTokens != null)
+        'Max output: ${_formatTokenCount(d.maxOutputTokens!)}',
+    ].join(' · ');
+    final warnings = d.warnings;
+    return _Section(
+      title: 'Provider readiness',
+      icon: Icons.memory_outlined,
+      children: [
+        Row(
+          children: [
+            Icon(
+              d.seminarReady ? Icons.check_circle_outline : Icons.error_outline,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${d.providerName} · ${d.modelId.isEmpty ? 'No model selected' : d.modelId}',
+              ),
+            ),
+          ],
+        ),
+        if (capabilityLine.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(capabilityLine),
+        ],
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            _TinyChip(label: _capabilityLabel('Tools', d.supportsTools)),
+            _TinyChip(label: _capabilityLabel('Vision', d.supportsImages)),
+            _TinyChip(
+              label: _capabilityLabel('Thinking', d.supportsThinking),
+            ),
+            _TinyChip(
+              label: _capabilityLabel('Streaming', d.supportsStreaming),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          d.costStatus == AiSeminarCostStatus.estimated &&
+                  d.estimatedCostUsd != null
+              ? 'Cost: \$${d.estimatedCostUsd!.toStringAsFixed(4)}'
+              : 'Cost: unknown',
+        ),
+        if (d.costUnknownReason?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: 4),
+          Text(
+            d.costUnknownReason!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          ),
+        ],
+        if (warnings.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          for (final warning in warnings)
+            Text(
+              warning,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+            ),
+        ],
+      ],
     );
   }
 }
@@ -412,4 +510,26 @@ IconData _roleIcon(AiSeminarRole role) {
     AiSeminarRole.synthesizer => Icons.auto_awesome_outlined,
     AiSeminarRole.verifier => Icons.verified_outlined,
   };
+}
+
+String _capabilityLabel(String label, bool? value) {
+  if (value == true) return label;
+  if (value == false) return 'No $label';
+  return '$label unknown';
+}
+
+String _formatTokenCount(int count) {
+  if (count >= 1000000) {
+    final value = count / 1000000;
+    return value == value.roundToDouble()
+        ? '${value.toInt()}M'
+        : '${value.toStringAsFixed(1)}M';
+  }
+  if (count >= 1000) {
+    final value = count / 1000;
+    return value == value.roundToDouble()
+        ? '${value.toInt()}K'
+        : '${value.toStringAsFixed(1)}K';
+  }
+  return count.toString();
 }

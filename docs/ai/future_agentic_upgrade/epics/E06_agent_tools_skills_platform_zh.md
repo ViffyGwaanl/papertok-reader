@@ -80,8 +80,9 @@ Provider/model 需要声明：
 - `CustomSkillContract` 已提供 schemaVersion `1`、JSON/Map parser、字段类型错误上报、unknown field 报错、unknown scene 报错、system scene 拦截、写工具拦截、`spawn_sub_agent` 拦截和 `canInject` runtime gate。
 - `CustomSkillStore` 和 `CustomSkillsPage` 已提供 Settings -> AI 导入入口、safe fixture 示例、valid contract upsert、禁用/删除、unsafe JSON 拦截、Installed skills runtime 状态展示和 Active Skill 合并。
 - `AiSkill.allowedToolIds/sceneIds` 与 `LangchainAiRegistry.enabledToolIdsForActiveSkill` 已把 active custom skill 的 runtime 工具集收窄到 contract 声明过且当前 scene/permission matrix 允许的只读工具；custom skill 激活时不加载 MCP 工具。
+- `AiSeminarProviderContextService` 已把 Provider Center 当前 provider/model、本地 `AiModelCapability` cache、context/max output、Tools/Vision/Thinking 状态投影到 Seminar runtime state 和 `Provider readiness` UI；当前 schema 没有 streaming 字段时显示 `Streaming unknown`，缺少 pricing/usage metadata 时只显示成本未知原因。
 - `AiToolPermissionMatrix`、`SubAgentGovernancePolicy`、`AiToolRegistry` governance filter、`SubAgentRunner.allowedToolIdsForAgent` 与 `ToolOrchestrator` 已有 focused tests 覆盖。
-- 取消、超时、成本记录和 provider capability matrix 仍保留为本 Epic 的剩余 Agent Task，不在当前切片中冒充完成。
+- 取消、超时、Seminar token usage 成本记录、角色预算、成本上限和后台恢复状态仍保留为本 Epic 的剩余 Agent Task，不在当前切片中冒充完成。
 
 ## 4. Task Execution Defaults
 

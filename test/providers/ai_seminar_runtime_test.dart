@@ -3,18 +3,61 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
+import 'package:papertok_reader/models/ai_model_capability.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
+import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
+import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
 import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+  });
+
+  void configureProvider() {
+    const now = 1000;
+    Prefs().aiProvidersV1 = const [
+      AiProviderMeta(
+        id: 'local-gateway',
+        name: 'Local Gateway',
+        type: AiProviderType.openaiCompatible,
+        enabled: true,
+        isBuiltIn: false,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ];
+    Prefs().selectedAiService = 'local-gateway';
+    Prefs().saveAiConfig('local-gateway', const {
+      'model': 'gpt-5.5',
+      'url': 'http://localhost:3003/v1/',
+    });
+    Prefs().saveAiModelCapabilitiesCacheV1(
+      'local-gateway',
+      const [
+        AiModelCapability(
+          id: 'gpt-5.5',
+          contextWindow: 128000,
+          maxOutputTokens: 8192,
+          supportsTools: true,
+          supportsImages: true,
+          supportsThinking: true,
+        ),
+      ],
+    );
+  }
+
   SourceRef traceableRef() => SourceRef(
         bookId: 7,
         href: 'Text/ch.xhtml',
@@ -80,6 +123,7 @@ void main() {
   }
 
   test('start captures evidence role turns whiteboard and synthesis', () async {
+    configureProvider();
     final container = ProviderContainer(
       overrides: [
         aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
@@ -105,6 +149,30 @@ void main() {
     );
     expect(state.synthesis!.summary, 'synthesizer response');
     expect(state.canRetry, false);
+  });
+
+  test('start captures provider diagnostics before streaming roles', () async {
+    configureProvider();
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(id: 's-provider', question: 'Explain this.'),
+        );
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(state.providerDiagnostics?.providerName, 'Local Gateway');
+    expect(state.providerDiagnostics?.modelId, 'gpt-5.5');
+    expect(state.providerDiagnostics?.contextWindow, 128000);
+    expect(state.providerDiagnostics?.seminarReady, true);
+    expect(
+      state.providerDiagnostics?.costStatus,
+      AiSeminarCostStatus.unknown,
+    );
   });
 
   test('retry clears failed partial state and reruns the same session',
@@ -141,6 +209,22 @@ void main() {
       evidenceBundle: bundle(),
       activeRole: AiSeminarRole.critical,
       partialRoleText: 'critical partial',
+      providerDiagnostics: const AiSeminarProviderDiagnostics(
+        providerId: 'local-gateway',
+        providerName: 'Local Gateway',
+        providerType: 'openai',
+        modelId: 'gpt-5.5',
+        hasProviderConfig: true,
+        hasCapabilityCache: true,
+        seminarReady: true,
+        contextWindow: 128000,
+        maxOutputTokens: 8192,
+        supportsTools: true,
+        supportsImages: true,
+        supportsThinking: true,
+        costStatus: AiSeminarCostStatus.unknown,
+        costUnknownReason: 'Provider pricing metadata is unavailable.',
+      ),
     );
 
     final restored = AiSeminarRuntimeState.fromJson(state.toJson());
@@ -150,6 +234,10 @@ void main() {
     expect(restored.evidenceBundle!.evidence.single.id, 'e1');
     expect(restored.activeRole, AiSeminarRole.critical);
     expect(restored.partialRoleText, 'critical partial');
+    expect(restored.providerDiagnostics!.providerName, 'Local Gateway');
+    expect(restored.providerDiagnostics!.modelId, 'gpt-5.5');
+    expect(restored.providerDiagnostics!.costUnknownReason,
+        contains('pricing metadata'));
   });
 
   test('sendToReview hands off synthesis candidate cards and flashcards',

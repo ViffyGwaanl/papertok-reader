@@ -79,6 +79,7 @@ Seminar 结束时输出：
 | E01-C04-T01 | 定义 synthesis 输出 | E01-C03-T01 | synthesis schema | 可转 Review，不直接落盘。 |
 | E01-C04-T02 | 接入结构化 UI 入口 | E01-C04-T01, E07 Ready | `AiSeminarRuntimePage`、Settings AI entry、reader selection entry | 阅读页 2 步内可开 Seminar，并可看到 evidence、role turns、Shared Whiteboard、synthesis。 |
 | E01-C04-T03 | 接入 synthesis Review handoff | E01-C04-T01, E05-C01-T01 | `SeminarSynthesisReviewAdapter`、`AiSeminarRuntimeNotifier.sendToReview` | readyForReview 且 traceable handoff 才能进入 pending Review；候选卡保持 draft/pending。 |
+| E01-C04-T04 | 接入 Seminar provider readiness | E06-C04-T01, E07 Ready | `AiSeminarProviderContextService`、`AiSeminarRuntimeState.providerDiagnostics`、`AiSeminarRuntimePage` readiness UI | 启动前显示当前 provider/model/capability cache 和成本未知原因；缺少 pricing/usage metadata 时不伪造成本估算。 |
 
 ## 5. Task Execution Defaults
 

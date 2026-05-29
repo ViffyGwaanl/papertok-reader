@@ -6,9 +6,9 @@
 
 | 项 | 当前可复用 | 缺口 | 下游 Epic |
 | --- | --- | --- | --- |
-| AI Chat streaming | `aiChatProvider` 已负责通用聊天 streaming 生命周期；本分支新增 `AiSeminarRuntimeService`，可把 role-by-role Seminar 输出为 evidence、role turn、whiteboard、synthesis 事件。 | Seminar 的成本记录、后台持久续跑和更细粒度 provider capability matrix 仍需接入。 | E01, E07 |
-| Provider Center | 已支持内置/自定义 provider、模型切换、Responses 兼容开关。 | Seminar 需要角色预算、成本上限、provider 能力矩阵。 | E01, E06 |
-| Skills | 已有 `seminar_mode`、reading companion、flashcard 等 prompt skill；本分支新增 AI Seminar 服务层编排、真实模型流式 role runtime、Shared Whiteboard UI、Review handoff、`CustomSkillContract` strict JSON/Map schema parser、`CustomSkillStore`、Settings -> AI -> `Custom skills` 导入入口、Active Skill 合并和 LangChain runtime 工具收窄，以及阅读页选中文本 -> `研讨` 的结构化入口。 | 角色预算、成本上限、后台续跑和 provider 能力矩阵还需要接入治理模型。 | E01, E06, E07 |
+| AI Chat streaming | `aiChatProvider` 已负责通用聊天 streaming 生命周期；本分支新增 `AiSeminarRuntimeService`，可把 role-by-role Seminar 输出为 evidence、role turn、whiteboard、synthesis 事件，并在 Seminar runtime state 中持久化 provider diagnostics。 | Seminar 的 token usage 成本记录、角色预算、成本上限和后台持久续跑仍需接入。 | E01, E07 |
+| Provider Center | 已支持内置/自定义 provider、模型切换、Responses 兼容开关；`AiSeminarProviderContextService` 已能读取当前 provider/model、本地 capability cache、context/max output、Tools/Vision/Thinking 状态；当前 schema 没有 streaming 字段时显示 `Streaming unknown`，并在缺少 pricing/usage metadata 时显示成本未知原因。 | Seminar 还需要 token usage 成本记录、角色预算、成本上限、后台恢复状态和正式 streaming capability 字段。 | E01, E06 |
+| Skills | 已有 `seminar_mode`、reading companion、flashcard 等 prompt skill；本分支新增 AI Seminar 服务层编排、真实模型流式 role runtime、Shared Whiteboard UI、Review handoff、provider readiness UI、`CustomSkillContract` strict JSON/Map schema parser、`CustomSkillStore`、Settings -> AI -> `Custom skills` 导入入口、Active Skill 合并和 LangChain runtime 工具收窄，以及阅读页选中文本 -> `研讨` 的结构化入口。 | 角色预算、成本上限和后台续跑还需要接入治理模型。 | E01, E06, E07 |
 
 锚点：
 
@@ -39,7 +39,7 @@
 | `AnnotationLedger` | 能记录当前会话 AI 创建的高亮/笔记，防重复。 | Seminar 需要 Shared Whiteboard，记录 claim、evidence、disagreement、open question。 | E00, E01 |
 | Create Highlight/Note tools | AI 已能创建高亮和笔记，且有工具审批链路。 | KnowledgeCard 不应直接复用 note 作为唯一模型，需要独立 review 状态。 | E03, E05 |
 | KnowledgeCard local store | 本分支新增 `KnowledgeCardStore`，可把 AI 候选卡持久化到 `.knowledge/knowledge_cards_v1.json`，重复候选不覆盖用户内容，ReviewItem 决策可回写 card；统一 Review Inbox UI 已能批准、忽略、应用 KnowledgeCard 审批项；阅读页选中文本、图片解析结果、RAG/GraphRAG evidence、AI Chat 回答和 Seminar candidate card 都可写入待审卡；Seminar candidate card 和 reader-grounded AI Chat card 可携带 `conceptRefs`，用户 Apply 后进入 ConceptGraph 候选链路。 | AI Chat 回答必须由用户点击回答旁 `知识卡` 才写入；回答旁已显示可跳转/不可用来源状态；从选中文本打开 AI 时可保留精确 reader SourceRef，并随 `conversationV2` 历史持久化；如果用户把预填草稿改成无关问题，或只是碰巧包含短公共片段，则本轮不保存旧 reader SourceRef；没有该字段的旧历史只保留 conversation provenance，不用当前阅读位置伪造 reader grounding；纯聊天 card 不生成 `conceptRefs`，AI Chat 不直接写 ConceptGraph。 | E03, E05, E08 |
-| Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项；选中文本 KnowledgeCard、Seminar synthesis、Seminar candidate card 和 Seminar reviewSuggestion flashcard 已能进入统一 Review Inbox；flashcard candidate Apply 后可进入 Spaced Review。 | Seminar synthesis 本身只支持 approve/dismiss，不做泛型 apply；Memory source-specific apply adapter 仍需接入。 | E03, E04, E05 |
+| Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项；选中文本 KnowledgeCard、Seminar synthesis、Seminar candidate card 和 Seminar reviewSuggestion flashcard 已能进入统一 Review Inbox；flashcard candidate Apply 后可进入 Spaced Review；Memory source-specific apply/dismiss adapter 已接入本地 Markdown memory 写入边界。 | Seminar synthesis 本身只支持 approve/dismiss，不做泛型 apply；旧 note/memory 全量 SourceRef 审计还需要继续统一。 | E03, E04, E05 |
 
 锚点：
 
@@ -84,7 +84,7 @@
 
 - 统一 `SourceRef` 核心模型已存在；仍需把所有 UI 输出、sync/export manifest 和旧 note/memory 路径完全接到同一证据链。
 - KnowledgeCard 模型、本地 store、Review adapter、统一 Review Inbox UI、reader selection 入口、图片分析结果入口、RAG/GraphRAG evidence 入口、AI Chat 回答显性 `知识卡` handoff、AI Chat 回答旁来源状态提示、AI Chat reader SourceRef 历史持久化、AI Chat 无关改写和短公共片段 SourceRef 降级、AI Chat reader-grounded `conceptRefs` handoff、Seminar candidate handoff、Seminar flashcard handoff、spaced review scheduler 和导出入口已有可测试切片；仍需把旧 note/memory 路径完全接到同一 SourceRef 审计 UI。
-- `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、结构化 runtime UI、真实模型流式事件、取消/重试、Review handoff 和阅读页选中入口；仍需成本记录、后台持久续跑和更强 provider capability matrix。
+- `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、结构化 runtime UI、真实模型流式事件、取消/重试、Review handoff、provider readiness/cost unknown UI 和阅读页选中入口；仍需 token usage 成本记录、角色预算、成本上限和后台持久续跑。
 - Custom Skill contract 已有 schema version、parser、validator、权限声明、导入 UI、fixture 示例、Active Skill 合并和 runtime injection gate；仍需 provider 能力界面。
 - ConceptGraph 模型、本地 store、KnowledgeCard producer、Seminar candidate conceptRefs handoff、reader-grounded AI Chat conceptRefs handoff、RAG/GraphRAG derived result producer、空态显性 action、局部探索、局部图谱摘要、统一 Review relation adapter、Explorer UI 和阅读页选中文本入口已有可测试切片；复杂无限画布、缩放手势和跨书外部知识扩展不在本切片。
 - 旧历史文档中仍存在传统 phase/roadmap 混写；agent team 应以本目录的 `Epic -> Capability -> Agent Task -> Gate -> Acceptance` 文档为执行入口，旧文档只作为历史锚点。

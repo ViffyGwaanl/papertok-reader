@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_evidence_broker.dart';
+import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/rag/semantic_search_current_book.dart';
@@ -46,6 +47,11 @@ final aiSeminarReviewItemStoreProvider = Provider<ReviewItemStore>((ref) {
   return ReviewItemStore();
 });
 
+final aiSeminarProviderContextServiceProvider =
+    Provider<AiSeminarProviderContextService>((ref) {
+  return const AiSeminarProviderContextService();
+});
+
 final aiSeminarKnowledgeCardStoreProvider = Provider<KnowledgeCardStore>((ref) {
   return KnowledgeCardStore();
 });
@@ -56,6 +62,7 @@ final aiSeminarRuntimeProvider =
     ref.watch(aiSeminarRuntimeServiceProvider),
     ref.watch(aiSeminarReviewItemStoreProvider),
     ref.watch(aiSeminarKnowledgeCardStoreProvider),
+    ref.watch(aiSeminarProviderContextServiceProvider),
   ),
 );
 
@@ -85,10 +92,16 @@ class AiSeminarRuntimeState {
     this.error,
     this.startedAt,
     this.completedAt,
+    this.providerDiagnostics,
   });
 
-  factory AiSeminarRuntimeState.initial() {
-    return const AiSeminarRuntimeState(status: AiSeminarRunStatus.draft);
+  factory AiSeminarRuntimeState.initial({
+    AiSeminarProviderDiagnostics? providerDiagnostics,
+  }) {
+    return AiSeminarRuntimeState(
+      status: AiSeminarRunStatus.draft,
+      providerDiagnostics: providerDiagnostics,
+    );
   }
 
   final AiSeminarRunStatus status;
@@ -103,6 +116,7 @@ class AiSeminarRuntimeState {
   final String? error;
   final int? startedAt;
   final int? completedAt;
+  final AiSeminarProviderDiagnostics? providerDiagnostics;
 
   bool get canCancel => status == AiSeminarRunStatus.running;
 
@@ -128,6 +142,7 @@ class AiSeminarRuntimeState {
     bool clearError = false,
     int? startedAt,
     int? completedAt,
+    AiSeminarProviderDiagnostics? providerDiagnostics,
   }) {
     return AiSeminarRuntimeState(
       status: status ?? this.status,
@@ -149,6 +164,7 @@ class AiSeminarRuntimeState {
       error: clearError ? null : error ?? this.error,
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
+      providerDiagnostics: providerDiagnostics ?? this.providerDiagnostics,
     );
   }
 
@@ -167,6 +183,8 @@ class AiSeminarRuntimeState {
         if (error != null) 'error': error,
         if (startedAt != null) 'startedAt': startedAt,
         if (completedAt != null) 'completedAt': completedAt,
+        if (providerDiagnostics != null)
+          'providerDiagnostics': providerDiagnostics!.toJson(),
       };
 
   factory AiSeminarRuntimeState.fromJson(Map<String, dynamic> json) {
@@ -211,6 +229,11 @@ class AiSeminarRuntimeState {
       error: json['error']?.toString(),
       startedAt: (json['startedAt'] as num?)?.toInt(),
       completedAt: (json['completedAt'] as num?)?.toInt(),
+      providerDiagnostics: json['providerDiagnostics'] is Map
+          ? AiSeminarProviderDiagnostics.fromJson(
+              Map<String, dynamic>.from(json['providerDiagnostics'] as Map),
+            )
+          : null,
     );
   }
 }
@@ -220,19 +243,28 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     this._service,
     this._reviewStore,
     this._knowledgeCardStore,
-  ) : super(AiSeminarRuntimeState.initial());
+    this._providerContext,
+  ) : super(
+          AiSeminarRuntimeState.initial(
+            providerDiagnostics: _providerContext.resolve(),
+          ),
+        );
 
   final AiSeminarRuntimeService _service;
   final ReviewItemStore _reviewStore;
   final KnowledgeCardStore _knowledgeCardStore;
+  final AiSeminarProviderContextService _providerContext;
   AiSeminarCancellationToken? _activeToken;
   int _generation = 0;
 
   Future<void> start(AiSeminarSessionContract session) async {
     final generation = ++_generation;
     final token = AiSeminarCancellationToken();
+    final providerDiagnostics = _providerContext.resolve();
     _activeToken = token;
-    state = AiSeminarRuntimeState.initial().copyWith(
+    state = AiSeminarRuntimeState.initial(
+      providerDiagnostics: providerDiagnostics,
+    ).copyWith(
       session: session,
       status: AiSeminarRunStatus.running,
       clearError: true,
