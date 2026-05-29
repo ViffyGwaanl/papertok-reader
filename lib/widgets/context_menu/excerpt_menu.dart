@@ -21,6 +21,27 @@ import 'package:flutter/services.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+typedef ExcerptKnowledgeCardCreator
+    = Future<SelectionKnowledgeCardProducerResult> Function({
+  required int bookId,
+  required String cfi,
+  required String selectedText,
+  String? chapterTitle,
+  String? bookTitle,
+});
+
+class ExcerptKnowledgeCardReaderContext {
+  const ExcerptKnowledgeCardReaderContext({
+    required this.bookId,
+    required this.bookTitle,
+    this.chapterTitle,
+  });
+
+  final int bookId;
+  final String bookTitle;
+  final String? chapterTitle;
+}
+
 class ExcerptMenu extends StatefulWidget {
   final String annoCfi;
   final String annoContent;
@@ -34,6 +55,9 @@ class ExcerptMenu extends StatefulWidget {
   final void Function(int noteId) onNoteCreated;
   final Axis axis;
   final bool reverse;
+  final ExcerptKnowledgeCardReaderContext? knowledgeCardReaderContext;
+  final ExcerptKnowledgeCardCreator? knowledgeCardCreator;
+  final ValueChanged<String>? knowledgeCardFeedback;
 
   const ExcerptMenu({
     super.key,
@@ -49,6 +73,9 @@ class ExcerptMenu extends StatefulWidget {
     required this.onNoteCreated,
     required this.axis,
     required this.reverse,
+    this.knowledgeCardReaderContext,
+    this.knowledgeCardCreator,
+    this.knowledgeCardFeedback,
   });
 
   @override
@@ -217,20 +244,35 @@ class ExcerptMenuState extends State<ExcerptMenu> {
   }
 
   Future<void> _createKnowledgeCardFromSelection() async {
-    final player = epubPlayerKey.currentState;
     final l10n = L10n.of(context);
-    if (player == null) {
-      AnxToast.show(l10n.knowledgeCardAddFailed);
+    final readerContext = _knowledgeCardReaderContext();
+    if (readerContext == null) {
+      _showKnowledgeCardFeedback(l10n.knowledgeCardAddFailed);
       return;
     }
 
     try {
-      final result = await SelectionKnowledgeCardProducer().createFromSelection(
-        bookId: player.widget.book.id,
+      final creator = widget.knowledgeCardCreator ??
+          ({
+            required int bookId,
+            required String cfi,
+            required String selectedText,
+            String? chapterTitle,
+            String? bookTitle,
+          }) =>
+              SelectionKnowledgeCardProducer().createFromSelection(
+                bookId: bookId,
+                cfi: cfi,
+                selectedText: selectedText,
+                chapterTitle: chapterTitle,
+                bookTitle: bookTitle,
+              );
+      final result = await creator(
+        bookId: readerContext.bookId,
         cfi: widget.annoCfi,
         selectedText: widget.annoContent,
-        chapterTitle: player.chapterTitle,
-        bookTitle: player.book.title,
+        chapterTitle: readerContext.chapterTitle,
+        bookTitle: readerContext.bookTitle,
       );
       if (!mounted) return;
       final message = result.addedToReviewInbox
@@ -238,13 +280,35 @@ class ExcerptMenuState extends State<ExcerptMenu> {
               ? l10n.knowledgeCardAddedToReviewInbox
               : l10n.knowledgeCardAlreadyInReviewInbox)
           : l10n.knowledgeCardAlreadySaved;
-      AnxToast.show(message);
+      _showKnowledgeCardFeedback(message);
       widget.onClose();
     } catch (_) {
       if (mounted) {
-        AnxToast.show(l10n.knowledgeCardAddFailed);
+        _showKnowledgeCardFeedback(l10n.knowledgeCardAddFailed);
       }
     }
+  }
+
+  ExcerptKnowledgeCardReaderContext? _knowledgeCardReaderContext() {
+    if (widget.knowledgeCardReaderContext case final injected?) {
+      return injected;
+    }
+    final player = epubPlayerKey.currentState;
+    if (player == null) return null;
+    return ExcerptKnowledgeCardReaderContext(
+      bookId: player.widget.book.id,
+      bookTitle: player.book.title,
+      chapterTitle: player.chapterTitle,
+    );
+  }
+
+  void _showKnowledgeCardFeedback(String message) {
+    final feedback = widget.knowledgeCardFeedback;
+    if (feedback != null) {
+      feedback(message);
+      return;
+    }
+    AnxToast.show(message);
   }
 
   Future<void> _openSeminarFromSelection() async {
