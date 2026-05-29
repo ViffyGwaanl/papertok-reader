@@ -5,7 +5,9 @@ import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/ai_chat_knowledge_card_producer.dart';
+import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 
 void main() {
@@ -105,6 +107,65 @@ void main() {
     expect(readerRef.canJumpBack, true);
   });
 
+  test('assistant answer derives conservative concept refs for review',
+      () async {
+    final result = await producer.createFromAssistantAnswer(
+      assistantAnswer:
+          'Attention is a mechanism for weighting context. SourceRef keeps the evidence jumpable.',
+      userPrompt: 'Explain attention and SourceRef.',
+      conversationId: 'chat-concepts',
+      messageNodeId: 'assistant:1',
+      bookId: 7,
+      cfi: 'epubcfi(/6/4)',
+      now: 100,
+    );
+
+    expect(result.card.conceptRefs, contains('Attention'));
+    expect(result.card.conceptRefs, contains('SourceRef'));
+    expect(result.card.conceptRefs.length, lessThanOrEqualTo(3));
+    expect(result.reviewItem!.payload['card'], isA<Map<String, dynamic>>());
+    final payload = result.reviewItem!.payload['card'] as Map<String, dynamic>;
+    expect(payload['conceptRefs'], contains('Attention'));
+  });
+
+  test('applied AI chat card seeds draft ConceptGraph candidates after review',
+      () async {
+    final graphStore = ConceptGraphStore(rootDir: tempRoot);
+    final controller = ReviewInboxController(
+      rootDir: tempRoot,
+      reviewStore: reviewStore,
+      knowledgeCardStore: cardStore,
+      conceptGraphStore: graphStore,
+      now: () => 200,
+    );
+    final result = await producer.createFromAssistantAnswer(
+      assistantAnswer: 'Attention is a mechanism for weighting context.',
+      userPrompt: 'Explain attention.',
+      conversationId: 'chat-graph',
+      messageNodeId: 'assistant:1',
+      bookId: 7,
+      cfi: 'epubcfi(/6/4)',
+      now: 100,
+    );
+
+    await controller.approve(result.reviewItem!.id);
+    await controller.apply(result.reviewItem!.id);
+
+    final nodes = await graphStore.listNodes();
+    final edges = await graphStore.listEdges();
+    final relationReviews = await reviewStore.list(
+      sourceType: ReviewItemSourceType.conceptGraphRelation,
+    );
+
+    expect(nodes.map((node) => node.id),
+        contains(stableCardNodeId(result.card.id)));
+    expect(nodes.map((node) => node.id), contains('concept:attention'));
+    expect(edges, hasLength(1));
+    expect(edges.single.isFormal, false);
+    expect(relationReviews, hasLength(1));
+    expect(relationReviews.single.status, ReviewItemStatus.pending);
+  });
+
   test('pure chat answer still carries explainable conversation provenance',
       () async {
     final result = await producer.createFromAssistantAnswer(
@@ -121,6 +182,7 @@ void main() {
     expect(result.card.sourceRefs.single.hasEvidence, true);
     expect(result.card.sourceRefs.single.canJumpBack, false);
     expect(result.card.sourceRefs.single.hasUnavailableReason, true);
+    expect(result.card.conceptRefs, isEmpty);
   });
 
   test('duplicate chat answer does not create duplicate cards', () async {
@@ -182,4 +244,13 @@ void main() {
     expect((payload['explanation'] as String).length,
         lessThanOrEqualTo(AiChatKnowledgeCardProducer.maxAnswerChars));
   });
+}
+
+String stableCardNodeId(String cardId) {
+  final normalized = cardId
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'-+'), '-')
+      .replaceAll(RegExp(r'^-|-$'), '');
+  return 'card:$normalized';
 }

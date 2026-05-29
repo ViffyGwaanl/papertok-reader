@@ -72,6 +72,9 @@ class AiChatKnowledgeCardProducer {
       readerSourceRef: readerSourceRef,
       now: timestamp,
     );
+    final conceptRefs = _hasReaderGrounding(sourceRefs)
+        ? _conceptRefs(prompt: prompt, answer: answer)
+        : const <String>[];
 
     final candidate = KnowledgeCard(
       id: _cardId(
@@ -84,6 +87,7 @@ class AiChatKnowledgeCardProducer {
       quote: prompt.isEmpty ? 'AI chat answer saved for review.' : prompt,
       explanation: _clip(answer, maxAnswerChars),
       sourceRefs: sourceRefs,
+      conceptRefs: conceptRefs,
       tags: const ['ai-chat'],
       reviewState: KnowledgeCardReviewState.pending,
       origin: KnowledgeCardOrigin.aiChat,
@@ -177,6 +181,13 @@ class AiChatKnowledgeCardProducer {
     return refs;
   }
 
+  static bool _hasReaderGrounding(List<SourceRef> sourceRefs) {
+    return sourceRefs.any((ref) {
+      if (ref.sourceKind == SourceRefKind.conversation) return false;
+      return ref.hasBookAnchor || ref.canJumpBack;
+    });
+  }
+
   static String _conversationLabel({
     String? conversationId,
     String? messageNodeId,
@@ -212,6 +223,116 @@ class AiChatKnowledgeCardProducer {
     if (title.length <= 80) return title;
     return '${title.substring(0, 77)}...';
   }
+
+  static List<String> _conceptRefs({
+    required String prompt,
+    required String answer,
+  }) {
+    final labels = <String>[];
+    final seen = <String>{};
+
+    void add(String raw) {
+      final label = _normalizeConcept(raw);
+      if (label == null) return;
+      final key = label.toLowerCase();
+      if (!seen.add(key)) return;
+      labels.add(label);
+    }
+
+    for (final text in [prompt, answer]) {
+      for (final match in RegExp(r'`([^`]{2,40})`').allMatches(text)) {
+        add(match.group(1) ?? '');
+        if (labels.length >= 3) return labels;
+      }
+    }
+
+    for (final match in RegExp(
+      r'^\s*([A-Z][A-Za-z0-9 /-]{1,40}|[\u4e00-\u9fff][\u4e00-\u9fffA-Za-z0-9]{1,15})\s+(?:is|are|means|refers to|can be|是|指|表示)\b',
+      multiLine: true,
+    ).allMatches(answer)) {
+      add(match.group(1) ?? '');
+      if (labels.length >= 3) return labels;
+    }
+
+    for (final text in [prompt, answer]) {
+      for (final match in RegExp(
+        r'\b(?:[A-Z]{2,}(?:/[A-Z0-9-]+)*|[A-Za-z]+(?:[A-Z][a-z0-9]+)+)\b',
+      ).allMatches(text)) {
+        add(match.group(0) ?? '');
+        if (labels.length >= 3) return labels;
+      }
+    }
+
+    for (final match in RegExp(
+      r'\b([A-Z][a-zA-Z0-9-]{2,24})\b',
+    ).allMatches(answer)) {
+      add(match.group(1) ?? '');
+      if (labels.length >= 3) return labels;
+    }
+
+    for (final match in RegExp(
+      r'(?:explain|summarize|analyse|analyze|compare|what is|什么是|解释|总结|分析)\s+([^?.!。！？,，;；]{2,40})',
+      caseSensitive: false,
+    ).allMatches(prompt)) {
+      add(_titleCaseConcept(match.group(1) ?? ''));
+      if (labels.length >= 3) return labels;
+    }
+
+    return labels;
+  }
+
+  static String? _normalizeConcept(String value) {
+    var label = value
+        .replaceAll(RegExp(r'^[\s\p{P}]+|[\s\p{P}]+$', unicode: true), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (label.isEmpty) return null;
+    if (label.length < 2 || label.length > 40) return null;
+    if (RegExp(r'^\d+$').hasMatch(label)) return null;
+    final lower = label.toLowerCase();
+    if (_conceptStopWords.contains(lower)) return null;
+    if (lower.startsWith('explain ') ||
+        lower.startsWith('summarize ') ||
+        lower.startsWith('analyse ') ||
+        lower.startsWith('analyze ')) {
+      return null;
+    }
+    return label;
+  }
+
+  static String _titleCaseConcept(String value) {
+    final normalized = _normalize(value);
+    if (normalized.isEmpty) return normalized;
+    if (RegExp(r'[\u4e00-\u9fff]').hasMatch(normalized)) return normalized;
+    return normalized
+        .split(' ')
+        .where((part) => part.trim().isNotEmpty)
+        .map((part) {
+      final word = part.trim();
+      if (word.toUpperCase() == word && word.length <= 8) return word;
+      if (word.length <= 1) return word.toUpperCase();
+      return '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}';
+    }).join(' ');
+  }
+
+  static const Set<String> _conceptStopWords = {
+    'a',
+    'an',
+    'and',
+    'answer',
+    'ai',
+    'chat',
+    'context',
+    'explain',
+    'it',
+    'mechanism',
+    'question',
+    'summary',
+    'the',
+    'this',
+    'what',
+    'why',
+  };
 
   static String _normalize(String value) {
     return value.replaceAll(RegExp(r'\s+'), ' ').trim();
