@@ -871,6 +871,44 @@
     }
   },
   "conceptGraphLocalPath": "Local path",
+  "conceptGraphLocalMapTitle": "Local map",
+  "conceptGraphMapCenter": "Center",
+  "conceptGraphDirectNeighborCount": "{count, plural, one{1 direct} other{{count} direct}}",
+  "@conceptGraphDirectNeighborCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphTwoHopCount": "{count, plural, one{1 two-hop} other{{count} two-hop}}",
+  "@conceptGraphTwoHopCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphEvidenceLinkCount": "{count, plural, one{1 evidence link} other{{count} evidence links}}",
+  "@conceptGraphEvidenceLinkCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphDraftItemCount": "{count, plural, one{1 draft item} other{{count} draft items}}",
+  "@conceptGraphDraftItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphDraftBadge": "Draft",
+  "conceptGraphFormalBadge": "Formal",
+  "conceptGraphEvidenceBadge": "Evidence",
+  "conceptGraphNoEvidenceBadge": "No evidence",
   "conceptGraphRelatedTitle": "Related",
   "conceptGraphEvidenceTitle": "Evidence",
   "conceptGraphNoRelated": "No traceable related concepts yet.",

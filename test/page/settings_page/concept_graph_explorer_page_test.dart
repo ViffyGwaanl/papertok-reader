@@ -51,9 +51,44 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Selective focus in a reading argument.'), findsWidgets);
-    expect(find.text('reinforces'), findsOneWidget);
+    expect(find.text('reinforces'), findsWidgets);
     expect(find.text('Local path'), findsOneWidget);
     expect(find.text('Open source'), findsOneWidget);
+  });
+
+  testWidgets('selected concept shows a local graph map summary',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Attention'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Local map'), findsOneWidget);
+    expect(find.text('Center'), findsOneWidget);
+    expect(find.text('1 direct'), findsOneWidget);
+    expect(find.text('1 two-hop'), findsOneWidget);
+    expect(find.text('1 evidence link'), findsOneWidget);
+    expect(find.text('4 draft items'), findsOneWidget);
+    expect(find.text('Attention -> Memory'), findsWidgets);
+    expect(find.text('Recall'), findsWidgets);
   });
 
   testWidgets('initial selection query filters related concepts',
@@ -281,6 +316,14 @@ class _FakeConceptGraphStore extends ConceptGraphStore {
     sourceRefs: [refFor('Memory keeps useful distinctions.')],
     createdAt: 90,
   );
+  final recall = ConceptNode(
+    id: 'recall',
+    type: ConceptNodeType.concept,
+    label: 'Recall',
+    summary: 'Second-hop retrieval practice.',
+    sourceRefs: [refFor('Recall depends on meaningful cues.')],
+    createdAt: 85,
+  );
   final orphan = const ConceptNode(
     id: 'orphan',
     type: ConceptNodeType.concept,
@@ -306,7 +349,12 @@ class _FakeConceptGraphStore extends ConceptGraphStore {
   );
 
   @override
-  Future<List<ConceptNode>> listNodes() async => [attention, memory, orphan];
+  Future<List<ConceptNode>> listNodes() async => [
+        attention,
+        memory,
+        recall,
+        orphan,
+      ];
 
   @override
   Future<ConceptGraphIntegrityReport> inspectIntegrity() async {
@@ -337,8 +385,8 @@ class _FakeConceptGraphStore extends ConceptGraphStore {
   }) async {
     return ConceptExplorationPath(
       startNodeId: startNodeId,
-      nodeIds: ['attention', 'memory'],
-      returnPath: ['attention', 'memory'],
+      nodeIds: ['attention', 'memory', 'recall'],
+      returnPath: ['attention', 'memory', 'recall'],
       policy: policy,
     );
   }

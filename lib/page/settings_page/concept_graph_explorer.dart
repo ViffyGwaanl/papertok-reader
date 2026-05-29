@@ -330,6 +330,11 @@ class _DossierContent extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 16),
+        _LocalGraphMap(
+          selection: selection,
+          nodesById: state.nodesById,
+        ),
+        const SizedBox(height: 16),
         Text(
           l10n.conceptGraphLocalPath,
           style: Theme.of(context).textTheme.titleMedium,
@@ -386,6 +391,242 @@ class _DossierContent extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LocalGraphMap extends StatelessWidget {
+  const _LocalGraphMap({
+    required this.selection,
+    required this.nodesById,
+  });
+
+  final ConceptGraphExplorerSelection selection;
+  final Map<String, ConceptNode> nodesById;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final dossier = selection.dossier;
+    final directIds = _directNeighborIds(
+      dossier.relatedEdges,
+      dossier.node.id,
+    );
+    final pathIds = selection.path.nodeIds
+        .where((id) => id.trim().isNotEmpty)
+        .toList(growable: false);
+    final twoHopIds = pathIds
+        .where((id) => id != dossier.node.id && !directIds.contains(id))
+        .toList(growable: false);
+    final directNodes = _nodesForIds(directIds, nodesById);
+    final twoHopNodes = _nodesForIds(twoHopIds, nodesById);
+    final localNodes = <ConceptNode>[
+      dossier.node,
+      ...directNodes,
+      ...twoHopNodes,
+    ];
+    final evidenceLinkCount =
+        dossier.relatedEdges.where((edge) => edge.hasEvidence).length;
+    final draftItemCount = localNodes.where((node) => !node.isFormal).length +
+        dossier.relatedEdges.where((edge) => !edge.isFormal).length;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ClaudePalette.elevated(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.hub_outlined, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.conceptGraphLocalMapTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _TinyChip(label: l10n.conceptGraphMapCenter),
+                _TinyChip(
+                  label: l10n.conceptGraphDirectNeighborCount(
+                    directNodes.length,
+                  ),
+                ),
+                _TinyChip(
+                  label: l10n.conceptGraphTwoHopCount(twoHopNodes.length),
+                ),
+                _TinyChip(
+                  label: l10n.conceptGraphEvidenceLinkCount(
+                    evidenceLinkCount,
+                  ),
+                ),
+                _TinyChip(
+                  label: l10n.conceptGraphDraftItemCount(draftItemCount),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _MapNodePill(node: dossier.node, isCenter: true),
+            if (directNodes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final node in directNodes) _MapNodePill(node: node),
+                ],
+              ),
+            ],
+            if (twoHopNodes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final node in twoHopNodes) _MapNodePill(node: node),
+                ],
+              ),
+            ],
+            if (dossier.relatedEdges.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              for (final edge in dossier.relatedEdges)
+                _LocalGraphEdgeSummary(edge: edge, nodesById: nodesById),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapNodePill extends StatelessWidget {
+  const _MapNodePill({
+    required this.node,
+    this.isCenter = false,
+  });
+
+  final ConceptNode node;
+  final bool isCenter;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 260),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isCenter
+              ? colorScheme.primaryContainer
+              : ClaudePalette.card(context),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isCenter
+                ? colorScheme.primary.withValues(alpha: 0.35)
+                : Theme.of(context).dividerColor.withValues(alpha: 0.24),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(_nodeIcon(node.type), size: 16),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      node.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _TinyChip(
+                    label: node.isFormal
+                        ? l10n.conceptGraphFormalBadge
+                        : l10n.conceptGraphDraftBadge,
+                  ),
+                  _TinyChip(
+                    label: node.hasEvidence
+                        ? l10n.conceptGraphEvidenceBadge
+                        : l10n.conceptGraphNoEvidenceBadge,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LocalGraphEdgeSummary extends StatelessWidget {
+  const _LocalGraphEdgeSummary({
+    required this.edge,
+    required this.nodesById,
+  });
+
+  final ConceptEdge edge;
+  final Map<String, ConceptNode> nodesById;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final sourceLabel =
+        nodesById[edge.sourceNodeId]?.label ?? edge.sourceNodeId;
+    final targetLabel =
+        nodesById[edge.targetNodeId]?.label ?? edge.targetNodeId;
+
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.account_tree_outlined),
+      title: Text(
+        '$sourceLabel -> $targetLabel',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          _TinyChip(label: edge.label ?? edge.type.asString),
+          _TinyChip(
+            label: edge.isFormal
+                ? l10n.conceptGraphFormalBadge
+                : l10n.conceptGraphDraftBadge,
+          ),
+          _TinyChip(
+            label: edge.hasEvidence
+                ? l10n.conceptGraphEvidenceBadge
+                : l10n.conceptGraphNoEvidenceBadge,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -669,6 +910,38 @@ IconData _nodeIcon(ConceptNodeType type) {
     ConceptNodeType.card => Icons.style_outlined,
     ConceptNodeType.unknown => Icons.help_outline,
   };
+}
+
+List<String> _directNeighborIds(
+  Iterable<ConceptEdge> edges,
+  String centerNodeId,
+) {
+  final ids = <String>[];
+  final seen = <String>{};
+  for (final edge in edges) {
+    final neighborId = edge.sourceNodeId == centerNodeId
+        ? edge.targetNodeId
+        : edge.targetNodeId == centerNodeId
+            ? edge.sourceNodeId
+            : '';
+    if (neighborId.trim().isEmpty) continue;
+    if (seen.add(neighborId)) ids.add(neighborId);
+  }
+  return ids;
+}
+
+List<ConceptNode> _nodesForIds(
+  Iterable<String> ids,
+  Map<String, ConceptNode> nodesById,
+) {
+  final nodes = <ConceptNode>[];
+  final seen = <String>{};
+  for (final id in ids) {
+    if (!seen.add(id)) continue;
+    final node = nodesById[id];
+    if (node != null) nodes.add(node);
+  }
+  return nodes;
 }
 
 PaperReaderReaderIntent? _firstIntent(Iterable<SourceRef> refs) {

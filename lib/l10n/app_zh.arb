@@ -768,6 +768,44 @@
     }
   },
   "conceptGraphLocalPath": "局部路径",
+  "conceptGraphLocalMapTitle": "局部图谱",
+  "conceptGraphMapCenter": "中心",
+  "conceptGraphDirectNeighborCount": "{count} 个直接",
+  "@conceptGraphDirectNeighborCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphTwoHopCount": "{count} 个二跳",
+  "@conceptGraphTwoHopCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphEvidenceLinkCount": "{count} 条证据关系",
+  "@conceptGraphEvidenceLinkCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphDraftItemCount": "{count} 个草稿项",
+  "@conceptGraphDraftItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphDraftBadge": "草稿",
+  "conceptGraphFormalBadge": "正式",
+  "conceptGraphEvidenceBadge": "有证据",
+  "conceptGraphNoEvidenceBadge": "无证据",
   "conceptGraphRelatedTitle": "关联概念",
   "conceptGraphEvidenceTitle": "证据",
   "conceptGraphNoRelated": "还没有可回溯的关联概念。",
