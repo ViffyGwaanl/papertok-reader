@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/knowledge_sync.dart';
+import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/providers/knowledge_asset_export.dart';
 import 'package:papertok_reader/service/sync/knowledge_asset_export_service.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/utils/page_transitions.dart';
 
 class KnowledgeAssetExportPage extends ConsumerStatefulWidget {
   const KnowledgeAssetExportPage({super.key});
@@ -152,6 +154,18 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
           if (state.lastConflictReviewCount case final count?) ...[
             const SizedBox(height: 8),
             _PolicyNote(text: l10n.knowledgeExportConflictReviewSent(count)),
+            if (count > 0) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(l10n.reviewInboxTitle),
+                onPressed: () => Navigator.of(context).push(
+                  CupertinoStyleRoute(
+                    page: const ReviewInboxPage(),
+                  ),
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: 16),
           _EnvelopeSection(

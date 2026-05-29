@@ -8,6 +8,7 @@ import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
+import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/service/sync/knowledge_asset_export_service.dart';
@@ -671,6 +672,63 @@ void main() {
     expect(item.payload['canApply'], true);
     expect(item.payload['entityType'], 'knowledge-card');
     expect(item.sourceRefs.single.hasBookAnchor, true);
+  });
+
+  test('submitted sync conflict can be approved applied and exported',
+      () async {
+    final conflictCard = card(
+      id: 'kc-safe-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Traceable safe conflict evidence.',
+    );
+    final conflict = KnowledgeSyncEnvelope(
+      id: conflictCard.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      sourceRefs: conflictCard.sourceRefs,
+      payload: conflictCard.toJson(),
+    );
+    await cardStore.ensureInitialized();
+    await cardStore.cardsFile.writeAsString(
+      jsonEncode({
+        'version': 1,
+        'cards': [conflict.toJson()],
+      }),
+    );
+
+    final submitted = await service.submitConflictsToReview();
+    final controller = ReviewInboxController(
+      rootDir: tempRoot,
+      reviewStore: reviewStore,
+      knowledgeCardStore: cardStore,
+      spacedReviewStore: spacedReviewStore,
+      now: () => 1100,
+    );
+    final reviewId = 'sync-conflict:${conflictCard.id}';
+
+    expect(submitted.submittedCount, 1);
+    expect(await reviewStore.getById(reviewId), isNotNull);
+
+    await controller.approve(reviewId);
+    final applied = await controller.apply(reviewId);
+    final resolvedCard = await cardStore.getById(conflictCard.id);
+    final snapshot = await service.buildSnapshot();
+
+    expect(applied.status, ReviewItemStatus.applied);
+    expect(resolvedCard?.reviewState, KnowledgeCardReviewState.applied);
+    expect(resolvedCard?.ownership, AiOutputOwnership.aiGeneratedApproved);
+    expect(
+      snapshot.included.map((envelope) => envelope.id),
+      contains(conflictCard.id),
+    );
+    expect(
+      snapshot.excluded.map((envelope) => envelope.id),
+      isNot(contains(conflictCard.id)),
+    );
   });
 
   test('uses safe payload card source refs for applyable sync conflicts',

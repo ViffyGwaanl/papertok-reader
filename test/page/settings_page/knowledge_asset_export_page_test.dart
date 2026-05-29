@@ -5,24 +5,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/knowledge_sync.dart';
+import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/page/settings_page/knowledge_asset_export.dart';
+import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/providers/knowledge_asset_export.dart';
+import 'package:papertok_reader/providers/review_inbox.dart';
+import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/sync/knowledge_asset_export_service.dart';
 
 void main() {
   testWidgets('shows export plan and creates manifest', (tester) async {
     final service = _FakeKnowledgeAssetExportService();
+    final reviewController = _FakeReviewInboxController();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           knowledgeAssetExportServiceProvider.overrideWithValue(service),
+          reviewInboxControllerProvider.overrideWithValue(reviewController),
         ],
-        child: const MaterialApp(
-          locale: Locale('en'),
+        child: MaterialApp(
+          locale: const Locale('en'),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: KnowledgeAssetExportPage(),
+          home: const KnowledgeAssetExportPage(),
         ),
       ),
     );
@@ -41,6 +47,7 @@ void main() {
 
     expect(service.submittedConflictsToReview, true);
     expect(find.text('1 conflict sent to Review inbox'), findsOneWidget);
+    expect(find.text('Review inbox'), findsOneWidget);
 
     await tester.tap(find.text('Create export'));
     await tester.pump();
@@ -53,7 +60,26 @@ void main() {
       findsOne,
     );
     expect(find.textContaining('knowledge_export_anki.tsv'), findsOne);
+
+    await tester.tap(find.text('Review inbox'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReviewInboxPage), findsOneWidget);
+    expect(reviewController.listCalled, true);
   });
+}
+
+class _FakeReviewInboxController extends ReviewInboxController {
+  bool listCalled = false;
+
+  @override
+  Future<List<ReviewItem>> list({
+    ReviewItemStatus? status,
+    ReviewItemSourceType? sourceType,
+  }) async {
+    listCalled = true;
+    return const <ReviewItem>[];
+  }
 }
 
 class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {

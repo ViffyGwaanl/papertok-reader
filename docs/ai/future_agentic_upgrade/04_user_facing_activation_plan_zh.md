@@ -21,7 +21,7 @@
 | ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入 Explorer、选中文本入口、KnowledgeCard -> draft ConceptGraph producer、Seminar candidate card -> conceptRefs -> KnowledgeCard -> ConceptGraph 候选链路、reader-grounded AI Chat card -> conceptRefs -> KnowledgeCard -> ConceptGraph 候选链路，以及空态 `Create draft candidate` 显性 action：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部图谱摘要、局部路径、draft/formal 状态、evidence 状态和 orphan/broken link，并可把 derived RAG/GraphRAG result 写成待审图谱候选；空态动作会显示已进入 Review 或跳过原因。 | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard，或带 `derivedLayer/derivedSummary + traceable chunk SourceRef` 的 library RAG result，会生成 draft node/edge 和 pending relation ReviewItem；空态草稿入口使用本地文本检索，关闭 query embedding、vector fallback 和 rerank；AI Chat 不直接调用 RAG/GraphRAG producer，不自动创建正式节点。 |
 | RAG/GraphRAG -> KnowledgeCard | 阅读页选中文本 -> `图谱/Graph` -> 无相关概念空态 -> `Card / 知识卡`。 | 本分支已接入 `RagEvidenceKnowledgeCardProducer` 和 ConceptGraph 空态 Card action；本地 RAG/GraphRAG 结果可进入 KnowledgeCard store 与 Review Inbox；写入后页面会提示已加入 Review inbox。 | 只接受带 traceable chunk SourceRef 和可保存 chunk snippet 的 RAG evidence；derived summary 只作为 explanation，正式 quote/evidence 使用书内 chunk snippet；不自动写图谱、长期记忆、笔记或 spaced review。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；KnowledgeCard 或 Seminar 候选 flashcard 在 Review Inbox 中 `Apply` 后入队。 | 本分支已接入 `.knowledge/spaced_review_items_v1.json`、复习页、证据摘录预览、Again/Hard/Good/Easy 评分、来源跳转状态；Seminar 的 `reviewSuggestion` 会作为 flashcard candidate 进入 Review，并可由 Review Inbox Apply UI 应用到 Spaced Review。 | KnowledgeCard apply 和 flashcard candidate apply 已接入；跨设备同步还没接。 |
-| Sync / Export 知识资产 | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览、Markdown 学习导出、HTML study report、Anki TSV 导出、创建入口和 `Send conflicts to Review` 冲突 handoff；只纳入已应用 KnowledgeCard 和复习历史，显性显示排除项和待审冲突；安全的 KnowledgeCard 冲突可在 Review Inbox 中 approve/apply。 | 目前是本地 manifest + Markdown + HTML study report + Anki TSV 导出入口，并能把待审冲突作为 `sync-conflict` ReviewItem 送入 Review Inbox；只有 `knowledge-card + schemaVersion=1 + 无 secret payload + 有可追踪 SourceRef` 的冲突可 apply，其他冲突继续只能 dismiss/triage；不是完整云同步引擎，per-entity remote sync 和远端冲突合并器仍在剩余任务中。 |
+| Sync / Export 知识资产 | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览、Markdown 学习导出、HTML study report、Anki TSV 导出、创建入口、`Send conflicts to Review` 冲突 handoff 和发送成功后的 `Review inbox` 直达入口；只纳入已应用 KnowledgeCard 和复习历史，显性显示排除项和待审冲突；安全的 KnowledgeCard 冲突可在 Review Inbox 中 approve/apply。 | 目前是本地 manifest + Markdown + HTML study report + Anki TSV 导出入口，并能把待审冲突作为 `sync-conflict` ReviewItem 送入 Review Inbox；只有 `knowledge-card + schemaVersion=1 + 无 secret payload + 有可追踪 SourceRef` 的冲突可 apply，其他冲突继续只能 dismiss/triage；不是完整云同步引擎，per-entity remote sync 和远端冲突合并器仍在剩余任务中。 |
 
 ## 2. 已接入的用户路径
 
@@ -285,14 +285,15 @@ flutter test --no-pub \
 4. 用户可以刷新计划，确认哪些 envelope 会进入导出，哪些因草稿、派生缓存、密钥或冲突被排除。
 5. 如果页面显示待审冲突，用户点击 `Send conflicts to Review / 发送冲突到 Review`。
 6. 系统为每个尚未进入 Review 的待审冲突创建 `ReviewItem(sourceType=sync-conflict, status=pending)`，只保存安全 metadata、payload key 列表和 SourceRef；如果冲突没有 SourceRef，则写入 `sync-conflict-no-source` 不可跳原因，不把 raw payload 值或 secret 值写入 ReviewItem payload。
-7. 用户进入 `Settings -> AI -> Review inbox`，查看 `Sync conflict / 同步冲突` 类型的待审项、冲突原因、来源证据和可跳转状态。
-8. 如果该冲突是 `knowledge-card + schemaVersion=1 + 无 secret payload + 有可追踪 SourceRef`，页面显示 `Approve` 和 `Apply`；用户 `Apply` 后系统把该 KnowledgeCard 写回为用户确认资产，并解除 pending conflict metadata。
-9. 如果冲突含 secret payload、未知 schema、无可追踪 SourceRef、非 KnowledgeCard 或 payload 不可解析，页面只显示 `Dismiss`，不提供 approve/apply。
-10. 用户点击 `Create export / 创建导出`。
-11. 系统写入 `.knowledge/knowledge_export_manifest_v1.json`，其中只包含安全的实体 ID、格式、时间戳和裁剪后的 SourceRef 引用。
-12. 系统同时写入 `.knowledge/knowledge_export_v1.md`，作为可阅读的 Markdown 学习导出，只包含已纳入资产、裁剪后的证据片段和可跳转来源。
-13. 系统同时写入 `.knowledge/knowledge_export_study_report.html`，作为可打开的本地 HTML 学习报告；页面不加载外部资源、不执行同步，只展示已纳入资产、裁剪后的证据片段和可跳转来源。
-14. 系统同时写入 `.knowledge/knowledge_export_anki.tsv`，作为 Anki 兼容 TSV；Front/Back/Source 只来自默认纳入资产、裁剪后的证据片段和可跳转来源。
+7. 页面显示 `Review inbox` 直达入口；用户点击后进入 Review Inbox，也可以从 `Settings -> AI -> Review inbox` 进入。
+8. 用户查看 `Sync conflict / 同步冲突` 类型的待审项、冲突原因、来源证据和可跳转状态。
+9. 如果该冲突是 `knowledge-card + schemaVersion=1 + 无 secret payload + 有可追踪 SourceRef`，页面显示 `Approve` 和 `Apply`；用户 `Apply` 后系统把该 KnowledgeCard 写回为用户确认资产，并解除 pending conflict metadata。
+10. 如果冲突含 secret payload、未知 schema、无可追踪 SourceRef、非 KnowledgeCard 或 payload 不可解析，页面只显示 `Dismiss`，不提供 approve/apply。
+11. 用户点击 `Create export / 创建导出`。
+12. 系统写入 `.knowledge/knowledge_export_manifest_v1.json`，其中只包含安全的实体 ID、格式、时间戳和裁剪后的 SourceRef 引用。
+13. 系统同时写入 `.knowledge/knowledge_export_v1.md`，作为可阅读的 Markdown 学习导出，只包含已纳入资产、裁剪后的证据片段和可跳转来源。
+14. 系统同时写入 `.knowledge/knowledge_export_study_report.html`，作为可打开的本地 HTML 学习报告；页面不加载外部资源、不执行同步，只展示已纳入资产、裁剪后的证据片段和可跳转来源。
+15. 系统同时写入 `.knowledge/knowledge_export_anki.tsv`，作为 Anki 兼容 TSV；Front/Back/Source 只来自默认纳入资产、裁剪后的证据片段和可跳转来源。
 
 Gate：
 
@@ -331,7 +332,7 @@ flutter test --no-pub \
 | 完整云同步引擎 | 当前只有本地导出、安全冲突 Review handoff 和安全 KnowledgeCard 冲突本地恢复。 | 设计并实现 per-entity remote sync、远端冲突合并器、远端写回和回滚。 | API key 永不同步；冲突进入 Review；不得使用 whole-file newer-wins 覆盖用户资产。 |
 | ImageViewer 真实点击级 KnowledgeCard 写入证据 | `AiImageAnalysisSheet` 的 `Card` callback 已有 widget 覆盖，producer 也有服务测试；完整 `ImageViewer -> AI Image Analysis -> Card -> stores` 还缺可注入流和点击级测试。 | 为 `ImageViewer` 增加可测试的 analysis stream / card producer seam，验证 book/cfi/href SourceRef、pending KnowledgeCard、pending ReviewItem、重复点击和不保存图片本体。 | 图片解析结果只进入 Review；SourceRef 使用当前阅读位置；图片本体不进 card payload。 |
 | 阅读页真实 fallback 选中文本 KnowledgeCard 证据 | `ExcerptMenu` 点击级测试覆盖注入 context/creator；生产路径依赖 `epubPlayerKey` fallback 和默认 producer，还缺无注入路径的 widget 证据。 | 抽出 reader context lookup adapter/provider，添加不注入 creator 的菜单测试，验证 pending card/review item。 | 不绕过 Review；相同 book/cfi/text 不重复写。 |
-| Export conflict -> Review Inbox 用户工作流 | Page test 证明按钮调用 service，service test 证明 ReviewItem 安全 payload；还缺用户从 export 页发送冲突后在 Review Inbox 看到并 apply 的集成式 widget/provider 测试。 | 用 temp stores seed pending conflict，点击 `Send conflicts to Review`，打开 Review Inbox，断言 safe conflict approve/apply 可见且 unsafe conflict 只能 dismiss。 | raw payload/secret 不进 ReviewItem；safe conflict apply 只解除本地 KnowledgeCard conflict metadata。 |
+| Export conflict 跨页 apply 点击级证据 | 用户入口和底层恢复已接通：导出页能发送冲突并打开 Review Inbox，真实 service/controller/store 测试覆盖安全冲突 approve/apply 后重新进入 export；还缺单个跨页 widget/provider 测试在 push 后点击 Review Inbox 的 `Approve -> Approved -> Apply`。 | 为 Review Inbox 列表 I/O 增加可测试调度或 fixture seam，添加从导出页导航后完成 safe conflict apply 的点击级测试；unsafe conflict 继续只显示 dismiss/triage。 | raw payload/secret 不进 ReviewItem；safe conflict apply 只解除本地 KnowledgeCard conflict metadata，不创建远端同步 side effect。 |
 | Memory source-specific apply adapter | Review Inbox 能展示 memory 类型候选，但 Memory 专属 apply 还未接到统一控制层。 | 接入 Memory candidate adapter，确保 apply/dismiss 可追踪且不覆盖用户 memory。 | Memory 写入必须 source-specific，不得走泛型 apply。 |
 | Custom Skill 导入 UI | 已有 `CustomSkillContract` schema/parser/validator/runtime gate，没有用户导入界面。 | 接入导入 UI、fixture 管理、provider capability 展示和 runtime injection 验收。 | 禁止写工具越权、递归 sub-agent 和 unknown scene。 |
 | Seminar 成本、后台续跑、provider matrix | Seminar runtime 已能流式、取消、重试、Review handoff；未接角色预算、成本上限、后台恢复和 provider capability matrix。 | 接入成本记录、后台恢复状态和 provider 能力矩阵。 | 移动资源 gate；长任务可取消、失败可恢复或重试。 |
@@ -358,7 +359,7 @@ flutter test --no-pub \
 | UFA-C03-T03 | Accepted | Reader concept entry | 阅读页选中文本可进入概念探索。 | UFA-C03-T02 | `ExcerptMenu` graph action, `ConceptGraphExplorerPage.initialQuery` | 选中文本可打开图谱页并筛选相关概念；没有相关概念时展示空态和草稿候选入口，不生成无证据正式节点。 |
 | UFA-C04-T01 | In Review | Spaced Review | Review apply 后生成复习队列。 | E03, E05 | `SpacedReviewStore`, `spacedReviewProvider`, `SpacedReviewPage`, `SourceRefEvidenceList`, injectable source opener, Settings AI entry | 复习项可回溯到卡片和原文；页面显示证据摘录和不可用来源原因；删除书后显示可解释状态；评分记录下一次到期时间；`Open source` 点击会把 jumpable SourceRef 交给 opener，不可跳来源显示原因且不触发 opener；Settings AI click-level navigation evidence 仍需补。 |
 | UFA-C04-T02 | Accepted | Flashcard Review apply | 待审 flashcard 应用后进入 Spaced Review。 | E05 controller, UFA-C02-T04 | `SpacedReviewStore.reviewIdForFlashcard`, `upsertFromFlashcardReviewItem`, `ReviewInboxPage` Apply gate | pending/approved flashcard 不直接入队；只有用户在 Review Inbox 点击 enabled `Apply` 后，applied 且 traceable 的 flashcard 才能入队；重复入队不制造重复复习项。 |
-| UFA-C05-T01 | In Review | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | `KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI entry、export manifest、Markdown export、HTML study report、Anki TSV export、sync-conflict ReviewItem handoff | API key 不同步；派生索引不当作 source-of-truth；冲突被排除并显性显示；当前创建本地 manifest、Markdown 学习导出、HTML study report 和 Anki TSV，并能把待审冲突送入 Review Inbox；安全 KnowledgeCard 冲突可由用户 approve/apply 后解除 pending conflict；Export -> Review Inbox 集成式用户测试仍需补；不执行远端同步或自动跨设备合并。 |
+| UFA-C05-T01 | In Review | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | `KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI entry、export manifest、Markdown export、HTML study report、Anki TSV export、sync-conflict ReviewItem handoff | API key 不同步；派生索引不当作 source-of-truth；冲突被排除并显性显示；当前创建本地 manifest、Markdown 学习导出、HTML study report 和 Anki TSV，并能把待审冲突送入 Review Inbox；导出页在发送成功后显示 `Review inbox` 直达入口；真实 service/controller 测试覆盖安全 KnowledgeCard 冲突 approve/apply 后解除 pending conflict 并重新进入导出集合；完整跨页 widget/provider apply 点击级证据仍在上表跟踪；不执行远端同步或自动跨设备合并。 |
 
 ## 5. Agent 执行约束
 
