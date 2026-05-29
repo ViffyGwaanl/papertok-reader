@@ -113,6 +113,10 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
             const SizedBox(height: 6),
             _PolicyNote(text: l10n.knowledgeExportMarkdownPath(path)),
           ],
+          if (state.lastHtmlReportPath case final path?) ...[
+            const SizedBox(height: 6),
+            _PolicyNote(text: l10n.knowledgeExportHtmlReportPath(path)),
+          ],
           if (state.lastAnkiPath case final path?) ...[
             const SizedBox(height: 6),
             _PolicyNote(text: l10n.knowledgeExportAnkiPath(path)),

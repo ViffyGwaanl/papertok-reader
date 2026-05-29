@@ -136,6 +136,7 @@ void main() {
       snapshot.manifest.formats,
       contains(KnowledgeExportFormat.sourceCitationManifest),
     );
+    expect(snapshot.manifest.formats, contains(KnowledgeExportFormat.html));
     expect(snapshot.manifest.formats, contains(KnowledgeExportFormat.anki));
     expect(
       snapshot.manifest.sourceRefs.first.sourceTextSnippet!.length,
@@ -195,6 +196,42 @@ void main() {
     expect(markdown, isNot(contains('Draft-only evidence should not export')));
     expect(markdown, isNot(contains('apiKey')));
     expect(markdown, isNot(contains('ai_index.db')));
+  });
+
+  test('writes html study report for included user assets only', () async {
+    await stageAppliedCard('kc-export');
+    await cardStore.upsertCandidate(
+      card(
+        id: 'kc-draft',
+        quote: 'Draft-only evidence should not export.',
+        sourceRefs: [
+          traceableRef(
+            cfi: 'epubcfi(/6/20)',
+            snippet: 'Draft-only evidence should not export.',
+          ),
+        ],
+      ),
+    );
+
+    final result = await service.writeManifest();
+
+    expect(result.htmlReportFile, isNotNull);
+    expect(
+      result.htmlReportFile!.path,
+      endsWith('knowledge_export_study_report.html'),
+    );
+    final html = await result.htmlReportFile!.readAsString();
+    expect(html, startsWith('<!doctype html>'));
+    expect(html, contains('<main'));
+    expect(html, contains('PaperTok Knowledge Study Report'));
+    expect(html, contains('Exportable card kc-export'));
+    expect(html, contains('Traceable export evidence.'));
+    expect(html, contains('Export should preserve source refs safely.'));
+    expect(html, contains('paperreader://reader/open?bookId=7'));
+    expect(html, isNot(contains('kc-draft')));
+    expect(html, isNot(contains('Draft-only evidence should not export')));
+    expect(html, isNot(contains('apiKey')));
+    expect(html, isNot(contains('ai_index.db')));
   });
 
   test('writes anki compatible tsv for included user assets only', () async {
@@ -301,6 +338,122 @@ void main() {
     expect(row, isNot(contains('<title>&')));
   });
 
+  test('html study report escapes html content', () async {
+    final specialCard = card(
+      id: 'kc-special',
+      title: 'Front <script>alert(1)</script> & title',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Quote <em>unsafe</em> & raw',
+      explanation: 'Explain > result',
+      userNote: 'User <note>',
+      conceptRefs: const ['Graph <RAG>'],
+      sourceRefs: [
+        traceableRef(
+          snippet: 'Snippet with <html>\nsecond & line',
+        ),
+      ],
+    );
+    final snapshot = KnowledgeAssetExportSnapshot(
+      manifest: KnowledgeExportManifest(
+        id: 'knowledge-export-test',
+        createdAt: 1000,
+        formats: const [
+          KnowledgeExportFormat.markdown,
+          KnowledgeExportFormat.html,
+          KnowledgeExportFormat.anki,
+          KnowledgeExportFormat.sourceCitationManifest,
+        ],
+        entityIds: [specialCard.id],
+        sourceRefs: specialCard.sourceRefs,
+      ),
+      included: [
+        KnowledgeSyncEnvelope(
+          id: specialCard.id,
+          entityType: KnowledgeSyncEntityType.knowledgeCard,
+          schemaVersion: 1,
+          updatedAt: 1000,
+          sourceRefs: specialCard.sourceRefs,
+          payload: specialCard.toJson(),
+        ),
+      ],
+      excluded: const [],
+      excludedReasons: const {},
+    );
+    final fakeService = _SnapshotKnowledgeAssetExportService(
+      rootDir: tempRoot,
+      snapshot: snapshot,
+    );
+
+    final result = await fakeService.writeManifest();
+    final html = await result.htmlReportFile!.readAsString();
+
+    expect(html, isNot(contains('<script')));
+    expect(html, isNot(contains('<em>unsafe</em>')));
+    expect(html, contains('Front &lt;script&gt;alert(1)&lt;/script&gt;'));
+    expect(html, contains('Quote &lt;em&gt;unsafe&lt;/em&gt; &amp; raw'));
+    expect(html, contains('Explain &gt; result'));
+    expect(html, contains('User &lt;note&gt;'));
+    expect(html, contains('Graph &lt;RAG&gt;'));
+    expect(html, contains('Snippet with &lt;html&gt;'));
+    expect(html, contains('second &amp; line'));
+  });
+
+  test('html study report does not render invalid jump links', () async {
+    final specialCard = card(
+      id: 'kc-invalid-link',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Included evidence.',
+      sourceRefs: [
+        SourceRef(
+          bookId: 7,
+          href: 'Text/chapter.xhtml',
+          jumpLink: 'javascript:alert(1)',
+          sourceTextSnippet: 'Safe snippet.',
+          sourceKind: SourceRefKind.highlight,
+        ),
+      ],
+    );
+    final snapshot = KnowledgeAssetExportSnapshot(
+      manifest: KnowledgeExportManifest(
+        id: 'knowledge-export-test',
+        createdAt: 1000,
+        formats: const [
+          KnowledgeExportFormat.markdown,
+          KnowledgeExportFormat.html,
+          KnowledgeExportFormat.anki,
+          KnowledgeExportFormat.sourceCitationManifest,
+        ],
+        entityIds: [specialCard.id],
+        sourceRefs: specialCard.sourceRefs,
+      ),
+      included: [
+        KnowledgeSyncEnvelope(
+          id: specialCard.id,
+          entityType: KnowledgeSyncEntityType.knowledgeCard,
+          schemaVersion: 1,
+          updatedAt: 1000,
+          sourceRefs: specialCard.sourceRefs,
+          payload: specialCard.toJson(),
+        ),
+      ],
+      excluded: const [],
+      excludedReasons: const {},
+    );
+    final fakeService = _SnapshotKnowledgeAssetExportService(
+      rootDir: tempRoot,
+      snapshot: snapshot,
+    );
+
+    final result = await fakeService.writeManifest();
+    final html = await result.htmlReportFile!.readAsString();
+
+    expect(html, contains('Safe snippet.'));
+    expect(html, isNot(contains('javascript:alert')));
+    expect(html, isNot(contains('<a href=')));
+  });
+
   test('exports ignore excluded conflict secret and derived cache envelopes',
       () async {
     final includedCard = card(
@@ -315,6 +468,7 @@ void main() {
         createdAt: 1000,
         formats: [
           KnowledgeExportFormat.markdown,
+          KnowledgeExportFormat.html,
           KnowledgeExportFormat.sourceCitationManifest,
         ],
         entityIds: ['kc-included'],
@@ -383,6 +537,12 @@ void main() {
     expect(anki, isNot(contains('super-secret-value')));
     expect(anki, isNot(contains('ai_index.db')));
     expect(anki, isNot(contains('derived-cache')));
+    final html = await result.htmlReportFile!.readAsString();
+    expect(html, contains('Included card evidence.'));
+    expect(html, isNot(contains('Conflict should stay out')));
+    expect(html, isNot(contains('super-secret-value')));
+    expect(html, isNot(contains('ai_index.db')));
+    expect(html, isNot(contains('derived-cache')));
   });
 
   test('holds persisted conflict envelopes out of export manifest', () async {

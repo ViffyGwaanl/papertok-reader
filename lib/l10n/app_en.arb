@@ -988,6 +988,14 @@
       }
     }
   },
+  "knowledgeExportHtmlReportPath": "HTML report: {path}",
+  "@knowledgeExportHtmlReportPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "knowledgeExportAnkiPath": "Anki TSV: {path}",
   "@knowledgeExportAnkiPath": {
     "placeholders": {

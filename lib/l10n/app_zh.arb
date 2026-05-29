@@ -885,6 +885,14 @@
       }
     }
   },
+  "knowledgeExportHtmlReportPath": "HTML 报告：{path}",
+  "@knowledgeExportHtmlReportPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "knowledgeExportAnkiPath": "Anki TSV：{path}",
   "@knowledgeExportAnkiPath": {
     "placeholders": {

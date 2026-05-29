@@ -42,6 +42,10 @@ void main() {
     expect(service.createdManifest, true);
     expect(find.textContaining('knowledge_export_manifest_v1.json'), findsOne);
     expect(find.textContaining('knowledge_export_v1.md'), findsOne);
+    expect(
+      find.textContaining('knowledge_export_study_report.html'),
+      findsOne,
+    );
     expect(find.textContaining('knowledge_export_anki.tsv'), findsOne);
   });
 }
@@ -79,6 +83,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
         createdAt: 100,
         formats: [
           KnowledgeExportFormat.markdown,
+          KnowledgeExportFormat.html,
           KnowledgeExportFormat.anki,
           KnowledgeExportFormat.sourceCitationManifest,
         ],
@@ -101,6 +106,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     return KnowledgeAssetExportManifestResult(
       file: File('/tmp/knowledge_export_manifest_v1.json'),
       markdownFile: File('/tmp/knowledge_export_v1.md'),
+      htmlReportFile: File('/tmp/knowledge_export_study_report.html'),
       ankiFile: File('/tmp/knowledge_export_anki.tsv'),
       snapshot: await buildSnapshot(),
     );

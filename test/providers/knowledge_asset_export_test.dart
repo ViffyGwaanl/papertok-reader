@@ -24,7 +24,8 @@ void main() {
     expect(state.snapshot.value!.conflictCount, 1);
   });
 
-  test('createManifest exposes manifest markdown and anki paths', () async {
+  test('createManifest exposes manifest markdown html and anki paths',
+      () async {
     final service = _FakeKnowledgeAssetExportService();
     final container = ProviderContainer(
       overrides: [
@@ -40,6 +41,10 @@ void main() {
 
     expect(state.lastManifestPath, '/tmp/knowledge_export_manifest_v1.json');
     expect(state.lastMarkdownPath, '/tmp/knowledge_export_v1.md');
+    expect(
+      state.lastHtmlReportPath,
+      '/tmp/knowledge_export_study_report.html',
+    );
     expect(state.lastAnkiPath, '/tmp/knowledge_export_anki.tsv');
     expect(state.snapshot.value!.includedCount, 1);
   });
@@ -76,6 +81,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
         createdAt: 100,
         formats: [
           KnowledgeExportFormat.markdown,
+          KnowledgeExportFormat.html,
           KnowledgeExportFormat.anki,
           KnowledgeExportFormat.sourceCitationManifest,
         ],
@@ -97,6 +103,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     return KnowledgeAssetExportManifestResult(
       file: File('/tmp/knowledge_export_manifest_v1.json'),
       markdownFile: File('/tmp/knowledge_export_v1.md'),
+      htmlReportFile: File('/tmp/knowledge_export_study_report.html'),
       ankiFile: File('/tmp/knowledge_export_anki.tsv'),
       snapshot: await buildSnapshot(),
     );

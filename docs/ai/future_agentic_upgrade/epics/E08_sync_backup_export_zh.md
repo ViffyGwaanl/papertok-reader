@@ -58,7 +58,7 @@ SourceRef 同步/导出默认只包含 `sourceTextSnippet`，且 snippet 上限 
 | E08-C01-T02 | 接入 knowledge sync policy model | E08-C01-T01 | `lib/models/knowledge_sync.dart` | user asset、AI draft、derived cache、secret payload 默认策略有测试。 |
 | E08-C02-T01 | 定义 conflict review flow | E08-C01-T01 | conflict spec | 冲突进入 Review，不自动 last-write-wins。 |
 | E08-C02-T02 | 接入 conflict classification contract | E08-C02-T01 | `KnowledgeSyncConflictDetector.reviewEnvelopeFor` | old/unknown schema、delete-modify、missing fields 进入 Review。 |
-| E08-C03-T01 | 定义 export manifest、本地 Markdown 导出和 Anki TSV 导出 | E00 Ready, E03 Ready | export spec, local Markdown writer, local Anki TSV writer | Manifest、Markdown 和 Anki TSV 保留 source refs；HTML study report 仍需独立任务接入。 |
+| E08-C03-T01 | 定义 export manifest、本地 Markdown 导出、HTML study report 和 Anki TSV 导出 | E00 Ready, E03 Ready | export spec, local Markdown writer, local HTML report writer, local Anki TSV writer | Manifest、Markdown、HTML study report 和 Anki TSV 保留 source refs；远端同步和冲突 Review UI 仍需独立任务接入。 |
 
 ## 4. Task Execution Defaults
 

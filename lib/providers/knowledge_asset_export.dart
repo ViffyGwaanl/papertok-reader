@@ -20,6 +20,7 @@ class KnowledgeAssetExportState {
     this.busy = false,
     this.lastManifestPath,
     this.lastMarkdownPath,
+    this.lastHtmlReportPath,
     this.lastAnkiPath,
     this.lastError,
   });
@@ -45,6 +46,7 @@ class KnowledgeAssetExportState {
   final bool busy;
   final String? lastManifestPath;
   final String? lastMarkdownPath;
+  final String? lastHtmlReportPath;
   final String? lastAnkiPath;
   final String? lastError;
 
@@ -53,6 +55,7 @@ class KnowledgeAssetExportState {
     bool? busy,
     String? lastManifestPath,
     String? lastMarkdownPath,
+    String? lastHtmlReportPath,
     String? lastAnkiPath,
     String? lastError,
     bool clearError = false,
@@ -62,6 +65,7 @@ class KnowledgeAssetExportState {
       busy: busy ?? this.busy,
       lastManifestPath: lastManifestPath ?? this.lastManifestPath,
       lastMarkdownPath: lastMarkdownPath ?? this.lastMarkdownPath,
+      lastHtmlReportPath: lastHtmlReportPath ?? this.lastHtmlReportPath,
       lastAnkiPath: lastAnkiPath ?? this.lastAnkiPath,
       lastError: clearError ? null : lastError ?? this.lastError,
     );
@@ -108,6 +112,7 @@ class KnowledgeAssetExportNotifier
         ),
         lastManifestPath: result.file.path,
         lastMarkdownPath: result.markdownFile?.path,
+        lastHtmlReportPath: result.htmlReportFile?.path,
         lastAnkiPath: result.ankiFile?.path,
         clearError: true,
       );

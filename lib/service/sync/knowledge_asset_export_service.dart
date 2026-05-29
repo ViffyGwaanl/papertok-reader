@@ -40,12 +40,14 @@ class KnowledgeAssetExportManifestResult {
   const KnowledgeAssetExportManifestResult({
     required this.file,
     this.markdownFile,
+    this.htmlReportFile,
     this.ankiFile,
     required this.snapshot,
   });
 
   final File file;
   final File? markdownFile;
+  final File? htmlReportFile;
   final File? ankiFile;
   final KnowledgeAssetExportSnapshot snapshot;
 }
@@ -73,6 +75,8 @@ class KnowledgeAssetExportService {
       File(p.join(knowledgeDir.path, 'knowledge_export_manifest_v1.json'));
   File get markdownFile =>
       File(p.join(knowledgeDir.path, 'knowledge_export_v1.md'));
+  File get htmlReportFile =>
+      File(p.join(knowledgeDir.path, 'knowledge_export_study_report.html'));
   File get ankiFile =>
       File(p.join(knowledgeDir.path, 'knowledge_export_anki.tsv'));
 
@@ -107,6 +111,7 @@ class KnowledgeAssetExportService {
         createdAt: timestamp,
         formats: const [
           KnowledgeExportFormat.markdown,
+          KnowledgeExportFormat.html,
           KnowledgeExportFormat.anki,
           KnowledgeExportFormat.sourceCitationManifest,
         ],
@@ -140,10 +145,12 @@ class KnowledgeAssetExportService {
       const JsonEncoder.withIndent('  ').convert(snapshot.manifest.toJson()),
     );
     await markdownFile.writeAsString(_buildMarkdown(snapshot));
+    await htmlReportFile.writeAsString(_buildHtmlStudyReport(snapshot));
     await ankiFile.writeAsString(_buildAnkiTsv(snapshot));
     return KnowledgeAssetExportManifestResult(
       file: manifestFile,
       markdownFile: markdownFile,
+      htmlReportFile: htmlReportFile,
       ankiFile: ankiFile,
       snapshot: snapshot,
     );
@@ -229,6 +236,95 @@ class KnowledgeAssetExportService {
     return buffer.toString();
   }
 
+  String _buildHtmlStudyReport(KnowledgeAssetExportSnapshot snapshot) {
+    final buffer = StringBuffer()
+      ..writeln('<!doctype html>')
+      ..writeln('<html lang="en">')
+      ..writeln('<head>')
+      ..writeln('  <meta charset="utf-8">')
+      ..writeln(
+        '  <meta name="viewport" content="width=device-width, initial-scale=1">',
+      )
+      ..writeln('  <title>PaperTok Knowledge Study Report</title>')
+      ..writeln('  <style>')
+      ..writeln(
+        '    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f7f4;color:#1d1d1b;line-height:1.55;}',
+      )
+      ..writeln(
+        '    main{max-width:920px;margin:0 auto;padding:32px 20px 48px;}',
+      )
+      ..writeln('    h1,h2,h3{line-height:1.2;margin:0 0 12px;}')
+      ..writeln(
+        '    .summary{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 24px;}',
+      )
+      ..writeln(
+        '    .chip{border:1px solid #d7d5ce;border-radius:6px;padding:6px 10px;background:#fff;}',
+      )
+      ..writeln(
+        '    article{background:#fff;border:1px solid #dedbd3;border-radius:8px;padding:18px;margin:14px 0;}',
+      )
+      ..writeln(
+        '    blockquote{border-left:3px solid #4f7f69;margin:12px 0;padding-left:12px;color:#363f38;}',
+      )
+      ..writeln(
+          '    .sources{margin-top:14px;padding-top:12px;border-top:1px solid #eee;}')
+      ..writeln('    .source{margin:10px 0;}')
+      ..writeln('    .muted{color:#686862;}')
+      ..writeln('  </style>')
+      ..writeln('</head>')
+      ..writeln('<body>')
+      ..writeln('<main>')
+      ..writeln('  <h1>PaperTok Knowledge Study Report</h1>')
+      ..writeln(
+          '  <p class="muted">Export id: ${_htmlText(snapshot.manifest.id)}</p>')
+      ..writeln('  <section class="summary">')
+      ..writeln(
+        '    <span class="chip">Included assets: ${snapshot.includedCount}</span>',
+      )
+      ..writeln(
+        '    <span class="chip">Held out assets: ${snapshot.excludedCount}</span>',
+      )
+      ..writeln(
+        '    <span class="chip">Conflicts: ${snapshot.conflictCount}</span>',
+      )
+      ..writeln('  </section>');
+
+    final knowledgeCards = snapshot.included.where(
+      (envelope) =>
+          envelope.entityType == KnowledgeSyncEntityType.knowledgeCard,
+    );
+    final reviewHistory = snapshot.included.where(
+      (envelope) =>
+          envelope.entityType == KnowledgeSyncEntityType.reviewHistory,
+    );
+
+    if (knowledgeCards.isNotEmpty) {
+      buffer.writeln('  <section>');
+      buffer.writeln('    <h2>Knowledge Cards</h2>');
+      for (final envelope in knowledgeCards) {
+        final card = KnowledgeCard.fromJson(envelope.payload);
+        _writeHtmlCard(buffer, card);
+      }
+      buffer.writeln('  </section>');
+    }
+
+    if (reviewHistory.isNotEmpty) {
+      buffer.writeln('  <section>');
+      buffer.writeln('    <h2>Review History</h2>');
+      for (final envelope in reviewHistory) {
+        final item = SpacedReviewItem.fromJson(envelope.payload);
+        _writeHtmlReviewHistory(buffer, item);
+      }
+      buffer.writeln('  </section>');
+    }
+
+    buffer
+      ..writeln('</main>')
+      ..writeln('</body>')
+      ..writeln('</html>');
+    return buffer.toString();
+  }
+
   String _buildAnkiTsv(KnowledgeAssetExportSnapshot snapshot) {
     final buffer = StringBuffer()
       ..writeln('#separator:tab')
@@ -287,6 +383,76 @@ class KnowledgeAssetExportService {
       ..write(_ankiField(normalizedBack))
       ..write('\t')
       ..writeln(_ankiField(_sourceSummary(sourceRefs)));
+  }
+
+  void _writeHtmlCard(StringBuffer buffer, KnowledgeCard card) {
+    buffer
+      ..writeln('    <article>')
+      ..writeln('      <h3>${_htmlText(card.title)}</h3>')
+      ..writeln(
+          '      <p class="muted">Origin: ${_htmlText(card.origin.asString)}</p>')
+      ..writeln('      <blockquote>${_htmlText(card.quote)}</blockquote>')
+      ..writeln('      <p>${_htmlText(card.explanation)}</p>');
+    if ((card.userNote ?? '').trim().isNotEmpty) {
+      buffer.writeln(
+          '      <p><strong>User note:</strong> ${_htmlText(card.userNote!)}</p>');
+    }
+    if (card.conceptRefs.isNotEmpty) {
+      buffer.writeln(
+        '      <p><strong>Concepts:</strong> ${card.conceptRefs.map(_htmlText).join(', ')}</p>',
+      );
+    }
+    _writeHtmlSources(buffer, card.sourceRefs);
+    buffer.writeln('    </article>');
+  }
+
+  void _writeHtmlReviewHistory(StringBuffer buffer, SpacedReviewItem item) {
+    buffer
+      ..writeln('    <article>')
+      ..writeln('      <h3>${_htmlText(item.prompt)}</h3>')
+      ..writeln('      <p>${_htmlText(item.answer)}</p>')
+      ..writeln(
+        '      <p class="muted">History entries: ${item.reviewHistory.length}</p>',
+      );
+    _writeHtmlSources(buffer, item.sourceRefs);
+    buffer.writeln('    </article>');
+  }
+
+  void _writeHtmlSources(StringBuffer buffer, List<SourceRef> refs) {
+    final evidenceRefs = refs.where((ref) => ref.hasEvidence).toList();
+    if (evidenceRefs.isEmpty) return;
+    buffer.writeln('      <section class="sources">');
+    buffer.writeln('        <h4>Sources</h4>');
+    for (var i = 0; i < evidenceRefs.length; i++) {
+      final ref = evidenceRefs[i];
+      final label = [
+        ref.sourceTitle,
+        ref.locationLabel,
+        ref.sourceKind.asString,
+      ].whereType<String>().where((part) => part.trim().isNotEmpty).join(' · ');
+      buffer.writeln('        <div class="source">');
+      buffer.writeln(
+        '          <strong>${i + 1}. ${_htmlText(label.isEmpty ? 'Source' : label)}</strong>',
+      );
+      if (ref.canJumpBack && (ref.jumpLink ?? '').trim().isNotEmpty) {
+        final link = ref.jumpLink!.trim();
+        buffer.writeln(
+          '          <div><a href="${_htmlAttribute(link)}">${_htmlText(link)}</a></div>',
+        );
+      }
+      if ((ref.sourceTextSnippet ?? '').trim().isNotEmpty) {
+        buffer.writeln(
+          '          <blockquote>${_htmlText(ref.sourceTextSnippet!)}</blockquote>',
+        );
+      }
+      if ((ref.unavailableReason ?? '').trim().isNotEmpty) {
+        buffer.writeln(
+          '          <p class="muted">Status: ${_htmlText(ref.unavailableReason!)}</p>',
+        );
+      }
+      buffer.writeln('        </div>');
+    }
+    buffer.writeln('      </section>');
   }
 
   void _writeCard(StringBuffer buffer, KnowledgeCard card) {
@@ -404,6 +570,18 @@ class KnowledgeAssetExportService {
         .where((line) => line.isNotEmpty)
         .join('<br>');
     return normalized;
+  }
+
+  String _htmlText(String value) {
+    return _paragraph(value)
+        .split('\n')
+        .map((line) => _htmlEscape(line.trim()))
+        .where((line) => line.isNotEmpty)
+        .join('<br>');
+  }
+
+  String _htmlAttribute(String value) {
+    return _htmlEscape(value).replaceAll('"', '&quot;');
   }
 
   String _htmlEscape(String value) {
