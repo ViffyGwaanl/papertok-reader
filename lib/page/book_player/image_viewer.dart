@@ -4,6 +4,7 @@ import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
 import 'package:papertok_reader/page/reading_page.dart';
 import 'package:papertok_reader/service/ai/index.dart';
+import 'package:papertok_reader/service/knowledge/image_analysis_knowledge_card_producer.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:papertok_reader/utils/get_path/get_temp_dir.dart';
 import 'package:papertok_reader/utils/save_image_to_path.dart';
@@ -22,7 +23,11 @@ import 'package:photo_view/photo_view.dart';
 
 class ImageViewer extends StatefulWidget {
   final String image;
+  final int bookId;
   final String bookName;
+  final String? cfi;
+  final String? chapterHref;
+  final String? chapterTitle;
   final String? contextText;
   final String? alt;
   final String? title;
@@ -30,7 +35,11 @@ class ImageViewer extends StatefulWidget {
   const ImageViewer({
     super.key,
     required this.image,
+    required this.bookId,
     required this.bookName,
+    this.cfi,
+    this.chapterHref,
+    this.chapterTitle,
     this.contextText,
     this.alt,
     this.title,
@@ -152,6 +161,35 @@ $displayText''';
     await reading.openAiChatDraft(content: prompt);
   }
 
+  Future<void> _createKnowledgeCardFromAnalysis(String analysisText) async {
+    try {
+      final result =
+          await ImageAnalysisKnowledgeCardProducer().createFromImageAnalysis(
+        bookId: widget.bookId,
+        cfi: widget.cfi,
+        href: widget.chapterHref,
+        analysisText: analysisText,
+        imageTitle: widget.title,
+        imageAlt: widget.alt,
+        contextText: widget.contextText,
+        chapterTitle: widget.chapterTitle,
+        bookTitle: widget.bookName,
+      );
+      if (!mounted) return;
+      final l10n = L10n.of(context);
+      final message = result.addedToReviewInbox
+          ? (result.inserted
+              ? l10n.knowledgeCardAddedToReviewInbox
+              : l10n.knowledgeCardAlreadyInReviewInbox)
+          : l10n.knowledgeCardAlreadySaved;
+      AnxToast.show(message);
+    } catch (_) {
+      if (mounted) {
+        AnxToast.show(L10n.of(context).knowledgeCardAddFailed);
+      }
+    }
+  }
+
   Future<void> _showAnalyzeSheet({
     required String base64,
     required String mimeType,
@@ -192,9 +230,10 @@ $displayText''';
     await PTBottomSheet.show<void>(
       context,
       builder: (context) {
-        return _AiImageAnalysisSheet(
+        return AiImageAnalysisSheet(
           stream: stream,
           onContinueAsk: _continueAskAiWithAnalysis,
+          onCreateKnowledgeCard: _createKnowledgeCardFromAnalysis,
         );
       },
     );
@@ -333,20 +372,41 @@ $displayText''';
   }
 }
 
-class _AiImageAnalysisSheet extends StatefulWidget {
-  const _AiImageAnalysisSheet({
+class AiImageAnalysisSheet extends StatefulWidget {
+  const AiImageAnalysisSheet({
     required this.stream,
     required this.onContinueAsk,
+    required this.onCreateKnowledgeCard,
+    super.key,
   });
 
   final Stream<String> stream;
   final Future<void> Function(String displayText) onContinueAsk;
+  final Future<void> Function(String displayText) onCreateKnowledgeCard;
 
   @override
-  State<_AiImageAnalysisSheet> createState() => _AiImageAnalysisSheetState();
+  State<AiImageAnalysisSheet> createState() => _AiImageAnalysisSheetState();
 }
 
-class _AiImageAnalysisSheetState extends State<_AiImageAnalysisSheet> {
+class _AiImageAnalysisSheetState extends State<AiImageAnalysisSheet> {
+  bool _creatingKnowledgeCard = false;
+
+  Future<void> _createKnowledgeCard(String displayText) async {
+    if (_creatingKnowledgeCard) return;
+    setState(() {
+      _creatingKnowledgeCard = true;
+    });
+    try {
+      await widget.onCreateKnowledgeCard(displayText);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _creatingKnowledgeCard = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<String>(
@@ -390,8 +450,9 @@ class _AiImageAnalysisSheetState extends State<_AiImageAnalysisSheet> {
                 ),
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 TextButton(
                   onPressed: () {
@@ -399,6 +460,20 @@ class _AiImageAnalysisSheetState extends State<_AiImageAnalysisSheet> {
                     AnxToast.show(L10n.of(context).notesPageCopied);
                   },
                   child: Text(L10n.of(context).commonCopy),
+                ),
+                TextButton.icon(
+                  onPressed:
+                      displayText.trim().isEmpty || _creatingKnowledgeCard
+                          ? null
+                          : () => _createKnowledgeCard(displayText),
+                  icon: _creatingKnowledgeCard
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.style_outlined),
+                  label: Text(L10n.of(context).contextMenuKnowledgeCard),
                 ),
                 TextButton(
                   onPressed: () => widget.onContinueAsk(displayText),

@@ -38,7 +38,7 @@
 | --- | --- | --- | --- |
 | `AnnotationLedger` | 能记录当前会话 AI 创建的高亮/笔记，防重复。 | Seminar 需要 Shared Whiteboard，记录 claim、evidence、disagreement、open question。 | E00, E01 |
 | Create Highlight/Note tools | AI 已能创建高亮和笔记，且有工具审批链路。 | KnowledgeCard 不应直接复用 note 作为唯一模型，需要独立 review 状态。 | E03, E05 |
-| KnowledgeCard local store | 本分支新增 `KnowledgeCardStore`，可把 AI 候选卡持久化到 `.knowledge/knowledge_cards_v1.json`，重复候选不覆盖用户内容，ReviewItem 决策可回写 card；统一 Review Inbox UI 已能批准、忽略、应用 KnowledgeCard 审批项；阅读页选中文本和 Seminar candidate card 都可写入待审卡；Seminar candidate card 可携带 `conceptRefs`，用户 Apply 后进入 ConceptGraph 候选链路。 | 图片分析和 RAG 摘要仍需接入同一 KnowledgeCard 候选边界；RAG/GraphRAG derived result 已先接到 ConceptGraph 候选边界。 | E03, E05, E08 |
+| KnowledgeCard local store | 本分支新增 `KnowledgeCardStore`，可把 AI 候选卡持久化到 `.knowledge/knowledge_cards_v1.json`，重复候选不覆盖用户内容，ReviewItem 决策可回写 card；统一 Review Inbox UI 已能批准、忽略、应用 KnowledgeCard 审批项；阅读页选中文本、图片解析结果和 Seminar candidate card 都可写入待审卡；Seminar candidate card 可携带 `conceptRefs`，用户 Apply 后进入 ConceptGraph 候选链路。 | RAG 摘要仍需接入同一 KnowledgeCard 候选边界；RAG/GraphRAG derived result 已先接到 ConceptGraph 候选边界。 | E03, E05, E08 |
 | Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项；选中文本 KnowledgeCard、Seminar synthesis、Seminar candidate card 和 Seminar reviewSuggestion flashcard 已能进入统一 Review Inbox；flashcard candidate Apply 后可进入 Spaced Review。 | Seminar synthesis 本身只支持 approve/dismiss，不做泛型 apply；Memory source-specific apply adapter 仍需接入。 | E03, E04, E05 |
 
 锚点：
@@ -83,7 +83,7 @@
 ## 6. 全局缺口
 
 - 统一 `SourceRef` 核心模型已存在；仍需把所有 UI 输出、sync/export manifest 和旧 note/memory 路径完全接到同一证据链。
-- KnowledgeCard 模型、本地 store、Review adapter、统一 Review Inbox UI、reader selection 入口、Seminar candidate handoff、Seminar flashcard handoff、spaced review scheduler 和导出入口已有可测试切片；仍需图片分析和 RAG 摘要接入。
+- KnowledgeCard 模型、本地 store、Review adapter、统一 Review Inbox UI、reader selection 入口、图片分析结果入口、Seminar candidate handoff、Seminar flashcard handoff、spaced review scheduler 和导出入口已有可测试切片；仍需 RAG 摘要接入。
 - `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、结构化 runtime UI、真实模型流式事件、取消/重试、Review handoff 和阅读页选中入口；仍需成本记录、后台持久续跑和更强 provider capability matrix。
 - Custom Skill contract 已有 schema version、parser、validator、权限声明和 runtime injection gate；仍需导入 UI、fixture 管理和 provider 能力界面。
 - ConceptGraph 模型、本地 store、KnowledgeCard producer、Seminar candidate conceptRefs handoff、RAG/GraphRAG derived result producer、空态显性 action、局部探索、统一 Review relation adapter、最小 Explorer UI 和阅读页选中文本入口已有可测试切片；仍需把 RAG/GraphRAG producer 接到 AI Chat 普通对话上下文，并补充更强可视化布局。

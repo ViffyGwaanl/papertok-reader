@@ -15,6 +15,7 @@
 | --- | --- | --- | --- |
 | Review Inbox | `Settings -> AI -> Review inbox`，以及 Settings 顶层知识审核入口。 | 已接入 UI，可展示、批准、忽略、应用 KnowledgeCard、ConceptGraph relation 和 flashcard candidate 类型审批项。 | 只有 producer 写入 `ReviewItemStore` 后，用户才会看到内容。 |
 | 选中文本 -> KnowledgeCard | 阅读页选中文本 -> `知识卡`。 | 本分支已接入 `SelectionKnowledgeCardProducer` 和选中菜单入口，选中文本会进入 KnowledgeCard store 与 Review Inbox。 | 默认只进入 Review，不写长期记忆、不写笔记、不写 spaced review。 |
+| 图片解析 -> KnowledgeCard | 阅读页点开图片 -> `AI Image Analysis / AI图片解析` -> `Card / 知识卡`。 | 本分支已接入 `ImageAnalysisKnowledgeCardProducer` 和图片解析结果弹层入口，解析结果会进入 KnowledgeCard store 与 Review Inbox。 | 默认只进入 Review，不写长期记忆、不写笔记、不写 spaced review；SourceRef 使用当前阅读位置的 book/cfi/href 回跳。 |
 | 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 runtime：用户可启动 role-by-role Seminar，查看 evidence、角色输出、Shared Whiteboard、synthesis，并把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox。 | 阅读页优先 current book evidence；Settings 独立入口没有 current book 时会走 library fallback。Seminar synthesis 本身只进入 Review，不自动应用；候选卡和候选 flashcard 仍需用户在 Review Inbox 中批准/应用后才成为长期资产或复习项。 |
 | AI Chat 普通解释 | 阅读页选中文本 -> `AI`。 | 仍可用，保留原行为。 | 不自动生成 KnowledgeCard 或 ConceptGraph。 |
 | ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer、选中文本入口、KnowledgeCard -> draft ConceptGraph producer、Seminar candidate card -> conceptRefs -> KnowledgeCard -> ConceptGraph 候选链路，以及空态 `Create draft candidate` 显性 action：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部路径、显示 orphan/broken link，并可把 derived RAG/GraphRAG result 写成待审图谱候选。 | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard，或带 `derivedLayer/derivedSummary + traceable chunk SourceRef` 的 library RAG result，会生成 draft node/edge 和 pending relation ReviewItem；空态草稿入口使用本地文本检索，关闭 query embedding、vector fallback 和 rerank；AI Chat 普通对话尚未自动触发 RAG/GraphRAG producer，更强可视化布局还没接，不自动创建正式节点。 |
@@ -86,7 +87,38 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.3 概念图谱探索
+### 2.3 图片解析生成知识卡
+
+用户路径：
+
+1. 打开一本书。
+2. 点开正文中的图片。
+3. 点击图片工具栏里的 `AI Image Analysis / AI图片解析`。
+4. 等待图片解析结果出现在弹层中。
+5. 点击弹层里的 `Card / 知识卡`。
+6. 系统创建 `KnowledgeCard(origin=image-analysis)`，写入 `.knowledge/knowledge_cards_v1.json`。
+7. 系统创建对应 `ReviewItem(sourceType=knowledge-card)`，写入 `.workflow/review_items_v1.json`。
+8. 用户进入 `Settings -> AI -> Review inbox`，审核这张卡。
+9. 用户可以批准、忽略、应用，并通过 SourceRef 跳回图片所在阅读位置。
+
+Gate：
+
+- 图片解析结果必须由用户显式点击 `Card / 知识卡` 后才写入。
+- 卡片必须带当前阅读位置的 `bookId/cfi/href/jumpLink/sourceHash/createdAt`。
+- 相同书籍、相同阅读锚点、相同图片上下文和相同解析结果重复点击，不制造重复卡。
+- 图片解析结果只进入 Review，不直接进入长期资产、笔记或 spaced review。
+- 图片本身不写入 knowledge card payload；SourceRef 只保存裁剪后的图片上下文、alt/title 和当前阅读锚点。
+
+验证命令：
+
+```bash
+flutter test --no-pub \
+  test/service/knowledge/image_analysis_knowledge_card_producer_test.dart \
+  test/page/book_player/image_viewer_test.dart \
+  -r compact
+```
+
+### 2.4 概念图谱探索
 
 用户路径：
 
@@ -132,7 +164,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.4 间隔复习
+### 2.5 间隔复习
 
 用户路径：
 
@@ -166,7 +198,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.5 知识同步 / 导出
+### 2.6 知识同步 / 导出
 
 用户路径：
 
@@ -204,6 +236,7 @@ flutter test --no-pub \
 | --- | --- | --- | --- | --- | --- | --- |
 | UFA-C01-T01 | In Review | Selection KnowledgeCard | 选中文本生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore | `SelectionKnowledgeCardProducer` | 已通过 producer 测试，重复点击不重复写入。 |
 | UFA-C01-T02 | In Review | Selection KnowledgeCard | 阅读页选中菜单显示 `知识卡`。 | UFA-C01-T01, E07 menu | `ExcerptMenu` action, l10n keys | widget smoke 能看到 `Card/Seminar` 入口。 |
+| UFA-C01-T03 | In Review | Image Analysis KnowledgeCard | 图片解析结果生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore, E07 image analysis sheet | `ImageAnalysisKnowledgeCardProducer`, `AiImageAnalysisSheet` Card action | 图片解析结果弹层显示 `Card` 入口；点击后写 pending KnowledgeCard 和 pending ReviewItem；重复点击不制造重复卡；不自动写长期资产。 |
 | UFA-C02-T01 | In Review | Seminar launcher | 阅读页选中菜单显示 `研讨`，打开结构化 Seminar runtime page。 | AI Seminar runtime, E07 menu | `ExcerptMenu` action | 入口可见；选中文本预填；不自动写用户资产。 |
 | UFA-C02-T02 | In Review | Structured Seminar runtime UI | 把 `AiSeminarOrchestrationService` 接入真实模型流式事件。 | E01 services, E06 governance, E07 progress UI | `AiSeminarRuntimeService`、`aiSeminarRuntimeProvider`、`AiSeminarRuntimePage` | 角色 turn、evidence、whiteboard、synthesis 进入可序列化 runtime state；失败可重试，运行可取消。 |
 | UFA-C02-T03 | In Review | Seminar Review handoff | Seminar synthesis 和候选卡进入 Review Inbox。 | UFA-C02-T02, E05 controller | `AiSeminarRuntimeNotifier.sendToReview` + `SeminarSynthesisReviewAdapter` | 只有 `readyForReview + traceable handoff` 的 synthesis 进入 pending Review；候选卡保持 AI draft/pending，不直接应用。 |

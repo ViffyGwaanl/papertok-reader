@@ -982,8 +982,12 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           context,
           CupertinoStyleRoute(
             page: ImageViewer(
-              image: image!,
+              image: image,
+              bookId: widget.book.id,
               bookName: widget.book.title,
+              cfi: cfi,
+              chapterHref: chapterHref,
+              chapterTitle: chapterTitle,
               contextText: contextText,
               alt: alt,
               title: title,
@@ -1609,8 +1613,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
     final lower = t.toLowerCase();
     if (lower.startsWith('error:')) return true;
-    if (lower.contains('translate error') || lower.contains('翻译错误'))
+    if (lower.contains('translate error') || lower.contains('翻译错误')) {
       return true;
+    }
     if (lower.contains('authentication failed')) return true;
     if (lower.contains('rate limit') || lower.contains('429')) return true;
     if (lower.contains('ai service not configured')) return true;
@@ -1714,9 +1719,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     // Choose Morandi background tint matching the book
     final Color tintColor = _morandiCoverTints[
         widget.book.title.hashCode.abs() % _morandiCoverTints.length];
-        
+
     final File coverFile = File(widget.book.coverFullPath);
-    
+
     return SizedBox.expand(
       child: IgnorePointer(
         ignoring: true,
