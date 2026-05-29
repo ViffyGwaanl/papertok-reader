@@ -729,6 +729,45 @@
   "reviewInboxTraceableSources": "{count} 个可跳转来源",
   "reviewInboxUnavailableSources": "{count} 个已标记不可用",
   "reviewInboxUnresolvedSources": "{count} 个未解析来源",
+  "conceptGraphTitle": "概念图谱",
+  "conceptGraphDescription": "探索已确认和草稿中的概念关系，并保留可跳回原文的证据。",
+  "conceptGraphEmptyTitle": "还没有概念",
+  "conceptGraphEmptyBody": "审核过的概念关系和后续图谱生成器会出现在这里。",
+  "conceptGraphSelectPrompt": "选择一个概念，查看它的证据、局部路径和附近关系。",
+  "conceptGraphIntegrityClean": "没有孤立节点或断开的图谱关系",
+  "conceptGraphIntegrityIssueCount": "{orphans} 个孤立 / {broken} 个断开",
+  "@conceptGraphIntegrityIssueCount": {
+    "placeholders": {
+      "orphans": {
+        "type": "int"
+      },
+      "broken": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphSourceCount": "{count} 个来源",
+  "@conceptGraphSourceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphRelatedCount": "{count} 个关联",
+  "@conceptGraphRelatedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphLocalPath": "局部路径",
+  "conceptGraphRelatedTitle": "关联概念",
+  "conceptGraphEvidenceTitle": "证据",
+  "conceptGraphNoRelated": "还没有可回溯的关联概念。",
+  "conceptGraphNoEvidence": "没有可用来源证据。",
+  "conceptGraphLoadFailed": "无法加载概念图谱",
   "reviewInboxActionFailed": "审核操作失败",
   "memoryReviewInboxTargetDaily": "今日日记",
   "memoryReviewInboxTargetLongTerm": "长期记忆",

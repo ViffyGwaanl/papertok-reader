@@ -832,6 +832,45 @@
   "reviewInboxTraceableSources": "{count} traceable",
   "reviewInboxUnavailableSources": "{count} unavailable",
   "reviewInboxUnresolvedSources": "{count} unresolved",
+  "conceptGraphTitle": "Concept graph",
+  "conceptGraphDescription": "Explore confirmed and draft concept relationships with evidence back to the book.",
+  "conceptGraphEmptyTitle": "No concepts yet",
+  "conceptGraphEmptyBody": "Reviewed concept relations and future graph producers will appear here.",
+  "conceptGraphSelectPrompt": "Select a concept to inspect its evidence, local path, and nearby relationships.",
+  "conceptGraphIntegrityClean": "No orphan or broken graph links",
+  "conceptGraphIntegrityIssueCount": "{orphans} orphan / {broken} broken",
+  "@conceptGraphIntegrityIssueCount": {
+    "placeholders": {
+      "orphans": {
+        "type": "int"
+      },
+      "broken": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphSourceCount": "{count} sources",
+  "@conceptGraphSourceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphRelatedCount": "{count} related",
+  "@conceptGraphRelatedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphLocalPath": "Local path",
+  "conceptGraphRelatedTitle": "Related",
+  "conceptGraphEvidenceTitle": "Evidence",
+  "conceptGraphNoRelated": "No traceable related concepts yet.",
+  "conceptGraphNoEvidence": "No source evidence available.",
+  "conceptGraphLoadFailed": "Could not load concept graph",
   "reviewInboxActionFailed": "Review action failed",
   "memoryReviewInboxTargetDaily": "Daily",
   "memoryReviewInboxTargetLongTerm": "Long-term",

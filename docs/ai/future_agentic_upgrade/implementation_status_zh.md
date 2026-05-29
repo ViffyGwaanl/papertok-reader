@@ -17,10 +17,10 @@
 | E01 AI Seminar | `lib/models/ai_seminar.dart`、`AiSeminarOrchestrationService`、`AiSeminarEvidenceBroker`、`SeminarSynthesisReviewAdapter`、Seminar runtime governance scene、`ExcerptMenu` selection seminar launcher | fixed roles、role turn contract validation、current book first、library fallback service rule、Shared Whiteboard handoff、ReviewItem/KnowledgeCard candidates 不直接写用户资产；阅读页 `研讨` 入口降级到 prompt skill flow | In Review slice |
 | E02 RAG / RAPTOR / GraphRAG | RAG evidence SourceRef alignment、`live_rag_gateway_smoke_test.dart` opt-in provider smoke、current branch `kAiIndexDbVersion = 10` | schema migration increments from main v8 through detailed progress and `force_rebuild`, embedding/rerank endpoint smoke isolated from normal CI | In Review slice |
 | E03 KnowledgeCard | `lib/models/knowledge_card.dart`、`KnowledgeCardReviewAdapter`、`KnowledgeCardStore`、`SelectionKnowledgeCardProducer`、`ExcerptMenu` KnowledgeCard action | draft/pending boundary, duplicate candidate guard, source-required apply, card-to-review tests, reader selection SourceRef, `.knowledge/knowledge_cards_v1.json` local persistence, Review Inbox write | In Review slice |
-| E04 ConceptGraph | `lib/models/concept_graph.dart`、`ConceptGraphStore`、`ConceptGraphReviewAdapter` | node/edge evidence, draft-only store writes, relation apply via ReviewItem, dossier assembly via traceable edges, orphan/broken link detection, local exploration depth/width limits, malformed graph degrade | In Review slice |
+| E04 ConceptGraph | `lib/models/concept_graph.dart`、`ConceptGraphStore`、`ConceptGraphReviewAdapter`、`ConceptGraphExplorerPage`、`conceptGraphExplorerProvider` | node/edge evidence, draft-only store writes, relation apply via ReviewItem, dossier assembly via traceable edges, orphan/broken link detection, local exploration depth/width limits, malformed graph degrade, Settings AI visible Explorer | In Review slice |
 | E05 Review Inbox / Spaced Review | `lib/models/review_item.dart`、`ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider`、`ReviewInboxPage`、`MemoryCandidateReviewAdapter`、`FlashcardReviewAdapter`、`ConceptGraphReviewAdapter` | strict status transitions, versioned local inbox persistence, source-required apply, apply/dismiss traceability, KnowledgeCard and ConceptGraph decision mirror, source jump audit UI, spaced review sourceRefs | In Review slice |
 | E06 Agent Tools / Skills Platform | `lib/models/ai_agent_governance.dart`、`AiToolRegistry` governance filters、`SubAgentRunner.allowedToolIdsForAgent`、`ToolOrchestrator` permission matrix | whitelist, no recursion, read-only Seminar sub-agent filtering, execution-time concurrency safety, `CustomSkillContract` strict schema/parser/validator/runtime injection gate | In Review slice |
-| E07 Mobile UX / Deep Link / Observability | SourceRef jump links, reader intent reuse, `PaperReaderSourceJumpAudit`, deep-link evidence tests, selected-text `知识卡` / `研讨` menu entries | formal knowledge objects carry jump-capable SourceRef, book anchor, or unavailable reason; source jump audit identifies jumpable, unavailable, and unresolved refs; user-facing activation test covers visible menu actions | In Review slice |
+| E07 Mobile UX / Deep Link / Observability | SourceRef jump links, reader intent reuse, `PaperReaderSourceJumpAudit`, deep-link evidence tests, selected-text `知识卡` / `研讨` menu entries, Settings AI `Concept graph` entry | formal knowledge objects carry jump-capable SourceRef, book anchor, or unavailable reason; source jump audit identifies jumpable, unavailable, and unresolved refs; user-facing activation tests cover visible menu actions and graph explorer entry | In Review slice |
 | E08 Sync / Backup / Export | `lib/models/knowledge_sync.dart` | user asset vs derived cache boundary, default sync policy, secret payload exclusion, draft/export defaults, conflict review status | In Review slice |
 
 ## 3. Verification Commands
@@ -48,6 +48,8 @@ flutter test --no-pub \
   test/service/ai/ai_seminar_evidence_broker_test.dart \
   test/service/ai/ai_seminar_orchestration_service_test.dart \
   test/service/knowledge/concept_graph_store_test.dart \
+  test/providers/concept_graph_explorer_test.dart \
+  test/page/settings_page/concept_graph_explorer_page_test.dart \
   test/service/knowledge/knowledge_card_store_test.dart \
   test/service/knowledge/selection_knowledge_card_producer_test.dart \
   test/service/review/knowledge_review_adapter_test.dart \
@@ -159,6 +161,11 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - `2026-05-28 23:23 EDT`：`dart analyze --no-fatal-warnings lib/service/knowledge/selection_knowledge_card_producer.dart lib/widgets/context_menu/excerpt_menu.dart test/service/knowledge/selection_knowledge_card_producer_test.dart test/widgets/context_menu/excerpt_menu_actions_test.dart` 仍被 analyzer plugin setup 阻塞，原因是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；该命令未返回代码诊断。
 - `2026-05-28 23:26 EDT`：独立 rescue reviewer 复核用户入口切片，结论为 no blockers；指出的重复已批准卡 toast 边界已用 `knowledgeCardAlreadySaved` 和回归测试修正。残余风险：真实 reader SourceRef 回跳仍缺端到端 UI 测试，card store 与 review store 是两个文件写入。
 - `2026-05-28 23:27 EDT`：agentic focused suite 通过，加入用户入口切片后结果为 `152 passed, 2 skipped`；两个 skipped 均为 opt-in live RAG gateway smoke。
+- `2026-05-28 23:35 EDT`：ConceptGraph Explorer 入口切片通过，`flutter test --no-pub test/providers/concept_graph_explorer_test.dart test/page/settings_page/concept_graph_explorer_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart -r compact` 结果为 `4 passed`；覆盖 graph provider refresh、dossier/local path、orphan/broken link 可见、Settings AI 页面编译。
+- `2026-05-28 23:38 EDT`：agentic focused suite 通过，加入 ConceptGraph Explorer 入口后结果为 `155 passed, 2 skipped`；两个 skipped 均为 opt-in live RAG gateway smoke。
+- `2026-05-28 23:38 EDT`：`git diff --check` 通过；future agentic docs 禁用词扫描无命中；用户提供的本地 gateway API key 明文扫描无命中。
+- `2026-05-28 23:38 EDT`：`dart analyze --no-fatal-warnings lib/providers/concept_graph_explorer.dart lib/page/settings_page/concept_graph_explorer.dart lib/page/settings_page/ai.dart test/providers/concept_graph_explorer_test.dart test/page/settings_page/concept_graph_explorer_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart` 仍被 analyzer plugin setup 阻塞，原因是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；该命令未返回代码诊断。
+- `2026-05-28 23:41 EDT`：独立 rescue reviewer 复核 ConceptGraph Explorer 用户入口与 README/04 状态表，结论为 no blockers；确认 README 未把 producer/阅读页入口/Spaced Review/Sync Export 标成已可用，Explorer 只调用 `listNodes`、`inspectIntegrity`、`buildDossier`、`exploreFrom`，不创建 node/edge，不绕过 Review。
 
 ## 4. Rescue Review Checklist
 
@@ -168,6 +175,7 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - KnowledgeCardStore 的候选写入把同 ID 视为冲突，不用生成内容覆盖已有用户 note、quote 或 title；显式修改必须走 source-specific apply/update 路径。
 - 正式 KnowledgeCard、ReviewItem、Seminar synthesis、ConceptNode、ConceptEdge 必须有 SourceRef book anchor、jump link 或不可跳原因；hash-only fingerprint 只能保留为 draft/unapplied。
 - ConceptGraphStore 只写 `.knowledge/concept_graph_v1.json`，node/edge 写入保持 draft ownership；dossier 和局部探索只走有 traceable evidence 的边，并按 depth 和每层 width clamp；orphan node 与 broken edge 必须可报告，不把图谱推断自动写成用户确认资产。
+- ConceptGraphExplorerPage 只读取和展示已有 ConceptGraphStore 数据；没有 producer 数据时展示空态，不自动创建概念节点或关系。
 - ConceptGraph relation 通过 `ConceptGraphReviewAdapter` 进入 Review；approved 只推进 ReviewItem，不把 edge 变成 formal，只有 applied 且有 evidence 的 edge 才升级为 `AI-generated-approved` ownership。
 - KnowledgeSyncPolicy 默认只同步用户确认资产类 envelope；`ai-draft`、`derived-index`、含 API key/token/secret/auth/authorization/bearer/private-key/credential/password 类 payload 的 envelope 默认排除，冲突和未知 schema 进入 Review。
 - PaperReaderReaderIntent 可以从 SourceRef 生成 reader deep link intent；SourceRef jumpLink 必须是可解析的 `paperreader://reader/open?...` 且包含 bookId 与 href/cfi 才能算 jumpable evidence；PaperReaderSourceJumpAudit 负责区分 jumpable、unavailable 和 unresolved source refs。

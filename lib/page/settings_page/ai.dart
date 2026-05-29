@@ -10,6 +10,7 @@ import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:papertok_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
 import 'package:papertok_reader/page/settings_page/ai_title_generation.dart';
 import 'package:papertok_reader/page/settings_page/ai_tools.dart';
+import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
@@ -381,6 +382,16 @@ class _AISettingsState extends ConsumerState<AISettings> {
             onPressed: (context) {
               Navigator.of(context).push(
                 CupertinoStyleRoute(page: const ReviewInboxPage()),
+              );
+            },
+          ),
+          SettingsTile.navigation(
+            leading: const Icon(Icons.account_tree_outlined),
+            title: Text(l10n.conceptGraphTitle),
+            description: Text(l10n.conceptGraphDescription),
+            onPressed: (context) {
+              Navigator.of(context).push(
+                CupertinoStyleRoute(page: const ConceptGraphExplorerPage()),
               );
             },
           ),
