@@ -95,7 +95,10 @@ class _ConceptGraphBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final visibleNodes = _filterNodesForQuery(nodes, initialQuery);
     if (visibleNodes.isEmpty) {
-      return _EmptyGraph(selectionQuery: initialQuery);
+      return _EmptyGraph(
+        selectionQuery: initialQuery,
+        state: state,
+      );
     }
 
     return LayoutBuilder(
@@ -489,16 +492,21 @@ class _IntegrityBanner extends StatelessWidget {
   }
 }
 
-class _EmptyGraph extends StatelessWidget {
-  const _EmptyGraph({this.selectionQuery});
+class _EmptyGraph extends ConsumerWidget {
+  const _EmptyGraph({
+    this.selectionQuery,
+    required this.state,
+  });
 
   final String? selectionQuery;
+  final ConceptGraphExplorerState state;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final hasQuery =
         selectionQuery != null && selectionQuery!.trim().isNotEmpty;
+    final isCreating = state.isCreatingDraftCandidate;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -526,9 +534,21 @@ class _EmptyGraph extends StatelessWidget {
             if (hasQuery) ...[
               const SizedBox(height: 14),
               OutlinedButton.icon(
-                icon: const Icon(Icons.add_link_outlined),
+                icon: isCreating
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_link_outlined),
                 label: Text(l10n.conceptGraphCreateDraftCandidate),
-                onPressed: null,
+                onPressed: isCreating
+                    ? null
+                    : () => ref
+                        .read(conceptGraphExplorerProvider.notifier)
+                        .createDraftCandidateFromLibrarySearch(
+                          selectionQuery!,
+                        ),
               ),
             ],
           ],

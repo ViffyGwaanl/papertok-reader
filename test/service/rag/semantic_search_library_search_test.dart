@@ -87,6 +87,97 @@ void main() {
     expect(result.evidence.single.href, 'Text/car.xhtml');
   });
 
+  test('local text-only mode does not call embedding or rerank providers',
+      () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+
+    final db = await aiDb.database;
+    await _insertBook(db, 1);
+    await _insertChunk(
+      db,
+      bookId: 1,
+      href: 'Text/local.xhtml',
+      title: 'Local',
+      chunkIndex: 0,
+      text: 'local-only graph candidate evidence',
+      embeddingJson: '[1,0]',
+    );
+
+    var embedCalls = 0;
+    var rerankCalls = 0;
+    final service = SemanticSearchLibrary(
+      database: aiDb,
+      embedQuery: (q, {required model, providerId}) async {
+        embedCalls += 1;
+        throw StateError('embedding provider must not be called');
+      },
+      rerank: (query, candidates) async {
+        rerankCalls += 1;
+        throw StateError('rerank provider must not be called');
+      },
+    );
+
+    final result = await service.search(
+      query: 'local-only',
+      maxResults: 1,
+      allowQueryEmbedding: false,
+      allowVectorFallback: false,
+      allowRerank: false,
+    );
+
+    expect(result.ok, true);
+    expect(result.usedVectorFallback, false);
+    expect(result.evidence.single.href, 'Text/local.xhtml');
+    expect(embedCalls, 0);
+    expect(rerankCalls, 0);
+  });
+
+  test('local text-only mode does not vector fallback on misses', () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+
+    final db = await aiDb.database;
+    await _insertBook(db, 1);
+    await _insertChunk(
+      db,
+      bookId: 1,
+      href: 'Text/vector-only.xhtml',
+      title: 'Vector Only',
+      chunkIndex: 0,
+      text: 'unrelated local passage',
+      embeddingJson: '[1,0]',
+    );
+
+    var embedCalls = 0;
+    final service = SemanticSearchLibrary(
+      database: aiDb,
+      embedQuery: (q, {required model, providerId}) async {
+        embedCalls += 1;
+        return <double>[1, 0];
+      },
+    );
+
+    final result = await service.search(
+      query: 'not-in-text',
+      maxResults: 1,
+      allowQueryEmbedding: false,
+      allowVectorFallback: false,
+      allowRerank: false,
+    );
+
+    expect(result.ok, false);
+    expect(result.usedVectorFallback, false);
+    expect(result.evidence, isEmpty);
+    expect(embedCalls, 0);
+  });
+
   test('neighbor expansion merges adjacent chunks in the same chapter only',
       () async {
     final aiDb = AiIndexDatabase.forTesting(

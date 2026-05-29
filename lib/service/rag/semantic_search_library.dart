@@ -170,6 +170,9 @@ class SemanticSearchLibrary {
     bool onlyIndexed = true,
     List<String>? queryVariants,
     int neighborWindow = 1,
+    bool allowQueryEmbedding = true,
+    bool allowVectorFallback = true,
+    bool allowRerank = true,
   }) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
@@ -365,6 +368,9 @@ LIMIT ?
       String model, {
       String? providerId,
     }) async {
+      if (!allowQueryEmbedding) {
+        throw StateError('query embedding is disabled for this search');
+      }
       final key = '${providerId ?? ''}|$model';
       final cached = qVecByKey[key];
       if (cached != null) return cached;
@@ -386,7 +392,10 @@ LIMIT ?
 
     var usedVectorFallback = false;
 
-    if (rows.isEmpty && onlyIndexed) {
+    if (rows.isEmpty &&
+        onlyIndexed &&
+        allowVectorFallback &&
+        allowQueryEmbedding) {
       // Final fallback: exact local vector search over indexed chunks.
       // The helper is intentionally isolated so an ANN/sqlite-vec backend can
       // replace the exact scanner without changing the search pipeline.
@@ -494,18 +503,23 @@ LIMIT 12
 
       final providerId = (r['provider_id']?.toString() ?? '').trim();
 
-      final q = await getQueryVec(
-        model,
-        providerId: providerId.isEmpty ? null : providerId,
-      );
       final vNorm = (r['embedding_norm'] as num?)?.toDouble();
-      final sim = VectorMath.cosineSimilarity(
-        q.v,
-        vec,
-        aNorm: q.norm,
-        bNorm: vNorm,
-      );
-      final vecScore = ((sim + 1) / 2).clamp(0.0, 1.0);
+      double vecScore;
+      if (allowQueryEmbedding) {
+        final q = await getQueryVec(
+          model,
+          providerId: providerId.isEmpty ? null : providerId,
+        );
+        final sim = VectorMath.cosineSimilarity(
+          q.v,
+          vec,
+          aNorm: q.norm,
+          bNorm: vNorm,
+        );
+        vecScore = ((sim + 1) / 2).clamp(0.0, 1.0).toDouble();
+      } else {
+        vecScore = 0;
+      }
 
       candidates.add(
         _Candidate(
@@ -573,16 +587,22 @@ LIMIT 12
 
     // Hybrid score.
     for (final c in candidates) {
-      final textWeight = usedFts ? 0.35 : 0.0;
-      final vecWeight = 1.0 - textWeight;
-      c.hybridScore =
-          (vecWeight * c.vectorScore) + (textWeight * (c.textScore ?? 0.0));
+      if (allowQueryEmbedding) {
+        final textWeight = usedFts ? 0.35 : 0.0;
+        final vecWeight = 1.0 - textWeight;
+        c.hybridScore =
+            (vecWeight * c.vectorScore) + (textWeight * (c.textScore ?? 0.0));
+      } else {
+        c.hybridScore = (c.textScore ?? 0).clamp(0.0, 1.0).toDouble();
+      }
     }
 
     // Sort by hybrid score (for stable tie-breaking).
     candidates.sort((a, b) => b.hybridScore.compareTo(a.hybridScore));
 
-    await _applyRerank(trimmed, candidates);
+    if (allowRerank) {
+      await _applyRerank(trimmed, candidates);
+    }
 
     // Sort again after optional reranking.
     candidates.sort((a, b) => b.hybridScore.compareTo(a.hybridScore));

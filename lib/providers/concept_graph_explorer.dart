@@ -1,14 +1,48 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
+import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
+import 'package:papertok_reader/service/rag/semantic_search_library.dart';
+import 'package:papertok_reader/service/review/review_item_store.dart';
+
+typedef ConceptGraphLibrarySearch = Future<AiSemanticSearchLibraryResult>
+    Function(String query);
 
 final conceptGraphStoreProvider = Provider<ConceptGraphStore>((ref) {
   return ConceptGraphStore();
 });
 
+final conceptGraphReviewItemStoreProvider = Provider<ReviewItemStore>((ref) {
+  return ReviewItemStore();
+});
+
+final conceptGraphProducerProvider = Provider<ConceptGraphProducer>((ref) {
+  return ConceptGraphProducer(
+    graphStore: ref.watch(conceptGraphStoreProvider),
+    reviewStore: ref.watch(conceptGraphReviewItemStoreProvider),
+  );
+});
+
+final conceptGraphLibrarySearchProvider =
+    Provider<ConceptGraphLibrarySearch>((ref) {
+  final service = SemanticSearchLibrary();
+  return (query) => service.search(
+        query: query,
+        maxResults: 6,
+        onlyIndexed: true,
+        allowQueryEmbedding: false,
+        allowVectorFallback: false,
+        allowRerank: false,
+      );
+});
+
 final conceptGraphExplorerProvider = StateNotifierProvider<
     ConceptGraphExplorerNotifier, ConceptGraphExplorerState>((ref) {
-  return ConceptGraphExplorerNotifier(ref.watch(conceptGraphStoreProvider));
+  return ConceptGraphExplorerNotifier(
+    ref.watch(conceptGraphStoreProvider),
+    ref.watch(conceptGraphProducerProvider),
+    ref.watch(conceptGraphLibrarySearchProvider),
+  );
 });
 
 class ConceptGraphExplorerSelection {
@@ -25,6 +59,7 @@ class ConceptGraphExplorerState {
   const ConceptGraphExplorerState({
     required this.nodes,
     required this.selection,
+    required this.draftCandidate,
     this.selectedNodeId,
     this.integrity,
     this.lastError,
@@ -34,14 +69,18 @@ class ConceptGraphExplorerState {
     return const ConceptGraphExplorerState(
       nodes: AsyncValue<List<ConceptNode>>.data(<ConceptNode>[]),
       selection: AsyncValue<ConceptGraphExplorerSelection?>.data(null),
+      draftCandidate: AsyncValue<ConceptGraphProducerResult?>.data(null),
     );
   }
 
   final AsyncValue<List<ConceptNode>> nodes;
   final AsyncValue<ConceptGraphExplorerSelection?> selection;
+  final AsyncValue<ConceptGraphProducerResult?> draftCandidate;
   final String? selectedNodeId;
   final ConceptGraphIntegrityReport? integrity;
   final String? lastError;
+
+  bool get isCreatingDraftCandidate => draftCandidate.isLoading;
 
   Map<String, ConceptNode> get nodesById {
     return {
@@ -53,6 +92,7 @@ class ConceptGraphExplorerState {
   ConceptGraphExplorerState copyWith({
     AsyncValue<List<ConceptNode>>? nodes,
     AsyncValue<ConceptGraphExplorerSelection?>? selection,
+    AsyncValue<ConceptGraphProducerResult?>? draftCandidate,
     Object? selectedNodeId = _unset,
     ConceptGraphIntegrityReport? integrity,
     String? lastError,
@@ -61,6 +101,7 @@ class ConceptGraphExplorerState {
     return ConceptGraphExplorerState(
       nodes: nodes ?? this.nodes,
       selection: selection ?? this.selection,
+      draftCandidate: draftCandidate ?? this.draftCandidate,
       selectedNodeId: identical(selectedNodeId, _unset)
           ? this.selectedNodeId
           : selectedNodeId as String?,
@@ -72,10 +113,15 @@ class ConceptGraphExplorerState {
 
 class ConceptGraphExplorerNotifier
     extends StateNotifier<ConceptGraphExplorerState> {
-  ConceptGraphExplorerNotifier(this._store)
-      : super(ConceptGraphExplorerState.initial());
+  ConceptGraphExplorerNotifier(
+    this._store,
+    this._producer,
+    this._librarySearch,
+  ) : super(ConceptGraphExplorerState.initial());
 
   final ConceptGraphStore _store;
+  final ConceptGraphProducer _producer;
+  final ConceptGraphLibrarySearch _librarySearch;
 
   Future<void> refresh() async {
     state = state.copyWith(
@@ -142,6 +188,40 @@ class ConceptGraphExplorerNotifier
           error,
           stackTrace,
         ),
+        lastError: error.toString(),
+      );
+    }
+  }
+
+  Future<void> createDraftCandidateFromLibrarySearch(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    state = state.copyWith(
+      draftCandidate: const AsyncValue<ConceptGraphProducerResult?>.loading(),
+      clearError: true,
+    );
+    try {
+      final searchResult = await _librarySearch(trimmed);
+      final producerResult =
+          await _producer.createFromLibrarySearchResult(searchResult);
+      state = state.copyWith(
+        draftCandidate:
+            AsyncValue<ConceptGraphProducerResult?>.data(producerResult),
+        clearError: true,
+      );
+      if (producerResult.createdAny) {
+        await refresh();
+        final firstNodeId = producerResult.nodes
+            .map((node) => node.id)
+            .firstWhere((id) => id.trim().isNotEmpty, orElse: () => '');
+        if (firstNodeId.isNotEmpty) {
+          await selectNode(firstNodeId);
+        }
+      }
+    } catch (error, stackTrace) {
+      state = state.copyWith(
+        draftCandidate:
+            AsyncValue<ConceptGraphProducerResult?>.error(error, stackTrace),
         lastError: error.toString(),
       );
     }

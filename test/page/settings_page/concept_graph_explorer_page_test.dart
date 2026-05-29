@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
+import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
+import 'package:papertok_reader/service/rag/semantic_search_library.dart';
+import 'package:papertok_reader/service/review/review_item_store.dart';
 
 void main() {
   late ConceptGraphStore store;
@@ -103,6 +106,73 @@ void main() {
     expect(find.text('Create draft candidate'), findsOneWidget);
     expect(find.text('Attention'), findsNothing);
   });
+
+  testWidgets('empty state create draft candidate runs derived RAG handoff',
+      (tester) async {
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphLibrarySearchProvider.overrideWithValue(
+            (query) async => AiSemanticSearchLibraryResult(
+              ok: true,
+              query: query,
+              evidence: [
+                AiSemanticSearchLibraryEvidence(
+                  chunkId: 77,
+                  bookId: 7,
+                  bookTitle: 'Graph Notes',
+                  href: 'Text/rag.xhtml',
+                  anchor: 'Chunk 77',
+                  snippet: 'Book chunk evidence for attention and memory.',
+                  jumpLink:
+                      'paperreader://reader/open?bookId=7&href=Text/rag.xhtml',
+                  score: 0.91,
+                  sourceRef: SourceRef(
+                    bookId: 7,
+                    href: 'Text/rag.xhtml',
+                    chunkId: 77,
+                    jumpLink:
+                        'paperreader://reader/open?bookId=7&href=Text/rag.xhtml',
+                    sourceTextSnippet:
+                        'Book chunk evidence for attention and memory.',
+                    sourceKind: SourceRefKind.libraryRag,
+                  ),
+                  derivedLayer: 'graph',
+                  derivedSummary:
+                      'GraphRAG community: Key themes: Attention, Memory.',
+                ),
+              ],
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(
+            initialQuery: 'attention memory',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Create draft candidate'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('No related concepts yet'), findsNothing);
+    expect(find.text('attention memory'), findsWidgets);
+    expect(find.text('Attention'), findsWidgets);
+  });
 }
 
 SourceRef refFor(String snippet) => SourceRef(
@@ -192,5 +262,147 @@ class _FakeConceptGraphStore extends ConceptGraphStore {
       returnPath: ['attention', 'memory'],
       policy: policy,
     );
+  }
+}
+
+class _MutableConceptGraphStore extends ConceptGraphStore {
+  final nodes = <ConceptNode>[];
+  final edges = <ConceptEdge>[];
+
+  @override
+  Future<List<ConceptNode>> listNodes() async => List<ConceptNode>.from(nodes)
+    ..sort((a, b) => (b.createdAt ?? b.updatedAt ?? 0)
+        .compareTo(a.createdAt ?? a.updatedAt ?? 0));
+
+  @override
+  Future<List<ConceptEdge>> listEdges() async => List<ConceptEdge>.from(edges);
+
+  @override
+  Future<ConceptNode> upsertNode(ConceptNode node) async {
+    final draft = ConceptNode(
+      id: node.id,
+      type: node.type,
+      label: node.label,
+      summary: node.summary,
+      sourceRefs: node.sourceRefs,
+      cardIds: node.cardIds,
+      ownership: AiOutputOwnership.aiGeneratedDraft,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+    );
+    final index = nodes.indexWhere((existing) => existing.id == draft.id);
+    if (index >= 0) {
+      nodes[index] = draft;
+    } else {
+      nodes.add(draft);
+    }
+    return draft;
+  }
+
+  @override
+  Future<ConceptEdge> upsertEdge(ConceptEdge edge) async {
+    final draft = ConceptEdge(
+      id: edge.id,
+      sourceNodeId: edge.sourceNodeId,
+      targetNodeId: edge.targetNodeId,
+      type: edge.type,
+      label: edge.label,
+      evidenceRefs: edge.evidenceRefs,
+      confidence: edge.confidence,
+      ownership: AiOutputOwnership.aiGeneratedDraft,
+      createdAt: edge.createdAt,
+      updatedAt: edge.updatedAt,
+    );
+    final index = edges.indexWhere((existing) => existing.id == draft.id);
+    if (index >= 0) {
+      edges[index] = draft;
+    } else {
+      edges.add(draft);
+    }
+    return draft;
+  }
+
+  @override
+  Future<ConceptGraphIntegrityReport> inspectIntegrity() async {
+    final nodeIds = nodes.map((node) => node.id).toSet();
+    return ConceptGraphIntegrityReport(
+      orphanNodeIds:
+          nodes.where((node) => node.isOrphan).map((node) => node.id).toList(),
+      brokenEdgeIds: edges
+          .where((edge) =>
+              edge.isBroken ||
+              !nodeIds.contains(edge.sourceNodeId) ||
+              !nodeIds.contains(edge.targetNodeId))
+          .map((edge) => edge.id)
+          .toList(),
+    );
+  }
+
+  @override
+  Future<ConceptDossier?> buildDossier(String nodeId) async {
+    ConceptNode? node;
+    for (final entry in nodes) {
+      if (entry.id == nodeId) {
+        node = entry;
+        break;
+      }
+    }
+    if (node == null) return null;
+    final relatedEdges = edges
+        .where(
+          (edge) =>
+              edge.hasEvidence &&
+              !edge.isBroken &&
+              (edge.sourceNodeId == nodeId || edge.targetNodeId == nodeId),
+        )
+        .toList();
+    return ConceptDossier(
+      node: node,
+      definition: node.summary,
+      appearances: node.sourceRefs.where((ref) => ref.hasEvidence).toList(),
+      relatedEdges: relatedEdges,
+      supportingEvidence:
+          relatedEdges.expand((edge) => edge.evidenceRefs).toList(),
+      recommendedNextNodeIds: relatedEdges
+          .map((edge) => edge.sourceNodeId == nodeId
+              ? edge.targetNodeId
+              : edge.sourceNodeId)
+          .toList(),
+    );
+  }
+
+  @override
+  Future<ConceptExplorationPath> exploreFrom(
+    String startNodeId, {
+    int requestedDepth = 2,
+    ConceptExplorationPolicy policy = const ConceptExplorationPolicy(),
+  }) async {
+    final related = edges
+        .where((edge) =>
+            edge.sourceNodeId == startNodeId ||
+            edge.targetNodeId == startNodeId)
+        .expand((edge) => [edge.sourceNodeId, edge.targetNodeId])
+        .where((id) => id.trim().isNotEmpty)
+        .toSet()
+        .toList();
+    return ConceptExplorationPath(
+      startNodeId: startNodeId,
+      nodeIds: related.isEmpty ? [startNodeId] : related,
+      returnPath: related.isEmpty ? [startNodeId] : related,
+      policy: policy,
+    );
+  }
+}
+
+class _MemoryReviewItemStore extends ReviewItemStore {
+  final _items = <String, ReviewItem>{};
+
+  @override
+  Future<ReviewItem?> getById(String id) async => _items[id];
+
+  @override
+  Future<ReviewItem> upsert(ReviewItem item) async {
+    _items[item.id] = item;
+    return item;
   }
 }
