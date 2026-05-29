@@ -57,13 +57,11 @@
 - 用户要找入口：看本节表格的“用户怎么用”列。
 - agent 要继续接产品闭环：看 `04_user_facing_activation_plan_zh.md` 的每条用户路径、Gate、验证命令和 `UFA-*` task。
 
-仍在 `In Review` 的用户入口证据不要解读成发布版完成项：
+仍在 `In Review` 的用户入口证据不要解读成发布版完成项；当前只剩阅读页真实 fallback 选中文本路径需要补点击级证据：
 
 | In Review 入口证据 | 现在已有 | 还要补的 agent task |
 | --- | --- | --- |
 | 阅读页真实选中文本 fallback | `ExcerptMenu` 注入 reader context 的 `Card` 点击测试已覆盖。 | 补不注入 creator/context 时走真实 `epubPlayerKey` fallback 的 widget 证据。 |
-| ConceptGraph Settings 入口点击证据 | Explorer 页面、provider、阅读页选中文本入口、局部图谱、证据和来源跳转均已覆盖。 | 补 `Settings -> AI -> Concept graph` 的点击级导航证据。 |
-| Spaced Review Settings 入口点击证据 | Spaced Review 队列、页面、provider、评分、来源跳转和 Review apply 入队均已覆盖。 | 补 `Settings -> AI -> Spaced review` 的点击级导航证据。 |
 
 | 能力 | 用户怎么用 | 状态 |
 | --- | --- | --- |
@@ -72,9 +70,9 @@
 | 一键开启研讨 | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 AI Seminar runtime/UI：展示 evidence、role turns、Shared Whiteboard、synthesis，支持取消、失败重试，并可把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox；页面级 widget 覆盖点击 `Send to Review` 后写入 pending synthesis/card/flashcard handoff；不自动写长期资产。 |
 | AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入显性 message action；streaming 中 `知识卡` 按钮禁用且不会调用 producer；回答旁会显示 `可跳转来源` 或 `已标记不可用` 来源状态；从选中文本打开 AI 时保留精确 SourceRef，并随 `conversationV2` 历史持久化，历史重载后仍优先使用原始 reader SourceRef；如果用户把预填草稿改成无关问题，本轮不保存旧 reader SourceRef，短公共片段只靠碰巧包含不会保留精确 reader grounding；reader-grounded card 会带保守 `conceptRefs`；用户 Apply 后进入 draft ConceptGraph 候选和 pending relation ReviewItem。纯聊天只保留 conversation provenance，不直接写长期资产或正式 ConceptGraph。 |
 | Review Inbox | `Settings -> AI -> Review inbox`。 | 已有统一 UI；待审项显示状态、类型、证据摘录、来源标题/位置、不可用来源原因和打开来源动作；内容依赖 producer 写入。 |
-| 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入 Explorer、阅读页选中文本入口、KnowledgeCard -> draft ConceptGraph producer 和空态 `Create draft candidate` 显性 action；可查看已有图谱、按选中文本筛选相关概念、查看局部图谱摘要、局部路径、证据、draft/formal 状态和 orphan/broken link。当前 producer 可从 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成待审图谱关系；Seminar candidate card 和 reader-grounded AI Chat card 都可携带 `conceptRefs`，经 Review apply 后进入同一图谱候选链路；`Create draft candidate` 使用关闭 query embedding、vector fallback、rerank 的本地文本检索，只让带 traceable chunk SourceRef 的 RAG/GraphRAG derived search result 生成 draft concept relation 和 pending ReviewItem；空态动作会显示已进入 Review 或跳过原因。 |
+| 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入 Explorer、Settings 点击入口、阅读页选中文本入口、KnowledgeCard -> draft ConceptGraph producer 和空态 `Create draft candidate` 显性 action；可查看已有图谱、按选中文本筛选相关概念、查看局部图谱摘要、局部路径、证据、draft/formal 状态和 orphan/broken link。当前 producer 可从 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成待审图谱关系；Seminar candidate card 和 reader-grounded AI Chat card 都可携带 `conceptRefs`，经 Review apply 后进入同一图谱候选链路；`Create draft candidate` 使用关闭 query embedding、vector fallback、rerank 的本地文本检索，只让带 traceable chunk SourceRef 的 RAG/GraphRAG derived search result 生成 draft concept relation 和 pending ReviewItem；空态动作会显示已进入 Review 或跳过原因。 |
 | RAG/GraphRAG 结果生成知识卡 | 阅读页选中文本 -> `图谱/Graph` -> 无相关概念空态 -> `Card / 知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入；使用同一条本地文本 library RAG search，关闭 query embedding、vector fallback、rerank，只把带 traceable chunk SourceRef 和可保存 chunk snippet 的 RAG 结果写成 pending KnowledgeCard，不写正式图谱或长期资产；写入后页面会提示已加入 Review inbox。 |
-| Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；知识卡或 Seminar 候选 flashcard 在 Review Inbox 中 `Apply` 后入队。 | 本分支已接入队列、复习页、证据摘录预览、Again/Hard/Good/Easy 评分和来源跳转状态；已接 KnowledgeCard apply 和 Seminar reviewSuggestion -> flashcard candidate -> Review Inbox Apply UI -> Spaced Review。 |
+| Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；知识卡或 Seminar 候选 flashcard 在 Review Inbox 中 `Apply` 后入队。 | 本分支已接入 Settings 点击入口、队列、复习页、证据摘录预览、Again/Hard/Good/Easy 评分和来源跳转状态；已接 KnowledgeCard apply 和 Seminar reviewSuggestion -> flashcard candidate -> Review Inbox Apply UI -> Spaced Review。 |
 | Sync Export | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览、Markdown 学习导出、HTML study report、Anki TSV 导出、创建入口、待审冲突发送到 Review Inbox 的入口，以及发送成功后的 `Review inbox` 直达按钮；默认只纳入已确认知识资产和复习历史，排除草稿、派生索引、API key 和待审冲突；provider 级闭环覆盖安全 KnowledgeCard 冲突从 export handoff 到 Review approve/apply，再解除 pending conflict 并重新进入 export included 集合；含 secret、未知 schema、无可追踪来源或非 KnowledgeCard 的冲突仍只能 dismiss/triage。完整云同步引擎、per-entity remote sync 和远端冲突合并器仍在剩余任务中。 |
 
 ## 6. 当前还不能用

@@ -13,7 +13,12 @@ import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/settings_page/knowledge_asset_export.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/spaced_review.dart';
+import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/providers/knowledge_asset_export.dart';
+import 'package:papertok_reader/providers/spaced_review.dart';
+import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
+import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/service/sync/knowledge_asset_export_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -89,6 +94,97 @@ void main() {
     expect(find.byType(KnowledgeAssetExportPage), findsOneWidget);
     expect(find.text('No confirmed knowledge assets yet'), findsOneWidget);
   });
+
+  testWidgets('AI settings opens concept graph entry', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+    final tempRoot = Directory.systemTemp.createTempSync();
+    addTearDown(() {
+      if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(
+            ConceptGraphStore(rootDir: tempRoot),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AISettings(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Concept graph'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Concept graph'));
+    await _pumpNavigationFrames(tester);
+
+    expect(find.byType(ConceptGraphExplorerPage), findsOneWidget);
+    expect(
+      find.text(
+        'Explore confirmed and draft concept relationships with evidence back to the book.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('AI settings opens spaced review entry', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+    final tempRoot = Directory.systemTemp.createTempSync();
+    addTearDown(() {
+      if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spacedReviewStoreProvider.overrideWithValue(
+            SpacedReviewStore(rootDir: tempRoot),
+          ),
+          spacedReviewKnowledgeCardStoreProvider.overrideWithValue(
+            KnowledgeCardStore(rootDir: tempRoot),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AISettings(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Spaced review'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Spaced review'));
+    await _pumpNavigationFrames(tester);
+
+    expect(find.byType(SpacedReviewPage), findsOneWidget);
+    expect(
+      find.text(
+        'Review applied knowledge cards with source links back to the original text.',
+      ),
+      findsOneWidget,
+    );
+  });
+}
+
+Future<void> _pumpNavigationFrames(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
