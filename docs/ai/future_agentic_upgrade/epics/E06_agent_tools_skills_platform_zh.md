@@ -78,8 +78,10 @@ Provider/model 需要声明：
 当前实现切片：
 
 - `CustomSkillContract` 已提供 schemaVersion `1`、JSON/Map parser、字段类型错误上报、unknown field 报错、unknown scene 报错、system scene 拦截、写工具拦截、`spawn_sub_agent` 拦截和 `canInject` runtime gate。
+- `CustomSkillStore` 和 `CustomSkillsPage` 已提供 Settings -> AI 导入入口、safe fixture 示例、valid contract upsert、禁用/删除、unsafe JSON 拦截、Installed skills runtime 状态展示和 Active Skill 合并。
+- `AiSkill.allowedToolIds/sceneIds` 与 `LangchainAiRegistry.enabledToolIdsForActiveSkill` 已把 active custom skill 的 runtime 工具集收窄到 contract 声明过且当前 scene/permission matrix 允许的只读工具；custom skill 激活时不加载 MCP 工具。
 - `AiToolPermissionMatrix`、`SubAgentGovernancePolicy`、`AiToolRegistry` governance filter、`SubAgentRunner.allowedToolIdsForAgent` 与 `ToolOrchestrator` 已有 focused tests 覆盖。
-- 导入 UI、fixture 管理、取消、超时和成本记录仍保留为本 Epic 的剩余 Agent Task，不在当前切片中冒充完成。
+- 取消、超时、成本记录和 provider capability matrix 仍保留为本 Epic 的剩余 Agent Task，不在当前切片中冒充完成。
 
 ## 4. Task Execution Defaults
 

@@ -9,6 +9,8 @@ class AiSkill {
     this.starterMessages = const [],
     this.iconCodePoint,
     this.isBuiltIn = true,
+    this.allowedToolIds = const [],
+    this.sceneIds = const [],
   });
 
   final String id;
@@ -26,4 +28,11 @@ class AiSkill {
 
   /// Whether this is a built-in skill (cannot be deleted).
   final bool isBuiltIn;
+
+  /// Custom skills may narrow the runtime tool set to these governed tool IDs.
+  final List<String> allowedToolIds;
+
+  /// Custom skill governance scenes as serialized [AiAgentScene.asString]
+  /// values. Built-in skills leave this empty and keep existing behavior.
+  final List<String> sceneIds;
 }

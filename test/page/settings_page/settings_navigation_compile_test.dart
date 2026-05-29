@@ -10,12 +10,14 @@ import 'package:papertok_reader/page/home_page/settings_page.dart';
 import 'package:papertok_reader/page/settings_page/ai.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
+import 'package:papertok_reader/page/settings_page/custom_skills.dart';
 import 'package:papertok_reader/page/settings_page/knowledge_asset_export.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/spaced_review.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/providers/knowledge_asset_export.dart';
 import 'package:papertok_reader/providers/spaced_review.dart';
+import 'package:papertok_reader/service/ai/skills/custom_skill_store.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
@@ -27,6 +29,7 @@ void main() {
     expect(const SettingsPage(), isA<SettingsPage>());
     expect(const AISettings(), isA<AISettings>());
     expect(const AiSeminarRuntimePage(), isA<AiSeminarRuntimePage>());
+    expect(const CustomSkillsPage(), isA<CustomSkillsPage>());
     expect(const ReviewInboxPage(), isA<ReviewInboxPage>());
     expect(const ConceptGraphExplorerPage(), isA<ConceptGraphExplorerPage>());
     expect(const SpacedReviewPage(), isA<SpacedReviewPage>());
@@ -62,6 +65,70 @@ void main() {
 
     expect(find.byType(AiSeminarRuntimePage), findsOneWidget);
     expect(find.text('Start Seminar'), findsOneWidget);
+  });
+
+  testWidgets('AI settings opens custom skills entry', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AISettings(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Custom skills'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Custom skills'));
+    await _pumpNavigationFrames(tester);
+
+    expect(find.byType(CustomSkillsPage), findsOneWidget);
+    expect(find.text('Import skill'), findsOneWidget);
+  });
+
+  testWidgets('AI settings shows active custom skill name', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+    await CustomSkillStore().importJson('''
+{
+  "schemaVersion": 1,
+  "id": "slow_reader",
+  "name": "Slow Reader",
+  "description": "Explain locally.",
+  "systemPromptAppend": "Move slowly and cite current-book evidence.",
+  "allowedToolIds": ["current_chapter_content"],
+  "scenes": ["reading"],
+  "enabled": true
+}
+''');
+    Prefs().activeAiSkillId = 'slow_reader';
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AISettings(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Active Skill'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Slow Reader'), findsOneWidget);
   });
 
   testWidgets('AI settings opens knowledge sync export entry', (tester) async {

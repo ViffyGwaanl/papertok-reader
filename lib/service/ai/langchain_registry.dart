@@ -158,15 +158,26 @@ class LangchainAiRegistry {
     if (useAgent) {
       final enabledIds = Prefs().enabledAiToolIds;
       final activeSkillId = Prefs().activeAiSkillId;
-      final activeSkill = AiSkillRegistry.byId(activeSkillId);
+      final selectedSkill = AiSkillRegistry.byId(activeSkillId);
       final activeAgentScene = agentSceneFor(
         toolScene: scene,
-        activeSkill: activeSkill,
+        activeSkill: selectedSkill,
+      );
+      final activeSkill = activeSkillForScene(
+        selectedSkill,
+        activeAgentScene,
       );
       agentScene = activeAgentScene;
       permissionMatrix = isSeminarSkill(activeSkill)
           ? seminarPermissionMatrixFor(toolScene: scene)
           : null;
+      final effectiveEnabledIds = enabledToolIdsForActiveSkill(
+        enabledIds,
+        activeSkill: selectedSkill,
+        toolScene: scene,
+        agentScene: activeAgentScene,
+        permissionMatrix: permissionMatrix,
+      );
       final toolContext = AiToolContext(
         ref: ref!,
         externalAnnotationLedger: annotationLedger,
@@ -178,15 +189,19 @@ class LangchainAiRegistry {
       // current context (reading vs library), plus global tools.
       final baseTools = AiToolRegistry.buildToolsForScene(
         toolContext,
-        enabledIds,
+        effectiveEnabledIds,
         scene,
         permissionMatrix: permissionMatrix,
         agentScene: activeAgentScene,
       );
 
-      final mcp = shouldIncludeMcpTools(activeAgentScene)
-          ? McpToolRegistry.buildCachedTools()
-          : (tools: const <Tool>[], descriptors: const <McpToolDescriptor>[]);
+      final mcp =
+          shouldIncludeMcpTools(activeAgentScene, activeSkill: selectedSkill)
+              ? McpToolRegistry.buildCachedTools()
+              : (
+                  tools: const <Tool>[],
+                  descriptors: const <McpToolDescriptor>[]
+                );
       // Sort tools alphabetically by name for stable prompt cache hits.
       // When the tool list is identical across requests, LLM providers
       // (Anthropic, OpenAI) can reuse cached system prompt tokens.
@@ -194,7 +209,7 @@ class LangchainAiRegistry {
         ..sort((a, b) => a.name.compareTo(b.name));
 
       final enabledDefs = AiToolRegistry.definitionsForScene(
-        enabledIds,
+        effectiveEnabledIds,
         scene,
         permissionMatrix: permissionMatrix,
         agentScene: activeAgentScene,
@@ -229,7 +244,57 @@ class LangchainAiRegistry {
     return AiToolRegistry.agentSceneForToolScene(toolScene);
   }
 
-  static bool shouldIncludeMcpTools(AiAgentScene agentScene) {
+  static AiSkill? activeSkillForScene(
+    AiSkill? activeSkill,
+    AiAgentScene agentScene,
+  ) {
+    if (activeSkill == null || activeSkill.isBuiltIn) return activeSkill;
+    if (activeSkill.sceneIds.contains(agentScene.asString)) {
+      return activeSkill;
+    }
+    return null;
+  }
+
+  static List<String> enabledToolIdsForActiveSkill(
+    List<String> enabledIds, {
+    required AiSkill? activeSkill,
+    required AiToolScene toolScene,
+    required AiAgentScene agentScene,
+    AiToolPermissionMatrix? permissionMatrix,
+  }) {
+    final effectiveSkill = activeSkillForScene(activeSkill, agentScene);
+    if (effectiveSkill == null) {
+      return activeSkill != null && !activeSkill.isBuiltIn
+          ? const <String>[]
+          : enabledIds;
+    }
+    if (effectiveSkill.isBuiltIn) return enabledIds;
+
+    final allowed = effectiveSkill.allowedToolIds.toSet();
+    if (allowed.isEmpty) return const <String>[];
+    final matrix = permissionMatrix ?? AiToolPermissionMatrix.defaultMatrix;
+    return AiToolRegistry.sanitizeIds(enabledIds)
+        .where(allowed.contains)
+        .where(
+          (id) => matrix.isAllowed(
+            scene: agentScene,
+            toolId: id,
+          ),
+        )
+        .where(
+          (id) =>
+              AiToolRegistry.scenesForId(id).contains(AiToolScene.global) ||
+              AiToolRegistry.scenesForId(id).contains(toolScene) ||
+              matrix.isAllowed(scene: agentScene, toolId: id),
+        )
+        .toList(growable: false);
+  }
+
+  static bool shouldIncludeMcpTools(
+    AiAgentScene agentScene, {
+    AiSkill? activeSkill,
+  }) {
+    if (activeSkill != null && !activeSkill.isBuiltIn) return false;
     return agentScene != AiAgentScene.seminar;
   }
 

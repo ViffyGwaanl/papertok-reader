@@ -12,6 +12,7 @@ import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/ai_title_generation.dart';
 import 'package:papertok_reader/page/settings_page/ai_tools.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
+import 'package:papertok_reader/page/settings_page/custom_skills.dart';
 import 'package:papertok_reader/page/settings_page/knowledge_asset_export.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/spaced_review.dart';
@@ -432,11 +433,20 @@ class _AISettingsState extends ConsumerState<AISettings> {
             leading: const Icon(Icons.auto_fix_high),
             title: Text(l10n.settingsAiActiveSkill),
             description: Text(
-              _localizedSkillName(context, Prefs().activeAiSkillId) ??
-                  l10n.settingsAiSkillNone,
+              _activeSkillDisplayName(context) ?? l10n.settingsAiSkillNone,
             ),
             onPressed: (context) {
               _showSkillPicker(context);
+            },
+          ),
+          SettingsTile.navigation(
+            leading: const Icon(Icons.extension_outlined),
+            title: const Text('Custom skills'),
+            description: const Text('Import governed JSON skill contracts'),
+            onPressed: (context) {
+              Navigator.of(context).push(
+                CupertinoStyleRoute(page: const CustomSkillsPage()),
+              );
             },
           ),
           SettingsTile.navigation(
@@ -693,6 +703,12 @@ class _AISettingsState extends ConsumerState<AISettings> {
       default:
         return null;
     }
+  }
+
+  String? _activeSkillDisplayName(BuildContext context) {
+    final activeId = Prefs().activeAiSkillId;
+    return _localizedSkillName(context, activeId) ??
+        AiSkillRegistry.byId(activeId)?.name;
   }
 
   String? _localizedSkillDesc(BuildContext context, String? id) {

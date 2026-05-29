@@ -1,4 +1,5 @@
 import 'package:papertok_reader/service/ai/skills/ai_skill.dart';
+import 'package:papertok_reader/service/ai/skills/custom_skill_store.dart';
 
 /// Registry of built-in and user-defined skills.
 class AiSkillRegistry {
@@ -202,12 +203,23 @@ Rules:
   /// Returns a skill by ID, or null if not found.
   static AiSkill? byId(String? id) {
     if (id == null || id.isEmpty) return null;
-    for (final skill in builtInSkills) {
+    for (final skill in allSkills()) {
       if (skill.id == id) return skill;
     }
     return null;
   }
 
   /// Returns all available skills (built-in + user-defined).
-  static List<AiSkill> allSkills() => builtInSkills;
+  static List<AiSkill> allSkills() => [
+        ...builtInSkills,
+        ..._customSkills(),
+      ];
+
+  static List<AiSkill> _customSkills() {
+    try {
+      return CustomSkillStore().runtimeSkills();
+    } catch (_) {
+      return const <AiSkill>[];
+    }
+  }
 }
