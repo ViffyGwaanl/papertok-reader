@@ -52,12 +52,17 @@
 
 本目录不是说“所有 Epic 都已产品化”。本节只放用户入口摘要；完整的功能使用路径、入口缺口、agent 任务和验收边界以 `04_user_facing_activation_plan_zh.md` 为准；代码级完成状态和验证命令以 `implementation_status_zh.md` 为准。
 
+如果只打开本 README，需要按下面两层理解：
+
+- 用户要找入口：看本节表格的“用户怎么用”列。
+- agent 要继续接产品闭环：看 `04_user_facing_activation_plan_zh.md` 的每条用户路径、Gate、验证命令和 `UFA-*` task。
+
 | 能力 | 用户怎么用 | 状态 |
 | --- | --- | --- |
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入。 |
 | 图片解析生成知识卡 | 阅读页点开图片 -> `AI Image Analysis / AI图片解析` -> `Card / 知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入；图片解析结果只作为 pending KnowledgeCard，不自动写长期资产。 |
 | 一键开启研讨 | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 AI Seminar runtime/UI：展示 evidence、role turns、Shared Whiteboard、synthesis，支持取消、失败重试，并可把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox；不自动写长期资产。 |
-| AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入显性 message action；从选中文本打开 AI 时保留精确 SourceRef，并随 `conversationV2` 历史持久化，历史重载后仍优先使用原始 reader SourceRef；reader-grounded card 会带保守 `conceptRefs`；用户 Apply 后进入 draft ConceptGraph 候选和 pending relation ReviewItem。纯聊天只保留 conversation provenance，不直接写长期资产或正式 ConceptGraph。 |
+| AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入显性 message action；从选中文本打开 AI 时保留精确 SourceRef，并随 `conversationV2` 历史持久化，历史重载后仍优先使用原始 reader SourceRef；如果用户把预填草稿改成无关问题，本轮不保存旧 reader SourceRef，短公共片段只靠碰巧包含不会保留精确 reader grounding；reader-grounded card 会带保守 `conceptRefs`；用户 Apply 后进入 draft ConceptGraph 候选和 pending relation ReviewItem。纯聊天只保留 conversation provenance，不直接写长期资产或正式 ConceptGraph。 |
 | Review Inbox | `Settings -> AI -> Review inbox`。 | 已有统一 UI；内容依赖 producer 写入。 |
 | 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入 Explorer、阅读页选中文本入口、KnowledgeCard -> draft ConceptGraph producer 和空态 `Create draft candidate` 显性 action；可查看已有图谱、按选中文本筛选相关概念、查看局部图谱摘要、局部路径、证据、draft/formal 状态和 orphan/broken link。当前 producer 可从 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成待审图谱关系；Seminar candidate card 和 reader-grounded AI Chat card 都可携带 `conceptRefs`，经 Review apply 后进入同一图谱候选链路；`Create draft candidate` 使用关闭 query embedding、vector fallback、rerank 的本地文本检索，只让带 traceable chunk SourceRef 的 RAG/GraphRAG derived search result 生成 draft concept relation 和 pending ReviewItem。 |
 | RAG/GraphRAG 结果生成知识卡 | 阅读页选中文本 -> `图谱/Graph` -> 无相关概念空态 -> `Card / 知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入；使用同一条本地文本 library RAG search，关闭 query embedding、vector fallback、rerank，只把带 traceable chunk SourceRef 和可保存 chunk snippet 的 RAG 结果写成 pending KnowledgeCard，不写正式图谱或长期资产。 |

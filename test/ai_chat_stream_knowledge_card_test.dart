@@ -87,7 +87,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 100));
 
-    await tester.tap(find.text('知识卡'));
+    await tester.tap(find.widgetWithText(TextButton, '知识卡').last);
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 2100));
 
@@ -185,7 +185,9 @@ void main() {
     );
     chatKey.currentState!.sendCurrentDraft();
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 2100));
 
     await tester.tap(find.text('知识卡'));
     await tester.pump(const Duration(milliseconds: 300));
@@ -219,6 +221,202 @@ void main() {
       expect(sourceRefs.map((ref) => ref['cfi']),
           contains('epubcfi(/6/4[selection])'));
     });
+  });
+
+  testWidgets('unrelated draft rewrite does not persist selection SourceRef',
+      (tester) async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('ai-chat-card-rewrite-source-');
+    _mockPathProvider(tempDir.path);
+    addTearDown(() {
+      _mockPathProvider(null);
+      tempDir.deleteSync(recursive: true);
+    });
+
+    const providerId = 'openai';
+    final chatKey = GlobalKey<AiChatStreamState>();
+    final providers = [
+      AiProviderMeta(
+        id: providerId,
+        name: 'OpenAI',
+        type: AiProviderType.openaiCompatible,
+        enabled: true,
+        isBuiltIn: true,
+        createdAt: 1,
+        updatedAt: 1,
+      ),
+    ];
+    final selectionRef = SourceRef(
+      bookId: 7,
+      cfi: 'epubcfi(/6/4[selection])',
+      jumpLink:
+          'paperreader://reader/open?bookId=7&cfi=epubcfi%28%2F6%2F4%5Bselection%5D%29',
+      sourceTitle: 'Scoped Book',
+      locationLabel: 'Chapter 1',
+      sourceTextSnippet: 'Attention needs exact evidence.',
+      sourceTextForHash: 'Attention needs exact evidence.',
+      sourceKind: SourceRefKind.reader,
+      createdAt: 1,
+    );
+
+    SharedPreferences.setMockInitialValues({
+      'selectedAiService': providerId,
+      'aiProvidersV1': AiProviderMeta.encodeList(providers),
+      'aiConfig_$providerId': jsonEncode({}),
+    });
+
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          locale: const Locale('zh', 'CN'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiChatStream(
+            key: chatKey,
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    AnxToast.init(tester.element(find.byType(AiChatStream)));
+    await tester.pump();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiChatStream)),
+    );
+    await container.read(aiChatProvider.future);
+    container.read(currentReadingProvider.notifier).start(
+          CurrentReadingState(
+            book: Book.mock().copyWith(id: 7, title: 'Scoped Book'),
+            cfi: 'epubcfi(/6/4)',
+            chapterTitle: 'Chapter 1',
+          ),
+        );
+
+    chatKey.currentState!.prefillDraft(
+      message: 'Attention needs exact evidence.',
+      sourceRef: selectionRef,
+    );
+    chatKey.currentState!.inputController.text =
+        'What should I remember about this project?';
+    chatKey.currentState!.sendCurrentDraft();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 2100));
+
+    expect(find.textContaining('What should I remember'), findsWidgets);
+    final messages = container.read(aiChatProvider).asData!.value;
+    final userIndex = messages.indexWhere(
+      (message) =>
+          message is HumanChatMessage &&
+          message.contentAsString ==
+              'What should I remember about this project?',
+    );
+    expect(userIndex, isNot(-1));
+    expect(
+      container
+          .read(aiChatProvider.notifier)
+          .sourceRefForMessageIndex(userIndex),
+      isNull,
+    );
+  });
+
+  testWidgets('short snippet coincidence does not persist selection SourceRef',
+      (tester) async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('ai-chat-card-short-source-');
+    _mockPathProvider(tempDir.path);
+    addTearDown(() {
+      _mockPathProvider(null);
+      tempDir.deleteSync(recursive: true);
+    });
+
+    const providerId = 'openai';
+    final chatKey = GlobalKey<AiChatStreamState>();
+    final providers = [
+      AiProviderMeta(
+        id: providerId,
+        name: 'OpenAI',
+        type: AiProviderType.openaiCompatible,
+        enabled: true,
+        isBuiltIn: true,
+        createdAt: 1,
+        updatedAt: 1,
+      ),
+    ];
+    final selectionRef = SourceRef(
+      bookId: 7,
+      cfi: 'epubcfi(/6/4[short])',
+      jumpLink:
+          'paperreader://reader/open?bookId=7&cfi=epubcfi%28%2F6%2F4%5Bshort%5D%29',
+      sourceTitle: 'Scoped Book',
+      locationLabel: 'Chapter 1',
+      sourceTextSnippet: 'AI',
+      sourceTextForHash: 'AI',
+      sourceKind: SourceRefKind.reader,
+      createdAt: 1,
+    );
+
+    SharedPreferences.setMockInitialValues({
+      'selectedAiService': providerId,
+      'aiProvidersV1': AiProviderMeta.encodeList(providers),
+      'aiConfig_$providerId': jsonEncode({}),
+    });
+
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          locale: const Locale('zh', 'CN'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiChatStream(
+            key: chatKey,
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    AnxToast.init(tester.element(find.byType(AiChatStream)));
+    await tester.pump();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiChatStream)),
+    );
+    await container.read(aiChatProvider.future);
+
+    chatKey.currentState!.prefillDraft(
+      message: 'AI',
+      sourceRef: selectionRef,
+    );
+    chatKey.currentState!.inputController.text =
+        'What AI tools should I use for this project?';
+    chatKey.currentState!.sendCurrentDraft();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 2100));
+
+    final messages = container.read(aiChatProvider).asData!.value;
+    final userIndex = messages.indexWhere(
+      (message) =>
+          message is HumanChatMessage &&
+          message.contentAsString ==
+              'What AI tools should I use for this project?',
+    );
+    expect(userIndex, isNot(-1));
+    expect(
+      container
+          .read(aiChatProvider.notifier)
+          .sourceRefForMessageIndex(userIndex),
+      isNull,
+    );
   });
 
   testWidgets('assistant Card action restores persisted reader SourceRef',

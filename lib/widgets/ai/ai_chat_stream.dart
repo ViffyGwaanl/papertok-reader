@@ -137,6 +137,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (_suppressDraftSync) return;
     if (inputController.text.trim().isEmpty) {
       _draftSourceRef = null;
+      _draftSourceRefSeedText = null;
     }
     try {
       ref.read(aiChatDraftInputProvider.notifier).set(inputController.text);
@@ -163,6 +164,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final Map<int, int> _selectedVariantByUserIndex = {};
   final Map<int, SourceRef> _sourceRefByUserIndex = {};
   SourceRef? _draftSourceRef;
+  String? _draftSourceRefSeedText;
   AiHistoryScope _historyScope = AiHistoryScope.currentBook;
   int? _historyScopeBookId;
 
@@ -277,6 +279,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final initial = draft.isNotEmpty ? draft : (widget.initialMessage ?? '');
     inputController.text = initial;
     _draftSourceRef = widget.initialSourceRef;
+    _draftSourceRefSeedText = widget.initialSourceRef == null ? null : initial;
     ref.read(aiChatDraftInputProvider.notifier).set(initial);
     inputController.addListener(_onDraftInputChanged);
 
@@ -1167,6 +1170,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         _selectedProviderId = entry.serviceId;
         _sourceRefByUserIndex.clear();
         _draftSourceRef = null;
+        _draftSourceRefSeedText = null;
       });
     }
 
@@ -1236,6 +1240,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       setState(() {
         _sourceRefByUserIndex.clear();
         _draftSourceRef = null;
+        _draftSourceRefSeedText = null;
       });
     }
   }
@@ -1254,10 +1259,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     final message = inputController.text.trim();
     if (message.isEmpty && _attachments.isEmpty) return;
-    final draftSourceRef = _draftSourceRef;
+    final draftSourceRef = _sourceRefForCurrentDraft(message);
 
     inputController.clear();
     _draftSourceRef = null;
+    _draftSourceRefSeedText = null;
 
     final attachments =
         _attachments.isEmpty ? null : List<AttachmentItem>.from(_attachments);
@@ -1283,6 +1289,42 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       }
     }
     _scrollToBottom(force: true);
+  }
+
+  SourceRef? _sourceRefForCurrentDraft(String message) {
+    final sourceRef = _draftSourceRef;
+    if (sourceRef == null) return null;
+
+    final current = _normalizeDraftSourceMatchText(message);
+    if (current.isEmpty) return null;
+
+    final seed = _normalizeDraftSourceMatchText(
+      _draftSourceRefSeedText ?? sourceRef.sourceTextSnippet ?? '',
+    );
+    final snippet = _normalizeDraftSourceMatchText(
+      sourceRef.sourceTextSnippet ?? '',
+    );
+
+    if (_containsSourceText(current, seed) ||
+        _containsSourceText(current, snippet)) {
+      return sourceRef;
+    }
+    return null;
+  }
+
+  bool _containsSourceText(String current, String sourceText) {
+    if (sourceText.isEmpty) return false;
+    if (current == sourceText) return true;
+    if (sourceText.length < 12) return false;
+    return current.contains(sourceText);
+  }
+
+  String _normalizeDraftSourceMatchText(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\u4e00-\u9fff]+'), ' ')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ');
   }
 
   void _regenerateFromUserIndex(int userIndex) {
@@ -1912,6 +1954,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }) {
     if (message != null) {
       _draftSourceRef = sourceRef;
+      _draftSourceRefSeedText = sourceRef == null ? null : message;
       _suppressDraftSync = true;
       inputController.text = message;
       inputController.selection = TextSelection.fromPosition(
@@ -2216,6 +2259,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     setState(() {
       _sourceRefByUserIndex.clear();
       _draftSourceRef = null;
+      _draftSourceRefSeedText = null;
       _suggestedPrompts = _pickSuggestedPrompts();
     });
   }
