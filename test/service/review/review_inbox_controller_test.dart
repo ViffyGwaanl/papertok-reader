@@ -5,6 +5,7 @@ import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
@@ -59,12 +60,14 @@ void main() {
   KnowledgeCard card({
     String id = 'kc-1',
     List<SourceRef>? sourceRefs,
+    List<String> conceptRefs = const <String>[],
   }) {
     return KnowledgeCard(
       id: id,
       title: 'Attention bottleneck',
       quote: 'Evidence passage.',
       explanation: 'Readers need a durable card with source traceability.',
+      conceptRefs: conceptRefs,
       sourceRefs: sourceRefs ?? [traceableRef()],
       origin: KnowledgeCardOrigin.seminar,
       reviewState: KnowledgeCardReviewState.pending,
@@ -74,8 +77,13 @@ void main() {
     );
   }
 
-  Future<ReviewItem> stageCardForReview(String id) async {
-    final staged = await cardStore.upsertCandidate(card(id: id));
+  Future<ReviewItem> stageCardForReview(
+    String id, {
+    List<String> conceptRefs = const <String>[],
+  }) async {
+    final staged = await cardStore.upsertCandidate(
+      card(id: id, conceptRefs: conceptRefs),
+    );
     final item = KnowledgeCardReviewAdapter.fromKnowledgeCard(staged.card);
     return reviewStore.upsert(item);
   }
@@ -143,6 +151,69 @@ void main() {
     );
     expect(reviewItems.single.cardId, 'kc-spaced');
     expect(reviewItems.single.sourceRefs.single.hasEvidence, true);
+  });
+
+  test('knowledge card apply creates draft concept graph candidates', () async {
+    await stageCardForReview(
+      'kc-graph',
+      conceptRefs: const ['Attention', 'Review'],
+    );
+
+    await controller.approve('knowledge-card:kc-graph');
+    await controller.apply('knowledge-card:kc-graph');
+
+    final nodes = await graphStore.listNodes();
+    final edges = await graphStore.listEdges();
+    final conceptReviewItems = await reviewStore.list(
+      sourceType: ReviewItemSourceType.conceptGraphRelation,
+    );
+
+    expect(nodes.map((node) => node.id), contains('card:kc-graph'));
+    expect(nodes.map((node) => node.id), contains('concept:attention'));
+    expect(nodes.map((node) => node.id), contains('concept:review'));
+    expect(
+        nodes.every(
+            (node) => node.ownership == AiOutputOwnership.aiGeneratedDraft),
+        isTrue);
+    expect(edges, hasLength(2));
+    expect(edges.every((edge) => edge.hasEvidence), isTrue);
+    expect(edges.every((edge) => edge.isFormal), isFalse);
+    expect(conceptReviewItems, hasLength(2));
+    expect(
+      conceptReviewItems.every(
+        (item) =>
+            item.status == ReviewItemStatus.pending && item.hasTraceableSource,
+      ),
+      isTrue,
+    );
+  });
+
+  test('concept graph producer failure does not roll back card apply',
+      () async {
+    final failingController = ReviewInboxController(
+      reviewStore: reviewStore,
+      knowledgeCardStore: cardStore,
+      conceptGraphStore: graphStore,
+      spacedReviewStore: spacedReviewStore,
+      conceptGraphProducer: _FailingConceptGraphProducer(),
+      now: () => 1000,
+    );
+    await stageCardForReview(
+      'kc-graph-fail',
+      conceptRefs: const ['Attention'],
+    );
+
+    final approved =
+        await failingController.approve('knowledge-card:kc-graph-fail');
+    final applied =
+        await failingController.apply('knowledge-card:kc-graph-fail');
+    final appliedCard = await cardStore.getById('kc-graph-fail');
+
+    expect(approved.status, ReviewItemStatus.approved);
+    expect(applied.status, ReviewItemStatus.applied);
+    expect(appliedCard!.isUserAsset, true);
+    expect(await spacedReviewStore.list(), hasLength(1));
+    expect(await graphStore.listEdges(), isEmpty);
   });
 
   test('dismiss mirrors knowledge card without creating a user asset',
@@ -251,4 +322,13 @@ void main() {
     expect(audit.unresolvedIndexes, [1]);
     expect(audit.allResolved, false);
   });
+}
+
+class _FailingConceptGraphProducer extends ConceptGraphProducer {
+  @override
+  Future<ConceptGraphProducerResult> createFromKnowledgeCard(
+    KnowledgeCard card,
+  ) {
+    throw StateError('graph unavailable');
+  }
 }

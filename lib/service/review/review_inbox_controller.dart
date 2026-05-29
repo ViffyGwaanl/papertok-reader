@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
@@ -16,6 +17,7 @@ class ReviewInboxController {
     ReviewItemStore? reviewStore,
     KnowledgeCardStore? knowledgeCardStore,
     ConceptGraphStore? conceptGraphStore,
+    ConceptGraphProducer? conceptGraphProducer,
     SpacedReviewStore? spacedReviewStore,
     ReviewInboxClock? now,
   })  : reviewStore = reviewStore ?? ReviewItemStore(rootDir: rootDir),
@@ -23,6 +25,13 @@ class ReviewInboxController {
             knowledgeCardStore ?? KnowledgeCardStore(rootDir: rootDir),
         conceptGraphStore =
             conceptGraphStore ?? ConceptGraphStore(rootDir: rootDir),
+        conceptGraphProducer = conceptGraphProducer ??
+            ConceptGraphProducer(
+              rootDir: rootDir,
+              graphStore: conceptGraphStore,
+              reviewStore: reviewStore,
+              now: now,
+            ),
         spacedReviewStore =
             spacedReviewStore ?? SpacedReviewStore(rootDir: rootDir),
         _now = now ?? (() => DateTime.now().millisecondsSinceEpoch);
@@ -30,6 +39,7 @@ class ReviewInboxController {
   final ReviewItemStore reviewStore;
   final KnowledgeCardStore knowledgeCardStore;
   final ConceptGraphStore conceptGraphStore;
+  final ConceptGraphProducer conceptGraphProducer;
   final SpacedReviewStore spacedReviewStore;
   final ReviewInboxClock _now;
 
@@ -118,6 +128,12 @@ class ReviewInboxController {
     final persisted = await persist(timestamp);
     if (mirrorResult.knowledgeCardForReview case final card?) {
       await spacedReviewStore.upsertFromKnowledgeCard(card, now: timestamp);
+      try {
+        await conceptGraphProducer.createFromKnowledgeCard(card);
+      } catch (_) {
+        // Concept graph candidates are a recoverable side effect of Review
+        // apply. The applied card and spaced review item remain authoritative.
+      }
     }
     return persisted;
   }

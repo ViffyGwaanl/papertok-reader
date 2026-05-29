@@ -17,7 +17,7 @@
 | 选中文本 -> KnowledgeCard | 阅读页选中文本 -> `知识卡`。 | 本分支已接入 `SelectionKnowledgeCardProducer` 和选中菜单入口，选中文本会进入 KnowledgeCard store 与 Review Inbox。 | 默认只进入 Review，不写长期记忆、不写笔记、不写 spaced review。 |
 | 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`。 | 本分支已接入最小可用入口：打开 AI 面板、切到 `seminar_mode`，把选中文段放入研讨草稿。 | 当前是 prompt skill flow；结构化 role runtime、Shared Whiteboard UI、自动 Review handoff 还没有接成产品入口。 |
 | AI Chat 普通解释 | 阅读页选中文本 -> `AI`。 | 仍可用，保留原行为。 | 不自动生成 KnowledgeCard 或 ConceptGraph。 |
-| ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer 和选中文本入口：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部路径、显示 orphan/broken link。 | 缺 RAG/GraphRAG producer 和更强的可视化布局；当前只探索已有 `ConceptGraphStore` 数据，不自动创建正式节点。 |
+| ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer、选中文本入口和 KnowledgeCard -> draft ConceptGraph producer：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部路径、显示 orphan/broken link。 | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard 会生成 draft node/edge 和 pending relation ReviewItem；缺 RAG/GraphRAG/Seminar 自动抽概念 producer 和更强可视化布局，不自动创建正式节点。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；KnowledgeCard 在 Review Inbox 中 `Apply` 后自动入队。 | 本分支已接入 `.knowledge/spaced_review_items_v1.json`、复习页、Again/Hard/Good/Easy 评分、来源跳转状态。 | 当前只接 KnowledgeCard apply；Seminar/Flashcard producer 和跨设备同步仍在后续任务中。 |
 | Sync / Export 知识资产 | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览和创建入口；只纳入已应用 KnowledgeCard 和复习历史，显性显示排除项和待审冲突。 | 目前是本地 manifest 导出入口，不是完整云同步引擎；per-entity remote sync 和冲突 Review UI 仍在剩余任务中。 |
 
@@ -79,26 +79,36 @@ flutter test --no-pub test/widgets/context_menu/excerpt_menu_actions_test.dart -
 
 用户路径：
 
-1. 进入 `Settings -> AI -> Concept graph / 概念图谱`，或在阅读页选中文本后点击 `图谱/Graph`。
-2. 系统列出 `ConceptGraphStore` 中已有概念节点；从阅读页进入时，会先按选中文本筛选相关概念。
-3. 用户点一个概念。
-4. 页面显示该概念的定义、来源证据、局部路径和可回溯关联。
-5. 页面显示 orphan node / broken edge 计数，用于发现悬空图谱关系。
-6. 有可跳转 SourceRef 时，用户可以点 `Open source / 打开来源` 回到原文。
-7. 如果选中文本没有匹配到已有概念，页面展示空态和 `Create draft candidate / 创建草稿候选` 入口，但该入口不创建正式 node/edge。
+1. 用户先在 Review Inbox 中 `Apply` 一个带 `conceptRefs` 和可追踪 SourceRef 的 KnowledgeCard。
+2. 系统创建 card node、concept node 和 `appears_in` edge，全部保持 draft ownership。
+3. 系统为每条 relation 创建 `ReviewItem(sourceType=concept-graph-relation, status=pending)`。
+4. 用户在 Review Inbox 中审核这些 relation；只有 relation 被 `Apply` 后，edge 才升级为正式图谱关系。
+5. 用户进入 `Settings -> AI -> Concept graph / 概念图谱`，或在阅读页选中文本后点击 `图谱/Graph`。
+6. 系统列出 `ConceptGraphStore` 中已有概念节点；从阅读页进入时，会先按选中文本筛选相关概念。
+7. 用户点一个概念。
+8. 页面显示该概念的定义、来源证据、局部路径和可回溯关联。
+9. 页面显示 orphan node / broken edge 计数，用于发现悬空图谱关系。
+10. 有可跳转 SourceRef 时，用户可以点 `Open source / 打开来源` 回到原文。
+11. 如果选中文本没有匹配到已有概念，页面展示空态和 `Create draft candidate / 创建草稿候选` 入口，但该入口不创建正式 node/edge。
 
 Gate：
 
+- 只有 `applied + user asset + traceable + conceptRefs` 的 KnowledgeCard 会触发 producer。
+- Producer 只写 draft node/edge 和 pending relation ReviewItem；正式 relation 必须经过 Review apply。
+- 没有 `conceptRefs` 的 KnowledgeCard 不制造图谱噪声。
+- Producer 失败不回滚 KnowledgeCard apply 或 spaced review 入队。
 - 只展示已有图谱数据，不把 AI 推断直接变成用户确认关系。
 - 局部路径只使用有 evidence 的边。
 - broken link / orphan node 必须显性可见。
 - 没有图谱数据时展示空态，而不是制造无证据节点。
-- 阅读页入口不调用 LLM、embedding、rerank 或 web provider，不外发正文，不写 `ConceptGraphStore`。
+- 阅读页入口不调用 LLM、embedding、rerank 或 web provider，不外发正文，不写正式 `ConceptGraphStore` 资产。
 
 验证命令：
 
 ```bash
 flutter test --no-pub \
+  test/service/knowledge/concept_graph_producer_test.dart \
+  test/service/review/review_inbox_controller_test.dart \
   test/providers/concept_graph_explorer_test.dart \
   test/page/settings_page/concept_graph_explorer_page_test.dart \
   test/widgets/context_menu/excerpt_menu_actions_test.dart \
@@ -181,7 +191,7 @@ flutter test --no-pub \
 | UFA-C02-T01 | In Review | Seminar launcher | 阅读页选中菜单显示 `研讨`，打开 `seminar_mode` 草稿。 | AI Chat, `AiSkillRegistry` | `ExcerptMenu` action | 入口可见；不自动写用户资产。 |
 | UFA-C02-T02 | Ready | Structured Seminar runtime UI | 把 `AiSeminarOrchestrationService` 接入真实模型流式事件。 | E01 services, E06 governance, E07 progress UI | Seminar session page/panel | 角色 turn、evidence、whiteboard、synthesis 可恢复；失败可重试或取消。 |
 | UFA-C02-T03 | Ready | Seminar Review handoff | Seminar synthesis 和候选卡进入 Review Inbox。 | UFA-C02-T02, E05 controller | Seminar producer adapter | 只有 `readyForReview + traceable handoff` 的 synthesis 进入 pending Review。 |
-| UFA-C03-T01 | Ready | Concept producer | 从 RAG/GraphRAG/KnowledgeCard 提取有证据的 ConceptNode/Edge 候选。 | E02, E03, E04 store | ConceptGraph producer adapter | 每个 node/edge 有 evidence 或 unavailable reason；写入为 draft。 |
+| UFA-C03-T01 | In Review | Concept producer | 从 KnowledgeCard 提取有证据的 ConceptNode/Edge 候选。 | E03, E04 store, E05 controller | `ConceptGraphProducer`, ReviewInboxController apply hook | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成 draft node/edge；relation 进入 pending Review；RAG/GraphRAG/Seminar 自动抽概念 producer 仍未接入。 |
 | UFA-C03-T02 | In Review | Concept Explorer page | 提供局部图谱探索入口。 | E04 dossier/explore | `ConceptGraphExplorerPage`, provider, Settings AI entry | 用户能打开概念页、看 1-2 层关系、跳回原文、检测 orphan/broken link。 |
 | UFA-C03-T03 | In Review | Reader concept entry | 阅读页选中文本可进入概念探索。 | UFA-C03-T02 | `ExcerptMenu` graph action, `ConceptGraphExplorerPage.initialQuery` | 选中文本可打开图谱页并筛选相关概念；没有相关概念时展示空态和草稿候选入口，不生成无证据正式节点。 |
 | UFA-C04-T01 | In Review | Spaced Review | Review apply 后生成复习队列。 | E03, E05 | `SpacedReviewStore`, `spacedReviewProvider`, `SpacedReviewPage`, Settings AI entry | 复习项可回溯到卡片和原文；删除书后显示可解释状态；评分记录下一次到期时间。 |

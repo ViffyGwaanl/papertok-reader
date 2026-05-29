@@ -57,7 +57,7 @@
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入。 |
 | 一键开启研讨 | 阅读页选中文本 -> `研讨` -> AI 面板以 `seminar_mode` 草稿打开。 | 本分支已接入最小可用入口；结构化多 agent runtime/UI 仍在剩余任务中。 |
 | Review Inbox | `Settings -> AI -> Review inbox`。 | 已有统一 UI；内容依赖 producer 写入。 |
-| 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer 和阅读页选中文本入口，可查看已有图谱、按选中文本筛选相关概念、查看局部路径、证据和 orphan/broken link；producer 仍在剩余任务中。 |
+| 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer、阅读页选中文本入口和 KnowledgeCard -> draft ConceptGraph producer；可查看已有图谱、按选中文本筛选相关概念、查看局部路径、证据和 orphan/broken link。当前 producer 只从 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成待审图谱关系；RAG/GraphRAG/Seminar 自动抽概念仍在剩余任务中。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；知识卡在 Review Inbox 中 `Apply` 后自动入队。 | 本分支已接入队列、复习页、Again/Hard/Good/Easy 评分和来源跳转状态；只接 KnowledgeCard apply。 |
 | Sync Export | `Settings -> AI -> Knowledge sync/export / 知识同步 / 导出`。 | 本分支已接入安全 manifest 预览和创建入口；默认只纳入已确认知识资产和复习历史，排除草稿、派生索引、API key 和待审冲突。完整云同步引擎仍在剩余任务中。 |
 
