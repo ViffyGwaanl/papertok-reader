@@ -4,6 +4,7 @@ import 'package:papertok_reader/dao/book_note.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/book_note.dart';
 import 'package:papertok_reader/page/reading_page.dart';
+import 'package:papertok_reader/service/knowledge/selection_knowledge_card_producer.dart';
 import 'package:papertok_reader/service/reading/epub_player_key.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/theme/morandi_palette.dart';
@@ -210,6 +211,54 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     epubPlayerKey.currentState!.addAnnotation(bookNote);
   }
 
+  Future<void> _createKnowledgeCardFromSelection() async {
+    final player = epubPlayerKey.currentState;
+    final l10n = L10n.of(context);
+    if (player == null) {
+      AnxToast.show(l10n.knowledgeCardAddFailed);
+      return;
+    }
+
+    try {
+      final result = await SelectionKnowledgeCardProducer().createFromSelection(
+        bookId: player.widget.book.id,
+        cfi: widget.annoCfi,
+        selectedText: widget.annoContent,
+        chapterTitle: player.chapterTitle,
+        bookTitle: player.book.title,
+      );
+      if (!mounted) return;
+      final message = result.addedToReviewInbox
+          ? (result.inserted
+              ? l10n.knowledgeCardAddedToReviewInbox
+              : l10n.knowledgeCardAlreadyInReviewInbox)
+          : l10n.knowledgeCardAlreadySaved;
+      AnxToast.show(message);
+      widget.onClose();
+    } catch (_) {
+      if (mounted) {
+        AnxToast.show(l10n.knowledgeCardAddFailed);
+      }
+    }
+  }
+
+  Future<void> _openSeminarFromSelection() async {
+    final key = readingPageKey.currentState;
+    final l10n = L10n.of(context);
+    if (key == null) {
+      AnxToast.show(l10n.contextMenuSeminarOpenFailed);
+      return;
+    }
+
+    final prompt = l10n.contextMenuSeminarPrompt(
+      widget.annoContent.trim(),
+    );
+    widget.onClose();
+    Prefs().activeAiSkillId = 'seminar_mode';
+    await key.showAiChat(content: prompt, sendImmediate: false);
+    key.aiChatKey.currentState?.prefillDraft(message: prompt);
+  }
+
   Widget _actionButton({
     required BuildContext context,
     required IconData icon,
@@ -408,6 +457,24 @@ class ExcerptMenuState extends State<ExcerptMenu> {
       if (EnvVar.enableAIFeature)
         _actionButton(
           context: context,
+          icon: Icons.style_outlined,
+          label: L10n.of(context).contextMenuKnowledgeCard,
+          onTap: () {
+            _createKnowledgeCardFromSelection();
+          },
+        ),
+      if (EnvVar.enableAIFeature)
+        _actionButton(
+          context: context,
+          icon: Icons.groups_outlined,
+          label: L10n.of(context).contextMenuSeminar,
+          onTap: () {
+            _openSeminarFromSelection();
+          },
+        ),
+      if (EnvVar.enableAIFeature)
+        _actionButton(
+          context: context,
           icon: EvaIcons.message_circle_outline,
           label: L10n.of(context).navBarAI,
           onTap: () {
@@ -480,8 +547,8 @@ class ExcerptMenuState extends State<ExcerptMenu> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: ClaudePalette.fg(context)
-                              .withValues(alpha: 0.72),
+                          color:
+                              ClaudePalette.fg(context).withValues(alpha: 0.72),
                         ),
                       ),
                       const Spacer(),

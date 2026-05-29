@@ -12,8 +12,9 @@
 3. `02_agent_execution_model_zh.md`：AI agent 执行模型、任务模板和禁止写法。
 4. `03_epic_index_zh.md`：全部 Epic 的 DAG 依赖图。
 5. `implementation_status_zh.md`：本分支代码 artifact、gate 和验证证据。
-6. `epics/`：每条能力线的执行规格。
-7. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
+6. `04_user_facing_activation_plan_zh.md`：用户现在从哪里用、哪些还没有入口、剩余入口任务怎样交给 agent。
+7. `epics/`：每条能力线的执行规格。
+8. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
 
 ## 2. 状态词
 
@@ -47,7 +48,21 @@
 - `ai_index.db`、RAPTOR、GraphRAG 索引默认是可重建派生缓存；用户确认过的卡片、复习记录、笔记和记忆才是用户资产。
 - API key 永不同步；外发正文给 LLM 或 embedding provider 必须有功能级开关或明确提示。
 
-## 5. 历史锚点
+## 5. 当前用户可用性
+
+本目录不是说“所有 Epic 都已产品化”。当前用户可用入口如下：
+
+| 能力 | 用户怎么用 | 状态 |
+| --- | --- | --- |
+| 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入。 |
+| 一键开启研讨 | 阅读页选中文本 -> `研讨` -> AI 面板以 `seminar_mode` 草稿打开。 | 本分支已接入最小可用入口；结构化多 agent runtime/UI 仍在剩余任务中。 |
+| Review Inbox | `Settings -> AI -> Review inbox`。 | 已有统一 UI；内容依赖 producer 写入。 |
+| 图谱可视化探索 | 当前没有正式入口。 | 底层 ConceptGraph store/review 已有切片；producer、概念页和局部图 UI 见 `04_user_facing_activation_plan_zh.md`。 |
+| Spaced Review / Sync Export | 当前没有正式入口。 | 模型和策略已有切片；产品入口见 `04_user_facing_activation_plan_zh.md`。 |
+
+入口计划以 `04_user_facing_activation_plan_zh.md` 为准；`implementation_status_zh.md` 只记录代码和验证证据。
+
+## 6. 历史锚点
 
 旧文档保留为历史事实，不在本目录内重写：
 

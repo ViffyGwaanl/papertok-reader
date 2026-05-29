@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | AI Chat streaming | `aiChatProvider` 已负责 streaming 生命周期，UI 最小化不应打断生成。 | Seminar session 需要结构化事件、角色输出和恢复状态。 | E01, E07 |
 | Provider Center | 已支持内置/自定义 provider、模型切换、Responses 兼容开关。 | Seminar 需要角色预算、成本上限、provider 能力矩阵。 | E01, E06 |
-| Skills | 已有 `seminar_mode`、reading companion、flashcard 等 prompt skill；本分支新增 AI Seminar 服务层编排切片和 `CustomSkillContract` strict JSON/Map schema parser。 | UI 入口、真实模型流式事件和自定义 Skill 导入界面还需要接入治理模型。 | E01, E06, E07 |
+| Skills | 已有 `seminar_mode`、reading companion、flashcard 等 prompt skill；本分支新增 AI Seminar 服务层编排切片、`CustomSkillContract` strict JSON/Map schema parser，以及阅读页选中文本 -> `研讨` 的最小入口。 | 真实模型流式 role runtime、Shared Whiteboard UI、Seminar Review handoff 和自定义 Skill 导入界面还需要接入治理模型。 | E01, E06, E07 |
 
 锚点：
 
@@ -38,8 +38,8 @@
 | --- | --- | --- | --- |
 | `AnnotationLedger` | 能记录当前会话 AI 创建的高亮/笔记，防重复。 | Seminar 需要 Shared Whiteboard，记录 claim、evidence、disagreement、open question。 | E00, E01 |
 | Create Highlight/Note tools | AI 已能创建高亮和笔记，且有工具审批链路。 | KnowledgeCard 不应直接复用 note 作为唯一模型，需要独立 review 状态。 | E03, E05 |
-| KnowledgeCard local store | 本分支新增 `KnowledgeCardStore`，可把 AI 候选卡持久化到 `.knowledge/knowledge_cards_v1.json`，重复候选不覆盖用户内容，ReviewItem 决策可回写 card；统一 Review Inbox UI 已能批准、忽略、应用 KnowledgeCard 审批项。 | 需要接入 reader selection、Seminar candidate handoff、spaced review scheduler 和导出入口。 | E03, E05, E08 |
-| Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项。 | Memory、Flashcard、Seminar source-specific apply adapter 尚未接到统一控制层；ReviewItem UI 已有入口但还未写入 spaced review scheduler。 | E03, E04, E05 |
+| KnowledgeCard local store | 本分支新增 `KnowledgeCardStore`，可把 AI 候选卡持久化到 `.knowledge/knowledge_cards_v1.json`，重复候选不覆盖用户内容，ReviewItem 决策可回写 card；统一 Review Inbox UI 已能批准、忽略、应用 KnowledgeCard 审批项；阅读页选中文本已通过 `SelectionKnowledgeCardProducer` 写入待审卡。 | 需要接入 Seminar candidate handoff、spaced review scheduler 和导出入口。 | E03, E05, E08 |
+| Memory Review Inbox | 已有候选写入、rationale、源跳转思路；本分支新增统一 `ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider` 和 `ReviewInboxPage`，可展示并处理 KnowledgeCard、ConceptGraph relation、Seminar synthesis、Memory、Flashcard 等审批项；选中文本生成的 KnowledgeCard 已能进入统一 Review Inbox。 | Memory、Flashcard、Seminar source-specific apply adapter 尚未接到统一控制层；ReviewItem UI 已有入口但还未写入 spaced review scheduler。 | E03, E04, E05 |
 
 锚点：
 
@@ -83,8 +83,8 @@
 ## 6. 全局缺口
 
 - 统一 `SourceRef` 核心模型已存在；仍需把所有 UI 输出、sync/export manifest 和旧 note/memory 路径完全接到同一证据链。
-- KnowledgeCard 模型、本地 store、Review adapter 和统一 Review Inbox UI 已有可测试切片；仍需 reader selection 入口、Seminar candidate 持久化接入、spaced review scheduler 和导出。
-- `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、统一 ReviewItem 持久化入口和 KnowledgeCard 本地资产入口的可测试切片；仍需 UI 入口、真实模型流式事件和持久化恢复。
+- KnowledgeCard 模型、本地 store、Review adapter、统一 Review Inbox UI 和 reader selection 入口已有可测试切片；仍需 Seminar candidate 持久化接入、spaced review scheduler 和导出。
+- `seminar_mode` 已有服务层编排、Evidence Broker、role turn validation、whiteboard handoff、统一 ReviewItem 持久化入口、KnowledgeCard 本地资产入口和阅读页最小研讨入口的可测试切片；仍需结构化 role runtime UI、真实模型流式事件和持久化恢复。
 - Custom Skill contract 已有 schema version、parser、validator、权限声明和 runtime injection gate；仍需导入 UI、fixture 管理和 provider 能力界面。
 - ConceptGraph 模型、本地 store、局部探索和统一 Review relation adapter 已有可测试切片；仍需 producer adapter、概念页 UI、sync/export asset 边界。
 - 文档中存在传统 phase/roadmap 混写，不能直接给 agent team 执行。

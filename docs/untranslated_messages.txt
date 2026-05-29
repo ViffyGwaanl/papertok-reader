@@ -1,6 +1,14 @@
 {
   "ar": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -679,6 +687,14 @@
 
   "de": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -1357,6 +1373,14 @@
 
   "es": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -2035,6 +2059,14 @@
 
   "fr": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -2713,6 +2745,14 @@
 
   "it": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -3391,6 +3431,14 @@
 
   "ja": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -4069,6 +4117,14 @@
 
   "ko": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -4747,6 +4803,14 @@
 
   "pt": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -5425,6 +5489,14 @@
 
   "ro": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -6103,6 +6175,14 @@
 
   "ru": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -6781,6 +6861,14 @@
 
   "tr": [
     "navBarMemory",
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -7889,6 +7977,14 @@
   ],
 
   "zh_CN": [
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "reviewInboxTitle",
     "reviewInboxDescription",
     "reviewInboxEmptyBody",
@@ -7949,6 +8045,14 @@
   ],
 
   "zh_LZH": [
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",
@@ -8606,6 +8710,14 @@
   ],
 
   "zh_TW": [
+    "contextMenuKnowledgeCard",
+    "contextMenuSeminar",
+    "contextMenuSeminarOpenFailed",
+    "contextMenuSeminarPrompt",
+    "knowledgeCardAddedToReviewInbox",
+    "knowledgeCardAlreadyInReviewInbox",
+    "knowledgeCardAlreadySaved",
+    "knowledgeCardAddFailed",
     "commonInvalid",
     "commonSkip",
     "backupIncludeApiKeyEncrypted",

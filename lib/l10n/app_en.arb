@@ -95,6 +95,19 @@
   "contextMenuConfirm": "Confirm",
   "contextMenuHighlight": "Highlight",
   "contextMenuUnderline": "Underline",
+  "contextMenuKnowledgeCard": "Card",
+  "contextMenuSeminar": "Seminar",
+  "contextMenuSeminarOpenFailed": "Could not open Seminar",
+  "contextMenuSeminarPrompt": "Start a PaperTok AI Seminar around this selected passage. Use critical, supportive, and synthesizer perspectives, cite current-book evidence first, and list candidate review cards only as drafts.\n\nSelected passage:\n{text}",
+  "@contextMenuSeminarPrompt": {
+    "placeholders": {
+      "text": {}
+    }
+  },
+  "knowledgeCardAddedToReviewInbox": "Added to Review inbox",
+  "knowledgeCardAlreadyInReviewInbox": "Knowledge card already waiting for review",
+  "knowledgeCardAlreadySaved": "Knowledge card already saved",
+  "knowledgeCardAddFailed": "Could not create knowledge card",
   "contextMenuShare": "Share",
   "readingPageFullScreen": "Full Screen",
   "readingPageScreenTimeout": "Screen Timeout",

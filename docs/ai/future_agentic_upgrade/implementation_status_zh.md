@@ -14,13 +14,13 @@
 | Epic | 当前代码 artifact | Gate 证据 | 状态 |
 | --- | --- | --- | --- |
 | E00 SourceRef & Provenance | `lib/models/source_ref.dart`、`lib/service/rag/source_ref_adapter.dart`、current-book/library RAG evidence `sourceRef` | SourceRef safe JSON、derived chunk hint、reader jump link、hash-only fingerprint 不算正式 evidence | In Review slice |
-| E01 AI Seminar | `lib/models/ai_seminar.dart`、`AiSeminarOrchestrationService`、`AiSeminarEvidenceBroker`、`SeminarSynthesisReviewAdapter`、Seminar runtime governance scene | fixed roles、role turn contract validation、current book first、library fallback service rule、Shared Whiteboard handoff、ReviewItem/KnowledgeCard candidates 不直接写用户资产 | In Review slice |
+| E01 AI Seminar | `lib/models/ai_seminar.dart`、`AiSeminarOrchestrationService`、`AiSeminarEvidenceBroker`、`SeminarSynthesisReviewAdapter`、Seminar runtime governance scene、`ExcerptMenu` selection seminar launcher | fixed roles、role turn contract validation、current book first、library fallback service rule、Shared Whiteboard handoff、ReviewItem/KnowledgeCard candidates 不直接写用户资产；阅读页 `研讨` 入口降级到 prompt skill flow | In Review slice |
 | E02 RAG / RAPTOR / GraphRAG | RAG evidence SourceRef alignment、`live_rag_gateway_smoke_test.dart` opt-in provider smoke、current branch `kAiIndexDbVersion = 10` | schema migration increments from main v8 through detailed progress and `force_rebuild`, embedding/rerank endpoint smoke isolated from normal CI | In Review slice |
-| E03 KnowledgeCard | `lib/models/knowledge_card.dart`、`KnowledgeCardReviewAdapter`、`KnowledgeCardStore` | draft/pending boundary, duplicate candidate guard, source-required apply, card-to-review tests, `.knowledge/knowledge_cards_v1.json` local persistence | In Review slice |
+| E03 KnowledgeCard | `lib/models/knowledge_card.dart`、`KnowledgeCardReviewAdapter`、`KnowledgeCardStore`、`SelectionKnowledgeCardProducer`、`ExcerptMenu` KnowledgeCard action | draft/pending boundary, duplicate candidate guard, source-required apply, card-to-review tests, reader selection SourceRef, `.knowledge/knowledge_cards_v1.json` local persistence, Review Inbox write | In Review slice |
 | E04 ConceptGraph | `lib/models/concept_graph.dart`、`ConceptGraphStore`、`ConceptGraphReviewAdapter` | node/edge evidence, draft-only store writes, relation apply via ReviewItem, dossier assembly via traceable edges, orphan/broken link detection, local exploration depth/width limits, malformed graph degrade | In Review slice |
 | E05 Review Inbox / Spaced Review | `lib/models/review_item.dart`、`ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider`、`ReviewInboxPage`、`MemoryCandidateReviewAdapter`、`FlashcardReviewAdapter`、`ConceptGraphReviewAdapter` | strict status transitions, versioned local inbox persistence, source-required apply, apply/dismiss traceability, KnowledgeCard and ConceptGraph decision mirror, source jump audit UI, spaced review sourceRefs | In Review slice |
 | E06 Agent Tools / Skills Platform | `lib/models/ai_agent_governance.dart`、`AiToolRegistry` governance filters、`SubAgentRunner.allowedToolIdsForAgent`、`ToolOrchestrator` permission matrix | whitelist, no recursion, read-only Seminar sub-agent filtering, execution-time concurrency safety, `CustomSkillContract` strict schema/parser/validator/runtime injection gate | In Review slice |
-| E07 Mobile UX / Deep Link / Observability | SourceRef jump links, reader intent reuse, `PaperReaderSourceJumpAudit`, deep-link evidence tests | formal knowledge objects carry jump-capable SourceRef, book anchor, or unavailable reason; source jump audit identifies jumpable, unavailable, and unresolved refs | In Review slice |
+| E07 Mobile UX / Deep Link / Observability | SourceRef jump links, reader intent reuse, `PaperReaderSourceJumpAudit`, deep-link evidence tests, selected-text `知识卡` / `研讨` menu entries | formal knowledge objects carry jump-capable SourceRef, book anchor, or unavailable reason; source jump audit identifies jumpable, unavailable, and unresolved refs; user-facing activation test covers visible menu actions | In Review slice |
 | E08 Sync / Backup / Export | `lib/models/knowledge_sync.dart` | user asset vs derived cache boundary, default sync policy, secret payload exclusion, draft/export defaults, conflict review status | In Review slice |
 
 ## 3. Verification Commands
@@ -49,6 +49,7 @@ flutter test --no-pub \
   test/service/ai/ai_seminar_orchestration_service_test.dart \
   test/service/knowledge/concept_graph_store_test.dart \
   test/service/knowledge/knowledge_card_store_test.dart \
+  test/service/knowledge/selection_knowledge_card_producer_test.dart \
   test/service/review/knowledge_review_adapter_test.dart \
   test/service/review/seminar_synthesis_review_adapter_test.dart \
   test/service/review/review_item_store_test.dart \
@@ -56,6 +57,7 @@ flutter test --no-pub \
   test/providers/review_inbox_test.dart \
   test/page/settings_page/review_inbox_page_test.dart \
   test/page/settings_page/settings_navigation_compile_test.dart \
+  test/widgets/context_menu/excerpt_menu_actions_test.dart \
   test/service/rag/live_rag_gateway_smoke_test.dart \
   -r compact
 ```
@@ -152,11 +154,17 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - `2026-05-28 14:16 EDT`：`git diff --check` 通过；future agentic implementation docs 禁用词扫描无命中；用户提供的本地 gateway API key 明文扫描无命中。
 - `2026-05-28 14:16 EDT`：`dart analyze --no-fatal-warnings lib/service/review/review_item_store.dart lib/models/knowledge_sync.dart test/service/review/review_item_store_test.dart test/models/knowledge_sync_test.dart` 仍被 analyzer plugin setup 阻塞，原因是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；该命令未返回代码诊断。
 - `2026-05-28 14:16 EDT`：final rescue re-review 确认 no blockers remain；复核点包括 `ReviewItemStore.apply` 底层 sourceType 白名单、unsupported source direct apply 回归测试、E08 artifact 名称、missing required fields conflict review、缺 `conflictStatus` 兼容行为。
+- `2026-05-28 23:26 EDT`：用户可用入口切片通过，`flutter test --no-pub test/service/knowledge/selection_knowledge_card_producer_test.dart test/widgets/context_menu/excerpt_menu_actions_test.dart -r compact` 结果为 `5 passed`；覆盖选中文本 -> KnowledgeCard -> Review Inbox、重复选中不重复写卡、已批准卡不重新进入 pending Review、空选中拒绝写入、阅读页选中菜单显示 `Card/Seminar`。
+- `2026-05-28 23:26 EDT`：KnowledgeCard/Review Inbox 相邻 suite 通过，`flutter test --no-pub test/service/knowledge/selection_knowledge_card_producer_test.dart test/service/knowledge/knowledge_card_store_test.dart test/service/review/review_item_store_test.dart test/service/review/review_inbox_controller_test.dart test/page/settings_page/review_inbox_page_test.dart test/widgets/context_menu/excerpt_menu_actions_test.dart -r compact` 结果为 `30 passed`。
+- `2026-05-28 23:23 EDT`：`dart analyze --no-fatal-warnings lib/service/knowledge/selection_knowledge_card_producer.dart lib/widgets/context_menu/excerpt_menu.dart test/service/knowledge/selection_knowledge_card_producer_test.dart test/widgets/context_menu/excerpt_menu_actions_test.dart` 仍被 analyzer plugin setup 阻塞，原因是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；该命令未返回代码诊断。
+- `2026-05-28 23:26 EDT`：独立 rescue reviewer 复核用户入口切片，结论为 no blockers；指出的重复已批准卡 toast 边界已用 `knowledgeCardAlreadySaved` 和回归测试修正。残余风险：真实 reader SourceRef 回跳仍缺端到端 UI 测试，card store 与 review store 是两个文件写入。
+- `2026-05-28 23:27 EDT`：agentic focused suite 通过，加入用户入口切片后结果为 `152 passed, 2 skipped`；两个 skipped 均为 opt-in live RAG gateway smoke。
 
 ## 4. Rescue Review Checklist
 
 - AI 生成内容默认 draft 或 pending，不自动写长期记忆、笔记、卡片或复习项。
 - KnowledgeCardStore 只持久化卡片资产状态，不写长期记忆、笔记、高亮或 spaced review；`upsertCandidate` 会把 Review 前候选保持为 draft/pending + `AI-generated-draft`，raw `upsert` 只接受 draft/pending AI candidates，draft/pending envelope 使用 `ai-draft`，只有 Review apply 后的 user asset 才使用 `knowledge-card`。
+- SelectionKnowledgeCardProducer 只把选中文本写成待审 KnowledgeCard 和 ReviewItem；重复选中复用已有卡，不写长期记忆、笔记、高亮或 spaced review。
 - KnowledgeCardStore 的候选写入把同 ID 视为冲突，不用生成内容覆盖已有用户 note、quote 或 title；显式修改必须走 source-specific apply/update 路径。
 - 正式 KnowledgeCard、ReviewItem、Seminar synthesis、ConceptNode、ConceptEdge 必须有 SourceRef book anchor、jump link 或不可跳原因；hash-only fingerprint 只能保留为 draft/unapplied。
 - ConceptGraphStore 只写 `.knowledge/concept_graph_v1.json`，node/edge 写入保持 draft ownership；dossier 和局部探索只走有 traceable evidence 的边，并按 depth 和每层 width clamp；orphan node 与 broken edge 必须可报告，不把图谱推断自动写成用户确认资产。
@@ -172,5 +180,6 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - AI Seminar role executor 的返回值必须匹配当前 role，且每个非失败 role turn 必须引用可追踪 evidence；不合格 turn 不进入后续 `priorTurns`。
 - AI Seminar evidence broker 默认 current book first；只有 current-book evidence 不足或 session 明确包含 library scope 时才使用 library evidence。
 - Seminar synthesis 只有同时满足 `readyForReview` 和 traceable handoff 才能进入 pending Review；候选 KnowledgeCard ID 必须处理空 ID 和重复 ID。
+- 阅读页 `研讨` 入口当前只打开 `seminar_mode` 草稿，不等同于结构化多 agent runtime，也不自动写 ReviewItem。
 - API key 不同步、不导出、不写测试文件。
 - Live smoke 是显式 opt-in，不进入默认 `flutter test` 网络依赖。

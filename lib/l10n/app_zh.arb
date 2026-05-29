@@ -95,6 +95,19 @@
   "contextMenuConfirm": "确认",
   "contextMenuHighlight": "高亮",
   "contextMenuUnderline": "下划线",
+  "contextMenuKnowledgeCard": "知识卡",
+  "contextMenuSeminar": "研讨",
+  "contextMenuSeminarOpenFailed": "无法打开研讨",
+  "contextMenuSeminarPrompt": "围绕这段选中文本开启一场 PaperTok AI Seminar。请使用 critical、supportive、synthesizer 三个视角，优先引用当前书内证据，候选知识卡只作为草稿建议。\n\n选中文本：\n{text}",
+  "@contextMenuSeminarPrompt": {
+    "placeholders": {
+      "text": {}
+    }
+  },
+  "knowledgeCardAddedToReviewInbox": "已加入知识待审队列",
+  "knowledgeCardAlreadyInReviewInbox": "知识卡已在待审队列",
+  "knowledgeCardAlreadySaved": "知识卡已保存",
+  "knowledgeCardAddFailed": "创建知识卡失败",
   "contextMenuShare": "分享",
   "readingPageFullScreen": "全屏",
   "readingPageScreenTimeout": "屏幕超时",
