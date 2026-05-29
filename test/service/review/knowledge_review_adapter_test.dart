@@ -118,6 +118,29 @@ void main() {
       expect(item.sourceRefs.single.jumpLink, startsWith('paperreader://'));
       expect(item.payload['targetDoc'], 'daily');
     });
+
+    test('conversation-only memory candidate keeps evidence with reason', () {
+      const candidate = MemoryCandidate(
+        id: 'mem-chat',
+        summary: 'Remember chat preference',
+        text: 'Prefer concise Chinese answers.',
+        targetDoc: MemoryDocTarget.daily,
+        sourceType: 'manual_save',
+        createdAtMs: 120,
+        status: MemoryCandidateStatus.pending,
+        sourcePointer: 'conversation-1#node-2',
+        sourceKind: MemorySourceKind.chat,
+      );
+
+      final item = MemoryCandidateReviewAdapter.fromMemoryCandidate(candidate);
+
+      expect(item.sourceRefs.single.sourceKind, SourceRefKind.memory);
+      expect(item.sourceRefs.single.sourceTextSnippet,
+          'Prefer concise Chinese answers.');
+      expect(item.sourceRefs.single.sourceHash, isNotEmpty);
+      expect(item.sourceRefs.single.hasUnavailableReason, isTrue);
+      expect(item.sourceRefs.single.hasEvidence, isTrue);
+    });
   });
 
   group('BookNoteSourceRefAdapter', () {

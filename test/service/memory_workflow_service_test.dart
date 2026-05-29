@@ -6,6 +6,7 @@ import 'package:papertok_reader/service/memory/memory_candidate_store.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_policy.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:papertok_reader/service/memory/memory_write_coordinator.dart';
+import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:langchain_core/chat_models.dart';
 
@@ -14,12 +15,14 @@ void main() {
     late Directory temp;
     late MarkdownMemoryStore store;
     late MemoryCandidateStore candidateStore;
+    late ReviewItemStore reviewStore;
     late MemoryWorkflowService workflow;
 
     setUp(() async {
       temp = await Directory.systemTemp.createTemp('anx_mem_workflow_test_');
       store = MarkdownMemoryStore(rootDir: temp);
       candidateStore = MemoryCandidateStore(rootDir: temp);
+      reviewStore = ReviewItemStore(rootDir: temp);
       workflow = MemoryWorkflowService(
         store: store,
         candidateStore: candidateStore,
@@ -59,13 +62,22 @@ void main() {
         text: 'Promote this later',
         targetDoc: MemoryDocTarget.daily,
         sourceType: 'chat',
+        bookId: 7,
+        cfi: 'epubcfi(/6/8!/4/2/12:5)',
+        chapter: 'Memory source chapter',
       );
 
       final pendingList = await workflow.listPendingCandidates();
       expect(pendingList.map((c) => c.id), contains(pending.id));
 
       final workflowFile = File('${temp.path}/.workflow/review_inbox_v1.json');
-      expect(await workflowFile.exists(), isTrue);
+      expect(await workflowFile.exists(), isFalse);
+      expect(await candidateStore.inboxFile.exists(), isTrue);
+      final reviewItem =
+          await reviewStore.getById('memory-candidate:${pending.id}');
+      expect(reviewItem, isNotNull);
+      expect(reviewItem!.sourceId, pending.id);
+      expect(reviewItem.sourceRefs.single.hasEvidence, isTrue);
 
       await workflow.applyCandidate(
         pending.id,

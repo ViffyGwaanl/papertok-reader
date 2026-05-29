@@ -199,6 +199,7 @@ class _ReviewInboxCard extends ConsumerWidget {
         canResolveSyncConflict;
     final canApplySource =
         item.sourceType == ReviewItemSourceType.knowledgeCard ||
+            item.sourceType == ReviewItemSourceType.memoryCandidate ||
             item.sourceType == ReviewItemSourceType.flashcardCandidate ||
             item.sourceType == ReviewItemSourceType.conceptGraphRelation ||
             canResolveSyncConflict;

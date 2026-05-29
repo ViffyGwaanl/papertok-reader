@@ -6,6 +6,9 @@ import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart'
 import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_candidate.dart';
+import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
@@ -20,6 +23,7 @@ class ReviewInboxController {
     ConceptGraphStore? conceptGraphStore,
     ConceptGraphProducer? conceptGraphProducer,
     SpacedReviewStore? spacedReviewStore,
+    MemoryWorkflowService? memoryWorkflowService,
     ReviewInboxClock? now,
   })  : reviewStore = reviewStore ?? ReviewItemStore(rootDir: rootDir),
         knowledgeCardStore =
@@ -35,6 +39,8 @@ class ReviewInboxController {
             ),
         spacedReviewStore =
             spacedReviewStore ?? SpacedReviewStore(rootDir: rootDir),
+        memoryWorkflowService =
+            memoryWorkflowService ?? _defaultMemoryWorkflowService(rootDir),
         _now = now ?? (() => DateTime.now().millisecondsSinceEpoch);
 
   final ReviewItemStore reviewStore;
@@ -42,7 +48,16 @@ class ReviewInboxController {
   final ConceptGraphStore conceptGraphStore;
   final ConceptGraphProducer conceptGraphProducer;
   final SpacedReviewStore spacedReviewStore;
+  final MemoryWorkflowService memoryWorkflowService;
   final ReviewInboxClock _now;
+
+  static MemoryWorkflowService _defaultMemoryWorkflowService(
+    Directory? rootDir,
+  ) {
+    return MemoryWorkflowService(
+      store: MarkdownMemoryStore(rootDir: rootDir),
+    );
+  }
 
   Future<List<ReviewItem>> list({
     ReviewItemStatus? status,
@@ -133,15 +148,13 @@ class ReviewInboxController {
       decisionSource: decisionSource,
     );
     final mirrorResult = await _mirrorSourceDecision(planned, now: timestamp);
-    final persisted = next == ReviewItemStatus.applied &&
-            item.sourceType == ReviewItemSourceType.syncConflict &&
-            _canResolveSyncConflict(item)
-        ? await reviewStore.applyResolvedSyncConflict(
-            id,
-            now: timestamp,
-            decisionSource: decisionSource ?? 'user_apply',
-          )
-        : await persist(timestamp);
+    final persisted = await _persistTransitionAfterSourceMirror(
+      item,
+      next,
+      timestamp: timestamp,
+      decisionSource: decisionSource,
+      persist: persist,
+    );
     if (mirrorResult.knowledgeCardForReview case final card?) {
       await spacedReviewStore.upsertFromKnowledgeCard(card, now: timestamp);
       try {
@@ -202,6 +215,18 @@ class ReviewInboxController {
         }
         return const _ReviewSourceMirrorResult();
       case ReviewItemSourceType.memoryCandidate:
+        if (item.status == ReviewItemStatus.dismissed) {
+          await memoryWorkflowService.dismissCandidate(item.sourceId);
+          return const _ReviewSourceMirrorResult();
+        }
+        if (item.status == ReviewItemStatus.applied) {
+          await memoryWorkflowService.applyCandidate(
+            item.sourceId,
+            targetDoc: _memoryTargetDocFor(item),
+          );
+          return const _ReviewSourceMirrorResult();
+        }
+        return const _ReviewSourceMirrorResult();
       case ReviewItemSourceType.seminarSynthesis:
       case ReviewItemSourceType.imageAnalysisCard:
       case ReviewItemSourceType.unknown:
@@ -218,6 +243,45 @@ class ReviewInboxController {
   bool _canResolveSyncConflict(ReviewItem item) {
     return item.sourceType == ReviewItemSourceType.syncConflict &&
         item.payload['canApply'] == true;
+  }
+
+  Future<ReviewItem> _persistTransitionAfterSourceMirror(
+    ReviewItem original,
+    ReviewItemStatus next, {
+    required int timestamp,
+    required String? decisionSource,
+    required Future<ReviewItem> Function(int timestamp) persist,
+  }) {
+    if (next == ReviewItemStatus.applied &&
+        original.sourceType == ReviewItemSourceType.syncConflict &&
+        _canResolveSyncConflict(original)) {
+      return reviewStore.applyResolvedSyncConflict(
+        original.id,
+        now: timestamp,
+        decisionSource: decisionSource ?? 'user_apply',
+      );
+    }
+    if (next == ReviewItemStatus.applied &&
+        original.sourceType == ReviewItemSourceType.memoryCandidate) {
+      return reviewStore.applyResolvedMemoryCandidate(
+        original.id,
+        now: timestamp,
+        decisionSource: decisionSource ?? 'user_apply',
+      );
+    }
+    return persist(timestamp);
+  }
+
+  MemoryDocTarget _memoryTargetDocFor(ReviewItem item) {
+    final rawTarget =
+        (item.payload['appliedTargetDoc'] ?? item.payload['targetDoc'])
+            ?.toString();
+    for (final target in MemoryDocTarget.values) {
+      if (target.name == rawTarget) return target;
+    }
+    throw StateError(
+      'Memory candidate review is missing a valid targetDoc: ${item.id}',
+    );
   }
 }
 

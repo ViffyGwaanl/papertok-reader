@@ -337,7 +337,17 @@ class MemoryCandidateReviewAdapter {
       sourceTextForHash: candidate.text,
       sourceKind: SourceRefKind.memory,
       confidence: candidate.confidence,
+      unavailableReason:
+          hasBookAnchor ? null : _memorySourceUnavailableReason(candidate),
     );
+  }
+
+  static String _memorySourceUnavailableReason(MemoryCandidate candidate) {
+    final pointer = candidate.effectiveSourcePointer.trim();
+    if (pointer.isEmpty) {
+      return 'memory-source-not-jumpable';
+    }
+    return 'memory-source-not-jumpable:$pointer';
   }
 }
 

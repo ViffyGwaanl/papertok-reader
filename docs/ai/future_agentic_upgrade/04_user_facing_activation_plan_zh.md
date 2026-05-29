@@ -18,6 +18,7 @@
 | 图片解析 -> KnowledgeCard | 阅读页点开图片 -> `AI Image Analysis / AI图片解析` -> `Card / 知识卡`。 | 本分支已接入 `ImageAnalysisKnowledgeCardProducer`、图片解析结果弹层入口和 ImageViewer 工具栏点击级路径，解析结果会进入 KnowledgeCard store 与 Review Inbox。 | 默认只进入 Review，不写长期记忆、不写笔记、不写 spaced review；SourceRef 使用当前阅读位置的 book/cfi/href 回跳；图片本体不写入 card payload。 |
 | 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 runtime：用户可启动 role-by-role Seminar，查看 evidence、角色输出、Shared Whiteboard、synthesis，并把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox。 | 阅读页优先 current book evidence；Settings 独立入口没有 current book 时会走 library fallback。Seminar synthesis 本身只进入 Review，不自动应用；候选卡和候选 flashcard 仍需用户在 Review Inbox 中批准/应用后才成为长期资产或复习项。 |
 | AI Chat 普通解释 -> KnowledgeCard | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡`。 | 本分支已接入 `AiChatKnowledgeCardProducer` 和回答旁显性 `知识卡` action；streaming 中 `知识卡` 按钮禁用且不会调用 producer；回答旁显示 `可跳转来源` 或 `已标记不可用` 来源状态，tooltip 解释是否能跳回原文；选中文本进入 AI 草稿时会带上精确 reader SourceRef，并随 `conversationV2` 历史持久化，点击后写入 KnowledgeCard store 与 Review Inbox；reader-grounded card 会带保守 `conceptRefs`。 | 必须用户显式点击；不会在回答生成时直接写 KnowledgeCard 或 ConceptGraph；如果用户把预填草稿改成不包含原选中文本或 SourceRef snippet 的无关问题，本轮 user node 不保存旧 reader SourceRef；短公共片段只靠碰巧包含不会保留精确 reader grounding；用户在 Review Inbox 中 Apply 后，带 `conceptRefs` 的 reader-grounded AI Chat card 才会生成 draft ConceptGraph relation 和 pending relation ReviewItem；纯聊天 card 不生成 `conceptRefs`；没有持久化 reader SourceRef 的旧历史只保留 conversation provenance，不用当前阅读位置伪造 reader grounding。 |
+| AI Chat -> Memory 候选审核 | AI Chat 回答旁 `Memory actions` -> `Add to Review inbox` -> `Settings -> AI -> Review inbox`。 | 本分支已接入 MemoryCandidate 到统一 ReviewItem 的 handoff、Memory source-specific apply/dismiss adapter 和 Review Inbox Apply UI。 | Memory 候选必须经用户批准和应用；Apply 先追加到目标 daily/long-term Markdown，再推进 ReviewItem；Dismiss 不写 memory；无书内跳转的 conversation memory 会显示证据摘录和不可跳原因；不写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入 Explorer、Settings 点击入口、选中文本入口、KnowledgeCard -> draft ConceptGraph producer、Seminar candidate card -> conceptRefs -> KnowledgeCard -> ConceptGraph 候选链路、reader-grounded AI Chat card -> conceptRefs -> KnowledgeCard -> ConceptGraph 候选链路，以及空态 `Create draft candidate` 显性 action：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部图谱摘要、局部路径、draft/formal 状态、evidence 状态和 orphan/broken link，并可把 derived RAG/GraphRAG result 写成待审图谱候选；空态动作会显示已进入 Review 或跳过原因。 | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard，或带 `derivedLayer/derivedSummary + traceable chunk SourceRef` 的 library RAG result，会生成 draft node/edge 和 pending relation ReviewItem；空态草稿入口使用本地文本检索，关闭 query embedding、vector fallback 和 rerank；AI Chat 不直接调用 RAG/GraphRAG producer，不自动创建正式节点。 |
 | RAG/GraphRAG -> KnowledgeCard | 阅读页选中文本 -> `图谱/Graph` -> 无相关概念空态 -> `Card / 知识卡`。 | 本分支已接入 `RagEvidenceKnowledgeCardProducer` 和 ConceptGraph 空态 Card action；本地 RAG/GraphRAG 结果可进入 KnowledgeCard store 与 Review Inbox；写入后页面会提示已加入 Review inbox。 | 只接受带 traceable chunk SourceRef 和可保存 chunk snippet 的 RAG evidence；derived summary 只作为 explanation，正式 quote/evidence 使用书内 chunk snippet；不自动写图谱、长期记忆、笔记或 spaced review。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；KnowledgeCard 或 Seminar 候选 flashcard 在 Review Inbox 中 `Apply` 后入队。 | 本分支已接入 Settings 点击入口、`.knowledge/spaced_review_items_v1.json`、复习页、证据摘录预览、Again/Hard/Good/Easy 评分、来源跳转状态；Seminar 的 `reviewSuggestion` 会作为 flashcard candidate 进入 Review，并可由 Review Inbox Apply UI 应用到 Spaced Review。 | KnowledgeCard apply 和 flashcard candidate apply 已接入；跨设备同步还没接。 |
@@ -130,7 +131,41 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.4 图片解析生成知识卡
+### 2.4 AI Chat Memory 候选审核
+
+用户路径：
+
+1. 在 AI Chat 中找到一条回答。
+2. 点击回答旁的 `Memory actions`。
+3. 选择 `Add to Review inbox`。
+4. 系统创建 `MemoryCandidate(status=pending)`，写入 `.workflow/review_inbox_v2.json`。
+5. 系统创建对应 `ReviewItem(sourceType=memory-candidate)`，写入 `.workflow/review_items_v1.json`。
+6. 用户进入 `Settings -> AI -> Review inbox`，审核这条 memory 候选。
+7. 用户可以查看证据摘录、来源标题/位置、不可跳原因或打开来源动作。
+8. 用户点击 `Approve` 后，再点击 `Apply`。
+9. 系统先通过 `MemoryWorkflowService.applyCandidate` 追加到目标 daily 或 long-term Markdown memory，再推进 ReviewItem 到 `applied`。
+
+Gate：
+
+- Memory 候选必须经用户显式 `Approve -> Apply`，不能自动写长期 memory。
+- `Dismiss` 必须同步 MemoryCandidate 状态，且不写 memory Markdown。
+- Apply 必须走 Memory source-specific adapter；不能通过泛型 ReviewItem 状态推进绕过 source 写入。
+- 无书内跳转的 conversation memory 必须保留 evidence snippet、source hash 和不可跳原因，使用户能解释来源不可跳。
+- Apply/dismiss 不写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。
+- MemoryCandidate 缺失、targetDoc 缺失或 SourceRef 不满足 gate 时，不得推进 ReviewItem 到 applied。
+
+验证命令：
+
+```bash
+flutter test --no-pub \
+  test/service/review/knowledge_review_adapter_test.dart \
+  test/service/memory_workflow_service_test.dart \
+  test/service/review/review_inbox_controller_test.dart \
+  test/page/settings_page/review_inbox_page_test.dart \
+  -r compact
+```
+
+### 2.5 图片解析生成知识卡
 
 用户路径：
 
@@ -161,7 +196,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.5 概念图谱探索
+### 2.6 概念图谱探索
 
 用户路径：
 
@@ -207,7 +242,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.6 RAG / GraphRAG 结果生成知识卡
+### 2.7 RAG / GraphRAG 结果生成知识卡
 
 用户路径：
 
@@ -241,7 +276,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.7 间隔复习
+### 2.8 间隔复习
 
 用户路径：
 
@@ -275,7 +310,7 @@ flutter test --no-pub \
   -r compact
 ```
 
-### 2.8 知识同步 / 导出
+### 2.9 知识同步 / 导出
 
 用户路径：
 
@@ -330,7 +365,6 @@ flutter test --no-pub \
 | 能力 | 当前边界 | 下一步 Agent Task | Gate |
 | --- | --- | --- | --- |
 | 完整云同步引擎 | 当前只有本地导出、安全冲突 Review handoff 和安全 KnowledgeCard 冲突本地恢复。 | 设计并实现 per-entity remote sync、远端冲突合并器、远端写回和回滚。 | API key 永不同步；冲突进入 Review；不得使用 whole-file newer-wins 覆盖用户资产。 |
-| Memory source-specific apply adapter | Review Inbox 能展示 memory 类型候选，但 Memory 专属 apply 还未接到统一控制层。 | 接入 Memory candidate adapter，确保 apply/dismiss 可追踪且不覆盖用户 memory。 | Memory 写入必须 source-specific，不得走泛型 apply。 |
 | Custom Skill 导入 UI | 已有 `CustomSkillContract` schema/parser/validator/runtime gate，没有用户导入界面。 | 接入导入 UI、fixture 管理、provider capability 展示和 runtime injection 验收。 | 禁止写工具越权、递归 sub-agent 和 unknown scene。 |
 | Seminar 成本、后台续跑、provider matrix | Seminar runtime 已能流式、取消、重试、Review handoff；未接角色预算、成本上限、后台恢复和 provider capability matrix。 | 接入成本记录、后台恢复状态和 provider 能力矩阵。 | 移动资源 gate；长任务可取消、失败可恢复或重试。 |
 | 复杂无限画布式 ConceptGraph | 当前是局部图谱、dossier、路径和摘要，不做无限画布、缩放手势或跨书外部知识扩展。 | 如需画布，先定义移动端资源、证据可见性和 graph ownership gate。 | 关系必须有 evidence；正式关系必须 Review apply。 |
@@ -356,6 +390,7 @@ flutter test --no-pub \
 | UFA-C03-T03 | Accepted | Reader concept entry | 阅读页选中文本可进入概念探索。 | UFA-C03-T02 | `ExcerptMenu` graph action, `ConceptGraphExplorerPage.initialQuery` | 选中文本可打开图谱页并筛选相关概念；没有相关概念时展示空态和草稿候选入口，不生成无证据正式节点。 |
 | UFA-C04-T01 | Accepted | Spaced Review | Review apply 后生成复习队列。 | E03, E05 | `SpacedReviewStore`, `spacedReviewProvider`, `SpacedReviewPage`, `SourceRefEvidenceList`, injectable source opener, Settings AI entry | 复习项可回溯到卡片和原文；页面显示证据摘录和不可用来源原因；删除书后显示可解释状态；评分记录下一次到期时间；`Open source` 点击会把 jumpable SourceRef 交给 opener，不可跳来源显示原因且不触发 opener；Settings AI 点击级测试覆盖 `Settings -> AI -> Spaced review` 导航到复习页。 |
 | UFA-C04-T02 | Accepted | Flashcard Review apply | 待审 flashcard 应用后进入 Spaced Review。 | E05 controller, UFA-C02-T04 | `SpacedReviewStore.reviewIdForFlashcard`, `upsertFromFlashcardReviewItem`, `ReviewInboxPage` Apply gate | pending/approved flashcard 不直接入队；只有用户在 Review Inbox 点击 enabled `Apply` 后，applied 且 traceable 的 flashcard 才能入队；重复入队不制造重复复习项。 |
+| UFA-C04-T03 | Accepted | Memory Review apply | 待审 MemoryCandidate 通过统一 Review Inbox 应用到本地 Markdown memory。 | E05 controller, MemoryWorkflowService, MemoryCandidateReviewAdapter | `MemoryWorkflowService.addToReviewInbox` -> `ReviewItemStore` handoff, `ReviewInboxController` memory source-specific apply/dismiss adapter, `ReviewInboxPage` Apply gate | AI Chat memory action 创建 pending MemoryCandidate 时同步创建 pending ReviewItem；conversation-only memory SourceRef 带 evidence snippet、source hash 和不可跳原因；Review Inbox `Approve -> Apply` 先调用 MemoryWorkflowService 追加到目标 daily/long-term Markdown，再推进 ReviewItem；`Dismiss` 同步 MemoryCandidate 且不写 memory；source candidate 缺失不推进 ReviewItem；不写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | UFA-C05-T01 | Accepted | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | `KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI entry、export manifest、Markdown export、HTML study report、Anki TSV export、sync-conflict ReviewItem handoff | API key 不同步；派生索引不当作 source-of-truth；冲突被排除并显性显示；当前创建本地 manifest、Markdown 学习导出、HTML study report 和 Anki TSV，并能把待审冲突送入 Review Inbox；导出页在发送成功后显示 `Review inbox` 直达入口；provider 级测试覆盖 `KnowledgeAssetExportNotifier -> ReviewInboxNotifier -> ReviewInboxController -> KnowledgeCardStore/ReviewItemStore` 的安全 KnowledgeCard 冲突 approve/apply 闭环，解除 pending conflict 并重新进入导出集合；不执行远端同步或自动跨设备合并。 |
 
 ## 5. Agent 执行约束

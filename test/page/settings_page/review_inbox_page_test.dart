@@ -266,6 +266,46 @@ void main() {
 
     expect(flashcardController.appliedIds, ['flashcard:seminar-review']);
   });
+
+  testWidgets('approved memory candidate can be applied from inbox',
+      (tester) async {
+    final memoryController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'memory-candidate:mem-review',
+        sourceType: ReviewItemSourceType.memoryCandidate,
+        sourceId: 'mem-review',
+        title: 'Remember current-book priority',
+        body: 'Default to current book before library search.',
+        status: ReviewItemStatus.approved,
+        sourceRefs: [
+          SourceRef(
+            bookId: 12,
+            href: 'Text/memory.xhtml',
+            cfi: 'epubcfi(/6/24)',
+            sourceTitle: 'Memory Book',
+            locationLabel: 'Chapter 4',
+            sourceTextSnippet: 'Current book first, library second.',
+            sourceKind: SourceRefKind.memory,
+          ),
+        ],
+        payload: const {'targetDoc': 'daily'},
+      ),
+    ]);
+
+    await _pumpPage(tester, memoryController);
+    await tester.tap(find.text('Approved').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Remember current-book priority'), findsOneWidget);
+    expect(find.text('Memory'), findsOneWidget);
+    expect(find.text('Apply'), findsOneWidget);
+
+    await tester.tap(find.text('Apply'));
+    await tester.pump();
+
+    expect(memoryController.appliedIds, ['memory-candidate:mem-review']);
+  });
 }
 
 class _FakeReviewInboxController extends ReviewInboxController {

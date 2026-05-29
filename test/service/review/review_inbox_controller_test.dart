@@ -10,6 +10,10 @@ import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_candidate.dart';
+import 'package:papertok_reader/service/memory/memory_candidate_store.dart';
+import 'package:papertok_reader/service/memory/memory_source_kind.dart';
 import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
 import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
@@ -21,6 +25,8 @@ void main() {
   late KnowledgeCardStore cardStore;
   late ConceptGraphStore graphStore;
   late SpacedReviewStore spacedReviewStore;
+  late MarkdownMemoryStore memoryStore;
+  late MemoryCandidateStore memoryCandidateStore;
   late ReviewInboxController controller;
 
   setUp(() async {
@@ -31,7 +37,10 @@ void main() {
     cardStore = KnowledgeCardStore(rootDir: tempRoot);
     graphStore = ConceptGraphStore(rootDir: tempRoot);
     spacedReviewStore = SpacedReviewStore(rootDir: tempRoot);
+    memoryStore = MarkdownMemoryStore(rootDir: tempRoot);
+    memoryCandidateStore = MemoryCandidateStore(rootDir: tempRoot);
     controller = ReviewInboxController(
+      rootDir: tempRoot,
       reviewStore: reviewStore,
       knowledgeCardStore: cardStore,
       conceptGraphStore: graphStore,
@@ -118,6 +127,33 @@ void main() {
     );
     return reviewStore.upsert(
       ConceptGraphReviewAdapter.fromRelation(relation),
+    );
+  }
+
+  Future<ReviewItem> stageMemoryCandidateForReview(
+    String id, {
+    MemoryDocTarget targetDoc = MemoryDocTarget.longTerm,
+    String text = 'Remember current-book evidence before library search.',
+  }) async {
+    const cfi = 'epubcfi(/6/8!/4/2/12:5)';
+    final candidate = MemoryCandidate(
+      id: id,
+      summary: 'Memory review candidate',
+      text: text,
+      targetDoc: targetDoc,
+      sourceType: 'session_digest',
+      createdAtMs: 100,
+      status: MemoryCandidateStatus.pending,
+      displayText: text,
+      sourcePointer: 'Chapter 2',
+      bookId: 7,
+      cfi: cfi,
+      chapter: 'Evidence chapter',
+      sourceKind: MemorySourceKind.reading,
+    );
+    await memoryCandidateStore.upsert(candidate);
+    return reviewStore.upsert(
+      MemoryCandidateReviewAdapter.fromMemoryCandidate(candidate),
     );
   }
 
@@ -281,6 +317,82 @@ void main() {
     final unchanged = await reviewStore.getById('seminar-synthesis:s1');
     expect(unchanged!.status, ReviewItemStatus.approved);
     expect(unchanged.appliedAt, isNull);
+  });
+
+  test(
+      'memory candidate apply writes target memory doc and advances both stores',
+      () async {
+    await stageMemoryCandidateForReview('mem-apply');
+
+    await controller.approve('memory-candidate:mem-apply');
+    final applied = await controller.apply('memory-candidate:mem-apply');
+    final storedCandidate = await memoryCandidateStore.getById('mem-apply');
+    final longTerm = await memoryStore.read(longTerm: true);
+    final daily = await memoryStore.read(longTerm: false);
+
+    expect(applied.status, ReviewItemStatus.applied);
+    expect(applied.decisionSource, 'user_apply');
+    expect(applied.appliedAt, 1000);
+    expect(storedCandidate!.status, MemoryCandidateStatus.applied);
+    expect(storedCandidate.appliedTargetDoc, MemoryDocTarget.longTerm);
+    expect(storedCandidate.decisionSource, 'user_apply');
+    expect(
+      longTerm,
+      contains('Remember current-book evidence before library search.'),
+    );
+    expect(
+      daily,
+      isNot(contains('Remember current-book evidence before library search.')),
+    );
+    expect(await spacedReviewStore.list(), isEmpty);
+    expect(await graphStore.listEdges(), isEmpty);
+  });
+
+  test(
+      'memory candidate dismiss mirrors source candidate without writing memory',
+      () async {
+    await stageMemoryCandidateForReview(
+      'mem-dismiss',
+      text: 'Do not keep this memory candidate.',
+    );
+
+    final dismissed = await controller.dismiss('memory-candidate:mem-dismiss');
+    final storedCandidate = await memoryCandidateStore.getById('mem-dismiss');
+    final longTerm = await memoryStore.read(longTerm: true);
+
+    expect(dismissed.status, ReviewItemStatus.dismissed);
+    expect(dismissed.decisionSource, 'user_dismiss');
+    expect(storedCandidate!.status, MemoryCandidateStatus.dismissed);
+    expect(storedCandidate.decisionSource, 'user_dismiss');
+    expect(longTerm, isNot(contains('Do not keep this memory candidate.')));
+  });
+
+  test('memory candidate source failure does not advance review item',
+      () async {
+    final item = ReviewItem(
+      id: 'memory-candidate:missing',
+      sourceType: ReviewItemSourceType.memoryCandidate,
+      sourceId: 'missing',
+      title: 'Missing memory candidate',
+      body: 'The source candidate was removed before apply.',
+      status: ReviewItemStatus.pending,
+      sourceRefs: [traceableRef()],
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    await reviewStore.upsert(item);
+    await controller.approve(item.id);
+
+    expect(
+      () => controller.apply(item.id),
+      throwsA(isA<StateError>()),
+    );
+    final unchanged = await reviewStore.getById(item.id);
+    final longTerm = await memoryStore.read(longTerm: true);
+
+    expect(unchanged!.status, ReviewItemStatus.approved);
+    expect(unchanged.appliedAt, isNull);
+    expect(longTerm.trim(), isEmpty);
   });
 
   test('sync conflict review cannot be approved without a resolution adapter',

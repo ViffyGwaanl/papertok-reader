@@ -10,6 +10,8 @@ import 'package:papertok_reader/service/memory/memory_session_digest_service.dar
 import 'package:papertok_reader/service/memory/memory_source_kind.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_policy.dart';
 import 'package:papertok_reader/service/memory/memory_write_coordinator.dart';
+import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
+import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/shortcuts/papertok_ai_chat_navigator.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:flutter/material.dart';
@@ -23,18 +25,22 @@ class MemoryWorkflowService {
     MemoryCandidateStore? candidateStore,
     MemoryWriteCoordinator? writeCoordinator,
     MemorySessionDigestService? sessionDigestService,
+    ReviewItemStore? reviewItemStore,
   })  : _candidateStore =
             candidateStore ?? MemoryCandidateStore(rootDir: store?.rootDir),
         _writeCoordinator =
             writeCoordinator ?? MemoryWriteCoordinator(store: store),
         _sessionDigestService =
-            sessionDigestService ?? const MemorySessionDigestService();
+            sessionDigestService ?? const MemorySessionDigestService(),
+        _reviewItemStore =
+            reviewItemStore ?? ReviewItemStore(rootDir: store?.rootDir);
 
   static const Uuid _uuid = Uuid();
 
   final MemoryCandidateStore _candidateStore;
   final MemoryWriteCoordinator _writeCoordinator;
   final MemorySessionDigestService _sessionDigestService;
+  final ReviewItemStore _reviewItemStore;
 
   Future<List<MemoryCandidate>> listCandidates({
     MemoryCandidateStatus? status,
@@ -90,7 +96,11 @@ class MemoryWorkflowService {
       sourceKind: sourceKind,
       rationale: rationale,
     );
-    return _candidateStore.upsert(candidate);
+    final stored = await _candidateStore.upsert(candidate);
+    await _reviewItemStore.upsert(
+      MemoryCandidateReviewAdapter.fromMemoryCandidate(stored),
+    );
+    return stored;
   }
 
   Future<MemoryCandidate> saveToDaily({

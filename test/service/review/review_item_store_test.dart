@@ -159,6 +159,33 @@ void main() {
     expect(restored.appliedAt, isNull);
   });
 
+  test(
+      'generic store apply rejects memory candidates without controller adapter',
+      () async {
+    final store = ReviewItemStore(rootDir: tempRoot);
+    final item = ReviewItem(
+      id: 'memory-candidate:mem-raw',
+      sourceType: ReviewItemSourceType.memoryCandidate,
+      sourceId: 'mem-raw',
+      title: 'Raw memory apply',
+      body: 'Raw store apply must not bypass MemoryWorkflowService.',
+      status: ReviewItemStatus.pending,
+      sourceRefs: [traceableRef()],
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    await store.upsert(item);
+    await store.approve(item.id, now: 200);
+
+    expect(
+      () => store.apply(item.id, now: 300),
+      throwsUnsupportedError,
+    );
+    final unchanged = await store.getById(item.id);
+    expect(unchanged!.status, ReviewItemStatus.approved);
+    expect(unchanged.appliedAt, isNull);
+  });
+
   test('generic store apply rejects sync conflict even with canApply gate',
       () async {
     final store = ReviewItemStore(rootDir: tempRoot);
