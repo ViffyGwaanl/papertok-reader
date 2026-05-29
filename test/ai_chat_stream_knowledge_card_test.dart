@@ -105,6 +105,72 @@ void main() {
     expect(fakeProducer.calls.single.readerSourceRef, isNull);
   });
 
+  testWidgets('assistant Card action is disabled while streaming',
+      (tester) async {
+    const providerId = 'openai';
+    final fakeProducer = _FakeAiChatKnowledgeCardProducer();
+    final providers = [
+      AiProviderMeta(
+        id: providerId,
+        name: 'OpenAI',
+        type: AiProviderType.openaiCompatible,
+        enabled: true,
+        isBuiltIn: true,
+        createdAt: 1,
+        updatedAt: 1,
+      ),
+    ];
+
+    SharedPreferences.setMockInitialValues({
+      'selectedAiService': providerId,
+      'aiProvidersV1': AiProviderMeta.encodeList(providers),
+      'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+    });
+
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          locale: const Locale('zh', 'CN'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiChatStream(
+            chatKnowledgeCardProducer: fakeProducer,
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    AnxToast.init(tester.element(find.byType(AiChatStream)));
+    await tester.pump();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiChatStream)),
+    );
+    await container.read(aiChatProvider.future);
+    container.read(aiChatProvider.notifier).restore(
+      [
+        ChatMessage.humanText('Explain active reading.'),
+        ChatMessage.ai('The answer is still streaming.'),
+      ],
+      sessionId: 'chat-streaming-card-gate',
+    );
+    container.read(aiChatStreamingProvider.notifier).setStreaming(true);
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final cardButton = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, '知识卡'),
+    );
+    expect(cardButton.onPressed, isNull);
+
+    await tester.tap(find.text('知识卡'), warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(fakeProducer.calls, isEmpty);
+  });
+
   testWidgets('assistant Card action forwards prefilled selection SourceRef',
       (tester) async {
     final tempDir = Directory.systemTemp.createTempSync('ai-chat-card-source-');
