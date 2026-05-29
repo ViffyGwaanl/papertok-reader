@@ -18,9 +18,9 @@
 | E02 RAG / RAPTOR / GraphRAG | RAG evidence SourceRef alignment、`live_rag_gateway_smoke_test.dart` opt-in provider smoke、current branch `kAiIndexDbVersion = 10` | schema migration increments from main v8 through detailed progress and `force_rebuild`, embedding/rerank endpoint smoke isolated from normal CI | In Review slice |
 | E03 KnowledgeCard | `lib/models/knowledge_card.dart`、`KnowledgeCardReviewAdapter`、`KnowledgeCardStore`、`SelectionKnowledgeCardProducer`、`ExcerptMenu` KnowledgeCard action | draft/pending boundary, duplicate candidate guard, source-required apply, card-to-review tests, reader selection SourceRef, `.knowledge/knowledge_cards_v1.json` local persistence, Review Inbox write | In Review slice |
 | E04 ConceptGraph | `lib/models/concept_graph.dart`、`ConceptGraphStore`、`ConceptGraphReviewAdapter`、`ConceptGraphExplorerPage`、`conceptGraphExplorerProvider`、`ExcerptMenu` graph action | node/edge evidence, draft-only store writes, relation apply via ReviewItem, dossier assembly via traceable edges, orphan/broken link detection, local exploration depth/width limits, malformed graph degrade, Settings AI and reader-selection visible Explorer | In Review slice |
-| E05 Review Inbox / Spaced Review | `lib/models/review_item.dart`、`ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider`、`ReviewInboxPage`、`MemoryCandidateReviewAdapter`、`FlashcardReviewAdapter`、`ConceptGraphReviewAdapter` | strict status transitions, versioned local inbox persistence, source-required apply, apply/dismiss traceability, KnowledgeCard and ConceptGraph decision mirror, source jump audit UI, spaced review sourceRefs | In Review slice |
+| E05 Review Inbox / Spaced Review | `lib/models/review_item.dart`、`ReviewItemStore`、`ReviewInboxController`、`reviewInboxProvider`、`ReviewInboxPage`、`SpacedReviewStore`、`spacedReviewProvider`、`SpacedReviewPage`、`MemoryCandidateReviewAdapter`、`FlashcardReviewAdapter`、`ConceptGraphReviewAdapter` | strict status transitions, versioned local inbox persistence, source-required apply, apply/dismiss traceability, KnowledgeCard and ConceptGraph decision mirror, KnowledgeCard apply -> spaced review queue, source jump audit UI, spaced review history/sourceRefs | In Review slice |
 | E06 Agent Tools / Skills Platform | `lib/models/ai_agent_governance.dart`、`AiToolRegistry` governance filters、`SubAgentRunner.allowedToolIdsForAgent`、`ToolOrchestrator` permission matrix | whitelist, no recursion, read-only Seminar sub-agent filtering, execution-time concurrency safety, `CustomSkillContract` strict schema/parser/validator/runtime injection gate | In Review slice |
-| E07 Mobile UX / Deep Link / Observability | SourceRef jump links, reader intent reuse, `PaperReaderSourceJumpAudit`, deep-link evidence tests, selected-text `知识卡` / `研讨` / `图谱` menu entries, Settings AI `Concept graph` entry | formal knowledge objects carry jump-capable SourceRef, book anchor, or unavailable reason; source jump audit identifies jumpable, unavailable, and unresolved refs; user-facing activation tests cover visible menu actions and graph explorer entry | In Review slice |
+| E07 Mobile UX / Deep Link / Observability | SourceRef jump links, reader intent reuse, `PaperReaderSourceJumpAudit`, deep-link evidence tests, selected-text `知识卡` / `研讨` / `图谱` menu entries, Settings AI `Concept graph` and `Spaced review` entries | formal knowledge objects carry jump-capable SourceRef, book anchor, or unavailable reason; source jump audit identifies jumpable, unavailable, and unresolved refs; user-facing activation tests cover visible menu actions, graph explorer entry, and spaced review entry | In Review slice |
 | E08 Sync / Backup / Export | `lib/models/knowledge_sync.dart` | user asset vs derived cache boundary, default sync policy, secret payload exclusion, draft/export defaults, conflict review status | In Review slice |
 
 ## 3. Verification Commands
@@ -56,8 +56,11 @@ flutter test --no-pub \
   test/service/review/seminar_synthesis_review_adapter_test.dart \
   test/service/review/review_item_store_test.dart \
   test/service/review/review_inbox_controller_test.dart \
+  test/service/review/spaced_review_store_test.dart \
   test/providers/review_inbox_test.dart \
+  test/providers/spaced_review_test.dart \
   test/page/settings_page/review_inbox_page_test.dart \
+  test/page/settings_page/spaced_review_page_test.dart \
   test/page/settings_page/settings_navigation_compile_test.dart \
   test/widgets/context_menu/excerpt_menu_actions_test.dart \
   test/service/rag/live_rag_gateway_smoke_test.dart \
@@ -171,12 +174,17 @@ flutter test --no-pub test/service/rag/live_rag_gateway_smoke_test.dart -r compa
 - `2026-05-28 23:59 EDT`：`git diff --check` 通过；future agentic docs 禁用词扫描无命中；用户提供的本地 gateway API key 明文扫描无命中。
 - `2026-05-28 23:59 EDT`：`dart analyze --no-fatal-warnings lib/page/settings_page/concept_graph_explorer.dart lib/widgets/context_menu/excerpt_menu.dart test/page/settings_page/concept_graph_explorer_page_test.dart test/widgets/context_menu/excerpt_menu_actions_test.dart` 仍被 analyzer plugin setup 阻塞，原因是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；该命令未返回代码诊断。
 - `2026-05-29 00:03 EDT`：独立 rescue reviewer 复核阅读页 ConceptGraph 入口切片，结论为 no blockers；确认 `Graph/图谱` 点击会 push `ConceptGraphExplorerPage(initialQuery)`，`initialQuery` 只筛选已从 `ConceptGraphStore.listNodes()` 读出的本地节点，不调用 LLM/embedding/rerank/web provider，不写 node/edge；无匹配时的 `Create draft candidate` 为 disabled button，不会创建正式或草稿图谱资产。
+- `2026-05-29 02:12 EDT`：Spaced Review 用户入口切片通过，`flutter test --no-pub test/service/review/spaced_review_store_test.dart test/service/review/review_inbox_controller_test.dart test/providers/spaced_review_test.dart test/page/settings_page/spaced_review_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart -r compact` 结果为 `14 passed`；覆盖 KnowledgeCard apply 自动入复习队列、重复入队不重复、approved 未 applied 不入队、复习页刷新对账 applied card、Again/Hard/Good/Easy 更新到期时间、Settings AI 复习入口、可跳转/不可用来源状态。
+- `2026-05-29 02:13 EDT`：agentic focused suite 通过，加入 Spaced Review 入口后结果为 `165 passed, 2 skipped`；两个 skipped 均为 opt-in live RAG gateway smoke。
+- `2026-05-29 02:13 EDT`：`dart analyze --no-fatal-warnings lib/service/review/spaced_review_store.dart lib/service/review/review_inbox_controller.dart lib/service/review/knowledge_review_adapter.dart lib/providers/spaced_review.dart lib/page/settings_page/spaced_review.dart lib/page/settings_page/ai.dart test/service/review/spaced_review_store_test.dart test/service/review/review_inbox_controller_test.dart test/providers/spaced_review_test.dart test/page/settings_page/spaced_review_page_test.dart test/page/settings_page/settings_navigation_compile_test.dart` 仍被 analyzer plugin setup 阻塞，原因是 `custom_lint` 从 `https://pub.dev` 解析时出现 TLS error；该命令未返回代码诊断。
+- `2026-05-29 02:14 EDT`：独立 rescue reviewer 复核 Spaced Review 入口切片，结论为 no blockers；确认 raw `SpacedReviewStore.upsert` 已移除、只能通过 `upsertFromKnowledgeCard` 写入 `applied + traceable + user asset`，approved 未 applied 卡不能入队，复习页刷新会对账 applied KnowledgeCard 并幂等修复缺失队列项。
 
 ## 4. Rescue Review Checklist
 
-- AI 生成内容默认 draft 或 pending，不自动写长期记忆、笔记、卡片或复习项。
+- AI 生成内容默认 draft 或 pending，不自动写长期记忆、笔记或正式知识资产；只有用户在 Review Inbox 中 `Apply` 后，KnowledgeCard 才会进入 spaced review 队列。
 - KnowledgeCardStore 只持久化卡片资产状态，不写长期记忆、笔记、高亮或 spaced review；`upsertCandidate` 会把 Review 前候选保持为 draft/pending + `AI-generated-draft`，raw `upsert` 只接受 draft/pending AI candidates，draft/pending envelope 使用 `ai-draft`，只有 Review apply 后的 user asset 才使用 `knowledge-card`。
 - SelectionKnowledgeCardProducer 只把选中文本写成待审 KnowledgeCard 和 ReviewItem；重复选中复用已有卡，不写长期记忆、笔记、高亮或 spaced review。
+- SpacedReviewStore 不暴露 raw asset upsert，只接受 `applied + traceable + user asset` 的 KnowledgeCard，复习记录只更新 `.knowledge/spaced_review_items_v1.json`，并保留 SourceRef 供回跳、不可用来源和未解析来源审计。
 - KnowledgeCardStore 的候选写入把同 ID 视为冲突，不用生成内容覆盖已有用户 note、quote 或 title；显式修改必须走 source-specific apply/update 路径。
 - 正式 KnowledgeCard、ReviewItem、Seminar synthesis、ConceptNode、ConceptEdge 必须有 SourceRef book anchor、jump link 或不可跳原因；hash-only fingerprint 只能保留为 draft/unapplied。
 - ConceptGraphStore 只写 `.knowledge/concept_graph_v1.json`，node/edge 写入保持 draft ownership；dossier 和局部探索只走有 traceable evidence 的边，并按 depth 和每层 width clamp；orphan node 与 broken edge 必须可报告，不把图谱推断自动写成用户确认资产。

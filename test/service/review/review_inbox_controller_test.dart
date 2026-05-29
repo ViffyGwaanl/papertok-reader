@@ -10,12 +10,14 @@ import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
 import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
+import 'package:papertok_reader/service/review/spaced_review_store.dart';
 
 void main() {
   late Directory tempRoot;
   late ReviewItemStore reviewStore;
   late KnowledgeCardStore cardStore;
   late ConceptGraphStore graphStore;
+  late SpacedReviewStore spacedReviewStore;
   late ReviewInboxController controller;
 
   setUp(() async {
@@ -25,10 +27,12 @@ void main() {
     reviewStore = ReviewItemStore(rootDir: tempRoot);
     cardStore = KnowledgeCardStore(rootDir: tempRoot);
     graphStore = ConceptGraphStore(rootDir: tempRoot);
+    spacedReviewStore = SpacedReviewStore(rootDir: tempRoot);
     controller = ReviewInboxController(
       reviewStore: reviewStore,
       knowledgeCardStore: cardStore,
       conceptGraphStore: graphStore,
+      spacedReviewStore: spacedReviewStore,
       now: () => 1000,
     );
   });
@@ -125,6 +129,22 @@ void main() {
     expect(appliedCard.isUserAsset, true);
   });
 
+  test('knowledge card apply creates a single spaced review item', () async {
+    await stageCardForReview('kc-spaced');
+
+    await controller.approve('knowledge-card:kc-spaced');
+    await controller.apply('knowledge-card:kc-spaced');
+    final reviewItems = await spacedReviewStore.list();
+
+    expect(reviewItems, hasLength(1));
+    expect(
+      reviewItems.single.id,
+      SpacedReviewStore.reviewIdForCard('kc-spaced'),
+    );
+    expect(reviewItems.single.cardId, 'kc-spaced');
+    expect(reviewItems.single.sourceRefs.single.hasEvidence, true);
+  });
+
   test('dismiss mirrors knowledge card without creating a user asset',
       () async {
     await stageCardForReview('kc-dismiss');
@@ -137,6 +157,7 @@ void main() {
     expect(dismissedCard!.reviewState, KnowledgeCardReviewState.dismissed);
     expect(dismissedCard.ownership, AiOutputOwnership.aiGeneratedDraft);
     expect(dismissedCard.isUserAsset, false);
+    expect(await spacedReviewStore.list(), isEmpty);
   });
 
   test('unsupported source types cannot be generically applied', () async {

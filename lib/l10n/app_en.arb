@@ -876,6 +876,34 @@
   "conceptGraphNoRelated": "No traceable related concepts yet.",
   "conceptGraphNoEvidence": "No source evidence available.",
   "conceptGraphLoadFailed": "Could not load concept graph",
+  "spacedReviewTitle": "Spaced review",
+  "spacedReviewDescription": "Review applied knowledge cards with source links back to the original text.",
+  "spacedReviewDueOnly": "Due",
+  "spacedReviewAllItems": "All",
+  "spacedReviewEmptyTitle": "Nothing due",
+  "spacedReviewEmptyBody": "Applied knowledge cards will appear here when they are ready for review.",
+  "spacedReviewDueNow": "Due now",
+  "spacedReviewScheduled": "Scheduled",
+  "spacedReviewAgain": "Again",
+  "spacedReviewHard": "Hard",
+  "spacedReviewGood": "Good",
+  "spacedReviewEasy": "Easy",
+  "spacedReviewIntervalDays": "{count}d interval",
+  "@spacedReviewIntervalDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spacedReviewHistoryCount": "{count} reviews",
+  "@spacedReviewHistoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reviewInboxActionFailed": "Review action failed",
   "memoryReviewInboxTargetDaily": "Daily",
   "memoryReviewInboxTargetLongTerm": "Long-term",

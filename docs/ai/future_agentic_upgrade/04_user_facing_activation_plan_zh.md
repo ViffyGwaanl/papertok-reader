@@ -18,7 +18,7 @@
 | 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`。 | 本分支已接入最小可用入口：打开 AI 面板、切到 `seminar_mode`，把选中文段放入研讨草稿。 | 当前是 prompt skill flow；结构化 role runtime、Shared Whiteboard UI、自动 Review handoff 还没有接成产品入口。 |
 | AI Chat 普通解释 | 阅读页选中文本 -> `AI`。 | 仍可用，保留原行为。 | 不自动生成 KnowledgeCard 或 ConceptGraph。 |
 | ConceptGraph / WikiLinks Explorer | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入最小 Explorer 和选中文本入口：可列出现有概念、按选中文本筛选相关概念、打开 dossier、查看局部路径、显示 orphan/broken link。 | 缺 RAG/GraphRAG producer 和更强的可视化布局；当前只探索已有 `ConceptGraphStore` 数据，不自动创建正式节点。 |
-| Spaced Review | 无正式用户入口。 | `SpacedReviewItem` 模型和 KnowledgeCard adapter 已有切片。 | 缺队列、复习页、到期调度和与 Review apply 的连接。 |
+| Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；KnowledgeCard 在 Review Inbox 中 `Apply` 后自动入队。 | 本分支已接入 `.knowledge/spaced_review_items_v1.json`、复习页、Again/Hard/Good/Easy 评分、来源跳转状态。 | 当前只接 KnowledgeCard apply；Seminar/Flashcard producer 和跨设备同步仍在后续任务中。 |
 | Sync / Export 知识资产 | 无正式用户入口。 | `KnowledgeSyncEnvelope` 和 policy 已定义 asset/cache/secret 边界。 | 缺 per-entity sync、冲突 Review UI、导出 manifest。 |
 
 ## 2. 已接入的用户路径
@@ -106,6 +106,40 @@ flutter test --no-pub \
   -r compact
 ```
 
+### 2.4 间隔复习
+
+用户路径：
+
+1. 阅读页选中文本生成 `KnowledgeCard`，或其他 producer 写入待审知识卡。
+2. 用户进入 `Settings -> AI -> Review inbox`。
+3. 用户先批准，再点击 `Apply`。
+4. 系统把已应用且有 SourceRef 的 KnowledgeCard 写入 `.knowledge/spaced_review_items_v1.json`。
+5. 用户进入 `Settings -> AI -> Spaced review / 间隔复习`。
+6. 页面刷新时会对账已应用 KnowledgeCard，补齐缺失的复习队列项。
+7. 页面显示到期复习项、答案、可跳转来源、不可用来源和未解析来源计数。
+8. 用户点击 `Again / Hard / Good / Easy` 后，系统记录复习历史并更新下一次到期时间。
+
+Gate：
+
+- 只有 `applied + traceable + user asset` 的 KnowledgeCard 能进入复习队列。
+- 同一 KnowledgeCard 重复入队不会制造重复复习项。
+- 如果 Review apply 已成功但队列写入曾失败，复习页刷新会按已应用 KnowledgeCard 对账恢复。
+- 复习项必须保留 SourceRef；可跳转、不可用、未解析来源都要显性展示。
+- 复习记录只更新 spaced review 队列，不写长期记忆、不写笔记、不写同步资产。
+- 删除书或恢复备份导致来源不可跳时，页面显示不可用或未解析状态，而不是静默丢失。
+
+验证命令：
+
+```bash
+flutter test --no-pub \
+  test/service/review/spaced_review_store_test.dart \
+  test/service/review/review_inbox_controller_test.dart \
+  test/providers/spaced_review_test.dart \
+  test/page/settings_page/spaced_review_page_test.dart \
+  test/page/settings_page/settings_navigation_compile_test.dart \
+  -r compact
+```
+
 ## 3. 剩余用户入口任务
 
 | TaskID | 状态 | Parent Capability | Goal | Depends On | Output Artifact | Acceptance |
@@ -118,7 +152,7 @@ flutter test --no-pub \
 | UFA-C03-T01 | Ready | Concept producer | 从 RAG/GraphRAG/KnowledgeCard 提取有证据的 ConceptNode/Edge 候选。 | E02, E03, E04 store | ConceptGraph producer adapter | 每个 node/edge 有 evidence 或 unavailable reason；写入为 draft。 |
 | UFA-C03-T02 | In Review | Concept Explorer page | 提供局部图谱探索入口。 | E04 dossier/explore | `ConceptGraphExplorerPage`, provider, Settings AI entry | 用户能打开概念页、看 1-2 层关系、跳回原文、检测 orphan/broken link。 |
 | UFA-C03-T03 | In Review | Reader concept entry | 阅读页选中文本可进入概念探索。 | UFA-C03-T02 | `ExcerptMenu` graph action, `ConceptGraphExplorerPage.initialQuery` | 选中文本可打开图谱页并筛选相关概念；没有相关概念时展示空态和草稿候选入口，不生成无证据正式节点。 |
-| UFA-C04-T01 | Ready | Spaced Review | Review apply 后生成复习队列。 | E03, E05 | scheduler/store/page | 复习项可回溯到卡片和原文；删除书后显示可解释状态。 |
+| UFA-C04-T01 | In Review | Spaced Review | Review apply 后生成复习队列。 | E03, E05 | `SpacedReviewStore`, `spacedReviewProvider`, `SpacedReviewPage`, Settings AI entry | 复习项可回溯到卡片和原文；删除书后显示可解释状态；评分记录下一次到期时间。 |
 | UFA-C05-T01 | Ready | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | export manifest, conflict Review UI | API key 不同步；派生索引不当作 source-of-truth；冲突进入 Review。 |
 
 ## 4. Agent 执行约束

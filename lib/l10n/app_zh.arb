@@ -773,6 +773,34 @@
   "conceptGraphNoRelated": "还没有可回溯的关联概念。",
   "conceptGraphNoEvidence": "没有可用来源证据。",
   "conceptGraphLoadFailed": "无法加载概念图谱",
+  "spacedReviewTitle": "间隔复习",
+  "spacedReviewDescription": "复习已应用的知识卡，并保留可跳回原文的来源链接。",
+  "spacedReviewDueOnly": "到期",
+  "spacedReviewAllItems": "全部",
+  "spacedReviewEmptyTitle": "暂无到期复习",
+  "spacedReviewEmptyBody": "应用后的知识卡会在需要复习时出现在这里。",
+  "spacedReviewDueNow": "现在到期",
+  "spacedReviewScheduled": "已排期",
+  "spacedReviewAgain": "再来",
+  "spacedReviewHard": "困难",
+  "spacedReviewGood": "掌握",
+  "spacedReviewEasy": "简单",
+  "spacedReviewIntervalDays": "{count} 天间隔",
+  "@spacedReviewIntervalDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spacedReviewHistoryCount": "{count} 次复习",
+  "@spacedReviewHistoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reviewInboxActionFailed": "审核操作失败",
   "memoryReviewInboxTargetDaily": "今日日记",
   "memoryReviewInboxTargetLongTerm": "长期记忆",

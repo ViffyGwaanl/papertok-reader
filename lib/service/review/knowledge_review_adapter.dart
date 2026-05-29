@@ -72,9 +72,9 @@ class KnowledgeCardReviewAdapter {
     required String id,
     int? dueAt,
   }) {
-    if (!card.canApply) {
+    if (!(card.canApply || card.isUserAsset)) {
       throw StateError(
-          'Only approved traceable cards can become review items.');
+          'Only approved or applied traceable cards can become review items.');
     }
     return SpacedReviewItem(
       id: id,
