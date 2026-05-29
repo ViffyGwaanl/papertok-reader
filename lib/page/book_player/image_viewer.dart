@@ -21,6 +21,26 @@ import 'package:image/image.dart' as img;
 import 'package:langchain_core/chat_models.dart';
 import 'package:photo_view/photo_view.dart';
 
+typedef ImageViewerAnalysisStreamFactory = Stream<String> Function({
+  required String base64,
+  required String mimeType,
+  required String prompt,
+});
+
+typedef ImageViewerKnowledgeCardCreator
+    = Future<ImageAnalysisKnowledgeCardProducerResult> Function({
+  required int bookId,
+  required String analysisText,
+  String? cfi,
+  String? href,
+  String? imageTitle,
+  String? imageAlt,
+  String? contextText,
+  String? chapterTitle,
+  String? bookTitle,
+  int? now,
+});
+
 class ImageViewer extends StatefulWidget {
   final String image;
   final int bookId;
@@ -31,6 +51,8 @@ class ImageViewer extends StatefulWidget {
   final String? contextText;
   final String? alt;
   final String? title;
+  final ImageViewerAnalysisStreamFactory? analysisStreamFactory;
+  final ImageViewerKnowledgeCardCreator? knowledgeCardCreator;
 
   const ImageViewer({
     super.key,
@@ -43,6 +65,8 @@ class ImageViewer extends StatefulWidget {
     this.contextText,
     this.alt,
     this.title,
+    this.analysisStreamFactory,
+    this.knowledgeCardCreator,
   });
 
   @override
@@ -163,8 +187,9 @@ $displayText''';
 
   Future<void> _createKnowledgeCardFromAnalysis(String analysisText) async {
     try {
-      final result =
-          await ImageAnalysisKnowledgeCardProducer().createFromImageAnalysis(
+      final creator = widget.knowledgeCardCreator ??
+          ImageAnalysisKnowledgeCardProducer().createFromImageAnalysis;
+      final result = await creator(
         bookId: widget.bookId,
         cfi: widget.cfi,
         href: widget.chapterHref,
@@ -218,14 +243,19 @@ $displayText''';
       ),
     ];
 
-    final stream = aiGenerateStream(
-      messages,
-      scope: AiRequestScope.imageAnalysis,
-      identifier: providerId,
-      config: model.isEmpty ? null : {'model': model},
-      regenerate: false,
-      useAgent: false,
-    );
+    final stream = widget.analysisStreamFactory?.call(
+          base64: base64,
+          mimeType: mimeType,
+          prompt: prompt,
+        ) ??
+        aiGenerateStream(
+          messages,
+          scope: AiRequestScope.imageAnalysis,
+          identifier: providerId,
+          config: model.isEmpty ? null : {'model': model},
+          regenerate: false,
+          useAgent: false,
+        );
 
     await PTBottomSheet.show<void>(
       context,
@@ -433,55 +463,61 @@ class _AiImageAnalysisSheetState extends State<AiImageAnalysisSheet> {
             .join('\n\n');
 
         final displayText = replyText.trim().isEmpty ? data : replyText;
+        final maxSheetHeight = (MediaQuery.sizeOf(context).height * 0.62)
+            .clamp(260.0, 640.0)
+            .toDouble();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              L10n.of(context).imageAnalyze,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: SingleChildScrollView(
-                child: StyledMarkdown(
-                  data: displayText,
-                  selectable: true,
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxSheetHeight),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                L10n.of(context).imageAnalyze,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: StyledMarkdown(
+                    data: displayText,
+                    selectable: true,
+                  ),
                 ),
               ),
-            ),
-            Wrap(
-              alignment: WrapAlignment.end,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: displayText));
-                    AnxToast.show(L10n.of(context).notesPageCopied);
-                  },
-                  child: Text(L10n.of(context).commonCopy),
-                ),
-                TextButton.icon(
-                  onPressed:
-                      displayText.trim().isEmpty || _creatingKnowledgeCard
-                          ? null
-                          : () => _createKnowledgeCard(displayText),
-                  icon: _creatingKnowledgeCard
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.style_outlined),
-                  label: Text(L10n.of(context).contextMenuKnowledgeCard),
-                ),
-                TextButton(
-                  onPressed: () => widget.onContinueAsk(displayText),
-                  child: Text(L10n.of(context).imageAnalyzeContinueAskAi),
-                ),
-              ],
-            ),
-          ],
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: displayText));
+                      AnxToast.show(L10n.of(context).notesPageCopied);
+                    },
+                    child: Text(L10n.of(context).commonCopy),
+                  ),
+                  TextButton.icon(
+                    onPressed:
+                        displayText.trim().isEmpty || _creatingKnowledgeCard
+                            ? null
+                            : () => _createKnowledgeCard(displayText),
+                    icon: _creatingKnowledgeCard
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.style_outlined),
+                    label: Text(L10n.of(context).contextMenuKnowledgeCard),
+                  ),
+                  TextButton(
+                    onPressed: () => widget.onContinueAsk(displayText),
+                    child: Text(L10n.of(context).imageAnalyzeContinueAskAi),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );

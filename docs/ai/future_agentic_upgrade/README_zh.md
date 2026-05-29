@@ -61,7 +61,6 @@
 
 | In Review 入口证据 | 现在已有 | 还要补的 agent task |
 | --- | --- | --- |
-| ImageViewer 点击级知识卡写入 | 图片解析 sheet 的 `Card` action 和 producer 服务测试已覆盖。 | 补 `ImageViewer -> AI Image Analysis -> Card -> KnowledgeCardStore/ReviewItemStore` 点击级测试和可注入分析流。 |
 | 阅读页真实选中文本 fallback | `ExcerptMenu` 注入 reader context 的 `Card` 点击测试已覆盖。 | 补不注入 creator/context 时走真实 `epubPlayerKey` fallback 的 widget 证据。 |
 | Export conflict 跨页 apply 点击级证据 | 导出页可发送冲突并显示 `Review inbox` 直达入口；service/controller/store 覆盖 safe conflict approve/apply/export；Review Inbox 单页覆盖 safe conflict actions。 | 补单个 widget/provider 测试从导出页 push 到 Review Inbox 后点击 `Approve -> Approved -> Apply`；这是证据任务，不是新增数据能力。 |
 | AI Chat 流式中不自动生成知识资产 | 回答完成后的显式 `知识卡` action 和 source grounding 已覆盖。 | 补 streaming 中按钮不可用且 producer 调用数为零的 UI gate 测试。 |
@@ -69,7 +68,7 @@
 | 能力 | 用户怎么用 | 状态 |
 | --- | --- | --- |
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入；widget 覆盖菜单入口可见、点击 `Card` 后调用 producer、显示 Review feedback 并关闭菜单。 |
-| 图片解析生成知识卡 | 阅读页点开图片 -> `AI Image Analysis / AI图片解析` -> `Card / 知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入；图片解析结果只作为 pending KnowledgeCard，不自动写长期资产。 |
+| 图片解析生成知识卡 | 阅读页点开图片 -> `AI Image Analysis / AI图片解析` -> `Card / 知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入；ImageViewer 工具栏点击、可注入分析流、弹层 `Card` 点击、pending KnowledgeCard 和 pending ReviewItem 已有 widget/service 证据；图片解析结果只作为 pending KnowledgeCard，不自动写长期资产。 |
 | 一键开启研讨 | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 AI Seminar runtime/UI：展示 evidence、role turns、Shared Whiteboard、synthesis，支持取消、失败重试，并可把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox；页面级 widget 覆盖点击 `Send to Review` 后写入 pending synthesis/card/flashcard handoff；不自动写长期资产。 |
 | AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入显性 message action；回答旁会显示 `可跳转来源` 或 `已标记不可用` 来源状态；从选中文本打开 AI 时保留精确 SourceRef，并随 `conversationV2` 历史持久化，历史重载后仍优先使用原始 reader SourceRef；如果用户把预填草稿改成无关问题，本轮不保存旧 reader SourceRef，短公共片段只靠碰巧包含不会保留精确 reader grounding；reader-grounded card 会带保守 `conceptRefs`；用户 Apply 后进入 draft ConceptGraph 候选和 pending relation ReviewItem。纯聊天只保留 conversation provenance，不直接写长期资产或正式 ConceptGraph。 |
 | Review Inbox | `Settings -> AI -> Review inbox`。 | 已有统一 UI；待审项显示状态、类型、证据摘录、来源标题/位置、不可用来源原因和打开来源动作；内容依赖 producer 写入。 |
