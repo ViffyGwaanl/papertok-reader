@@ -145,7 +145,11 @@ class KnowledgeAssetExportState {
     bool clearError = false,
     bool clearRemotePreview = false,
     bool clearRemoteUpload = false,
+    bool clearReviewHandoffCounts = false,
+    bool clearRemoteReviewHandoffCounts = false,
   }) {
+    final clearRemoteHandoffCounts =
+        clearReviewHandoffCounts || clearRemoteReviewHandoffCounts;
     return KnowledgeAssetExportState(
       snapshot: snapshot ?? this.snapshot,
       busy: busy ?? this.busy,
@@ -154,23 +158,33 @@ class KnowledgeAssetExportState {
       lastHtmlReportPath: lastHtmlReportPath ?? this.lastHtmlReportPath,
       lastAnkiPath: lastAnkiPath ?? this.lastAnkiPath,
       lastSyncBundlePath: lastSyncBundlePath ?? this.lastSyncBundlePath,
-      lastConflictReviewCount:
-          lastConflictReviewCount ?? this.lastConflictReviewCount,
-      lastRemoteConflictReviewCount:
-          lastRemoteConflictReviewCount ?? this.lastRemoteConflictReviewCount,
-      lastRemoteConflictStageCount:
-          lastRemoteConflictStageCount ?? this.lastRemoteConflictStageCount,
-      lastRemoteConflictStageSkippedCount:
-          lastRemoteConflictStageSkippedCount ??
+      lastConflictReviewCount: clearReviewHandoffCounts
+          ? null
+          : lastConflictReviewCount ?? this.lastConflictReviewCount,
+      lastRemoteConflictReviewCount: clearRemoteHandoffCounts
+          ? lastRemoteConflictReviewCount
+          : lastRemoteConflictReviewCount ?? this.lastRemoteConflictReviewCount,
+      lastRemoteConflictStageCount: clearRemoteHandoffCounts
+          ? lastRemoteConflictStageCount
+          : lastRemoteConflictStageCount ?? this.lastRemoteConflictStageCount,
+      lastRemoteConflictStageSkippedCount: clearRemoteHandoffCounts
+          ? lastRemoteConflictStageSkippedCount
+          : lastRemoteConflictStageSkippedCount ??
               this.lastRemoteConflictStageSkippedCount,
-      lastRemoteIncomingReviewCount:
-          lastRemoteIncomingReviewCount ?? this.lastRemoteIncomingReviewCount,
-      lastRemoteIncomingSkippedCount:
-          lastRemoteIncomingSkippedCount ?? this.lastRemoteIncomingSkippedCount,
-      lastRemoteReviewHistoryReviewCount: lastRemoteReviewHistoryReviewCount ??
-          this.lastRemoteReviewHistoryReviewCount,
-      lastRemoteReviewHistorySkippedCount:
-          lastRemoteReviewHistorySkippedCount ??
+      lastRemoteIncomingReviewCount: clearRemoteHandoffCounts
+          ? lastRemoteIncomingReviewCount
+          : lastRemoteIncomingReviewCount ?? this.lastRemoteIncomingReviewCount,
+      lastRemoteIncomingSkippedCount: clearRemoteHandoffCounts
+          ? lastRemoteIncomingSkippedCount
+          : lastRemoteIncomingSkippedCount ??
+              this.lastRemoteIncomingSkippedCount,
+      lastRemoteReviewHistoryReviewCount: clearRemoteHandoffCounts
+          ? lastRemoteReviewHistoryReviewCount
+          : lastRemoteReviewHistoryReviewCount ??
+              this.lastRemoteReviewHistoryReviewCount,
+      lastRemoteReviewHistorySkippedCount: clearRemoteHandoffCounts
+          ? lastRemoteReviewHistorySkippedCount
+          : lastRemoteReviewHistorySkippedCount ??
               this.lastRemoteReviewHistorySkippedCount,
       lastRemoteUploadPath: clearRemoteUpload
           ? null
@@ -441,6 +455,7 @@ class KnowledgeAssetExportNotifier
         lastRemotePreconditionFailed: result.remotePreconditionFailed,
         lastSyncBundlePath: result.file.path,
         clearError: true,
+        clearReviewHandoffCounts: true,
       );
     } catch (error) {
       final writebackError =
@@ -454,6 +469,114 @@ class KnowledgeAssetExportNotifier
             writebackError?.conditionalWriteSupported,
         lastRemotePreconditionFailed: writebackError?.remotePreconditionFailed,
         lastError: error.toString(),
+      );
+    }
+  }
+
+  Future<void> runSafeRemoteSync() async {
+    state = state.copyWith(
+      busy: true,
+      clearError: true,
+      clearRemoteUpload: true,
+    );
+    try {
+      final preview = await _service.previewRemoteSync();
+      if (preview.incomingCount == 0 && preview.conflictCount == 0) {
+        final result = await _service.uploadRemoteSyncBundle();
+        state = state.copyWith(
+          busy: false,
+          snapshot: AsyncValue<KnowledgeAssetExportSnapshot>.data(
+            result.snapshot,
+          ),
+          remotePreview: result.preview,
+          lastRemoteUploadPath: result.remotePath,
+          lastRemoteUploadCount: result.uploadedCount,
+          lastRemoteRollbackPath: result.rollbackSnapshotFile?.path,
+          lastRemoteRollbackRestored: result.rollbackRestored,
+          lastRemotePartialRemoved: result.removedPartialRemote,
+          lastRemoteConditionalWriteSupported: result.conditionalWriteSupported,
+          lastRemotePreconditionFailed: result.remotePreconditionFailed,
+          lastSyncBundlePath: result.file.path,
+          clearError: true,
+          clearReviewHandoffCounts: true,
+        );
+        return;
+      }
+
+      var latestPreview = preview;
+      KnowledgeAssetExportSnapshot? snapshot;
+      int? conflictReviewCount;
+      int? conflictStageCount;
+      int? conflictStageSkippedCount;
+      int? incomingReviewCount;
+      int? incomingSkippedCount;
+      int? reviewHistoryReviewCount;
+      int? reviewHistorySkippedCount;
+
+      if (preview.conflictCount > 0) {
+        final stageResult =
+            await _service.stageRemoteKnowledgeCardConflictsToReview();
+        snapshot = stageResult.snapshot;
+        latestPreview = stageResult.remotePreview;
+        conflictStageCount = stageResult.stagedCount;
+        conflictStageSkippedCount = stageResult.skippedCount;
+
+        final conflictResult = await _service.submitRemoteConflictsToReview();
+        snapshot = conflictResult.snapshot;
+        if (conflictResult.remotePreview case final remotePreview?) {
+          latestPreview = remotePreview;
+        }
+        conflictReviewCount = conflictResult.submittedCount;
+      }
+
+      if (preview.incomingCount > 0) {
+        final incomingResult = await _service.submitRemoteIncomingToReview();
+        snapshot = incomingResult.snapshot;
+        latestPreview = incomingResult.remotePreview;
+        incomingReviewCount = incomingResult.submittedCount;
+        incomingSkippedCount = incomingResult.skippedCount;
+      }
+
+      if (preview.incoming.any(
+        (envelope) =>
+            envelope.entityType == KnowledgeSyncEntityType.reviewHistory,
+      )) {
+        final historyResult =
+            await _service.submitRemoteReviewHistoryToReview();
+        snapshot = historyResult.snapshot;
+        latestPreview = historyResult.remotePreview;
+        reviewHistoryReviewCount = historyResult.submittedCount;
+        reviewHistorySkippedCount = historyResult.skippedCount;
+      }
+
+      snapshot ??= await _service.buildSnapshot();
+      state = state.copyWith(
+        busy: false,
+        snapshot: AsyncValue<KnowledgeAssetExportSnapshot>.data(snapshot),
+        remotePreview: latestPreview,
+        lastRemoteConflictReviewCount: conflictReviewCount,
+        lastRemoteConflictStageCount: conflictStageCount,
+        lastRemoteConflictStageSkippedCount: conflictStageSkippedCount,
+        lastRemoteIncomingReviewCount: incomingReviewCount,
+        lastRemoteIncomingSkippedCount: incomingSkippedCount,
+        lastRemoteReviewHistoryReviewCount: reviewHistoryReviewCount,
+        lastRemoteReviewHistorySkippedCount: reviewHistorySkippedCount,
+        clearError: true,
+        clearRemoteReviewHandoffCounts: true,
+      );
+    } catch (error) {
+      final writebackError =
+          error is KnowledgeRemoteWritebackException ? error : null;
+      state = state.copyWith(
+        busy: false,
+        lastRemoteRollbackPath: writebackError?.rollbackSnapshotPath,
+        lastRemoteRollbackRestored: writebackError?.rollbackRestored,
+        lastRemotePartialRemoved: writebackError?.removedPartialRemote,
+        lastRemoteConditionalWriteSupported:
+            writebackError?.conditionalWriteSupported,
+        lastRemotePreconditionFailed: writebackError?.remotePreconditionFailed,
+        lastError: error.toString(),
+        clearRemotePreview: writebackError == null,
       );
     }
   }

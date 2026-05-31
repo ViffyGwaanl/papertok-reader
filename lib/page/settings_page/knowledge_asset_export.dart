@@ -161,6 +161,16 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
+            icon: const Icon(Icons.sync_outlined),
+            label: Text(l10n.knowledgeExportRunSafeRemoteSync),
+            onPressed: state.busy
+                ? null
+                : () => ref
+                    .read(knowledgeAssetExportProvider.notifier)
+                    .runSafeRemoteSync(),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
             icon: const Icon(Icons.cloud_upload_outlined),
             label: Text(l10n.knowledgeExportUploadRemoteSync),
             onPressed: state.busy

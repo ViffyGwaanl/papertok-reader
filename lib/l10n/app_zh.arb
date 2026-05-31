@@ -921,6 +921,7 @@
     }
   },
   "knowledgeExportPreviewRemoteSync": "预览远端同步",
+  "knowledgeExportRunSafeRemoteSync": "运行安全远端同步",
   "knowledgeExportRemotePreviewTitle": "远端同步预览",
   "knowledgeExportRemoteCount": "{count} 个远端",
   "@knowledgeExportRemoteCount": {

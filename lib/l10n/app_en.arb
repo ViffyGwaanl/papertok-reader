@@ -1024,6 +1024,7 @@
     }
   },
   "knowledgeExportPreviewRemoteSync": "Preview remote sync",
+  "knowledgeExportRunSafeRemoteSync": "Run safe remote sync",
   "knowledgeExportRemotePreviewTitle": "Remote sync preview",
   "knowledgeExportRemoteCount": "{count} remote",
   "@knowledgeExportRemoteCount": {

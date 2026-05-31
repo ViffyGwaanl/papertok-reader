@@ -68,12 +68,18 @@ void main() {
     await tester.pump();
 
     expect(service.previewedRemoteSync, true);
-    expect(find.text('Remote sync preview'), findsOneWidget);
     expect(find.text('Remote sync status: Review required'), findsOneWidget);
     expect(
       find.textContaining('Send incoming items or conflicts to Review'),
       findsOneWidget,
     );
+    await tester.scrollUntilVisible(
+      find.text('Remote sync preview'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Remote sync preview'), findsOneWidget);
     expect(find.text('3 remote'), findsOneWidget);
     expect(find.text('2 incoming'), findsOneWidget);
     expect(find.text('1 remote conflict'), findsOneWidget);
@@ -239,6 +245,58 @@ void main() {
     );
     expect(find.text('Remote sync preview'), findsNothing);
     expect(find.textContaining('remote unavailable'), findsOneWidget);
+  });
+
+  testWidgets('run safe remote sync batches blockers into Review',
+      (tester) async {
+    final service = _FakeKnowledgeAssetExportService();
+    final reviewController = _FakeReviewInboxController();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          knowledgeAssetExportServiceProvider.overrideWithValue(service),
+          reviewInboxControllerProvider.overrideWithValue(reviewController),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: const KnowledgeAssetExportPage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Run safe remote sync'));
+    await tester.pumpAndSettle();
+
+    expect(service.previewedRemoteSync, true);
+    expect(service.stagedRemoteKnowledgeCardConflictsToReview, true);
+    expect(service.submittedRemoteConflictsToReview, true);
+    expect(service.submittedRemoteIncomingToReview, true);
+    expect(service.submittedRemoteReviewHistoryToReview, true);
+    expect(service.uploadedRemoteSyncBundle, false);
+    expect(find.text('Remote sync status: Review required'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('1 remote incoming sent to Review inbox'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('1 remote incoming sent to Review inbox'), findsOneWidget);
+    expect(find.text('1 remote conflict sent to Review inbox'), findsOneWidget);
+    expect(
+      find.text('1 safe remote card conflict staged for Review inbox'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('1 remote review history sent to Review inbox'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('remote writeback rollback status is visible', (tester) async {
