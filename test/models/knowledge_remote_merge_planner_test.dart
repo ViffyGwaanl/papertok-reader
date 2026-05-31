@@ -187,4 +187,48 @@ void main() {
     expect(plan.conflicts.single.requiresConflictReview, true);
     expect(plan.conflicts.single.conflictReason, 'missing-required-fields');
   });
+
+  test('whitespace padded id enters review instead of disappearing', () {
+    final plan = KnowledgeRemoteMergePlanner.plan(
+      local: const [],
+      remote: [envelope(' card-1 ', updatedAt: 100)],
+    );
+
+    expect(plan.incoming, isEmpty);
+    expect(plan.outgoing, isEmpty);
+    expect(plan.conflicts, hasLength(1));
+    expect(plan.conflicts.single.id, ' card-1 ');
+    expect(plan.conflicts.single.conflictReason, 'malformed-id');
+  });
+
+  test('unsafe base envelope enters review before diff decisions', () {
+    final plan = KnowledgeRemoteMergePlanner.plan(
+      local: [envelope('future-card', updatedAt: 200)],
+      remote: [envelope('future-card', updatedAt: 300)],
+      base: [
+        envelope(
+          'future-card',
+          updatedAt: 100,
+          schemaVersion: 99,
+        ),
+        envelope(
+          'secret-base',
+          updatedAt: 100,
+          payload: const {
+            'title': 'Base',
+            'provider': {'apiKey': 'must-not-sync'},
+          },
+        ),
+      ],
+      currentSchemaVersion: 1,
+    );
+
+    expect(plan.incoming, isEmpty);
+    expect(plan.outgoing, isEmpty);
+    expect(plan.conflicts.map((e) => e.id), ['future-card', 'secret-base']);
+    expect(
+      plan.conflicts.map((e) => e.conflictReason),
+      ['unknown-schema-version', 'contains-secret'],
+    );
+  });
 }

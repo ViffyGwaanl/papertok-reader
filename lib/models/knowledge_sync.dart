@@ -331,19 +331,25 @@ class KnowledgeRemoteMergePlanner {
     final incoming = <KnowledgeSyncEnvelope>[];
     final outgoing = <KnowledgeSyncEnvelope>[];
     final conflicts = <KnowledgeSyncEnvelope>[];
+    final unsafeIds = <String>{};
 
     for (final envelope in [...localList, ...remoteList, ...baseList]) {
-      if (envelope.id.trim().isEmpty) {
+      final idConflictReason = _idConflictReason(envelope);
+      if (idConflictReason != null) {
+        unsafeIds.add(envelope.id.trim());
         conflicts.add(
           _reviewEnvelope(
             envelope,
-            envelope.conflictReason ?? 'missing-required-fields',
+            envelope.conflictReason ?? idConflictReason,
           ),
         );
       }
     }
 
     for (final id in _orderedIds(localList, remoteList, baseList)) {
+      if (unsafeIds.contains(id)) {
+        continue;
+      }
       final localEnvelope = localById[id];
       final remoteEnvelope = remoteById[id];
       final baseEnvelope = baseById[id];
@@ -370,11 +376,23 @@ class KnowledgeRemoteMergePlanner {
               remoteEnvelope,
               currentSchemaVersion: currentSchemaVersion,
             );
-      if (invalidLocal != null || invalidRemote != null) {
+      final invalidBase = baseEnvelope == null
+          ? null
+          : _safetyConflictReason(
+              baseEnvelope,
+              currentSchemaVersion: currentSchemaVersion,
+            );
+      if (invalidLocal != null ||
+          invalidRemote != null ||
+          invalidBase != null) {
         conflicts.add(
           _reviewEnvelope(
-            invalidRemote == null ? localEnvelope! : remoteEnvelope!,
-            invalidRemote ?? invalidLocal!,
+            invalidRemote != null
+                ? remoteEnvelope!
+                : invalidLocal != null
+                    ? localEnvelope!
+                    : baseEnvelope!,
+            invalidRemote ?? invalidLocal ?? invalidBase!,
           ),
         );
         continue;
@@ -446,8 +464,19 @@ class KnowledgeRemoteMergePlanner {
   ) {
     return {
       for (final envelope in envelopes)
-        if (envelope.id.trim().isNotEmpty) envelope.id: envelope,
+        if (envelope.id.trim().isNotEmpty) envelope.id.trim(): envelope,
     };
+  }
+
+  static String? _idConflictReason(KnowledgeSyncEnvelope envelope) {
+    final trimmed = envelope.id.trim();
+    if (trimmed.isEmpty) {
+      return 'missing-required-fields';
+    }
+    if (trimmed != envelope.id) {
+      return 'malformed-id';
+    }
+    return null;
   }
 
   static List<String> _duplicateIds(
