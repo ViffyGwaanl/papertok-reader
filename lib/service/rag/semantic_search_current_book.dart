@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
@@ -19,6 +19,55 @@ typedef AiCurrentBookQueryEmbedder = Future<List<double>> Function(
 typedef AiCurrentBookVectorScanObserver = void Function(
   List<Map<String, Object?>> rows,
 );
+
+typedef AiCurrentBookSearchProgressObserver = void Function(
+  AiCurrentBookSearchProgress progress,
+);
+
+typedef AiCurrentBookVectorPageScorer
+    = Future<List<AiCurrentBookVectorCandidate>> Function({
+  required List<double> queryVector,
+  required double queryNorm,
+  required List<Map<String, Object?>> rows,
+  required Map<int, String?> jsonById,
+});
+
+class AiCurrentBookSearchCancellationToken {
+  bool _cancelled = false;
+
+  bool get isCancelled => _cancelled;
+
+  void cancel() {
+    _cancelled = true;
+  }
+}
+
+class AiCurrentBookSearchProgress {
+  const AiCurrentBookSearchProgress({
+    required this.scannedRows,
+    required this.totalRows,
+    this.cancelled = false,
+  });
+
+  final int scannedRows;
+  final int totalRows;
+  final bool cancelled;
+
+  double get progress {
+    if (totalRows <= 0) return 0;
+    return (scannedRows / totalRows).clamp(0.0, 1.0).toDouble();
+  }
+}
+
+class AiCurrentBookVectorCandidate {
+  const AiCurrentBookVectorCandidate({
+    required this.row,
+    required this.score,
+  });
+
+  final Map<String, Object?> row;
+  final double score;
+}
 
 class AiSemanticSearchEvidence {
   const AiSemanticSearchEvidence({
@@ -58,6 +107,7 @@ class AiSemanticSearchResult {
     required this.bookId,
     required this.query,
     required this.evidence,
+    this.cancelled = false,
     this.message,
     this.indexInfo,
   });
@@ -66,6 +116,7 @@ class AiSemanticSearchResult {
   final int bookId;
   final String query;
   final List<AiSemanticSearchEvidence> evidence;
+  final bool cancelled;
   final String? message;
   final AiBookIndexInfo? indexInfo;
 
@@ -73,6 +124,7 @@ class AiSemanticSearchResult {
         'ok': ok,
         'bookId': bookId,
         'query': query,
+        if (cancelled) 'cancelled': true,
         if (message != null) 'message': message,
         if (indexInfo != null)
           'index': {
@@ -89,12 +141,12 @@ class SemanticSearchCurrentBook {
     AiIndexDatabase? database,
     AiCurrentBookQueryEmbedder? embedQuery,
     int vectorScanPageSize = 256,
-    int vectorScanYieldEvery = 32,
+    AiCurrentBookVectorPageScorer? scoreVectorPage,
     @visibleForTesting AiCurrentBookVectorScanObserver? onVectorScanPage,
   })  : _db = database ?? AiIndexDatabase.instance,
         _embedQuery = embedQuery ?? _defaultEmbedQuery,
         _vectorScanPageSize = vectorScanPageSize.clamp(1, 512).toInt(),
-        _vectorScanYieldEvery = vectorScanYieldEvery.clamp(1, 128).toInt(),
+        _scoreVectorPage = scoreVectorPage ?? _defaultScoreVectorPage,
         _onVectorScanPage = onVectorScanPage;
 
   static final _globalSearchLock = _AsyncLock();
@@ -102,7 +154,7 @@ class SemanticSearchCurrentBook {
   final AiIndexDatabase _db;
   final AiCurrentBookQueryEmbedder _embedQuery;
   final int _vectorScanPageSize;
-  final int _vectorScanYieldEvery;
+  final AiCurrentBookVectorPageScorer _scoreVectorPage;
   final AiCurrentBookVectorScanObserver? _onVectorScanPage;
 
   static Future<List<double>> _defaultEmbedQuery(
@@ -123,6 +175,8 @@ class SemanticSearchCurrentBook {
     int maxResults = 6,
     String? embeddingModel,
     String? providerId,
+    AiCurrentBookSearchCancellationToken? cancelToken,
+    AiCurrentBookSearchProgressObserver? onProgress,
   }) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
@@ -143,6 +197,8 @@ class SemanticSearchCurrentBook {
         maxResults: maxResults,
         embeddingModel: embeddingModel,
         providerId: providerId,
+        cancelToken: cancelToken,
+        onProgress: onProgress,
       ),
     );
   }
@@ -154,7 +210,13 @@ class SemanticSearchCurrentBook {
     required int maxResults,
     String? embeddingModel,
     String? providerId,
+    AiCurrentBookSearchCancellationToken? cancelToken,
+    AiCurrentBookSearchProgressObserver? onProgress,
   }) async {
+    if (cancelToken?.isCancelled ?? false) {
+      return _cancelledResult(bookId: bookId, query: query);
+    }
+
     final info = await _db.getBookIndexInfo(bookId);
     if (info == null || info.chunkCount <= 0) {
       return AiSemanticSearchResult(
@@ -183,16 +245,33 @@ class SemanticSearchCurrentBook {
       model: effectiveModel,
       providerId: effectiveProviderId.isEmpty ? null : effectiveProviderId,
     );
+    if (cancelToken?.isCancelled ?? false) {
+      _emitProgress(
+        onProgress: onProgress,
+        scannedRows: 0,
+        totalRows: info.chunkCount,
+        cancelled: true,
+      );
+      return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
+    }
     final qNorm = VectorMath.l2Norm(qVec);
 
     final db = await _db.database;
     final k = maxResults.clamp(1, 10);
-    final scored = <({Map<String, Object?> row, double score})>[];
+    final scored = <AiCurrentBookVectorCandidate>[];
     var scannedRows = 0;
     var lastId = 0;
-    var rowsSinceYield = 0;
 
     while (true) {
+      if (cancelToken?.isCancelled ?? false) {
+        _emitProgress(
+          onProgress: onProgress,
+          scannedRows: scannedRows,
+          totalRows: info.chunkCount,
+          cancelled: true,
+        );
+        return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
+      }
       final rows = await db.query(
         'ai_chunks',
         columns: [
@@ -216,31 +295,50 @@ class SemanticSearchCurrentBook {
       _onVectorScanPage?.call(rows);
       scannedRows += rows.length;
       lastId = (rows.last['id'] as num?)?.toInt() ?? lastId;
+      _emitProgress(
+        onProgress: onProgress,
+        scannedRows: scannedRows,
+        totalRows: info.chunkCount,
+      );
+      if (cancelToken?.isCancelled ?? false) {
+        _emitProgress(
+          onProgress: onProgress,
+          scannedRows: scannedRows,
+          totalRows: info.chunkCount,
+          cancelled: true,
+        );
+        return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
+      }
 
       final jsonById = await _embeddingJsonForRows(db, rows);
-
-      for (final r in rows) {
-        final id = (r['id'] as num?)?.toInt();
-        final v = AiVectorCodec.decodeVector(
-          blob: r['embedding_blob'],
-          jsonText: id == null ? null : jsonById[id],
+      if (cancelToken?.isCancelled ?? false) {
+        _emitProgress(
+          onProgress: onProgress,
+          scannedRows: scannedRows,
+          totalRows: info.chunkCount,
+          cancelled: true,
         );
-        if (v == null || v.isEmpty) continue;
+        return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
+      }
 
-        final norm = (r['embedding_norm'] as num?)?.toDouble();
-        final score = VectorMath.cosineSimilarity(
-          qVec,
-          v,
-          aNorm: qNorm,
-          bNorm: norm,
+      final pageCandidates = await _scoreVectorPage(
+        queryVector: qVec,
+        queryNorm: qNorm,
+        rows: rows,
+        jsonById: jsonById,
+      );
+      if (cancelToken?.isCancelled ?? false) {
+        _emitProgress(
+          onProgress: onProgress,
+          scannedRows: scannedRows,
+          totalRows: info.chunkCount,
+          cancelled: true,
         );
-        _addScoredCandidate(scored, (row: r, score: score), k);
+        return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
+      }
 
-        rowsSinceYield++;
-        if (rowsSinceYield >= _vectorScanYieldEvery) {
-          rowsSinceYield = 0;
-          await Future<void>.delayed(Duration.zero);
-        }
+      for (final candidate in pageCandidates) {
+        _addScoredCandidate(scored, candidate, k);
       }
 
       // Yield between pages so large current-book scans do not monopolize the
@@ -373,8 +471,8 @@ class SemanticSearchCurrentBook {
   }
 
   void _addScoredCandidate(
-    List<({Map<String, Object?> row, double score})> scored,
-    ({Map<String, Object?> row, double score}) candidate,
+    List<AiCurrentBookVectorCandidate> scored,
+    AiCurrentBookVectorCandidate candidate,
     int limit,
   ) {
     if (scored.length < limit) {
@@ -393,6 +491,114 @@ class SemanticSearchCurrentBook {
       scored[minIndex] = candidate;
     }
   }
+
+  AiSemanticSearchResult _cancelledResult({
+    required int bookId,
+    required String query,
+    AiBookIndexInfo? indexInfo,
+  }) {
+    return AiSemanticSearchResult(
+      ok: false,
+      bookId: bookId,
+      query: query,
+      evidence: const [],
+      cancelled: true,
+      message: 'Semantic search cancelled.',
+      indexInfo: indexInfo,
+    );
+  }
+
+  void _emitProgress({
+    required AiCurrentBookSearchProgressObserver? onProgress,
+    required int scannedRows,
+    required int totalRows,
+    bool cancelled = false,
+  }) {
+    onProgress?.call(
+      AiCurrentBookSearchProgress(
+        scannedRows: scannedRows,
+        totalRows: totalRows,
+        cancelled: cancelled,
+      ),
+    );
+  }
+}
+
+Future<List<AiCurrentBookVectorCandidate>> _defaultScoreVectorPage({
+  required List<double> queryVector,
+  required double queryNorm,
+  required List<Map<String, Object?>> rows,
+  required Map<int, String?> jsonById,
+}) async {
+  final encoded = await compute(
+    _scoreCurrentBookVectorPage,
+    <String, Object?>{
+      'queryVector': queryVector,
+      'queryNorm': queryNorm,
+      'rows': rows,
+      'jsonById': {
+        for (final entry in jsonById.entries) entry.key.toString(): entry.value,
+      },
+    },
+  );
+  return encoded
+      .map(
+        (item) => AiCurrentBookVectorCandidate(
+          row: Map<String, Object?>.from(item['row'] as Map),
+          score: (item['score'] as num).toDouble(),
+        ),
+      )
+      .toList(growable: false);
+}
+
+List<Map<String, Object?>> _scoreCurrentBookVectorPage(
+  Map<String, Object?> input,
+) {
+  final queryVector = ((input['queryVector'] as List?) ?? const [])
+      .whereType<num>()
+      .map((value) => value.toDouble())
+      .toList(growable: false);
+  final queryNorm = (input['queryNorm'] as num?)?.toDouble();
+  final rows = ((input['rows'] as List?) ?? const [])
+      .whereType<Map>()
+      .map((row) => Map<String, Object?>.from(row))
+      .toList(growable: false);
+  final jsonById = Map<String, Object?>.from(
+    (input['jsonById'] as Map?) ?? const {},
+  );
+
+  final out = <Map<String, Object?>>[];
+  for (final row in rows) {
+    final id = (row['id'] as num?)?.toInt();
+    final vector = AiVectorCodec.decodeVector(
+      blob: row['embedding_blob'],
+      jsonText: id == null ? null : jsonById[id.toString()]?.toString(),
+    );
+    if (vector == null || vector.isEmpty) continue;
+
+    final norm = (row['embedding_norm'] as num?)?.toDouble();
+    final score = VectorMath.cosineSimilarity(
+      queryVector,
+      vector,
+      aNorm: queryNorm,
+      bNorm: norm,
+    );
+    out.add(
+      {
+        'row': {
+          'id': row['id'],
+          'chapter_href': row['chapter_href'],
+          'chapter_title': row['chapter_title'],
+          'chunk_index': row['chunk_index'],
+          'embedding_input_hash': row['embedding_input_hash'],
+          'context_version': row['context_version'],
+          'context_created_at': row['context_created_at'],
+        },
+        'score': score,
+      },
+    );
+  }
+  return out;
 }
 
 class _AsyncLock {

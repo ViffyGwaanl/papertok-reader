@@ -15,6 +15,7 @@ class TocSearchState {
     this.scrollOffset = 0.0,
     this.semanticResults = const [],
     this.isSemanticSearching = false,
+    this.semanticProgress = 0.0,
     this.hasAiIndex = false,
   });
 
@@ -29,6 +30,9 @@ class TocSearchState {
 
   /// Whether a semantic search is currently running.
   final bool isSemanticSearching;
+
+  /// Progress for the AI semantic search scan, when known.
+  final double semanticProgress;
 
   /// Whether the current book has an AI semantic index available.
   final bool hasAiIndex;
@@ -52,6 +56,7 @@ class TocSearchState {
     double? scrollOffset,
     List<AiSemanticSearchEvidence>? semanticResults,
     bool? isSemanticSearching,
+    double? semanticProgress,
     bool? hasAiIndex,
   }) {
     return TocSearchState(
@@ -62,6 +67,7 @@ class TocSearchState {
       scrollOffset: scrollOffset ?? this.scrollOffset,
       semanticResults: semanticResults ?? this.semanticResults,
       isSemanticSearching: isSemanticSearching ?? this.isSemanticSearching,
+      semanticProgress: semanticProgress ?? this.semanticProgress,
       hasAiIndex: hasAiIndex ?? this.hasAiIndex,
     );
   }
@@ -112,7 +118,16 @@ class TocSearch extends _$TocSearch {
   void startSemanticSearch() {
     state = state.copyWith(
       isSemanticSearching: true,
+      semanticProgress: 0.0,
       semanticResults: const [],
+    );
+  }
+
+  /// Update semantic search progress.
+  void updateSemanticProgress(double progress) {
+    state = state.copyWith(
+      semanticProgress: progress.clamp(0.0, 1.0).toDouble(),
+      isSemanticSearching: true,
     );
   }
 
@@ -121,6 +136,7 @@ class TocSearch extends _$TocSearch {
     state = state.copyWith(
       semanticResults: List<AiSemanticSearchEvidence>.unmodifiable(results),
       isSemanticSearching: false,
+      semanticProgress: 1.0,
     );
   }
 
@@ -129,8 +145,16 @@ class TocSearch extends _$TocSearch {
     state = state.copyWith(isSemanticSearching: false);
   }
 
+  /// Cancel semantic search and discard partial semantic results.
+  void cancelSemanticSearch() {
+    state = state.copyWith(
+      isSemanticSearching: false,
+      semanticProgress: 0.0,
+      semanticResults: const [],
+    );
+  }
+
   void clear() {
     state = TocSearchState(hasAiIndex: state.hasAiIndex);
   }
 }
-

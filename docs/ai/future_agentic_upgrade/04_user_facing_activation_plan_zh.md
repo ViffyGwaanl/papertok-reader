@@ -544,6 +544,9 @@ flutter test --no-pub \
 5. 系统维护 bounded topK 候选，只为最终命中的 chunk 回查正文。
 6. 如果旧索引 chunk 还没有 `embedding_blob`，系统按页批量回查 `embedding_json`，不做逐行 SQL 回查。
 7. 同进程 current-book semantic search 通过全局 lock 串行化；agent tool registry 也把 `semantic_search_current_book` 标为非并发。
+8. 每页向量解码和 cosine scoring 通过 `AiCurrentBookVectorPageScorer` seam 执行，默认使用 background isolate，避免长循环独占 UI isolate。
+9. 阅读页新搜索、清空搜索或离开页面会 cancel stale semantic search；stale query 不写入 partial results。
+10. 阅读页目录搜索进度条显示 semantic progress；`semantic_search_current_book` 工具超时时会 cancel 底层 token 并返回 `cancelled=true` degrade。
 
 Gate：
 
@@ -552,14 +555,17 @@ Gate：
 - text/raw_text 只能为 winners 回查。
 - JSON fallback 只能按页批量回查 blob 缺失行。
 - 直接调用路径和 tool orchestrator 路径都不能并发扫描当前书。
-- 搜索必须定期 yield，降低阅读页滚动和翻页被长循环阻塞的概率。
-- 本切片不是 ANN 后端；大书仍可能触发 timeout，后续性能任务必须继续保留 SourceRef 和 evidence gate。
+- 向量 scoring 默认不得在 UI isolate 长循环执行；可替换 backend 必须保留 SourceRef provenance 所需字段。
+- 取消后不得回查 winners 正文或写入 semantic results。
+- 本切片不是 ANN/sqlite-vec/Vec1 后端；大书仍可能触发 timeout，剩余性能任务必须继续保留 SourceRef 和 evidence gate。
 
 验证命令：
 
 ```bash
 flutter test --no-pub \
   test/service/rag/semantic_search_current_book_search_test.dart \
+  test/providers/toc_search_test.dart \
+  test/service/ai/tools/semantic_search_current_book_tool_test.dart \
   test/service/ai/tools/ai_tool_registry_governance_test.dart \
   -r compact
 ```
@@ -572,7 +578,7 @@ flutter test --no-pub \
 | --- | --- | --- | --- |
 | 完整云同步引擎 | 当前已有本地导出、机器可读 sync bundle、远端 bundle preview、远端同步状态面板、安全远端 incoming KnowledgeCard Review 导入、安全远端 review history Review 导入、安全远端 KnowledgeCard 冲突 staged Review 恢复、受保护 bundle 上传、安全冲突 Review handoff 和安全 KnowledgeCard 冲突本地恢复；还没有双向自动合并、远端写回和失败回滚执行器。 | 设计并实现双向合并器、远端写回和 rollback。 | API key 永不同步；冲突进入 Review；不得使用 whole-file newer-wins 覆盖用户资产。 |
 | Seminar 后台续跑和真实账单对账 | Seminar runtime 已能流式、取消、重试、Review handoff，并显示 provider readiness、capability cache、成本未知原因、provider token usage、本地 token 估算 fallback、本地 role/run token budget、pricing metadata 驱动的估算 `Run cost cap USD` 和本机 state 恢复；running state 重启后恢复为 interrupted/retryable。未接真正后台任务续跑，也不做 provider invoice reconciliation。 | 接入后台任务队列、重启续跑、移动资源 gate 和真实账单/价格版本对账说明。 | 移动资源 gate；长任务可取消、失败可恢复或重试；无 pricing metadata 时继续显示成本未知原因并禁用美元 cap；估算美元成本不等于 provider 发票；本地 token budget 不得声明为 provider billing cap；不能把本机 recovery cache 当作同步资产。 |
-| 高性能当前书向量检索后端 | 当前书语义搜索已做分页、topK、串行和 yield，能规避一次性全书向量/正文加载；仍不是 ANN/Vec1/sqlite-vec 后端，也不是后台 isolate 检索。 | `UFA-C07-T02`：抽象 current-book vector backend，先接候选预筛或 sqlite-vec/Vec1 实验 backend，再接取消、进度和后台 isolate 验证。 | 不得牺牲 SourceRef；无 evidence 不返回正式结果；旧 DB、无 embedding、FTS5 缺失、书籍删除和 provider 切换都有 degrade path；移动端大书搜索必须有取消或可恢复状态。 |
+| 高性能当前书向量检索后端 | 当前书语义搜索已做分页、topK、串行、background isolate scoring、取消 token、progress callback、阅读页 stale query cancel 和工具超时 cancel，能规避一次性全书向量/正文加载并降低 UI isolate 长循环风险；仍不是 ANN/Vec1/sqlite-vec 后端。 | `UFA-C07-T02` 继续 In Review：接候选预筛或 sqlite-vec/Vec1 实验 backend，并补大书性能验收。 | 不得牺牲 SourceRef；无 evidence 不返回正式结果；旧 DB、无 embedding、FTS5 缺失、书籍删除和 provider 切换都有 degrade path；移动端大书搜索必须有取消或可恢复状态。 |
 | 复杂无限画布式 ConceptGraph | 当前是局部图谱、dossier、路径和摘要，不做无限画布、缩放手势或跨书外部知识扩展。 | 如需画布，先定义移动端资源、证据可见性和 graph ownership gate。 | 关系必须有 evidence；正式关系必须 Review apply。 |
 | 发布版可用 | 本文件描述 `codex/future-agentic-upgrade` 分支；不代表 `main`、TestFlight 或已安装版本。 | 走 release promotion gate，完成合并、构建、回归、发布说明和用户迁移说明。 | 发布前必须重跑权威验证命令并记录 commit。 |
 
@@ -623,7 +629,7 @@ flutter test --no-pub \
 | UFA-C06-T02 | Accepted | Responses previous_response_id fallback | 第三方 Responses provider 拒绝 `previous_response_id` 时自动降级重试。 | Provider Center Responses config, LangChain runtime | `ChatOpenAIResponses` compatibility latch, fallback request builder | 只有明确 `previous_response_id` unsupported 的 HTTP 400 会 fallback；正常 provider 继续用 server-side continuation；unrelated 400 不 retry；测试覆盖正向 fallback 和负向错误保留。 |
 | UFA-C06-T03 | Accepted | Active Skill picker widget evidence | 从 `Settings -> AI -> Active Skill` 选择已启用 custom skill 的点击级 widget 测试。 | UFA-C06-T01 | `test/page/settings_page/settings_navigation_compile_test.dart` | 已启用 custom skill 出现在 picker；disabled custom skill 不出现；选择后 runtime registry 能读取 active custom skill 并收窄工具。 |
 | UFA-C07-T01 | Accepted | Current-book semantic search resource guard | 当前书语义搜索避免一次性全书向量/正文加载并串行化扫描。 | E02 current-book index, E06 tool governance, mobile resource gate | `SemanticSearchCurrentBook` paged scan/topK/text winner load/global lock, `AiToolRegistry` non-concurrent flag | scan columns 不含 `text/raw_text/embedding_json`；JSON fallback 按页批量；只为 winners 取正文；直接调用与 tool 调用都不并发扫描；测试覆盖分页列、winner text load、直接调用串行和 tool non-concurrent。 |
-| UFA-C07-T02 | Ready | Current-book semantic search background backend | 为当前书语义搜索增加候选预筛/ANN 或后台 isolate，并暴露取消或进度状态。 | UFA-C07-T01, E02 schema gate | vector backend interface, cancellation/progress tests | 大书检索不能阻塞阅读滚动；取消后不写 partial result；无 embedding/旧 DB/provider 切换都有明确 degrade；SourceRef evidence 不降级。 |
+| UFA-C07-T02 | In Review | Current-book semantic search background backend | 为当前书语义搜索增加候选预筛/ANN 或后台 isolate，并暴露取消或进度状态。 | UFA-C07-T01, E02 schema gate | `AiCurrentBookVectorPageScorer` backend seam, default background isolate scoring, cancellation/progress tests, `TocSearch.semanticProgress`, reading-page stale search cancel, tool timeout cancel | 已覆盖 background isolate scoring seam、取消后不回查 winners/不写 partial result、阅读页 semantic progress state 和工具 timeout cancel；仍需候选预筛或 ANN/sqlite-vec/Vec1 backend 与大书性能验收，SourceRef evidence 不降级。 |
 
 ## 5. Agent 执行约束
 

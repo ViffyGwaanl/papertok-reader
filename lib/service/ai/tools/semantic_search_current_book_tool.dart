@@ -4,14 +4,27 @@ import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/service/rag/semantic_search_current_book.dart';
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'base_tool.dart';
 
+typedef SemanticSearchCurrentBookRunner = Future<AiSemanticSearchResult>
+    Function({
+  required int bookId,
+  required String query,
+  required int maxResults,
+  AiCurrentBookSearchCancellationToken? cancelToken,
+});
+
 class SemanticSearchCurrentBookTool
     extends RepositoryTool<JsonMap, Map<String, dynamic>> {
-  SemanticSearchCurrentBookTool(this._ref)
-      : super(
+  SemanticSearchCurrentBookTool(
+    this._ref, {
+    SemanticSearchCurrentBookRunner? search,
+    Duration searchTimeout = const Duration(seconds: 24),
+  })  : _search = search,
+        _searchTimeout = searchTimeout,
+        super(
           name: 'semantic_search_current_book',
           description:
               'Semantic vector search inside the book the user is currently reading. Requires a pre-built local semantic index (Reading → Settings → Other → AI Semantic Index). Returns evidence snippets with internal jump links.',
@@ -34,6 +47,8 @@ class SemanticSearchCurrentBookTool
         );
 
   final Ref _ref;
+  final SemanticSearchCurrentBookRunner? _search;
+  final Duration _searchTimeout;
 
   @override
   JsonMap parseInput(Map<String, dynamic> json) => json;
@@ -55,11 +70,40 @@ class SemanticSearchCurrentBookTool
         ? maxResultsRaw.toInt().clamp(1, 10)
         : 6;
 
-    final service = SemanticSearchCurrentBook();
-    final result = await service.search(
+    final cancelToken = AiCurrentBookSearchCancellationToken();
+    final runner = _search ??
+        ({
+          required int bookId,
+          required String query,
+          required int maxResults,
+          AiCurrentBookSearchCancellationToken? cancelToken,
+        }) {
+          final service = SemanticSearchCurrentBook();
+          return service.search(
+            bookId: bookId,
+            query: query,
+            maxResults: maxResults,
+            cancelToken: cancelToken,
+          );
+        };
+    final result = await runner(
       bookId: reading.book!.id,
       query: q,
       maxResults: maxResults,
+      cancelToken: cancelToken,
+    ).timeout(
+      _searchTimeout,
+      onTimeout: () {
+        cancelToken.cancel();
+        return AiSemanticSearchResult(
+          ok: false,
+          bookId: reading.book!.id,
+          query: q,
+          evidence: const [],
+          cancelled: true,
+          message: 'Semantic search cancelled after timeout.',
+        );
+      },
     );
 
     return result.toJson();

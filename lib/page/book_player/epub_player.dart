@@ -134,6 +134,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   String? _lastSelectionContextText;
   bool _selectionClearLocked = false;
   bool _selectionClearPending = false;
+  AiCurrentBookSearchCancellationToken? _semanticSearchToken;
+  int _semanticSearchGeneration = 0;
 
   // Inline translation HUD (per relocated page)
   final ValueNotifier<_InlineTranslateHudState> _translateHud =
@@ -347,6 +349,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       );
 
   void clearSearch() {
+    _cancelSemanticSearch(updateState: false);
     ref.read(tocSearchProvider.notifier).clear();
     _clearSearchHighlights();
   }
@@ -357,6 +360,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       clearSearch();
       return;
     }
+    _cancelSemanticSearch(updateState: true);
     _clearSearchHighlights();
     ref.read(tocSearchProvider.notifier).start(sanitized);
     webViewController.evaluateJavascript(source: '''
@@ -383,6 +387,10 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       return;
     }
 
+    final generation = ++_semanticSearchGeneration;
+    final token = AiCurrentBookSearchCancellationToken();
+    _semanticSearchToken = token;
+
     try {
       tocSearch.startSemanticSearch();
 
@@ -391,20 +399,50 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         bookId: widget.book.id,
         query: query,
         maxResults: 6,
+        cancelToken: token,
+        onProgress: (progress) {
+          if (!mounted || token.isCancelled) return;
+          if (_semanticSearchGeneration != generation) return;
+          final currentQuery = ref.read(tocSearchProvider).query;
+          if (currentQuery != query) return;
+          tocSearch.updateSemanticProgress(progress.progress);
+        },
       );
 
       // Only update if the query hasn't changed since we started
       final currentQuery = ref.read(tocSearchProvider).query;
-      if (currentQuery != query) return;
+      if (currentQuery != query ||
+          token.isCancelled ||
+          _semanticSearchGeneration != generation) {
+        return;
+      }
 
       if (result.ok && result.evidence.isNotEmpty) {
         tocSearch.setSemanticResults(result.evidence);
+      } else if (result.cancelled) {
+        tocSearch.cancelSemanticSearch();
       } else {
         tocSearch.finishSemanticSearch();
       }
     } catch (e) {
+      if (token.isCancelled || _semanticSearchGeneration != generation) {
+        return;
+      }
       AnxLog.warning('Semantic search failed: $e');
       tocSearch.finishSemanticSearch();
+    } finally {
+      if (_semanticSearchToken == token) {
+        _semanticSearchToken = null;
+      }
+    }
+  }
+
+  void _cancelSemanticSearch({required bool updateState}) {
+    _semanticSearchGeneration++;
+    _semanticSearchToken?.cancel();
+    _semanticSearchToken = null;
+    if (updateState && mounted) {
+      ref.read(tocSearchProvider.notifier).cancelSemanticSearch();
     }
   }
 
@@ -1313,6 +1351,7 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
 
   @override
   void dispose() {
+    _cancelSemanticSearch(updateState: false);
     _translateHud.dispose();
     _animationController?.dispose();
     saveReadingProgress();

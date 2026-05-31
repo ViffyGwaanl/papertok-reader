@@ -211,4 +211,192 @@ void main() {
     expect(secondResult.ok, true);
     expect(secondStarted, true);
   });
+
+  test('current book vector scan can be cancelled after progress update',
+      () async {
+    final dir = await Directory.systemTemp.createTemp('current_book_rag_test');
+    addTearDown(() async {
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    });
+
+    final database = AiIndexDatabase.forTesting(
+      path: '${dir.path}/ai_index.db',
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(database.close);
+
+    final db = await database.database;
+    await db.insert('ai_book_index', {
+      'book_id': 34,
+      'provider_id': 'test-provider',
+      'embedding_model': 'test-model',
+      'chunk_count': 4,
+      'index_version': 1,
+      'created_at': 1,
+      'updated_at': 2,
+    });
+
+    for (var i = 0; i < 4; i++) {
+      await db.insert('ai_chunks', {
+        'book_id': 34,
+        'chapter_href': 'Text/ch$i.xhtml',
+        'chapter_title': 'Chapter $i',
+        'chunk_index': i,
+        'start_char': 0,
+        'end_char': 12,
+        'text': 'context $i',
+        'raw_text': 'target text $i',
+        'embedding_json': '[1,0]',
+        'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+        'embedding_dim': 2,
+        'embedding_norm': 1.0,
+        'embedding_input_hash': 'hash-$i',
+        'context_version': 1,
+        'context_created_at': 3,
+        'created_at': 3,
+      });
+    }
+
+    final token = AiCurrentBookSearchCancellationToken();
+    final progressEvents = <AiCurrentBookSearchProgress>[];
+    var scoreCalls = 0;
+    final service = SemanticSearchCurrentBook(
+      database: database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 2,
+      scoreVectorPage: ({
+        required queryVector,
+        required queryNorm,
+        required rows,
+        required jsonById,
+      }) async {
+        scoreCalls += 1;
+        return rows
+            .map(
+              (row) => AiCurrentBookVectorCandidate(
+                row: row,
+                score: 1.0,
+              ),
+            )
+            .toList(growable: false);
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'needle',
+      maxResults: 1,
+      cancelToken: token,
+      onProgress: (progress) {
+        progressEvents.add(progress);
+        token.cancel();
+      },
+    );
+
+    expect(result.ok, false);
+    expect(result.cancelled, true);
+    expect(result.evidence, isEmpty);
+    expect(result.message, contains('cancelled'));
+    expect(scoreCalls, 0);
+    expect(progressEvents, hasLength(2));
+    expect(progressEvents.first.scannedRows, 2);
+    expect(progressEvents.first.progress, 0.5);
+    expect(progressEvents.last.cancelled, true);
+  });
+
+  test('current book vector scan delegates scoring by page', () async {
+    final dir = await Directory.systemTemp.createTemp('current_book_rag_test');
+    addTearDown(() async {
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    });
+
+    final database = AiIndexDatabase.forTesting(
+      path: '${dir.path}/ai_index.db',
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(database.close);
+
+    final db = await database.database;
+    await db.insert('ai_book_index', {
+      'book_id': 34,
+      'provider_id': 'test-provider',
+      'embedding_model': 'test-model',
+      'chunk_count': 3,
+      'index_version': 1,
+      'created_at': 1,
+      'updated_at': 2,
+    });
+
+    for (var i = 0; i < 3; i++) {
+      await db.insert('ai_chunks', {
+        'book_id': 34,
+        'chapter_href': 'Text/ch$i.xhtml',
+        'chapter_title': 'Chapter $i',
+        'chunk_index': i,
+        'start_char': 0,
+        'end_char': 12,
+        'text': 'context $i',
+        'raw_text': 'target text $i',
+        'embedding_json': i == 2 ? '[1,0]' : '[0,1]',
+        'embedding_blob':
+            i == 2 ? null : AiVectorCodec.encodeFloat32(const [0, 1]),
+        'embedding_dim': 2,
+        'embedding_norm': 1.0,
+        'embedding_input_hash': 'hash-$i',
+        'context_version': 1,
+        'context_created_at': 3,
+        'created_at': 3,
+      });
+    }
+
+    final pageSizes = <int>[];
+    final fallbackJsonIds = <int>[];
+    final service = SemanticSearchCurrentBook(
+      database: database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 2,
+      scoreVectorPage: ({
+        required queryVector,
+        required queryNorm,
+        required rows,
+        required jsonById,
+      }) async {
+        pageSizes.add(rows.length);
+        fallbackJsonIds.addAll(jsonById.keys);
+        return rows.map((row) {
+          final id = (row['id'] as num).toInt();
+          final score = id == 3 ? 1.0 : 0.0;
+          return AiCurrentBookVectorCandidate(
+            row: row,
+            score: score,
+          );
+        }).toList(growable: false);
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'needle',
+      maxResults: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'target text 2');
+    expect(pageSizes, [2, 1]);
+    expect(fallbackJsonIds, [3]);
+  });
 }

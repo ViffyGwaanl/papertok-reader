@@ -7,7 +7,6 @@ import 'package:papertok_reader/providers/toc_search.dart';
 import 'package:papertok_reader/service/rag/semantic_search_current_book.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/common/container/filled_container.dart';
-import 'package:papertok_reader/service/reading/epub_player_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
@@ -348,8 +347,12 @@ class _BookTocState extends ConsumerState<BookToc> {
     );
     final semanticResults = tocSearchState.semanticResults;
     final isSemanticSearching = tocSearchState.isSemanticSearching;
+    final semanticProgressValue = tocSearchState.semanticProgress <= 0.0
+        ? null
+        : tocSearchState.semanticProgress.clamp(0.0, 1.0);
     final hasAiIndex = tocSearchState.hasAiIndex;
-    final hasAnyResults = searchResults.isNotEmpty || semanticResults.isNotEmpty;
+    final hasAnyResults =
+        searchResults.isNotEmpty || semanticResults.isNotEmpty;
 
     var searchResult = Expanded(
         child: Column(
@@ -357,7 +360,7 @@ class _BookTocState extends ConsumerState<BookToc> {
         const SizedBox(height: 6.0),
         if (showSearchProgress || isSemanticSearching)
           LinearProgressIndicator(
-            value: showSearchProgress ? progressValue : null,
+            value: showSearchProgress ? progressValue : semanticProgressValue,
           ),
         Expanded(
           child: !hasAnyResults && !showSearchProgress && !isSemanticSearching
@@ -624,8 +627,7 @@ Widget _semanticResultWidget({
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: ClaudePalette.accent(
-                        navigatorKey.currentContext!),
+                    color: ClaudePalette.accent(navigatorKey.currentContext!),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -633,11 +635,9 @@ Widget _semanticResultWidget({
               ),
               const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 5, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: ClaudePalette.accent(
-                          navigatorKey.currentContext!)
+                  color: ClaudePalette.accent(navigatorKey.currentContext!)
                       .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -646,8 +646,7 @@ Widget _semanticResultWidget({
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
-                    color: ClaudePalette.accent(
-                        navigatorKey.currentContext!),
+                    color: ClaudePalette.accent(navigatorKey.currentContext!),
                   ),
                 ),
               ),
@@ -658,8 +657,7 @@ Widget _semanticResultWidget({
             evidence.text,
             style: TextStyle(
               fontSize: 13,
-              color: ClaudePalette.tertiary(
-                  navigatorKey.currentContext!),
+              color: ClaudePalette.tertiary(navigatorKey.currentContext!),
             ),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
