@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 
@@ -278,6 +280,291 @@ class KnowledgeSyncConflictDetector {
       return 'content-conflict';
     }
     return null;
+  }
+}
+
+@immutable
+class KnowledgeRemoteMergePlan {
+  const KnowledgeRemoteMergePlan({
+    required this.local,
+    required this.remote,
+    required this.base,
+    required this.unchanged,
+    required this.incoming,
+    required this.outgoing,
+    required this.conflicts,
+  });
+
+  final List<KnowledgeSyncEnvelope> local;
+  final List<KnowledgeSyncEnvelope> remote;
+  final List<KnowledgeSyncEnvelope> base;
+  final List<KnowledgeSyncEnvelope> unchanged;
+  final List<KnowledgeSyncEnvelope> incoming;
+  final List<KnowledgeSyncEnvelope> outgoing;
+  final List<KnowledgeSyncEnvelope> conflicts;
+
+  bool get hasReviewBlockers => conflicts.isNotEmpty;
+}
+
+class KnowledgeRemoteMergePlanner {
+  const KnowledgeRemoteMergePlanner._();
+
+  static KnowledgeRemoteMergePlan plan({
+    required Iterable<KnowledgeSyncEnvelope> local,
+    required Iterable<KnowledgeSyncEnvelope> remote,
+    Iterable<KnowledgeSyncEnvelope> base = const <KnowledgeSyncEnvelope>[],
+    int currentSchemaVersion = 1,
+  }) {
+    final localList = local.toList(growable: false);
+    final remoteList = remote.toList(growable: false);
+    final baseList = base.toList(growable: false);
+    final localById = _byId(localList);
+    final remoteById = _byId(remoteList);
+    final baseById = _byId(baseList);
+    final duplicateReasons = <String, String>{
+      for (final id in _duplicateIds(localList)) id: 'duplicate-local-id',
+      for (final id in _duplicateIds(remoteList)) id: 'duplicate-remote-id',
+      for (final id in _duplicateIds(baseList)) id: 'duplicate-base-id',
+    };
+
+    final unchanged = <KnowledgeSyncEnvelope>[];
+    final incoming = <KnowledgeSyncEnvelope>[];
+    final outgoing = <KnowledgeSyncEnvelope>[];
+    final conflicts = <KnowledgeSyncEnvelope>[];
+
+    for (final envelope in [...localList, ...remoteList, ...baseList]) {
+      if (envelope.id.trim().isEmpty) {
+        conflicts.add(
+          _reviewEnvelope(
+            envelope,
+            envelope.conflictReason ?? 'missing-required-fields',
+          ),
+        );
+      }
+    }
+
+    for (final id in _orderedIds(localList, remoteList, baseList)) {
+      final localEnvelope = localById[id];
+      final remoteEnvelope = remoteById[id];
+      final baseEnvelope = baseById[id];
+      final duplicateReason = duplicateReasons[id];
+      if (duplicateReason != null) {
+        conflicts.add(
+          _reviewEnvelope(
+            remoteEnvelope ?? localEnvelope ?? baseEnvelope!,
+            duplicateReason,
+          ),
+        );
+        continue;
+      }
+
+      final invalidLocal = localEnvelope == null
+          ? null
+          : _safetyConflictReason(
+              localEnvelope,
+              currentSchemaVersion: currentSchemaVersion,
+            );
+      final invalidRemote = remoteEnvelope == null
+          ? null
+          : _safetyConflictReason(
+              remoteEnvelope,
+              currentSchemaVersion: currentSchemaVersion,
+            );
+      if (invalidLocal != null || invalidRemote != null) {
+        conflicts.add(
+          _reviewEnvelope(
+            invalidRemote == null ? localEnvelope! : remoteEnvelope!,
+            invalidRemote ?? invalidLocal!,
+          ),
+        );
+        continue;
+      }
+
+      if (localEnvelope == null && remoteEnvelope != null) {
+        incoming.add(remoteEnvelope);
+        continue;
+      }
+      if (remoteEnvelope == null && localEnvelope != null) {
+        outgoing.add(localEnvelope);
+        continue;
+      }
+      if (localEnvelope == null || remoteEnvelope == null) {
+        continue;
+      }
+
+      if (_sameContent(localEnvelope, remoteEnvelope)) {
+        unchanged.add(localEnvelope);
+        continue;
+      }
+
+      if (baseEnvelope == null) {
+        conflicts.add(
+          _reviewEnvelope(
+            remoteEnvelope,
+            _contentConflictReason(localEnvelope, remoteEnvelope),
+          ),
+        );
+        continue;
+      }
+
+      final localChanged = !_sameContent(localEnvelope, baseEnvelope);
+      final remoteChanged = !_sameContent(remoteEnvelope, baseEnvelope);
+      if (localChanged && !remoteChanged) {
+        outgoing.add(localEnvelope);
+        continue;
+      }
+      if (!localChanged && remoteChanged) {
+        incoming.add(remoteEnvelope);
+        continue;
+      }
+      if (!localChanged && !remoteChanged) {
+        unchanged.add(localEnvelope);
+        continue;
+      }
+
+      conflicts.add(
+        _reviewEnvelope(
+          remoteEnvelope,
+          _contentConflictReason(localEnvelope, remoteEnvelope),
+        ),
+      );
+    }
+
+    return KnowledgeRemoteMergePlan(
+      local: List.unmodifiable(localList),
+      remote: List.unmodifiable(remoteList),
+      base: List.unmodifiable(baseList),
+      unchanged: List.unmodifiable(unchanged),
+      incoming: List.unmodifiable(incoming),
+      outgoing: List.unmodifiable(outgoing),
+      conflicts: List.unmodifiable(conflicts),
+    );
+  }
+
+  static Map<String, KnowledgeSyncEnvelope> _byId(
+    Iterable<KnowledgeSyncEnvelope> envelopes,
+  ) {
+    return {
+      for (final envelope in envelopes)
+        if (envelope.id.trim().isNotEmpty) envelope.id: envelope,
+    };
+  }
+
+  static List<String> _duplicateIds(
+    Iterable<KnowledgeSyncEnvelope> envelopes,
+  ) {
+    final seen = <String>{};
+    final duplicates = <String>{};
+    for (final envelope in envelopes) {
+      final id = envelope.id.trim();
+      if (id.isEmpty) continue;
+      if (!seen.add(id)) {
+        duplicates.add(id);
+      }
+    }
+    return duplicates.toList(growable: false);
+  }
+
+  static List<String> _orderedIds(
+    List<KnowledgeSyncEnvelope> local,
+    List<KnowledgeSyncEnvelope> remote,
+    List<KnowledgeSyncEnvelope> base,
+  ) {
+    final ids = <String>[];
+    void add(KnowledgeSyncEnvelope envelope) {
+      final id = envelope.id.trim();
+      if (id.isNotEmpty && !ids.contains(id)) {
+        ids.add(id);
+      }
+    }
+
+    local.forEach(add);
+    remote.forEach(add);
+    base.forEach(add);
+    return ids;
+  }
+
+  static String? _safetyConflictReason(
+    KnowledgeSyncEnvelope envelope, {
+    required int currentSchemaVersion,
+  }) {
+    if (envelope.requiresConflictReview) {
+      return envelope.conflictReason ?? 'pending-conflict-review';
+    }
+    if (envelope.schemaVersion > currentSchemaVersion) {
+      return 'unknown-schema-version';
+    }
+    if (KnowledgeSyncPolicy.containsSecretPayload(envelope.payload)) {
+      return 'contains-secret';
+    }
+    if (!envelope.shouldSyncByDefault) {
+      return 'not-default-sync-entity';
+    }
+    return null;
+  }
+
+  static bool _sameContent(
+    KnowledgeSyncEnvelope left,
+    KnowledgeSyncEnvelope right,
+  ) {
+    return _contentFingerprint(left) == _contentFingerprint(right);
+  }
+
+  static String _contentFingerprint(KnowledgeSyncEnvelope envelope) {
+    return jsonEncode(
+      _canonicalize({
+        'id': envelope.id,
+        'entityType': envelope.entityType.asString,
+        'schemaVersion': envelope.schemaVersion,
+        'deletedAt': envelope.deletedAt,
+        'sourceRefs': envelope.sourceRefs
+            .map((ref) => ref.toSafeJson())
+            .toList(growable: false),
+        'payload': envelope.payload,
+      }),
+    );
+  }
+
+  static Object? _canonicalize(Object? value) {
+    if (value is Map) {
+      final out = <String, Object?>{};
+      final keys = value.keys.map((key) => key.toString()).toList()..sort();
+      for (final key in keys) {
+        out[key] = _canonicalize(value[key]);
+      }
+      return out;
+    }
+    if (value is Iterable) {
+      return value.map(_canonicalize).toList(growable: false);
+    }
+    return value;
+  }
+
+  static String _contentConflictReason(
+    KnowledgeSyncEnvelope local,
+    KnowledgeSyncEnvelope remote,
+  ) {
+    if (local.isTombstone != remote.isTombstone) {
+      return 'delete-modify-conflict';
+    }
+    return 'content-conflict';
+  }
+
+  static KnowledgeSyncEnvelope _reviewEnvelope(
+    KnowledgeSyncEnvelope envelope,
+    String reason,
+  ) {
+    return KnowledgeSyncEnvelope(
+      id: envelope.id,
+      entityType: envelope.entityType,
+      schemaVersion: envelope.schemaVersion,
+      updatedAt: envelope.updatedAt,
+      deletedAt: envelope.deletedAt,
+      sourceRefs: envelope.sourceRefs,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: reason,
+      payload: envelope.payload,
+    );
   }
 }
 

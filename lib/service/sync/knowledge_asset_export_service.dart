@@ -565,33 +565,18 @@ class KnowledgeAssetExportService {
       remotePath: remotePath,
     );
     final local = snapshot.included;
-    final localById = {for (final envelope in local) envelope.id: envelope};
-    final remoteById = {for (final envelope in remote) envelope.id: envelope};
-    final incoming = <KnowledgeSyncEnvelope>[];
-    final conflicts = <KnowledgeSyncEnvelope>[];
-
-    for (final remoteEnvelope in remote) {
-      final reviewed = _reviewEnvelopeForRemote(
-        local: localById[remoteEnvelope.id],
-        remote: remoteEnvelope,
-      );
-      if (reviewed.requiresConflictReview) {
-        conflicts.add(reviewed);
-      } else if (!localById.containsKey(remoteEnvelope.id)) {
-        incoming.add(reviewed);
-      }
-    }
-
-    final outgoing = local
-        .where((localEnvelope) => !remoteById.containsKey(localEnvelope.id))
-        .toList(growable: false);
+    final mergePlan = KnowledgeRemoteMergePlanner.plan(
+      local: local,
+      remote: remote,
+      currentSchemaVersion: currentSyncBundleSchemaVersion,
+    );
 
     return KnowledgeRemoteSyncPreview(
-      local: List.unmodifiable(local),
-      remote: List.unmodifiable(remote),
-      incoming: List.unmodifiable(incoming),
-      outgoing: List.unmodifiable(outgoing),
-      conflicts: List.unmodifiable(conflicts),
+      local: mergePlan.local,
+      remote: mergePlan.remote,
+      incoming: mergePlan.incoming,
+      outgoing: mergePlan.outgoing,
+      conflicts: mergePlan.conflicts,
       remotePath: remotePath,
     );
   }
@@ -655,41 +640,6 @@ class KnowledgeAssetExportService {
       );
     }
     return current;
-  }
-
-  KnowledgeSyncEnvelope _reviewEnvelopeForRemote({
-    required KnowledgeSyncEnvelope? local,
-    required KnowledgeSyncEnvelope remote,
-  }) {
-    final safetyReason = _remoteSafetyReviewReason(remote);
-    if (safetyReason != null) {
-      return KnowledgeSyncEnvelope(
-        id: remote.id,
-        entityType: remote.entityType,
-        schemaVersion: remote.schemaVersion,
-        updatedAt: remote.updatedAt,
-        deletedAt: remote.deletedAt,
-        sourceRefs: remote.sourceRefs,
-        conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
-        conflictReason: safetyReason,
-        payload: remote.payload,
-      );
-    }
-    return KnowledgeSyncConflictDetector.reviewEnvelopeFor(
-      local: local,
-      remote: remote,
-      currentSchemaVersion: currentSyncBundleSchemaVersion,
-    );
-  }
-
-  String? _remoteSafetyReviewReason(KnowledgeSyncEnvelope remote) {
-    if (KnowledgeSyncPolicy.containsSecretPayload(remote.payload)) {
-      return 'contains-secret';
-    }
-    if (!remote.shouldSyncByDefault) {
-      return 'not-default-sync-entity';
-    }
-    return null;
   }
 
   Future<List<KnowledgeSyncEnvelope>> _cardEnvelopes(int fallbackNow) async {
