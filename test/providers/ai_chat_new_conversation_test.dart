@@ -213,6 +213,110 @@ void main() {
     expect(container.read(aiChatStreamingProvider), isFalse);
   });
 
+  test('startStreaming slows UI flushes while chat surface is hidden',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('ai-chat-stream-hidden-throttle-');
+    _mockPathProvider(tempDir.path);
+    final controller = StreamController<String>();
+    addTearDown(() async {
+      _mockPathProvider(null);
+      await controller.close();
+      tempDir.deleteSync(recursive: true);
+    });
+
+    debugAiChatGenerateStreamOverride = (
+      messages, {
+      scope = AiRequestScope.chat,
+      identifier,
+      config,
+      regenerate = false,
+      useAgent = false,
+      conversationId,
+      ref,
+    }) =>
+        controller.stream;
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container.read(aiChatProvider.future);
+    container.read(aiChatUiVisibleProvider.notifier).state = false;
+
+    container
+        .read(aiChatProvider.notifier)
+        .startStreaming('Explain this in the background', false);
+    await Future<void>.delayed(Duration.zero);
+
+    for (var i = 0; i < 8; i++) {
+      controller.add('hidden-$i');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+
+    expect(_latestAssistantText(container), isNot('hidden-7'));
+
+    container.read(aiChatUiVisibleProvider.notifier).state = true;
+    container.read(aiChatProvider.notifier).flushPendingStreamingUi();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(_latestAssistantText(container), 'hidden-7');
+    await controller.close();
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(container.read(aiChatStreamingProvider), isFalse);
+  });
+
+  test('startStreaming reschedules pending UI flush when chat becomes hidden',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('ai-chat-stream-hide-reschedule-');
+    _mockPathProvider(tempDir.path);
+    final controller = StreamController<String>();
+    addTearDown(() async {
+      _mockPathProvider(null);
+      await controller.close();
+      tempDir.deleteSync(recursive: true);
+    });
+
+    debugAiChatGenerateStreamOverride = (
+      messages, {
+      scope = AiRequestScope.chat,
+      identifier,
+      config,
+      regenerate = false,
+      useAgent = false,
+      conversationId,
+      ref,
+    }) =>
+        controller.stream;
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container.read(aiChatProvider.future);
+
+    container
+        .read(aiChatProvider.notifier)
+        .startStreaming('Explain this while hiding', false);
+    await Future<void>.delayed(Duration.zero);
+
+    controller.add('visible-0');
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(_latestAssistantText(container), 'visible-0');
+
+    controller.add('hidden-pending');
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    container.read(aiChatProvider.notifier).setStreamingUiVisible(false);
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+
+    expect(_latestAssistantText(container), 'visible-0');
+
+    await Future<void>.delayed(const Duration(milliseconds: 850));
+    expect(_latestAssistantText(container), 'hidden-pending');
+
+    await controller.close();
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(container.read(aiChatStreamingProvider), isFalse);
+  });
+
   test('startStreaming flushes pending assistant text when stream finishes',
       () async {
     final tempDir =

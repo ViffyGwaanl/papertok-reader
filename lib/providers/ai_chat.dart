@@ -34,6 +34,14 @@ final aiChatContextNoticeProvider = StateProvider<String?>((ref) => null);
 final aiChatUsageSummaryProvider = StateProvider<String?>((ref) => null);
 
 const _streamingUiFlushInterval = Duration(milliseconds: 160);
+const _streamingHiddenUiFlushInterval = Duration(milliseconds: 1000);
+
+/// Whether the chat surface for this provider scope is actively visible.
+///
+/// Reading-page hidden panels and inactive chat tabs keep generation alive, but
+/// their UI flush rate is reduced to avoid rebuilding offscreen chat widgets
+/// while the user is scrolling or paging the book.
+final aiChatUiVisibleProvider = StateProvider<bool>((ref) => true);
 
 typedef AiChatGenerateStreamFactory = Stream<String> Function(
   List<ChatMessage> messages, {
@@ -80,6 +88,8 @@ class AiChat extends _$AiChat {
 
   @override
   FutureOr<List<ChatMessage>> build() async {
+    ref.onDispose(_disposeActiveStreamingScope);
+
     _currentSessionId = null;
     _tree = AiConversationTree.empty();
     _activeNodeIds = const [];
@@ -97,6 +107,16 @@ class AiChat extends _$AiChat {
     _cancelStreamingUiFlush();
 
     return List<ChatMessage>.empty();
+  }
+
+  void _disposeActiveStreamingScope() {
+    cancelActiveAiRequest();
+    final generationSub = _generationSub;
+    _generationSub = null;
+    if (generationSub != null) {
+      unawaited(generationSub.cancel());
+    }
+    _cancelStreamingUiFlush();
   }
 
   Future<void> sendMessage(String message) async {
@@ -470,22 +490,71 @@ class AiChat extends _$AiChat {
     AiHistoryNotifier historyNotifier,
   ) {
     _pendingStreamingContent = chunk;
+    _scheduleOrFlushPendingStreamingChunk(historyNotifier);
+  }
+
+  void setStreamingUiVisible(bool visible) {
+    ref.read(aiChatUiVisibleProvider.notifier).state = visible;
+    if (visible) {
+      flushPendingStreamingUi();
+      return;
+    }
+    if (_pendingStreamingContent == null) {
+      return;
+    }
+    final historyNotifier = ref.read(aiHistoryProvider.notifier);
+    _scheduleOrFlushPendingStreamingChunk(
+      historyNotifier,
+      replaceTimer: true,
+    );
+  }
+
+  void _scheduleOrFlushPendingStreamingChunk(
+    AiHistoryNotifier historyNotifier, {
+    bool replaceTimer = false,
+  }) {
     final now = DateTime.now().millisecondsSinceEpoch;
     final elapsed = now - _lastStreamingUiFlushMs;
-
-    final flushMs = _streamingUiFlushInterval.inMilliseconds;
-    if (_lastStreamingUiFlushMs == 0 || elapsed >= flushMs) {
+    final uiVisible = ref.read(aiChatUiVisibleProvider);
+    final flushMs = uiVisible
+        ? _streamingUiFlushInterval.inMilliseconds
+        : _streamingHiddenUiFlushInterval.inMilliseconds;
+    if (uiVisible && (_lastStreamingUiFlushMs == 0 || elapsed >= flushMs)) {
+      _flushPendingStreamingChunk(historyNotifier);
+      return;
+    }
+    if (!uiVisible && _lastStreamingUiFlushMs != 0 && elapsed >= flushMs) {
       _flushPendingStreamingChunk(historyNotifier);
       return;
     }
 
+    final delayMs = _lastStreamingUiFlushMs == 0
+        ? flushMs
+        : (flushMs - elapsed).clamp(1, flushMs).toInt();
+    if (replaceTimer) {
+      _streamingUiFlushTimer?.cancel();
+      _streamingUiFlushTimer = null;
+    }
     _streamingUiFlushTimer ??= Timer(
-      Duration(milliseconds: flushMs - elapsed),
+      Duration(milliseconds: delayMs),
       () {
         _streamingUiFlushTimer = null;
         _flushPendingStreamingChunk(historyNotifier);
       },
     );
+  }
+
+  void flushPendingStreamingUi() {
+    if (!ref.read(aiChatUiVisibleProvider)) {
+      return;
+    }
+    if (_pendingStreamingContent == null) {
+      return;
+    }
+    _streamingUiFlushTimer?.cancel();
+    _streamingUiFlushTimer = null;
+    final historyNotifier = ref.read(aiHistoryProvider.notifier);
+    _flushPendingStreamingChunk(historyNotifier);
   }
 
   void _flushPendingStreamingChunk(

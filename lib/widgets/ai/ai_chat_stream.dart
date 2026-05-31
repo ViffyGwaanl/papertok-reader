@@ -73,6 +73,7 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.chatKnowledgeCardProducer,
     this.memoryWorkflowService,
     this.initialSourceRef,
+    this.uiVisible = true,
   });
 
   final String? initialMessage;
@@ -116,6 +117,7 @@ class AiChatStream extends ConsumerStatefulWidget {
   final AiChatKnowledgeCardProducer? chatKnowledgeCardProducer;
   final MemoryWorkflowService? memoryWorkflowService;
   final SourceRef? initialSourceRef;
+  final bool uiVisible;
 
   @override
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
@@ -169,6 +171,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final Map<int, SourceRef> _sourceRefByUserIndex = {};
   SourceRef? _draftSourceRef;
   String? _draftSourceRefSeedText;
+  bool _uiVisibleSyncScheduled = false;
   AiHistoryScope _historyScope = AiHistoryScope.currentBook;
   int? _historyScopeBookId;
 
@@ -260,6 +263,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   @override
   void initState() {
     super.initState();
+    _scheduleSyncUiVisible();
 
     _scrollController = ScrollController();
     _attachScrollController(widget.scrollController);
@@ -307,6 +311,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (oldWidget.scrollController != widget.scrollController) {
       _attachScrollController(widget.scrollController);
     }
+    if (oldWidget.uiVisible != widget.uiVisible) {
+      _scheduleSyncUiVisible();
+    }
   }
 
   @override
@@ -352,6 +359,21 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       _scrollController.dispose();
     }
     super.dispose();
+  }
+
+  void _scheduleSyncUiVisible() {
+    if (_uiVisibleSyncScheduled) {
+      return;
+    }
+    _uiVisibleSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _uiVisibleSyncScheduled = false;
+      if (!mounted) {
+        return;
+      }
+      final visible = widget.uiVisible;
+      ref.read(aiChatProvider.notifier).setStreamingUiVisible(visible);
+    });
   }
 
   void _ensureProvidersInitialized() {

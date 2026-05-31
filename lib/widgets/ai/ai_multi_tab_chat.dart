@@ -30,6 +30,7 @@ class AiMultiTabChat extends StatefulWidget {
     this.emptyStateBuilder,
     this.onTapTabBar,
     this.initialSourceRef,
+    this.uiVisible = true,
   });
 
   final String? initialMessage;
@@ -43,6 +44,7 @@ class AiMultiTabChat extends StatefulWidget {
   final bool resizeToAvoidBottomInset;
   final Widget Function(BuildContext, void Function(String))? emptyStateBuilder;
   final SourceRef? initialSourceRef;
+  final bool uiVisible;
 
   /// Called when the user taps the empty background of the tab bar strip.
   /// In lock mode (reading page bottom sheet) this should close the sheet;
@@ -88,6 +90,18 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
     if (_tabs.isEmpty) return;
     _tabs[_activeTab].chatKey.currentState?.sendCurrentDraft();
   }
+
+  @visibleForTesting
+  int get debugTabCount => _tabs.length;
+
+  @visibleForTesting
+  void debugAddTab() => _addTab();
+
+  @visibleForTesting
+  void debugSwitchTab(int index) => _switchTab(index);
+
+  @visibleForTesting
+  void debugCloseTab(int index) => _closeTab(index);
 
   // ── Tab management ─────────────────────────────────────────────────────────
 
@@ -152,6 +166,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
                       inputSafeAreaBottom: widget.inputSafeAreaBottom,
                       resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
                       emptyStateBuilder: widget.emptyStateBuilder,
+                      uiVisible: widget.uiVisible && i == _activeTab,
                     ),
                   ),
               ],
@@ -231,6 +246,7 @@ class _TabSlot {
       aiChatStreamingProvider.overrideWith(AiChatStreaming.new),
       aiChatContextNoticeProvider.overrideWith((ref) => null),
       aiChatUsageSummaryProvider.overrideWith((ref) => null),
+      aiChatUiVisibleProvider.overrideWith((ref) => true),
       aiChatDraftInputProvider
           .overrideWith((ref) => AiChatDraftInputNotifier()),
     ];

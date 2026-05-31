@@ -1188,6 +1188,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                               initialSourceRef: _aiInitialSourceRef,
                               sendImmediate: _aiSendImmediate,
                               quickPromptChips: _getAiQuickPromptChips(),
+                              uiVisible: _aiChatVisible,
                               inputSafeAreaBottom: false,
                               onRequestMinimize: () {
                                 if (mounted) {
