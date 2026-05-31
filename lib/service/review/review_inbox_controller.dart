@@ -15,6 +15,29 @@ import 'package:papertok_reader/service/review/spaced_review_store.dart';
 
 typedef ReviewInboxClock = int Function();
 
+class ReviewInboxBatchApplyFailure {
+  const ReviewInboxBatchApplyFailure({
+    required this.id,
+    required this.error,
+  });
+
+  final String id;
+  final String error;
+}
+
+class ReviewInboxBatchApplyResult {
+  const ReviewInboxBatchApplyResult({
+    required this.applied,
+    this.failed = const <ReviewInboxBatchApplyFailure>[],
+  });
+
+  final List<ReviewItem> applied;
+  final List<ReviewInboxBatchApplyFailure> failed;
+
+  List<String> get appliedIds =>
+      applied.map((item) => item.id).toList(growable: false);
+}
+
 class ReviewInboxController {
   ReviewInboxController({
     Directory? rootDir,
@@ -119,8 +142,39 @@ class ReviewInboxController {
     );
   }
 
+  Future<ReviewInboxBatchApplyResult> applyApprovedSyncConflicts() async {
+    final items = await reviewStore.list(
+      status: ReviewItemStatus.approved,
+      sourceType: ReviewItemSourceType.syncConflict,
+    );
+    final applied = <ReviewItem>[];
+    final failed = <ReviewInboxBatchApplyFailure>[];
+    for (final item in items) {
+      if (!canBatchApplySyncConflict(item)) continue;
+      try {
+        applied.add(await apply(item.id));
+      } catch (error) {
+        failed.add(
+          ReviewInboxBatchApplyFailure(
+            id: item.id,
+            error: error.toString(),
+          ),
+        );
+      }
+    }
+    return ReviewInboxBatchApplyResult(applied: applied, failed: failed);
+  }
+
   PaperReaderSourceJumpAudit sourceJumpAudit(ReviewItem item) {
     return PaperReaderSourceJumpAudit.fromSourceRefs(item.sourceRefs);
+  }
+
+  static bool canBatchApplySyncConflict(ReviewItem item) {
+    return item.status == ReviewItemStatus.approved &&
+        item.sourceType == ReviewItemSourceType.syncConflict &&
+        item.payload['canApply'] == true &&
+        item.payload['remotePreviewOnly'] != true &&
+        item.sourceRefs.any((ref) => ref.hasBookAnchor || ref.canJumpBack);
   }
 
   Future<ReviewItem> _transition(
@@ -254,7 +308,8 @@ class ReviewInboxController {
 
   bool _canResolveSyncConflict(ReviewItem item) {
     return item.sourceType == ReviewItemSourceType.syncConflict &&
-        item.payload['canApply'] == true;
+        item.payload['canApply'] == true &&
+        item.payload['remotePreviewOnly'] != true;
   }
 
   String? _stagedSyncConflictId(ReviewItem item) {

@@ -228,6 +228,83 @@ void main() {
     expect(find.text('Approve'), findsNothing);
   });
 
+  testWidgets('approved safe sync conflicts expose batch apply action',
+      (tester) async {
+    final safeSource = SourceRef(
+      bookId: 9,
+      href: 'Text/chapter.xhtml',
+      cfi: 'epubcfi(/6/12)',
+      sourceTitle: 'Widget Book',
+      locationLabel: 'Chapter 2',
+      sourceTextSnippet: 'A visible evidence quote.',
+      sourceKind: SourceRefKind.highlight,
+    );
+    final batchController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'sync-conflict:kc-safe-a',
+        sourceType: ReviewItemSourceType.syncConflict,
+        sourceId: 'kc-safe-a',
+        title: 'Sync conflict: kc-safe-a',
+        body: 'Conflict reason: content-conflict',
+        status: ReviewItemStatus.approved,
+        sourceRefs: [safeSource],
+        payload: const {'canApply': true},
+      ),
+      ReviewItem(
+        id: 'sync-conflict:kc-preview-only',
+        sourceType: ReviewItemSourceType.syncConflict,
+        sourceId: 'kc-preview-only',
+        title: 'Sync conflict: kc-preview-only',
+        body: 'Conflict reason: preview-only',
+        status: ReviewItemStatus.approved,
+        sourceRefs: [safeSource],
+        payload: const {'canApply': false, 'remotePreviewOnly': true},
+      ),
+      ReviewItem(
+        id: 'sync-conflict:kc-unavailable-only',
+        sourceType: ReviewItemSourceType.syncConflict,
+        sourceId: 'kc-unavailable-only',
+        title: 'Sync conflict: kc-unavailable-only',
+        body: 'Conflict reason: source-missing',
+        status: ReviewItemStatus.approved,
+        sourceRefs: [
+          SourceRef(
+            sourceKind: SourceRefKind.unknown,
+            unavailableReason: 'sync-conflict-no-source',
+          ),
+        ],
+        payload: const {'canApply': true},
+      ),
+      ReviewItem(
+        id: 'memory-candidate:mem-approved',
+        sourceType: ReviewItemSourceType.memoryCandidate,
+        sourceId: 'mem-approved',
+        title: 'Approved memory',
+        body: 'Memory should not be part of sync conflict batch apply.',
+        status: ReviewItemStatus.approved,
+        sourceRefs: [safeSource],
+        payload: const {'targetDoc': 'daily'},
+      ),
+    ]);
+
+    await _pumpPage(tester, batchController);
+    await tester.tap(find.text('Approved').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(find.byType(DropdownButton<ReviewItemSourceType?>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sync conflict').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Apply Sync conflict'), findsOneWidget);
+    await tester.tap(find.text('Apply Sync conflict'));
+    await tester.pump();
+
+    expect(batchController.batchApplyRuns, 1);
+    expect(batchController.appliedIds, ['sync-conflict:kc-safe-a']);
+  });
+
   testWidgets('approved flashcard candidate can be applied from inbox',
       (tester) async {
     final flashcardController = _FakeReviewInboxController([
@@ -313,6 +390,7 @@ class _FakeReviewInboxController extends ReviewInboxController {
 
   final List<ReviewItem> _items;
   final appliedIds = <String>[];
+  var batchApplyRuns = 0;
 
   @override
   Future<List<ReviewItem>> list({
@@ -332,6 +410,23 @@ class _FakeReviewInboxController extends ReviewInboxController {
     return _items.firstWhere((item) => item.id == id).copyWith(
           status: ReviewItemStatus.applied,
         );
+  }
+
+  @override
+  Future<ReviewInboxBatchApplyResult> applyApprovedSyncConflicts() async {
+    batchApplyRuns += 1;
+    final applied = <ReviewItem>[];
+    for (var index = 0; index < _items.length; index++) {
+      final item = _items[index];
+      if (!ReviewInboxController.canBatchApplySyncConflict(item)) {
+        continue;
+      }
+      appliedIds.add(item.id);
+      final appliedItem = item.copyWith(status: ReviewItemStatus.applied);
+      _items[index] = appliedItem;
+      applied.add(appliedItem);
+    }
+    return ReviewInboxBatchApplyResult(applied: applied);
   }
 }
 

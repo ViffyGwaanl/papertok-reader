@@ -70,6 +70,13 @@ class _ReviewInboxHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
+    final syncConflictLabel = _sourceTypeLabel(
+      l10n,
+      ReviewItemSourceType.syncConflict,
+    );
+    final batchActionLabel =
+        '${state.lastError == null ? l10n.reviewInboxApplyAction : l10n.commonRetry} '
+        '$syncConflictLabel';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Column(
@@ -118,6 +125,36 @@ class _ReviewInboxHeader extends ConsumerWidget {
                 .read(reviewInboxProvider.notifier)
                 .setSourceTypeFilter(value),
           ),
+          if (state.canApplyApprovedSyncConflicts) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                icon: state.isApplyingBatchSyncConflicts
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.done_all),
+                label: Text(batchActionLabel),
+                onPressed: state.isApplyingBatchSyncConflicts
+                    ? null
+                    : () => ref
+                        .read(reviewInboxProvider.notifier)
+                        .applyApprovedSyncConflicts(),
+              ),
+            ),
+          ],
+          if (state.lastError != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              state.lastError!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+            ),
+          ],
         ],
       ),
     );
@@ -194,7 +231,8 @@ class _ReviewInboxCard extends ConsumerWidget {
     final busy = state.isBusy(item.id);
     final canResolveSyncConflict =
         item.sourceType == ReviewItemSourceType.syncConflict &&
-            item.payload['canApply'] == true;
+            item.payload['canApply'] == true &&
+            item.payload['remotePreviewOnly'] != true;
     final canApprove = item.sourceType != ReviewItemSourceType.syncConflict ||
         canResolveSyncConflict;
     final canApplySource =

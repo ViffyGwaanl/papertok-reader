@@ -3,6 +3,7 @@ import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 
 const Object _unset = Object();
+const _batchSyncConflictBusyId = '__review_inbox_batch_sync_conflicts__';
 
 final reviewInboxControllerProvider = Provider<ReviewInboxController>((ref) {
   return ReviewInboxController();
@@ -35,6 +36,23 @@ class ReviewInboxState {
   final String? lastError;
 
   bool isBusy(String itemId) => busyItemIds.contains(itemId);
+  bool get isApplyingBatchSyncConflicts =>
+      busyItemIds.contains(_batchSyncConflictBusyId);
+
+  List<ReviewItem> get applyableApprovedSyncConflicts {
+    if (statusFilter != ReviewItemStatus.approved ||
+        sourceTypeFilter != ReviewItemSourceType.syncConflict) {
+      return const <ReviewItem>[];
+    }
+    final currentItems = items.valueOrNull;
+    if (currentItems == null) return const <ReviewItem>[];
+    return currentItems
+        .where(ReviewInboxController.canBatchApplySyncConflict)
+        .toList(growable: false);
+  }
+
+  bool get canApplyApprovedSyncConflicts =>
+      applyableApprovedSyncConflicts.isNotEmpty;
 
   ReviewInboxState copyWith({
     AsyncValue<List<ReviewItem>>? items,
@@ -61,10 +79,10 @@ class ReviewInboxNotifier extends StateNotifier<ReviewInboxState> {
 
   final ReviewInboxController _controller;
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool clearError = true}) async {
     state = state.copyWith(
       items: const AsyncValue<List<ReviewItem>>.loading(),
-      clearError: true,
+      clearError: clearError,
     );
     try {
       final items = await _controller.list(
@@ -73,7 +91,7 @@ class ReviewInboxNotifier extends StateNotifier<ReviewInboxState> {
       );
       state = state.copyWith(
         items: AsyncValue<List<ReviewItem>>.data(items),
-        clearError: true,
+        clearError: clearError,
       );
     } catch (error, stackTrace) {
       state = state.copyWith(
@@ -106,6 +124,44 @@ class ReviewInboxNotifier extends StateNotifier<ReviewInboxState> {
 
   Future<void> apply(String id) {
     return _runAction(id, () => _controller.apply(id));
+  }
+
+  Future<void> applyApprovedSyncConflicts() async {
+    final candidates = state.applyableApprovedSyncConflicts;
+    if (candidates.isEmpty) return;
+    final candidateIds = candidates.map((item) => item.id).toSet();
+    state = state.copyWith(
+      busyItemIds: {
+        ...state.busyItemIds,
+        _batchSyncConflictBusyId,
+        ...candidateIds,
+      },
+      clearError: true,
+    );
+
+    try {
+      final result = await _controller.applyApprovedSyncConflicts();
+      await refresh(clearError: false);
+      if (result.failed.isNotEmpty) {
+        state = state.copyWith(
+          lastError:
+              '${result.failed.length} sync conflict failed to apply. Retry after resolving the issue.',
+        );
+      } else {
+        state = state.copyWith(clearError: true);
+      }
+    } catch (error, stackTrace) {
+      state = state.copyWith(
+        items: AsyncValue<List<ReviewItem>>.error(error, stackTrace),
+        lastError: error.toString(),
+      );
+    } finally {
+      state = state.copyWith(
+        busyItemIds: {...state.busyItemIds}
+          ..remove(_batchSyncConflictBusyId)
+          ..removeAll(candidateIds),
+      );
+    }
   }
 
   Future<void> _runAction(

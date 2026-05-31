@@ -67,6 +67,7 @@
 - 图片知识卡入口不会在打开图片时直接出现；需要先点图片工具栏的魔法棒 `AI Image Analysis / AI图片解析`，等解析结果弹层出现后再点 `Card / 知识卡`。
 - AI Chat 的回答必须生成完成后，回答旁 `知识卡` 才可点击；streaming 中保持禁用。
 - `Custom skills` 当前 UI label 仍是英文；中文文档中的“自定义 Skill”对应这一项。
+- Sync 冲突批量处理入口在 `Review inbox` 中：切到 `Approved` 状态和 `Sync conflict` 类型后，安全可应用冲突会显示 `Apply Sync conflict`；部分失败后保留失败项并显示 `Retry Sync conflict`。
 
 | 能力 | 用户怎么用 | 状态 |
 | --- | --- | --- |
@@ -92,7 +93,7 @@
 
 | 还不能用的能力 | 当前边界 | 下一步 agent task |
 | --- | --- | --- |
-| 完整云同步引擎 | 目前有本地安全 manifest、Markdown、HTML、Anki TSV、机器可读 sync bundle、远端 bundle preview、远端同步状态面板、`Run safe remote sync` 前台安全编排、远端 incoming KnowledgeCard Review 导入、远端 review history Review 导入、远端冲突 Review triage handoff、安全远端 KnowledgeCard 冲突 staged Review 恢复、安全 KnowledgeCard 冲突的本地 Review 恢复、只读 remote merge planner、本机 remotePath baseline 持久化、带 rollback snapshot 的 remote writeback executor，以及 WebDAV ETag/CAS 条件写防并发覆盖；还没有跨设备后台同步任务、Review Inbox 中已审核安全冲突的批量 apply/retry 操作和 release promotion。 | 继续拆跨设备后台同步、Review Inbox 批量 apply/retry 和发布版迁移 gate。 |
+| 完整云同步引擎 | 目前有本地安全 manifest、Markdown、HTML、Anki TSV、机器可读 sync bundle、远端 bundle preview、远端同步状态面板、`Run safe remote sync` 前台安全编排、远端 incoming KnowledgeCard Review 导入、远端 review history Review 导入、远端冲突 Review triage handoff、安全远端 KnowledgeCard 冲突 staged Review 恢复、安全 KnowledgeCard 冲突的本地 Review 恢复、Review Inbox 已审核安全冲突批量 apply/retry、只读 remote merge planner、本机 remotePath baseline 持久化、带 rollback snapshot 的 remote writeback executor，以及 WebDAV ETag/CAS 条件写防并发覆盖；还没有跨设备后台同步任务和 release promotion。 | 继续拆跨设备后台同步和发布版迁移 gate。 |
 | Seminar 多任务后台队列、进程死亡续跑和 provider 发票导入 | Seminar runtime 已能流式、取消、重试、送 Review，并能显示 provider/model capability、成本未知原因、provider-reported token usage、本地 token 估算 fallback、本地 role/run token budget、pricing metadata 驱动的估算 `Run cost cap USD`、billing snapshot / reconciliation UI、本机 state 恢复、当前 `Background job` snapshot 和最近本机 job 账本；running state 重启后会保留 job id 并降级为 `interrupted/retryable`。当前没有并发多 Seminar 后台任务调度，没有进程死亡后继续 LLM stream，也没有连接 provider invoice import API，页面会把 invoice reconciliation 标为 `Not connected` 或显示失败原因。 | 继续拆持久多 job scheduler、OS/background execution gate；真实 provider invoice import 需要另建 provider-specific adapter、鉴权和只读账单导入 gate。 |
 | sqlite-vec/ANN 实验后端 | 当前书搜索已经完成分页、串行、取消、background isolate scoring、progress 合并、stale query 丢弃、bounded FTS/BM25 候选预筛、前台/tool fallback scan budget 和 synthetic large-book scan acceptance；它不是 sqlite-vec/Vec1/ANN 后端，无 FTS 候选时仍是预算内分页扫描，不是原生向量索引。 | 暂不作为当前用户可用性 blocker；若真实大书性能 gate 失败，再拆 sqlite-vec/Vec1 或 ANN backend。 |
 | 复杂无限画布式图谱 | 当前 ConceptGraph 是局部探索、dossier 和本地摘要，不做无限画布、缩放手势或跨书外部知识扩展。 | 若要做画布，先定义移动端资源 gate、证据可见性和 graph asset ownership。 |

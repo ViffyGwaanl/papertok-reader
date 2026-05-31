@@ -472,6 +472,152 @@ void main() {
     expect(await graphStore.listEdges(), isEmpty);
   });
 
+  test(
+      'batch applies approved safe sync conflicts and leaves failures retryable',
+      () async {
+    final localConflictCard = card(
+      id: 'kc-batch-local',
+      sourceRefs: [traceableRef()],
+    ).copyWith(
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+    );
+    await cardStore.ensureInitialized();
+    await cardStore.cardsFile.writeAsString(
+      jsonEncode({
+        'version': 1,
+        'cards': [
+          KnowledgeSyncEnvelope(
+            id: localConflictCard.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 200,
+            conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+            conflictReason: 'content-conflict',
+            sourceRefs: localConflictCard.sourceRefs,
+            payload: localConflictCard.toJson(),
+          ).toJson(),
+        ],
+      }),
+    );
+    final localItem = ReviewItem(
+      id: 'sync-conflict:${localConflictCard.id}',
+      sourceType: ReviewItemSourceType.syncConflict,
+      sourceId: localConflictCard.id,
+      title: 'Sync conflict: ${localConflictCard.id}',
+      body: 'Conflict reason: content-conflict',
+      status: ReviewItemStatus.approved,
+      sourceRefs: localConflictCard.sourceRefs,
+      payload: const {'canApply': true},
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    final missingRemoteItem = ReviewItem(
+      id: 'sync-conflict-remote-staged:kc-batch-remote',
+      sourceType: ReviewItemSourceType.syncConflict,
+      sourceId: 'kc-batch-remote',
+      title: 'Sync conflict: kc-batch-remote',
+      body: 'Conflict reason: content-conflict',
+      status: ReviewItemStatus.approved,
+      sourceRefs: [traceableRef(snippet: 'Remote conflict evidence.')],
+      payload: const {
+        'canApply': true,
+        'remoteStaged': true,
+        'stagedConflictId': 'kc-batch-remote',
+      },
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    final previewOnlyItem = ReviewItem(
+      id: 'sync-conflict:preview-only',
+      sourceType: ReviewItemSourceType.syncConflict,
+      sourceId: 'preview-only',
+      title: 'Sync conflict: preview-only',
+      body: 'Conflict reason: preview-only',
+      status: ReviewItemStatus.approved,
+      sourceRefs: [traceableRef(snippet: 'Preview evidence.')],
+      payload: const {
+        'canApply': false,
+        'remotePreviewOnly': true,
+      },
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    final unavailableOnlyItem = ReviewItem(
+      id: 'sync-conflict:unavailable-only',
+      sourceType: ReviewItemSourceType.syncConflict,
+      sourceId: 'unavailable-only',
+      title: 'Sync conflict: unavailable-only',
+      body: 'Conflict reason: source-missing',
+      status: ReviewItemStatus.approved,
+      sourceRefs: [
+        SourceRef(
+          sourceKind: SourceRefKind.unknown,
+          unavailableReason: 'sync-conflict-no-source',
+        ),
+      ],
+      payload: const {'canApply': true},
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    Future<void> upsertApproved(ReviewItem item) async {
+      await reviewStore.upsert(item.copyWith(status: ReviewItemStatus.pending));
+      await reviewStore.approve(item.id, now: 150);
+    }
+
+    await upsertApproved(localItem);
+    await upsertApproved(missingRemoteItem);
+    await upsertApproved(previewOnlyItem);
+    await upsertApproved(unavailableOnlyItem);
+
+    final firstRun = await controller.applyApprovedSyncConflicts();
+    final localAfterFirstRun = await reviewStore.getById(localItem.id);
+    final missingAfterFirstRun =
+        await reviewStore.getById(missingRemoteItem.id);
+    final previewAfterFirstRun = await reviewStore.getById(previewOnlyItem.id);
+    final unavailableAfterFirstRun =
+        await reviewStore.getById(unavailableOnlyItem.id);
+
+    expect(firstRun.appliedIds, [localItem.id]);
+    expect(firstRun.failed.single.id, missingRemoteItem.id);
+    expect(localAfterFirstRun?.status, ReviewItemStatus.applied);
+    expect(missingAfterFirstRun?.status, ReviewItemStatus.approved);
+    expect(missingAfterFirstRun?.appliedAt, isNull);
+    expect(previewAfterFirstRun?.status, ReviewItemStatus.approved);
+    expect(unavailableAfterFirstRun?.status, ReviewItemStatus.approved);
+
+    final remoteConflictCard = card(
+      id: 'kc-batch-remote',
+      sourceRefs: [traceableRef(snippet: 'Remote conflict evidence.')],
+    ).copyWith(
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+    );
+    await cardStore.stageRemoteSyncConflict(
+      KnowledgeSyncEnvelope(
+        id: remoteConflictCard.id,
+        entityType: KnowledgeSyncEntityType.knowledgeCard,
+        schemaVersion: 1,
+        updatedAt: 300,
+        conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+        conflictReason: 'content-conflict',
+        sourceRefs: remoteConflictCard.sourceRefs,
+        payload: remoteConflictCard.toJson(),
+      ),
+    );
+
+    final retryRun = await controller.applyApprovedSyncConflicts();
+    final missingAfterRetry = await reviewStore.getById(missingRemoteItem.id);
+
+    expect(retryRun.appliedIds, [missingRemoteItem.id]);
+    expect(retryRun.failed, isEmpty);
+    expect(missingAfterRetry?.status, ReviewItemStatus.applied);
+    expect(
+      await cardStore.getStagedRemoteSyncConflictById('kc-batch-remote'),
+      isNull,
+    );
+  });
+
   test('staged remote sync conflict fails closed without staged envelope',
       () async {
     final item = ReviewItem(
