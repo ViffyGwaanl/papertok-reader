@@ -185,6 +185,7 @@ class AiSeminarRuntimeState {
     this.completedAt,
     this.providerDiagnostics,
     this.backgroundJob,
+    this.backgroundJobs = const <AiSeminarBackgroundJobSnapshot>[],
     this.restoredFromLocalCache = false,
   });
 
@@ -211,6 +212,7 @@ class AiSeminarRuntimeState {
   final int? completedAt;
   final AiSeminarProviderDiagnostics? providerDiagnostics;
   final AiSeminarBackgroundJobSnapshot? backgroundJob;
+  final List<AiSeminarBackgroundJobSnapshot> backgroundJobs;
   final bool restoredFromLocalCache;
 
   bool get canCancel => status == AiSeminarRunStatus.running;
@@ -242,6 +244,7 @@ class AiSeminarRuntimeState {
     int? completedAt,
     AiSeminarProviderDiagnostics? providerDiagnostics,
     Object? backgroundJob = _unset,
+    List<AiSeminarBackgroundJobSnapshot>? backgroundJobs,
     bool? restoredFromLocalCache,
   }) {
     return AiSeminarRuntimeState(
@@ -268,6 +271,7 @@ class AiSeminarRuntimeState {
       backgroundJob: identical(backgroundJob, _unset)
           ? this.backgroundJob
           : backgroundJob as AiSeminarBackgroundJobSnapshot?,
+      backgroundJobs: backgroundJobs ?? this.backgroundJobs,
       restoredFromLocalCache:
           restoredFromLocalCache ?? this.restoredFromLocalCache,
     );
@@ -291,9 +295,26 @@ class AiSeminarRuntimeState {
         if (providerDiagnostics != null)
           'providerDiagnostics': providerDiagnostics!.toJson(),
         if (backgroundJob != null) 'backgroundJob': backgroundJob!.toJson(),
+        if (backgroundJobs.isNotEmpty)
+          'backgroundJobs':
+              backgroundJobs.map((job) => job.toJson()).toList(growable: false),
       };
 
   factory AiSeminarRuntimeState.fromJson(Map<String, dynamic> json) {
+    final backgroundJob = json['backgroundJob'] is Map
+        ? AiSeminarBackgroundJobSnapshot.fromJson(
+            Map<String, dynamic>.from(json['backgroundJob'] as Map),
+          )
+        : null;
+    final backgroundJobs = (json['backgroundJobs'] as List?)
+            ?.whereType<Map>()
+            .map((job) => AiSeminarBackgroundJobSnapshot.fromJson(
+                  Map<String, dynamic>.from(job),
+                ))
+            .toList(growable: false) ??
+        [
+          if (backgroundJob != null) backgroundJob,
+        ];
     return AiSeminarRuntimeState(
       status: AiSeminarRunStatus.fromString(json['status']?.toString()),
       session: json['session'] is Map
@@ -340,11 +361,10 @@ class AiSeminarRuntimeState {
               Map<String, dynamic>.from(json['providerDiagnostics'] as Map),
             )
           : null,
-      backgroundJob: json['backgroundJob'] is Map
-          ? AiSeminarBackgroundJobSnapshot.fromJson(
-              Map<String, dynamic>.from(json['backgroundJob'] as Map),
-            )
-          : null,
+      backgroundJob: backgroundJob,
+      backgroundJobs: AiSeminarRuntimeNotifier._normalizeBackgroundJobs(
+        backgroundJobs,
+      ),
     );
   }
 }
@@ -381,6 +401,20 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       resolvedSession,
       startedAt: jobStartedAt,
     );
+    final replacedJob = state.backgroundJob?.isActive == true
+        ? _markBackgroundJob(
+            state.backgroundJob,
+            AiSeminarBackgroundJobStatus.cancelled,
+            updatedAt: jobStartedAt,
+            completedAt: jobStartedAt,
+            message: 'AI Seminar replaced by a newer run.',
+          )
+        : null;
+    final backgroundJobs = _upsertBackgroundJob(
+      _upsertBackgroundJob(state.backgroundJobs, replacedJob),
+      backgroundJob,
+    );
+    _activeToken?.cancel();
     _activeToken = token;
     state = AiSeminarRuntimeState.initial(
       providerDiagnostics: providerDiagnostics,
@@ -396,6 +430,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       whiteboardEntries: const <AiSeminarWhiteboardEntry>[],
       startedAt: jobStartedAt,
       backgroundJob: backgroundJob,
+      backgroundJobs: backgroundJobs,
     );
     await _persistState();
 
@@ -446,6 +481,13 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       billingSnapshot: billingSnapshot,
       message: 'AI Seminar cancelled.',
     );
+    final backgroundJob = _markBackgroundJob(
+      state.backgroundJob,
+      AiSeminarBackgroundJobStatus.cancelled,
+      updatedAt: completedAt,
+      completedAt: completedAt,
+      message: run.message,
+    );
     state = state.copyWith(
       status: AiSeminarRunStatus.cancelled,
       activeRole: null,
@@ -453,15 +495,16 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       lastRun: run,
       error: run.message,
       completedAt: run.completedAt,
-      backgroundJob: _markBackgroundJob(
-        state.backgroundJob,
-        AiSeminarBackgroundJobStatus.cancelled,
-        updatedAt: completedAt,
-        completedAt: completedAt,
-        message: run.message,
-      ),
+      backgroundJob: backgroundJob,
+      backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, backgroundJob),
     );
     _persistState();
+  }
+
+  void cancelBackgroundJob(String jobId) {
+    if (jobId.trim().isEmpty) return;
+    if (state.backgroundJob?.id != jobId) return;
+    cancel();
   }
 
   Future<void> retry() async {
@@ -571,14 +614,17 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     switch (event.type) {
       case AiSeminarRuntimeEventType.sessionStarted:
         final now = DateTime.now().millisecondsSinceEpoch;
+        final backgroundJob = _markBackgroundJob(
+          state.backgroundJob,
+          AiSeminarBackgroundJobStatus.running,
+          updatedAt: now,
+        );
         state = state.copyWith(
           status: AiSeminarRunStatus.running,
           startedAt: state.startedAt ?? now,
-          backgroundJob: _markBackgroundJob(
-            state.backgroundJob,
-            AiSeminarBackgroundJobStatus.running,
-            updatedAt: now,
-          ),
+          backgroundJob: backgroundJob,
+          backgroundJobs:
+              _upsertBackgroundJob(state.backgroundJobs, backgroundJob),
           clearError: true,
         );
         break;
@@ -615,6 +661,12 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       case AiSeminarRuntimeEventType.synthesisReady:
         final completedAt =
             event.run?.completedAt ?? DateTime.now().millisecondsSinceEpoch;
+        final backgroundJob = _markBackgroundJob(
+          state.backgroundJob,
+          AiSeminarBackgroundJobStatus.completed,
+          updatedAt: completedAt,
+          completedAt: completedAt,
+        );
         state = state.copyWith(
           status: AiSeminarRunStatus.completed,
           turns: event.turns,
@@ -624,12 +676,9 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           activeRole: null,
           partialRoleText: null,
           completedAt: completedAt,
-          backgroundJob: _markBackgroundJob(
-            state.backgroundJob,
-            AiSeminarBackgroundJobStatus.completed,
-            updatedAt: completedAt,
-            completedAt: completedAt,
-          ),
+          backgroundJob: backgroundJob,
+          backgroundJobs:
+              _upsertBackgroundJob(state.backgroundJobs, backgroundJob),
           clearError: true,
         );
         break;
@@ -638,6 +687,13 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       case AiSeminarRuntimeEventType.cancelled:
         final completedAt =
             event.run?.completedAt ?? DateTime.now().millisecondsSinceEpoch;
+        final backgroundJob = _markBackgroundJob(
+          state.backgroundJob,
+          _backgroundStatusForRun(event.status),
+          updatedAt: completedAt,
+          completedAt: completedAt,
+          message: event.message,
+        );
         state = state.copyWith(
           status: event.status,
           evidenceBundle: event.evidenceBundle,
@@ -649,13 +705,9 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           partialRoleText: null,
           error: event.message,
           completedAt: completedAt,
-          backgroundJob: _markBackgroundJob(
-            state.backgroundJob,
-            _backgroundStatusForRun(event.status),
-            updatedAt: completedAt,
-            completedAt: completedAt,
-            message: event.message,
-          ),
+          backgroundJob: backgroundJob,
+          backgroundJobs:
+              _upsertBackgroundJob(state.backgroundJobs, backgroundJob),
         );
         break;
     }
@@ -739,6 +791,10 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           activeRole: null,
           partialRoleText: null,
           backgroundJob: backgroundJob,
+          backgroundJobs: _upsertBackgroundJob(
+            restored.backgroundJobs,
+            backgroundJob,
+          ),
           error:
               'AI Seminar was interrupted before it could finish. Retry to run it again.',
           completedAt: completedAt,
@@ -804,6 +860,51 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       updatedAt: updatedAt,
       completedAt: status.isTerminal ? completedAt ?? updatedAt : null,
       message: message,
+    );
+  }
+
+  static List<AiSeminarBackgroundJobSnapshot> _upsertBackgroundJob(
+    List<AiSeminarBackgroundJobSnapshot> jobs,
+    AiSeminarBackgroundJobSnapshot? job,
+  ) {
+    if (job == null) return _normalizeBackgroundJobs(jobs);
+    final merged = <AiSeminarBackgroundJobSnapshot>[];
+    var replaced = false;
+    for (final existing in jobs) {
+      if (existing.id.trim().isEmpty) continue;
+      if (existing.id == job.id) {
+        merged.add(job);
+        replaced = true;
+      } else {
+        merged.add(existing);
+      }
+    }
+    if (!replaced && job.id.trim().isNotEmpty) {
+      merged.add(job);
+    }
+    return _normalizeBackgroundJobs(merged);
+  }
+
+  static List<AiSeminarBackgroundJobSnapshot> _normalizeBackgroundJobs(
+    List<AiSeminarBackgroundJobSnapshot> jobs,
+  ) {
+    final byId = <String, AiSeminarBackgroundJobSnapshot>{};
+    for (final job in jobs) {
+      final id = job.id.trim();
+      if (id.isEmpty) continue;
+      byId[id] = job;
+    }
+    final normalized = byId.values.toList(growable: false)
+      ..sort((a, b) {
+        final started = a.startedAt.compareTo(b.startedAt);
+        if (started != 0) return started;
+        return a.id.compareTo(b.id);
+      });
+    final offset = normalized.length > _maxSeminarBackgroundJobs
+        ? normalized.length - _maxSeminarBackgroundJobs
+        : 0;
+    return List<AiSeminarBackgroundJobSnapshot>.unmodifiable(
+      normalized.skip(offset),
     );
   }
 
@@ -999,4 +1100,5 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   }
 }
 
+const int _maxSeminarBackgroundJobs = 20;
 const Object _unset = Object();

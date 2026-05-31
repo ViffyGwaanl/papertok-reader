@@ -217,6 +217,43 @@ void main() {
     );
   });
 
+  test('records multiple seminar background jobs in a local ledger', () async {
+    configureProvider();
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(id: 's-ledger-1', question: 'First run.'),
+        );
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(id: 's-ledger-2', question: 'Second run.'),
+        );
+
+    final state = container.read(aiSeminarRuntimeProvider);
+    expect(state.backgroundJob!.sessionId, 's-ledger-2');
+    expect(state.backgroundJobs.map((job) => job.sessionId), [
+      's-ledger-1',
+      's-ledger-2',
+    ]);
+    expect(
+      state.backgroundJobs.map((job) => job.status).toSet(),
+      {AiSeminarBackgroundJobStatus.completed},
+    );
+
+    final persisted = jsonDecode(
+      Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey)!,
+    ) as Map<String, dynamic>;
+    final persistedJobs = (persisted['backgroundJobs'] as List).cast<Map>();
+    expect(
+      persistedJobs.map((job) => job['sessionId']),
+      ['s-ledger-1', 's-ledger-2'],
+    );
+  });
+
   test('needs-evidence terminal run marks background job needs-evidence',
       () async {
     configureProvider();
@@ -325,6 +362,142 @@ void main() {
     expect(
       state.backgroundJob!.status,
       AiSeminarBackgroundJobStatus.cancelled,
+    );
+  });
+
+  test('cancelBackgroundJob only cancels the active job id', () async {
+    configureProvider();
+    final activeRoleStarted = Completer<void>();
+    final releaseActiveRole = Completer<void>();
+    final customService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, token) async* {
+        if (invocation.session.id == 's-active-job-cancel') {
+          if (!activeRoleStarted.isCompleted) activeRoleStarted.complete();
+          token.onCancel(() {
+            if (!releaseActiveRole.isCompleted) releaseActiveRole.complete();
+          });
+          await releaseActiveRole.future;
+          return;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(customService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    await notifier.start(
+      AiSeminarSessionContract(id: 's-old-job', question: 'Old run.'),
+    );
+    final oldJobId = container.read(aiSeminarRuntimeProvider).backgroundJob!.id;
+    final startFuture = notifier.start(
+      AiSeminarSessionContract(
+        id: 's-active-job-cancel',
+        question: 'Active run.',
+      ),
+    );
+    await activeRoleStarted.future;
+    final activeJobId =
+        container.read(aiSeminarRuntimeProvider).backgroundJob!.id;
+
+    notifier.cancelBackgroundJob(oldJobId);
+    expect(container.read(aiSeminarRuntimeProvider).status,
+        AiSeminarRunStatus.running);
+    expect(releaseActiveRole.isCompleted, false);
+
+    notifier.cancelBackgroundJob(activeJobId);
+    await startFuture;
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(state.status, AiSeminarRunStatus.cancelled);
+    expect(state.backgroundJob!.id, activeJobId);
+    expect(
+      state.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.cancelled,
+    );
+    expect(
+      state.backgroundJobs.map((job) => job.status),
+      [
+        AiSeminarBackgroundJobStatus.completed,
+        AiSeminarBackgroundJobStatus.cancelled,
+      ],
+    );
+  });
+
+  test('starting a new seminar cancels the previous active job', () async {
+    configureProvider();
+    final previousRoleStarted = Completer<void>();
+    final previousRoleReleased = Completer<void>();
+    final customService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, token) async* {
+        if (invocation.session.id == 's-replaced-job') {
+          if (!previousRoleStarted.isCompleted) previousRoleStarted.complete();
+          token.onCancel(() {
+            if (!previousRoleReleased.isCompleted) {
+              previousRoleReleased.complete();
+            }
+          });
+          await previousRoleReleased.future;
+          return;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(customService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    final firstRun = notifier.start(
+      AiSeminarSessionContract(id: 's-replaced-job', question: 'Replace me.'),
+    );
+    await previousRoleStarted.future;
+    final replacedJobId =
+        container.read(aiSeminarRuntimeProvider).backgroundJob!.id;
+
+    await notifier.start(
+      AiSeminarSessionContract(id: 's-newer-job', question: 'New run.'),
+    );
+    await firstRun;
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(previousRoleReleased.isCompleted, true);
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(state.backgroundJob!.sessionId, 's-newer-job');
+    expect(
+      state.backgroundJobs.firstWhere((job) => job.id == replacedJobId).status,
+      AiSeminarBackgroundJobStatus.cancelled,
+    );
+    expect(
+      state.backgroundJobs.map((job) => job.sessionId),
+      ['s-replaced-job', 's-newer-job'],
     );
   });
 
