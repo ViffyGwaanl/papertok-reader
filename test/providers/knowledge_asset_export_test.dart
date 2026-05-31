@@ -131,6 +131,27 @@ void main() {
     expect(state.remotePreview?.conflictCount, 1);
   });
 
+  test('submitRemoteIncomingToReview exposes submitted incoming count',
+      () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .submitRemoteIncomingToReview();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(service.submittedRemoteIncomingToReview, true);
+    expect(state.lastRemoteIncomingReviewCount, 1);
+    expect(state.lastRemoteIncomingSkippedCount, 0);
+    expect(state.remotePreview?.incomingCount, 1);
+  });
+
   test('uploadRemoteSyncBundle exposes remote upload path and count', () async {
     final service = _FakeKnowledgeAssetExportService();
     final container = ProviderContainer(
@@ -347,6 +368,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool submittedConflictsToReview = false;
   bool previewedRemoteSync = false;
   bool submittedRemoteConflictsToReview = false;
+  bool submittedRemoteIncomingToReview = false;
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
 
@@ -438,6 +460,23 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     }
     submittedRemoteConflictsToReview = true;
     return KnowledgeAssetConflictReviewResult(
+      submittedCount: 1,
+      skippedCount: 0,
+      snapshot: await buildSnapshot(),
+      remotePreview: _remotePreview(await buildSnapshot()),
+    );
+  }
+
+  @override
+  Future<KnowledgeRemoteIncomingReviewResult> submitRemoteIncomingToReview({
+    SyncClientBase? client,
+    String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+  }) async {
+    if (failRemotePreview) {
+      throw StateError('remote unavailable');
+    }
+    submittedRemoteIncomingToReview = true;
+    return KnowledgeRemoteIncomingReviewResult(
       submittedCount: 1,
       skippedCount: 0,
       snapshot: await buildSnapshot(),

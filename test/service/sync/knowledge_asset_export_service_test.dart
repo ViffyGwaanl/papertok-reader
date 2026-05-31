@@ -901,6 +901,117 @@ void main() {
     ]);
   });
 
+  test('remote incoming knowledge cards are staged as review candidates',
+      () async {
+    final remoteCard = card(
+      id: 'kc-remote-incoming',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Remote incoming evidence.',
+      explanation: 'Remote incoming card requires local review.',
+      sourceRefs: [
+        traceableRef(
+          bookId: 12,
+          cfi: 'epubcfi(/6/42)',
+          snippet: 'Remote incoming evidence.',
+        ),
+      ],
+    );
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion': 1,
+        'createdAt': 2000,
+        'envelopes': [
+          KnowledgeSyncEnvelope(
+            id: remoteCard.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: remoteCard.sourceRefs,
+            payload: remoteCard.toJson(),
+          ).toJson(),
+        ],
+      }),
+    });
+
+    final result = await service.submitRemoteIncomingToReview(
+      client: remoteClient,
+    );
+
+    expect(result.submittedCount, 1);
+    expect(result.skippedCount, 0);
+    expect(result.remotePreview.incomingCount, 1);
+    final cards = await cardStore.list();
+    expect(cards, hasLength(1));
+    expect(cards.single.id, remoteCard.id);
+    expect(cards.single.reviewState, KnowledgeCardReviewState.pending);
+    expect(cards.single.ownership, AiOutputOwnership.aiGeneratedDraft);
+    expect(cards.single.isUserAsset, false);
+    final items = await reviewStore.list(
+      sourceType: ReviewItemSourceType.knowledgeCard,
+    );
+    expect(items, hasLength(1));
+    expect(items.single.id, 'knowledge-card:${remoteCard.id}');
+    expect(items.single.status, ReviewItemStatus.pending);
+    expect(items.single.sourceRefs.single.hasBookAnchor, true);
+    expect(jsonEncode(items.single.payload), isNot(contains('apiKey')));
+
+    final secondResult = await service.submitRemoteIncomingToReview(
+      client: remoteClient,
+    );
+    expect(secondResult.submittedCount, 0);
+    expect(secondResult.skippedCount, 1);
+    expect(await cardStore.list(), hasLength(1));
+    expect(
+      await reviewStore.list(sourceType: ReviewItemSourceType.knowledgeCard),
+      hasLength(1),
+    );
+  });
+
+  test('remote incoming review skips unsupported and untraceable envelopes',
+      () async {
+    final untraceableCard = card(
+      id: 'kc-untraceable-remote',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      sourceRefs: const <SourceRef>[],
+    );
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion': 1,
+        'createdAt': 2000,
+        'envelopes': [
+          KnowledgeSyncEnvelope(
+            id: untraceableCard.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            payload: untraceableCard.toJson(),
+          ).toJson(),
+          const KnowledgeSyncEnvelope(
+            id: 'remote-review-history',
+            entityType: KnowledgeSyncEntityType.reviewHistory,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            payload: {'id': 'remote-review-history'},
+          ).toJson(),
+        ],
+      }),
+    });
+
+    final result = await service.submitRemoteIncomingToReview(
+      client: remoteClient,
+    );
+
+    expect(result.submittedCount, 0);
+    expect(result.skippedCount, 2);
+    expect(await cardStore.list(), isEmpty);
+    expect(
+      await reviewStore.list(sourceType: ReviewItemSourceType.knowledgeCard),
+      isEmpty,
+    );
+  });
+
   test('remote sync upload is blocked by remote incoming and conflicts',
       () async {
     final localCard = await stageAppliedCard('kc-shared');

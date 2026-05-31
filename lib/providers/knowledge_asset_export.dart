@@ -25,6 +25,8 @@ class KnowledgeAssetExportState {
     this.lastSyncBundlePath,
     this.lastConflictReviewCount,
     this.lastRemoteConflictReviewCount,
+    this.lastRemoteIncomingReviewCount,
+    this.lastRemoteIncomingSkippedCount,
     this.lastRemoteUploadPath,
     this.lastRemoteUploadCount,
     this.remotePreview,
@@ -57,6 +59,8 @@ class KnowledgeAssetExportState {
   final String? lastSyncBundlePath;
   final int? lastConflictReviewCount;
   final int? lastRemoteConflictReviewCount;
+  final int? lastRemoteIncomingReviewCount;
+  final int? lastRemoteIncomingSkippedCount;
   final String? lastRemoteUploadPath;
   final int? lastRemoteUploadCount;
   final KnowledgeRemoteSyncPreview? remotePreview;
@@ -72,6 +76,8 @@ class KnowledgeAssetExportState {
     String? lastSyncBundlePath,
     int? lastConflictReviewCount,
     int? lastRemoteConflictReviewCount,
+    int? lastRemoteIncomingReviewCount,
+    int? lastRemoteIncomingSkippedCount,
     String? lastRemoteUploadPath,
     int? lastRemoteUploadCount,
     KnowledgeRemoteSyncPreview? remotePreview,
@@ -91,6 +97,10 @@ class KnowledgeAssetExportState {
           lastConflictReviewCount ?? this.lastConflictReviewCount,
       lastRemoteConflictReviewCount:
           lastRemoteConflictReviewCount ?? this.lastRemoteConflictReviewCount,
+      lastRemoteIncomingReviewCount:
+          lastRemoteIncomingReviewCount ?? this.lastRemoteIncomingReviewCount,
+      lastRemoteIncomingSkippedCount:
+          lastRemoteIncomingSkippedCount ?? this.lastRemoteIncomingSkippedCount,
       lastRemoteUploadPath: lastRemoteUploadPath ?? this.lastRemoteUploadPath,
       lastRemoteUploadCount:
           lastRemoteUploadCount ?? this.lastRemoteUploadCount,
@@ -216,6 +226,29 @@ class KnowledgeAssetExportNotifier
         ),
         remotePreview: result.remotePreview,
         lastRemoteConflictReviewCount: result.submittedCount,
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        busy: false,
+        lastError: error.toString(),
+        clearRemotePreview: true,
+      );
+    }
+  }
+
+  Future<void> submitRemoteIncomingToReview() async {
+    state = state.copyWith(busy: true, clearError: true);
+    try {
+      final result = await _service.submitRemoteIncomingToReview();
+      state = state.copyWith(
+        busy: false,
+        snapshot: AsyncValue<KnowledgeAssetExportSnapshot>.data(
+          result.snapshot,
+        ),
+        remotePreview: result.remotePreview,
+        lastRemoteIncomingReviewCount: result.submittedCount,
+        lastRemoteIncomingSkippedCount: result.skippedCount,
         clearError: true,
       );
     } catch (error) {

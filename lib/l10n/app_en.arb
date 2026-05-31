@@ -1073,6 +1073,15 @@
       }
     }
   },
+  "knowledgeExportSendRemoteIncomingToReview": "Send remote incoming to Review",
+  "knowledgeExportRemoteIncomingReviewSent": "{count} remote incoming sent to Review inbox",
+  "@knowledgeExportRemoteIncomingReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgeExportUploadRemoteSync": "Upload sync bundle",
   "knowledgeExportRemoteUploadPath": "Uploaded sync bundle: {path}",
   "@knowledgeExportRemoteUploadPath": {

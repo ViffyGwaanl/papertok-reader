@@ -72,6 +72,30 @@ void main() {
     expect(find.text('1 incoming'), findsOneWidget);
     expect(find.text('1 remote conflict'), findsOneWidget);
 
+    await tester.scrollUntilVisible(
+      find.text('Send remote incoming to Review'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send remote incoming to Review'));
+    await tester.pump();
+
+    expect(service.submittedRemoteIncomingToReview, true);
+    await tester.scrollUntilVisible(
+      find.text('1 remote incoming sent to Review inbox'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('1 remote incoming sent to Review inbox'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Upload sync bundle'),
+      -180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Upload sync bundle'));
     await tester.pump();
 
@@ -175,6 +199,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool submittedConflictsToReview = false;
   bool previewedRemoteSync = false;
   bool submittedRemoteConflictsToReview = false;
+  bool submittedRemoteIncomingToReview = false;
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
 
@@ -267,6 +292,23 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     }
     submittedRemoteConflictsToReview = true;
     return KnowledgeAssetConflictReviewResult(
+      submittedCount: 1,
+      skippedCount: 0,
+      snapshot: await buildSnapshot(),
+      remotePreview: _remotePreview(await buildSnapshot()),
+    );
+  }
+
+  @override
+  Future<KnowledgeRemoteIncomingReviewResult> submitRemoteIncomingToReview({
+    SyncClientBase? client,
+    String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+  }) async {
+    if (failRemotePreview) {
+      throw StateError('remote unavailable');
+    }
+    submittedRemoteIncomingToReview = true;
+    return KnowledgeRemoteIncomingReviewResult(
       submittedCount: 1,
       skippedCount: 0,
       snapshot: await buildSnapshot(),

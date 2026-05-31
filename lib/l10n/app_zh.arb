@@ -970,6 +970,15 @@
       }
     }
   },
+  "knowledgeExportSendRemoteIncomingToReview": "发送远端待引入到 Review",
+  "knowledgeExportRemoteIncomingReviewSent": "{count} 个远端待引入已发送到 Review inbox",
+  "@knowledgeExportRemoteIncomingReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgeExportUploadRemoteSync": "上传 sync bundle",
   "knowledgeExportRemoteUploadPath": "已上传 sync bundle：{path}",
   "@knowledgeExportRemoteUploadPath": {

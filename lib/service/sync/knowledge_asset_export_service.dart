@@ -7,6 +7,7 @@ import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/service/sync/sync_client_base.dart';
@@ -69,6 +70,20 @@ class KnowledgeAssetConflictReviewResult {
   final int skippedCount;
   final KnowledgeAssetExportSnapshot snapshot;
   final KnowledgeRemoteSyncPreview? remotePreview;
+}
+
+class KnowledgeRemoteIncomingReviewResult {
+  const KnowledgeRemoteIncomingReviewResult({
+    required this.submittedCount,
+    required this.skippedCount,
+    required this.snapshot,
+    required this.remotePreview,
+  });
+
+  final int submittedCount;
+  final int skippedCount;
+  final KnowledgeAssetExportSnapshot snapshot;
+  final KnowledgeRemoteSyncPreview remotePreview;
 }
 
 class KnowledgeRemoteSyncPreview {
@@ -272,6 +287,60 @@ class KnowledgeAssetExportService {
     }
 
     return KnowledgeAssetConflictReviewResult(
+      submittedCount: submitted,
+      skippedCount: skipped,
+      snapshot: snapshot,
+      remotePreview: preview,
+    );
+  }
+
+  Future<KnowledgeRemoteIncomingReviewResult> submitRemoteIncomingToReview({
+    SyncClientBase? client,
+    String remotePath = defaultRemoteSyncBundlePath,
+  }) async {
+    final snapshot = await buildSnapshot();
+    final preview = await _previewRemoteSync(
+      snapshot: snapshot,
+      client: client,
+      remotePath: remotePath,
+    );
+    final timestamp = _now();
+    var submitted = 0;
+    var skipped = 0;
+
+    for (final envelope in preview.incoming) {
+      final candidate = _remoteIncomingCardCandidate(
+        envelope,
+        timestamp: timestamp,
+      );
+      if (candidate == null) {
+        skipped++;
+        continue;
+      }
+
+      final reviewId = 'knowledge-card:${candidate.id}';
+      if (await reviewStore.getById(reviewId) != null) {
+        skipped++;
+        continue;
+      }
+
+      final staged = await knowledgeCardStore.upsertCandidate(candidate);
+      if (!staged.inserted) {
+        skipped++;
+        continue;
+      }
+
+      await reviewStore.upsert(
+        KnowledgeCardReviewAdapter.fromKnowledgeCard(
+          staged.card,
+          now: timestamp,
+          status: ReviewItemStatus.pending,
+        ),
+      );
+      submitted++;
+    }
+
+    return KnowledgeRemoteIncomingReviewResult(
       submittedCount: submitted,
       skippedCount: skipped,
       snapshot: snapshot,
@@ -601,6 +670,41 @@ class KnowledgeAssetExportService {
       return refs.any((ref) => ref.hasBookAnchor || ref.canJumpBack);
     } catch (_) {
       return false;
+    }
+  }
+
+  KnowledgeCard? _remoteIncomingCardCandidate(
+    KnowledgeSyncEnvelope envelope, {
+    required int timestamp,
+  }) {
+    if (envelope.requiresConflictReview) return null;
+    if (envelope.entityType != KnowledgeSyncEntityType.knowledgeCard) {
+      return null;
+    }
+    if (envelope.schemaVersion != 1) return null;
+    if (KnowledgeSyncPolicy.containsSecretPayload(envelope.payload)) {
+      return null;
+    }
+    try {
+      final card = KnowledgeCard.fromJson(envelope.payload);
+      final sourceRefs =
+          card.sourceRefs.isNotEmpty ? card.sourceRefs : envelope.sourceRefs;
+      final safeSourceRefs = sourceRefs
+          .map((ref) => SourceRef.fromJson(ref.toSafeJson()))
+          .toList(growable: false);
+      if (!safeSourceRefs.any((ref) => ref.hasEvidence)) return null;
+      final id = envelope.id.trim().isEmpty ? card.id.trim() : envelope.id;
+      if (id.trim().isEmpty) return null;
+      return card.copyWith(
+        id: id,
+        sourceRefs: safeSourceRefs,
+        reviewState: KnowledgeCardReviewState.pending,
+        ownership: AiOutputOwnership.aiGeneratedDraft,
+        createdAt: card.createdAt ?? timestamp,
+        updatedAt: timestamp,
+      );
+    } catch (_) {
+      return null;
     }
   }
 
