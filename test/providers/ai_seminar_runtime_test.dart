@@ -438,10 +438,11 @@ void main() {
     );
   });
 
-  test('starting a new seminar cancels the previous active job', () async {
+  test('starting a new seminar queues behind the active job', () async {
     configureProvider();
     final previousRoleStarted = Completer<void>();
     final previousRoleReleased = Completer<void>();
+    final secondRunCompleted = Completer<void>();
     final customService = AiSeminarRuntimeService(
       fetchEvidence: (_) async => bundle(),
       streamRole: (invocation, token) async* {
@@ -453,7 +454,6 @@ void main() {
             }
           });
           await previousRoleReleased.future;
-          return;
         }
         yield AiSeminarRoleStreamChunk(
           completedTurn: AiSeminarRoleTurn(
@@ -464,6 +464,11 @@ void main() {
             evidenceRefIds: const ['e1'],
           ),
         );
+        if (invocation.session.id == 's-newer-job' &&
+            invocation.role == AiSeminarRole.synthesizer &&
+            !secondRunCompleted.isCompleted) {
+          secondRunCompleted.complete();
+        }
       },
       now: () => 1000,
     );
@@ -485,7 +490,25 @@ void main() {
     await notifier.start(
       AiSeminarSessionContract(id: 's-newer-job', question: 'New run.'),
     );
+    final queuedState = container.read(aiSeminarRuntimeProvider);
+
+    expect(previousRoleReleased.isCompleted, false);
+    expect(queuedState.status, AiSeminarRunStatus.running);
+    expect(queuedState.backgroundJob!.id, replacedJobId);
+    expect(
+      queuedState.backgroundJobs.map((job) => job.sessionId),
+      ['s-replaced-job', 's-newer-job'],
+    );
+    expect(
+      queuedState.backgroundJobs
+          .firstWhere((job) => job.sessionId == 's-newer-job')
+          .status,
+      AiSeminarBackgroundJobStatus.queued,
+    );
+
+    previousRoleReleased.complete();
     await firstRun;
+    await secondRunCompleted.future;
     final state = container.read(aiSeminarRuntimeProvider);
 
     expect(previousRoleReleased.isCompleted, true);
@@ -493,12 +516,240 @@ void main() {
     expect(state.backgroundJob!.sessionId, 's-newer-job');
     expect(
       state.backgroundJobs.firstWhere((job) => job.id == replacedJobId).status,
-      AiSeminarBackgroundJobStatus.cancelled,
+      AiSeminarBackgroundJobStatus.completed,
     );
     expect(
       state.backgroundJobs.map((job) => job.sessionId),
       ['s-replaced-job', 's-newer-job'],
     );
+    expect(
+      state.backgroundJobs.map((job) => job.status),
+      [
+        AiSeminarBackgroundJobStatus.completed,
+        AiSeminarBackgroundJobStatus.completed,
+      ],
+    );
+  });
+
+  test('cancelBackgroundJob cancels queued jobs without cancelling active run',
+      () async {
+    configureProvider();
+    final activeRoleStarted = Completer<void>();
+    final releaseActiveRole = Completer<void>();
+    final customService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, token) async* {
+        if (invocation.session.id == 's-active-queue-cancel') {
+          if (!activeRoleStarted.isCompleted) activeRoleStarted.complete();
+          token.onCancel(() {
+            if (!releaseActiveRole.isCompleted) releaseActiveRole.complete();
+          });
+          await releaseActiveRole.future;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(customService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    final activeRun = notifier.start(
+      AiSeminarSessionContract(
+        id: 's-active-queue-cancel',
+        question: 'Active run.',
+      ),
+    );
+    await activeRoleStarted.future;
+
+    await notifier.start(
+      AiSeminarSessionContract(
+        id: 's-queued-cancel',
+        question: 'Queued run.',
+      ),
+    );
+    final queuedJobId = container
+        .read(aiSeminarRuntimeProvider)
+        .backgroundJobs
+        .firstWhere((job) => job.sessionId == 's-queued-cancel')
+        .id;
+
+    notifier.cancelBackgroundJob(queuedJobId);
+    final queuedCancelled = container.read(aiSeminarRuntimeProvider);
+
+    expect(queuedCancelled.status, AiSeminarRunStatus.running);
+    expect(releaseActiveRole.isCompleted, false);
+    expect(
+      queuedCancelled.backgroundJobs
+          .firstWhere((job) => job.id == queuedJobId)
+          .status,
+      AiSeminarBackgroundJobStatus.cancelled,
+    );
+
+    releaseActiveRole.complete();
+    await activeRun;
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(state.backgroundJob!.sessionId, 's-active-queue-cancel');
+    expect(
+      state.backgroundJobs.map((job) => job.sessionId),
+      ['s-active-queue-cancel', 's-queued-cancel'],
+    );
+    expect(
+      state.backgroundJobs.firstWhere((job) => job.id == queuedJobId).status,
+      AiSeminarBackgroundJobStatus.cancelled,
+    );
+  });
+
+  test('queued seminar jobs restore as interrupted snapshots', () async {
+    configureProvider();
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-active-before-restore',
+        question: 'Active before restore?',
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-active-before-restore',
+        sessionId: 's-active-before-restore',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 100,
+        updatedAt: 100,
+      ),
+      backgroundJobs: [
+        const AiSeminarBackgroundJobSnapshot(
+          id: 'job-active-before-restore',
+          sessionId: 's-active-before-restore',
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 100,
+          updatedAt: 100,
+        ),
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-queued-before-restore',
+          sessionId: 's-queued-before-restore',
+          status: AiSeminarBackgroundJobStatus.queued,
+          startedAt: 101,
+          updatedAt: 101,
+          session: AiSeminarSessionContract(
+            id: 's-queued-before-restore',
+            question: 'Queued before restore?',
+          ),
+        ),
+      ],
+      evidenceBundle: bundle(),
+      activeRole: AiSeminarRole.critical,
+      partialRoleText: 'partial answer',
+      turns: const [],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(restored.status, AiSeminarRunStatus.cancelled);
+    expect(
+      restored.backgroundJobs.map((job) => job.status),
+      [
+        AiSeminarBackgroundJobStatus.interrupted,
+        AiSeminarBackgroundJobStatus.interrupted,
+      ],
+    );
+    expect(restored.backgroundJobs.last.sessionId, 's-queued-before-restore');
+    expect(restored.canSendToReview, false);
+  });
+
+  test('terminal restored state interrupts queued seminar snapshots', () async {
+    configureProvider();
+    final completedState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-completed-before-restore',
+        question: 'Completed before restore?',
+      ),
+      status: AiSeminarRunStatus.completed,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-completed-before-restore',
+        sessionId: 's-completed-before-restore',
+        status: AiSeminarBackgroundJobStatus.completed,
+        startedAt: 100,
+        updatedAt: 110,
+        completedAt: 110,
+      ),
+      backgroundJobs: [
+        const AiSeminarBackgroundJobSnapshot(
+          id: 'job-completed-before-restore',
+          sessionId: 's-completed-before-restore',
+          status: AiSeminarBackgroundJobStatus.completed,
+          startedAt: 100,
+          updatedAt: 110,
+          completedAt: 110,
+        ),
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-queued-after-completed',
+          sessionId: 's-queued-after-completed',
+          status: AiSeminarBackgroundJobStatus.queued,
+          startedAt: 111,
+          updatedAt: 111,
+          session: AiSeminarSessionContract(
+            id: 's-queued-after-completed',
+            question: 'Queued after completed?',
+          ),
+        ),
+      ],
+      evidenceBundle: bundle(),
+      turns: const [],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(completedState.toJson()),
+        );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(restored.status, AiSeminarRunStatus.completed);
+    expect(
+        restored.backgroundJob!.status, AiSeminarBackgroundJobStatus.completed);
+    expect(
+      restored.backgroundJobs.map((job) => job.status),
+      [
+        AiSeminarBackgroundJobStatus.completed,
+        AiSeminarBackgroundJobStatus.interrupted,
+      ],
+    );
+
+    await Future<void>.delayed(Duration.zero);
+    final persisted = jsonDecode(
+      Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey)!,
+    ) as Map<String, dynamic>;
+    final persistedJobs = (persisted['backgroundJobs'] as List).cast<Map>();
+    expect(persistedJobs.last['status'],
+        AiSeminarBackgroundJobStatus.interrupted.asString);
   });
 
   test('retry clears failed partial state and reruns the same session',

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -674,6 +675,103 @@ void main() {
           'Background job: interrupted · job-restored-background'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('starting while running queues a visible Seminar job',
+      (tester) async {
+    final activeRoleStarted = Completer<void>();
+    final releaseActiveRole = Completer<void>();
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => AiSeminarEvidenceBundle(
+        query: 'Queue?',
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'The source passage.',
+            sourceRef: traceableRef(),
+          ),
+        ],
+      ),
+      streamRole: (invocation, token) async* {
+        if (invocation.session.id.contains('seminar-') &&
+            invocation.session.question == 'First queued page run?') {
+          if (!activeRoleStarted.isCompleted) activeRoleStarted.complete();
+          token.onCancel(() {
+            if (!releaseActiveRole.isCompleted) releaseActiveRole.complete();
+          });
+          await releaseActiveRole.future;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(
+            initialQuestion: 'First queued page run?',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await activeRoleStarted.future;
+
+    await tester.scrollUntilVisible(
+      textFieldWithLabel('Seminar question'),
+      -220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.enterText(
+      textFieldWithLabel('Seminar question'),
+      'Second queued page run?',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.scrollUntilVisible(
+      find.text('Queue Seminar'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.text('Queue Seminar'));
+    await tester.pump();
+
+    await tester.scrollUntilVisible(
+      find.text('Seminar job queue'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Seminar job queue'), findsOneWidget);
+    expect(find.textContaining('running · seminar-job-'), findsOneWidget);
+    expect(find.textContaining('queued · seminar-job-'), findsOneWidget);
+    expect(find.textContaining('Second queued page run?'), findsOneWidget);
+
+    releaseActiveRole.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('does not show recovered state for a different book selection',

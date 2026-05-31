@@ -125,7 +125,6 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
             controller: _questionController,
             minLines: 2,
             maxLines: 5,
-            enabled: !busy,
             decoration: const InputDecoration(
               labelText: 'Seminar question',
               border: OutlineInputBorder(),
@@ -147,15 +146,11 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
           Row(
             children: [
               FilledButton.icon(
-                icon: busy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.groups_2_outlined),
-                label: const Text('Start Seminar'),
-                onPressed: busy ? null : _start,
+                icon: Icon(
+                  busy ? Icons.playlist_add_outlined : Icons.groups_2_outlined,
+                ),
+                label: Text(busy ? 'Queue Seminar' : 'Start Seminar'),
+                onPressed: _start,
               ),
               const SizedBox(width: 8),
               if (state.canRetry)
@@ -176,6 +171,10 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
           ),
           const SizedBox(height: 16),
           _StatusBanner(state: state),
+          if (_shouldShowJobQueue(state.backgroundJobs)) ...[
+            const SizedBox(height: 12),
+            _BackgroundJobsSection(jobs: state.backgroundJobs),
+          ],
           const SizedBox(height: 12),
           _EvidenceSection(state: state),
           const SizedBox(height: 12),
@@ -276,6 +275,11 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
       if (!mounted) return;
       ref.read(aiSeminarRuntimeProvider.notifier).discardLocalRuntimeState();
     });
+  }
+
+  bool _shouldShowJobQueue(List<AiSeminarBackgroundJobSnapshot> jobs) {
+    if (jobs.length > 1) return true;
+    return jobs.any((job) => job.isQueued);
   }
 }
 
@@ -532,6 +536,70 @@ class _StatusBanner extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _BackgroundJobsSection extends StatelessWidget {
+  const _BackgroundJobsSection({required this.jobs});
+
+  final List<AiSeminarBackgroundJobSnapshot> jobs;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleJobs = jobs.reversed.take(6).toList(growable: false);
+    return _Section(
+      title: 'Seminar job queue',
+      icon: Icons.playlist_add_check_outlined,
+      children: [
+        for (final job in visibleJobs)
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(_jobIcon(job.status), size: 20),
+            title: Text(
+              '${job.status.asString} · ${job.id}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              [
+                job.session?.question.trim().isNotEmpty == true
+                    ? job.session!.question.trim()
+                    : job.sessionId,
+                if (job.message?.trim().isNotEmpty == true) job.message!.trim(),
+              ].join(' · '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: ClaudePalette.secondary(context),
+                  ),
+            ),
+            trailing: job.isQueued
+                ? Consumer(
+                    builder: (context, ref, _) => IconButton(
+                      tooltip: 'Cancel queued Seminar',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => ref
+                          .read(aiSeminarRuntimeProvider.notifier)
+                          .cancelBackgroundJob(job.id),
+                    ),
+                  )
+                : null,
+          ),
+      ],
+    );
+  }
+
+  IconData _jobIcon(AiSeminarBackgroundJobStatus status) {
+    return switch (status) {
+      AiSeminarBackgroundJobStatus.running => Icons.play_circle_outline,
+      AiSeminarBackgroundJobStatus.queued => Icons.schedule_outlined,
+      AiSeminarBackgroundJobStatus.completed => Icons.check_circle_outline,
+      AiSeminarBackgroundJobStatus.needsEvidence => Icons.link_off_outlined,
+      AiSeminarBackgroundJobStatus.cancelled => Icons.cancel_outlined,
+      AiSeminarBackgroundJobStatus.failed => Icons.error_outline,
+      AiSeminarBackgroundJobStatus.interrupted => Icons.pause_circle_outline,
+    };
   }
 }
 

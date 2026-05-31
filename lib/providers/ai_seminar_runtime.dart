@@ -87,6 +87,7 @@ class AiSeminarReviewHandoffResult {
 
 enum AiSeminarBackgroundJobStatus {
   running('running'),
+  queued('queued'),
   completed('completed'),
   needsEvidence('needs-evidence'),
   cancelled('cancelled'),
@@ -97,7 +98,9 @@ enum AiSeminarBackgroundJobStatus {
 
   final String asString;
 
-  bool get isTerminal => this != AiSeminarBackgroundJobStatus.running;
+  bool get isTerminal =>
+      this != AiSeminarBackgroundJobStatus.running &&
+      this != AiSeminarBackgroundJobStatus.queued;
 
   static AiSeminarBackgroundJobStatus fromString(String? value) {
     for (final status in AiSeminarBackgroundJobStatus.values) {
@@ -116,6 +119,7 @@ class AiSeminarBackgroundJobSnapshot {
     required this.updatedAt,
     this.completedAt,
     this.message,
+    this.session,
   });
 
   final String id;
@@ -125,14 +129,17 @@ class AiSeminarBackgroundJobSnapshot {
   final int updatedAt;
   final int? completedAt;
   final String? message;
+  final AiSeminarSessionContract? session;
 
   bool get isActive => status == AiSeminarBackgroundJobStatus.running;
+  bool get isQueued => status == AiSeminarBackgroundJobStatus.queued;
 
   AiSeminarBackgroundJobSnapshot copyWith({
     AiSeminarBackgroundJobStatus? status,
     int? updatedAt,
     Object? completedAt = _unset,
     Object? message = _unset,
+    Object? session = _unset,
   }) {
     return AiSeminarBackgroundJobSnapshot(
       id: id,
@@ -144,6 +151,9 @@ class AiSeminarBackgroundJobSnapshot {
           ? this.completedAt
           : completedAt as int?,
       message: identical(message, _unset) ? this.message : message as String?,
+      session: identical(session, _unset)
+          ? this.session
+          : session as AiSeminarSessionContract?,
     );
   }
 
@@ -155,6 +165,7 @@ class AiSeminarBackgroundJobSnapshot {
         'updatedAt': updatedAt,
         if (completedAt != null) 'completedAt': completedAt,
         if (message != null && message!.trim().isNotEmpty) 'message': message,
+        if (session != null && isQueued) 'session': session!.toJson(),
       };
 
   factory AiSeminarBackgroundJobSnapshot.fromJson(Map<String, dynamic> json) {
@@ -168,6 +179,11 @@ class AiSeminarBackgroundJobSnapshot {
       updatedAt: (json['updatedAt'] as num?)?.toInt() ?? 0,
       completedAt: (json['completedAt'] as num?)?.toInt(),
       message: json['message']?.toString(),
+      session: json['session'] is Map
+          ? AiSeminarSessionContract.fromJson(
+              Map<String, dynamic>.from(json['session'] as Map),
+            )
+          : null,
     );
   }
 }
@@ -392,8 +408,6 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       'Provider invoice import is not connected for this run.';
 
   Future<void> start(AiSeminarSessionContract session) async {
-    final generation = ++_generation;
-    final token = AiSeminarCancellationToken();
     final jobStartedAt = _nextBackgroundJobStartedAt(
       DateTime.now().millisecondsSinceEpoch,
     );
@@ -402,25 +416,53 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       session,
       providerDiagnostics,
     );
+    if (state.backgroundJob?.isActive == true &&
+        state.status == AiSeminarRunStatus.running) {
+      final queuedJob = _newBackgroundJob(
+        resolvedSession,
+        startedAt: jobStartedAt,
+        status: AiSeminarBackgroundJobStatus.queued,
+        message: 'AI Seminar queued behind the active run.',
+      );
+      state = state.copyWith(
+        backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, queuedJob),
+        clearError: true,
+      );
+      await _persistState();
+      return;
+    }
+
     final backgroundJob = _newBackgroundJob(
       resolvedSession,
       startedAt: jobStartedAt,
     );
-    final replacedJob = state.backgroundJob?.isActive == true
-        ? _markBackgroundJob(
-            state.backgroundJob,
-            AiSeminarBackgroundJobStatus.cancelled,
-            updatedAt: jobStartedAt,
-            completedAt: jobStartedAt,
-            message: 'AI Seminar replaced by a newer run.',
-          )
-        : null;
-    final backgroundJobs = _upsertBackgroundJob(
-      _upsertBackgroundJob(state.backgroundJobs, replacedJob),
+    await _runResolvedSession(
+      resolvedSession,
       backgroundJob,
+      providerDiagnostics,
     );
+  }
+
+  Future<void> _runResolvedSession(
+    AiSeminarSessionContract resolvedSession,
+    AiSeminarBackgroundJobSnapshot backgroundJob,
+    AiSeminarProviderDiagnostics providerDiagnostics,
+  ) async {
+    final generation = ++_generation;
+    final token = AiSeminarCancellationToken();
     _activeToken?.cancel();
     _activeToken = token;
+    final runningJob = backgroundJob.copyWith(
+      status: AiSeminarBackgroundJobStatus.running,
+      updatedAt: DateTime.now().millisecondsSinceEpoch,
+      completedAt: null,
+      message: null,
+      session: backgroundJob.session ?? resolvedSession,
+    );
+    final backgroundJobs = _upsertBackgroundJob(
+      state.backgroundJobs,
+      runningJob,
+    );
     state = AiSeminarRuntimeState.initial(
       providerDiagnostics: providerDiagnostics,
     ).copyWith(
@@ -433,8 +475,8 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       lastRun: null,
       turns: const <AiSeminarRoleTurn>[],
       whiteboardEntries: const <AiSeminarWhiteboardEntry>[],
-      startedAt: jobStartedAt,
-      backgroundJob: backgroundJob,
+      startedAt: runningJob.startedAt,
+      backgroundJob: runningJob,
       backgroundJobs: backgroundJobs,
     );
     await _persistState();
@@ -451,6 +493,9 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       if (event.status?.isTerminal == true) {
         _activeToken = null;
       }
+    }
+    if (generation == _generation) {
+      await _startNextQueuedJobIfAvailable();
     }
   }
 
@@ -504,12 +549,36 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, backgroundJob),
     );
     _persistState();
+    unawaited(_startNextQueuedJobIfAvailable());
   }
 
   void cancelBackgroundJob(String jobId) {
     if (jobId.trim().isEmpty) return;
-    if (state.backgroundJob?.id != jobId) return;
-    cancel();
+    if (state.backgroundJob?.id == jobId) {
+      cancel();
+      return;
+    }
+    AiSeminarBackgroundJobSnapshot? queuedJob;
+    for (final job in state.backgroundJobs) {
+      if (job.id == jobId && job.isQueued) {
+        queuedJob = job;
+        break;
+      }
+    }
+    if (queuedJob == null) return;
+    final completedAt = DateTime.now().millisecondsSinceEpoch;
+    final cancelledJob = _markBackgroundJob(
+      queuedJob,
+      AiSeminarBackgroundJobStatus.cancelled,
+      updatedAt: completedAt,
+      completedAt: completedAt,
+      message: 'Queued AI Seminar cancelled.',
+    );
+    state = state.copyWith(
+      backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, cancelledJob),
+      clearError: true,
+    );
+    _persistState();
   }
 
   Future<void> retry() async {
@@ -537,6 +606,25 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     }
     state = AiSeminarRuntimeState.initial(
       providerDiagnostics: _providerContext.resolve(),
+    );
+  }
+
+  Future<void> _startNextQueuedJobIfAvailable() async {
+    if (_activeToken != null || state.status == AiSeminarRunStatus.running) {
+      return;
+    }
+    AiSeminarBackgroundJobSnapshot? queuedJob;
+    for (final job in state.backgroundJobs) {
+      if (job.isQueued && job.session != null) {
+        queuedJob = job;
+        break;
+      }
+    }
+    if (queuedJob == null) return;
+    await _runResolvedSession(
+      queuedJob.session!,
+      queuedJob,
+      _providerContext.resolve(),
     );
   }
 
@@ -789,23 +877,50 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
                 message:
                     'AI Seminar was interrupted before it could finish. Retry to run it again.',
               );
+        final interruptedJobs = _interruptNonTerminalBackgroundJobs(
+          _upsertBackgroundJob(restored.backgroundJobs, backgroundJob),
+          completedAt,
+        );
+        AiSeminarBackgroundJobSnapshot? interruptedBackgroundJob =
+            backgroundJob;
+        if (backgroundJob != null) {
+          for (final job in interruptedJobs) {
+            if (job.id == backgroundJob.id) {
+              interruptedBackgroundJob = job;
+              break;
+            }
+          }
+        }
         final interrupted = restored.copyWith(
           status: AiSeminarRunStatus.cancelled,
           evidenceBundle: evidenceBundle,
           lastRun: run,
           activeRole: null,
           partialRoleText: null,
-          backgroundJob: backgroundJob,
-          backgroundJobs: _upsertBackgroundJob(
-            restored.backgroundJobs,
-            backgroundJob,
-          ),
+          backgroundJob: interruptedBackgroundJob,
+          backgroundJobs: interruptedJobs,
           error:
               'AI Seminar was interrupted before it could finish. Retry to run it again.',
           completedAt: completedAt,
         );
         _rewriteLocalRecoveryCache(interrupted);
         return interrupted;
+      }
+      if (restored.backgroundJobs.any((job) => !job.status.isTerminal)) {
+        final completedAt = DateTime.now().millisecondsSinceEpoch;
+        final interruptedPendingJobs = _interruptNonTerminalBackgroundJobs(
+          restored.backgroundJobs,
+          completedAt,
+        );
+        final repaired = restored.copyWith(
+          backgroundJob: _backgroundJobFromList(
+            restored.backgroundJob,
+            interruptedPendingJobs,
+          ),
+          backgroundJobs: interruptedPendingJobs,
+        );
+        _rewriteLocalRecoveryCache(repaired);
+        return repaired;
       }
       return restored;
     } catch (_) {
@@ -830,13 +945,17 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   static AiSeminarBackgroundJobSnapshot _newBackgroundJob(
     AiSeminarSessionContract session, {
     required int startedAt,
+    AiSeminarBackgroundJobStatus status = AiSeminarBackgroundJobStatus.running,
+    String? message,
   }) {
     return AiSeminarBackgroundJobSnapshot(
       id: _backgroundJobId(session, startedAt),
       sessionId: session.id,
-      status: AiSeminarBackgroundJobStatus.running,
+      status: status,
       startedAt: startedAt,
       updatedAt: startedAt,
+      message: message,
+      session: session,
     );
   }
 
@@ -911,6 +1030,37 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     return List<AiSeminarBackgroundJobSnapshot>.unmodifiable(
       normalized.skip(offset),
     );
+  }
+
+  static List<AiSeminarBackgroundJobSnapshot>
+      _interruptNonTerminalBackgroundJobs(
+    List<AiSeminarBackgroundJobSnapshot> jobs,
+    int completedAt,
+  ) {
+    return _normalizeBackgroundJobs(
+      jobs.map((job) {
+        if (job.status.isTerminal) return job;
+        return job.copyWith(
+          status: AiSeminarBackgroundJobStatus.interrupted,
+          updatedAt: completedAt,
+          completedAt: completedAt,
+          message: job.isQueued
+              ? 'Queued AI Seminar was interrupted before it could start. Start it again manually.'
+              : 'AI Seminar was interrupted before it could finish. Retry to run it again.',
+        );
+      }).toList(growable: false),
+    );
+  }
+
+  static AiSeminarBackgroundJobSnapshot? _backgroundJobFromList(
+    AiSeminarBackgroundJobSnapshot? backgroundJob,
+    List<AiSeminarBackgroundJobSnapshot> jobs,
+  ) {
+    if (backgroundJob == null) return null;
+    for (final job in jobs) {
+      if (job.id == backgroundJob.id) return job;
+    }
+    return backgroundJob;
   }
 
   int _nextBackgroundJobStartedAt(int candidate) {
