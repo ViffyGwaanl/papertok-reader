@@ -11,6 +11,7 @@ import 'package:papertok_reader/service/mcp/mcp_client_service.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:langchain_core/chat_models.dart';
@@ -31,6 +32,20 @@ final aiChatContextNoticeProvider = StateProvider<String?>((ref) => null);
 
 /// Token usage summary displayed after streaming completes.
 final aiChatUsageSummaryProvider = StateProvider<String?>((ref) => null);
+
+typedef AiChatGenerateStreamFactory = Stream<String> Function(
+  List<ChatMessage> messages, {
+  AiRequestScope scope,
+  String? identifier,
+  Map<String, String>? config,
+  bool regenerate,
+  bool useAgent,
+  String? conversationId,
+  Ref? ref,
+});
+
+@visibleForTesting
+AiChatGenerateStreamFactory? debugAiChatGenerateStreamOverride;
 
 @Riverpod(keepAlive: true)
 class AiChat extends _$AiChat {
@@ -53,6 +68,9 @@ class AiChat extends _$AiChat {
   int _lastDraftProgressPersistMs = 0;
   String _lastDraftProgressContent = '';
   Future<void> _draftPersistChain = Future<void>.value();
+  Timer? _streamingUiFlushTimer;
+  String? _pendingStreamingContent;
+  int _lastStreamingUiFlushMs = 0;
 
   String _draftModel = '';
   int _draftTokenInSnapshot = 0;
@@ -74,6 +92,7 @@ class AiChat extends _$AiChat {
     _lastDraftProgressPersistMs = 0;
     _lastDraftProgressContent = '';
     _draftPersistChain = Future<void>.value();
+    _cancelStreamingUiFlush();
 
     return List<ChatMessage>.empty();
   }
@@ -100,6 +119,7 @@ class AiChat extends _$AiChat {
     _lastDraftProgressPersistMs = 0;
     _lastDraftProgressContent = '';
     _draftPersistChain = Future<void>.value();
+    _cancelStreamingUiFlush();
     _tree = AiConversationTree.fromLinearMessages(history);
     _rebuildFromTree();
   }
@@ -331,7 +351,8 @@ class AiChat extends _$AiChat {
 
     ref.read(aiChatStreamingProvider.notifier).setStreaming(true);
 
-    final stream = aiGenerateStream(
+    final streamFactory = debugAiChatGenerateStreamOverride ?? aiGenerateStream;
+    final stream = streamFactory(
       budgetResult.messages,
       regenerate: isRegenerate,
       useAgent: true,
@@ -341,24 +362,16 @@ class AiChat extends _$AiChat {
 
     _generationSub = stream.listen(
       (chunk) {
-        final assistantId = _draftAssistantNodeId;
-        if (assistantId == null) {
-          return;
-        }
-        _tree = _tree.updateNodeMessage(assistantId, ChatMessage.ai(chunk));
-        _rebuildFromTree();
-        _persistDraftProgress(
-          historyNotifier,
-          completed: false,
-          force: _lastDraftProgressContent.isEmpty && chunk.trim().isNotEmpty,
-        );
+        _handleStreamingChunk(chunk, historyNotifier);
       },
       onError: (Object error, StackTrace stack) {
         _generationSub = null;
+        _flushPendingStreamingChunk(historyNotifier);
         _finalizeStreaming(completed: false);
       },
       onDone: () {
         _generationSub = null;
+        _flushPendingStreamingChunk(historyNotifier);
         _finalizeStreaming(completed: true);
       },
       cancelOnError: false,
@@ -384,6 +397,8 @@ class AiChat extends _$AiChat {
     } catch (_) {}
 
     _generationSub = null;
+    final historyNotifier = ref.read(aiHistoryProvider.notifier);
+    _flushPendingStreamingChunk(historyNotifier);
     _finalizeStreaming(completed: false);
   }
 
@@ -393,6 +408,7 @@ class AiChat extends _$AiChat {
     }
 
     ref.read(aiChatStreamingProvider.notifier).setStreaming(false);
+    _cancelStreamingUiFlush(clearPending: false);
 
     // Update token usage summary for UI display.
     final tracker = getUsageTracker(_currentSessionId);
@@ -445,6 +461,62 @@ class AiChat extends _$AiChat {
     _draftAssistantNodeId = null;
     _lastDraftProgressPersistMs = 0;
     _lastDraftProgressContent = '';
+  }
+
+  void _handleStreamingChunk(
+    String chunk,
+    AiHistoryNotifier historyNotifier,
+  ) {
+    _pendingStreamingContent = chunk;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final elapsed = now - _lastStreamingUiFlushMs;
+
+    if (_lastStreamingUiFlushMs == 0 || elapsed >= 80) {
+      _flushPendingStreamingChunk(historyNotifier);
+      return;
+    }
+
+    _streamingUiFlushTimer ??= Timer(
+      Duration(milliseconds: 80 - elapsed),
+      () {
+        _streamingUiFlushTimer = null;
+        _flushPendingStreamingChunk(historyNotifier);
+      },
+    );
+  }
+
+  void _flushPendingStreamingChunk(
+    AiHistoryNotifier historyNotifier,
+  ) {
+    final chunk = _pendingStreamingContent;
+    if (chunk == null) {
+      return;
+    }
+    _pendingStreamingContent = null;
+    _lastStreamingUiFlushMs = DateTime.now().millisecondsSinceEpoch;
+
+    final assistantId = _draftAssistantNodeId;
+    if (assistantId == null) {
+      return;
+    }
+    _tree = _tree.updateNodeMessage(assistantId, ChatMessage.ai(chunk));
+    _rebuildFromTree();
+    _persistDraftProgress(
+      historyNotifier,
+      completed: false,
+      force: _lastDraftProgressContent.isEmpty && chunk.trim().isNotEmpty,
+    );
+  }
+
+  void _cancelStreamingUiFlush({bool clearPending = true}) {
+    try {
+      _streamingUiFlushTimer?.cancel();
+    } catch (_) {}
+    _streamingUiFlushTimer = null;
+    if (clearPending) {
+      _pendingStreamingContent = null;
+    }
+    _lastStreamingUiFlushMs = 0;
   }
 
   void _persistDraftProgress(
@@ -539,6 +611,7 @@ class AiChat extends _$AiChat {
     _lastDraftProgressPersistMs = 0;
     _lastDraftProgressContent = '';
     _draftPersistChain = Future<void>.value();
+    _cancelStreamingUiFlush();
     ref.read(aiChatContextNoticeProvider.notifier).state = null;
     ref.read(aiChatUsageSummaryProvider.notifier).state = null;
   }
@@ -568,6 +641,7 @@ class AiChat extends _$AiChat {
     _lastDraftProgressPersistMs = 0;
     _lastDraftProgressContent = '';
     _draftPersistChain = Future<void>.value();
+    _cancelStreamingUiFlush();
 
     final rawTree = entry.conversationV2;
     if (rawTree != null) {
