@@ -565,6 +565,89 @@ void main() {
     );
   });
 
+  test(
+      'current book semantic search keeps synthetic large book scans bounded by FTS candidates',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    const bookId = 34;
+    const chunkCount = 640;
+    const candidateLimit = 16;
+    await _insertBook(db, bookId: bookId, chunkCount: chunkCount);
+
+    final batch = db.batch();
+    for (var i = 0; i < chunkCount; i++) {
+      final isCandidate = i % 16 == 0;
+      batch.insert(
+        'ai_chunks',
+        _chunkRow(
+          bookId: bookId,
+          chunkIndex: i,
+          text: isCandidate
+              ? 'needle performance candidate $i'
+              : 'background performance chunk $i',
+          rawText: i == 0 ? 'large-book winner raw' : 'large raw $i',
+          vector: i == 0 ? const [1, 0] : const [0, 1],
+        ),
+      );
+    }
+    await batch.commit(noResult: true);
+
+    final scannedIds = <int>[];
+    final scanColumns = <Set<String>>[];
+    final progressEvents = <AiCurrentBookSearchProgress>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 5,
+      ftsCandidateLimit: candidateLimit,
+      progressMinInterval: Duration.zero,
+      onVectorScanPage: (rows) {
+        scannedIds.addAll(
+          rows.map((row) => (row['id'] as num?)?.toInt()).whereType<int>(),
+        );
+        if (rows.isNotEmpty) {
+          scanColumns.add(rows.first.keys.toSet());
+        }
+      },
+    );
+
+    final result = await service.search(
+      bookId: bookId,
+      query: 'needle',
+      maxResults: 1,
+      onProgress: progressEvents.add,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'large-book winner raw');
+    expect(result.evidence.single.sourceRef, isNotNull);
+    expect(result.evidence.single.sourceRef!.hasEvidence, true);
+    expect(result.evidence.single.sourceRef!.chunkId, scannedIds.first);
+    expect(scannedIds, hasLength(candidateLimit));
+    expect(scannedIds.length, lessThan(chunkCount ~/ 10));
+    expect(progressEvents.last.scannedRows, candidateLimit);
+    expect(progressEvents.last.totalRows, candidateLimit);
+    expect(
+      scanColumns.expand((columns) => columns),
+      isNot(contains('text')),
+    );
+    expect(
+      scanColumns.expand((columns) => columns),
+      isNot(contains('raw_text')),
+    );
+    expect(
+      scanColumns.expand((columns) => columns),
+      isNot(contains('embedding_json')),
+    );
+  });
+
   test('current book semantic search falls back when FTS has no candidates',
       () async {
     final fixture = await _openSearchFixture();
@@ -915,7 +998,28 @@ Future<int> _insertChunk(
   required List<double> vector,
   bool writeBlob = true,
 }) {
-  return db.insert('ai_chunks', {
+  return db.insert(
+    'ai_chunks',
+    _chunkRow(
+      bookId: bookId,
+      chunkIndex: chunkIndex,
+      text: text,
+      rawText: rawText,
+      vector: vector,
+      writeBlob: writeBlob,
+    ),
+  );
+}
+
+Map<String, Object?> _chunkRow({
+  required int bookId,
+  required int chunkIndex,
+  required String text,
+  required String rawText,
+  required List<double> vector,
+  bool writeBlob = true,
+}) {
+  return {
     'book_id': bookId,
     'chapter_href': 'Text/book$bookId-ch$chunkIndex.xhtml',
     'chapter_title': 'Book $bookId Chapter $chunkIndex',
@@ -932,5 +1036,5 @@ Future<int> _insertChunk(
     'context_version': 1,
     'context_created_at': 3,
     'created_at': 3,
-  });
+  };
 }
