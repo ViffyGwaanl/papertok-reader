@@ -148,6 +148,8 @@ class KnowledgeRemoteSyncUploadResult {
     this.rollbackSnapshotFile,
     this.rollbackRestored = false,
     this.removedPartialRemote = false,
+    this.conditionalWriteSupported = true,
+    this.remotePreconditionFailed = false,
     this.preview,
   });
 
@@ -159,6 +161,8 @@ class KnowledgeRemoteSyncUploadResult {
   final File? rollbackSnapshotFile;
   final bool rollbackRestored;
   final bool removedPartialRemote;
+  final bool conditionalWriteSupported;
+  final bool remotePreconditionFailed;
   final KnowledgeRemoteSyncPreview? preview;
 
   int get uploadedCount => snapshot.includedCount;
@@ -169,11 +173,15 @@ class KnowledgeRemoteWritebackResult {
     this.rollbackSnapshotFile,
     this.rollbackRestored = false,
     this.removedPartialRemote = false,
+    this.conditionalWriteSupported = true,
+    this.remotePreconditionFailed = false,
   });
 
   final File? rollbackSnapshotFile;
   final bool rollbackRestored;
   final bool removedPartialRemote;
+  final bool conditionalWriteSupported;
+  final bool remotePreconditionFailed;
 }
 
 class KnowledgeRemoteWritebackException implements Exception {
@@ -183,6 +191,8 @@ class KnowledgeRemoteWritebackException implements Exception {
     this.rollbackSnapshotPath,
     this.rollbackRestored = false,
     this.removedPartialRemote = false,
+    this.conditionalWriteSupported = true,
+    this.remotePreconditionFailed = false,
     this.rollbackError,
   });
 
@@ -191,6 +201,8 @@ class KnowledgeRemoteWritebackException implements Exception {
   final String? rollbackSnapshotPath;
   final bool rollbackRestored;
   final bool removedPartialRemote;
+  final bool conditionalWriteSupported;
+  final bool remotePreconditionFailed;
   final String? rollbackError;
 
   @override
@@ -202,6 +214,8 @@ class KnowledgeRemoteWritebackException implements Exception {
         'rollbackSnapshot=$rollbackSnapshotPath',
       if (rollbackRestored) 'rollbackRestored=true',
       if (removedPartialRemote) 'removedPartialRemote=true',
+      if (!conditionalWriteSupported) 'conditionalWriteSupported=false',
+      if (remotePreconditionFailed) 'remotePreconditionFailed=true',
       if (rollbackError != null) 'rollbackError=$rollbackError',
     ];
     return details.join('; ');
@@ -214,6 +228,7 @@ class KnowledgeRemoteWritebackExecutor {
     required this.localBundleFile,
     required this.remotePath,
     required this.remoteExists,
+    required this.precondition,
     required this.rollbackSnapshotFile,
   });
 
@@ -221,9 +236,19 @@ class KnowledgeRemoteWritebackExecutor {
   final File localBundleFile;
   final String remotePath;
   final bool remoteExists;
+  final SyncRemoteWritePrecondition precondition;
   final File? rollbackSnapshotFile;
 
   Future<KnowledgeRemoteWritebackResult> execute() async {
+    if (!client.supportsConditionalWrite) {
+      throw KnowledgeRemoteWritebackException(
+        message:
+            'Remote sync writeback requires conditional upload support. Preview again after using a provider with ETag/CAS support.',
+        remotePath: remotePath,
+        conditionalWriteSupported: false,
+      );
+    }
+
     final remoteDir = p.posix.dirname(remotePath);
     final rollbackFile = rollbackSnapshotFile;
     if (remoteExists && rollbackFile != null) {
@@ -233,15 +258,26 @@ class KnowledgeRemoteWritebackExecutor {
 
     try {
       await client.mkdirAll(remoteDir);
-      await client.uploadFile(
+      await client.uploadFileConditionally(
         localBundleFile.path,
         remotePath,
-        replace: true,
+        precondition: precondition,
       );
       return KnowledgeRemoteWritebackResult(
         rollbackSnapshotFile: rollbackFile,
+        conditionalWriteSupported: true,
       );
     } catch (error) {
+      if (error is SyncPreconditionFailedException) {
+        throw KnowledgeRemoteWritebackException(
+          message:
+              'Remote sync writeback blocked because the remote bundle changed after preview. Preview remote sync again before uploading.',
+          remotePath: remotePath,
+          rollbackSnapshotPath: rollbackFile?.path,
+          remotePreconditionFailed: true,
+        );
+      }
+
       var rollbackRestored = false;
       var removedPartialRemote = false;
       Object? rollbackError;
@@ -269,6 +305,7 @@ class KnowledgeRemoteWritebackExecutor {
         rollbackSnapshotPath: rollbackFile?.path,
         rollbackRestored: rollbackRestored,
         removedPartialRemote: removedPartialRemote,
+        conditionalWriteSupported: true,
         rollbackError: rollbackError?.toString(),
       );
     }
@@ -601,14 +638,34 @@ class KnowledgeAssetExportService {
     final remoteDir = p.posix.dirname(remotePath);
     await resolvedClient.safeReadDir(remoteDir);
     final remoteExists = await resolvedClient.isExist(remotePath);
+    late final SyncRemoteWritePrecondition precondition;
 
     if (remoteExists) {
+      final remoteETagBefore = await _remoteETagForWriteGuard(
+        resolvedClient,
+        remotePath,
+      );
       preview = await _previewRemoteSync(
         snapshot: snapshot,
         client: resolvedClient,
         remotePath: remotePath,
       );
       _throwIfRemoteUploadBlocked(preview);
+      final remoteETagAfter = await _remoteETagForWriteGuard(
+        resolvedClient,
+        remotePath,
+      );
+      if (remoteETagAfter != remoteETagBefore) {
+        throw KnowledgeRemoteWritebackException(
+          message:
+              'Remote sync writeback blocked because the remote bundle changed during preview. Preview remote sync again before uploading.',
+          remotePath: remotePath,
+          remotePreconditionFailed: true,
+        );
+      }
+      precondition = SyncRemoteWritePrecondition.ifMatch(remoteETagBefore);
+    } else {
+      precondition = const SyncRemoteWritePrecondition.ifNoneMatch();
     }
 
     if (!await knowledgeDir.exists()) {
@@ -620,6 +677,7 @@ class KnowledgeAssetExportService {
       localBundleFile: syncBundleFile,
       remotePath: remotePath,
       remoteExists: remoteExists,
+      precondition: precondition,
       rollbackSnapshotFile: remoteExists
           ? File(
               p.join(
@@ -639,8 +697,35 @@ class KnowledgeAssetExportService {
       rollbackSnapshotFile: writeback.rollbackSnapshotFile,
       rollbackRestored: writeback.rollbackRestored,
       removedPartialRemote: writeback.removedPartialRemote,
+      conditionalWriteSupported: writeback.conditionalWriteSupported,
+      remotePreconditionFailed: writeback.remotePreconditionFailed,
       preview: preview,
     );
+  }
+
+  Future<String> _remoteETagForWriteGuard(
+    SyncClientBase client,
+    String remotePath,
+  ) async {
+    if (!client.supportsConditionalWrite) {
+      throw KnowledgeRemoteWritebackException(
+        message:
+            'Remote sync writeback requires ETag/CAS support. This sync provider cannot guarantee concurrent write safety.',
+        remotePath: remotePath,
+        conditionalWriteSupported: false,
+      );
+    }
+    final props = await client.readProps(remotePath);
+    final eTag = props?.eTag?.trim();
+    if (eTag == null || eTag.isEmpty) {
+      throw KnowledgeRemoteWritebackException(
+        message:
+            'Remote sync writeback requires a remote ETag. Preview again after using a sync provider that exposes ETag/CAS metadata.',
+        remotePath: remotePath,
+        conditionalWriteSupported: false,
+      );
+    }
+    return eTag;
   }
 
   Future<KnowledgeAssetConflictReviewResult> submitConflictsToReview() async {

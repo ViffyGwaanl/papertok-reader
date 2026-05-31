@@ -1177,6 +1177,10 @@ void main() {
       KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
       KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
     ]);
+    expect(remoteClient.conditionalPreconditions, hasLength(2));
+    expect(
+        remoteClient.conditionalPreconditions.first.requireRemoteAbsent, true);
+    expect(remoteClient.conditionalPreconditions.last.expectedETag, isNotNull);
   });
 
   test('remote writeback restores rollback snapshot when replace upload fails',
@@ -1244,6 +1248,87 @@ void main() {
     expect(remoteClient.removedPaths, [
       KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
     ]);
+  });
+
+  test('remote sync upload blocks replace when remote changes after preview',
+      () async {
+    await stageAppliedCard('kc-cas-local');
+    final manifest = await service.writeManifest();
+    final originalRemote = await manifest.syncBundleFile!.readAsString();
+    final concurrentRemote = originalRemote.replaceFirst(
+      'kc-cas-local',
+      'kc-concurrent-remote',
+    );
+    final remoteClient = _ConcurrentWriteDuringUploadSyncClient(
+      {
+        KnowledgeAssetExportService.defaultRemoteSyncBundlePath: originalRemote,
+      },
+      concurrentRemoteContent: concurrentRemote,
+    );
+
+    Object? caught;
+    try {
+      await service.uploadRemoteSyncBundle(client: remoteClient);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught, isNotNull);
+    expect(
+      remoteClient
+          .files[KnowledgeAssetExportService.defaultRemoteSyncBundlePath],
+      concurrentRemote,
+    );
+    expect(remoteClient.uploadedPaths, isEmpty);
+  });
+
+  test('remote sync upload blocks create when remote appears before upload',
+      () async {
+    await stageAppliedCard('kc-cas-create');
+    final concurrentRemote = jsonEncode({
+      'schemaVersion': 1,
+      'createdAt': 2000,
+      'envelopes': const [],
+    });
+    final remoteClient = _ConcurrentCreateDuringUploadSyncClient(
+      <String, String>{},
+      concurrentRemoteContent: concurrentRemote,
+    );
+
+    Object? caught;
+    try {
+      await service.uploadRemoteSyncBundle(client: remoteClient);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught, isA<KnowledgeRemoteWritebackException>());
+    final error = caught as KnowledgeRemoteWritebackException;
+    expect(error.remotePreconditionFailed, true);
+    expect(
+      remoteClient
+          .files[KnowledgeAssetExportService.defaultRemoteSyncBundlePath],
+      concurrentRemote,
+    );
+    expect(remoteClient.uploadedPaths, isEmpty);
+  });
+
+  test('remote sync upload refuses clients without conditional writes',
+      () async {
+    await stageAppliedCard('kc-no-cas');
+    final remoteClient = _NoConditionalWriteSyncClient(<String, String>{});
+
+    Object? caught;
+    try {
+      await service.uploadRemoteSyncBundle(client: remoteClient);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught, isA<KnowledgeRemoteWritebackException>());
+    final error = caught as KnowledgeRemoteWritebackException;
+    expect(error.conditionalWriteSupported, false);
+    expect(remoteClient.uploadedPaths, isEmpty);
   });
 
   test('remote incoming knowledge cards are staged as review candidates',
@@ -1752,6 +1837,10 @@ class _FakeSyncClient extends SyncClientBase {
   final uploadedPaths = <String>[];
   final createdDirs = <String>[];
   final safeReadDirs = <String>[];
+  final conditionalPreconditions = <SyncRemoteWritePrecondition>[];
+
+  @override
+  bool get supportsConditionalWrite => true;
 
   @override
   Future<void> downloadFile(
@@ -1792,7 +1881,17 @@ class _FakeSyncClient extends SyncClientBase {
   Future<List<RemoteFile>> readDir(String path) async => const <RemoteFile>[];
 
   @override
-  Future<RemoteFile?> readProps(String path) async => null;
+  Future<RemoteFile?> readProps(String path) async {
+    final content = files[path];
+    if (content == null) return null;
+    return RemoteFile(
+      path: path,
+      name: path.split('/').last,
+      isDir: false,
+      size: content.length,
+      eTag: _eTagFor(content),
+    );
+  }
 
   @override
   Future<void> remove(String path) async {}
@@ -1825,6 +1924,40 @@ class _FakeSyncClient extends SyncClientBase {
     uploadedPaths.add(remotePath);
     onProgress?.call(content.length, content.length);
   }
+
+  @override
+  Future<void> uploadFileConditionally(
+    String localPath,
+    String remotePath, {
+    required SyncRemoteWritePrecondition precondition,
+    void Function(int sent, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    conditionalPreconditions.add(precondition);
+    final current = files[remotePath];
+    if (precondition.requireRemoteAbsent && current != null) {
+      throw SyncPreconditionFailedException(
+        remotePath: remotePath,
+        reason: 'Remote path already exists.',
+      );
+    }
+    final expectedETag = precondition.expectedETag;
+    if (expectedETag != null && _eTagFor(current ?? '') != expectedETag) {
+      throw SyncPreconditionFailedException(
+        remotePath: remotePath,
+        reason: 'Remote ETag changed.',
+      );
+    }
+    await uploadFile(
+      localPath,
+      remotePath,
+      replace: true,
+      onProgress: onProgress,
+      cancelToken: cancelToken,
+    );
+  }
+
+  String _eTagFor(String content) => '"${content.hashCode}"';
 }
 
 class _FailingUploadSyncClient extends _FakeSyncClient {
@@ -1860,6 +1993,67 @@ class _FailingUploadSyncClient extends _FakeSyncClient {
   Future<void> remove(String path) async {
     removedPaths.add(path);
     files.remove(path);
+  }
+}
+
+class _NoConditionalWriteSyncClient extends _FakeSyncClient {
+  _NoConditionalWriteSyncClient(super.files);
+
+  @override
+  bool get supportsConditionalWrite => false;
+}
+
+class _ConcurrentWriteDuringUploadSyncClient extends _FakeSyncClient {
+  _ConcurrentWriteDuringUploadSyncClient(
+    super.files, {
+    required this.concurrentRemoteContent,
+  });
+
+  final String concurrentRemoteContent;
+
+  @override
+  Future<void> uploadFileConditionally(
+    String localPath,
+    String remotePath, {
+    required SyncRemoteWritePrecondition precondition,
+    void Function(int sent, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    files[remotePath] = concurrentRemoteContent;
+    await super.uploadFileConditionally(
+      localPath,
+      remotePath,
+      precondition: precondition,
+      onProgress: onProgress,
+      cancelToken: cancelToken,
+    );
+  }
+}
+
+class _ConcurrentCreateDuringUploadSyncClient extends _FakeSyncClient {
+  _ConcurrentCreateDuringUploadSyncClient(
+    super.files, {
+    required this.concurrentRemoteContent,
+  });
+
+  final String concurrentRemoteContent;
+
+  @override
+  Future<void> uploadFileConditionally(
+    String localPath,
+    String remotePath, {
+    required SyncRemoteWritePrecondition precondition,
+    void Function(int sent, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    files[remotePath] = concurrentRemoteContent;
+    await super.uploadFileConditionally(
+      localPath,
+      remotePath,
+      precondition: precondition,
+      onProgress: onProgress,
+      cancelToken: cancelToken,
+    );
   }
 }
 

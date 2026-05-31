@@ -224,6 +224,9 @@ class WebdavClient extends SyncClientBase {
   }
 
   @override
+  bool get supportsConditionalWrite => true;
+
+  @override
   Future<void> uploadFile(
     String localPath,
     String remotePath, {
@@ -244,6 +247,67 @@ class WebdavClient extends SyncClientBase {
       _safeEncodePath(remotePath),
       onProgress: onProgress,
       cancelToken: cancelToken,
+    );
+  }
+
+  @override
+  Future<void> uploadFileConditionally(
+    String localPath,
+    String remotePath, {
+    required SyncRemoteWritePrecondition precondition,
+    void Function(int sent, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    final encodedPath = _safeEncodePath(remotePath);
+    final optionsResponse = await _client.c.wdOptions(
+      _client,
+      encodedPath,
+      cancelToken: cancelToken,
+    );
+    if (optionsResponse.statusCode != 200) {
+      throw DioException(
+        requestOptions: optionsResponse.requestOptions,
+        response: optionsResponse,
+        type: DioExceptionType.badResponse,
+        error: 'WebDAV OPTIONS failed before conditional upload.',
+      );
+    }
+
+    final file = io.File(localPath);
+    final length = file.lengthSync();
+    final response = await _client.c.req(
+      _client,
+      'PUT',
+      encodedPath,
+      data: file.openRead(),
+      optionsHandler: (options) {
+        options.headers?['content-length'] = length;
+        if (precondition.expectedETag case final etag?) {
+          options.headers?['if-match'] = etag;
+        }
+        if (precondition.requireRemoteAbsent) {
+          options.headers?['if-none-match'] = '*';
+        }
+      },
+      onSendProgress: onProgress,
+      cancelToken: cancelToken,
+    );
+
+    final status = response.statusCode;
+    if (status == 200 || status == 201 || status == 204) {
+      return;
+    }
+    if (status == 412) {
+      throw SyncPreconditionFailedException(
+        remotePath: remotePath,
+        reason: 'Remote ETag changed before upload.',
+      );
+    }
+    throw DioException(
+      requestOptions: response.requestOptions,
+      response: response,
+      type: DioExceptionType.badResponse,
+      error: 'WebDAV conditional upload failed with status $status.',
     );
   }
 

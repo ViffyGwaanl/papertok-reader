@@ -333,6 +333,10 @@ class _RemoteSyncStatusPanel extends StatelessWidget {
         l10n.knowledgeExportRemoteStatusReadyToUpload,
       KnowledgeRemoteSyncStatus.uploaded =>
         l10n.knowledgeExportRemoteStatusUploaded,
+      KnowledgeRemoteSyncStatus.repreviewRequired =>
+        l10n.knowledgeExportRemoteStatusRepreviewRequired,
+      KnowledgeRemoteSyncStatus.concurrencyGuardUnavailable =>
+        l10n.knowledgeExportRemoteStatusConcurrencyGuardUnavailable,
       KnowledgeRemoteSyncStatus.failed =>
         l10n.knowledgeExportRemoteStatusFailed,
     };
@@ -345,6 +349,10 @@ class _RemoteSyncStatusPanel extends StatelessWidget {
         l10n.knowledgeExportRemoteStatusReadyToUploadBody,
       KnowledgeRemoteSyncStatus.uploaded =>
         l10n.knowledgeExportRemoteStatusUploadedBody,
+      KnowledgeRemoteSyncStatus.repreviewRequired =>
+        l10n.knowledgeExportRemoteStatusRepreviewRequiredBody,
+      KnowledgeRemoteSyncStatus.concurrencyGuardUnavailable =>
+        l10n.knowledgeExportRemoteStatusConcurrencyGuardUnavailableBody,
       KnowledgeRemoteSyncStatus.failed =>
         l10n.knowledgeExportRemoteStatusFailedBody,
     };
@@ -395,6 +403,9 @@ class _RemoteSyncStatusPanel extends StatelessWidget {
       KnowledgeRemoteSyncStatus.reviewRequired => Icons.fact_check_outlined,
       KnowledgeRemoteSyncStatus.readyToUpload => Icons.cloud_done_outlined,
       KnowledgeRemoteSyncStatus.uploaded => Icons.cloud_upload_outlined,
+      KnowledgeRemoteSyncStatus.repreviewRequired => Icons.sync_problem,
+      KnowledgeRemoteSyncStatus.concurrencyGuardUnavailable =>
+        Icons.gpp_maybe_outlined,
       KnowledgeRemoteSyncStatus.failed => Icons.error_outline,
     };
   }

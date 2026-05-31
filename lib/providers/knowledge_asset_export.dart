@@ -19,6 +19,8 @@ enum KnowledgeRemoteSyncStatus {
   reviewRequired,
   readyToUpload,
   uploaded,
+  repreviewRequired,
+  concurrencyGuardUnavailable,
   failed,
 }
 
@@ -44,6 +46,8 @@ class KnowledgeAssetExportState {
     this.lastRemoteRollbackPath,
     this.lastRemoteRollbackRestored,
     this.lastRemotePartialRemoved,
+    this.lastRemoteConditionalWriteSupported,
+    this.lastRemotePreconditionFailed,
     this.remotePreview,
     this.lastError,
   });
@@ -85,10 +89,18 @@ class KnowledgeAssetExportState {
   final String? lastRemoteRollbackPath;
   final bool? lastRemoteRollbackRestored;
   final bool? lastRemotePartialRemoved;
+  final bool? lastRemoteConditionalWriteSupported;
+  final bool? lastRemotePreconditionFailed;
   final KnowledgeRemoteSyncPreview? remotePreview;
   final String? lastError;
 
   KnowledgeRemoteSyncStatus get remoteSyncStatus {
+    if (lastRemoteConditionalWriteSupported == false) {
+      return KnowledgeRemoteSyncStatus.concurrencyGuardUnavailable;
+    }
+    if (lastRemotePreconditionFailed == true) {
+      return KnowledgeRemoteSyncStatus.repreviewRequired;
+    }
     if (lastError != null) {
       return KnowledgeRemoteSyncStatus.failed;
     }
@@ -126,6 +138,8 @@ class KnowledgeAssetExportState {
     String? lastRemoteRollbackPath,
     bool? lastRemoteRollbackRestored,
     bool? lastRemotePartialRemoved,
+    bool? lastRemoteConditionalWriteSupported,
+    bool? lastRemotePreconditionFailed,
     KnowledgeRemoteSyncPreview? remotePreview,
     String? lastError,
     bool clearError = false,
@@ -173,6 +187,13 @@ class KnowledgeAssetExportState {
       lastRemotePartialRemoved: clearRemoteUpload
           ? null
           : lastRemotePartialRemoved ?? this.lastRemotePartialRemoved,
+      lastRemoteConditionalWriteSupported: clearRemoteUpload
+          ? null
+          : lastRemoteConditionalWriteSupported ??
+              this.lastRemoteConditionalWriteSupported,
+      lastRemotePreconditionFailed: clearRemoteUpload
+          ? null
+          : lastRemotePreconditionFailed ?? this.lastRemotePreconditionFailed,
       remotePreview:
           clearRemotePreview ? null : remotePreview ?? this.remotePreview,
       lastError: clearError ? null : lastError ?? this.lastError,
@@ -416,6 +437,8 @@ class KnowledgeAssetExportNotifier
         lastRemoteRollbackPath: result.rollbackSnapshotFile?.path,
         lastRemoteRollbackRestored: result.rollbackRestored,
         lastRemotePartialRemoved: result.removedPartialRemote,
+        lastRemoteConditionalWriteSupported: result.conditionalWriteSupported,
+        lastRemotePreconditionFailed: result.remotePreconditionFailed,
         lastSyncBundlePath: result.file.path,
         clearError: true,
       );
@@ -427,6 +450,9 @@ class KnowledgeAssetExportNotifier
         lastRemoteRollbackPath: writebackError?.rollbackSnapshotPath,
         lastRemoteRollbackRestored: writebackError?.rollbackRestored,
         lastRemotePartialRemoved: writebackError?.removedPartialRemote,
+        lastRemoteConditionalWriteSupported:
+            writebackError?.conditionalWriteSupported,
+        lastRemotePreconditionFailed: writebackError?.remotePreconditionFailed,
         lastError: error.toString(),
       );
     }

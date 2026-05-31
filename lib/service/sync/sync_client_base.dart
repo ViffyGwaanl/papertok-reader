@@ -1,7 +1,53 @@
 import 'package:papertok_reader/models/remote_file.dart';
 import 'package:dio/dio.dart';
 
+class SyncRemoteWritePrecondition {
+  const SyncRemoteWritePrecondition._({
+    this.expectedETag,
+    this.requireRemoteAbsent = false,
+  });
+
+  const SyncRemoteWritePrecondition.ifMatch(String expectedETag)
+      : this._(expectedETag: expectedETag);
+
+  const SyncRemoteWritePrecondition.ifNoneMatch()
+      : this._(requireRemoteAbsent: true);
+
+  final String? expectedETag;
+  final bool requireRemoteAbsent;
+}
+
+class SyncConditionalWriteNotSupportedException implements Exception {
+  const SyncConditionalWriteNotSupportedException(this.protocolName);
+
+  final String protocolName;
+
+  @override
+  String toString() {
+    return '$protocolName does not support conditional remote writes.';
+  }
+}
+
+class SyncPreconditionFailedException implements Exception {
+  const SyncPreconditionFailedException({
+    required this.remotePath,
+    required this.reason,
+  });
+
+  final String remotePath;
+  final String reason;
+
+  @override
+  String toString() {
+    return 'Remote write precondition failed for $remotePath: $reason';
+  }
+}
+
 abstract class SyncClientBase {
+  /// Whether this client can atomically guard uploads with an ETag/CAS
+  /// precondition such as If-Match or If-None-Match.
+  bool get supportsConditionalWrite => false;
+
   /// Test connection to the remote server
   Future<void> ping();
 
@@ -33,6 +79,17 @@ abstract class SyncClientBase {
     void Function(int sent, int total)? onProgress,
     CancelToken? cancelToken,
   });
+
+  /// Upload a file only if the remote still matches [precondition].
+  Future<void> uploadFileConditionally(
+    String localPath,
+    String remotePath, {
+    required SyncRemoteWritePrecondition precondition,
+    void Function(int sent, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) {
+    throw SyncConditionalWriteNotSupportedException(protocolName);
+  }
 
   /// Download a file from remote path to local path
   Future<void> downloadFile(

@@ -316,6 +316,54 @@ void main() {
     expect(state.lastError, contains('remote writeback failed'));
   });
 
+  test('uploadRemoteSyncBundle maps remote precondition failure to repreview',
+      () async {
+    final service = _FakeKnowledgeAssetExportService()
+      ..failRemoteWritebackWithPrecondition = true;
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .uploadRemoteSyncBundle();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(
+      state.remoteSyncStatus,
+      KnowledgeRemoteSyncStatus.repreviewRequired,
+    );
+    expect(state.lastRemotePreconditionFailed, true);
+    expect(state.lastError, contains('changed after preview'));
+  });
+
+  test('uploadRemoteSyncBundle maps unsupported CAS to guard unavailable',
+      () async {
+    final service = _FakeKnowledgeAssetExportService()
+      ..failRemoteWritebackWithoutConditionalGuard = true;
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .uploadRemoteSyncBundle();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(
+      state.remoteSyncStatus,
+      KnowledgeRemoteSyncStatus.concurrencyGuardUnavailable,
+    );
+    expect(state.lastRemoteConditionalWriteSupported, false);
+    expect(state.lastError, contains('ETag/CAS'));
+  });
+
   test('uploadRemoteSyncBundle clears stale rollback state on later success',
       () async {
     final service = _FakeKnowledgeAssetExportService()
@@ -551,6 +599,8 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
   bool failRemoteWritebackWithRollback = false;
+  bool failRemoteWritebackWithPrecondition = false;
+  bool failRemoteWritebackWithoutConditionalGuard = false;
   File? remoteUploadRollbackSnapshotFile = File('/tmp/remote-rollback.json');
   bool remotePreviewHasBlockers = true;
 
@@ -716,6 +766,21 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
         remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
         rollbackSnapshotPath: '/tmp/remote-rollback.json',
         rollbackRestored: true,
+      );
+    }
+    if (failRemoteWritebackWithPrecondition) {
+      throw const KnowledgeRemoteWritebackException(
+        message:
+            'Remote sync writeback blocked because the remote bundle changed after preview.',
+        remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+        remotePreconditionFailed: true,
+      );
+    }
+    if (failRemoteWritebackWithoutConditionalGuard) {
+      throw const KnowledgeRemoteWritebackException(
+        message: 'Remote sync writeback requires ETag/CAS support.',
+        remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+        conditionalWriteSupported: false,
       );
     }
     uploadedRemoteSyncBundle = true;

@@ -286,6 +286,82 @@ void main() {
     );
   });
 
+  testWidgets('remote precondition failure asks user to preview again',
+      (tester) async {
+    final service = _FakeKnowledgeAssetExportService()
+      ..failRemoteWritebackWithPrecondition = true;
+    final reviewController = _FakeReviewInboxController();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          knowledgeAssetExportServiceProvider.overrideWithValue(service),
+          reviewInboxControllerProvider.overrideWithValue(reviewController),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: const KnowledgeAssetExportPage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Upload sync bundle'));
+    await tester.pump();
+
+    expect(
+      find.text('Remote sync status: Re-preview required'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Preview remote sync again before uploading'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('unsupported conditional writes show guard unavailable',
+      (tester) async {
+    final service = _FakeKnowledgeAssetExportService()
+      ..failRemoteWritebackWithoutConditionalGuard = true;
+    final reviewController = _FakeReviewInboxController();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          knowledgeAssetExportServiceProvider.overrideWithValue(service),
+          reviewInboxControllerProvider.overrideWithValue(reviewController),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: const KnowledgeAssetExportPage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Upload sync bundle'));
+    await tester.pump();
+
+    expect(
+      find.text('Remote sync status: Concurrency guard unavailable'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('did not expose ETag/CAS protection'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('remote preview without blockers shows ready-to-upload status',
       (tester) async {
     final service = _FakeKnowledgeAssetExportService()
@@ -351,6 +427,8 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
   bool failRemoteWritebackWithRollback = false;
+  bool failRemoteWritebackWithPrecondition = false;
+  bool failRemoteWritebackWithoutConditionalGuard = false;
   bool remotePreviewHasBlockers = true;
 
   @override
@@ -516,6 +594,21 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
         remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
         rollbackSnapshotPath: '/tmp/remote-rollback.json',
         rollbackRestored: true,
+      );
+    }
+    if (failRemoteWritebackWithPrecondition) {
+      throw const KnowledgeRemoteWritebackException(
+        message:
+            'Remote sync writeback blocked because the remote bundle changed after preview.',
+        remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+        remotePreconditionFailed: true,
+      );
+    }
+    if (failRemoteWritebackWithoutConditionalGuard) {
+      throw const KnowledgeRemoteWritebackException(
+        message: 'Remote sync writeback requires ETag/CAS support.',
+        remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+        conditionalWriteSupported: false,
       );
     }
     uploadedRemoteSyncBundle = true;
