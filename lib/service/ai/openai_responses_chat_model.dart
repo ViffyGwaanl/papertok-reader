@@ -59,6 +59,10 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
   /// manually replaying provider reasoning items.
   String? _lastServerResponseId;
 
+  /// Runtime compatibility guard for Responses-compatible providers that
+  /// advertise /responses but reject `previous_response_id`.
+  bool _previousResponseIdUnsupported = false;
+
   /// Accumulated reasoning items from previous Responses calls within the same
   /// agent loop.
   ///
@@ -99,6 +103,21 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
 
   http.Client _ensureClient() => _client ??= http.Client();
 
+  Future<http.StreamedResponse> _sendRequest(
+    http.Client client,
+    Map<String, dynamic> requestBody,
+  ) {
+    final request = http.Request('POST', _endpoint())
+      ..headers.addAll({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $apiKey',
+        if (headers != null) ...headers!,
+      })
+      ..body = jsonEncode(requestBody);
+
+    return client.send(request);
+  }
+
   @override
   void close() {
     try {
@@ -131,12 +150,13 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     final effective = options ?? defaultOptions;
     ChatResult? aggregated;
     await for (final chunk in stream(input, options: effective)) {
-      aggregated = aggregated == null ? chunk : aggregated!.concat(chunk);
+      aggregated = aggregated?.concat(chunk) ?? chunk;
     }
-    if (aggregated == null) {
+    final result = aggregated;
+    if (result == null) {
       throw StateError('OpenAI Responses returned no output');
     }
-    return aggregated!;
+    return result;
   }
 
   @override
@@ -148,7 +168,8 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     final controller = StreamController<ChatResult>();
 
     Future<void>(() async {
-      final requestBody = _buildRequestBody(input.toChatMessages(), effective);
+      final messages = input.toChatMessages();
+      var requestBody = _buildRequestBody(messages, effective);
 
       if (_aiDebugEnabled) {
         final inputItems = requestBody['input'];
@@ -163,20 +184,29 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
         );
       }
 
-      final request = http.Request('POST', _endpoint())
-        ..headers.addAll({
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
-          if (headers != null) ...headers!,
-        })
-        ..body = jsonEncode(requestBody);
-
       final client = _ensureClient();
 
       try {
-        final response = await client.send(request);
+        var response = await _sendRequest(client, requestBody);
+        String? errorBody;
         if (response.statusCode < 200 || response.statusCode >= 300) {
-          final errorBody = await response.stream.bytesToString();
+          errorBody = await response.stream.bytesToString();
+          if (_isUnsupportedPreviousResponseId(
+            statusCode: response.statusCode,
+            errorBody: errorBody,
+            requestBody: requestBody,
+          )) {
+            _previousResponseIdUnsupported = true;
+            _aiDebug(
+              'provider rejected previous_response_id; retrying in compatibility mode',
+            );
+            requestBody = _buildRequestBody(messages, effective);
+            response = await _sendRequest(client, requestBody);
+            errorBody = null;
+          }
+        }
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          errorBody ??= await response.stream.bytesToString();
           throw StateError(
             'OpenAI Responses HTTP ${response.statusCode}: $errorBody',
           );
@@ -510,6 +540,8 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     ChatOpenAIOptions options,
   ) {
     final model = options.model ?? defaultOptions.model;
+    final canUsePreviousResponseId =
+        usePreviousResponseId && !_previousResponseIdUnsupported;
 
     // If we're starting a fresh run (no tool outputs in the scratchpad), clear
     // replay items and previous-response tracking.
@@ -526,7 +558,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     // If we have a server-side response id, use `previous_response_id` and only
     // submit tool outputs. This avoids manual replay of provider reasoning items
     // (which is brittle and may violate item adjacency constraints).
-    if (usePreviousResponseId &&
+    if (canUsePreviousResponseId &&
         hasToolOutputs &&
         _lastServerResponseId != null &&
         _lastServerResponseId!.trim().isNotEmpty) {
@@ -593,7 +625,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     // replay for tool-call loops. This may be required for some reasoning
     // models, but can be rejected by strict servers.
     var replayInserted = false;
-    if (usePreviousResponseId &&
+    if (canUsePreviousResponseId &&
         hasToolOutputs &&
         _replayReasoningItems.isNotEmpty) {
       for (var i = 0; i < inputItems.length; i++) {
@@ -678,6 +710,22 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     };
   }
 
+  bool _isUnsupportedPreviousResponseId({
+    required int statusCode,
+    required String errorBody,
+    required Map<String, dynamic> requestBody,
+  }) {
+    if (statusCode != 400) {
+      return false;
+    }
+    if (!requestBody.containsKey('previous_response_id')) {
+      return false;
+    }
+    final lower = errorBody.toLowerCase();
+    return lower.contains('previous_response_id') &&
+        lower.contains('unsupported');
+  }
+
   String _dataUrlFromBase64(String base64, String mimeType) {
     final b64 = base64.trim();
     if (b64.isEmpty) return '';
@@ -714,7 +762,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       SystemChatMessage() => 'system',
       HumanChatMessage() => 'user',
       AIChatMessage() => 'assistant',
-      CustomChatMessage() => (msg as CustomChatMessage).role,
+      CustomChatMessage() => msg.role,
       _ => 'user',
     };
 
@@ -796,16 +844,14 @@ class _PendingFunctionCall {
     this.outputIndex,
     required this.callId,
     required this.name,
-    this.arguments = '',
-    this.done = false,
   });
 
   final String itemId;
   int? outputIndex;
   String callId;
   String name;
-  String arguments;
-  bool done;
+  String arguments = '';
+  bool done = false;
 }
 
 class _SseEvent {

@@ -82,4 +82,11 @@ void main() {
     );
     expect(AiToolRegistry.isConcurrencySafeForId('calculator'), isTrue);
   });
+
+  test('current book semantic search is serialized by default', () {
+    expect(
+      AiToolRegistry.isConcurrencySafeForId('semantic_search_current_book'),
+      isFalse,
+    );
+  });
 }

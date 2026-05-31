@@ -13,7 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _QueuedStreamClient extends http.BaseClient {
   _QueuedStreamClient(this._queue);
 
-  final List<String> _queue;
+  final List<Object> _queue;
   final List<Map<String, dynamic>> sentJsonBodies = [];
 
   @override
@@ -29,8 +29,15 @@ class _QueuedStreamClient extends http.BaseClient {
       );
     }
 
-    final sse = _queue.removeAt(0);
-    final bytes = utf8.encode(sse);
+    final queued = _queue.removeAt(0);
+    if (queued is _QueuedHttpResponse) {
+      return http.StreamedResponse(
+        Stream<List<int>>.fromIterable([utf8.encode(queued.body)]),
+        queued.statusCode,
+      );
+    }
+
+    final bytes = utf8.encode(queued.toString());
     final stream = Stream<List<int>>.fromIterable([bytes]);
 
     return http.StreamedResponse(
@@ -41,6 +48,13 @@ class _QueuedStreamClient extends http.BaseClient {
       },
     );
   }
+}
+
+class _QueuedHttpResponse {
+  const _QueuedHttpResponse(this.statusCode, this.body);
+
+  final int statusCode;
+  final String body;
 }
 
 String _sseEvent(String type, Map<String, dynamic> data) {
@@ -86,7 +100,7 @@ void main() {
 
     ChatResult? agg;
     for (final c in chunks) {
-      agg = agg == null ? c : agg!.concat(c);
+      agg = agg?.concat(c) ?? c;
     }
 
     expect(agg, isNotNull);
@@ -376,6 +390,124 @@ void main() {
 
     expect(types, contains('function_call'));
     expect(types, contains('function_call_output'));
+  });
+
+  test('falls back when previous_response_id is rejected by provider',
+      () async {
+    final first = StringBuffer()
+      ..write(_sseEvent('response.output_item.done', {
+        'output_index': 0,
+        'item': {
+          'type': 'function_call',
+          'id': 'fc_1',
+          'call_id': 'call_1',
+          'name': 'get_weather',
+          'arguments': '{"location":"Paris"}'
+        }
+      }))
+      ..write(_sseEvent('response.completed', {
+        'response': {
+          'id': 'resp_1',
+          'reasoning': {'summary': null}
+        }
+      }));
+
+    final retry = StringBuffer()
+      ..write(_sseEvent('response.output_text.delta', {'delta': 'OK'}))
+      ..write(_sseEvent('response.completed', {
+        'response': {
+          'id': 'resp_2',
+          'reasoning': {'summary': null}
+        }
+      }));
+
+    final client = _QueuedStreamClient([
+      first.toString(),
+      const _QueuedHttpResponse(
+        400,
+        '{"error":{"message":"Unsupported parameter: previous_response_id"}}',
+      ),
+      retry.toString(),
+    ]);
+
+    final model = ChatOpenAIResponses(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'k',
+      defaultOptions: const ChatOpenAIOptions(model: 'gpt-test'),
+      client: client,
+    );
+
+    await model
+        .stream(
+          PromptValue.chat([
+            ChatMessage.humanText('hello'),
+          ]),
+        )
+        .toList();
+
+    final toolCall = AIChatMessageToolCall(
+      id: 'call_1',
+      name: 'get_weather',
+      argumentsRaw: '{"location":"Paris"}',
+      arguments: const {},
+    );
+
+    final chunks = await model
+        .stream(
+          PromptValue.chat([
+            AIChatMessage(content: '', toolCalls: [toolCall]),
+            ChatMessage.tool(toolCallId: 'call_1', content: '{"temp":25}'),
+          ]),
+        )
+        .toList();
+
+    expect(client.sentJsonBodies, hasLength(3));
+    expect(client.sentJsonBodies[1]['previous_response_id'], 'resp_1');
+    expect(client.sentJsonBodies[2].containsKey('previous_response_id'), false);
+
+    final retryInput = (client.sentJsonBodies[2]['input'] as List)
+        .whereType<Map>()
+        .map((e) => e['type']?.toString())
+        .toList(growable: false);
+    expect(retryInput, contains('function_call'));
+    expect(retryInput, contains('function_call_output'));
+
+    final content = chunks.map((c) => c.output.content).join();
+    expect(content, 'OK');
+  });
+
+  test('does not retry unrelated HTTP 400 errors', () async {
+    final client = _QueuedStreamClient([
+      const _QueuedHttpResponse(
+        400,
+        '{"error":{"message":"Unsupported parameter: reasoning"}}',
+      ),
+    ]);
+
+    final model = ChatOpenAIResponses(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'k',
+      defaultOptions: const ChatOpenAIOptions(model: 'gpt-test'),
+      client: client,
+    );
+
+    await expectLater(
+      model
+          .stream(
+            PromptValue.chat([
+              ChatMessage.humanText('hello'),
+            ]),
+          )
+          .toList(),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('Unsupported parameter: reasoning'),
+        ),
+      ),
+    );
+    expect(client.sentJsonBodies, hasLength(1));
   });
 
   test('respects requestReasoningSummary flag', () async {

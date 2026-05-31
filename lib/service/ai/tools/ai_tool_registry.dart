@@ -322,6 +322,7 @@ class AiToolRegistry {
     'reminders_delete_list',
     'shortcuts_run',
     'spawn_sub_agent',
+    'semantic_search_current_book',
   };
 
   /// Returns the effective scenes for a tool, considering overrides.
