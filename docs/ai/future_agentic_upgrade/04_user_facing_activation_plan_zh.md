@@ -9,6 +9,16 @@
 - 哪些能力已有底层 artifact，但还没有产品入口。
 - 剩余 Agent Task 怎样把能力接成可用闭环。
 
+入口前置条件和命名：
+
+- 阅读页入口来自选中文本后的横向菜单；窄屏上 `知识卡 / 研讨 / 图谱 / AI` 可能需要横向滑动才能看到。
+- `Review Inbox` 有两个可达路径：Settings 顶层 AI 区的直达入口，以及 `Settings -> AI -> Review inbox`。
+- AI Chat 的 Memory 入口是回答旁书签图标；tooltip 是 `Memory actions / 记忆操作`，菜单项是 `Add to Review inbox / 加入待审核队列`。
+- 图片知识卡必须先在 ImageViewer 点工具栏魔法棒 `AI Image Analysis / AI图片解析`，解析结果弹层出现后才会显示 `Card / 知识卡`。
+- AI Chat 回答旁 `知识卡` 只在回答完成后可用；streaming 中禁用，不会写 store。
+- `Custom skills` 当前 UI label 仍是英文；中文文档里的“自定义 Skill”指向这一项。
+- Review Inbox 只有 producer 写入 pending item 后才会显示内容；空 inbox 不代表入口不存在。
+
 ## 1. 当前用户可用性
 
 | 能力 | 用户入口 | 当前状态 | 真实边界 |
@@ -18,7 +28,9 @@
 | 图片解析 -> KnowledgeCard | 阅读页点开图片 -> `AI Image Analysis / AI图片解析` -> `Card / 知识卡`。 | 本分支已接入 `ImageAnalysisKnowledgeCardProducer`、图片解析结果弹层入口和 ImageViewer 工具栏点击级路径，解析结果会进入 KnowledgeCard store 与 Review Inbox。 | 默认只进入 Review，不写长期记忆、不写笔记、不写 spaced review；SourceRef 使用当前阅读位置的 book/cfi/href 回跳；图片本体不写入 card payload。 |
 | 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 runtime：用户可启动 role-by-role Seminar，查看 evidence、角色输出、Shared Whiteboard、synthesis，并把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox；Seminar 页面会在启动前显示 `Provider readiness`，列出当前 provider、model、context/max output、Tools/Vision/Thinking 能力、Streaming 状态未知提示和成本状态；角色完成后优先显示 provider 返回的 `Provider reported usage`，没有 provider usage metadata 时显示 `Local token estimate`、input/output 估算和 `Provider billing may differ` 提示；页面提供本地 `Role output token budget`、`Run token budget`，当 provider capability cache 带 pricing metadata 时还启用估算 `Run cost cap USD`；页面可在同一书籍/同一入口问题恢复本机保存的 completed/cancelled/failed Seminar state，并显示 `Recovered local Seminar state`。 | 阅读页优先 current book evidence；Settings 独立入口没有 current book 时会走 library fallback。Seminar synthesis 本身只进入 Review，不自动应用；候选卡和候选 flashcard 仍需用户在 Review Inbox 中批准/应用后才成为长期资产或复习项；provider readiness 只读本地 Provider Center 配置和 capability cache，不记录 API key；provider token usage 只表示 provider/SDK 回传的 token metadata；估算美元成本来自 pricing metadata 与 token usage，不等于真实 provider 发票；缺少 pricing metadata 时继续显示成本未知原因且禁用美元 cap；重启前仍在 running 的 Seminar 只恢复为 interrupted/retryable，不伪装继续后台生成；换书或换选区打开 Seminar 会丢弃旧 runtime/cache，不显示不属于当前入口的旧研讨。 |
 | AI Chat 普通解释 -> KnowledgeCard | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡`。 | 本分支已接入 `AiChatKnowledgeCardProducer` 和回答旁显性 `知识卡` action；streaming 中 `知识卡` 按钮禁用且不会调用 producer；回答旁显示 `可跳转来源` 或 `已标记不可用` 来源状态，tooltip 解释是否能跳回原文；选中文本进入 AI 草稿时会带上精确 reader SourceRef，并随 `conversationV2` 历史持久化，点击后写入 KnowledgeCard store 与 Review Inbox；reader-grounded card 会带保守 `conceptRefs`。 | 必须用户显式点击；不会在回答生成时直接写 KnowledgeCard 或 ConceptGraph；如果用户把预填草稿改成不包含原选中文本或 SourceRef snippet 的无关问题，本轮 user node 不保存旧 reader SourceRef；短公共片段只靠碰巧包含不会保留精确 reader grounding；用户在 Review Inbox 中 Apply 后，带 `conceptRefs` 的 reader-grounded AI Chat card 才会生成 draft ConceptGraph relation 和 pending relation ReviewItem；纯聊天 card 不生成 `conceptRefs`；没有持久化 reader SourceRef 的旧历史只保留 conversation provenance，不用当前阅读位置伪造 reader grounding。 |
-| AI Chat -> Memory 候选审核 | AI Chat 回答旁 `Memory actions` -> `Add to Review inbox` -> `Settings -> AI -> Review inbox`。 | 本分支已接入 MemoryCandidate 到统一 ReviewItem 的 handoff、Memory source-specific apply/dismiss adapter 和 Review Inbox Apply UI。 | Memory 候选必须经用户批准和应用；Apply 先追加到目标 daily/long-term Markdown，再推进 ReviewItem；Dismiss 不写 memory；无书内跳转的 conversation memory 会显示证据摘录和不可跳原因；不写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。 |
+| Responses 兼容模型提问 | `Settings -> AI -> Provider Center` 选择 OpenAI Responses 兼容 provider，按 provider 配置打开或保留 `Use previous_response_id continuation`。 | 本分支已接入 `previous_response_id` 兼容 fallback：当 Responses provider 返回 HTTP 400 且错误体明确指向 `Unsupported parameter: previous_response_id` 时，当前请求会标记该运行时实例不再发送 `previous_response_id`，并用同一消息/工具输出重建 replay body 重试一次；正常 provider 仍使用 server-side continuation。 | 只对明确的 `previous_response_id` unsupported 生效；非该参数的 HTTP 400 保留原始错误并不重试；fallback 是当前运行时实例内的兼容保护，不是 provider capability schema 的永久迁移；仍需用户在 Provider Center 正确配置 base URL、model、streaming 和 reasoning 选项。 |
+| 当前书语义检索资源保护 | 阅读页搜索、AI Seminar current-book evidence、`semantic_search_current_book` 工具。 | 本分支已把当前书语义搜索改成分页向量扫描：扫描页只取 id、章节、hash、context 和 vector blob/norm，不取 `text/raw_text/embedding_json`；只为 topK 命中回查正文；老索引缺少 blob 时按页批量回查 `embedding_json`；搜索服务全局串行，页内/页末让出 UI isolate，工具 registry 也默认串行该工具。 | 这是 OOM/发热/掉帧的保护层，不是完整高性能向量引擎；大书仍会做精确向量扫描，只是 bounded memory 和非并发；没有实现 sqlite-vec/ANN、后台 isolate、取消进度 UI 或自动索引重建提示。 |
+| AI Chat -> Memory 候选审核 | AI Chat 回答旁书签图标 `Memory actions / 记忆操作` -> `Add to Review inbox / 加入待审核队列` -> `Settings -> AI -> Review inbox`。 | 本分支已接入 MemoryCandidate 到统一 ReviewItem 的 handoff、Memory source-specific apply/dismiss adapter 和 Review Inbox Apply UI。 | Memory 候选必须经用户批准和应用；Apply 先追加到目标 daily/long-term Markdown，再推进 ReviewItem；Dismiss 不写 memory；无书内跳转的 conversation memory 会显示证据摘录和不可跳原因；不写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | Memory 独立浏览 SourceRef 审计 | 首页底部 `Memory / 记忆` tab 打开 daily/long-term memory 列表，再进入条目详情；该 tab 默认隐藏，可先到 `Settings -> Home navigation / 首页导航` 打开。 | 本分支已接入 `MemoryEntrySourceRefAdapter`、Memory home row source audit chips、Memory detail `SourceRefEvidenceList` 和 `Open source` action；只从已应用 MemoryCandidate 只读投影 SourceRef，按目标文档与条目 body 匹配，long-term `MEMORY.md` 按 H1 分段 body 匹配。 | 匹配只认实际写入 memory 的 `text/displayText`，不能只靠 summary 命中；不往 Markdown memory 写隐藏来源字段；没有 book anchor 的 conversation memory 只显示 unavailable/unresolved；可跳来源只使用合法 `paperreader://reader/open?...`；long-term H1 分段不能被批量删除/打标签，避免误操作整份 `MEMORY.md`；浏览页不创建 KnowledgeCard、ReviewItem、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | 旧划线/笔记 SourceRef 审计 | 书籍笔记列表或搜索结果里的笔记条目。 | 本分支已接入 `BookNoteSourceRefAdapter`、`BookNoteTile` source audit、`SourceRefEvidenceList` 和 `PaperReaderSourceJumpAudit`；条目显示 Evidence、可跳转/不可跳状态、来源书名/章节和不可跳原因。 | 有有效 `bookId + cfi` 的条目保持原文跳转；无有效 book anchor 的旧条目点击时显示不可跳原因，不调用阅读页空 CFI 或无效 book anchor 跳转；不写 KnowledgeCard、ReviewItem、Memory、ConceptGraph、SpacedReview 或 Sync。 |
 | Custom Skill 导入 | `Settings -> AI -> Custom skills` 粘贴 governed JSON -> `Import skill`，再到 `Active Skill` 选择启用后的自定义 skill。 | 本分支已接入导入页面、`CustomSkillStore`、Settings 入口、`AiSkillRegistry` 合并和 LangChain runtime 工具收窄。 | 只接受 `CustomSkillContract(schemaVersion=1)`；unsafe JSON 不落库、不激活；禁用 skill 不进入 Active Skill 列表；运行时只保留自定义 skill 声明过、当前 scene 可用、permission matrix 允许的只读工具；custom skill 激活时不加载 MCP 工具。 |
@@ -492,6 +504,66 @@ flutter test --no-pub \
   -r compact
 ```
 
+### 2.13 Responses 兼容模型提问
+
+用户路径：
+
+1. 用户进入 `Settings -> AI -> Provider Center`。
+2. 用户选择或创建 OpenAI Responses 兼容 provider。
+3. 用户按 provider 需要配置 model、base URL、streaming/reasoning 选项。
+4. 用户可以保持 `Use previous_response_id continuation` 开启。
+5. 用户在阅读页 AI Chat、Seminar 或工具调用场景中发起请求。
+6. 如果 provider 支持 `previous_response_id`，系统继续使用 server-side continuation。
+7. 如果 provider 明确以 HTTP 400 拒绝 `previous_response_id`，系统自动重建为不带该字段的 tool-output replay body，并重试一次。
+8. 如果错误不是 `previous_response_id` unsupported，系统保留原错误并显示给用户，不把 provider 配置错误误判为兼容 fallback。
+
+Gate：
+
+- 只有请求体确实包含 `previous_response_id`，且 HTTP status 是 `400`，且错误正文同时包含 `previous_response_id` 和 `unsupported`，才允许 fallback。
+- fallback 后同一个 `ChatOpenAIResponses` runtime instance 不再发送 `previous_response_id`。
+- 正常支持 `previous_response_id` 的 provider 不受影响。
+- 非 `previous_response_id` 的 HTTP 400 不允许 retry。
+- fallback 不记录 API key，不改 provider 设置，不把第三方 provider 的兼容行为写成永久 capability。
+
+验证命令：
+
+```bash
+flutter test --no-pub \
+  test/service/openai_responses_chat_model_test.dart \
+  -r compact
+```
+
+### 2.14 当前书语义检索资源保护
+
+用户路径：
+
+1. 用户先为当前书构建本地 AI semantic index。
+2. 用户在阅读页触发普通搜索、AI Seminar current-book evidence，或 agent tool 调用 `semantic_search_current_book`。
+3. 系统嵌入 query 后按 `ai_chunks.id` 分页扫描当前书向量。
+4. 扫描页只读取 vector 和 provenance 所需列，不读取 `text/raw_text/embedding_json`。
+5. 系统维护 bounded topK 候选，只为最终命中的 chunk 回查正文。
+6. 如果旧索引 chunk 还没有 `embedding_blob`，系统按页批量回查 `embedding_json`，不做逐行 SQL 回查。
+7. 同进程 current-book semantic search 通过全局 lock 串行化；agent tool registry 也把 `semantic_search_current_book` 标为非并发。
+
+Gate：
+
+- hot scan query 不允许选择 `text/raw_text/embedding_json`。
+- topK 候选必须 bounded，不能把全书 scored rows 常驻内存。
+- text/raw_text 只能为 winners 回查。
+- JSON fallback 只能按页批量回查 blob 缺失行。
+- 直接调用路径和 tool orchestrator 路径都不能并发扫描当前书。
+- 搜索必须定期 yield，降低阅读页滚动和翻页被长循环阻塞的概率。
+- 本切片不是 ANN 后端；大书仍可能触发 timeout，后续性能任务必须继续保留 SourceRef 和 evidence gate。
+
+验证命令：
+
+```bash
+flutter test --no-pub \
+  test/service/rag/semantic_search_current_book_search_test.dart \
+  test/service/ai/tools/ai_tool_registry_governance_test.dart \
+  -r compact
+```
+
 ## 3. 当前还不能用
 
 这些能力没有产品入口或没有完成端到端验收，不应在用户沟通中描述为已经可用：
@@ -500,6 +572,7 @@ flutter test --no-pub \
 | --- | --- | --- | --- |
 | 完整云同步引擎 | 当前已有本地导出、机器可读 sync bundle、远端 bundle preview、远端同步状态面板、安全远端 incoming KnowledgeCard Review 导入、安全远端 review history Review 导入、安全远端 KnowledgeCard 冲突 staged Review 恢复、受保护 bundle 上传、安全冲突 Review handoff 和安全 KnowledgeCard 冲突本地恢复；还没有双向自动合并、远端写回和失败回滚执行器。 | 设计并实现双向合并器、远端写回和 rollback。 | API key 永不同步；冲突进入 Review；不得使用 whole-file newer-wins 覆盖用户资产。 |
 | Seminar 后台续跑和真实账单对账 | Seminar runtime 已能流式、取消、重试、Review handoff，并显示 provider readiness、capability cache、成本未知原因、provider token usage、本地 token 估算 fallback、本地 role/run token budget、pricing metadata 驱动的估算 `Run cost cap USD` 和本机 state 恢复；running state 重启后恢复为 interrupted/retryable。未接真正后台任务续跑，也不做 provider invoice reconciliation。 | 接入后台任务队列、重启续跑、移动资源 gate 和真实账单/价格版本对账说明。 | 移动资源 gate；长任务可取消、失败可恢复或重试；无 pricing metadata 时继续显示成本未知原因并禁用美元 cap；估算美元成本不等于 provider 发票；本地 token budget 不得声明为 provider billing cap；不能把本机 recovery cache 当作同步资产。 |
+| 高性能当前书向量检索后端 | 当前书语义搜索已做分页、topK、串行和 yield，能规避一次性全书向量/正文加载；仍不是 ANN/Vec1/sqlite-vec 后端，也不是后台 isolate 检索。 | `UFA-C07-T02`：抽象 current-book vector backend，先接候选预筛或 sqlite-vec/Vec1 实验 backend，再接取消、进度和后台 isolate 验证。 | 不得牺牲 SourceRef；无 evidence 不返回正式结果；旧 DB、无 embedding、FTS5 缺失、书籍删除和 provider 切换都有 degrade path；移动端大书搜索必须有取消或可恢复状态。 |
 | 复杂无限画布式 ConceptGraph | 当前是局部图谱、dossier、路径和摘要，不做无限画布、缩放手势或跨书外部知识扩展。 | 如需画布，先定义移动端资源、证据可见性和 graph ownership gate。 | 关系必须有 evidence；正式关系必须 Review apply。 |
 | 发布版可用 | 本文件描述 `codex/future-agentic-upgrade` 分支；不代表 `main`、TestFlight 或已安装版本。 | 走 release promotion gate，完成合并、构建、回归、发布说明和用户迁移说明。 | 发布前必须重跑权威验证命令并记录 commit。 |
 
@@ -514,6 +587,7 @@ flutter test --no-pub \
 | UFA-C01-T03 | Accepted | Image Analysis KnowledgeCard | 图片解析结果生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore, E07 image analysis sheet | `ImageAnalysisKnowledgeCardProducer`, `AiImageAnalysisSheet` Card action, `ImageViewer` analysis/card seams | 图片解析结果弹层显示 `Card` 入口；producer 覆盖 pending KnowledgeCard 和 pending ReviewItem、重复点击和不自动写长期资产；ImageViewer 工具栏点击 `AI Image Analysis` 后使用可注入分析流打开弹层，点击 `Card` 写入 pending image-analysis KnowledgeCard 和 pending ReviewItem，保留 book/cfi/href SourceRef 且不保存图片本体。 |
 | UFA-C01-T04 | Accepted | RAG Evidence KnowledgeCard | 本地 RAG/GraphRAG evidence 生成待审 KnowledgeCard。 | E00 SourceRef, E02 RAG evidence, E03 store, E05 ReviewItemStore, E07 ConceptGraph empty state | `RagEvidenceKnowledgeCardProducer`, `ConceptGraphExplorerNotifier.createKnowledgeCardFromLibrarySearch`, 空态 `Card` action | 只有 traceable chunk SourceRef 且带可保存 chunk snippet 的 RAG evidence 能写 pending KnowledgeCard 和 pending ReviewItem；derived summary 不替代书内 chunk evidence；不写正式图谱或长期资产；写入后页面显示 Review inbox 反馈。 |
 | UFA-C01-T05 | Accepted | AI Chat KnowledgeCard | AI Chat 回答显式生成待审 KnowledgeCard。 | E00 SourceRef, E03 store, E05 ReviewItemStore, E07 AI Chat message action | `AiChatKnowledgeCardProducer`, `AiChatStream` 回答旁 `知识卡` action, answer-side source status chip, `ExcerptMenu` AI sourceRef handoff, `conversationV2` user-node SourceRef persistence | 回答完成后才可点击 `知识卡`，streaming 中按钮禁用且 producer 调用数为零；回答旁显示可跳转或不可用来源状态；选中文本进入 AI 草稿且发送内容仍包含原选中文本或 SourceRef snippet 时，才保留并持久化精确 reader SourceRef；历史重载后 `知识卡` 仍优先使用原始 reader SourceRef；无关改写不保存旧 reader SourceRef；短公共片段碰巧命中不保存旧 reader SourceRef；reader-grounded card 带保守 `conceptRefs`，纯聊天 card 不带；重复点击不制造重复卡；不直接写 ConceptGraph、长期记忆、笔记或 spaced review。 |
+| UFA-C01-T06 | Ready | Selected-text AI launcher widget evidence | 补阅读页选中文本 `AI` 按钮点击级 widget 测试，证明会打开 AI chat draft 并传 reader SourceRef。 | UFA-C01-T05, E07 menu | `ExcerptMenu` AI action widget test | 点击 `AI` 后草稿包含选中文本；有效 `bookId + cfi` SourceRef 被传入 chat；无有效 anchor 时不伪造 reader grounding。 |
 | UFA-C02-T01 | Accepted | Seminar launcher | 阅读页选中菜单显示 `研讨`，打开结构化 Seminar runtime page。 | AI Seminar runtime, E07 menu | `ExcerptMenu` action | 入口可见；选中文本预填；不自动写用户资产。 |
 | UFA-C02-T02 | Accepted | Structured Seminar runtime UI | 把 `AiSeminarOrchestrationService` 接入真实模型流式事件。 | E01 services, E06 governance, E07 progress UI | `AiSeminarRuntimeService`、`aiSeminarRuntimeProvider`、`AiSeminarRuntimePage` | 角色 turn、evidence、whiteboard、synthesis 进入可序列化 runtime state；失败可重试，运行可取消。 |
 | UFA-C02-T03 | Accepted | Seminar Review handoff | Seminar synthesis 和候选卡进入 Review Inbox。 | UFA-C02-T02, E05 controller | `AiSeminarRuntimeNotifier.sendToReview` + `SeminarSynthesisReviewAdapter` | 只有 `readyForReview + traceable handoff` 的 synthesis 进入 pending Review；候选卡保持 AI draft/pending，不直接应用；页面级 widget 覆盖用户点击 `Start Seminar` 后再点击 `Send to Review`，并断言 synthesis、KnowledgeCard ReviewItem 和 seminar KnowledgeCard 均为 pending/draft 边界。 |
@@ -524,6 +598,8 @@ flutter test --no-pub \
 | UFA-C02-T08 | Accepted | Seminar local token budgets | 用户在 Seminar 页面设置本地 role/run token budget，并在超限时停止后续步骤。 | UFA-C02-T06, mobile resource gate | `AiSeminarBudgetPolicy`, `AiSeminarRuntimeService` budget gate, `AiSeminarRuntimePage` Local budget guardrails | Session contract round-trip 保存 `maxRoleOutputTokens/maxRunTokens`；页面显示 `Local budget guardrails`、`Role output token budget` 和 `Run token budget`；runtime 用 `local-char-estimate-v1` 判断 token 超限，流式 partial 超出 role output budget 时取消 active stream，completed turn 超出 role/run budget 时停止后续步骤；超限进入 failed/retryable，不生成 synthesis，不发送 Review；restore/retry 保留 session budget policy；不把本地 token 预算冒充 provider billing 或美元成本上限。 |
 | UFA-C02-T09 | Accepted | Seminar provider token usage | provider/SDK 返回 token usage metadata 时，Seminar turn/run 保存并显示 provider-reported token usage。 | UFA-C02-T06, UFA-C02-T08 | `CancelableLangchainRunner.stream`, `AiUsageTracker`, `AiSeminarModelRoleExecutor`, `AiSeminarTokenUsage.source`, `AiSeminarRuntimePage` usage UI | 非 agent stream 完成后把 provider usage 记录到会话 tracker；role executor 按 session usage tracker 前后差值写入 `provider-reported` tokenUsage；run 聚合 provider/local mixed usage；页面显示 `Provider reported usage` 或 mixed/local fallback；local role/run token budget 仍只使用 `local-char-estimate-v1`；provider token usage 只作为估算成本输入之一，不等于真实账单。 |
 | UFA-C02-T10 | Accepted | Seminar estimated USD cost cap | 用户在 Seminar 页面设置估算 `Run cost cap USD`，超出时停止后续步骤。 | UFA-C02-T05, UFA-C02-T09 | `AiModelCapability` pricing metadata, `AiSeminarBudgetPolicy.maxRunCostUsd`, `AiSeminarRuntimeService` cost gate, `AiSeminarRuntimePage` cost cap UI | Provider capability cache 带 input/output/cache pricing metadata 时，页面启用 `Run cost cap USD` 并显示 pricing source；session/run JSON round-trip 保存 pricing policy 和 estimated cost；runtime 聚合 provider-reported usage 或本地 fallback usage 估算美元成本，超出 cap 时进入 failed/retryable、保留已完成 turn、不生成 synthesis、不发送 Review；无 pricing metadata 时禁用 cost cap 并显示原因；估算成本不声明为 provider invoice。 |
+| UFA-C02-T11 | Ready | Seminar background resume | 把 Seminar running state 接入可取消后台 job，重启后按 job id 恢复或标记 interrupted。 | UFA-C02-T07, mobile resource gate | background job adapter, runtime recovery bridge | 不同步 API key；partial stream 不伪装 completed；失败可重试；取消、重启、provider 失败和换书/换选区都要有测试。 |
+| UFA-C02-T12 | Ready | Provider billing reconciliation | 记录 provider pricing version/usage snapshot，并在 UI 中区分 estimate、provider metadata 和 invoice reconciliation。 | UFA-C02-T10 | billing reconciliation model/view | 不把 local budget 或 estimated USD cap 声明为真实扣费上限；缺 pricing metadata 时继续禁用美元 cap；provider invoice 对账失败要显示原因。 |
 | UFA-C03-T01 | Accepted | Concept producer | 从 KnowledgeCard、Seminar candidate concept refs、reader-grounded AI Chat concept refs 和 derived RAG/GraphRAG search result 提取有证据的 ConceptNode/Edge 候选。 | E03, E04 store, E05 controller, UFA-C01-T05, UFA-C02-T03, E02 SourceRef evidence | `ConceptGraphProducer`, ReviewInboxController apply hook, Seminar candidate `conceptRefs` handoff, AI Chat card `conceptRefs` handoff, `createFromLibrarySearchResult`, `ConceptGraphExplorerNotifier.createDraftCandidateFromLibrarySearch` | 只有 `applied + traceable + conceptRefs` 的 KnowledgeCard，或 `derivedLayer/derivedSummary + traceable chunk SourceRef` 的 library RAG result，生成 draft node/edge；Seminar candidate card 和 reader-grounded AI Chat card 可携带 conceptRefs 并在用户 Apply 后进入同一链路；relation 进入 pending Review；ConceptGraph 空态显性 action 已接，并展示 Review/skip feedback。 |
 | UFA-C03-T02 | Accepted | Concept Explorer page | 提供局部图谱探索入口。 | E04 dossier/explore | `ConceptGraphExplorerPage`, provider, Settings AI entry, local graph map summary, injectable source opener | 用户能打开概念页、看中心概念、直接关系、二跳节点、evidence link 数量、draft/formal 状态、局部路径、原文跳转和 orphan/broken link；`Open source` 点击会把 jumpable SourceRef 交给 opener，不可跳来源显示原因且不触发 opener；Settings AI 点击级测试覆盖 `Settings -> AI -> Concept graph` 导航到 Explorer。 |
 | UFA-C03-T03 | Accepted | Reader concept entry | 阅读页选中文本可进入概念探索。 | UFA-C03-T02 | `ExcerptMenu` graph action, `ConceptGraphExplorerPage.initialQuery` | 选中文本可打开图谱页并筛选相关概念；没有相关概念时展示空态和草稿候选入口，不生成无证据正式节点。 |
@@ -532,6 +608,8 @@ flutter test --no-pub \
 | UFA-C04-T03 | Accepted | Memory Review apply | 待审 MemoryCandidate 通过统一 Review Inbox 应用到本地 Markdown memory。 | E05 controller, MemoryWorkflowService, MemoryCandidateReviewAdapter | `MemoryWorkflowService.addToReviewInbox` -> `ReviewItemStore` handoff, `ReviewInboxController` memory source-specific apply/dismiss adapter, `ReviewInboxPage` Apply gate | AI Chat memory action 创建 pending MemoryCandidate 时同步创建 pending ReviewItem；conversation-only memory SourceRef 带 evidence snippet、source hash 和不可跳原因；Review Inbox `Approve -> Apply` 先调用 MemoryWorkflowService 追加到目标 daily/long-term Markdown，再推进 ReviewItem；`Dismiss` 同步 MemoryCandidate 且不写 memory；source candidate 缺失不推进 ReviewItem；不写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | UFA-C04-T04 | Accepted | BookNote SourceRef audit | 旧划线/笔记条目显示来源证据和可跳/不可跳状态。 | E00 SourceRef, E07 deep link, BookNote UI | `BookNoteSourceRefAdapter`, `BookNoteTile`, `BookNotesList`, search note result, `SourceRefEvidenceList` | Notes 列表和搜索结果传入 source title；BookNoteTile 显示 evidence、traceable/unavailable chip、来源位置和不可跳原因；有有效 `bookId + cfi` 的条目保持原文跳转；无有效 book anchor 条目点击只显示不可跳 snackbar，不触发空 CFI 或无效 book anchor 跳转；测试覆盖 adapter 和 widget。 |
 | UFA-C04-T05 | Accepted | Memory browse SourceRef audit | Memory home、daily memory、long-term memory 浏览 UI 显示来源证据和可跳/不可跳状态。 | E00 SourceRef, E05 MemoryCandidate, E07 deep link, Memory browse UI | `MemoryEntrySourceRefAdapter`, `MemoryEntryRef.body/supportsBulkActions`, `MemoryRow` source audit chips, `MemoryDetailPage` source evidence/open source, Home navigation Memory label/icon | 只读投影已应用 MemoryCandidate；按目标文档和条目 body 匹配，summary-only 不归因，long-term H1 分段不共享整文件来源；列表显示 traceable/unavailable/unresolved chip；详情页显示 Evidence 和 `Open source`；可跳来源交给 reader opener，不可跳来源显示原因且不调用 opener；long-term H1 分段不允许批量删除/打标签，详情页也不显示会写整份 `MEMORY.md` 的 tag editor；不写 Markdown metadata、不写任何新知识资产。 |
+| UFA-C04-T06 | Ready | AI Chat Memory popup widget evidence | 补回答旁书签图标打开 popup 并点击 `Add to Review inbox` 的 widget 测试。 | UFA-C04-T03, AI Chat message actions | `AiChatStream` memory action widget test | 点击 Memory icon 展示 `Memory actions / 记忆操作` 菜单；点击 `Add to Review inbox / 加入待审核队列` 调用 memory handoff；streaming 或空回答不写 memory candidate。 |
+| UFA-C04-T07 | Ready | Settings Review Inbox navigation evidence | 补 Settings 顶层 AI 区和 `Settings -> AI` 子页进入 Review Inbox 的点击级 widget 测试。 | E05 Review Inbox UI, E07 navigation | Settings navigation widget tests | 两条路径都能打开 `ReviewInboxPage`；空 inbox 显示空态而不是导航失败；不创建 ReviewItem。 |
 | UFA-C05-T01 | Accepted | Sync / Export | 用户确认资产进入同步和导出入口。 | E08 policy | `KnowledgeAssetExportService`、`knowledgeAssetExportProvider`、`KnowledgeAssetExportPage`、Settings AI entry、export manifest、Markdown export、HTML study report、Anki TSV export、sync-conflict ReviewItem handoff | API key 不同步；派生索引不当作 source-of-truth；冲突被排除并显性显示；当前创建本地 manifest、Markdown 学习导出、HTML study report 和 Anki TSV，并能把待审冲突送入 Review Inbox；导出页在发送成功后显示 `Review inbox` 直达入口；provider 级测试覆盖 `KnowledgeAssetExportNotifier -> ReviewInboxNotifier -> ReviewInboxController -> KnowledgeCardStore/ReviewItemStore` 的安全 KnowledgeCard 冲突 approve/apply 闭环，解除 pending conflict 并重新进入导出集合；不执行远端写回或自动跨设备合并。 |
 | UFA-C05-T02 | Accepted | Remote sync preview | 用户从 Knowledge sync/export 读取远端 sync bundle，预览 per-entity incoming/outgoing/conflict，并把远端冲突送入 Review。 | UFA-C05-T01, E08 sync bundle, SyncClient/WebDAV config, E05 ReviewItemStore | `.knowledge/knowledge_sync_bundle_v1.json`, `KnowledgeRemoteSyncPreview`, `KnowledgeAssetExportService.previewRemoteSync`, `submitRemoteConflictsToReview`, `KnowledgeAssetExportNotifier.previewRemoteSync`, `KnowledgeAssetExportPage` `Preview remote sync` / `Send remote conflicts to Review` actions | sync bundle 只包含默认纳入的安全 envelope；remote preview 读取 `paper_reader/.knowledge/knowledge_sync_bundle_v1.json` 并展示 remote/incoming/outgoing/conflict 计数；preview 不导入 incoming、不覆盖本地资产；远端冲突 ReviewItem 只保存安全 metadata、payload keys、SourceRef count 和 safe SourceRef；远端 preview 冲突一律 `canApply=false`，只支持 dismiss/triage；安全 KnowledgeCard 本地 staged 冲突继续走 approve/apply，本地解除 pending conflict；不执行远端写回、自动合并或备份同步。 |
 | UFA-C05-T03 | Accepted | Protected remote sync upload | 用户从 Knowledge sync/export 把本机安全 sync bundle 写到 WebDAV/SyncClient。 | UFA-C05-T02, SyncClient/WebDAV config | `KnowledgeAssetExportService.uploadRemoteSyncBundle`, `KnowledgeRemoteSyncUploadResult`, `KnowledgeAssetExportNotifier.uploadRemoteSyncBundle`, `KnowledgeAssetExportPage` `Upload sync bundle` action | 上传前重新生成本机安全 sync bundle；远端不存在时创建 `paper_reader/.knowledge` 并上传；远端存在时先 preview，只有 `incoming=0` 且 `conflict=0` 时允许 replace；存在 incoming 或 conflict 时抛错并保持 remote 未改；页面显示上传路径和上传数量；不导入 incoming、不应用远端冲突、不执行双向自动合并或备份同步。 |
@@ -539,7 +617,13 @@ flutter test --no-pub \
 | UFA-C05-T05 | Accepted | Remote review history Review import | 用户从 Knowledge sync/export 把远端 review history 发送到 Review Inbox。 | UFA-C05-T02, E05 ReviewInboxController, SpacedReviewStore | `KnowledgeAssetExportService.submitRemoteReviewHistoryToReview`, `KnowledgeRemoteReviewHistoryReviewResult`, `ReviewItemSourceType.reviewHistoryImport`, `ReviewInboxController` review history apply adapter, `SpacedReviewStore.upsertImportedReviewHistory`, `KnowledgeAssetExportPage` `Send remote review history to Review` action | 只接受 `review-history + schemaVersion=1 + 无 secret payload + 有 evidence` 的远端 incoming envelope；导入时只创建 pending ReviewItem；generic ReviewItemStore apply 被拒绝；用户在 Review Inbox approve/apply 后才写入 SpacedReviewStore；重复导入不制造重复复习记录；不应用远端冲突、不写 KnowledgeCard/Memory/Note/ConceptGraph。 |
 | UFA-C05-T06 | Accepted | Remote KnowledgeCard conflict staged restore | 用户从 Knowledge sync/export 把安全远端 KnowledgeCard conflict 暂存到 Review Inbox，并在 Review Inbox 中确认恢复。 | UFA-C05-T02, E03 KnowledgeCardStore, E05 ReviewInboxController | `KnowledgeAssetExportService.stageRemoteKnowledgeCardConflictsToReview`, `KnowledgeRemoteConflictStageResult`, `KnowledgeCardStore.stageRemoteSyncConflict`, `KnowledgeCardStore.removeStagedRemoteSyncConflict`, `remote_sync_conflicts_v1.json`, `KnowledgeAssetExportPage` `Stage safe remote card conflicts to Review` action | 只接受 `knowledge-card + schemaVersion=1 + 无 secret payload + 有可追踪 SourceRef` 的远端 conflict；staging 只写 staged conflict store 和 pending sync-conflict ReviewItem，未 Apply 前不覆盖本机 KnowledgeCard；ReviewItem 写入失败会删除 staged entry；用户 Apply 后才写为本机 approved asset 并清掉 staged conflict；preview-only `Send remote conflicts to Review` 仍 `canApply=false`；重复、unsafe、untraceable 或无 staged envelope 的 apply 失败关闭；不远端写回、不双向自动合并、不写 Memory/Note/ConceptGraph/SpacedReview。 |
 | UFA-C05-T07 | Accepted | Remote sync status panel | 用户从 Knowledge sync/export 看到远端同步当前状态和下一步动作。 | UFA-C05-T02, UFA-C05-T03, E07 observability | `KnowledgeRemoteSyncStatus`, `KnowledgeAssetExportState.remoteSyncStatus`, `KnowledgeAssetExportPage` remote status panel, l10n keys | 页面显示 `Not previewed / Review required / Ready to upload / Uploaded / Failed`；远端 preview 出现 incoming/conflict 时显示 Review required；无 blocker 时显示 Ready to upload；上传成功显示 Uploaded；远端操作失败显示 Failed；刷新或重新创建 manifest 会清理旧上传状态；状态面板只解释下一步，不自动合并、不远端写回、不绕过 Review。 |
+| UFA-C05-T08 | Ready | Remote merge planner | 对 local/remote envelope 做三路 diff，输出 incoming/outgoing/conflict plan，不写本地或远端资产。 | UFA-C05-T07, E08 policy | `KnowledgeRemoteMergePlanner` + tests | 覆盖 same id same hash、local newer、remote newer、delete/modify、unknown schema、secret payload；不得 whole-file newer-wins；冲突必须进入 Review。 |
+| UFA-C05-T09 | Ready | Remote writeback executor | 只在 merge plan 无 incoming/conflict blocker 时写回远端 bundle，并保留 rollback snapshot。 | UFA-C05-T08 | `KnowledgeRemoteWritebackExecutor` + rollback tests | 远端写失败不改本地 confirmed asset；rollback 可恢复旧 remote bundle；API key 和派生索引不得写出；写回前后状态面板必须可解释。 |
 | UFA-C06-T01 | Accepted | Custom Skill 导入 | 用户从 Settings 导入 governed JSON skill，并在 Active Skill 中启用。 | E06 CustomSkillContract, AiSkillRegistry, LangChain runtime | `CustomSkillStore`、`CustomSkillsPage`、Settings AI entry、`AiSkill.allowedToolIds/sceneIds`、`LangchainAiRegistry.enabledToolIdsForActiveSkill` | 有效 `CustomSkillContract(schemaVersion=1)` 可导入、upsert、禁用和删除；危险工具、递归 sub-agent、unknown scene/field 和类型错误不落库不激活；禁用 skill 不进入 Active Skill；运行时只保留 custom skill 声明过且当前 scene/permission matrix 允许的只读工具；custom skill 激活时不加载 MCP 工具；widget 覆盖 `Settings -> AI -> Custom skills` 导航和粘贴 JSON 导入。 |
+| UFA-C06-T02 | Accepted | Responses previous_response_id fallback | 第三方 Responses provider 拒绝 `previous_response_id` 时自动降级重试。 | Provider Center Responses config, LangChain runtime | `ChatOpenAIResponses` compatibility latch, fallback request builder | 只有明确 `previous_response_id` unsupported 的 HTTP 400 会 fallback；正常 provider 继续用 server-side continuation；unrelated 400 不 retry；测试覆盖正向 fallback 和负向错误保留。 |
+| UFA-C06-T03 | Ready | Active Skill picker widget evidence | 补从 `Settings -> AI -> Active Skill` 选择已启用 custom skill 的点击级 widget 测试。 | UFA-C06-T01 | Settings active skill picker widget test | 已启用 custom skill 出现在 picker；disabled custom skill 不出现；选择后 runtime registry 能读取 active custom skill 并收窄工具。 |
+| UFA-C07-T01 | Accepted | Current-book semantic search resource guard | 当前书语义搜索避免一次性全书向量/正文加载并串行化扫描。 | E02 current-book index, E06 tool governance, mobile resource gate | `SemanticSearchCurrentBook` paged scan/topK/text winner load/global lock, `AiToolRegistry` non-concurrent flag | scan columns 不含 `text/raw_text/embedding_json`；JSON fallback 按页批量；只为 winners 取正文；直接调用与 tool 调用都不并发扫描；测试覆盖分页列、winner text load、直接调用串行和 tool non-concurrent。 |
+| UFA-C07-T02 | Ready | Current-book semantic search background backend | 为当前书语义搜索增加候选预筛/ANN 或后台 isolate，并暴露取消或进度状态。 | UFA-C07-T01, E02 schema gate | vector backend interface, cancellation/progress tests | 大书检索不能阻塞阅读滚动；取消后不写 partial result；无 embedding/旧 DB/provider 切换都有明确 degrade；SourceRef evidence 不降级。 |
 
 ## 5. Agent 执行约束
 

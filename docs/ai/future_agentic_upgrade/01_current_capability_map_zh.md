@@ -7,7 +7,7 @@
 | 项 | 当前可复用 | 缺口 | 下游 Epic |
 | --- | --- | --- | --- |
 | AI Chat streaming | `aiChatProvider` 已负责通用聊天 streaming 生命周期；本分支新增 `AiSeminarRuntimeService`，可把 role-by-role Seminar 输出为 evidence、role turn、whiteboard、synthesis 事件，并在 Seminar runtime state 中持久化 provider diagnostics、provider-reported token usage、本地 token usage fallback、本地 role/run token budget、pricing metadata 驱动的估算美元成本 cap 和同入口本机恢复缓存。 | Seminar 的后台任务队列、重启续跑和真实账单对账仍需接入。 | E01, E07 |
-| Provider Center | 已支持内置/自定义 provider、模型切换、Responses 兼容开关；`AiSeminarProviderContextService` 已能读取当前 provider/model、本地 capability cache、context/max output、Tools/Vision/Thinking 状态和 pricing metadata；`AiUsageTracker` 可接收 provider/SDK 回传的 token usage；当前 schema 没有 streaming 字段时显示 `Streaming unknown`，并在缺少 pricing metadata 时显示成本未知原因。 | Seminar 还需要后台恢复状态、正式 streaming capability 字段和 provider invoice reconciliation。 | E01, E06 |
+| Provider Center | 已支持内置/自定义 provider、模型切换、Responses 兼容开关；`ChatOpenAIResponses` 已能在第三方 Responses 网关明确拒绝 `previous_response_id` 时自动降级重试，不影响正常 server-side continuation provider；`AiSeminarProviderContextService` 已能读取当前 provider/model、本地 capability cache、context/max output、Tools/Vision/Thinking 状态和 pricing metadata；`AiUsageTracker` 可接收 provider/SDK 回传的 token usage；当前 schema 没有 streaming 字段时显示 `Streaming unknown`，并在缺少 pricing metadata 时显示成本未知原因。 | Seminar 还需要后台恢复状态、正式 streaming capability 字段、provider invoice reconciliation 和 provider capability 中的 `previous_response_id` 长期兼容标记。 | E01, E06 |
 | Skills | 已有 `seminar_mode`、reading companion、flashcard 等 prompt skill；本分支新增 AI Seminar 服务层编排、真实模型流式 role runtime、Shared Whiteboard UI、Review handoff、provider readiness UI、provider token usage UI、本地 token budget guardrails、estimated USD run cost cap、`CustomSkillContract` strict JSON/Map schema parser、`CustomSkillStore`、Settings -> AI -> `Custom skills` 导入入口、Active Skill 合并和 LangChain runtime 工具收窄，以及阅读页选中文本 -> `研讨` 的结构化入口。 | 后台续跑、价格版本/账单对账和 provider 能力界面还需要接入治理模型。 | E01, E06, E07 |
 
 锚点：
@@ -52,14 +52,15 @@
 
 | 项 | 当前可复用 | 缺口 | 下游 Epic |
 | --- | --- | --- | --- |
-| Library RAG | `semantic_search_library` 已提供跨书库 hybrid retrieval、`paperreader://reader/open?...` 跳转和 SourceRef evidence；RAPTOR/GraphRAG summary 只作为 `derivedSummary/derivedLayer` 检索提示，正式 evidence snippet 使用书内 chunk 原文；ConceptGraph 空态已可显式触发本地文本 RAG，把 traceable chunk evidence 写成 pending KnowledgeCard 或 draft graph relation，其中 KnowledgeCard 入口还要求 evidence 带可保存 chunk snippet。 | 需要把 derived summary 的 UI 展示和正式 evidence 视觉层级接入 AI 面板。 | E00, E01, E02, E03 |
-| `ai_index.db` | 存放可重建索引、chunk、job、RAG/Graph 相关表；当前分支事实为 `kAiIndexDbVersion = 10`。 | 用户资产不能放进可重建索引层；后续迁移必须从当前版本递增。 | E02, E04, E08 |
+| Library RAG | `semantic_search_library` 已提供跨书库 hybrid retrieval、`paperreader://reader/open?...` 跳转和 SourceRef evidence；`semantic_search_current_book` 已改为分页扫描、bounded topK、winner-only 正文加载、page-batched JSON fallback 和全局串行，避免一次性加载当前书全部 chunk 正文/JSON；RAPTOR/GraphRAG summary 只作为 `derivedSummary/derivedLayer` 检索提示，正式 evidence snippet 使用书内 chunk 原文；ConceptGraph 空态已可显式触发本地文本 RAG，把 traceable chunk evidence 写成 pending KnowledgeCard 或 draft graph relation，其中 KnowledgeCard 入口还要求 evidence 带可保存 chunk snippet。 | 需要把 derived summary 的 UI 展示和正式 evidence 视觉层级接入 AI 面板；current-book search 仍是精确全书向量扫描，还需要 ANN/后台 isolate/取消进度。 | E00, E01, E02, E03 |
+| `ai_index.db` | 存放可重建索引、chunk、job、RAG/Graph 相关表；当前分支事实为 `kAiIndexDbVersion = 10`；当前书 hot scan 不再读取 `text/raw_text/embedding_json`，旧 JSON fallback 按页读取。 | 用户资产不能放进可重建索引层；后续迁移必须从当前版本递增；向量后端抽象和大书性能 gate 仍需补齐。 | E02, E04, E08 |
 | ConceptGraph local store | 本分支新增 `ConceptGraphStore`，可持久化 `.knowledge/concept_graph_v1.json`，构建 Concept Dossier，检测 orphan node / broken edge，并按 policy 限制局部探索深度和每层宽度；ConceptGraph relation 已能通过 ReviewItem apply 才进入正式 ownership；`ConceptGraphExplorerPage` 已提供 Settings -> AI 和阅读页选中文本 -> `图谱/Graph` 可见入口；KnowledgeCard apply、带 conceptRefs 的 Seminar candidate card apply、带 conceptRefs 的 reader-grounded AI Chat card apply，以及带 `derivedLayer/derivedSummary + traceable chunk SourceRef` 的 library RAG result 可生成 draft graph candidates；空态 `Create draft candidate` 可显式触发关闭 query embedding、vector fallback、rerank 的本地文本 RAG -> producer -> ReviewItem handoff；选中概念后可看到局部图谱摘要，包含中心概念、直接关系、二跳节点、evidence link 数量和 draft/formal 状态。 | 复杂无限画布、缩放手势和跨书外部知识扩展不在本切片；AI Chat 仍不直接调用 RAG/GraphRAG producer。 | E04, E05, E07, E08 |
 | RAPTOR/GraphRAG 雏形 | 已有全局层表和 builder 方向。 | 需要产品化 Gate：证据、重建、旧 DB 升级、失败恢复。 | E02, E04 |
 
 锚点：
 
 - `lib/service/rag/semantic_search_library.dart`
+- `lib/service/rag/semantic_search_current_book.dart`
 - `lib/service/rag/ai_index_schema.dart`
 - `lib/service/rag/ai_book_indexer.dart`
 - `lib/service/rag/ai_global_index_builder.dart`
