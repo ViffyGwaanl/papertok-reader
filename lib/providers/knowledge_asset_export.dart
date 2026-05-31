@@ -14,6 +14,14 @@ final knowledgeAssetExportProvider = StateNotifierProvider<
   ),
 );
 
+enum KnowledgeRemoteSyncStatus {
+  notPreviewed,
+  reviewRequired,
+  readyToUpload,
+  uploaded,
+  failed,
+}
+
 class KnowledgeAssetExportState {
   const KnowledgeAssetExportState({
     required this.snapshot,
@@ -74,6 +82,23 @@ class KnowledgeAssetExportState {
   final KnowledgeRemoteSyncPreview? remotePreview;
   final String? lastError;
 
+  KnowledgeRemoteSyncStatus get remoteSyncStatus {
+    if (lastError != null) {
+      return KnowledgeRemoteSyncStatus.failed;
+    }
+    if (lastRemoteUploadPath != null) {
+      return KnowledgeRemoteSyncStatus.uploaded;
+    }
+    final preview = remotePreview;
+    if (preview == null) {
+      return KnowledgeRemoteSyncStatus.notPreviewed;
+    }
+    if (preview.incomingCount > 0 || preview.conflictCount > 0) {
+      return KnowledgeRemoteSyncStatus.reviewRequired;
+    }
+    return KnowledgeRemoteSyncStatus.readyToUpload;
+  }
+
   KnowledgeAssetExportState copyWith({
     AsyncValue<KnowledgeAssetExportSnapshot>? snapshot,
     bool? busy,
@@ -96,6 +121,7 @@ class KnowledgeAssetExportState {
     String? lastError,
     bool clearError = false,
     bool clearRemotePreview = false,
+    bool clearRemoteUpload = false,
   }) {
     return KnowledgeAssetExportState(
       snapshot: snapshot ?? this.snapshot,
@@ -123,9 +149,12 @@ class KnowledgeAssetExportState {
       lastRemoteReviewHistorySkippedCount:
           lastRemoteReviewHistorySkippedCount ??
               this.lastRemoteReviewHistorySkippedCount,
-      lastRemoteUploadPath: lastRemoteUploadPath ?? this.lastRemoteUploadPath,
-      lastRemoteUploadCount:
-          lastRemoteUploadCount ?? this.lastRemoteUploadCount,
+      lastRemoteUploadPath: clearRemoteUpload
+          ? null
+          : lastRemoteUploadPath ?? this.lastRemoteUploadPath,
+      lastRemoteUploadCount: clearRemoteUpload
+          ? null
+          : lastRemoteUploadCount ?? this.lastRemoteUploadCount,
       remotePreview:
           clearRemotePreview ? null : remotePreview ?? this.remotePreview,
       lastError: clearError ? null : lastError ?? this.lastError,
@@ -145,6 +174,7 @@ class KnowledgeAssetExportNotifier
       snapshot: const AsyncValue<KnowledgeAssetExportSnapshot>.loading(),
       clearError: true,
       clearRemotePreview: true,
+      clearRemoteUpload: true,
     );
     try {
       final snapshot = await _service.buildSnapshot();
@@ -168,6 +198,7 @@ class KnowledgeAssetExportNotifier
       busy: true,
       clearError: true,
       clearRemotePreview: true,
+      clearRemoteUpload: true,
     );
     try {
       final result = await _service.writeManifest();
@@ -220,7 +251,11 @@ class KnowledgeAssetExportNotifier
   }
 
   Future<void> previewRemoteSync() async {
-    state = state.copyWith(busy: true, clearError: true);
+    state = state.copyWith(
+      busy: true,
+      clearError: true,
+      clearRemoteUpload: true,
+    );
     try {
       final preview = await _service.previewRemoteSync();
       state = state.copyWith(
@@ -238,7 +273,11 @@ class KnowledgeAssetExportNotifier
   }
 
   Future<void> submitRemoteConflictsToReview() async {
-    state = state.copyWith(busy: true, clearError: true);
+    state = state.copyWith(
+      busy: true,
+      clearError: true,
+      clearRemoteUpload: true,
+    );
     try {
       final result = await _service.submitRemoteConflictsToReview();
       state = state.copyWith(
@@ -260,7 +299,11 @@ class KnowledgeAssetExportNotifier
   }
 
   Future<void> stageRemoteKnowledgeCardConflictsToReview() async {
-    state = state.copyWith(busy: true, clearError: true);
+    state = state.copyWith(
+      busy: true,
+      clearError: true,
+      clearRemoteUpload: true,
+    );
     try {
       final result = await _service.stageRemoteKnowledgeCardConflictsToReview();
       state = state.copyWith(
@@ -283,7 +326,11 @@ class KnowledgeAssetExportNotifier
   }
 
   Future<void> submitRemoteIncomingToReview() async {
-    state = state.copyWith(busy: true, clearError: true);
+    state = state.copyWith(
+      busy: true,
+      clearError: true,
+      clearRemoteUpload: true,
+    );
     try {
       final result = await _service.submitRemoteIncomingToReview();
       state = state.copyWith(
@@ -306,7 +353,11 @@ class KnowledgeAssetExportNotifier
   }
 
   Future<void> submitRemoteReviewHistoryToReview() async {
-    state = state.copyWith(busy: true, clearError: true);
+    state = state.copyWith(
+      busy: true,
+      clearError: true,
+      clearRemoteUpload: true,
+    );
     try {
       final result = await _service.submitRemoteReviewHistoryToReview();
       state = state.copyWith(

@@ -1065,6 +1065,16 @@
       }
     }
   },
+  "knowledgeExportRemoteStatusNotPreviewed": "Remote sync status: Not previewed",
+  "knowledgeExportRemoteStatusNotPreviewedBody": "Preview the remote sync bundle before uploading or importing remote items.",
+  "knowledgeExportRemoteStatusReviewRequired": "Remote sync status: Review required",
+  "knowledgeExportRemoteStatusReviewRequiredBody": "Send incoming items or conflicts to Review, apply decisions, then preview again before upload.",
+  "knowledgeExportRemoteStatusReadyToUpload": "Remote sync status: Ready to upload",
+  "knowledgeExportRemoteStatusReadyToUploadBody": "No remote incoming items or conflicts were found in the latest preview.",
+  "knowledgeExportRemoteStatusUploaded": "Remote sync status: Uploaded",
+  "knowledgeExportRemoteStatusUploadedBody": "Latest protected upload completed. Preview again before the next device writes.",
+  "knowledgeExportRemoteStatusFailed": "Remote sync status: Failed",
+  "knowledgeExportRemoteStatusFailedBody": "Last remote operation failed. Refresh or preview again after fixing the connection.",
   "knowledgeExportSendRemoteConflictsToReview": "Send remote conflicts to Review",
   "knowledgeExportRemoteConflictReviewSent": "{count} remote conflict sent to Review inbox",
   "@knowledgeExportRemoteConflictReviewSent": {

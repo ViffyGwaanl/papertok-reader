@@ -962,6 +962,16 @@
       }
     }
   },
+  "knowledgeExportRemoteStatusNotPreviewed": "远端同步状态：未预览",
+  "knowledgeExportRemoteStatusNotPreviewedBody": "上传或导入远端条目前，先预览远端 sync bundle。",
+  "knowledgeExportRemoteStatusReviewRequired": "远端同步状态：需要 Review",
+  "knowledgeExportRemoteStatusReviewRequiredBody": "先把远端待引入项或冲突送入 Review，完成 Apply 后再重新预览并上传。",
+  "knowledgeExportRemoteStatusReadyToUpload": "远端同步状态：可上传",
+  "knowledgeExportRemoteStatusReadyToUploadBody": "最近一次预览没有发现远端待引入项或冲突。",
+  "knowledgeExportRemoteStatusUploaded": "远端同步状态：已上传",
+  "knowledgeExportRemoteStatusUploadedBody": "受保护上传已完成；下一台设备写入前建议重新预览。",
+  "knowledgeExportRemoteStatusFailed": "远端同步状态：失败",
+  "knowledgeExportRemoteStatusFailedBody": "上一次远端操作失败。修复连接后刷新或重新预览。",
   "knowledgeExportSendRemoteConflictsToReview": "发送远端冲突到 Review",
   "knowledgeExportRemoteConflictReviewSent": "{count} 个远端冲突已发送到 Review inbox",
   "@knowledgeExportRemoteConflictReviewSent": {

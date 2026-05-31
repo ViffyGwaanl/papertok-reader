@@ -39,6 +39,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Knowledge sync/export'), findsWidgets);
+    expect(find.text('Remote sync status: Not previewed'), findsOneWidget);
     expect(find.text('1 included'), findsWidgets);
     expect(find.text('1 excluded'), findsWidgets);
     expect(find.text('1 conflict'), findsOneWidget);
@@ -68,6 +69,11 @@ void main() {
 
     expect(service.previewedRemoteSync, true);
     expect(find.text('Remote sync preview'), findsOneWidget);
+    expect(find.text('Remote sync status: Review required'), findsOneWidget);
+    expect(
+      find.textContaining('Send incoming items or conflicts to Review'),
+      findsOneWidget,
+    );
     expect(find.text('3 remote'), findsOneWidget);
     expect(find.text('2 incoming'), findsOneWidget);
     expect(find.text('1 remote conflict'), findsOneWidget);
@@ -121,6 +127,17 @@ void main() {
     await tester.pump();
 
     expect(service.uploadedRemoteSyncBundle, true);
+    await tester.scrollUntilVisible(
+      find.text('Remote sync status: Uploaded'),
+      -180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Remote sync status: Uploaded'), findsOneWidget);
+    expect(
+      find.textContaining('Latest protected upload completed'),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.textContaining('Uploaded sync bundle'),
       180,
@@ -215,8 +232,50 @@ void main() {
     await tester.pump();
 
     expect(find.text('1 included'), findsWidgets);
+    expect(find.text('Remote sync status: Failed'), findsOneWidget);
+    expect(
+      find.textContaining('Last remote operation failed'),
+      findsOneWidget,
+    );
     expect(find.text('Remote sync preview'), findsNothing);
     expect(find.textContaining('remote unavailable'), findsOneWidget);
+  });
+
+  testWidgets('remote preview without blockers shows ready-to-upload status',
+      (tester) async {
+    final service = _FakeKnowledgeAssetExportService()
+      ..remotePreviewHasBlockers = false;
+    final reviewController = _FakeReviewInboxController();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          knowledgeAssetExportServiceProvider.overrideWithValue(service),
+          reviewInboxControllerProvider.overrideWithValue(reviewController),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: const KnowledgeAssetExportPage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Preview remote sync'));
+    await tester.pump();
+
+    expect(find.text('Remote sync status: Ready to upload'), findsOneWidget);
+    expect(
+      find.textContaining('No remote incoming items or conflicts were found'),
+      findsOneWidget,
+    );
+    expect(find.text('0 incoming'), findsOneWidget);
+    expect(find.text('0 remote conflict'), findsOneWidget);
   });
 }
 
@@ -246,6 +305,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool submittedRemoteReviewHistoryToReview = false;
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
+  bool remotePreviewHasBlockers = true;
 
   @override
   Future<KnowledgeAssetExportSnapshot> buildSnapshot({
@@ -444,9 +504,13 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     return KnowledgeRemoteSyncPreview(
       local: snapshot.included,
       remote: const [remoteIncoming, remoteHistory, remoteConflict],
-      incoming: const [remoteIncoming, remoteHistory],
+      incoming: remotePreviewHasBlockers
+          ? const [remoteIncoming, remoteHistory]
+          : const <KnowledgeSyncEnvelope>[],
       outgoing: const <KnowledgeSyncEnvelope>[],
-      conflicts: const [remoteConflict],
+      conflicts: remotePreviewHasBlockers
+          ? const [remoteConflict]
+          : const <KnowledgeSyncEnvelope>[],
       remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
     );
   }

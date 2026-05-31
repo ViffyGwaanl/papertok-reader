@@ -111,6 +111,85 @@ void main() {
     expect(container.read(knowledgeAssetExportProvider).remotePreview, isNull);
   });
 
+  test('remote sync status tracks preview blockers upload and failures',
+      () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    expect(
+      container.read(knowledgeAssetExportProvider).remoteSyncStatus,
+      KnowledgeRemoteSyncStatus.notPreviewed,
+    );
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .previewRemoteSync();
+    expect(
+      container.read(knowledgeAssetExportProvider).remoteSyncStatus,
+      KnowledgeRemoteSyncStatus.reviewRequired,
+    );
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .uploadRemoteSyncBundle();
+    expect(
+      container.read(knowledgeAssetExportProvider).remoteSyncStatus,
+      KnowledgeRemoteSyncStatus.uploaded,
+    );
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .previewRemoteSync();
+    expect(
+      container.read(knowledgeAssetExportProvider).remoteSyncStatus,
+      KnowledgeRemoteSyncStatus.reviewRequired,
+    );
+
+    service.failRemotePreview = true;
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .previewRemoteSync();
+    expect(
+      container.read(knowledgeAssetExportProvider).remoteSyncStatus,
+      KnowledgeRemoteSyncStatus.failed,
+    );
+
+    await container.read(knowledgeAssetExportProvider.notifier).refresh();
+    expect(
+      container.read(knowledgeAssetExportProvider).remoteSyncStatus,
+      KnowledgeRemoteSyncStatus.notPreviewed,
+    );
+  });
+
+  test('remote sync status is ready to upload without remote blockers',
+      () async {
+    final service = _FakeKnowledgeAssetExportService()
+      ..remotePreviewHasBlockers = false;
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .previewRemoteSync();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(state.remotePreview?.incomingCount, 0);
+    expect(state.remotePreview?.conflictCount, 0);
+    expect(
+      state.remoteSyncStatus,
+      KnowledgeRemoteSyncStatus.readyToUpload,
+    );
+  });
+
   test('submitRemoteConflictsToReview exposes submitted remote conflict count',
       () async {
     final service = _FakeKnowledgeAssetExportService();
@@ -415,6 +494,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool submittedRemoteReviewHistoryToReview = false;
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
+  bool remotePreviewHasBlockers = true;
 
   @override
   Future<KnowledgeAssetExportSnapshot> buildSnapshot({
@@ -612,9 +692,13 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     return KnowledgeRemoteSyncPreview(
       local: snapshot.included,
       remote: const [remoteIncoming, remoteHistory, remoteConflict],
-      incoming: const [remoteIncoming, remoteHistory],
+      incoming: remotePreviewHasBlockers
+          ? const [remoteIncoming, remoteHistory]
+          : const <KnowledgeSyncEnvelope>[],
       outgoing: const <KnowledgeSyncEnvelope>[],
-      conflicts: const [remoteConflict],
+      conflicts: remotePreviewHasBlockers
+          ? const [remoteConflict]
+          : const <KnowledgeSyncEnvelope>[],
       remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
     );
   }

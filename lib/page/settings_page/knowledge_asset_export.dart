@@ -111,6 +111,8 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _PolicyNote(text: l10n.knowledgeExportSafeDefault),
+          const SizedBox(height: 8),
+          _RemoteSyncStatusPanel(status: state.remoteSyncStatus),
           if (state.lastManifestPath case final path?) ...[
             const SizedBox(height: 12),
             _PolicyNote(text: l10n.knowledgeExportManifestPath(path)),
@@ -297,6 +299,90 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _RemoteSyncStatusPanel extends StatelessWidget {
+  const _RemoteSyncStatusPanel({required this.status});
+
+  final KnowledgeRemoteSyncStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final title = switch (status) {
+      KnowledgeRemoteSyncStatus.notPreviewed =>
+        l10n.knowledgeExportRemoteStatusNotPreviewed,
+      KnowledgeRemoteSyncStatus.reviewRequired =>
+        l10n.knowledgeExportRemoteStatusReviewRequired,
+      KnowledgeRemoteSyncStatus.readyToUpload =>
+        l10n.knowledgeExportRemoteStatusReadyToUpload,
+      KnowledgeRemoteSyncStatus.uploaded =>
+        l10n.knowledgeExportRemoteStatusUploaded,
+      KnowledgeRemoteSyncStatus.failed =>
+        l10n.knowledgeExportRemoteStatusFailed,
+    };
+    final body = switch (status) {
+      KnowledgeRemoteSyncStatus.notPreviewed =>
+        l10n.knowledgeExportRemoteStatusNotPreviewedBody,
+      KnowledgeRemoteSyncStatus.reviewRequired =>
+        l10n.knowledgeExportRemoteStatusReviewRequiredBody,
+      KnowledgeRemoteSyncStatus.readyToUpload =>
+        l10n.knowledgeExportRemoteStatusReadyToUploadBody,
+      KnowledgeRemoteSyncStatus.uploaded =>
+        l10n.knowledgeExportRemoteStatusUploadedBody,
+      KnowledgeRemoteSyncStatus.failed =>
+        l10n.knowledgeExportRemoteStatusFailedBody,
+    };
+
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: ClaudePalette.card(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              _statusIcon(status),
+              size: 18,
+              color: ClaudePalette.accent(context),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    body,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _statusIcon(KnowledgeRemoteSyncStatus status) {
+    return switch (status) {
+      KnowledgeRemoteSyncStatus.notPreviewed => Icons.cloud_queue_outlined,
+      KnowledgeRemoteSyncStatus.reviewRequired => Icons.fact_check_outlined,
+      KnowledgeRemoteSyncStatus.readyToUpload => Icons.cloud_done_outlined,
+      KnowledgeRemoteSyncStatus.uploaded => Icons.cloud_upload_outlined,
+      KnowledgeRemoteSyncStatus.failed => Icons.error_outline,
+    };
   }
 }
 
