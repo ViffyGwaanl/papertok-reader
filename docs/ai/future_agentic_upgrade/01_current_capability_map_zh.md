@@ -71,7 +71,7 @@
 | --- | --- | --- | --- |
 | Reader deep link | `paperreader://reader/open?...` 已是书内跳转规范；本分支新增 SourceRef -> `PaperReaderReaderIntent` 和 `PaperReaderSourceJumpAudit`，可统一检查 jumpable、unavailable、unresolved refs；Review Inbox、Spaced Review、ConceptGraph、BookNote/highlight tile 和 Memory 独立浏览页已复用 jump audit，缺失书内锚点时显示不可跳原因。 | 新增 UI 输出必须先定义 source-specific unavailable/unresolved 状态。 | E00, E03, E04, E07 |
 | AI settings sync | WebDAV 同步 AI 设置，不包含 API key；KnowledgeSyncPolicy 已递归排除常见 secret-like payload keys。 | Knowledge assets 需要 per-entity sync，而非 settings-style newer-wins。 | E08 |
-| Knowledge asset sync boundary | `KnowledgeSyncEnvelope` 已区分 `ai-draft`、`knowledge-card`、`derived-index`；`KnowledgeSyncPolicy` 默认排除 draft、derived cache 和含 secret-like payload 的 envelope；`KnowledgeCardStore` 中 draft/pending 不按用户资产同步，applied 且有 evidence 的卡片才进入 knowledge-card envelope。 | 真正的同步/冲突恢复管线还需要 per-entity merge、Review 冲突 UI 和 export manifest 接入。 | E08 |
+| Knowledge asset sync boundary | `KnowledgeSyncEnvelope` 已区分 `ai-draft`、`knowledge-card`、`derived-index`；`KnowledgeSyncPolicy` 默认排除 draft、derived cache 和含 secret-like payload 的 envelope；`KnowledgeCardStore` 中 draft/pending 不按用户资产同步，applied 且有 evidence 的卡片才进入 knowledge-card envelope；Knowledge sync/export 已能写安全 sync bundle、读取远端 bundle preview，并把远端冲突送入 Review。 | 真正的同步管线还需要 per-entity remote writeback、双向合并、staging/rollback 和同步状态 UI。 | E08 |
 | Backup/restore | 已支持 memory 和 `ai_index.db` 可选包含。 | 未来要区分用户资产、AI draft、派生索引和密钥策略。 | E05, E08 |
 
 锚点：

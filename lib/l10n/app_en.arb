@@ -1014,6 +1014,65 @@
       }
     }
   },
+  "knowledgeExportSyncBundlePath": "Sync bundle: {path}",
+  "@knowledgeExportSyncBundlePath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportPreviewRemoteSync": "Preview remote sync",
+  "knowledgeExportRemotePreviewTitle": "Remote sync preview",
+  "knowledgeExportRemoteCount": "{count} remote",
+  "@knowledgeExportRemoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportIncomingCount": "{count} incoming",
+  "@knowledgeExportIncomingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportOutgoingCount": "{count} outgoing",
+  "@knowledgeExportOutgoingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteConflictCount": "{count} remote conflict",
+  "@knowledgeExportRemoteConflictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteBundlePath": "Remote bundle: {path}",
+  "@knowledgeExportRemoteBundlePath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportSendRemoteConflictsToReview": "Send remote conflicts to Review",
+  "knowledgeExportRemoteConflictReviewSent": "{count} remote conflict sent to Review inbox",
+  "@knowledgeExportRemoteConflictReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgeExportSafeDefault": "Drafts, derived indexes, API keys, and conflicts are excluded by default.",
   "knowledgeExportLoadFailed": "Could not load knowledge export plan",
   "reviewInboxActionFailed": "Review action failed",

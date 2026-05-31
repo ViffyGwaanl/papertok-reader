@@ -14,6 +14,7 @@ import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/service/sync/knowledge_asset_export_service.dart';
+import 'package:papertok_reader/service/sync/sync_client_base.dart';
 
 void main() {
   test('refresh exposes included excluded and conflict counts', () async {
@@ -45,6 +46,14 @@ void main() {
 
     await container
         .read(knowledgeAssetExportProvider.notifier)
+        .previewRemoteSync();
+    expect(
+      container.read(knowledgeAssetExportProvider).remotePreview,
+      isNotNull,
+    );
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
         .createManifest();
     final state = container.read(knowledgeAssetExportProvider);
 
@@ -55,7 +64,9 @@ void main() {
       '/tmp/knowledge_export_study_report.html',
     );
     expect(state.lastAnkiPath, '/tmp/knowledge_export_anki.tsv');
+    expect(state.lastSyncBundlePath, '/tmp/knowledge_sync_bundle_v1.json');
     expect(state.snapshot.value!.includedCount, 1);
+    expect(state.remotePreview, isNull);
   });
 
   test('submitConflictsToReview exposes submitted conflict count', () async {
@@ -75,6 +86,111 @@ void main() {
     expect(service.submittedConflictsToReview, true);
     expect(state.lastConflictReviewCount, 1);
     expect(state.snapshot.value!.conflictCount, 1);
+  });
+
+  test('previewRemoteSync exposes remote envelope conflict counts', () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .previewRemoteSync();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(service.previewedRemoteSync, true);
+    expect(state.remotePreview?.remoteCount, 2);
+    expect(state.remotePreview?.incomingCount, 1);
+    expect(state.remotePreview?.conflictCount, 1);
+
+    await container.read(knowledgeAssetExportProvider.notifier).refresh();
+    expect(container.read(knowledgeAssetExportProvider).remotePreview, isNull);
+  });
+
+  test('submitRemoteConflictsToReview exposes submitted remote conflict count',
+      () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .submitRemoteConflictsToReview();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(service.submittedRemoteConflictsToReview, true);
+    expect(state.lastRemoteConflictReviewCount, 1);
+    expect(state.remotePreview?.conflictCount, 1);
+  });
+
+  test('previewRemoteSync clears stale preview when remote read fails',
+      () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(knowledgeAssetExportProvider.notifier).refresh();
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .previewRemoteSync();
+    expect(
+      container.read(knowledgeAssetExportProvider).remotePreview,
+      isNotNull,
+    );
+
+    service.failRemotePreview = true;
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .previewRemoteSync();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(state.snapshot.value?.includedCount, 1);
+    expect(state.snapshot.hasError, false);
+    expect(state.remotePreview, isNull);
+    expect(state.lastError, contains('remote unavailable'));
+  });
+
+  test('submitRemoteConflictsToReview clears stale preview when remote fails',
+      () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(knowledgeAssetExportProvider.notifier).refresh();
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .previewRemoteSync();
+    expect(
+      container.read(knowledgeAssetExportProvider).remotePreview,
+      isNotNull,
+    );
+
+    service.failRemotePreview = true;
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .submitRemoteConflictsToReview();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(state.snapshot.value?.includedCount, 1);
+    expect(state.snapshot.hasError, false);
+    expect(state.remotePreview, isNull);
+    expect(state.lastError, contains('remote unavailable'));
   });
 
   test('safe conflict flows from export provider to review apply', () async {
@@ -208,6 +324,9 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       : super(rootDir: Directory.systemTemp.createTempSync());
 
   bool submittedConflictsToReview = false;
+  bool previewedRemoteSync = false;
+  bool submittedRemoteConflictsToReview = false;
+  bool failRemotePreview = false;
 
   @override
   Future<KnowledgeAssetExportSnapshot> buildSnapshot({
@@ -260,6 +379,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       markdownFile: File('/tmp/knowledge_export_v1.md'),
       htmlReportFile: File('/tmp/knowledge_export_study_report.html'),
       ankiFile: File('/tmp/knowledge_export_anki.tsv'),
+      syncBundleFile: File('/tmp/knowledge_sync_bundle_v1.json'),
       snapshot: await buildSnapshot(),
     );
   }
@@ -271,6 +391,64 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       submittedCount: 1,
       skippedCount: 0,
       snapshot: await buildSnapshot(),
+    );
+  }
+
+  @override
+  Future<KnowledgeRemoteSyncPreview> previewRemoteSync({
+    SyncClientBase? client,
+    String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+  }) async {
+    if (failRemotePreview) {
+      throw StateError('remote unavailable');
+    }
+    previewedRemoteSync = true;
+    return _remotePreview(await buildSnapshot());
+  }
+
+  @override
+  Future<KnowledgeAssetConflictReviewResult> submitRemoteConflictsToReview({
+    SyncClientBase? client,
+    String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+  }) async {
+    if (failRemotePreview) {
+      throw StateError('remote unavailable');
+    }
+    submittedRemoteConflictsToReview = true;
+    return KnowledgeAssetConflictReviewResult(
+      submittedCount: 1,
+      skippedCount: 0,
+      snapshot: await buildSnapshot(),
+      remotePreview: _remotePreview(await buildSnapshot()),
+    );
+  }
+
+  KnowledgeRemoteSyncPreview _remotePreview(
+    KnowledgeAssetExportSnapshot snapshot,
+  ) {
+    const remoteIncoming = KnowledgeSyncEnvelope(
+      id: 'remote-incoming',
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      payload: {'title': 'Remote incoming'},
+    );
+    const remoteConflict = KnowledgeSyncEnvelope(
+      id: 'remote-conflict',
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: 200,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: 'content-conflict',
+      payload: {'title': 'Remote conflict'},
+    );
+    return KnowledgeRemoteSyncPreview(
+      local: snapshot.included,
+      remote: const [remoteIncoming, remoteConflict],
+      incoming: const [remoteIncoming],
+      outgoing: const <KnowledgeSyncEnvelope>[],
+      conflicts: const [remoteConflict],
+      remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
     );
   }
 }

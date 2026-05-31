@@ -9,6 +9,8 @@ import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
+import 'package:papertok_reader/service/sync/sync_client_base.dart';
+import 'package:papertok_reader/service/sync/sync_client_factory.dart';
 import 'package:path/path.dart' as p;
 
 typedef KnowledgeAssetExportClock = int Function();
@@ -43,6 +45,7 @@ class KnowledgeAssetExportManifestResult {
     this.markdownFile,
     this.htmlReportFile,
     this.ankiFile,
+    this.syncBundleFile,
     required this.snapshot,
   });
 
@@ -50,6 +53,7 @@ class KnowledgeAssetExportManifestResult {
   final File? markdownFile;
   final File? htmlReportFile;
   final File? ankiFile;
+  final File? syncBundleFile;
   final KnowledgeAssetExportSnapshot snapshot;
 }
 
@@ -58,11 +62,37 @@ class KnowledgeAssetConflictReviewResult {
     required this.submittedCount,
     required this.skippedCount,
     required this.snapshot,
+    this.remotePreview,
   });
 
   final int submittedCount;
   final int skippedCount;
   final KnowledgeAssetExportSnapshot snapshot;
+  final KnowledgeRemoteSyncPreview? remotePreview;
+}
+
+class KnowledgeRemoteSyncPreview {
+  const KnowledgeRemoteSyncPreview({
+    required this.local,
+    required this.remote,
+    required this.incoming,
+    required this.outgoing,
+    required this.conflicts,
+    required this.remotePath,
+  });
+
+  final List<KnowledgeSyncEnvelope> local;
+  final List<KnowledgeSyncEnvelope> remote;
+  final List<KnowledgeSyncEnvelope> incoming;
+  final List<KnowledgeSyncEnvelope> outgoing;
+  final List<KnowledgeSyncEnvelope> conflicts;
+  final String remotePath;
+
+  int get localCount => local.length;
+  int get remoteCount => remote.length;
+  int get incomingCount => incoming.length;
+  int get outgoingCount => outgoing.length;
+  int get conflictCount => conflicts.length;
 }
 
 class KnowledgeAssetExportService {
@@ -85,6 +115,10 @@ class KnowledgeAssetExportService {
   final ReviewItemStore reviewStore;
   final SpacedReviewStore spacedReviewStore;
   final KnowledgeAssetExportClock _now;
+  static const int currentSyncBundleSchemaVersion = 1;
+  static const String defaultRemoteSyncBundlePath =
+      'paper_reader/.knowledge/knowledge_sync_bundle_v1.json';
+  static const String remoteSyncPreviewExcludedReason = 'remote-sync-preview';
 
   Directory get knowledgeDir => Directory(p.join(rootDir.path, '.knowledge'));
   File get manifestFile =>
@@ -95,6 +129,8 @@ class KnowledgeAssetExportService {
       File(p.join(knowledgeDir.path, 'knowledge_export_study_report.html'));
   File get ankiFile =>
       File(p.join(knowledgeDir.path, 'knowledge_export_anki.tsv'));
+  File get syncBundleFile =>
+      File(p.join(knowledgeDir.path, 'knowledge_sync_bundle_v1.json'));
 
   Future<KnowledgeAssetExportSnapshot> buildSnapshot({
     bool includeDrafts = false,
@@ -163,12 +199,63 @@ class KnowledgeAssetExportService {
     await markdownFile.writeAsString(_buildMarkdown(snapshot));
     await htmlReportFile.writeAsString(_buildHtmlStudyReport(snapshot));
     await ankiFile.writeAsString(_buildAnkiTsv(snapshot));
+    await syncBundleFile.writeAsString(_buildSyncBundle(snapshot));
     return KnowledgeAssetExportManifestResult(
       file: manifestFile,
       markdownFile: markdownFile,
       htmlReportFile: htmlReportFile,
       ankiFile: ankiFile,
+      syncBundleFile: syncBundleFile,
       snapshot: snapshot,
+    );
+  }
+
+  Future<KnowledgeRemoteSyncPreview> previewRemoteSync({
+    SyncClientBase? client,
+    String remotePath = defaultRemoteSyncBundlePath,
+  }) async {
+    final snapshot = await buildSnapshot();
+    return _previewRemoteSync(
+      snapshot: snapshot,
+      client: client,
+      remotePath: remotePath,
+    );
+  }
+
+  Future<KnowledgeAssetConflictReviewResult> submitRemoteConflictsToReview({
+    SyncClientBase? client,
+    String remotePath = defaultRemoteSyncBundlePath,
+  }) async {
+    final snapshot = await buildSnapshot();
+    final preview = await _previewRemoteSync(
+      snapshot: snapshot,
+      client: client,
+      remotePath: remotePath,
+    );
+    final timestamp = _now();
+    var submitted = 0;
+    var skipped = 0;
+
+    for (final envelope in preview.conflicts) {
+      final item = _reviewItemForConflict(
+        envelope,
+        excludedReason: remoteSyncPreviewExcludedReason,
+        timestamp: timestamp,
+      );
+      final existing = await reviewStore.getById(item.id);
+      if (existing != null) {
+        skipped++;
+        continue;
+      }
+      await reviewStore.upsert(item);
+      submitted++;
+    }
+
+    return KnowledgeAssetConflictReviewResult(
+      submittedCount: submitted,
+      skippedCount: skipped,
+      snapshot: snapshot,
+      remotePreview: preview,
     );
   }
 
@@ -198,6 +285,137 @@ class KnowledgeAssetExportService {
       skippedCount: skipped,
       snapshot: snapshot,
     );
+  }
+
+  Future<KnowledgeRemoteSyncPreview> _previewRemoteSync({
+    required KnowledgeAssetExportSnapshot snapshot,
+    required SyncClientBase? client,
+    required String remotePath,
+  }) async {
+    final remote = await _downloadRemoteSyncBundle(
+      client: client,
+      remotePath: remotePath,
+    );
+    final local = snapshot.included;
+    final localById = {for (final envelope in local) envelope.id: envelope};
+    final remoteById = {for (final envelope in remote) envelope.id: envelope};
+    final incoming = <KnowledgeSyncEnvelope>[];
+    final conflicts = <KnowledgeSyncEnvelope>[];
+
+    for (final remoteEnvelope in remote) {
+      final reviewed = _reviewEnvelopeForRemote(
+        local: localById[remoteEnvelope.id],
+        remote: remoteEnvelope,
+      );
+      if (reviewed.requiresConflictReview) {
+        conflicts.add(reviewed);
+      } else if (!localById.containsKey(remoteEnvelope.id)) {
+        incoming.add(reviewed);
+      }
+    }
+
+    final outgoing = local
+        .where((localEnvelope) => !remoteById.containsKey(localEnvelope.id))
+        .toList(growable: false);
+
+    return KnowledgeRemoteSyncPreview(
+      local: List.unmodifiable(local),
+      remote: List.unmodifiable(remote),
+      incoming: List.unmodifiable(incoming),
+      outgoing: List.unmodifiable(outgoing),
+      conflicts: List.unmodifiable(conflicts),
+      remotePath: remotePath,
+    );
+  }
+
+  Future<List<KnowledgeSyncEnvelope>> _downloadRemoteSyncBundle({
+    required SyncClientBase? client,
+    required String remotePath,
+  }) async {
+    final resolvedClient = _configuredRemoteClient(client);
+    final tempDir = await Directory.systemTemp.createTemp(
+      'papertok_remote_sync_',
+    );
+    try {
+      final localFile =
+          File(p.join(tempDir.path, 'knowledge_sync_bundle.json'));
+      await resolvedClient.downloadFile(remotePath, localFile.path);
+      final decoded = jsonDecode(await localFile.readAsString());
+      if (decoded is! Map) {
+        throw StateError('Remote knowledge sync bundle is not a JSON object.');
+      }
+      final schemaVersion = decoded['schemaVersion'];
+      if (schemaVersion != currentSyncBundleSchemaVersion) {
+        throw StateError(
+          'Unsupported remote knowledge sync bundle schema: $schemaVersion.',
+        );
+      }
+      final envelopes = decoded['envelopes'];
+      if (envelopes is! List) {
+        throw StateError('Remote knowledge sync bundle is missing envelopes.');
+      }
+      return envelopes
+          .whereType<Map>()
+          .map((entry) => KnowledgeSyncEnvelope.fromJson(
+                Map<String, dynamic>.from(entry),
+              ))
+          .toList(growable: false);
+    } finally {
+      try {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      } catch (_) {
+        // Best-effort cleanup for downloaded remote preview data.
+      }
+    }
+  }
+
+  SyncClientBase _configuredRemoteClient(SyncClientBase? client) {
+    if (client != null) return client;
+    SyncClientFactory.initializeCurrentClient();
+    final current = SyncClientFactory.currentClient;
+    if (current == null || !current.isConfigured) {
+      throw StateError(
+        'Knowledge remote sync preview requires a configured sync client.',
+      );
+    }
+    return current;
+  }
+
+  KnowledgeSyncEnvelope _reviewEnvelopeForRemote({
+    required KnowledgeSyncEnvelope? local,
+    required KnowledgeSyncEnvelope remote,
+  }) {
+    final safetyReason = _remoteSafetyReviewReason(remote);
+    if (safetyReason != null) {
+      return KnowledgeSyncEnvelope(
+        id: remote.id,
+        entityType: remote.entityType,
+        schemaVersion: remote.schemaVersion,
+        updatedAt: remote.updatedAt,
+        deletedAt: remote.deletedAt,
+        sourceRefs: remote.sourceRefs,
+        conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+        conflictReason: safetyReason,
+        payload: remote.payload,
+      );
+    }
+    return KnowledgeSyncConflictDetector.reviewEnvelopeFor(
+      local: local,
+      remote: remote,
+      currentSchemaVersion: currentSyncBundleSchemaVersion,
+    );
+  }
+
+  String? _remoteSafetyReviewReason(KnowledgeSyncEnvelope remote) {
+    if (KnowledgeSyncPolicy.containsSecretPayload(remote.payload)) {
+      return 'contains-secret';
+    }
+    if (!remote.shouldSyncByDefault) {
+      return 'not-default-sync-entity';
+    }
+    return null;
   }
 
   Future<List<KnowledgeSyncEnvelope>> _cardEnvelopes(int fallbackNow) async {
@@ -252,6 +470,9 @@ class KnowledgeAssetExportService {
     final conflictReason =
         envelope.conflictReason ?? excludedReason ?? 'pending-conflict-review';
     final safeSourceRefs = _safeSourceRefsForConflict(envelope);
+    final canApply = excludedReason == remoteSyncPreviewExcludedReason
+        ? false
+        : _canResolveConflict(envelope);
     return ReviewItem(
       id: 'sync-conflict:${envelope.id}',
       sourceType: ReviewItemSourceType.syncConflict,
@@ -274,7 +495,9 @@ class KnowledgeAssetExportService {
         if (envelope.deletedAt != null) 'deletedAt': envelope.deletedAt,
         'conflictStatus': envelope.conflictStatus.asString,
         'conflictReason': conflictReason,
-        'canApply': _canResolveConflict(envelope),
+        'canApply': canApply,
+        if (excludedReason == remoteSyncPreviewExcludedReason)
+          'remotePreviewOnly': true,
         if (excludedReason != null) 'excludedReason': excludedReason,
         'payloadKeys': envelope.payload.keys
             .map((key) => key.toString())
@@ -370,6 +593,16 @@ class KnowledgeAssetExportService {
     }
 
     return buffer.toString();
+  }
+
+  String _buildSyncBundle(KnowledgeAssetExportSnapshot snapshot) {
+    return const JsonEncoder.withIndent('  ').convert({
+      'schemaVersion': currentSyncBundleSchemaVersion,
+      'createdAt': snapshot.manifest.createdAt,
+      'envelopes': snapshot.included
+          .map((envelope) => envelope.toJson())
+          .toList(growable: false),
+    });
   }
 
   String _buildHtmlStudyReport(KnowledgeAssetExportSnapshot snapshot) {

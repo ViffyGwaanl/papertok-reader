@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:papertok_reader/models/remote_file.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/knowledge_sync.dart';
 import 'package:papertok_reader/models/review_item.dart';
@@ -12,6 +14,7 @@ import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/service/sync/knowledge_asset_export_service.dart';
+import 'package:papertok_reader/service/sync/sync_client_base.dart';
 
 void main() {
   late Directory tempRoot;
@@ -164,6 +167,40 @@ void main() {
     expect(decoded['entityIds'], ['kc-export']);
     expect(jsonEncode(decoded), isNot(contains('apiKey')));
     expect(jsonEncode(decoded), isNot(contains('ai_index.db')));
+  });
+
+  test('writes machine readable sync bundle for included user assets only',
+      () async {
+    await stageAppliedCard('kc-export');
+    await cardStore.upsertCandidate(
+      card(
+        id: 'kc-draft',
+        quote: 'Draft-only evidence should not sync.',
+        sourceRefs: [
+          traceableRef(
+            cfi: 'epubcfi(/6/20)',
+            snippet: 'Draft-only evidence should not sync.',
+          ),
+        ],
+      ),
+    );
+
+    final result = await service.writeManifest();
+
+    expect(result.syncBundleFile, isNotNull);
+    expect(
+        result.syncBundleFile!.path, endsWith('knowledge_sync_bundle_v1.json'));
+    final decoded = jsonDecode(await result.syncBundleFile!.readAsString())
+        as Map<String, dynamic>;
+    final encoded = jsonEncode(decoded);
+    expect(decoded['schemaVersion'], 1);
+    expect(decoded['createdAt'], 1000);
+    expect((decoded['envelopes'] as List), hasLength(1));
+    expect(encoded, contains('kc-export'));
+    expect(encoded, isNot(contains('kc-draft')));
+    expect(encoded, isNot(contains('Draft-only evidence should not sync')));
+    expect(encoded, isNot(contains('apiKey')));
+    expect(encoded, isNot(contains('ai_index.db')));
   });
 
   test('writes readable markdown export for included user assets only',
@@ -731,6 +768,102 @@ void main() {
     );
   });
 
+  test('remote sync preview detects conflicts and submits them to review',
+      () async {
+    final localCard = await stageAppliedCard('kc-shared');
+    final remoteConflictCard = card(
+      id: localCard.id,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Remote changed evidence.',
+      explanation: 'Remote changed explanation.',
+      sourceRefs: [
+        traceableRef(snippet: 'Remote changed evidence.'),
+      ],
+    );
+    final remoteIncomingCard = card(
+      id: 'kc-remote-new',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Remote new evidence.',
+      explanation: 'Remote new explanation.',
+      sourceRefs: [
+        traceableRef(
+          bookId: 9,
+          cfi: 'epubcfi(/6/30)',
+          snippet: 'Remote new evidence.',
+        ),
+      ],
+    );
+    final remoteBundle = jsonEncode({
+      'schemaVersion': 1,
+      'createdAt': 2000,
+      'envelopes': [
+        KnowledgeSyncEnvelope(
+          id: remoteConflictCard.id,
+          entityType: KnowledgeSyncEntityType.knowledgeCard,
+          schemaVersion: 1,
+          updatedAt: 2000,
+          sourceRefs: remoteConflictCard.sourceRefs,
+          payload: remoteConflictCard.toJson(),
+        ).toJson(),
+        KnowledgeSyncEnvelope(
+          id: remoteIncomingCard.id,
+          entityType: KnowledgeSyncEntityType.knowledgeCard,
+          schemaVersion: 1,
+          updatedAt: 2000,
+          sourceRefs: remoteIncomingCard.sourceRefs,
+          payload: remoteIncomingCard.toJson(),
+        ).toJson(),
+      ],
+    });
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: remoteBundle,
+    });
+
+    final preview = await service.previewRemoteSync(client: remoteClient);
+
+    expect(preview.localCount, 1);
+    expect(preview.remoteCount, 2);
+    expect(preview.incoming.map((envelope) => envelope.id), ['kc-remote-new']);
+    expect(preview.outgoing, isEmpty);
+    expect(preview.conflicts.map((envelope) => envelope.id), ['kc-shared']);
+    expect(preview.conflicts.single.conflictReason, 'content-conflict');
+    expect(
+      await reviewStore.list(sourceType: ReviewItemSourceType.syncConflict),
+      isEmpty,
+    );
+
+    final submitted = await service.submitRemoteConflictsToReview(
+      client: remoteClient,
+    );
+    final items = await reviewStore.list(
+      sourceType: ReviewItemSourceType.syncConflict,
+    );
+
+    expect(submitted.submittedCount, 1);
+    expect(submitted.skippedCount, 0);
+    expect(items, hasLength(1));
+    expect(items.single.id, 'sync-conflict:kc-shared');
+    expect(items.single.payload['canApply'], false);
+    expect(items.single.payload['remotePreviewOnly'], true);
+    expect(items.single.payload['excludedReason'], 'remote-sync-preview');
+    expect(items.single.payload['entityType'], 'knowledge-card');
+    expect(items.single.sourceRefs.single.hasBookAnchor, true);
+    expect(jsonEncode(items.single.payload),
+        isNot(contains('Remote changed explanation')));
+    final controller = ReviewInboxController(
+      rootDir: tempRoot,
+      reviewStore: reviewStore,
+      knowledgeCardStore: cardStore,
+      spacedReviewStore: spacedReviewStore,
+    );
+    await expectLater(
+      controller.approve(items.single.id),
+      throwsA(isA<UnsupportedError>()),
+    );
+  });
+
   test('uses safe payload card source refs for applyable sync conflicts',
       () async {
     final conflictCard = card(
@@ -860,5 +993,75 @@ class _SnapshotKnowledgeAssetExportService extends KnowledgeAssetExportService {
     bool includeFullEvidenceText = false,
   }) async {
     return snapshot;
+  }
+}
+
+class _FakeSyncClient extends SyncClientBase {
+  _FakeSyncClient(this.files);
+
+  final Map<String, String> files;
+  final downloadedPaths = <String>[];
+
+  @override
+  Future<void> downloadFile(
+    String remotePath,
+    String localPath, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    final content = files[remotePath];
+    if (content == null) throw StateError('Missing remote path: $remotePath');
+    downloadedPaths.add(remotePath);
+    final file = File(localPath);
+    await file.parent.create(recursive: true);
+    await file.writeAsString(content);
+    onProgress?.call(content.length, content.length);
+  }
+
+  @override
+  String get protocolName => 'fake';
+
+  @override
+  Map<String, dynamic> get config => const <String, dynamic>{};
+
+  @override
+  bool get isConfigured => true;
+
+  @override
+  Future<bool> isExist(String path) async => files.containsKey(path);
+
+  @override
+  Future<void> mkdirAll(String path) async {}
+
+  @override
+  Future<void> ping() async {}
+
+  @override
+  Future<List<RemoteFile>> readDir(String path) async => const <RemoteFile>[];
+
+  @override
+  Future<RemoteFile?> readProps(String path) async => null;
+
+  @override
+  Future<void> remove(String path) async {}
+
+  @override
+  Future<List<RemoteFile>> safeReadDir(String path) async =>
+      const <RemoteFile>[];
+
+  @override
+  Future<void> testFullCapabilities() async {}
+
+  @override
+  void updateConfig(Map<String, dynamic> newConfig) {}
+
+  @override
+  Future<void> uploadFile(
+    String localPath,
+    String remotePath, {
+    bool replace = true,
+    void Function(int sent, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    throw UnimplementedError('uploadFile is not used by this test.');
   }
 }

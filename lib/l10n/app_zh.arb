@@ -911,6 +911,65 @@
       }
     }
   },
+  "knowledgeExportSyncBundlePath": "Sync bundle：{path}",
+  "@knowledgeExportSyncBundlePath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportPreviewRemoteSync": "预览远端同步",
+  "knowledgeExportRemotePreviewTitle": "远端同步预览",
+  "knowledgeExportRemoteCount": "{count} 个远端",
+  "@knowledgeExportRemoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportIncomingCount": "{count} 个待引入",
+  "@knowledgeExportIncomingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportOutgoingCount": "{count} 个待写出",
+  "@knowledgeExportOutgoingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteConflictCount": "{count} 个远端冲突",
+  "@knowledgeExportRemoteConflictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteBundlePath": "远端 bundle：{path}",
+  "@knowledgeExportRemoteBundlePath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportSendRemoteConflictsToReview": "发送远端冲突到 Review",
+  "knowledgeExportRemoteConflictReviewSent": "{count} 个远端冲突已发送到 Review inbox",
+  "@knowledgeExportRemoteConflictReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgeExportSafeDefault": "默认排除草稿、派生索引、API key 和待审冲突。",
   "knowledgeExportLoadFailed": "无法加载知识导出计划",
   "reviewInboxActionFailed": "审核操作失败",

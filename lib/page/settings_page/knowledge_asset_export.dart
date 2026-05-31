@@ -83,6 +83,10 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
                   color: ClaudePalette.secondary(context),
                 ),
           ),
+          if (state.lastError case final error?) ...[
+            const SizedBox(height: 8),
+            _PolicyNote(text: error),
+          ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -123,6 +127,10 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
             const SizedBox(height: 6),
             _PolicyNote(text: l10n.knowledgeExportAnkiPath(path)),
           ],
+          if (state.lastSyncBundlePath case final path?) ...[
+            const SizedBox(height: 6),
+            _PolicyNote(text: l10n.knowledgeExportSyncBundlePath(path)),
+          ],
           const SizedBox(height: 16),
           FilledButton.icon(
             icon: state.busy
@@ -139,6 +147,41 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
                     .read(knowledgeAssetExportProvider.notifier)
                     .createManifest(),
           ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.cloud_sync_outlined),
+            label: Text(l10n.knowledgeExportPreviewRemoteSync),
+            onPressed: state.busy
+                ? null
+                : () => ref
+                    .read(knowledgeAssetExportProvider.notifier)
+                    .previewRemoteSync(),
+          ),
+          if (state.remotePreview case final preview?) ...[
+            const SizedBox(height: 8),
+            _RemotePreviewSection(
+              preview: preview,
+              busy: state.busy,
+            ),
+          ],
+          if (state.lastRemoteConflictReviewCount case final count?) ...[
+            const SizedBox(height: 8),
+            _PolicyNote(
+              text: l10n.knowledgeExportRemoteConflictReviewSent(count),
+            ),
+            if (count > 0) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(l10n.reviewInboxTitle),
+                onPressed: () => Navigator.of(context).push(
+                  CupertinoStyleRoute(
+                    page: const ReviewInboxPage(),
+                  ),
+                ),
+              ),
+            ],
+          ],
           if (snapshot.conflictCount > 0) ...[
             const SizedBox(height: 8),
             OutlinedButton.icon(
@@ -180,6 +223,82 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
             excludedReasons: snapshot.excludedReasons,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RemotePreviewSection extends ConsumerWidget {
+  const _RemotePreviewSection({
+    required this.preview,
+    required this.busy,
+  });
+
+  final KnowledgeRemoteSyncPreview preview;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: ClaudePalette.card(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.knowledgeExportRemotePreviewTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _TinyChip(
+                  label: l10n.knowledgeExportRemoteCount(
+                    preview.remoteCount,
+                  ),
+                ),
+                _TinyChip(
+                  label: l10n.knowledgeExportIncomingCount(
+                    preview.incomingCount,
+                  ),
+                ),
+                _TinyChip(
+                  label: l10n.knowledgeExportOutgoingCount(
+                    preview.outgoingCount,
+                  ),
+                ),
+                _TinyChip(
+                  label: l10n.knowledgeExportRemoteConflictCount(
+                    preview.conflictCount,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _PolicyNote(
+              text: l10n.knowledgeExportRemoteBundlePath(preview.remotePath),
+            ),
+            if (preview.conflictCount > 0) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.rate_review_outlined),
+                label: Text(l10n.knowledgeExportSendRemoteConflictsToReview),
+                onPressed: busy
+                    ? null
+                    : () => ref
+                        .read(knowledgeAssetExportProvider.notifier)
+                        .submitRemoteConflictsToReview(),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

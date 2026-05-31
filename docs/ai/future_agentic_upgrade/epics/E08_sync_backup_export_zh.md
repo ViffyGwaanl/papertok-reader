@@ -39,7 +39,7 @@ SourceRef 同步/导出默认只包含 `sourceTextSnippet`，且 snippet 上限 
 - source book 缺失。
 - schema 版本未知。
 
-当前本分支已接入本地冲突 handoff：`Knowledge sync/export` 页面可把待审冲突发送为 `sync-conflict` ReviewItem。该 handoff 只保存安全 metadata、payload key 列表和 SourceRef；没有 SourceRef 的冲突会带 `sync-conflict-no-source` 不可跳原因；不保存 raw payload value、API key、token、secret 或派生缓存内容。安全的 KnowledgeCard 冲突可由用户在 Review Inbox 中 approve/apply 后解除 pending conflict metadata；安全条件固定为 `entityType=knowledge-card`、`schemaVersion=1`、payload 不含 secret-like key、且 SourceRef 可追踪到书内来源或 reader jump link。含 secret、未知 schema、无可追踪 SourceRef、非 KnowledgeCard 或 payload 不可解析的冲突继续只支持 triage/dismiss。完整远端合并、按实体恢复和冲突写回执行器仍是独立任务。
+当前本分支已接入本地冲突 handoff 和远端 bundle preview：`Knowledge sync/export` 页面可把待审冲突发送为 `sync-conflict` ReviewItem，也可读取配置 SyncClient/WebDAV 上的 `paper_reader/.knowledge/knowledge_sync_bundle_v1.json`，展示 remote/incoming/outgoing/conflict 计数，并把远端冲突送入同一 Review 流。该 handoff 只保存安全 metadata、payload key 列表和 SourceRef；没有 SourceRef 的冲突会带 `sync-conflict-no-source` 不可跳原因；不保存 raw payload value、API key、token、secret 或派生缓存内容。安全的本地 KnowledgeCard 冲突可由用户在 Review Inbox 中 approve/apply 后解除 pending conflict metadata；安全条件固定为 `entityType=knowledge-card`、`schemaVersion=1`、payload 不含 secret-like key、且 SourceRef 可追踪到书内来源或 reader jump link。远端 preview 产生的冲突在 v1 中一律 `canApply=false`，只支持 triage/dismiss，直到后续 staging/import/writeback 执行器接入。完整远端写回、双向自动合并、staging/rollback 和冲突写回执行器仍是独立任务。
 
 ### E08-C03 Export
 
@@ -49,6 +49,7 @@ SourceRef 同步/导出默认只包含 `sourceTextSnippet`，且 snippet 上限 
 - HTML study report
 - Anki-compatible package
 - source citation manifest
+- machine-readable sync bundle
 
 导出必须保留 source refs 和 evidence status。
 
@@ -62,7 +63,8 @@ SourceRef 同步/导出默认只包含 `sourceTextSnippet`，且 snippet 上限 
 | E08-C02-T02 | 接入 conflict classification contract | E08-C02-T01 | `KnowledgeSyncConflictDetector.reviewEnvelopeFor` | old/unknown schema、delete-modify、missing fields 进入 Review。 |
 | E08-C02-T03 | 接入本地 sync-conflict Review handoff | E08-C02-T02, E05 ReviewItemStore | `KnowledgeAssetExportService.submitConflictsToReview`、`ReviewItemSourceType.syncConflict`、`KnowledgeAssetExportPage` action | 待审冲突可从 Knowledge sync/export 发送到 Review Inbox；重复点击不制造重复 ReviewItem；无 SourceRef 冲突有不可跳原因；ReviewItem payload 不包含 raw payload value 或 secret 值；ReviewItem payload 用 `canApply` 明确区分可本地恢复和只可 triage 的冲突。 |
 | E08-C02-T04 | 接入安全 KnowledgeCard 冲突本地恢复 | E08-C02-T03, E03 KnowledgeCardStore, E05 ReviewInboxController | `KnowledgeCardStore.resolveSyncConflict`、`ReviewItemStore.applyResolvedSyncConflict`、`ReviewInboxController` sync-conflict apply gate、Review Inbox safe approve/apply UI | 只有 `knowledge-card + schemaVersion=1 + 无 secret payload + 有可追踪 SourceRef` 的冲突可 approve/apply；apply 后解除 pending conflict metadata 并写回为用户确认资产；generic `ReviewItemStore.apply` 拒绝 sync-conflict；unsafe conflict 仍只显示 dismiss；不创建 SpacedReview、ConceptGraph、Memory、Note 或远端同步 side effect。 |
-| E08-C03-T01 | 定义 export manifest、本地 Markdown 导出、HTML study report 和 Anki TSV 导出 | E00 Ready, E03 Ready | export spec, local Markdown writer, local HTML report writer, local Anki TSV writer | Manifest、Markdown、HTML study report 和 Anki TSV 保留 source refs；本地冲突 handoff 已接入，远端同步和冲突合并/恢复执行器仍需独立任务接入。 |
+| E08-C02-T05 | 接入远端 sync bundle preview 和远端冲突 Review handoff | E08-C02-T04, SyncClient/WebDAV config, E05 ReviewItemStore | `KnowledgeRemoteSyncPreview`、`KnowledgeAssetExportService.previewRemoteSync`、`submitRemoteConflictsToReview`、`KnowledgeAssetExportPage` remote actions | 页面可读取远端 sync bundle 并展示 remote/incoming/outgoing/conflict 计数；preview 不导入 incoming、不覆盖本地资产；远端冲突进入 `sync-conflict` ReviewItem，payload 不含 raw remote payload value 或 secret；不执行远端写回或自动合并。 |
+| E08-C03-T01 | 定义 export manifest、本地 Markdown 导出、HTML study report、Anki TSV 导出和 sync bundle | E00 Ready, E03 Ready | export spec, local Markdown writer, local HTML report writer, local Anki TSV writer, safe sync bundle writer | Manifest、Markdown、HTML study report、Anki TSV 和 sync bundle 保留 source refs；本地/远端冲突 handoff 已接入，远端写回和双向合并执行器仍需独立任务接入。 |
 
 ## 4. Task Execution Defaults
 
