@@ -67,4 +67,4 @@ flowchart TD
 - 测试、静态检查、DB 断言或 UI 验收有证据。
 - 用户资产、AI draft、派生缓存的边界没有混淆。
 - 独立 reviewer/rescue gate 已完成。
-- 文档中无 `未来优化`、`后续完善`、`可接受` 等不可执行表达。
+- 文档中无 `02_agent_execution_model_zh.md` 定义的不可执行表达。

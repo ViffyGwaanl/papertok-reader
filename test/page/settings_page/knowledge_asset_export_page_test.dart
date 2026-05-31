@@ -72,6 +72,30 @@ void main() {
     expect(find.text('1 incoming'), findsOneWidget);
     expect(find.text('1 remote conflict'), findsOneWidget);
 
+    await tester.tap(find.text('Upload sync bundle'));
+    await tester.pump();
+
+    expect(service.uploadedRemoteSyncBundle, true);
+    await tester.scrollUntilVisible(
+      find.textContaining('Uploaded sync bundle'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Uploaded sync bundle'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Uploaded sync bundle: paper_reader/.knowledge',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Send remote conflicts to Review'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Send remote conflicts to Review'));
     await tester.pump();
 
@@ -151,6 +175,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool submittedConflictsToReview = false;
   bool previewedRemoteSync = false;
   bool submittedRemoteConflictsToReview = false;
+  bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
 
   @override
@@ -246,6 +271,25 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       skippedCount: 0,
       snapshot: await buildSnapshot(),
       remotePreview: _remotePreview(await buildSnapshot()),
+    );
+  }
+
+  @override
+  Future<KnowledgeRemoteSyncUploadResult> uploadRemoteSyncBundle({
+    SyncClientBase? client,
+    String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+  }) async {
+    if (failRemotePreview) {
+      throw StateError('remote unavailable');
+    }
+    uploadedRemoteSyncBundle = true;
+    return KnowledgeRemoteSyncUploadResult(
+      snapshot: await buildSnapshot(),
+      file: File('/tmp/knowledge_sync_bundle_v1.json'),
+      remotePath: remotePath,
+      uploadedAt: 200,
+      createdRemote: false,
+      preview: _remotePreview(await buildSnapshot()),
     );
   }
 

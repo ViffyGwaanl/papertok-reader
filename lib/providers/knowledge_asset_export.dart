@@ -25,6 +25,8 @@ class KnowledgeAssetExportState {
     this.lastSyncBundlePath,
     this.lastConflictReviewCount,
     this.lastRemoteConflictReviewCount,
+    this.lastRemoteUploadPath,
+    this.lastRemoteUploadCount,
     this.remotePreview,
     this.lastError,
   });
@@ -55,6 +57,8 @@ class KnowledgeAssetExportState {
   final String? lastSyncBundlePath;
   final int? lastConflictReviewCount;
   final int? lastRemoteConflictReviewCount;
+  final String? lastRemoteUploadPath;
+  final int? lastRemoteUploadCount;
   final KnowledgeRemoteSyncPreview? remotePreview;
   final String? lastError;
 
@@ -68,6 +72,8 @@ class KnowledgeAssetExportState {
     String? lastSyncBundlePath,
     int? lastConflictReviewCount,
     int? lastRemoteConflictReviewCount,
+    String? lastRemoteUploadPath,
+    int? lastRemoteUploadCount,
     KnowledgeRemoteSyncPreview? remotePreview,
     String? lastError,
     bool clearError = false,
@@ -85,6 +91,9 @@ class KnowledgeAssetExportState {
           lastConflictReviewCount ?? this.lastConflictReviewCount,
       lastRemoteConflictReviewCount:
           lastRemoteConflictReviewCount ?? this.lastRemoteConflictReviewCount,
+      lastRemoteUploadPath: lastRemoteUploadPath ?? this.lastRemoteUploadPath,
+      lastRemoteUploadCount:
+          lastRemoteUploadCount ?? this.lastRemoteUploadCount,
       remotePreview:
           clearRemotePreview ? null : remotePreview ?? this.remotePreview,
       lastError: clearError ? null : lastError ?? this.lastError,
@@ -214,6 +223,29 @@ class KnowledgeAssetExportNotifier
         busy: false,
         lastError: error.toString(),
         clearRemotePreview: true,
+      );
+    }
+  }
+
+  Future<void> uploadRemoteSyncBundle() async {
+    state = state.copyWith(busy: true, clearError: true);
+    try {
+      final result = await _service.uploadRemoteSyncBundle();
+      state = state.copyWith(
+        busy: false,
+        snapshot: AsyncValue<KnowledgeAssetExportSnapshot>.data(
+          result.snapshot,
+        ),
+        remotePreview: result.preview,
+        lastRemoteUploadPath: result.remotePath,
+        lastRemoteUploadCount: result.uploadedCount,
+        lastSyncBundlePath: result.file.path,
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        busy: false,
+        lastError: error.toString(),
       );
     }
   }

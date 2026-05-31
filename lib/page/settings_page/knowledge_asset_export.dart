@@ -157,6 +157,16 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
                     .read(knowledgeAssetExportProvider.notifier)
                     .previewRemoteSync(),
           ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.cloud_upload_outlined),
+            label: Text(l10n.knowledgeExportUploadRemoteSync),
+            onPressed: state.busy
+                ? null
+                : () => ref
+                    .read(knowledgeAssetExportProvider.notifier)
+                    .uploadRemoteSyncBundle(),
+          ),
           if (state.remotePreview case final preview?) ...[
             const SizedBox(height: 8),
             _RemotePreviewSection(
@@ -180,6 +190,14 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
                   ),
                 ),
               ),
+            ],
+          ],
+          if (state.lastRemoteUploadPath case final path?) ...[
+            const SizedBox(height: 8),
+            _PolicyNote(text: l10n.knowledgeExportRemoteUploadPath(path)),
+            if (state.lastRemoteUploadCount case final count?) ...[
+              const SizedBox(height: 6),
+              _TinyChip(label: l10n.knowledgeExportRemoteUploadCount(count)),
             ],
           ],
           if (snapshot.conflictCount > 0) ...[

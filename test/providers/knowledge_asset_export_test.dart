@@ -131,6 +131,27 @@ void main() {
     expect(state.remotePreview?.conflictCount, 1);
   });
 
+  test('uploadRemoteSyncBundle exposes remote upload path and count', () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .uploadRemoteSyncBundle();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(service.uploadedRemoteSyncBundle, true);
+    expect(state.lastRemoteUploadPath,
+        KnowledgeAssetExportService.defaultRemoteSyncBundlePath);
+    expect(state.lastRemoteUploadCount, 1);
+    expect(state.snapshot.value?.includedCount, 1);
+  });
+
   test('previewRemoteSync clears stale preview when remote read fails',
       () async {
     final service = _FakeKnowledgeAssetExportService();
@@ -326,6 +347,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool submittedConflictsToReview = false;
   bool previewedRemoteSync = false;
   bool submittedRemoteConflictsToReview = false;
+  bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
 
   @override
@@ -420,6 +442,25 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       skippedCount: 0,
       snapshot: await buildSnapshot(),
       remotePreview: _remotePreview(await buildSnapshot()),
+    );
+  }
+
+  @override
+  Future<KnowledgeRemoteSyncUploadResult> uploadRemoteSyncBundle({
+    SyncClientBase? client,
+    String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+  }) async {
+    if (failRemotePreview) {
+      throw StateError('remote unavailable');
+    }
+    uploadedRemoteSyncBundle = true;
+    return KnowledgeRemoteSyncUploadResult(
+      snapshot: await buildSnapshot(),
+      file: File('/tmp/knowledge_sync_bundle_v1.json'),
+      remotePath: remotePath,
+      uploadedAt: 200,
+      createdRemote: false,
+      preview: _remotePreview(await buildSnapshot()),
     );
   }
 

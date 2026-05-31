@@ -18,7 +18,7 @@ Reviewer 至少读取：
 
 Reviewer 必查：
 
-- 是否还存在 `未来优化`、`后续完善`、`可接受`、`稳定`、`必要时` 等不可执行表达。
+- 是否还存在 `02_agent_execution_model_zh.md` 定义的不可执行表达。
 - 数据归属是否清楚：source-of-truth、derived-cache、user-authored、AI draft、AI approved。
 - SourceRef 是否保留。
 - 是否有无证据内容进入正式知识库。
@@ -47,4 +47,3 @@ Epic 进入 `Accepted` 前必须有：
 - `ai_index.db` 被当作跨端 source-of-truth。
 - 测试或验收无法复现。
 - 外部 AGPL/商业代码未经隔离审查直接复制。
-

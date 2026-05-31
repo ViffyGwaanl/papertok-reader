@@ -864,6 +864,146 @@ void main() {
     );
   });
 
+  test('remote sync upload writes bundle only when remote has no blockers',
+      () async {
+    await stageAppliedCard('kc-upload');
+    final remoteClient = _FakeSyncClient(<String, String>{});
+
+    final uploaded = await service.uploadRemoteSyncBundle(
+      client: remoteClient,
+    );
+
+    expect(uploaded.remotePath,
+        KnowledgeAssetExportService.defaultRemoteSyncBundlePath);
+    expect(uploaded.uploadedCount, 1);
+    expect(uploaded.createdRemote, true);
+    expect(remoteClient.safeReadDirs, ['paper_reader/.knowledge']);
+    expect(remoteClient.createdDirs, ['paper_reader/.knowledge']);
+    expect(
+      remoteClient.uploadedPaths,
+      [KnowledgeAssetExportService.defaultRemoteSyncBundlePath],
+    );
+    final remoteBundle = jsonDecode(remoteClient
+            .files[KnowledgeAssetExportService.defaultRemoteSyncBundlePath]!)
+        as Map<String, dynamic>;
+    expect(jsonEncode(remoteBundle), contains('kc-upload'));
+    expect(jsonEncode(remoteBundle), isNot(contains('apiKey')));
+
+    final secondUpload = await service.uploadRemoteSyncBundle(
+      client: remoteClient,
+    );
+    expect(secondUpload.createdRemote, false);
+    expect(secondUpload.preview?.incomingCount, 0);
+    expect(secondUpload.preview?.conflictCount, 0);
+    expect(remoteClient.uploadedPaths, [
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+    ]);
+  });
+
+  test('remote sync upload is blocked by remote incoming and conflicts',
+      () async {
+    final localCard = await stageAppliedCard('kc-shared');
+    final remoteIncomingCard = card(
+      id: 'kc-remote-only',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Remote-only evidence.',
+      explanation: 'Remote-only card must not be overwritten.',
+      sourceRefs: [
+        traceableRef(
+          bookId: 9,
+          cfi: 'epubcfi(/6/30)',
+          snippet: 'Remote-only evidence.',
+        ),
+      ],
+    );
+    final incomingBundle = jsonEncode({
+      'schemaVersion': 1,
+      'createdAt': 2000,
+      'envelopes': [
+        KnowledgeSyncEnvelope(
+          id: remoteIncomingCard.id,
+          entityType: KnowledgeSyncEntityType.knowledgeCard,
+          schemaVersion: 1,
+          updatedAt: 2000,
+          sourceRefs: remoteIncomingCard.sourceRefs,
+          payload: remoteIncomingCard.toJson(),
+        ).toJson(),
+      ],
+    });
+    final incomingClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: incomingBundle,
+    });
+
+    await expectLater(
+      service.uploadRemoteSyncBundle(client: incomingClient),
+      throwsA(
+        predicate((Object error) =>
+            error is StateError && error.message.contains('remote-incoming')),
+      ),
+    );
+    expect(incomingClient.uploadedPaths, isEmpty);
+
+    final remoteConflictCard = card(
+      id: localCard.id,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Remote changed evidence.',
+      explanation: 'Remote changed explanation.',
+      sourceRefs: [
+        traceableRef(snippet: 'Remote changed evidence.'),
+      ],
+    );
+    final conflictBundle = jsonEncode({
+      'schemaVersion': 1,
+      'createdAt': 2000,
+      'envelopes': [
+        KnowledgeSyncEnvelope(
+          id: remoteConflictCard.id,
+          entityType: KnowledgeSyncEntityType.knowledgeCard,
+          schemaVersion: 1,
+          updatedAt: 2000,
+          sourceRefs: remoteConflictCard.sourceRefs,
+          payload: remoteConflictCard.toJson(),
+        ).toJson(),
+      ],
+    });
+    final conflictClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: conflictBundle,
+    });
+
+    await expectLater(
+      service.uploadRemoteSyncBundle(client: conflictClient),
+      throwsA(
+        predicate((Object error) =>
+            error is StateError && error.message.contains('remote-conflict')),
+      ),
+    );
+    expect(conflictClient.uploadedPaths, isEmpty);
+  });
+
+  test('remote sync upload is blocked by malformed remote bundles', () async {
+    await stageAppliedCard('kc-malformed-upload');
+    final malformedClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion': 1,
+        'createdAt': 2000,
+        'envelopes': ['not-an-envelope'],
+      }),
+    });
+
+    await expectLater(
+      service.uploadRemoteSyncBundle(client: malformedClient),
+      throwsA(
+        predicate((Object error) =>
+            error is StateError &&
+            error.message.contains('malformed envelope')),
+      ),
+    );
+    expect(malformedClient.uploadedPaths, isEmpty);
+  });
+
   test('uses safe payload card source refs for applyable sync conflicts',
       () async {
     final conflictCard = card(
@@ -1001,6 +1141,9 @@ class _FakeSyncClient extends SyncClientBase {
 
   final Map<String, String> files;
   final downloadedPaths = <String>[];
+  final uploadedPaths = <String>[];
+  final createdDirs = <String>[];
+  final safeReadDirs = <String>[];
 
   @override
   Future<void> downloadFile(
@@ -1030,7 +1173,9 @@ class _FakeSyncClient extends SyncClientBase {
   Future<bool> isExist(String path) async => files.containsKey(path);
 
   @override
-  Future<void> mkdirAll(String path) async {}
+  Future<void> mkdirAll(String path) async {
+    createdDirs.add(path);
+  }
 
   @override
   Future<void> ping() async {}
@@ -1045,8 +1190,10 @@ class _FakeSyncClient extends SyncClientBase {
   Future<void> remove(String path) async {}
 
   @override
-  Future<List<RemoteFile>> safeReadDir(String path) async =>
-      const <RemoteFile>[];
+  Future<List<RemoteFile>> safeReadDir(String path) async {
+    safeReadDirs.add(path);
+    return const <RemoteFile>[];
+  }
 
   @override
   Future<void> testFullCapabilities() async {}
@@ -1062,6 +1209,12 @@ class _FakeSyncClient extends SyncClientBase {
     void Function(int sent, int total)? onProgress,
     CancelToken? cancelToken,
   }) async {
-    throw UnimplementedError('uploadFile is not used by this test.');
+    final content = await File(localPath).readAsString();
+    if (!replace && files.containsKey(remotePath)) {
+      throw StateError('Remote path already exists: $remotePath');
+    }
+    files[remotePath] = content;
+    uploadedPaths.add(remotePath);
+    onProgress?.call(content.length, content.length);
   }
 }

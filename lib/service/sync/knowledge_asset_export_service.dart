@@ -95,6 +95,26 @@ class KnowledgeRemoteSyncPreview {
   int get conflictCount => conflicts.length;
 }
 
+class KnowledgeRemoteSyncUploadResult {
+  const KnowledgeRemoteSyncUploadResult({
+    required this.snapshot,
+    required this.file,
+    required this.remotePath,
+    required this.uploadedAt,
+    required this.createdRemote,
+    this.preview,
+  });
+
+  final KnowledgeAssetExportSnapshot snapshot;
+  final File file;
+  final String remotePath;
+  final int uploadedAt;
+  final bool createdRemote;
+  final KnowledgeRemoteSyncPreview? preview;
+
+  int get uploadedCount => snapshot.includedCount;
+}
+
 class KnowledgeAssetExportService {
   KnowledgeAssetExportService({
     Directory? rootDir,
@@ -259,6 +279,47 @@ class KnowledgeAssetExportService {
     );
   }
 
+  Future<KnowledgeRemoteSyncUploadResult> uploadRemoteSyncBundle({
+    SyncClientBase? client,
+    String remotePath = defaultRemoteSyncBundlePath,
+  }) async {
+    final resolvedClient = _configuredRemoteClient(client);
+    final snapshot = await buildSnapshot();
+    KnowledgeRemoteSyncPreview? preview;
+    final remoteDir = p.posix.dirname(remotePath);
+    await resolvedClient.safeReadDir(remoteDir);
+    final remoteExists = await resolvedClient.isExist(remotePath);
+
+    if (remoteExists) {
+      preview = await _previewRemoteSync(
+        snapshot: snapshot,
+        client: resolvedClient,
+        remotePath: remotePath,
+      );
+      _throwIfRemoteUploadBlocked(preview);
+    }
+
+    if (!await knowledgeDir.exists()) {
+      await knowledgeDir.create(recursive: true);
+    }
+    await syncBundleFile.writeAsString(_buildSyncBundle(snapshot));
+    await resolvedClient.mkdirAll(remoteDir);
+    await resolvedClient.uploadFile(
+      syncBundleFile.path,
+      remotePath,
+      replace: true,
+    );
+
+    return KnowledgeRemoteSyncUploadResult(
+      snapshot: snapshot,
+      file: syncBundleFile,
+      remotePath: remotePath,
+      uploadedAt: _now(),
+      createdRemote: !remoteExists,
+      preview: preview,
+    );
+  }
+
   Future<KnowledgeAssetConflictReviewResult> submitConflictsToReview() async {
     final snapshot = await buildSnapshot();
     final timestamp = _now();
@@ -284,6 +345,18 @@ class KnowledgeAssetExportService {
       submittedCount: submitted,
       skippedCount: skipped,
       snapshot: snapshot,
+    );
+  }
+
+  void _throwIfRemoteUploadBlocked(KnowledgeRemoteSyncPreview preview) {
+    final blockers = <String>[
+      if (preview.incomingCount > 0) 'remote-incoming:${preview.incomingCount}',
+      if (preview.conflictCount > 0) 'remote-conflict:${preview.conflictCount}',
+    ];
+    if (blockers.isEmpty) return;
+    throw StateError(
+      'Remote sync upload blocked: ${blockers.join(', ')}. '
+      'Review remote differences before writing the local bundle.',
     );
   }
 
@@ -354,12 +427,18 @@ class KnowledgeAssetExportService {
       if (envelopes is! List) {
         throw StateError('Remote knowledge sync bundle is missing envelopes.');
       }
-      return envelopes
-          .whereType<Map>()
-          .map((entry) => KnowledgeSyncEnvelope.fromJson(
-                Map<String, dynamic>.from(entry),
-              ))
-          .toList(growable: false);
+      final parsed = <KnowledgeSyncEnvelope>[];
+      for (final entry in envelopes) {
+        if (entry is! Map) {
+          throw StateError(
+            'Remote knowledge sync bundle contains a malformed envelope.',
+          );
+        }
+        parsed.add(
+          KnowledgeSyncEnvelope.fromJson(Map<String, dynamic>.from(entry)),
+        );
+      }
+      return parsed;
     } finally {
       try {
         if (await tempDir.exists()) {

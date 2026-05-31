@@ -1073,6 +1073,23 @@
       }
     }
   },
+  "knowledgeExportUploadRemoteSync": "Upload sync bundle",
+  "knowledgeExportRemoteUploadPath": "Uploaded sync bundle: {path}",
+  "@knowledgeExportRemoteUploadPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportRemoteUploadCount": "{count} uploaded",
+  "@knowledgeExportRemoteUploadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgeExportSafeDefault": "Drafts, derived indexes, API keys, and conflicts are excluded by default.",
   "knowledgeExportLoadFailed": "Could not load knowledge export plan",
   "reviewInboxActionFailed": "Review action failed",
