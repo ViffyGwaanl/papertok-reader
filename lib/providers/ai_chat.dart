@@ -33,6 +33,8 @@ final aiChatContextNoticeProvider = StateProvider<String?>((ref) => null);
 /// Token usage summary displayed after streaming completes.
 final aiChatUsageSummaryProvider = StateProvider<String?>((ref) => null);
 
+const _streamingUiFlushInterval = Duration(milliseconds: 160);
+
 typedef AiChatGenerateStreamFactory = Stream<String> Function(
   List<ChatMessage> messages, {
   AiRequestScope scope,
@@ -471,13 +473,14 @@ class AiChat extends _$AiChat {
     final now = DateTime.now().millisecondsSinceEpoch;
     final elapsed = now - _lastStreamingUiFlushMs;
 
-    if (_lastStreamingUiFlushMs == 0 || elapsed >= 80) {
+    final flushMs = _streamingUiFlushInterval.inMilliseconds;
+    if (_lastStreamingUiFlushMs == 0 || elapsed >= flushMs) {
       _flushPendingStreamingChunk(historyNotifier);
       return;
     }
 
     _streamingUiFlushTimer ??= Timer(
-      Duration(milliseconds: 80 - elapsed),
+      Duration(milliseconds: flushMs - elapsed),
       () {
         _streamingUiFlushTimer = null;
         _flushPendingStreamingChunk(historyNotifier);

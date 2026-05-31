@@ -141,7 +141,8 @@ void main() {
     expect(history.single.bookTitle, isNull);
   });
 
-  test('startStreaming coalesces rapid assistant chunk updates', () async {
+  test('startStreaming coalesces rapid assistant chunk updates for scrolling',
+      () async {
     final tempDir =
         Directory.systemTemp.createTempSync('ai-chat-stream-throttle-');
     _mockPathProvider(tempDir.path);
@@ -200,6 +201,9 @@ void main() {
       visibleAssistantUpdates.where((text) => text.startsWith('rapid-')).length,
       lessThan(20),
     );
+
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(_latestAssistantText(container), isNot('rapid-19'));
 
     await Future<void>.delayed(const Duration(milliseconds: 120));
 

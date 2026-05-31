@@ -141,21 +141,27 @@ class SemanticSearchCurrentBook {
     AiIndexDatabase? database,
     AiCurrentBookQueryEmbedder? embedQuery,
     int vectorScanPageSize = 256,
+    Duration progressMinInterval = const Duration(milliseconds: 160),
     AiCurrentBookVectorPageScorer? scoreVectorPage,
     @visibleForTesting AiCurrentBookVectorScanObserver? onVectorScanPage,
+    @visibleForTesting int Function()? nowMs,
   })  : _db = database ?? AiIndexDatabase.instance,
         _embedQuery = embedQuery ?? _defaultEmbedQuery,
         _vectorScanPageSize = vectorScanPageSize.clamp(1, 512).toInt(),
+        _progressMinInterval = progressMinInterval,
         _scoreVectorPage = scoreVectorPage ?? _defaultScoreVectorPage,
-        _onVectorScanPage = onVectorScanPage;
+        _onVectorScanPage = onVectorScanPage,
+        _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch);
 
   static final _globalSearchLock = _AsyncLock();
 
   final AiIndexDatabase _db;
   final AiCurrentBookQueryEmbedder _embedQuery;
   final int _vectorScanPageSize;
+  final Duration _progressMinInterval;
   final AiCurrentBookVectorPageScorer _scoreVectorPage;
   final AiCurrentBookVectorScanObserver? _onVectorScanPage;
+  final int Function() _nowMs;
 
   static Future<List<double>> _defaultEmbedQuery(
     String text, {
@@ -261,14 +267,47 @@ class SemanticSearchCurrentBook {
     final scored = <AiCurrentBookVectorCandidate>[];
     var scannedRows = 0;
     var lastId = 0;
+    int? lastProgressEmitMs;
+    int? lastProgressScannedRows;
+    bool lastProgressCancelled = false;
+
+    void emitProgress({
+      required int scannedRows,
+      required int totalRows,
+      bool cancelled = false,
+      bool force = false,
+    }) {
+      if (onProgress == null) return;
+      final now = _nowMs();
+      final intervalMs = _progressMinInterval.inMilliseconds;
+      final shouldEmit = force ||
+          cancelled ||
+          lastProgressEmitMs == null ||
+          intervalMs <= 0 ||
+          now - lastProgressEmitMs! >= intervalMs;
+      if (!shouldEmit) return;
+      if (lastProgressScannedRows == scannedRows &&
+          lastProgressCancelled == cancelled) {
+        return;
+      }
+      lastProgressEmitMs = now;
+      lastProgressScannedRows = scannedRows;
+      lastProgressCancelled = cancelled;
+      _emitProgress(
+        onProgress: onProgress,
+        scannedRows: scannedRows,
+        totalRows: totalRows,
+        cancelled: cancelled,
+      );
+    }
 
     while (true) {
       if (cancelToken?.isCancelled ?? false) {
-        _emitProgress(
-          onProgress: onProgress,
+        emitProgress(
           scannedRows: scannedRows,
           totalRows: info.chunkCount,
           cancelled: true,
+          force: true,
         );
         return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
       }
@@ -295,28 +334,27 @@ class SemanticSearchCurrentBook {
       _onVectorScanPage?.call(rows);
       scannedRows += rows.length;
       lastId = (rows.last['id'] as num?)?.toInt() ?? lastId;
-      _emitProgress(
-        onProgress: onProgress,
+      emitProgress(
         scannedRows: scannedRows,
         totalRows: info.chunkCount,
       );
       if (cancelToken?.isCancelled ?? false) {
-        _emitProgress(
-          onProgress: onProgress,
+        emitProgress(
           scannedRows: scannedRows,
           totalRows: info.chunkCount,
           cancelled: true,
+          force: true,
         );
         return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
       }
 
       final jsonById = await _embeddingJsonForRows(db, rows);
       if (cancelToken?.isCancelled ?? false) {
-        _emitProgress(
-          onProgress: onProgress,
+        emitProgress(
           scannedRows: scannedRows,
           totalRows: info.chunkCount,
           cancelled: true,
+          force: true,
         );
         return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
       }
@@ -328,11 +366,11 @@ class SemanticSearchCurrentBook {
         jsonById: jsonById,
       );
       if (cancelToken?.isCancelled ?? false) {
-        _emitProgress(
-          onProgress: onProgress,
+        emitProgress(
           scannedRows: scannedRows,
           totalRows: info.chunkCount,
           cancelled: true,
+          force: true,
         );
         return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
       }
@@ -345,6 +383,12 @@ class SemanticSearchCurrentBook {
       // UI isolate while the reader is scrolling or paging.
       await Future<void>.delayed(Duration.zero);
     }
+
+    emitProgress(
+      scannedRows: scannedRows,
+      totalRows: info.chunkCount,
+      force: true,
+    );
 
     if (scannedRows == 0) {
       return AiSemanticSearchResult(

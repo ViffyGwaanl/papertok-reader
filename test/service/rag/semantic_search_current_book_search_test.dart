@@ -212,6 +212,79 @@ void main() {
     expect(secondStarted, true);
   });
 
+  test('current book vector scan coalesces rapid progress updates', () async {
+    final dir = await Directory.systemTemp.createTemp('current_book_rag_test');
+    addTearDown(() async {
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    });
+
+    final database = AiIndexDatabase.forTesting(
+      path: '${dir.path}/ai_index.db',
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(database.close);
+
+    final db = await database.database;
+    await db.insert('ai_book_index', {
+      'book_id': 34,
+      'provider_id': 'test-provider',
+      'embedding_model': 'test-model',
+      'chunk_count': 5,
+      'index_version': 1,
+      'created_at': 1,
+      'updated_at': 2,
+    });
+
+    for (var i = 0; i < 5; i++) {
+      await db.insert('ai_chunks', {
+        'book_id': 34,
+        'chapter_href': 'Text/ch$i.xhtml',
+        'chapter_title': 'Chapter $i',
+        'chunk_index': i,
+        'start_char': 0,
+        'end_char': 12,
+        'text': 'context $i',
+        'raw_text': 'target text $i',
+        'embedding_json': '[1,0]',
+        'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+        'embedding_dim': 2,
+        'embedding_norm': 1.0,
+        'embedding_input_hash': 'hash-$i',
+        'context_version': 1,
+        'context_created_at': 3,
+        'created_at': 3,
+      });
+    }
+
+    final progressEvents = <AiCurrentBookSearchProgress>[];
+    final service = SemanticSearchCurrentBook(
+      database: database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 1,
+      nowMs: () => 1000,
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'needle',
+      maxResults: 1,
+      onProgress: progressEvents.add,
+    );
+
+    expect(result.ok, true);
+    expect(
+      progressEvents.map((event) => event.scannedRows).toList(),
+      [1, 5],
+    );
+  });
+
   test('current book vector scan can be cancelled after progress update',
       () async {
     final dir = await Directory.systemTemp.createTemp('current_book_rag_test');
