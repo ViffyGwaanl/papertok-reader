@@ -338,6 +338,61 @@ void main() {
     );
   });
 
+  test('records billing snapshot without claiming invoice reconciliation',
+      () async {
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: 'priced response',
+            evidenceRefIds: const ['e1'],
+            tokenUsage: const AiSeminarTokenUsage(
+              inputTokens: 1000,
+              outputTokens: 1000,
+              isEstimated: false,
+              estimationMethod: 'provider-usage-tracker-v1',
+              source: AiSeminarTokenUsage.sourceProviderReported,
+            ),
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(
+          AiSeminarSessionContract(
+            id: 's-billing-snapshot',
+            question: 'Billing?',
+            budgetPolicy: const AiSeminarBudgetPolicy(
+              maxRunCostUsd: 1,
+              inputCostPerMillionTokens: 2,
+              outputCostPerMillionTokens: 8,
+              costPriceSource: 'test-pricing-v1',
+            ),
+          ),
+        )
+        .toList();
+    final billing = events.last.run!.billingSnapshot!;
+
+    expect(events.last.type, AiSeminarRuntimeEventType.synthesisReady);
+    expect(billing.usageSnapshot.source,
+        AiSeminarTokenUsage.sourceProviderReported);
+    expect(billing.pricingSource, 'test-pricing-v1');
+    expect(billing.pricingCapturedAt, 1000);
+    expect(billing.estimatedCostUsd, greaterThan(0));
+    expect(
+      billing.invoiceStatus,
+      AiSeminarInvoiceReconciliationStatus.notConnected,
+    );
+    expect(billing.invoiceReason, contains('not connected'));
+    expect(billing.isProviderInvoice, false);
+  });
+
   test('does not count executor-supplied token usage on failed role turns',
       () async {
     final service = AiSeminarRuntimeService(

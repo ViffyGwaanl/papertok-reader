@@ -109,6 +109,8 @@ class AiSeminarRuntimeService {
   final AiSeminarStreamingRoleExecutor _streamRole;
   final AiSeminarClock? _now;
   static const String _localTokenEstimateMethod = 'local-char-estimate-v1';
+  static const String _providerInvoiceNotConnectedReason =
+      'Provider invoice import is not connected for this run.';
 
   Stream<AiSeminarRuntimeEvent> run(
     AiSeminarSessionContract session, {
@@ -393,6 +395,17 @@ class AiSeminarRuntimeService {
     final status = synthesis.hasTraceableHandoff
         ? AiSeminarRunStatus.completed
         : AiSeminarRunStatus.needsEvidence;
+    final completedAt = _nowMs();
+    final billingSnapshot = _billingSnapshot(
+      session: session,
+      turns: turns,
+      completedAt: completedAt,
+    );
+    final tokenUsage = AiSeminarTokenUsage.aggregateRoleTurns(turns);
+    final estimatedCostUsd = billingSnapshot?.estimatedCostUsd ??
+        _estimatedRunCostUsd(session, turns);
+    final costPriceSource =
+        billingSnapshot?.pricingSource ?? _costPriceSource(session, turns);
     final run = AiSeminarRun(
       session: session,
       status: status,
@@ -400,10 +413,11 @@ class AiSeminarRuntimeService {
       turns: List.unmodifiable(turns),
       synthesis: synthesis,
       startedAt: startedAt,
-      completedAt: _nowMs(),
-      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
-      estimatedCostUsd: _estimatedRunCostUsd(session.budgetPolicy, turns),
-      costPriceSource: _costPriceSource(session.budgetPolicy, turns),
+      completedAt: completedAt,
+      tokenUsage: tokenUsage,
+      estimatedCostUsd: estimatedCostUsd,
+      costPriceSource: costPriceSource,
+      billingSnapshot: billingSnapshot,
       message: status == AiSeminarRunStatus.needsEvidence
           ? 'AI Seminar synthesis is missing traceable handoff evidence.'
           : null,
@@ -430,16 +444,28 @@ class AiSeminarRuntimeService {
     List<AiSeminarRoleTurn> turns = const <AiSeminarRoleTurn>[],
     String? message,
   }) {
+    final completedAt = _nowMs();
+    final billingSnapshot = _billingSnapshot(
+      session: session,
+      turns: turns,
+      completedAt: completedAt,
+    );
+    final tokenUsage = AiSeminarTokenUsage.aggregateRoleTurns(turns);
+    final estimatedCostUsd = billingSnapshot?.estimatedCostUsd ??
+        _estimatedRunCostUsd(session, turns);
+    final costPriceSource =
+        billingSnapshot?.pricingSource ?? _costPriceSource(session, turns);
     final run = AiSeminarRun(
       session: session,
       status: AiSeminarRunStatus.failed,
       evidenceBundle: evidenceBundle,
       turns: List.unmodifiable(turns),
       startedAt: startedAt,
-      completedAt: _nowMs(),
-      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
-      estimatedCostUsd: _estimatedRunCostUsd(session.budgetPolicy, turns),
-      costPriceSource: _costPriceSource(session.budgetPolicy, turns),
+      completedAt: completedAt,
+      tokenUsage: tokenUsage,
+      estimatedCostUsd: estimatedCostUsd,
+      costPriceSource: costPriceSource,
+      billingSnapshot: billingSnapshot,
       message: message,
     );
     return AiSeminarRuntimeEvent(
@@ -461,16 +487,28 @@ class AiSeminarRuntimeService {
     List<AiSeminarRoleTurn> turns = const <AiSeminarRoleTurn>[],
     String? message,
   }) {
+    final completedAt = _nowMs();
+    final billingSnapshot = _billingSnapshot(
+      session: session,
+      turns: turns,
+      completedAt: completedAt,
+    );
+    final tokenUsage = AiSeminarTokenUsage.aggregateRoleTurns(turns);
+    final estimatedCostUsd = billingSnapshot?.estimatedCostUsd ??
+        _estimatedRunCostUsd(session, turns);
+    final costPriceSource =
+        billingSnapshot?.pricingSource ?? _costPriceSource(session, turns);
     final run = AiSeminarRun(
       session: session,
       status: AiSeminarRunStatus.needsEvidence,
       evidenceBundle: evidenceBundle,
       turns: List.unmodifiable(turns),
       startedAt: startedAt,
-      completedAt: _nowMs(),
-      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
-      estimatedCostUsd: _estimatedRunCostUsd(session.budgetPolicy, turns),
-      costPriceSource: _costPriceSource(session.budgetPolicy, turns),
+      completedAt: completedAt,
+      tokenUsage: tokenUsage,
+      estimatedCostUsd: estimatedCostUsd,
+      costPriceSource: costPriceSource,
+      billingSnapshot: billingSnapshot,
       message: message,
     );
     return AiSeminarRuntimeEvent(
@@ -491,16 +529,28 @@ class AiSeminarRuntimeService {
     required int startedAt,
     List<AiSeminarRoleTurn> turns = const <AiSeminarRoleTurn>[],
   }) {
+    final completedAt = _nowMs();
+    final billingSnapshot = _billingSnapshot(
+      session: session,
+      turns: turns,
+      completedAt: completedAt,
+    );
+    final tokenUsage = AiSeminarTokenUsage.aggregateRoleTurns(turns);
+    final estimatedCostUsd = billingSnapshot?.estimatedCostUsd ??
+        _estimatedRunCostUsd(session, turns);
+    final costPriceSource =
+        billingSnapshot?.pricingSource ?? _costPriceSource(session, turns);
     final run = AiSeminarRun(
       session: session,
       status: AiSeminarRunStatus.cancelled,
       evidenceBundle: evidenceBundle,
       turns: List.unmodifiable(turns),
       startedAt: startedAt,
-      completedAt: _nowMs(),
-      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
-      estimatedCostUsd: _estimatedRunCostUsd(session.budgetPolicy, turns),
-      costPriceSource: _costPriceSource(session.budgetPolicy, turns),
+      completedAt: completedAt,
+      tokenUsage: tokenUsage,
+      estimatedCostUsd: estimatedCostUsd,
+      costPriceSource: costPriceSource,
+      billingSnapshot: billingSnapshot,
       message: 'AI Seminar cancelled.',
     );
     return AiSeminarRuntimeEvent(
@@ -618,7 +668,13 @@ class AiSeminarRuntimeService {
     List<AiSeminarRoleTurn> nextTurns,
   ) {
     if (policy == null || !policy.hasCostLimit) return null;
-    final estimatedCost = _estimatedRunCostUsd(policy, nextTurns);
+    final estimatedCost = _estimatedRunCostUsdForRates(
+      usage: AiSeminarTokenUsage.aggregateRoleTurns(nextTurns),
+      inputCostPerMillionTokens: policy.inputCostPerMillionTokens,
+      outputCostPerMillionTokens: policy.outputCostPerMillionTokens,
+      cacheReadCostPerMillionTokens: policy.cacheReadCostPerMillionTokens,
+      cacheWriteCostPerMillionTokens: policy.cacheWriteCostPerMillionTokens,
+    );
     final limit = policy.maxRunCostUsd;
     if (estimatedCost == null || limit == null || estimatedCost <= limit) {
       return null;
@@ -628,25 +684,95 @@ class AiSeminarRuntimeService {
         '\$${limit.toStringAsFixed(4)}).';
   }
 
+  static AiSeminarBillingSnapshot? _billingSnapshot({
+    required AiSeminarSessionContract session,
+    required List<AiSeminarRoleTurn> turns,
+    required int completedAt,
+  }) {
+    final usage = AiSeminarTokenUsage.aggregateRoleTurns(turns);
+    if (usage == null) return null;
+    final context = session.billingContext;
+    final policy = session.budgetPolicy;
+    final inputCostPerMillionTokens =
+        context?.inputCostPerMillionTokens ?? policy?.inputCostPerMillionTokens;
+    final outputCostPerMillionTokens = context?.outputCostPerMillionTokens ??
+        policy?.outputCostPerMillionTokens;
+    final cacheReadCostPerMillionTokens =
+        context?.cacheReadCostPerMillionTokens ??
+            policy?.cacheReadCostPerMillionTokens;
+    final cacheWriteCostPerMillionTokens =
+        context?.cacheWriteCostPerMillionTokens ??
+            policy?.cacheWriteCostPerMillionTokens;
+    final estimatedCost = _estimatedRunCostUsdForRates(
+      usage: usage,
+      inputCostPerMillionTokens: inputCostPerMillionTokens,
+      outputCostPerMillionTokens: outputCostPerMillionTokens,
+      cacheReadCostPerMillionTokens: cacheReadCostPerMillionTokens,
+      cacheWriteCostPerMillionTokens: cacheWriteCostPerMillionTokens,
+    );
+    return AiSeminarBillingSnapshot(
+      providerId: context?.providerId ?? '',
+      providerName: context?.providerName ?? '',
+      providerType: context?.providerType,
+      modelId: context?.modelId ?? '',
+      usageSnapshot: usage,
+      pricingSource: context?.pricingSource ?? policy?.costPriceSource,
+      pricingVersion: context?.pricingVersion,
+      pricingCapturedAt: context?.pricingCapturedAt ?? completedAt,
+      currency: context?.currency ?? 'USD',
+      inputCostPerMillionTokens: inputCostPerMillionTokens,
+      outputCostPerMillionTokens: outputCostPerMillionTokens,
+      cacheReadCostPerMillionTokens: cacheReadCostPerMillionTokens,
+      cacheWriteCostPerMillionTokens: cacheWriteCostPerMillionTokens,
+      estimatedCostUsd: estimatedCost,
+      invoiceStatus: AiSeminarInvoiceReconciliationStatus.notConnected,
+      invoiceReason: _providerInvoiceNotConnectedReason,
+    );
+  }
+
   static double? _estimatedRunCostUsd(
-    AiSeminarBudgetPolicy? policy,
+    AiSeminarSessionContract session,
     List<AiSeminarRoleTurn> turns,
   ) {
-    if (policy == null || !policy.hasPricingMetadata) return null;
-    final usage = AiSeminarTokenUsage.aggregateRoleTurns(turns);
+    final context = session.billingContext;
+    final policy = session.budgetPolicy;
+    return _estimatedRunCostUsdForRates(
+      usage: AiSeminarTokenUsage.aggregateRoleTurns(turns),
+      inputCostPerMillionTokens: context?.inputCostPerMillionTokens ??
+          policy?.inputCostPerMillionTokens,
+      outputCostPerMillionTokens: context?.outputCostPerMillionTokens ??
+          policy?.outputCostPerMillionTokens,
+      cacheReadCostPerMillionTokens: context?.cacheReadCostPerMillionTokens ??
+          policy?.cacheReadCostPerMillionTokens,
+      cacheWriteCostPerMillionTokens: context?.cacheWriteCostPerMillionTokens ??
+          policy?.cacheWriteCostPerMillionTokens,
+    );
+  }
+
+  static double? _estimatedRunCostUsdForRates({
+    required AiSeminarTokenUsage? usage,
+    required double? inputCostPerMillionTokens,
+    required double? outputCostPerMillionTokens,
+    double? cacheReadCostPerMillionTokens,
+    double? cacheWriteCostPerMillionTokens,
+  }) {
+    if (inputCostPerMillionTokens == null ||
+        inputCostPerMillionTokens <= 0 ||
+        outputCostPerMillionTokens == null ||
+        outputCostPerMillionTokens <= 0) {
+      return null;
+    }
     if (usage == null) return null;
     final inputTokens =
         usage.inputTokens - usage.cacheReadTokens - usage.cacheWriteTokens;
     final billableInputTokens = inputTokens < 0 ? 0 : inputTokens;
-    final inputCost =
-        billableInputTokens * (policy.inputCostPerMillionTokens ?? 0) / 1000000;
+    final inputCost = billableInputTokens * inputCostPerMillionTokens / 1000000;
     final outputCost =
-        usage.outputTokens * (policy.outputCostPerMillionTokens ?? 0) / 1000000;
-    final cacheReadCost = usage.cacheReadTokens *
-        (policy.cacheReadCostPerMillionTokens ?? 0) /
-        1000000;
+        usage.outputTokens * outputCostPerMillionTokens / 1000000;
+    final cacheReadCost =
+        usage.cacheReadTokens * (cacheReadCostPerMillionTokens ?? 0) / 1000000;
     final cacheWriteCost = usage.cacheWriteTokens *
-        (policy.cacheWriteCostPerMillionTokens ?? 0) /
+        (cacheWriteCostPerMillionTokens ?? 0) /
         1000000;
     final cost = inputCost + outputCost + cacheReadCost + cacheWriteCost;
     if (cost <= 0) return null;
@@ -654,10 +780,13 @@ class AiSeminarRuntimeService {
   }
 
   static String? _costPriceSource(
-    AiSeminarBudgetPolicy? policy,
+    AiSeminarSessionContract session,
     List<AiSeminarRoleTurn> turns,
   ) {
     if (turns.isEmpty) return null;
+    final context = session.billingContext;
+    if (context?.hasPricingMetadata == true) return context?.pricingSource;
+    final policy = session.budgetPolicy;
     if (policy == null || !policy.hasPricingMetadata) return null;
     return policy.costPriceSource;
   }

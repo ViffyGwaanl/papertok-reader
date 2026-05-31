@@ -532,6 +532,7 @@ class _RolesSection extends StatelessWidget {
     final activeRole = state.activeRole;
     final children = <Widget>[];
     final tokenUsage = state.tokenUsage;
+    final billingSnapshot = state.lastRun?.billingSnapshot;
     if (tokenUsage != null) {
       final summary = _tokenUsageSummary(tokenUsage);
       final estimatedCost = state.lastRun?.estimatedCostUsd;
@@ -555,13 +556,50 @@ class _RolesSection extends StatelessWidget {
             if (estimatedCost != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Estimated cost: \$${estimatedCost.toStringAsFixed(4)}'
+                'Estimated cost, not invoice: '
+                '\$${estimatedCost.toStringAsFixed(4)}'
                 '${priceSource?.isNotEmpty == true ? ' · $priceSource' : ''}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: ClaudePalette.secondary(context),
                     ),
               ),
             ],
+          ],
+        ),
+      );
+    }
+    if (billingSnapshot != null) {
+      final pricingSource = billingSnapshot.pricingSource?.trim();
+      final invoiceReason = billingSnapshot.invoiceReason?.trim();
+      children.add(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (children.isNotEmpty) const Divider(height: 20),
+            Text(
+              'Billing reconciliation',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Usage snapshot: '
+              '${_billingUsageLabel(billingSnapshot.usageSnapshot)}',
+            ),
+            Text(
+              'Pricing snapshot: '
+              '${pricingSource?.isNotEmpty == true ? pricingSource : 'Unavailable'}',
+            ),
+            Text(
+              'Invoice reconciliation: '
+              '${_invoiceStatusLabel(billingSnapshot.invoiceStatus)}',
+            ),
+            if (invoiceReason?.isNotEmpty == true)
+              Text(
+                invoiceReason!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
+              ),
           ],
         ),
       );
@@ -814,6 +852,23 @@ String _roleUsagePrefix(AiSeminarTokenUsage usage) {
     AiSeminarTokenUsage.sourceProviderReported => 'Provider usage',
     AiSeminarTokenUsage.sourceMixed => 'Mixed usage',
     _ => 'Local estimate',
+  };
+}
+
+String _billingUsageLabel(AiSeminarTokenUsage usage) {
+  return switch (usage.source) {
+    AiSeminarTokenUsage.sourceProviderReported => 'Provider metadata',
+    AiSeminarTokenUsage.sourceMixed =>
+      'Mixed provider metadata and local estimate',
+    _ => 'Local estimate',
+  };
+}
+
+String _invoiceStatusLabel(AiSeminarInvoiceReconciliationStatus status) {
+  return switch (status) {
+    AiSeminarInvoiceReconciliationStatus.notConnected => 'Not connected',
+    AiSeminarInvoiceReconciliationStatus.reconciled => 'Reconciled',
+    AiSeminarInvoiceReconciliationStatus.failed => 'Failed',
   };
 }
 

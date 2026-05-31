@@ -96,6 +96,23 @@ enum AiSeminarRunStatus {
   }
 }
 
+enum AiSeminarInvoiceReconciliationStatus {
+  notConnected('not-connected'),
+  reconciled('reconciled'),
+  failed('failed');
+
+  const AiSeminarInvoiceReconciliationStatus(this.asString);
+
+  final String asString;
+
+  static AiSeminarInvoiceReconciliationStatus fromString(String? value) {
+    for (final status in AiSeminarInvoiceReconciliationStatus.values) {
+      if (status.asString == value) return status;
+    }
+    return AiSeminarInvoiceReconciliationStatus.notConnected;
+  }
+}
+
 @immutable
 class AiSeminarBudgetPolicy {
   const AiSeminarBudgetPolicy({
@@ -226,6 +243,147 @@ class AiSeminarBudgetPolicy {
 }
 
 @immutable
+class AiSeminarBillingContext {
+  const AiSeminarBillingContext({
+    required this.providerId,
+    required this.providerName,
+    required this.modelId,
+    this.providerType,
+    this.pricingSource,
+    this.pricingVersion,
+    this.pricingCapturedAt,
+    this.currency = 'USD',
+    this.inputCostPerMillionTokens,
+    this.outputCostPerMillionTokens,
+    this.cacheReadCostPerMillionTokens,
+    this.cacheWriteCostPerMillionTokens,
+  });
+
+  final String providerId;
+  final String providerName;
+  final String modelId;
+  final String? providerType;
+  final String? pricingSource;
+  final String? pricingVersion;
+  final int? pricingCapturedAt;
+  final String currency;
+  final double? inputCostPerMillionTokens;
+  final double? outputCostPerMillionTokens;
+  final double? cacheReadCostPerMillionTokens;
+  final double? cacheWriteCostPerMillionTokens;
+
+  bool get hasPricingMetadata =>
+      inputCostPerMillionTokens != null &&
+      inputCostPerMillionTokens! > 0 &&
+      outputCostPerMillionTokens != null &&
+      outputCostPerMillionTokens! > 0;
+
+  AiSeminarBillingContext get normalized => AiSeminarBillingContext(
+        providerId: _trimmedOrNull(providerId) ?? '',
+        providerName: _trimmedOrNull(providerName) ?? '',
+        modelId: _trimmedOrNull(modelId) ?? '',
+        providerType: _trimmedOrNull(providerType),
+        pricingSource: _trimmedOrNull(pricingSource),
+        pricingVersion: _trimmedOrNull(pricingVersion),
+        pricingCapturedAt: _positiveOrNull(pricingCapturedAt),
+        currency: (_trimmedOrNull(currency) ?? 'USD').toUpperCase(),
+        inputCostPerMillionTokens:
+            _positiveDoubleOrNull(inputCostPerMillionTokens),
+        outputCostPerMillionTokens:
+            _positiveDoubleOrNull(outputCostPerMillionTokens),
+        cacheReadCostPerMillionTokens:
+            _nonNegativeDoubleOrNull(cacheReadCostPerMillionTokens),
+        cacheWriteCostPerMillionTokens:
+            _nonNegativeDoubleOrNull(cacheWriteCostPerMillionTokens),
+      );
+
+  Map<String, dynamic> toJson() {
+    final normalized = this.normalized;
+    return {
+      'providerId': normalized.providerId,
+      'providerName': normalized.providerName,
+      'modelId': normalized.modelId,
+      if (normalized.providerType != null)
+        'providerType': normalized.providerType,
+      if (normalized.pricingSource != null)
+        'pricingSource': normalized.pricingSource,
+      if (normalized.pricingVersion != null)
+        'pricingVersion': normalized.pricingVersion,
+      if (normalized.pricingCapturedAt != null)
+        'pricingCapturedAt': normalized.pricingCapturedAt,
+      'currency': normalized.currency,
+      if (normalized.inputCostPerMillionTokens != null)
+        'inputCostPerMillionTokens': normalized.inputCostPerMillionTokens,
+      if (normalized.outputCostPerMillionTokens != null)
+        'outputCostPerMillionTokens': normalized.outputCostPerMillionTokens,
+      if (normalized.cacheReadCostPerMillionTokens != null)
+        'cacheReadCostPerMillionTokens':
+            normalized.cacheReadCostPerMillionTokens,
+      if (normalized.cacheWriteCostPerMillionTokens != null)
+        'cacheWriteCostPerMillionTokens':
+            normalized.cacheWriteCostPerMillionTokens,
+    };
+  }
+
+  factory AiSeminarBillingContext.fromJson(Map<String, dynamic> json) {
+    return AiSeminarBillingContext(
+      providerId: (json['providerId'] ?? '').toString(),
+      providerName: (json['providerName'] ?? '').toString(),
+      modelId: (json['modelId'] ?? '').toString(),
+      providerType: _trimmedOrNull(json['providerType']),
+      pricingSource: _trimmedOrNull(json['pricingSource']),
+      pricingVersion: _trimmedOrNull(json['pricingVersion']),
+      pricingCapturedAt: _positiveInt(json['pricingCapturedAt']),
+      currency: (json['currency'] ?? 'USD').toString(),
+      inputCostPerMillionTokens:
+          _positiveDouble(json['inputCostPerMillionTokens']),
+      outputCostPerMillionTokens:
+          _positiveDouble(json['outputCostPerMillionTokens']),
+      cacheReadCostPerMillionTokens:
+          _nonNegativeDouble(json['cacheReadCostPerMillionTokens']),
+      cacheWriteCostPerMillionTokens:
+          _nonNegativeDouble(json['cacheWriteCostPerMillionTokens']),
+    ).normalized;
+  }
+
+  static int? _positiveInt(Object? value) {
+    final parsed = (value as num?)?.toInt();
+    return _positiveOrNull(parsed);
+  }
+
+  static int? _positiveOrNull(int? value) {
+    if (value == null || value <= 0) return null;
+    return value;
+  }
+
+  static double? _positiveDouble(Object? value) {
+    final parsed = (value as num?)?.toDouble();
+    return _positiveDoubleOrNull(parsed);
+  }
+
+  static double? _positiveDoubleOrNull(double? value) {
+    if (value == null || value <= 0) return null;
+    return value;
+  }
+
+  static double? _nonNegativeDouble(Object? value) {
+    final parsed = (value as num?)?.toDouble();
+    return _nonNegativeDoubleOrNull(parsed);
+  }
+
+  static double? _nonNegativeDoubleOrNull(double? value) {
+    if (value == null || value < 0) return null;
+    return value;
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
+}
+
+@immutable
 class AiSeminarSessionContract {
   factory AiSeminarSessionContract({
     required String id,
@@ -239,11 +397,13 @@ class AiSeminarSessionContract {
     bool writeRequiresApproval = true,
     int maxRounds = 2,
     AiSeminarBudgetPolicy? budgetPolicy,
+    AiSeminarBillingContext? billingContext,
     int? createdAt,
   }) {
     final normalizedRoles = _normalizeRoles(roles);
     final normalizedScopes = _dedupeScopes(scopes);
     final normalizedBudget = budgetPolicy?.normalized;
+    final normalizedBillingContext = billingContext?.normalized;
     return AiSeminarSessionContract._(
       id: id.trim(),
       question: question.trim(),
@@ -259,6 +419,7 @@ class AiSeminarSessionContract {
       maxRounds: maxRounds.clamp(1, 5),
       budgetPolicy:
           normalizedBudget?.hasLimits == true ? normalizedBudget : null,
+      billingContext: normalizedBillingContext,
       createdAt: createdAt,
     );
   }
@@ -273,6 +434,7 @@ class AiSeminarSessionContract {
     required this.writeRequiresApproval,
     required this.maxRounds,
     required this.budgetPolicy,
+    required this.billingContext,
     required this.createdAt,
   });
 
@@ -285,6 +447,7 @@ class AiSeminarSessionContract {
   final bool writeRequiresApproval;
   final int maxRounds;
   final AiSeminarBudgetPolicy? budgetPolicy;
+  final AiSeminarBillingContext? billingContext;
   final int? createdAt;
 
   bool get hasVerifier => roles.contains(AiSeminarRole.verifier);
@@ -301,6 +464,7 @@ class AiSeminarSessionContract {
         'maxRounds': maxRounds,
         if (budgetPolicy?.hasLimits == true)
           'budgetPolicy': budgetPolicy!.toJson(),
+        if (billingContext != null) 'billingContext': billingContext!.toJson(),
         if (createdAt != null) 'createdAt': createdAt,
       };
 
@@ -327,6 +491,11 @@ class AiSeminarSessionContract {
       budgetPolicy: json['budgetPolicy'] is Map
           ? AiSeminarBudgetPolicy.fromJson(
               Map<String, dynamic>.from(json['budgetPolicy'] as Map),
+            )
+          : null,
+      billingContext: json['billingContext'] is Map
+          ? AiSeminarBillingContext.fromJson(
+              Map<String, dynamic>.from(json['billingContext'] as Map),
             )
           : null,
       createdAt: (json['createdAt'] as num?)?.toInt(),
@@ -646,6 +815,137 @@ class AiSeminarTokenUsage {
 }
 
 @immutable
+class AiSeminarBillingSnapshot {
+  const AiSeminarBillingSnapshot({
+    required this.providerId,
+    required this.providerName,
+    required this.modelId,
+    required this.usageSnapshot,
+    this.providerType,
+    this.pricingSource,
+    this.pricingVersion,
+    this.pricingCapturedAt,
+    this.currency = 'USD',
+    this.inputCostPerMillionTokens,
+    this.outputCostPerMillionTokens,
+    this.cacheReadCostPerMillionTokens,
+    this.cacheWriteCostPerMillionTokens,
+    this.estimatedCostUsd,
+    this.invoiceStatus = AiSeminarInvoiceReconciliationStatus.notConnected,
+    this.invoiceReason,
+  });
+
+  final String providerId;
+  final String providerName;
+  final String modelId;
+  final String? providerType;
+  final AiSeminarTokenUsage usageSnapshot;
+  final String? pricingSource;
+  final String? pricingVersion;
+  final int? pricingCapturedAt;
+  final String currency;
+  final double? inputCostPerMillionTokens;
+  final double? outputCostPerMillionTokens;
+  final double? cacheReadCostPerMillionTokens;
+  final double? cacheWriteCostPerMillionTokens;
+  final double? estimatedCostUsd;
+  final AiSeminarInvoiceReconciliationStatus invoiceStatus;
+  final String? invoiceReason;
+
+  bool get isProviderInvoice =>
+      invoiceStatus == AiSeminarInvoiceReconciliationStatus.reconciled;
+
+  Map<String, dynamic> toJson() => {
+        'providerId': providerId.trim(),
+        'providerName': providerName.trim(),
+        'modelId': modelId.trim(),
+        if (_trimmedOrNull(providerType) != null)
+          'providerType': _trimmedOrNull(providerType),
+        'usageSnapshot': usageSnapshot.toJson(),
+        if (_trimmedOrNull(pricingSource) != null)
+          'pricingSource': _trimmedOrNull(pricingSource),
+        if (_trimmedOrNull(pricingVersion) != null)
+          'pricingVersion': _trimmedOrNull(pricingVersion),
+        if (_positiveInt(pricingCapturedAt) != null)
+          'pricingCapturedAt': _positiveInt(pricingCapturedAt),
+        'currency': (_trimmedOrNull(currency) ?? 'USD').toUpperCase(),
+        if (_positiveDouble(inputCostPerMillionTokens) != null)
+          'inputCostPerMillionTokens':
+              _positiveDouble(inputCostPerMillionTokens),
+        if (_positiveDouble(outputCostPerMillionTokens) != null)
+          'outputCostPerMillionTokens':
+              _positiveDouble(outputCostPerMillionTokens),
+        if (_nonNegativeDouble(cacheReadCostPerMillionTokens) != null)
+          'cacheReadCostPerMillionTokens':
+              _nonNegativeDouble(cacheReadCostPerMillionTokens),
+        if (_nonNegativeDouble(cacheWriteCostPerMillionTokens) != null)
+          'cacheWriteCostPerMillionTokens':
+              _nonNegativeDouble(cacheWriteCostPerMillionTokens),
+        if (_positiveDouble(estimatedCostUsd) != null)
+          'estimatedCostUsd': _positiveDouble(estimatedCostUsd),
+        'invoiceStatus': invoiceStatus.asString,
+        if (_trimmedOrNull(invoiceReason) != null)
+          'invoiceReason': _trimmedOrNull(invoiceReason),
+      };
+
+  factory AiSeminarBillingSnapshot.fromJson(Map<String, dynamic> json) {
+    final usage = json['usageSnapshot'] is Map
+        ? AiSeminarTokenUsage.fromJson(
+            Map<String, dynamic>.from(json['usageSnapshot'] as Map),
+          )
+        : AiSeminarTokenUsage.fromJson(const <String, dynamic>{});
+    return AiSeminarBillingSnapshot(
+      providerId: (json['providerId'] ?? '').toString(),
+      providerName: (json['providerName'] ?? '').toString(),
+      modelId: (json['modelId'] ?? '').toString(),
+      providerType: _trimmedOrNull(json['providerType']),
+      usageSnapshot: usage,
+      pricingSource: _trimmedOrNull(json['pricingSource']),
+      pricingVersion: _trimmedOrNull(json['pricingVersion']),
+      pricingCapturedAt: _positiveInt(json['pricingCapturedAt']),
+      currency: (json['currency'] ?? 'USD').toString(),
+      inputCostPerMillionTokens:
+          _positiveDouble(json['inputCostPerMillionTokens']),
+      outputCostPerMillionTokens:
+          _positiveDouble(json['outputCostPerMillionTokens']),
+      cacheReadCostPerMillionTokens:
+          _nonNegativeDouble(json['cacheReadCostPerMillionTokens']),
+      cacheWriteCostPerMillionTokens:
+          _nonNegativeDouble(json['cacheWriteCostPerMillionTokens']),
+      estimatedCostUsd: _positiveDouble(json['estimatedCostUsd']),
+      invoiceStatus: AiSeminarInvoiceReconciliationStatus.fromString(
+        json['invoiceStatus']?.toString(),
+      ),
+      invoiceReason: _trimmedOrNull(json['invoiceReason']),
+    );
+  }
+
+  static int? _positiveInt(Object? value) {
+    final parsed = (value as num?)?.toInt();
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
+  }
+
+  static double? _positiveDouble(Object? value) {
+    final parsed = (value as num?)?.toDouble();
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
+  }
+
+  static double? _nonNegativeDouble(Object? value) {
+    final parsed = (value as num?)?.toDouble();
+    if (parsed == null || parsed < 0) return null;
+    return parsed;
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
+}
+
+@immutable
 class AiSeminarRoleTurn {
   const AiSeminarRoleTurn({
     required this.id,
@@ -826,6 +1126,7 @@ class AiSeminarRun {
     this.tokenUsage,
     this.estimatedCostUsd,
     this.costPriceSource,
+    this.billingSnapshot,
   });
 
   final AiSeminarSessionContract session;
@@ -839,6 +1140,7 @@ class AiSeminarRun {
   final AiSeminarTokenUsage? tokenUsage;
   final double? estimatedCostUsd;
   final String? costPriceSource;
+  final AiSeminarBillingSnapshot? billingSnapshot;
 
   bool get readyForReview =>
       status == AiSeminarRunStatus.completed &&
@@ -858,6 +1160,8 @@ class AiSeminarRun {
         if (tokenUsage != null) 'tokenUsage': tokenUsage!.toJson(),
         if (estimatedCostUsd != null) 'estimatedCostUsd': estimatedCostUsd,
         if (costPriceSource != null) 'costPriceSource': costPriceSource,
+        if (billingSnapshot != null)
+          'billingSnapshot': billingSnapshot!.toJson(),
       };
 
   factory AiSeminarRun.fromJson(Map<String, dynamic> json) {
@@ -893,6 +1197,11 @@ class AiSeminarRun {
           : null,
       estimatedCostUsd: (json['estimatedCostUsd'] as num?)?.toDouble(),
       costPriceSource: json['costPriceSource']?.toString(),
+      billingSnapshot: json['billingSnapshot'] is Map
+          ? AiSeminarBillingSnapshot.fromJson(
+              Map<String, dynamic>.from(json['billingSnapshot'] as Map),
+            )
+          : null,
     );
   }
 }

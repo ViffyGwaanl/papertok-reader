@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -183,6 +184,68 @@ void main() {
     );
   });
 
+  test('manual cancel preserves billing snapshot for completed turns',
+      () async {
+    configureProvider(withPricing: true);
+    final firstTurnDone = Completer<void>();
+    final releaseStream = Completer<void>();
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, token) async* {
+        if (invocation.role == AiSeminarRole.critical) {
+          yield AiSeminarRoleStreamChunk(
+            completedTurn: AiSeminarRoleTurn(
+              id: 'turn-${invocation.role.asString}',
+              role: invocation.role,
+              prompt: invocation.prompt,
+              responseText: '${invocation.role.asString} response',
+              evidenceRefIds: const ['e1'],
+              tokenUsage: const AiSeminarTokenUsage(
+                inputTokens: 1000,
+                outputTokens: 200,
+                isEstimated: false,
+                estimationMethod: 'provider-usage-tracker-v1',
+                source: AiSeminarTokenUsage.sourceProviderReported,
+              ),
+            ),
+          );
+          if (!firstTurnDone.isCompleted) firstTurnDone.complete();
+          return;
+        }
+        token.onCancel(() {
+          if (!releaseStream.isCompleted) releaseStream.complete();
+        });
+        await releaseStream.future;
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    final startFuture = notifier.start(
+      AiSeminarSessionContract(id: 's-cancel-billing', question: 'Cancel?'),
+    );
+    await firstTurnDone.future;
+
+    notifier.cancel();
+    await startFuture;
+    final state = container.read(aiSeminarRuntimeProvider);
+    final billing = state.lastRun!.billingSnapshot!;
+
+    expect(state.status, AiSeminarRunStatus.cancelled);
+    expect(billing.usageSnapshot.source,
+        AiSeminarTokenUsage.sourceProviderReported);
+    expect(billing.pricingSource, 'current-pricing-v1');
+    expect(billing.invoiceStatus,
+        AiSeminarInvoiceReconciliationStatus.notConnected);
+    expect(billing.isProviderInvoice, false);
+  });
+
   test('retry clears failed partial state and reruns the same session',
       () async {
     final container = ProviderContainer(
@@ -358,6 +421,80 @@ void main() {
     expect(persisted['status'], AiSeminarRunStatus.cancelled.asString);
     expect(persisted.containsKey('activeRole'), isFalse);
     expect(persisted.containsKey('partialRoleText'), isFalse);
+  });
+
+  test(
+      'interrupted restore keeps captured billing snapshot for completed turns',
+      () async {
+    configureProvider(withPricing: true);
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-running-billing',
+        question: 'Resume billing?',
+        budgetPolicy: const AiSeminarBudgetPolicy(
+          inputCostPerMillionTokens: 20,
+          outputCostPerMillionTokens: 80,
+          costPriceSource: 'current-pricing-should-not-win',
+        ),
+        billingContext: const AiSeminarBillingContext(
+          providerId: 'captured-provider',
+          providerName: 'Captured Provider',
+          providerType: 'openai-compatible',
+          modelId: 'captured-model',
+          pricingSource: 'captured-pricing-v1',
+          pricingCapturedAt: 12345,
+          inputCostPerMillionTokens: 2,
+          outputCostPerMillionTokens: 8,
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      evidenceBundle: bundle(),
+      activeRole: AiSeminarRole.supportive,
+      partialRoleText: 'partial answer',
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+          tokenUsage: AiSeminarTokenUsage(
+            inputTokens: 1000,
+            outputTokens: 200,
+            isEstimated: false,
+            estimationMethod: 'provider-usage-tracker-v1',
+            source: AiSeminarTokenUsage.sourceProviderReported,
+          ),
+        ),
+      ],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final restored = container.read(aiSeminarRuntimeProvider);
+    final billing = restored.lastRun!.billingSnapshot!;
+
+    expect(restored.status, AiSeminarRunStatus.cancelled);
+    expect(restored.lastRun!.status, AiSeminarRunStatus.cancelled);
+    expect(billing.providerId, 'captured-provider');
+    expect(billing.modelId, 'captured-model');
+    expect(billing.pricingSource, 'captured-pricing-v1');
+    expect(billing.pricingCapturedAt, 12345);
+    expect(billing.usageSnapshot.source,
+        AiSeminarTokenUsage.sourceProviderReported);
+    expect(billing.estimatedCostUsd, closeTo(0.0036, 0.000001));
+    expect(
+      billing.invoiceStatus,
+      AiSeminarInvoiceReconciliationStatus.notConnected,
+    );
   });
 
   test('restored seminar keeps persisted provider diagnostics', () async {

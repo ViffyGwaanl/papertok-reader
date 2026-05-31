@@ -271,6 +271,65 @@ void main() {
     });
   });
 
+  group('AiSeminarBillingSnapshot', () {
+    test('run round-trips pricing usage estimate and invoice status', () {
+      const usage = AiSeminarTokenUsage(
+        inputTokens: 1000,
+        outputTokens: 250,
+        isEstimated: false,
+        estimationMethod: 'provider-usage-tracker-v1',
+        source: AiSeminarTokenUsage.sourceProviderReported,
+        cacheReadTokens: 100,
+        apiCalls: 3,
+      );
+      const billing = AiSeminarBillingSnapshot(
+        providerId: 'local-gateway',
+        providerName: 'Local Gateway',
+        modelId: 'gpt-5.5',
+        usageSnapshot: usage,
+        pricingSource: 'test-pricing-v1',
+        pricingCapturedAt: 1234,
+        estimatedCostUsd: 0.0042,
+        invoiceStatus: AiSeminarInvoiceReconciliationStatus.failed,
+        invoiceReason: 'Provider invoice API rejected the request.',
+      );
+
+      final run = AiSeminarRun(
+        session: AiSeminarSessionContract(
+          id: 's-billing',
+          question: 'Billing?',
+        ),
+        status: AiSeminarRunStatus.completed,
+        evidenceBundle: const AiSeminarEvidenceBundle(
+          query: 'Billing?',
+          evidence: [],
+        ),
+        tokenUsage: usage,
+        estimatedCostUsd: 0.0042,
+        costPriceSource: 'test-pricing-v1',
+        billingSnapshot: billing,
+      );
+
+      final restored = AiSeminarRun.fromJson(run.toJson());
+
+      expect(restored.billingSnapshot, isNotNull);
+      expect(restored.billingSnapshot!.providerId, 'local-gateway');
+      expect(restored.billingSnapshot!.modelId, 'gpt-5.5');
+      expect(restored.billingSnapshot!.usageSnapshot.source,
+          AiSeminarTokenUsage.sourceProviderReported);
+      expect(restored.billingSnapshot!.pricingSource, 'test-pricing-v1');
+      expect(restored.billingSnapshot!.estimatedCostUsd, 0.0042);
+      expect(
+        restored.billingSnapshot!.invoiceStatus,
+        AiSeminarInvoiceReconciliationStatus.failed,
+      );
+      expect(
+        restored.billingSnapshot!.invoiceReason,
+        contains('invoice API'),
+      );
+    });
+  });
+
   group('AiSeminarSynthesis', () {
     test('handoff is review-ready but not auto-applied to user assets', () {
       final synthesis = AiSeminarSynthesis(

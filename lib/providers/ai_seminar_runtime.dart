@@ -266,6 +266,8 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   final AiSeminarProviderContextService _providerContext;
   AiSeminarCancellationToken? _activeToken;
   int _generation = 0;
+  static const String _providerInvoiceNotConnectedReason =
+      'Provider invoice import is not connected for this run.';
 
   Future<void> start(AiSeminarSessionContract session) async {
     final generation = ++_generation;
@@ -314,19 +316,28 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     _generation += 1;
     final evidenceBundle = state.evidenceBundle ??
         AiSeminarEvidenceBundle(query: session.question, evidence: const []);
+    final completedAt = DateTime.now().millisecondsSinceEpoch;
+    final billingSnapshot = _billingSnapshot(
+      session: session,
+      turns: state.turns,
+      completedAt: completedAt,
+    );
+    final tokenUsage = AiSeminarTokenUsage.aggregateRoleTurns(state.turns);
+    final estimatedCostUsd = billingSnapshot?.estimatedCostUsd ??
+        _estimatedRunCostUsd(session.budgetPolicy, state.turns);
+    final costPriceSource = billingSnapshot?.pricingSource ??
+        _costPriceSource(session.budgetPolicy, state.turns);
     final run = AiSeminarRun(
       session: session,
       status: AiSeminarRunStatus.cancelled,
       evidenceBundle: evidenceBundle,
       turns: state.turns,
       startedAt: state.startedAt,
-      completedAt: DateTime.now().millisecondsSinceEpoch,
-      tokenUsage: AiSeminarTokenUsage.aggregateRoleTurns(state.turns),
-      estimatedCostUsd: _estimatedRunCostUsd(
-        session.budgetPolicy,
-        state.turns,
-      ),
-      costPriceSource: _costPriceSource(session.budgetPolicy, state.turns),
+      completedAt: completedAt,
+      tokenUsage: tokenUsage,
+      estimatedCostUsd: estimatedCostUsd,
+      costPriceSource: costPriceSource,
+      billingSnapshot: billingSnapshot,
       message: 'AI Seminar cancelled.',
     );
     state = state.copyWith(
@@ -536,13 +547,50 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         restoredFromLocalCache: true,
       );
       if (restored.status == AiSeminarRunStatus.running) {
+        final completedAt = DateTime.now().millisecondsSinceEpoch;
+        final session = restored.session;
+        final evidenceBundle = restored.evidenceBundle ??
+            AiSeminarEvidenceBundle(
+              query: session?.question ?? '',
+              evidence: const <AiSeminarEvidence>[],
+            );
+        final billingSnapshot = session == null
+            ? null
+            : _billingSnapshot(
+                session: session,
+                turns: restored.turns,
+                completedAt: completedAt,
+              );
+        final tokenUsage = AiSeminarTokenUsage.aggregateRoleTurns(
+          restored.turns,
+        );
+        final run = session == null
+            ? null
+            : AiSeminarRun(
+                session: session,
+                status: AiSeminarRunStatus.cancelled,
+                evidenceBundle: evidenceBundle,
+                turns: restored.turns,
+                startedAt: restored.startedAt,
+                completedAt: completedAt,
+                tokenUsage: tokenUsage,
+                estimatedCostUsd: billingSnapshot?.estimatedCostUsd ??
+                    _estimatedRunCostUsd(session.budgetPolicy, restored.turns),
+                costPriceSource: billingSnapshot?.pricingSource ??
+                    _costPriceSource(session.budgetPolicy, restored.turns),
+                billingSnapshot: billingSnapshot,
+                message:
+                    'AI Seminar was interrupted before it could finish. Retry to run it again.',
+              );
         final interrupted = restored.copyWith(
           status: AiSeminarRunStatus.cancelled,
+          evidenceBundle: evidenceBundle,
+          lastRun: run,
           activeRole: null,
           partialRoleText: null,
           error:
               'AI Seminar was interrupted before it could finish. Retry to run it again.',
-          completedAt: DateTime.now().millisecondsSinceEpoch,
+          completedAt: completedAt,
         );
         _rewriteLocalRecoveryCache(interrupted);
         return interrupted;
@@ -585,8 +633,27 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       writeRequiresApproval: session.writeRequiresApproval,
       maxRounds: session.maxRounds,
       budgetPolicy: budgetPolicy,
+      billingContext: _billingContextForCurrentProvider(diagnostics),
       createdAt: session.createdAt,
     );
+  }
+
+  static AiSeminarBillingContext _billingContextForCurrentProvider(
+    AiSeminarProviderDiagnostics diagnostics,
+  ) {
+    return AiSeminarBillingContext(
+      providerId: diagnostics.providerId,
+      providerName: diagnostics.providerName,
+      providerType: diagnostics.providerType,
+      modelId: diagnostics.modelId,
+      pricingSource: diagnostics.costPriceSource,
+      pricingCapturedAt: DateTime.now().millisecondsSinceEpoch,
+      inputCostPerMillionTokens: diagnostics.inputCostPerMillionTokens,
+      outputCostPerMillionTokens: diagnostics.outputCostPerMillionTokens,
+      cacheReadCostPerMillionTokens: diagnostics.cacheReadCostPerMillionTokens,
+      cacheWriteCostPerMillionTokens:
+          diagnostics.cacheWriteCostPerMillionTokens,
+    ).normalized;
   }
 
   static AiSeminarBudgetPolicy? _budgetPolicyWithCurrentProviderPricing(
@@ -634,6 +701,82 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         1000000;
     final cacheWriteCost = usage.cacheWriteTokens *
         (policy.cacheWriteCostPerMillionTokens ?? 0) /
+        1000000;
+    final cost = inputCost + outputCost + cacheReadCost + cacheWriteCost;
+    if (cost <= 0) return null;
+    return cost;
+  }
+
+  static AiSeminarBillingSnapshot? _billingSnapshot({
+    required AiSeminarSessionContract session,
+    required List<AiSeminarRoleTurn> turns,
+    required int completedAt,
+  }) {
+    final usage = AiSeminarTokenUsage.aggregateRoleTurns(turns);
+    if (usage == null) return null;
+    final context = session.billingContext;
+    final policy = session.budgetPolicy;
+    final inputCostPerMillionTokens =
+        context?.inputCostPerMillionTokens ?? policy?.inputCostPerMillionTokens;
+    final outputCostPerMillionTokens = context?.outputCostPerMillionTokens ??
+        policy?.outputCostPerMillionTokens;
+    final cacheReadCostPerMillionTokens =
+        context?.cacheReadCostPerMillionTokens ??
+            policy?.cacheReadCostPerMillionTokens;
+    final cacheWriteCostPerMillionTokens =
+        context?.cacheWriteCostPerMillionTokens ??
+            policy?.cacheWriteCostPerMillionTokens;
+    final estimatedCost = _estimatedRunCostUsdForRates(
+      usage: usage,
+      inputCostPerMillionTokens: inputCostPerMillionTokens,
+      outputCostPerMillionTokens: outputCostPerMillionTokens,
+      cacheReadCostPerMillionTokens: cacheReadCostPerMillionTokens,
+      cacheWriteCostPerMillionTokens: cacheWriteCostPerMillionTokens,
+    );
+    return AiSeminarBillingSnapshot(
+      providerId: context?.providerId ?? '',
+      providerName: context?.providerName ?? '',
+      providerType: context?.providerType,
+      modelId: context?.modelId ?? '',
+      usageSnapshot: usage,
+      pricingSource: context?.pricingSource ?? policy?.costPriceSource,
+      pricingVersion: context?.pricingVersion,
+      pricingCapturedAt: context?.pricingCapturedAt ?? completedAt,
+      currency: context?.currency ?? 'USD',
+      inputCostPerMillionTokens: inputCostPerMillionTokens,
+      outputCostPerMillionTokens: outputCostPerMillionTokens,
+      cacheReadCostPerMillionTokens: cacheReadCostPerMillionTokens,
+      cacheWriteCostPerMillionTokens: cacheWriteCostPerMillionTokens,
+      estimatedCostUsd: estimatedCost,
+      invoiceStatus: AiSeminarInvoiceReconciliationStatus.notConnected,
+      invoiceReason: _providerInvoiceNotConnectedReason,
+    );
+  }
+
+  static double? _estimatedRunCostUsdForRates({
+    required AiSeminarTokenUsage? usage,
+    required double? inputCostPerMillionTokens,
+    required double? outputCostPerMillionTokens,
+    double? cacheReadCostPerMillionTokens,
+    double? cacheWriteCostPerMillionTokens,
+  }) {
+    if (inputCostPerMillionTokens == null ||
+        inputCostPerMillionTokens <= 0 ||
+        outputCostPerMillionTokens == null ||
+        outputCostPerMillionTokens <= 0) {
+      return null;
+    }
+    if (usage == null) return null;
+    final inputTokens =
+        usage.inputTokens - usage.cacheReadTokens - usage.cacheWriteTokens;
+    final billableInputTokens = inputTokens < 0 ? 0 : inputTokens;
+    final inputCost = billableInputTokens * inputCostPerMillionTokens / 1000000;
+    final outputCost =
+        usage.outputTokens * outputCostPerMillionTokens / 1000000;
+    final cacheReadCost =
+        usage.cacheReadTokens * (cacheReadCostPerMillionTokens ?? 0) / 1000000;
+    final cacheWriteCost = usage.cacheWriteTokens *
+        (cacheWriteCostPerMillionTokens ?? 0) /
         1000000;
     final cost = inputCost + outputCost + cacheReadCost + cacheWriteCost;
     if (cost <= 0) return null;

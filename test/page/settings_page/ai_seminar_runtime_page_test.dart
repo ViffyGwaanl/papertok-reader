@@ -382,6 +382,53 @@ void main() {
     );
   });
 
+  testWidgets('shows billing reconciliation as estimate not provider invoice',
+      (tester) async {
+    configurePricingCapability();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(
+            providerUsageService(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.scrollUntilVisible(
+      find.text('Billing reconciliation'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Billing reconciliation'), findsOneWidget);
+    expect(find.textContaining('Estimated cost, not invoice'), findsOneWidget);
+    expect(find.textContaining('Usage snapshot: Provider metadata'),
+        findsOneWidget);
+    expect(find.textContaining('Pricing snapshot: test-pricing-v1'),
+        findsOneWidget);
+    expect(find.textContaining('Invoice reconciliation: Not connected'),
+        findsOneWidget);
+    expect(find.textContaining('Provider invoice import is not connected'),
+        findsOneWidget);
+  });
+
   testWidgets('shows a recovered local state banner for restored seminars',
       (tester) async {
     await Prefs().prefs.setString(
