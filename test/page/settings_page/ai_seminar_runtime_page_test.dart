@@ -525,6 +525,84 @@ void main() {
     expect(find.text('critical restored response'), findsOneWidget);
   });
 
+  testWidgets('shows interrupted background job state after local restore',
+      (tester) async {
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode({
+            'status': 'running',
+            'session': {
+              'id': 's-restored-background',
+              'question': 'Restored background?',
+            },
+            'backgroundJob': {
+              'id': 'job-restored-background',
+              'sessionId': 's-restored-background',
+              'status': 'running',
+              'startedAt': 1000,
+              'updatedAt': 1000,
+            },
+            'evidenceBundle': {
+              'query': 'Restored background?',
+              'evidence': [
+                {
+                  'id': 'e1',
+                  'scope': 'current-book',
+                  'text': 'The source passage.',
+                  'sourceRef': traceableRef().toSafeJson(),
+                },
+              ],
+            },
+            'turns': [
+              {
+                'id': 'turn-critical',
+                'role': 'critical',
+                'prompt': 'prompt',
+                'responseText': 'critical restored response',
+                'evidenceRefIds': ['e1'],
+                'tokenUsage': {
+                  'inputTokens': 8,
+                  'outputTokens': 4,
+                  'isEstimated': true,
+                  'estimationMethod': 'local-char-estimate-v1',
+                },
+              },
+            ],
+          }),
+        );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.scrollUntilVisible(
+      find.textContaining('Recovered interrupted local Seminar state'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Recovered interrupted local Seminar state'),
+        findsOneWidget);
+    expect(
+      find.textContaining(
+          'Background job: interrupted · job-restored-background'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('does not show recovered state for a different book selection',
       (tester) async {
     await Prefs().prefs.setString(

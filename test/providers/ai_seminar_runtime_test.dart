@@ -184,6 +184,84 @@ void main() {
     );
   });
 
+  test('start tracks a persisted background job through completion', () async {
+    configureProvider();
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(
+            id: 's-background',
+            question: 'Run in background.',
+          ),
+        );
+    final state = container.read(aiSeminarRuntimeProvider);
+    final job = state.backgroundJob!;
+
+    expect(job.sessionId, 's-background');
+    expect(job.id, contains('s-background'));
+    expect(job.status, AiSeminarBackgroundJobStatus.completed);
+    expect(job.completedAt, isNotNull);
+
+    final persisted = jsonDecode(
+      Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey)!,
+    ) as Map<String, dynamic>;
+    expect(persisted['backgroundJob']['id'], job.id);
+    expect(
+      persisted['backgroundJob']['status'],
+      AiSeminarBackgroundJobStatus.completed.asString,
+    );
+  });
+
+  test('needs-evidence terminal run marks background job needs-evidence',
+      () async {
+    configureProvider();
+    final untraceableService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => AiSeminarEvidenceBundle(
+        query: 'Needs evidence?',
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'Untraceable source.',
+            sourceRef: SourceRef(sourceKind: SourceRefKind.currentBookRag),
+          ),
+        ],
+      ),
+      streamRole: (_, __) async* {
+        fail('roles should not run without traceable evidence');
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(untraceableService),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(
+            id: 's-needs-evidence',
+            question: 'Needs evidence?',
+          ),
+        );
+
+    final state = container.read(aiSeminarRuntimeProvider);
+    expect(state.status, AiSeminarRunStatus.needsEvidence);
+    expect(
+      state.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.needsEvidence,
+    );
+    expect(state.backgroundJob!.completedAt, isNotNull);
+    expect(state.synthesis, isNull);
+    expect(state.canSendToReview, false);
+  });
+
   test('manual cancel preserves billing snapshot for completed turns',
       () async {
     configureProvider(withPricing: true);
@@ -244,6 +322,10 @@ void main() {
     expect(billing.invoiceStatus,
         AiSeminarInvoiceReconciliationStatus.notConnected);
     expect(billing.isProviderInvoice, false);
+    expect(
+      state.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.cancelled,
+    );
   });
 
   test('retry clears failed partial state and reruns the same session',
@@ -261,13 +343,20 @@ void main() {
     await notifier.start(
       AiSeminarSessionContract(id: 's2', question: 'Retry this.'),
     );
-    expect(container.read(aiSeminarRuntimeProvider).status,
-        AiSeminarRunStatus.failed);
+    final failedState = container.read(aiSeminarRuntimeProvider);
+    expect(failedState.status, AiSeminarRunStatus.failed);
+    expect(
+      failedState.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.failed,
+    );
+    final failedJobId = failedState.backgroundJob!.id;
 
     await notifier.retry();
     final state = container.read(aiSeminarRuntimeProvider);
 
     expect(state.status, AiSeminarRunStatus.completed);
+    expect(state.backgroundJob!.id, isNot(failedJobId));
+    expect(state.backgroundJob!.status, AiSeminarBackgroundJobStatus.completed);
     expect(state.partialRoleText, isNull);
     expect(state.activeRole, isNull);
     expect(state.turns, hasLength(3));
@@ -448,6 +537,13 @@ void main() {
         ),
       ),
       status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-s-running-billing',
+        sessionId: 's-running-billing',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 11111,
+        updatedAt: 11111,
+      ),
       evidenceBundle: bundle(),
       activeRole: AiSeminarRole.supportive,
       partialRoleText: 'partial answer',
@@ -484,6 +580,11 @@ void main() {
 
     expect(restored.status, AiSeminarRunStatus.cancelled);
     expect(restored.lastRun!.status, AiSeminarRunStatus.cancelled);
+    expect(restored.backgroundJob!.id, 'job-s-running-billing');
+    expect(
+      restored.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.interrupted,
+    );
     expect(billing.providerId, 'captured-provider');
     expect(billing.modelId, 'captured-model');
     expect(billing.pricingSource, 'captured-pricing-v1');
@@ -495,6 +596,79 @@ void main() {
       billing.invoiceStatus,
       AiSeminarInvoiceReconciliationStatus.notConnected,
     );
+  });
+
+  test('background job snapshot round-trips and unknown status is interrupted',
+      () {
+    const job = AiSeminarBackgroundJobSnapshot(
+      id: 'job-1',
+      sessionId: 'session-1',
+      status: AiSeminarBackgroundJobStatus.running,
+      startedAt: 10,
+      updatedAt: 20,
+      message: 'working',
+    );
+
+    final restored = AiSeminarBackgroundJobSnapshot.fromJson(job.toJson());
+    final unknown = AiSeminarBackgroundJobSnapshot.fromJson(
+      const {
+        'id': 'job-2',
+        'sessionId': 'session-2',
+        'status': 'provider-disappeared',
+        'startedAt': 1,
+        'updatedAt': 2,
+      },
+    );
+
+    expect(restored.id, 'job-1');
+    expect(restored.status, AiSeminarBackgroundJobStatus.running);
+    expect(restored.message, 'working');
+    expect(unknown.status, AiSeminarBackgroundJobStatus.interrupted);
+  });
+
+  test('interrupted restore does not fake completion or review readiness',
+      () async {
+    configureProvider();
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-partial-restore',
+        question: 'Partial?',
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-partial-restore',
+        sessionId: 's-partial-restore',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 100,
+        updatedAt: 100,
+      ),
+      evidenceBundle: bundle(),
+      activeRole: AiSeminarRole.critical,
+      partialRoleText: 'partial stream text that is not a completed turn',
+      turns: const [],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(restored.status, AiSeminarRunStatus.cancelled);
+    expect(restored.backgroundJob!.status,
+        AiSeminarBackgroundJobStatus.interrupted);
+    expect(restored.activeRole, isNull);
+    expect(restored.partialRoleText, isNull);
+    expect(restored.turns, isEmpty);
+    expect(restored.synthesis, isNull);
+    expect(restored.lastRun!.readyForReview, false);
+    expect(restored.canSendToReview, false);
   });
 
   test('restored seminar keeps persisted provider diagnostics', () async {

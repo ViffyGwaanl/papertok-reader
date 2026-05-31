@@ -82,6 +82,93 @@ class AiSeminarReviewHandoffResult {
   final List<String> flashcardIds;
 }
 
+enum AiSeminarBackgroundJobStatus {
+  running('running'),
+  completed('completed'),
+  needsEvidence('needs-evidence'),
+  cancelled('cancelled'),
+  failed('failed'),
+  interrupted('interrupted');
+
+  const AiSeminarBackgroundJobStatus(this.asString);
+
+  final String asString;
+
+  bool get isTerminal => this != AiSeminarBackgroundJobStatus.running;
+
+  static AiSeminarBackgroundJobStatus fromString(String? value) {
+    for (final status in AiSeminarBackgroundJobStatus.values) {
+      if (status.asString == value) return status;
+    }
+    return AiSeminarBackgroundJobStatus.interrupted;
+  }
+}
+
+class AiSeminarBackgroundJobSnapshot {
+  const AiSeminarBackgroundJobSnapshot({
+    required this.id,
+    required this.sessionId,
+    required this.status,
+    required this.startedAt,
+    required this.updatedAt,
+    this.completedAt,
+    this.message,
+  });
+
+  final String id;
+  final String sessionId;
+  final AiSeminarBackgroundJobStatus status;
+  final int startedAt;
+  final int updatedAt;
+  final int? completedAt;
+  final String? message;
+
+  bool get isActive => status == AiSeminarBackgroundJobStatus.running;
+
+  AiSeminarBackgroundJobSnapshot copyWith({
+    AiSeminarBackgroundJobStatus? status,
+    int? updatedAt,
+    Object? completedAt = _unset,
+    Object? message = _unset,
+  }) {
+    return AiSeminarBackgroundJobSnapshot(
+      id: id,
+      sessionId: sessionId,
+      status: status ?? this.status,
+      startedAt: startedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      completedAt: identical(completedAt, _unset)
+          ? this.completedAt
+          : completedAt as int?,
+      message: identical(message, _unset) ? this.message : message as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'sessionId': sessionId,
+        'status': status.asString,
+        'startedAt': startedAt,
+        'updatedAt': updatedAt,
+        if (completedAt != null) 'completedAt': completedAt,
+        if (message != null && message!.trim().isNotEmpty) 'message': message,
+      };
+
+  factory AiSeminarBackgroundJobSnapshot.fromJson(Map<String, dynamic> json) {
+    return AiSeminarBackgroundJobSnapshot(
+      id: (json['id'] ?? '').toString(),
+      sessionId: (json['sessionId'] ?? '').toString(),
+      status: AiSeminarBackgroundJobStatus.fromString(
+        json['status']?.toString(),
+      ),
+      startedAt: (json['startedAt'] as num?)?.toInt() ?? 0,
+      updatedAt: (json['updatedAt'] as num?)?.toInt() ?? 0,
+      completedAt: (json['completedAt'] as num?)?.toInt(),
+      message: json['message']?.toString(),
+    );
+  }
+}
+
 class AiSeminarRuntimeState {
   const AiSeminarRuntimeState({
     required this.status,
@@ -97,6 +184,7 @@ class AiSeminarRuntimeState {
     this.startedAt,
     this.completedAt,
     this.providerDiagnostics,
+    this.backgroundJob,
     this.restoredFromLocalCache = false,
   });
 
@@ -122,6 +210,7 @@ class AiSeminarRuntimeState {
   final int? startedAt;
   final int? completedAt;
   final AiSeminarProviderDiagnostics? providerDiagnostics;
+  final AiSeminarBackgroundJobSnapshot? backgroundJob;
   final bool restoredFromLocalCache;
 
   bool get canCancel => status == AiSeminarRunStatus.running;
@@ -152,6 +241,7 @@ class AiSeminarRuntimeState {
     int? startedAt,
     int? completedAt,
     AiSeminarProviderDiagnostics? providerDiagnostics,
+    Object? backgroundJob = _unset,
     bool? restoredFromLocalCache,
   }) {
     return AiSeminarRuntimeState(
@@ -175,6 +265,9 @@ class AiSeminarRuntimeState {
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       providerDiagnostics: providerDiagnostics ?? this.providerDiagnostics,
+      backgroundJob: identical(backgroundJob, _unset)
+          ? this.backgroundJob
+          : backgroundJob as AiSeminarBackgroundJobSnapshot?,
       restoredFromLocalCache:
           restoredFromLocalCache ?? this.restoredFromLocalCache,
     );
@@ -197,6 +290,7 @@ class AiSeminarRuntimeState {
         if (completedAt != null) 'completedAt': completedAt,
         if (providerDiagnostics != null)
           'providerDiagnostics': providerDiagnostics!.toJson(),
+        if (backgroundJob != null) 'backgroundJob': backgroundJob!.toJson(),
       };
 
   factory AiSeminarRuntimeState.fromJson(Map<String, dynamic> json) {
@@ -246,6 +340,11 @@ class AiSeminarRuntimeState {
               Map<String, dynamic>.from(json['providerDiagnostics'] as Map),
             )
           : null,
+      backgroundJob: json['backgroundJob'] is Map
+          ? AiSeminarBackgroundJobSnapshot.fromJson(
+              Map<String, dynamic>.from(json['backgroundJob'] as Map),
+            )
+          : null,
     );
   }
 }
@@ -272,10 +371,15 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   Future<void> start(AiSeminarSessionContract session) async {
     final generation = ++_generation;
     final token = AiSeminarCancellationToken();
+    final jobStartedAt = DateTime.now().millisecondsSinceEpoch;
     final providerDiagnostics = _providerContext.resolve();
     final resolvedSession = _sessionWithCurrentProviderBudget(
       session,
       providerDiagnostics,
+    );
+    final backgroundJob = _newBackgroundJob(
+      resolvedSession,
+      startedAt: jobStartedAt,
     );
     _activeToken = token;
     state = AiSeminarRuntimeState.initial(
@@ -290,6 +394,8 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       lastRun: null,
       turns: const <AiSeminarRoleTurn>[],
       whiteboardEntries: const <AiSeminarWhiteboardEntry>[],
+      startedAt: jobStartedAt,
+      backgroundJob: backgroundJob,
     );
     await _persistState();
 
@@ -347,6 +453,13 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       lastRun: run,
       error: run.message,
       completedAt: run.completedAt,
+      backgroundJob: _markBackgroundJob(
+        state.backgroundJob,
+        AiSeminarBackgroundJobStatus.cancelled,
+        updatedAt: completedAt,
+        completedAt: completedAt,
+        message: run.message,
+      ),
     );
     _persistState();
   }
@@ -457,9 +570,15 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   void _applyEvent(AiSeminarRuntimeEvent event) {
     switch (event.type) {
       case AiSeminarRuntimeEventType.sessionStarted:
+        final now = DateTime.now().millisecondsSinceEpoch;
         state = state.copyWith(
           status: AiSeminarRunStatus.running,
-          startedAt: DateTime.now().millisecondsSinceEpoch,
+          startedAt: state.startedAt ?? now,
+          backgroundJob: _markBackgroundJob(
+            state.backgroundJob,
+            AiSeminarBackgroundJobStatus.running,
+            updatedAt: now,
+          ),
           clearError: true,
         );
         break;
@@ -494,6 +613,8 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         );
         break;
       case AiSeminarRuntimeEventType.synthesisReady:
+        final completedAt =
+            event.run?.completedAt ?? DateTime.now().millisecondsSinceEpoch;
         state = state.copyWith(
           status: AiSeminarRunStatus.completed,
           turns: event.turns,
@@ -502,13 +623,21 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           lastRun: event.run,
           activeRole: null,
           partialRoleText: null,
-          completedAt: event.run?.completedAt,
+          completedAt: completedAt,
+          backgroundJob: _markBackgroundJob(
+            state.backgroundJob,
+            AiSeminarBackgroundJobStatus.completed,
+            updatedAt: completedAt,
+            completedAt: completedAt,
+          ),
           clearError: true,
         );
         break;
       case AiSeminarRuntimeEventType.needsEvidence:
       case AiSeminarRuntimeEventType.failed:
       case AiSeminarRuntimeEventType.cancelled:
+        final completedAt =
+            event.run?.completedAt ?? DateTime.now().millisecondsSinceEpoch;
         state = state.copyWith(
           status: event.status,
           evidenceBundle: event.evidenceBundle,
@@ -519,7 +648,14 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           activeRole: null,
           partialRoleText: null,
           error: event.message,
-          completedAt: event.run?.completedAt,
+          completedAt: completedAt,
+          backgroundJob: _markBackgroundJob(
+            state.backgroundJob,
+            _backgroundStatusForRun(event.status),
+            updatedAt: completedAt,
+            completedAt: completedAt,
+            message: event.message,
+          ),
         );
         break;
     }
@@ -549,6 +685,20 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       if (restored.status == AiSeminarRunStatus.running) {
         final completedAt = DateTime.now().millisecondsSinceEpoch;
         final session = restored.session;
+        final backgroundJob = _markBackgroundJob(
+          restored.backgroundJob ??
+              (session == null
+                  ? null
+                  : _newBackgroundJob(
+                      session,
+                      startedAt: restored.startedAt ?? completedAt,
+                    )),
+          AiSeminarBackgroundJobStatus.interrupted,
+          updatedAt: completedAt,
+          completedAt: completedAt,
+          message:
+              'AI Seminar was interrupted before it could finish. Retry to run it again.',
+        );
         final evidenceBundle = restored.evidenceBundle ??
             AiSeminarEvidenceBundle(
               query: session?.question ?? '',
@@ -588,6 +738,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           lastRun: run,
           activeRole: null,
           partialRoleText: null,
+          backgroundJob: backgroundJob,
           error:
               'AI Seminar was interrupted before it could finish. Retry to run it again.',
           completedAt: completedAt,
@@ -613,6 +764,60 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     } catch (_) {
       // Best-effort local recovery cache cleanup.
     }
+  }
+
+  static AiSeminarBackgroundJobSnapshot _newBackgroundJob(
+    AiSeminarSessionContract session, {
+    required int startedAt,
+  }) {
+    return AiSeminarBackgroundJobSnapshot(
+      id: _backgroundJobId(session, startedAt),
+      sessionId: session.id,
+      status: AiSeminarBackgroundJobStatus.running,
+      startedAt: startedAt,
+      updatedAt: startedAt,
+    );
+  }
+
+  static String _backgroundJobId(
+    AiSeminarSessionContract session,
+    int startedAt,
+  ) {
+    final safeSessionId = session.id
+        .replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '-')
+        .replaceAll(RegExp(r'-+'), '-')
+        .trim();
+    final sessionPart = safeSessionId.isEmpty ? 'session' : safeSessionId;
+    return 'seminar-job-$sessionPart-$startedAt';
+  }
+
+  static AiSeminarBackgroundJobSnapshot? _markBackgroundJob(
+    AiSeminarBackgroundJobSnapshot? job,
+    AiSeminarBackgroundJobStatus status, {
+    required int updatedAt,
+    int? completedAt,
+    String? message,
+  }) {
+    if (job == null) return null;
+    return job.copyWith(
+      status: status,
+      updatedAt: updatedAt,
+      completedAt: status.isTerminal ? completedAt ?? updatedAt : null,
+      message: message,
+    );
+  }
+
+  static AiSeminarBackgroundJobStatus _backgroundStatusForRun(
+    AiSeminarRunStatus? status,
+  ) {
+    return switch (status) {
+      AiSeminarRunStatus.completed => AiSeminarBackgroundJobStatus.completed,
+      AiSeminarRunStatus.needsEvidence =>
+        AiSeminarBackgroundJobStatus.needsEvidence,
+      AiSeminarRunStatus.cancelled => AiSeminarBackgroundJobStatus.cancelled,
+      AiSeminarRunStatus.failed => AiSeminarBackgroundJobStatus.failed,
+      _ => AiSeminarBackgroundJobStatus.interrupted,
+    };
   }
 
   static AiSeminarSessionContract _sessionWithCurrentProviderBudget(

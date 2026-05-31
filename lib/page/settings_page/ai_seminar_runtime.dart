@@ -451,6 +451,7 @@ class _StatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final error = state.error?.trim();
+    final backgroundJob = state.backgroundJob;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ClaudePalette.card(context),
@@ -481,6 +482,16 @@ class _StatusBanner extends StatelessWidget {
                 state.status == AiSeminarRunStatus.cancelled
                     ? 'Recovered interrupted local Seminar state. Retry to run it again.'
                     : 'Recovered local Seminar state from this device.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
+              ),
+            ],
+            if (backgroundJob != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Background job: ${backgroundJob.status.asString} · '
+                '${backgroundJob.id}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: ClaudePalette.secondary(context),
                     ),
