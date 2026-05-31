@@ -394,7 +394,10 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     try {
       tocSearch.startSemanticSearch();
 
-      final service = SemanticSearchCurrentBook();
+      final service = SemanticSearchCurrentBook(
+        maxFallbackVectorRows:
+            SemanticSearchCurrentBook.foregroundFallbackVectorRowBudget,
+      );
       final result = await service.search(
         bookId: widget.book.id,
         query: query,

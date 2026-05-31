@@ -78,7 +78,10 @@ class SemanticSearchCurrentBookTool
           required int maxResults,
           AiCurrentBookSearchCancellationToken? cancelToken,
         }) {
-          final service = SemanticSearchCurrentBook();
+          final service = SemanticSearchCurrentBook(
+            maxFallbackVectorRows:
+                SemanticSearchCurrentBook.toolFallbackVectorRowBudget,
+          );
           return service.search(
             bookId: bookId,
             query: query,

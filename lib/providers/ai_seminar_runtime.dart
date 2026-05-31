@@ -16,7 +16,10 @@ import 'package:papertok_reader/service/review/review_item_store.dart';
 
 final aiSeminarRuntimeServiceProvider = Provider<AiSeminarRuntimeService>(
   (ref) {
-    final currentBookSearch = SemanticSearchCurrentBook();
+    final currentBookSearch = SemanticSearchCurrentBook(
+      maxFallbackVectorRows:
+          SemanticSearchCurrentBook.toolFallbackVectorRowBudget,
+    );
     final librarySearch = SemanticSearchLibrary();
     final broker = AiSeminarEvidenceBroker(
       currentBookSearch: (session) {
@@ -391,7 +394,9 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   Future<void> start(AiSeminarSessionContract session) async {
     final generation = ++_generation;
     final token = AiSeminarCancellationToken();
-    final jobStartedAt = DateTime.now().millisecondsSinceEpoch;
+    final jobStartedAt = _nextBackgroundJobStartedAt(
+      DateTime.now().millisecondsSinceEpoch,
+    );
     final providerDiagnostics = _providerContext.resolve();
     final resolvedSession = _sessionWithCurrentProviderBudget(
       session,
@@ -906,6 +911,16 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     return List<AiSeminarBackgroundJobSnapshot>.unmodifiable(
       normalized.skip(offset),
     );
+  }
+
+  int _nextBackgroundJobStartedAt(int candidate) {
+    var latest = state.backgroundJob?.startedAt ?? 0;
+    for (final job in state.backgroundJobs) {
+      if (job.startedAt > latest) {
+        latest = job.startedAt;
+      }
+    }
+    return candidate <= latest ? latest + 1 : candidate;
   }
 
   static AiSeminarBackgroundJobStatus _backgroundStatusForRun(

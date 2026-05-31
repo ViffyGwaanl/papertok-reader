@@ -143,6 +143,7 @@ class SemanticSearchCurrentBook {
     int vectorScanPageSize = 256,
     bool enableFtsCandidatePrefilter = true,
     int ftsCandidateLimit = 512,
+    int? maxFallbackVectorRows,
     Duration progressMinInterval = const Duration(milliseconds: 160),
     AiCurrentBookVectorPageScorer? scoreVectorPage,
     @visibleForTesting AiCurrentBookVectorScanObserver? onVectorScanPage,
@@ -152,11 +153,15 @@ class SemanticSearchCurrentBook {
         _vectorScanPageSize = vectorScanPageSize.clamp(1, 512).toInt(),
         _enableFtsCandidatePrefilter = enableFtsCandidatePrefilter,
         _ftsCandidateLimit = ftsCandidateLimit.clamp(1, 2048).toInt(),
+        _maxFallbackVectorRows =
+            maxFallbackVectorRows?.clamp(1, 1000000).toInt(),
         _progressMinInterval = progressMinInterval,
         _scoreVectorPage = scoreVectorPage ?? _defaultScoreVectorPage,
         _onVectorScanPage = onVectorScanPage,
         _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch);
 
+  static const int foregroundFallbackVectorRowBudget = 1024;
+  static const int toolFallbackVectorRowBudget = 2048;
   static final _globalSearchLock = _AsyncLock();
   static final RegExp _ftsSafeToken = RegExp(r'^[0-9A-Za-z_\u4e00-\u9fff]+$');
   static const List<String> _vectorRowColumns = [
@@ -176,6 +181,7 @@ class SemanticSearchCurrentBook {
   final int _vectorScanPageSize;
   final bool _enableFtsCandidatePrefilter;
   final int _ftsCandidateLimit;
+  final int? _maxFallbackVectorRows;
   final Duration _progressMinInterval;
   final AiCurrentBookVectorPageScorer _scoreVectorPage;
   final AiCurrentBookVectorScanObserver? _onVectorScanPage;
@@ -295,7 +301,9 @@ class SemanticSearchCurrentBook {
     final candidateIds = (ftsCandidateIds != null && ftsCandidateIds.isNotEmpty)
         ? ftsCandidateIds
         : null;
-    var totalRows = candidateIds?.length ?? info.chunkCount;
+    final fallbackTotalRows = _fallbackTotalRows(info.chunkCount);
+    var totalRows = candidateIds?.length ?? fallbackTotalRows;
+    var fallbackScanLimited = false;
     int? lastProgressEmitMs;
     int? lastProgressScannedRows;
     bool lastProgressCancelled = false;
@@ -409,19 +417,36 @@ class SemanticSearchCurrentBook {
 
     Future<AiSemanticSearchResult?> scanFullBook() async {
       var lastId = 0;
+      var remainingRows = _maxFallbackVectorRows;
       while (true) {
+        final pageLimit = remainingRows == null
+            ? _vectorScanPageSize
+            : remainingRows < _vectorScanPageSize
+                ? remainingRows
+                : _vectorScanPageSize;
+        if (pageLimit <= 0) {
+          fallbackScanLimited = info.chunkCount > scannedRows;
+          break;
+        }
         final rows = await db.query(
           'ai_chunks',
           columns: _vectorRowColumns,
           where: 'book_id = ? AND id > ?',
           whereArgs: [bookId, lastId],
           orderBy: 'id ASC',
-          limit: _vectorScanPageSize,
+          limit: pageLimit,
         );
         if (rows.isEmpty) break;
         lastId = (rows.last['id'] as num?)?.toInt() ?? lastId;
         final cancelled = await scorePage(rows);
         if (cancelled != null) return cancelled;
+        if (remainingRows != null) {
+          remainingRows -= rows.length;
+          if (remainingRows <= 0) {
+            fallbackScanLimited = info.chunkCount > scannedRows;
+            break;
+          }
+        }
       }
       return null;
     }
@@ -444,7 +469,7 @@ class SemanticSearchCurrentBook {
       }
 
       if (scannedRows == 0) {
-        totalRows = info.chunkCount;
+        totalRows = fallbackTotalRows;
         final cancelled = await scanFullBook();
         if (cancelled != null) return cancelled;
       }
@@ -533,8 +558,17 @@ class SemanticSearchCurrentBook {
       bookId: bookId,
       query: query,
       evidence: evidence,
+      message: fallbackScanLimited
+          ? 'Semantic search limited fallback vector scan to $scannedRows of ${info.chunkCount} chunks for device resources. Try a more specific keyword or rebuild the index.'
+          : null,
       indexInfo: info,
     );
+  }
+
+  int _fallbackTotalRows(int chunkCount) {
+    final limit = _maxFallbackVectorRows;
+    if (limit == null || chunkCount <= limit) return chunkCount;
+    return limit;
   }
 
   Future<List<int>?> _loadFtsCandidateIds(

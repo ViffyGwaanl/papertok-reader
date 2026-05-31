@@ -697,6 +697,80 @@ void main() {
     expect(scannedIds, ids);
   });
 
+  test('current book semantic search limits large fallback vector scans',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    const chunkCount = 20;
+    const fallbackBudget = 5;
+    await _insertBook(db, bookId: 34, chunkCount: chunkCount);
+    final ids = <int>[];
+    for (var i = 0; i < chunkCount; i++) {
+      ids.add(
+        await _insertChunk(
+          db,
+          bookId: 34,
+          chunkIndex: i,
+          text: 'background $i',
+          rawText: 'target raw $i',
+          vector: i == fallbackBudget - 1 ? const [1, 0] : const [0, 1],
+        ),
+      );
+    }
+
+    final scannedIds = <int>[];
+    final scanColumns = <Set<String>>[];
+    final progressEvents = <AiCurrentBookSearchProgress>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 2,
+      ftsCandidateLimit: 4,
+      maxFallbackVectorRows: fallbackBudget,
+      progressMinInterval: Duration.zero,
+      onVectorScanPage: (rows) {
+        scannedIds.addAll(
+          rows.map((row) => (row['id'] as num?)?.toInt()).whereType<int>(),
+        );
+        if (rows.isNotEmpty) {
+          scanColumns.add(rows.first.keys.toSet());
+        }
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'absent-token',
+      maxResults: 1,
+      onProgress: progressEvents.add,
+    );
+
+    expect(result.ok, true);
+    expect(result.message, contains('limited fallback vector scan'));
+    expect(result.evidence.single.text, 'target raw ${fallbackBudget - 1}');
+    expect(scannedIds, ids.take(fallbackBudget).toList(growable: false));
+    expect(progressEvents.last.scannedRows, fallbackBudget);
+    expect(progressEvents.last.totalRows, fallbackBudget);
+    expect(
+      scanColumns.expand((columns) => columns),
+      isNot(contains('text')),
+    );
+    expect(
+      scanColumns.expand((columns) => columns),
+      isNot(contains('raw_text')),
+    );
+    expect(
+      scanColumns.expand((columns) => columns),
+      isNot(contains('embedding_json')),
+    );
+  });
+
   test('current book semantic search falls back when FTS table is unavailable',
       () async {
     final fixture = await _openSearchFixture();
