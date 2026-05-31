@@ -238,6 +238,79 @@ void main() {
     expect(find.text('Send to Review'), findsOneWidget);
   });
 
+  testWidgets('start passes reader selection SourceRef into seminar session',
+      (tester) async {
+    AiSeminarSessionContract? capturedSession;
+    final selectedRef = SourceRef(
+      bookId: 42,
+      cfi: 'epubcfi(/6/4)',
+      jumpLink: 'paperreader://reader/open?bookId=42&cfi=epubcfi%28/6/4%29',
+      sourceTextSnippet: 'Evidence-backed learning needs jump links.',
+      sourceKind: SourceRefKind.reader,
+    );
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (session) async {
+        capturedSession = session;
+        return AiSeminarEvidenceBundle(
+          query: session.question,
+          evidence: [
+            AiSeminarEvidence(
+              id: 'selection-1',
+              scope: AiSeminarEvidenceScope.currentBook,
+              text: session.sourceRefs.single.sourceTextSnippet!,
+              sourceRef: session.sourceRefs.single,
+            ),
+          ],
+        );
+      },
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['selection-1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(
+            initialQuestion: 'Discuss this selection.',
+            bookId: 42,
+            initialSourceRef: selectedRef,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(capturedSession, isNotNull);
+    expect(capturedSession!.bookId, 42);
+    expect(capturedSession!.sourceRefs, hasLength(1));
+    expect(capturedSession!.sourceRefs.single.cfi, 'epubcfi(/6/4)');
+    expect(capturedSession!.sourceRefs.single.sourceTextSnippet,
+        'Evidence-backed learning needs jump links.');
+    expect(capturedSession!.sourceRefs.single.sourceKind, SourceRefKind.reader);
+  });
+
   testWidgets('shows provider reported token usage when available',
       (tester) async {
     await tester.pumpWidget(
@@ -650,6 +723,74 @@ void main() {
     expect(find.text('Start Seminar'), findsOneWidget);
     expect(find.textContaining('Recovered local Seminar state'), findsNothing);
     expect(find.text('old restored response'), findsNothing);
+    await tester.pump();
+    expect(Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey), isNull);
+  });
+
+  testWidgets(
+      'does not restore selected-text Seminar state for a different SourceRef',
+      (tester) async {
+    final oldRef = SourceRef(
+      bookId: 42,
+      cfi: 'epubcfi(/6/4)',
+      jumpLink: 'paperreader://reader/open?bookId=42&cfi=epubcfi%28/6/4%29',
+      sourceTextSnippet: 'Repeated selected sentence.',
+      sourceKind: SourceRefKind.reader,
+    );
+    final newRef = SourceRef(
+      bookId: 42,
+      cfi: 'epubcfi(/6/12)',
+      jumpLink: 'paperreader://reader/open?bookId=42&cfi=epubcfi%28/6/12%29',
+      sourceTextSnippet: 'Repeated selected sentence.',
+      sourceKind: SourceRefKind.reader,
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode({
+            'status': 'completed',
+            'session': {
+              'id': 's-old-selection',
+              'question': 'Discuss repeated selected sentence.',
+              'bookId': 42,
+              'sourceRefs': [oldRef.toSafeJson()],
+            },
+            'turns': [
+              {
+                'id': 'turn-critical',
+                'role': 'critical',
+                'prompt': 'prompt',
+                'responseText': 'old CFI restored response',
+                'evidenceRefIds': ['selection-1'],
+              },
+            ],
+          }),
+        );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(
+            initialQuestion: 'Discuss repeated selected sentence.',
+            bookId: 42,
+            initialSourceRef: newRef,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(tester.takeException(), isNull);
+    await scrollToStartSeminar(tester);
+    expect(find.text('Start Seminar'), findsOneWidget);
+    expect(find.textContaining('Recovered local Seminar state'), findsNothing);
+    expect(find.text('old CFI restored response'), findsNothing);
     await tester.pump();
     expect(Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey), isNull);
   });

@@ -9,6 +9,7 @@ import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
@@ -394,6 +395,12 @@ void main() {
                 onNoteCreated: (_) {},
                 axis: Axis.horizontal,
                 reverse: false,
+                knowledgeCardReaderContext:
+                    const ExcerptKnowledgeCardReaderContext(
+                  bookId: 42,
+                  bookTitle: 'Evidence Book',
+                  chapterTitle: 'Chapter 1',
+                ),
               ),
             ),
           ),
@@ -411,6 +418,17 @@ void main() {
     expect(find.text('Seminar Mode'), findsOneWidget);
     expect(find.textContaining('Evidence-backed learning needs jump links.'),
         findsOneWidget);
+    final page = tester.widget<AiSeminarRuntimePage>(
+      find.byType(AiSeminarRuntimePage),
+    );
+    expect(page.bookId, 42);
+    expect(page.initialSourceRef, isNotNull);
+    expect(page.initialSourceRef!.bookId, 42);
+    expect(page.initialSourceRef!.cfi, 'epubcfi(/6/4)');
+    expect(page.initialSourceRef!.sourceTextSnippet,
+        'Evidence-backed learning needs jump links.');
+    expect(page.initialSourceRef!.sourceKind, SourceRefKind.reader);
+    expect(page.initialSourceRef!.canJumpBack, true);
     await tester.scrollUntilVisible(
       find.text('Start Seminar'),
       220,

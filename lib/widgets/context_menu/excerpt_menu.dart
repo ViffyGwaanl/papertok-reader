@@ -337,7 +337,9 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     final prompt = l10n.contextMenuSeminarPrompt(
       widget.annoContent.trim(),
     );
-    final bookId = epubPlayerKey.currentState?.widget.book.id;
+    final sourceRef = _selectionSourceRef();
+    final bookId =
+        sourceRef?.bookId ?? epubPlayerKey.currentState?.widget.book.id;
     widget.onClose();
     Prefs().activeAiSkillId = 'seminar_mode';
     if (!mounted) return;
@@ -346,6 +348,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
         page: AiSeminarRuntimePage(
           initialQuestion: prompt,
           bookId: bookId,
+          initialSourceRef: sourceRef,
         ),
       ),
     );

@@ -26,6 +26,7 @@ class AiSeminarEvidenceBroker {
     AiSeminarSessionContract session,
   ) async {
     final evidence = <AiSeminarEvidence>[];
+    evidence.addAll(_fromSessionSourceRefs(session));
 
     if (_shouldSearchCurrentBook(session)) {
       final current = await _currentBookSearch(session);
@@ -54,6 +55,28 @@ class AiSeminarEvidenceBroker {
     return session.bookId != null &&
         (session.scopes.contains(AiSeminarEvidenceScope.currentBook) ||
             session.scopes.contains(AiSeminarEvidenceScope.currentChapter));
+  }
+
+  static List<AiSeminarEvidence> _fromSessionSourceRefs(
+    AiSeminarSessionContract session,
+  ) {
+    final out = <AiSeminarEvidence>[];
+    for (final ref in session.sourceRefs) {
+      if (!ref.hasEvidence) continue;
+      final text = ref.sourceTextSnippet?.trim();
+      if (text == null || text.isEmpty) continue;
+      out.add(
+        AiSeminarEvidence(
+          id: 'selection-${out.length + 1}',
+          scope: AiSeminarEvidenceScope.currentBook,
+          text: text,
+          sourceRef: ref,
+          relevance: 1,
+          note: 'Reader selection',
+        ),
+      );
+    }
+    return out;
   }
 
   static List<AiSeminarEvidence> _fromCurrentBook(

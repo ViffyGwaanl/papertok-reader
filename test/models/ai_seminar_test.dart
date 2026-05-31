@@ -70,6 +70,32 @@ void main() {
       expect(restored.budgetPolicy!.costPriceSource, 'test-pricing-v1');
       expect(restored.budgetPolicy!.hasCostLimit, true);
     });
+
+    test('round-trips reader selection source refs', () {
+      final sourceRef = SourceRef(
+        bookId: 42,
+        cfi: 'epubcfi(/6/4)',
+        jumpLink: 'paperreader://reader/open?bookId=42&cfi=epubcfi%28/6/4%29',
+        sourceTextSnippet: 'Evidence-backed learning needs jump links.',
+        sourceKind: SourceRefKind.reader,
+      );
+      final session = AiSeminarSessionContract(
+        id: 's-selection',
+        question: 'Discuss this selected passage.',
+        bookId: 42,
+        sourceRefs: [sourceRef],
+      );
+
+      final restored = AiSeminarSessionContract.fromJson(session.toJson());
+
+      expect(restored.sourceRefs, hasLength(1));
+      expect(restored.sourceRefs.single.bookId, 42);
+      expect(restored.sourceRefs.single.cfi, 'epubcfi(/6/4)');
+      expect(restored.sourceRefs.single.sourceTextSnippet,
+          'Evidence-backed learning needs jump links.');
+      expect(restored.sourceRefs.single.sourceKind, SourceRefKind.reader);
+      expect(restored.sourceRefs.single.canJumpBack, true);
+    });
   });
 
   group('AiSeminarEvidenceBundle', () {

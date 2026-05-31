@@ -64,6 +64,94 @@ void main() {
         SourceRefKind.currentBookRag);
   });
 
+  test('seeds evidence from reader selection source refs', () async {
+    var currentBookCalls = 0;
+    var libraryCalls = 0;
+    final selectionRef = SourceRef(
+      bookId: 7,
+      cfi: 'epubcfi(/6/4)',
+      jumpLink: 'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/4%29',
+      sourceTextSnippet: 'Selected passage text.',
+      sourceKind: SourceRefKind.reader,
+    );
+    final broker = AiSeminarEvidenceBroker(
+      currentBookSearch: (_) async {
+        currentBookCalls += 1;
+        return const AiSemanticSearchResult(
+          ok: true,
+          bookId: 7,
+          query: 'argument',
+          evidence: [],
+        );
+      },
+      librarySearch: (_) async {
+        libraryCalls += 1;
+        return const AiSemanticSearchLibraryResult(
+          ok: true,
+          query: 'argument',
+          evidence: [],
+        );
+      },
+    );
+
+    final bundle = await broker.fetch(
+      AiSeminarSessionContract(
+        id: 's-selection',
+        question: 'argument',
+        bookId: 7,
+        sourceRefs: [selectionRef],
+      ),
+    );
+
+    expect(currentBookCalls, 1);
+    expect(libraryCalls, 0);
+    expect(bundle.evidence, hasLength(1));
+    expect(bundle.evidence.single.id, 'selection-1');
+    expect(bundle.evidence.single.text, 'Selected passage text.');
+    expect(bundle.evidence.single.scope, AiSeminarEvidenceScope.currentBook);
+    expect(bundle.evidence.single.sourceRef.sourceKind, SourceRefKind.reader);
+    expect(bundle.evidence.single.sourceRef.cfi, 'epubcfi(/6/4)');
+    expect(bundle.allEvidenceTraceable, true);
+  });
+
+  test('does not use the question as reader selection evidence text', () async {
+    var libraryCalls = 0;
+    final anchorOnlyRef = SourceRef(
+      bookId: 7,
+      cfi: 'epubcfi(/6/4)',
+      jumpLink: 'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/4%29',
+      sourceKind: SourceRefKind.reader,
+    );
+    final broker = AiSeminarEvidenceBroker(
+      currentBookSearch: (_) async => const AiSemanticSearchResult(
+        ok: true,
+        bookId: 7,
+        query: 'argument',
+        evidence: [],
+      ),
+      librarySearch: (_) async {
+        libraryCalls += 1;
+        return const AiSemanticSearchLibraryResult(
+          ok: true,
+          query: 'argument',
+          evidence: [],
+        );
+      },
+    );
+
+    final bundle = await broker.fetch(
+      AiSeminarSessionContract(
+        id: 's-selection-anchor-only',
+        question: 'argument',
+        bookId: 7,
+        sourceRefs: [anchorOnlyRef],
+      ),
+    );
+
+    expect(bundle.evidence, isEmpty);
+    expect(libraryCalls, 1);
+  });
+
   test('falls back to library when current book evidence is thin', () async {
     var libraryCalls = 0;
     final broker = AiSeminarEvidenceBroker(

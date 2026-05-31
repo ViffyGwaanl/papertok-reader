@@ -834,6 +834,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       bookId: session.bookId,
       roles: session.roles,
       scopes: session.scopes,
+      sourceRefs: session.sourceRefs,
       allowWeb: session.allowWeb,
       writeRequiresApproval: session.writeRequiresApproval,
       maxRounds: session.maxRounds,

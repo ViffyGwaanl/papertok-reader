@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
@@ -12,11 +13,13 @@ class AiSeminarRuntimePage extends ConsumerStatefulWidget {
     super.key,
     this.initialQuestion,
     this.bookId,
+    this.initialSourceRef,
     this.autoStart = false,
   });
 
   final String? initialQuestion;
   final int? bookId;
+  final SourceRef? initialSourceRef;
   final bool autoStart;
 
   @override
@@ -65,7 +68,10 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
           AiSeminarSessionContract(
             id: 'seminar-${DateTime.now().millisecondsSinceEpoch}',
             question: question,
-            bookId: widget.bookId,
+            bookId: widget.initialSourceRef?.bookId ?? widget.bookId,
+            sourceRefs: [
+              if (widget.initialSourceRef != null) widget.initialSourceRef!,
+            ],
             budgetPolicy: _budgetPolicyFromInputs(diagnostics),
           ),
         );
@@ -223,11 +229,18 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
   bool _hasMismatchedEntryState(AiSeminarRuntimeState state) {
     if (state.session == null) return false;
     final entryQuestion = widget.initialQuestion?.trim();
-    final hasScopedEntry =
-        widget.bookId != null || (entryQuestion?.isNotEmpty ?? false);
+    final entryBookId = widget.initialSourceRef?.bookId ?? widget.bookId;
+    final hasScopedEntry = entryBookId != null ||
+        widget.initialSourceRef != null ||
+        (entryQuestion?.isNotEmpty ?? false);
     if (!hasScopedEntry) return false;
     final session = state.session!;
-    if (widget.bookId != null && session.bookId != widget.bookId) {
+    if (entryBookId != null && session.bookId != entryBookId) {
+      return true;
+    }
+    final entrySourceRef = widget.initialSourceRef;
+    if (entrySourceRef != null &&
+        !_sessionContainsSourceRef(session, entrySourceRef)) {
       return true;
     }
     if (entryQuestion != null &&
@@ -237,6 +250,24 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
     }
     return false;
   }
+
+  bool _sessionContainsSourceRef(
+    AiSeminarSessionContract session,
+    SourceRef entrySourceRef,
+  ) {
+    final entryKey = _sourceRefEntryKey(entrySourceRef);
+    return session.sourceRefs
+        .any((candidate) => _sourceRefEntryKey(candidate) == entryKey);
+  }
+
+  String _sourceRefEntryKey(SourceRef ref) => [
+        ref.bookId ?? '',
+        ref.href ?? '',
+        ref.cfi ?? '',
+        ref.chunkId ?? '',
+        ref.jumpLink ?? '',
+        ref.sourceHash ?? '',
+      ].join('\u001f');
 
   void _scheduleDiscardMismatchedEntryState() {
     if (_discardedMismatchedEntryState) return;

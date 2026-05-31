@@ -393,6 +393,7 @@ class AiSeminarSessionContract {
     List<AiSeminarEvidenceScope> scopes = const <AiSeminarEvidenceScope>[
       AiSeminarEvidenceScope.currentBook,
     ],
+    List<SourceRef> sourceRefs = const <SourceRef>[],
     bool allowWeb = false,
     bool writeRequiresApproval = true,
     int maxRounds = 2,
@@ -402,6 +403,7 @@ class AiSeminarSessionContract {
   }) {
     final normalizedRoles = _normalizeRoles(roles);
     final normalizedScopes = _dedupeScopes(scopes);
+    final normalizedSourceRefs = _dedupeSourceRefs(sourceRefs);
     final normalizedBudget = budgetPolicy?.normalized;
     final normalizedBillingContext = billingContext?.normalized;
     return AiSeminarSessionContract._(
@@ -414,6 +416,7 @@ class AiSeminarSessionContract {
               AiSeminarEvidenceScope.currentBook,
             ]
           : normalizedScopes,
+      sourceRefs: normalizedSourceRefs,
       allowWeb: allowWeb,
       writeRequiresApproval: writeRequiresApproval,
       maxRounds: maxRounds.clamp(1, 5),
@@ -430,6 +433,7 @@ class AiSeminarSessionContract {
     required this.bookId,
     required this.roles,
     required this.scopes,
+    required this.sourceRefs,
     required this.allowWeb,
     required this.writeRequiresApproval,
     required this.maxRounds,
@@ -443,6 +447,7 @@ class AiSeminarSessionContract {
   final int? bookId;
   final List<AiSeminarRole> roles;
   final List<AiSeminarEvidenceScope> scopes;
+  final List<SourceRef> sourceRefs;
   final bool allowWeb;
   final bool writeRequiresApproval;
   final int maxRounds;
@@ -459,6 +464,9 @@ class AiSeminarSessionContract {
         if (bookId != null) 'bookId': bookId,
         'roles': roles.map((role) => role.asString).toList(growable: false),
         'scopes': scopes.map((scope) => scope.asString).toList(growable: false),
+        if (sourceRefs.isNotEmpty)
+          'sourceRefs':
+              sourceRefs.map((ref) => ref.toSafeJson()).toList(growable: false),
         'allowWeb': allowWeb,
         'writeRequiresApproval': writeRequiresApproval,
         'maxRounds': maxRounds,
@@ -479,12 +487,18 @@ class AiSeminarSessionContract {
             .whereType<AiSeminarEvidenceScope>()
             .toList(growable: false) ??
         const <AiSeminarEvidenceScope>[AiSeminarEvidenceScope.currentBook];
+    final rawSourceRefs = (json['sourceRefs'] as List?)
+            ?.whereType<Map>()
+            .map((e) => SourceRef.fromJson(Map<String, dynamic>.from(e)))
+            .toList(growable: false) ??
+        const <SourceRef>[];
     return AiSeminarSessionContract(
       id: (json['id'] ?? '').toString(),
       question: (json['question'] ?? '').toString(),
       bookId: (json['bookId'] as num?)?.toInt(),
       roles: rawRoles,
       scopes: rawScopes,
+      sourceRefs: rawSourceRefs,
       allowWeb: json['allowWeb'] == true,
       writeRequiresApproval: json['writeRequiresApproval'] != false,
       maxRounds: (json['maxRounds'] as num?)?.toInt() ?? 2,
@@ -534,6 +548,26 @@ class AiSeminarSessionContract {
     final out = <AiSeminarEvidenceScope>[];
     for (final scope in scopes) {
       if (!out.contains(scope)) out.add(scope);
+    }
+    return List.unmodifiable(out);
+  }
+
+  static List<SourceRef> _dedupeSourceRefs(List<SourceRef> refs) {
+    final out = <SourceRef>[];
+    final seen = <String>{};
+    for (final ref in refs) {
+      if (!ref.hasEvidence) continue;
+      final key = [
+        ref.bookId ?? '',
+        ref.href ?? '',
+        ref.cfi ?? '',
+        ref.chunkId ?? '',
+        ref.jumpLink ?? '',
+        ref.sourceHash ?? '',
+      ].join('\u001f');
+      if (seen.add(key)) {
+        out.add(ref);
+      }
     }
     return List.unmodifiable(out);
   }
