@@ -422,6 +422,8 @@ String _sourceTypeLabel(L10n l10n, ReviewItemSourceType type) {
       l10n.reviewInboxSourceFlashcardCandidate,
     ReviewItemSourceType.imageAnalysisCard =>
       l10n.reviewInboxSourceImageAnalysisCard,
+    ReviewItemSourceType.reviewHistoryImport =>
+      l10n.reviewInboxSourceReviewHistoryImport,
     ReviewItemSourceType.syncConflict => l10n.reviewInboxSourceSyncConflict,
     ReviewItemSourceType.unknown => l10n.reviewInboxSourceUnknown,
   };

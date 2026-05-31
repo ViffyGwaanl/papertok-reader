@@ -227,6 +227,14 @@ class ReviewInboxController {
           return const _ReviewSourceMirrorResult();
         }
         return const _ReviewSourceMirrorResult();
+      case ReviewItemSourceType.reviewHistoryImport:
+        if (item.status == ReviewItemStatus.applied) {
+          await spacedReviewStore.upsertImportedReviewHistory(
+            _reviewHistoryImportItem(item),
+            now: now,
+          );
+        }
+        return const _ReviewSourceMirrorResult();
       case ReviewItemSourceType.seminarSynthesis:
       case ReviewItemSourceType.imageAnalysisCard:
       case ReviewItemSourceType.unknown:
@@ -269,7 +277,32 @@ class ReviewInboxController {
         decisionSource: decisionSource ?? 'user_apply',
       );
     }
+    if (next == ReviewItemStatus.applied &&
+        original.sourceType == ReviewItemSourceType.reviewHistoryImport) {
+      return reviewStore.applyResolvedReviewHistoryImport(
+        original.id,
+        now: timestamp,
+        decisionSource: decisionSource ?? 'user_apply',
+      );
+    }
     return persist(timestamp);
+  }
+
+  SpacedReviewItem _reviewHistoryImportItem(ReviewItem item) {
+    final raw = item.payload['reviewHistoryItem'];
+    if (raw is! Map) {
+      throw StateError('Review history import is missing payload.');
+    }
+    final reviewItem = SpacedReviewItem.fromJson(
+      Map<String, dynamic>.from(raw),
+    );
+    if (reviewItem.id != item.sourceId) {
+      throw StateError('Review history import source id mismatch.');
+    }
+    if (!reviewItem.sourceRefs.any((ref) => ref.hasEvidence)) {
+      throw StateError('Review history import cannot apply without SourceRef.');
+    }
+    return reviewItem;
   }
 
   MemoryDocTarget _memoryTargetDocFor(ReviewItem item) {

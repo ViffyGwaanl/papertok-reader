@@ -722,6 +722,7 @@
   "reviewInboxSourceConceptGraphRelation": "概念图谱",
   "reviewInboxSourceFlashcardCandidate": "复习卡",
   "reviewInboxSourceImageAnalysisCard": "图片分析",
+  "reviewInboxSourceReviewHistoryImport": "复习记录",
   "reviewInboxSourceSyncConflict": "同步冲突",
   "reviewInboxSourceUnknown": "未知来源",
   "reviewInboxApproveAction": "批准",
@@ -973,6 +974,15 @@
   "knowledgeExportSendRemoteIncomingToReview": "发送远端待引入到 Review",
   "knowledgeExportRemoteIncomingReviewSent": "{count} 个远端待引入已发送到 Review inbox",
   "@knowledgeExportRemoteIncomingReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportSendRemoteReviewHistoryToReview": "发送远端复习记录到 Review",
+  "knowledgeExportRemoteReviewHistoryReviewSent": "{count} 个远端复习记录已发送到 Review inbox",
+  "@knowledgeExportRemoteReviewHistoryReviewSent": {
     "placeholders": {
       "count": {
         "type": "int"

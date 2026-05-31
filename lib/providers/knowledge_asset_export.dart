@@ -27,6 +27,8 @@ class KnowledgeAssetExportState {
     this.lastRemoteConflictReviewCount,
     this.lastRemoteIncomingReviewCount,
     this.lastRemoteIncomingSkippedCount,
+    this.lastRemoteReviewHistoryReviewCount,
+    this.lastRemoteReviewHistorySkippedCount,
     this.lastRemoteUploadPath,
     this.lastRemoteUploadCount,
     this.remotePreview,
@@ -61,6 +63,8 @@ class KnowledgeAssetExportState {
   final int? lastRemoteConflictReviewCount;
   final int? lastRemoteIncomingReviewCount;
   final int? lastRemoteIncomingSkippedCount;
+  final int? lastRemoteReviewHistoryReviewCount;
+  final int? lastRemoteReviewHistorySkippedCount;
   final String? lastRemoteUploadPath;
   final int? lastRemoteUploadCount;
   final KnowledgeRemoteSyncPreview? remotePreview;
@@ -78,6 +82,8 @@ class KnowledgeAssetExportState {
     int? lastRemoteConflictReviewCount,
     int? lastRemoteIncomingReviewCount,
     int? lastRemoteIncomingSkippedCount,
+    int? lastRemoteReviewHistoryReviewCount,
+    int? lastRemoteReviewHistorySkippedCount,
     String? lastRemoteUploadPath,
     int? lastRemoteUploadCount,
     KnowledgeRemoteSyncPreview? remotePreview,
@@ -101,6 +107,11 @@ class KnowledgeAssetExportState {
           lastRemoteIncomingReviewCount ?? this.lastRemoteIncomingReviewCount,
       lastRemoteIncomingSkippedCount:
           lastRemoteIncomingSkippedCount ?? this.lastRemoteIncomingSkippedCount,
+      lastRemoteReviewHistoryReviewCount: lastRemoteReviewHistoryReviewCount ??
+          this.lastRemoteReviewHistoryReviewCount,
+      lastRemoteReviewHistorySkippedCount:
+          lastRemoteReviewHistorySkippedCount ??
+              this.lastRemoteReviewHistorySkippedCount,
       lastRemoteUploadPath: lastRemoteUploadPath ?? this.lastRemoteUploadPath,
       lastRemoteUploadCount:
           lastRemoteUploadCount ?? this.lastRemoteUploadCount,
@@ -249,6 +260,29 @@ class KnowledgeAssetExportNotifier
         remotePreview: result.remotePreview,
         lastRemoteIncomingReviewCount: result.submittedCount,
         lastRemoteIncomingSkippedCount: result.skippedCount,
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        busy: false,
+        lastError: error.toString(),
+        clearRemotePreview: true,
+      );
+    }
+  }
+
+  Future<void> submitRemoteReviewHistoryToReview() async {
+    state = state.copyWith(busy: true, clearError: true);
+    try {
+      final result = await _service.submitRemoteReviewHistoryToReview();
+      state = state.copyWith(
+        busy: false,
+        snapshot: AsyncValue<KnowledgeAssetExportSnapshot>.data(
+          result.snapshot,
+        ),
+        remotePreview: result.remotePreview,
+        lastRemoteReviewHistoryReviewCount: result.submittedCount,
+        lastRemoteReviewHistorySkippedCount: result.skippedCount,
         clearError: true,
       );
     } catch (error) {

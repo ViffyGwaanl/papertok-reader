@@ -68,8 +68,8 @@ void main() {
 
     expect(service.previewedRemoteSync, true);
     expect(find.text('Remote sync preview'), findsOneWidget);
-    expect(find.text('2 remote'), findsOneWidget);
-    expect(find.text('1 incoming'), findsOneWidget);
+    expect(find.text('3 remote'), findsOneWidget);
+    expect(find.text('2 incoming'), findsOneWidget);
     expect(find.text('1 remote conflict'), findsOneWidget);
 
     await tester.scrollUntilVisible(
@@ -89,6 +89,27 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('1 remote incoming sent to Review inbox'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Send remote review history to Review'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send remote review history to Review'));
+    await tester.pump();
+
+    expect(service.submittedRemoteReviewHistoryToReview, true);
+    await tester.scrollUntilVisible(
+      find.text('1 remote review history sent to Review inbox'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('1 remote review history sent to Review inbox'),
+      findsOneWidget,
+    );
 
     await tester.scrollUntilVisible(
       find.text('Upload sync bundle'),
@@ -116,7 +137,7 @@ void main() {
 
     await tester.scrollUntilVisible(
       find.text('Send remote conflicts to Review'),
-      180,
+      -180,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
@@ -200,6 +221,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool previewedRemoteSync = false;
   bool submittedRemoteConflictsToReview = false;
   bool submittedRemoteIncomingToReview = false;
+  bool submittedRemoteReviewHistoryToReview = false;
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
 
@@ -317,6 +339,24 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   }
 
   @override
+  Future<KnowledgeRemoteReviewHistoryReviewResult>
+      submitRemoteReviewHistoryToReview({
+    SyncClientBase? client,
+    String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+  }) async {
+    if (failRemotePreview) {
+      throw StateError('remote unavailable');
+    }
+    submittedRemoteReviewHistoryToReview = true;
+    return KnowledgeRemoteReviewHistoryReviewResult(
+      submittedCount: 1,
+      skippedCount: 0,
+      snapshot: await buildSnapshot(),
+      remotePreview: _remotePreview(await buildSnapshot()),
+    );
+  }
+
+  @override
   Future<KnowledgeRemoteSyncUploadResult> uploadRemoteSyncBundle({
     SyncClientBase? client,
     String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
@@ -354,10 +394,17 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       conflictReason: 'content-conflict',
       payload: {'title': 'Remote conflict'},
     );
+    const remoteHistory = KnowledgeSyncEnvelope(
+      id: 'remote-review-history',
+      entityType: KnowledgeSyncEntityType.reviewHistory,
+      schemaVersion: 1,
+      updatedAt: 200,
+      payload: {'id': 'remote-review-history'},
+    );
     return KnowledgeRemoteSyncPreview(
       local: snapshot.included,
-      remote: const [remoteIncoming, remoteConflict],
-      incoming: const [remoteIncoming],
+      remote: const [remoteIncoming, remoteHistory, remoteConflict],
+      incoming: const [remoteIncoming, remoteHistory],
       outgoing: const <KnowledgeSyncEnvelope>[],
       conflicts: const [remoteConflict],
       remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,

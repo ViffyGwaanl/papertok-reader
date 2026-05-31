@@ -192,6 +192,24 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
               ),
             ],
           ],
+          if (state.lastRemoteReviewHistoryReviewCount case final count?) ...[
+            const SizedBox(height: 8),
+            _PolicyNote(
+              text: l10n.knowledgeExportRemoteReviewHistoryReviewSent(count),
+            ),
+            if (count > 0) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(l10n.reviewInboxTitle),
+                onPressed: () => Navigator.of(context).push(
+                  CupertinoStyleRoute(
+                    page: const ReviewInboxPage(),
+                  ),
+                ),
+              ),
+            ],
+          ],
           if (state.lastRemoteConflictReviewCount case final count?) ...[
             const SizedBox(height: 8),
             _PolicyNote(
@@ -331,6 +349,22 @@ class _RemotePreviewSection extends ConsumerWidget {
                     : () => ref
                         .read(knowledgeAssetExportProvider.notifier)
                         .submitRemoteIncomingToReview(),
+              ),
+            ],
+            if (preview.incoming.any(
+              (envelope) =>
+                  envelope.entityType == KnowledgeSyncEntityType.reviewHistory,
+            )) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.history_edu_outlined),
+                label:
+                    Text(l10n.knowledgeExportSendRemoteReviewHistoryToReview),
+                onPressed: busy
+                    ? null
+                    : () => ref
+                        .read(knowledgeAssetExportProvider.notifier)
+                        .submitRemoteReviewHistoryToReview(),
               ),
             ],
             if (preview.conflictCount > 0) ...[

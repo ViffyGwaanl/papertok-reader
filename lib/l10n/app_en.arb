@@ -825,6 +825,7 @@
   "reviewInboxSourceConceptGraphRelation": "Concept graph",
   "reviewInboxSourceFlashcardCandidate": "Flashcard",
   "reviewInboxSourceImageAnalysisCard": "Image analysis",
+  "reviewInboxSourceReviewHistoryImport": "Review history",
   "reviewInboxSourceSyncConflict": "Sync conflict",
   "reviewInboxSourceUnknown": "Unknown source",
   "reviewInboxApproveAction": "Approve",
@@ -1076,6 +1077,15 @@
   "knowledgeExportSendRemoteIncomingToReview": "Send remote incoming to Review",
   "knowledgeExportRemoteIncomingReviewSent": "{count} remote incoming sent to Review inbox",
   "@knowledgeExportRemoteIncomingReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportSendRemoteReviewHistoryToReview": "Send remote review history to Review",
+  "knowledgeExportRemoteReviewHistoryReviewSent": "{count} remote review history sent to Review inbox",
+  "@knowledgeExportRemoteReviewHistoryReviewSent": {
     "placeholders": {
       "count": {
         "type": "int"

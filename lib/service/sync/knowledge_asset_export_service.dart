@@ -86,6 +86,20 @@ class KnowledgeRemoteIncomingReviewResult {
   final KnowledgeRemoteSyncPreview remotePreview;
 }
 
+class KnowledgeRemoteReviewHistoryReviewResult {
+  const KnowledgeRemoteReviewHistoryReviewResult({
+    required this.submittedCount,
+    required this.skippedCount,
+    required this.snapshot,
+    required this.remotePreview,
+  });
+
+  final int submittedCount;
+  final int skippedCount;
+  final KnowledgeAssetExportSnapshot snapshot;
+  final KnowledgeRemoteSyncPreview remotePreview;
+}
+
 class KnowledgeRemoteSyncPreview {
   const KnowledgeRemoteSyncPreview({
     required this.local,
@@ -341,6 +355,47 @@ class KnowledgeAssetExportService {
     }
 
     return KnowledgeRemoteIncomingReviewResult(
+      submittedCount: submitted,
+      skippedCount: skipped,
+      snapshot: snapshot,
+      remotePreview: preview,
+    );
+  }
+
+  Future<KnowledgeRemoteReviewHistoryReviewResult>
+      submitRemoteReviewHistoryToReview({
+    SyncClientBase? client,
+    String remotePath = defaultRemoteSyncBundlePath,
+  }) async {
+    final snapshot = await buildSnapshot();
+    final preview = await _previewRemoteSync(
+      snapshot: snapshot,
+      client: client,
+      remotePath: remotePath,
+    );
+    final timestamp = _now();
+    var submitted = 0;
+    var skipped = 0;
+
+    for (final envelope in preview.incoming) {
+      final item = _remoteReviewHistoryReviewItem(
+        envelope,
+        timestamp: timestamp,
+      );
+      if (item == null) {
+        skipped++;
+        continue;
+      }
+      if (await reviewStore.getById(item.id) != null ||
+          await spacedReviewStore.getById(item.sourceId) != null) {
+        skipped++;
+        continue;
+      }
+      await reviewStore.upsert(item);
+      submitted++;
+    }
+
+    return KnowledgeRemoteReviewHistoryReviewResult(
       submittedCount: submitted,
       skippedCount: skipped,
       snapshot: snapshot,
@@ -702,6 +757,68 @@ class KnowledgeAssetExportService {
         ownership: AiOutputOwnership.aiGeneratedDraft,
         createdAt: card.createdAt ?? timestamp,
         updatedAt: timestamp,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  ReviewItem? _remoteReviewHistoryReviewItem(
+    KnowledgeSyncEnvelope envelope, {
+    required int timestamp,
+  }) {
+    if (envelope.requiresConflictReview) return null;
+    if (envelope.entityType != KnowledgeSyncEntityType.reviewHistory) {
+      return null;
+    }
+    if (envelope.schemaVersion != 1) return null;
+    if (KnowledgeSyncPolicy.containsSecretPayload(envelope.payload)) {
+      return null;
+    }
+    try {
+      final remote = SpacedReviewItem.fromJson(envelope.payload);
+      final id = envelope.id.trim().isEmpty ? remote.id : envelope.id;
+      if (id.trim().isEmpty || remote.cardId.trim().isEmpty) return null;
+      final sourceRefs = remote.sourceRefs.isNotEmpty
+          ? remote.sourceRefs
+          : envelope.sourceRefs;
+      final safeSourceRefs = sourceRefs
+          .map((ref) => SourceRef.fromJson(ref.toSafeJson()))
+          .toList(growable: false);
+      if (!safeSourceRefs.any((ref) => ref.hasEvidence)) return null;
+      final safeItem = SpacedReviewItem(
+        id: id,
+        cardId: remote.cardId,
+        prompt: remote.prompt,
+        answer: remote.answer,
+        sourceRefs: safeSourceRefs,
+        lastReviewedAt: remote.lastReviewedAt,
+        dueAt: remote.dueAt,
+        intervalDays: remote.intervalDays,
+        lapses: remote.lapses,
+        reviewHistory: remote.reviewHistory,
+      );
+      return ReviewItem(
+        id: 'review-history-import:$id',
+        sourceType: ReviewItemSourceType.reviewHistoryImport,
+        sourceId: id,
+        title: 'Remote review history: ${remote.prompt}',
+        body: [
+          'Card: ${remote.cardId}',
+          'History entries: ${remote.reviewHistory.length}',
+          'Review this remote practice history before importing.',
+        ].join('\n'),
+        status: ReviewItemStatus.pending,
+        sourceRefs: safeSourceRefs,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        payload: {
+          'entityId': id,
+          'entityType': envelope.entityType.asString,
+          'schemaVersion': envelope.schemaVersion,
+          'updatedAt': envelope.updatedAt,
+          'reviewHistoryItem': safeItem.toJson(),
+        },
       );
     } catch (_) {
       return null;

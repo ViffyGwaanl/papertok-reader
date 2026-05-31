@@ -41,6 +41,7 @@ enum ReviewItemSourceType {
   conceptGraphRelation('concept-graph-relation'),
   flashcardCandidate('flashcard-candidate'),
   imageAnalysisCard('image-analysis-card'),
+  reviewHistoryImport('review-history-import'),
   syncConflict('sync-conflict'),
   unknown('unknown');
 

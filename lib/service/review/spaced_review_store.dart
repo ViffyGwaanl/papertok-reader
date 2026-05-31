@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
 import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
@@ -167,6 +168,34 @@ class SpacedReviewStore {
     });
   }
 
+  Future<SpacedReviewItem> upsertImportedReviewHistory(
+    SpacedReviewItem remote, {
+    int? now,
+  }) {
+    if (remote.id.trim().isEmpty || remote.cardId.trim().isEmpty) {
+      throw StateError('Remote review history is missing an id.');
+    }
+    if (!remote.sourceRefs.any((ref) => ref.hasEvidence)) {
+      throw StateError(
+        'Remote review history cannot be imported without SourceRef.',
+      );
+    }
+    return _enqueue(() async {
+      final items = await _readAllUnlocked();
+      final index = items.indexWhere((item) => item.id == remote.id);
+      final sanitized = _sanitizeImportedReviewHistory(remote, now: now);
+      final next =
+          index >= 0 ? _mergeImported(items[index], sanitized) : sanitized;
+      if (index >= 0) {
+        items[index] = next;
+      } else {
+        items.add(next);
+      }
+      await _writeAllUnlocked(items);
+      return next;
+    });
+  }
+
   PaperReaderSourceJumpAudit sourceJumpAudit(SpacedReviewItem item) {
     return PaperReaderSourceJumpAudit.fromSourceRefs(item.sourceRefs);
   }
@@ -226,6 +255,63 @@ class SpacedReviewStore {
       lapses: existing.lapses,
       reviewHistory: existing.reviewHistory,
     );
+  }
+
+  SpacedReviewItem _sanitizeImportedReviewHistory(
+    SpacedReviewItem remote, {
+    int? now,
+  }) {
+    final timestamp = now ?? DateTime.now().millisecondsSinceEpoch;
+    return SpacedReviewItem(
+      id: remote.id,
+      cardId: remote.cardId,
+      prompt: remote.prompt,
+      answer: remote.answer,
+      sourceRefs: remote.sourceRefs
+          .map((ref) => SourceRef.fromJson(ref.toSafeJson()))
+          .toList(growable: false),
+      lastReviewedAt: remote.lastReviewedAt,
+      dueAt: remote.dueAt ?? timestamp,
+      intervalDays: remote.intervalDays,
+      lapses: remote.lapses,
+      reviewHistory: remote.reviewHistory,
+    );
+  }
+
+  SpacedReviewItem _mergeImported(
+    SpacedReviewItem existing,
+    SpacedReviewItem remote,
+  ) {
+    final remoteIsNewer = (remote.lastReviewedAt ?? remote.dueAt ?? 0) >
+        (existing.lastReviewedAt ?? existing.dueAt ?? 0);
+    final historyByKey = <String, SpacedReviewHistoryEntry>{
+      for (final entry in existing.reviewHistory) _historyKey(entry): entry,
+      for (final entry in remote.reviewHistory) _historyKey(entry): entry,
+    };
+    final history = historyByKey.values.toList(growable: false)
+      ..sort((a, b) => a.reviewedAt.compareTo(b.reviewedAt));
+    return SpacedReviewItem(
+      id: existing.id,
+      cardId: remote.cardId,
+      prompt: remote.prompt,
+      answer: remote.answer,
+      sourceRefs: remote.sourceRefs,
+      lastReviewedAt:
+          remoteIsNewer ? remote.lastReviewedAt : existing.lastReviewedAt,
+      dueAt: remoteIsNewer ? remote.dueAt : existing.dueAt,
+      intervalDays: remoteIsNewer ? remote.intervalDays : existing.intervalDays,
+      lapses: remote.lapses > existing.lapses ? remote.lapses : existing.lapses,
+      reviewHistory: history,
+    );
+  }
+
+  String _historyKey(SpacedReviewHistoryEntry entry) {
+    return [
+      entry.reviewedAt,
+      entry.rating,
+      entry.intervalDays,
+      entry.note ?? '',
+    ].join('|');
   }
 
   int _nextIntervalDays(

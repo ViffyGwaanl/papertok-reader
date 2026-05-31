@@ -208,6 +208,26 @@ void main() {
     expect(restored.appliedAt, isNull);
   });
 
+  test('generic store apply rejects review history imports', () async {
+    final store = ReviewItemStore(rootDir: tempRoot);
+    await store.upsert(
+      item(
+        id: 'review-history-import:remote',
+        sourceType: ReviewItemSourceType.reviewHistoryImport,
+      ),
+    );
+    await store.approve('review-history-import:remote', now: 200);
+
+    expect(
+      () => store.apply('review-history-import:remote', now: 300),
+      throwsUnsupportedError,
+    );
+
+    final restored = await store.getById('review-history-import:remote');
+    expect(restored!.status, ReviewItemStatus.approved);
+    expect(restored.appliedAt, isNull);
+  });
+
   test('submit moves a draft review item into pending without applying it',
       () async {
     final store = ReviewItemStore(rootDir: tempRoot);

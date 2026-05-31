@@ -1012,6 +1012,158 @@ void main() {
     );
   });
 
+  test('remote review history is applied only after Review approval', () async {
+    final remoteHistory = SpacedReviewItem(
+      id: SpacedReviewStore.reviewIdForCard('kc-remote-review'),
+      cardId: 'kc-remote-review',
+      prompt: 'Remote review prompt',
+      answer: 'Remote review answer',
+      sourceRefs: [traceableRef(snippet: 'Remote review evidence.')],
+      lastReviewedAt: 2000,
+      dueAt: 2000 + Duration.millisecondsPerDay * 3,
+      intervalDays: 3,
+      reviewHistory: const [
+        SpacedReviewHistoryEntry(
+          reviewedAt: 2000,
+          rating: 'good',
+          intervalDays: 3,
+        ),
+      ],
+    );
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion': 1,
+        'createdAt': 2000,
+        'envelopes': [
+          KnowledgeSyncEnvelope(
+            id: remoteHistory.id,
+            entityType: KnowledgeSyncEntityType.reviewHistory,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: remoteHistory.sourceRefs,
+            payload: remoteHistory.toJson(),
+          ).toJson(),
+        ],
+      }),
+    });
+
+    final result = await service.submitRemoteReviewHistoryToReview(
+      client: remoteClient,
+    );
+
+    expect(result.submittedCount, 1);
+    expect(result.skippedCount, 0);
+    expect(result.remotePreview.incomingCount, 1);
+    expect(await spacedReviewStore.list(), isEmpty);
+    final reviewItems = await reviewStore.list(
+      sourceType: ReviewItemSourceType.reviewHistoryImport,
+    );
+    expect(reviewItems, hasLength(1));
+    expect(reviewItems.single.status, ReviewItemStatus.pending);
+    expect(reviewItems.single.sourceId, remoteHistory.id);
+    expect(reviewItems.single.sourceRefs.single.hasEvidence, true);
+    expect(
+      jsonEncode(reviewItems.single.payload),
+      isNot(contains('apiKey')),
+    );
+
+    final controller = ReviewInboxController(
+      rootDir: tempRoot,
+      reviewStore: reviewStore,
+      knowledgeCardStore: cardStore,
+      spacedReviewStore: spacedReviewStore,
+    );
+    await controller.approve(reviewItems.single.id);
+    await controller.apply(reviewItems.single.id);
+
+    final imported = await spacedReviewStore.getById(remoteHistory.id);
+    final applied = await reviewStore.getById(reviewItems.single.id);
+    expect(imported?.lastReviewedAt, 2000);
+    expect(imported?.reviewHistory.single.rating, 'good');
+    expect(applied?.status, ReviewItemStatus.applied);
+  });
+
+  test('remote review history skips duplicate unsafe and untraceable entries',
+      () async {
+    final safeHistory = SpacedReviewItem(
+      id: SpacedReviewStore.reviewIdForCard('kc-safe-history'),
+      cardId: 'kc-safe-history',
+      prompt: 'Safe prompt',
+      answer: 'Safe answer',
+      sourceRefs: [traceableRef(snippet: 'Safe remote review evidence.')],
+      lastReviewedAt: 2000,
+      dueAt: 2000,
+      intervalDays: 3,
+    );
+    final unsafeHistory = SpacedReviewItem(
+      id: SpacedReviewStore.reviewIdForCard('kc-unsafe-history'),
+      cardId: 'kc-unsafe-history',
+      prompt: 'Unsafe prompt',
+      answer: 'Unsafe answer',
+      sourceRefs: [traceableRef(snippet: 'Unsafe remote review evidence.')],
+    );
+    final untraceableHistory = SpacedReviewItem(
+      id: SpacedReviewStore.reviewIdForCard('kc-untraceable-history'),
+      cardId: 'kc-untraceable-history',
+      prompt: 'Untraceable prompt',
+      answer: 'Untraceable answer',
+      sourceRefs: const <SourceRef>[],
+    );
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion': 1,
+        'createdAt': 2000,
+        'envelopes': [
+          KnowledgeSyncEnvelope(
+            id: safeHistory.id,
+            entityType: KnowledgeSyncEntityType.reviewHistory,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: safeHistory.sourceRefs,
+            payload: safeHistory.toJson(),
+          ).toJson(),
+          KnowledgeSyncEnvelope(
+            id: unsafeHistory.id,
+            entityType: KnowledgeSyncEntityType.reviewHistory,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: unsafeHistory.sourceRefs,
+            payload: {
+              ...unsafeHistory.toJson(),
+              'apiKey': 'must-not-enter-review',
+            },
+          ).toJson(),
+          KnowledgeSyncEnvelope(
+            id: untraceableHistory.id,
+            entityType: KnowledgeSyncEntityType.reviewHistory,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            payload: untraceableHistory.toJson(),
+          ).toJson(),
+        ],
+      }),
+    });
+
+    final first = await service.submitRemoteReviewHistoryToReview(
+      client: remoteClient,
+    );
+    final second = await service.submitRemoteReviewHistoryToReview(
+      client: remoteClient,
+    );
+
+    expect(first.submittedCount, 1);
+    expect(first.skippedCount, 1);
+    expect(second.submittedCount, 0);
+    expect(second.skippedCount, 2);
+    final reviewItems = await reviewStore.list(
+      sourceType: ReviewItemSourceType.reviewHistoryImport,
+    );
+    expect(reviewItems, hasLength(1));
+    expect(reviewItems.single.sourceId, safeHistory.id);
+    expect(jsonEncode(reviewItems.single.payload), isNot(contains('apiKey')));
+    expect(await spacedReviewStore.list(), isEmpty);
+  });
+
   test('remote sync upload is blocked by remote incoming and conflicts',
       () async {
     final localCard = await stageAppliedCard('kc-shared');

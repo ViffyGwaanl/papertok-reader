@@ -154,6 +154,20 @@ class ReviewItemStore {
     );
   }
 
+  Future<ReviewItem> applyResolvedReviewHistoryImport(
+    String id, {
+    int? now,
+    String decisionSource = 'user_apply',
+  }) {
+    return _transition(
+      id,
+      ReviewItemStatus.applied,
+      now: now,
+      decisionSource: decisionSource,
+      allowResolvedReviewHistoryImport: true,
+    );
+  }
+
   Future<ReviewItem> _transition(
     String id,
     ReviewItemStatus next, {
@@ -161,6 +175,7 @@ class ReviewItemStore {
     required String? decisionSource,
     bool allowResolvedSyncConflict = false,
     bool allowResolvedMemoryCandidate = false,
+    bool allowResolvedReviewHistoryImport = false,
   }) {
     return _enqueue(() async {
       final items = await _readAllUnlocked();
@@ -173,6 +188,7 @@ class ReviewItemStore {
             items[index],
             allowResolvedSyncConflict: allowResolvedSyncConflict,
             allowResolvedMemoryCandidate: allowResolvedMemoryCandidate,
+            allowResolvedReviewHistoryImport: allowResolvedReviewHistoryImport,
           )) {
         throw UnsupportedError(
           'Review item source ${items[index].sourceType.asString} cannot be '
@@ -236,12 +252,16 @@ class ReviewItemStore {
     ReviewItem item, {
     required bool allowResolvedSyncConflict,
     required bool allowResolvedMemoryCandidate,
+    required bool allowResolvedReviewHistoryImport,
   }) {
     if (item.sourceType == ReviewItemSourceType.syncConflict) {
       return allowResolvedSyncConflict && item.payload['canApply'] == true;
     }
     if (item.sourceType == ReviewItemSourceType.memoryCandidate) {
       return allowResolvedMemoryCandidate;
+    }
+    if (item.sourceType == ReviewItemSourceType.reviewHistoryImport) {
+      return allowResolvedReviewHistoryImport;
     }
     return _sourceTypesWithApplyAdapters.contains(item.sourceType);
   }

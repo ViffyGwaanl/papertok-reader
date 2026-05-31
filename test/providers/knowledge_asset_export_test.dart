@@ -103,8 +103,8 @@ void main() {
     final state = container.read(knowledgeAssetExportProvider);
 
     expect(service.previewedRemoteSync, true);
-    expect(state.remotePreview?.remoteCount, 2);
-    expect(state.remotePreview?.incomingCount, 1);
+    expect(state.remotePreview?.remoteCount, 3);
+    expect(state.remotePreview?.incomingCount, 2);
     expect(state.remotePreview?.conflictCount, 1);
 
     await container.read(knowledgeAssetExportProvider.notifier).refresh();
@@ -149,7 +149,28 @@ void main() {
     expect(service.submittedRemoteIncomingToReview, true);
     expect(state.lastRemoteIncomingReviewCount, 1);
     expect(state.lastRemoteIncomingSkippedCount, 0);
-    expect(state.remotePreview?.incomingCount, 1);
+    expect(state.remotePreview?.incomingCount, 2);
+  });
+
+  test('submitRemoteReviewHistoryToReview exposes submitted history count',
+      () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .submitRemoteReviewHistoryToReview();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(service.submittedRemoteReviewHistoryToReview, true);
+    expect(state.lastRemoteReviewHistoryReviewCount, 1);
+    expect(state.lastRemoteReviewHistorySkippedCount, 0);
+    expect(state.remotePreview?.incomingCount, 2);
   });
 
   test('uploadRemoteSyncBundle exposes remote upload path and count', () async {
@@ -369,6 +390,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool previewedRemoteSync = false;
   bool submittedRemoteConflictsToReview = false;
   bool submittedRemoteIncomingToReview = false;
+  bool submittedRemoteReviewHistoryToReview = false;
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
 
@@ -485,6 +507,24 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   }
 
   @override
+  Future<KnowledgeRemoteReviewHistoryReviewResult>
+      submitRemoteReviewHistoryToReview({
+    SyncClientBase? client,
+    String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+  }) async {
+    if (failRemotePreview) {
+      throw StateError('remote unavailable');
+    }
+    submittedRemoteReviewHistoryToReview = true;
+    return KnowledgeRemoteReviewHistoryReviewResult(
+      submittedCount: 1,
+      skippedCount: 0,
+      snapshot: await buildSnapshot(),
+      remotePreview: _remotePreview(await buildSnapshot()),
+    );
+  }
+
+  @override
   Future<KnowledgeRemoteSyncUploadResult> uploadRemoteSyncBundle({
     SyncClientBase? client,
     String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
@@ -522,10 +562,17 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       conflictReason: 'content-conflict',
       payload: {'title': 'Remote conflict'},
     );
+    const remoteHistory = KnowledgeSyncEnvelope(
+      id: 'remote-review-history',
+      entityType: KnowledgeSyncEntityType.reviewHistory,
+      schemaVersion: 1,
+      updatedAt: 200,
+      payload: {'id': 'remote-review-history'},
+    );
     return KnowledgeRemoteSyncPreview(
       local: snapshot.included,
-      remote: const [remoteIncoming, remoteConflict],
-      incoming: const [remoteIncoming],
+      remote: const [remoteIncoming, remoteHistory, remoteConflict],
+      incoming: const [remoteIncoming, remoteHistory],
       outgoing: const <KnowledgeSyncEnvelope>[],
       conflicts: const [remoteConflict],
       remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
