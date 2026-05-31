@@ -472,4 +472,465 @@ void main() {
     expect(pageSizes, [2, 1]);
     expect(fallbackJsonIds, [3]);
   });
+
+  test('current book semantic search uses FTS candidates before vector scoring',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    await _insertBook(db, bookId: 34, chunkCount: 6);
+    await _insertBook(db, bookId: 35, chunkCount: 1);
+
+    final candidateIds = <int>[];
+    for (var i = 0; i < 4; i++) {
+      candidateIds.add(
+        await _insertChunk(
+          db,
+          bookId: 34,
+          chunkIndex: i,
+          text: 'needle candidate $i',
+          rawText: 'candidate raw $i',
+          vector: i == 3 ? const [1, 0] : const [0, 1],
+        ),
+      );
+    }
+    await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 4,
+      text: 'unmatched semantic winner outside fts',
+      rawText: 'outside raw',
+      vector: const [1, 0],
+    );
+    await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 5,
+      text: 'another unmatched chunk',
+      rawText: 'other raw',
+      vector: const [0, 1],
+    );
+    await _insertChunk(
+      db,
+      bookId: 35,
+      chunkIndex: 0,
+      text: 'needle from another book',
+      rawText: 'other book raw',
+      vector: const [1, 0],
+    );
+
+    final scannedIds = <int>[];
+    final scanColumns = <Set<String>>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 2,
+      ftsCandidateLimit: 4,
+      onVectorScanPage: (rows) {
+        scannedIds.addAll(
+          rows.map((row) => (row['id'] as num?)?.toInt()).whereType<int>(),
+        );
+        if (rows.isNotEmpty) {
+          scanColumns.add(rows.first.keys.toSet());
+        }
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'needle',
+      maxResults: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'candidate raw 3');
+    expect(scannedIds.toSet(), candidateIds.toSet());
+    expect(scannedIds, hasLength(4));
+    expect(
+      scanColumns.expand((columns) => columns),
+      isNot(contains('text')),
+    );
+    expect(
+      scanColumns.expand((columns) => columns),
+      isNot(contains('raw_text')),
+    );
+    expect(
+      scanColumns.expand((columns) => columns),
+      isNot(contains('embedding_json')),
+    );
+  });
+
+  test('current book semantic search falls back when FTS has no candidates',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    await _insertBook(db, bookId: 34, chunkCount: 3);
+    final ids = <int>[];
+    for (var i = 0; i < 3; i++) {
+      ids.add(
+        await _insertChunk(
+          db,
+          bookId: 34,
+          chunkIndex: i,
+          text: 'background $i',
+          rawText: 'target raw $i',
+          vector: i == 2 ? const [1, 0] : const [0, 1],
+        ),
+      );
+    }
+
+    final scannedIds = <int>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 2,
+      ftsCandidateLimit: 4,
+      onVectorScanPage: (rows) {
+        scannedIds.addAll(
+          rows.map((row) => (row['id'] as num?)?.toInt()).whereType<int>(),
+        );
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'absent-token',
+      maxResults: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'target raw 2');
+    expect(scannedIds, ids);
+  });
+
+  test('current book semantic search falls back when FTS table is unavailable',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    await _insertBook(db, bookId: 34, chunkCount: 2);
+    final ids = <int>[];
+    for (var i = 0; i < 2; i++) {
+      ids.add(
+        await _insertChunk(
+          db,
+          bookId: 34,
+          chunkIndex: i,
+          text: 'needle chunk $i',
+          rawText: 'target raw $i',
+          vector: i == 1 ? const [1, 0] : const [0, 1],
+        ),
+      );
+    }
+    await db.execute('DROP TABLE IF EXISTS ai_chunks_fts');
+
+    final scannedIds = <int>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 1,
+      ftsCandidateLimit: 4,
+      onVectorScanPage: (rows) {
+        scannedIds.addAll(
+          rows.map((row) => (row['id'] as num?)?.toInt()).whereType<int>(),
+        );
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'needle',
+      maxResults: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'target raw 1');
+    expect(scannedIds, ids);
+  });
+
+  test('current book semantic search falls back when FTS MATCH fails',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    await _insertBook(db, bookId: 34, chunkCount: 2);
+    final ids = <int>[];
+    for (var i = 0; i < 2; i++) {
+      ids.add(
+        await _insertChunk(
+          db,
+          bookId: 34,
+          chunkIndex: i,
+          text: 'needle chunk $i',
+          rawText: 'target raw $i',
+          vector: i == 1 ? const [1, 0] : const [0, 1],
+        ),
+      );
+    }
+    await db.execute('DROP TABLE IF EXISTS ai_chunks_fts');
+    await db.execute('''
+CREATE TABLE ai_chunks_fts (
+  text TEXT,
+  chapter_title TEXT,
+  book_id INTEGER,
+  chapter_href TEXT
+)
+''');
+    await db.insert('ai_chunks_fts', {
+      'text': 'needle ordinary table row',
+      'chapter_title': 'Ordinary',
+      'book_id': 34,
+      'chapter_href': 'Text/ordinary.xhtml',
+    });
+
+    final scannedIds = <int>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 1,
+      ftsCandidateLimit: 4,
+      onVectorScanPage: (rows) {
+        scannedIds.addAll(
+          rows.map((row) => (row['id'] as num?)?.toInt()).whereType<int>(),
+        );
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'needle',
+      maxResults: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'target raw 1');
+    expect(scannedIds, ids);
+  });
+
+  test('current book semantic search falls back when FTS candidates are stale',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    await _insertBook(db, bookId: 34, chunkCount: 2);
+    final staleId = await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 99,
+      text: 'needle stale fts row',
+      rawText: 'stale raw',
+      vector: const [0, 1],
+    );
+    await db.execute('DROP TRIGGER IF EXISTS ai_chunks_fts_ad');
+    await db.delete('ai_chunks', where: 'id = ?', whereArgs: [staleId]);
+
+    final ids = <int>[];
+    for (var i = 0; i < 2; i++) {
+      ids.add(
+        await _insertChunk(
+          db,
+          bookId: 34,
+          chunkIndex: i,
+          text: 'background chunk $i',
+          rawText: 'target raw $i',
+          vector: i == 1 ? const [1, 0] : const [0, 1],
+        ),
+      );
+    }
+
+    final scannedIds = <int>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 1,
+      ftsCandidateLimit: 4,
+      onVectorScanPage: (rows) {
+        scannedIds.addAll(
+          rows.map((row) => (row['id'] as num?)?.toInt()).whereType<int>(),
+        );
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'needle',
+      maxResults: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'target raw 1');
+    expect(scannedIds, ids);
+  });
+
+  test(
+      'current book FTS candidate scan keeps JSON fallback bounded to candidates',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    await _insertBook(db, bookId: 34, chunkCount: 3);
+    final jsonCandidateId = await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 0,
+      text: 'needle json candidate',
+      rawText: 'json candidate raw',
+      vector: const [1, 0],
+      writeBlob: false,
+    );
+    await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 1,
+      text: 'needle blob candidate',
+      rawText: 'blob candidate raw',
+      vector: const [0, 1],
+    );
+    await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 2,
+      text: 'semantic outside',
+      rawText: 'outside raw',
+      vector: const [1, 0],
+      writeBlob: false,
+    );
+
+    final fallbackJsonIds = <int>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 2,
+      ftsCandidateLimit: 2,
+      scoreVectorPage: ({
+        required queryVector,
+        required queryNorm,
+        required rows,
+        required jsonById,
+      }) async {
+        fallbackJsonIds.addAll(jsonById.keys);
+        return rows.map((row) {
+          final id = (row['id'] as num).toInt();
+          return AiCurrentBookVectorCandidate(
+            row: row,
+            score: id == jsonCandidateId ? 1.0 : 0.0,
+          );
+        }).toList(growable: false);
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'needle',
+      maxResults: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'json candidate raw');
+    expect(fallbackJsonIds, [jsonCandidateId]);
+  });
+}
+
+class _SearchFixture {
+  _SearchFixture({
+    required this.database,
+    required this.db,
+  });
+
+  final AiIndexDatabase database;
+  final Database db;
+}
+
+Future<_SearchFixture> _openSearchFixture() async {
+  final dir = await Directory.systemTemp.createTemp('current_book_rag_test');
+  addTearDown(() async {
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
+  });
+
+  final database = AiIndexDatabase.forTesting(
+    path: '${dir.path}/ai_index.db',
+    factory: databaseFactoryFfi,
+  );
+  addTearDown(database.close);
+
+  final db = await database.database;
+  return _SearchFixture(database: database, db: db);
+}
+
+Future<void> _insertBook(
+  Database db, {
+  required int bookId,
+  required int chunkCount,
+}) async {
+  await db.insert('ai_book_index', {
+    'book_id': bookId,
+    'provider_id': 'test-provider',
+    'embedding_model': 'test-model',
+    'chunk_count': chunkCount,
+    'index_version': 1,
+    'created_at': 1,
+    'updated_at': 2,
+  });
+}
+
+Future<int> _insertChunk(
+  Database db, {
+  required int bookId,
+  required int chunkIndex,
+  required String text,
+  required String rawText,
+  required List<double> vector,
+  bool writeBlob = true,
+}) {
+  return db.insert('ai_chunks', {
+    'book_id': bookId,
+    'chapter_href': 'Text/book$bookId-ch$chunkIndex.xhtml',
+    'chapter_title': 'Book $bookId Chapter $chunkIndex',
+    'chunk_index': chunkIndex,
+    'start_char': 0,
+    'end_char': text.length,
+    'text': text,
+    'raw_text': rawText,
+    'embedding_json': '[${vector.join(',')}]',
+    'embedding_blob': writeBlob ? AiVectorCodec.encodeFloat32(vector) : null,
+    'embedding_dim': vector.length,
+    'embedding_norm': 1.0,
+    'embedding_input_hash': 'hash-$bookId-$chunkIndex',
+    'context_version': 1,
+    'context_created_at': 3,
+    'created_at': 3,
+  });
 }

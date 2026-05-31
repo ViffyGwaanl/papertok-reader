@@ -141,6 +141,8 @@ class SemanticSearchCurrentBook {
     AiIndexDatabase? database,
     AiCurrentBookQueryEmbedder? embedQuery,
     int vectorScanPageSize = 256,
+    bool enableFtsCandidatePrefilter = true,
+    int ftsCandidateLimit = 512,
     Duration progressMinInterval = const Duration(milliseconds: 160),
     AiCurrentBookVectorPageScorer? scoreVectorPage,
     @visibleForTesting AiCurrentBookVectorScanObserver? onVectorScanPage,
@@ -148,16 +150,32 @@ class SemanticSearchCurrentBook {
   })  : _db = database ?? AiIndexDatabase.instance,
         _embedQuery = embedQuery ?? _defaultEmbedQuery,
         _vectorScanPageSize = vectorScanPageSize.clamp(1, 512).toInt(),
+        _enableFtsCandidatePrefilter = enableFtsCandidatePrefilter,
+        _ftsCandidateLimit = ftsCandidateLimit.clamp(1, 2048).toInt(),
         _progressMinInterval = progressMinInterval,
         _scoreVectorPage = scoreVectorPage ?? _defaultScoreVectorPage,
         _onVectorScanPage = onVectorScanPage,
         _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch);
 
   static final _globalSearchLock = _AsyncLock();
+  static final RegExp _ftsSafeToken = RegExp(r'^[0-9A-Za-z_\u4e00-\u9fff]+$');
+  static const List<String> _vectorRowColumns = [
+    'id',
+    'chapter_href',
+    'chapter_title',
+    'chunk_index',
+    'embedding_input_hash',
+    'context_version',
+    'context_created_at',
+    'embedding_blob',
+    'embedding_norm',
+  ];
 
   final AiIndexDatabase _db;
   final AiCurrentBookQueryEmbedder _embedQuery;
   final int _vectorScanPageSize;
+  final bool _enableFtsCandidatePrefilter;
+  final int _ftsCandidateLimit;
   final Duration _progressMinInterval;
   final AiCurrentBookVectorPageScorer _scoreVectorPage;
   final AiCurrentBookVectorScanObserver? _onVectorScanPage;
@@ -266,7 +284,18 @@ class SemanticSearchCurrentBook {
     final k = maxResults.clamp(1, 10);
     final scored = <AiCurrentBookVectorCandidate>[];
     var scannedRows = 0;
-    var lastId = 0;
+    final ftsCandidateIds = _enableFtsCandidatePrefilter
+        ? await _loadFtsCandidateIds(
+            db,
+            bookId: bookId,
+            query: trimmedQuery,
+            limit: _ftsCandidateLimit,
+          )
+        : null;
+    final candidateIds = (ftsCandidateIds != null && ftsCandidateIds.isNotEmpty)
+        ? ftsCandidateIds
+        : null;
+    var totalRows = candidateIds?.length ?? info.chunkCount;
     int? lastProgressEmitMs;
     int? lastProgressScannedRows;
     bool lastProgressCancelled = false;
@@ -301,47 +330,40 @@ class SemanticSearchCurrentBook {
       );
     }
 
-    while (true) {
+    if (cancelToken?.isCancelled ?? false) {
+      emitProgress(
+        scannedRows: scannedRows,
+        totalRows: totalRows,
+        cancelled: true,
+        force: true,
+      );
+      return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
+    }
+
+    Future<AiSemanticSearchResult?> scorePage(
+      List<Map<String, Object?>> rows,
+    ) async {
+      if (rows.isEmpty) return null;
       if (cancelToken?.isCancelled ?? false) {
         emitProgress(
           scannedRows: scannedRows,
-          totalRows: info.chunkCount,
+          totalRows: totalRows,
           cancelled: true,
           force: true,
         );
         return _cancelledResult(bookId: bookId, query: query, indexInfo: info);
       }
-      final rows = await db.query(
-        'ai_chunks',
-        columns: [
-          'id',
-          'chapter_href',
-          'chapter_title',
-          'chunk_index',
-          'embedding_input_hash',
-          'context_version',
-          'context_created_at',
-          'embedding_blob',
-          'embedding_norm',
-        ],
-        where: 'book_id = ? AND id > ?',
-        whereArgs: [bookId, lastId],
-        orderBy: 'id ASC',
-        limit: _vectorScanPageSize,
-      );
-      if (rows.isEmpty) break;
 
       _onVectorScanPage?.call(rows);
       scannedRows += rows.length;
-      lastId = (rows.last['id'] as num?)?.toInt() ?? lastId;
       emitProgress(
         scannedRows: scannedRows,
-        totalRows: info.chunkCount,
+        totalRows: totalRows,
       );
       if (cancelToken?.isCancelled ?? false) {
         emitProgress(
           scannedRows: scannedRows,
-          totalRows: info.chunkCount,
+          totalRows: totalRows,
           cancelled: true,
           force: true,
         );
@@ -352,7 +374,7 @@ class SemanticSearchCurrentBook {
       if (cancelToken?.isCancelled ?? false) {
         emitProgress(
           scannedRows: scannedRows,
-          totalRows: info.chunkCount,
+          totalRows: totalRows,
           cancelled: true,
           force: true,
         );
@@ -368,7 +390,7 @@ class SemanticSearchCurrentBook {
       if (cancelToken?.isCancelled ?? false) {
         emitProgress(
           scannedRows: scannedRows,
-          totalRows: info.chunkCount,
+          totalRows: totalRows,
           cancelled: true,
           force: true,
         );
@@ -382,11 +404,58 @@ class SemanticSearchCurrentBook {
       // Yield between pages so large current-book scans do not monopolize the
       // UI isolate while the reader is scrolling or paging.
       await Future<void>.delayed(Duration.zero);
+      return null;
+    }
+
+    Future<AiSemanticSearchResult?> scanFullBook() async {
+      var lastId = 0;
+      while (true) {
+        final rows = await db.query(
+          'ai_chunks',
+          columns: _vectorRowColumns,
+          where: 'book_id = ? AND id > ?',
+          whereArgs: [bookId, lastId],
+          orderBy: 'id ASC',
+          limit: _vectorScanPageSize,
+        );
+        if (rows.isEmpty) break;
+        lastId = (rows.last['id'] as num?)?.toInt() ?? lastId;
+        final cancelled = await scorePage(rows);
+        if (cancelled != null) return cancelled;
+      }
+      return null;
+    }
+
+    if (candidateIds != null) {
+      for (var offset = 0; offset < candidateIds.length;) {
+        final end = (offset + _vectorScanPageSize) > candidateIds.length
+            ? candidateIds.length
+            : offset + _vectorScanPageSize;
+        final pageIds = candidateIds.sublist(offset, end);
+        offset = end;
+        final cancelled = await scorePage(
+          await _loadVectorRowsByIds(
+            db,
+            bookId: bookId,
+            ids: pageIds,
+          ),
+        );
+        if (cancelled != null) return cancelled;
+      }
+
+      if (scannedRows == 0) {
+        totalRows = info.chunkCount;
+        final cancelled = await scanFullBook();
+        if (cancelled != null) return cancelled;
+      }
+    } else {
+      final cancelled = await scanFullBook();
+      if (cancelled != null) return cancelled;
     }
 
     emitProgress(
       scannedRows: scannedRows,
-      totalRows: info.chunkCount,
+      totalRows: totalRows,
       force: true,
     );
 
@@ -466,6 +535,97 @@ class SemanticSearchCurrentBook {
       evidence: evidence,
       indexInfo: info,
     );
+  }
+
+  Future<List<int>?> _loadFtsCandidateIds(
+    Database db, {
+    required int bookId,
+    required String query,
+    required int limit,
+  }) async {
+    final match = _buildFtsQuery(query);
+    if (match.isEmpty) return null;
+
+    final hasFts = await _tableExists(db, 'ai_chunks_fts');
+    if (!hasFts) return null;
+
+    try {
+      final rows = await db.rawQuery(
+        '''
+SELECT rowid
+FROM ai_chunks_fts
+WHERE ai_chunks_fts MATCH ?
+  AND book_id = ?
+ORDER BY bm25(ai_chunks_fts)
+LIMIT ?
+''',
+        [match, bookId, limit],
+      );
+      final ids = <int>[];
+      final seen = <int>{};
+      for (final row in rows) {
+        final id = (row['rowid'] as num?)?.toInt();
+        if (id == null || id <= 0 || !seen.add(id)) continue;
+        ids.add(id);
+      }
+      return ids;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _tableExists(Database db, String tableName) async {
+    final rows = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
+      [tableName],
+    );
+    return rows.isNotEmpty;
+  }
+
+  Future<List<Map<String, Object?>>> _loadVectorRowsByIds(
+    Database db, {
+    required int bookId,
+    required List<int> ids,
+  }) async {
+    if (ids.isEmpty) return const [];
+    final placeholders = List.filled(ids.length, '?').join(',');
+    return db.query(
+      'ai_chunks',
+      columns: _vectorRowColumns,
+      where: 'book_id = ? AND id IN ($placeholders)',
+      whereArgs: [bookId, ...ids],
+      orderBy: 'id ASC',
+    );
+  }
+
+  String _buildFtsQuery(String query) {
+    final tokens = _tokenize(query);
+    if (tokens.isEmpty) return '';
+    return tokens.take(8).map(_escapeFtsToken).join(' OR ');
+  }
+
+  String _escapeFtsToken(String token) {
+    if (_ftsSafeToken.hasMatch(token)) {
+      return token;
+    }
+    final escaped = token.replaceAll('"', '""');
+    return '"$escaped"';
+  }
+
+  List<String> _tokenize(String query) {
+    final cleaned = query
+        .replaceAll(RegExp(r'''["'\[\]\(\)\{\}:;]+'''), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (cleaned.isEmpty) return const [];
+
+    final out = <String>[];
+    for (final raw in cleaned.split(' ')) {
+      final token = raw.trim();
+      if (token.isEmpty) continue;
+      out.add(token.length > 40 ? token.substring(0, 40) : token);
+    }
+    return out;
   }
 
   Future<Map<int, String?>> _embeddingJsonForRows(

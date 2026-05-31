@@ -29,7 +29,7 @@
 | 选中文本 -> AI Seminar | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode / 研讨会模式`。 | 本分支已接入结构化 runtime：用户可启动 role-by-role Seminar，查看 evidence、角色输出、Shared Whiteboard、synthesis，并把 traceable synthesis、候选卡和候选 flashcard 送入 Review Inbox；Seminar 页面会在启动前显示 `Provider readiness`，列出当前 provider、model、context/max output、Tools/Vision/Thinking 能力、Streaming 状态未知提示和成本状态；角色完成后优先显示 provider 返回的 `Provider reported usage`，没有 provider usage metadata 时显示 `Local token estimate`、input/output 估算和 `Provider billing may differ` 提示；页面提供本地 `Role output token budget`、`Run token budget`，当 provider capability cache 带 pricing metadata 时还启用估算 `Run cost cap USD`；页面保存单个本机 `Background job` snapshot 并显示 job id/status，可在同一书籍/同一入口问题恢复本机保存的 completed/cancelled/failed/interrupted Seminar state，并显示 `Recovered local Seminar state`。 | 阅读页优先 current book evidence；Settings 独立入口没有 current book 时会走 library fallback。Seminar synthesis 本身只进入 Review，不自动应用；候选卡和候选 flashcard 仍需用户在 Review Inbox 中批准/应用后才成为长期资产或复习项；provider readiness 只读本地 Provider Center 配置和 capability cache，不记录 API key；provider token usage 只表示 provider/SDK 回传的 token metadata；估算美元成本来自 pricing metadata 与 token usage，不等于真实 provider 发票；缺少 pricing metadata 时继续显示成本未知原因且禁用美元 cap；重启前仍在 running 的 Seminar 会保留 job id 并恢复为 interrupted/retryable，不伪装继续后台生成；换书或换选区打开 Seminar 会丢弃旧 runtime/cache，不显示不属于当前入口的旧研讨。 |
 | AI Chat 普通解释 -> KnowledgeCard | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡`。 | 本分支已接入 `AiChatKnowledgeCardProducer` 和回答旁显性 `知识卡` action；streaming 中 `知识卡` 按钮禁用且不会调用 producer；AI 回答流式文本更新会合并到 160ms UI flush 窗口，减少生成中阅读页滚动重建压力；回答旁显示 `可跳转来源` 或 `已标记不可用` 来源状态，tooltip 解释是否能跳回原文；选中文本 `AI` 入口点击级测试覆盖打开 chat draft 并传入 reader SourceRef；选中文本进入 AI 草稿时会带上精确 reader SourceRef，并随 `conversationV2` 历史持久化，点击后写入 KnowledgeCard store 与 Review Inbox；reader-grounded card 会带保守 `conceptRefs`。 | 必须用户显式点击；不会在回答生成时直接写 KnowledgeCard 或 ConceptGraph；如果用户把预填草稿改成不包含原选中文本或 SourceRef snippet 的无关问题，本轮 user node 不保存旧 reader SourceRef；短公共片段只靠碰巧包含不会保留精确 reader grounding；无有效 anchor 的选中文本只打开 AI draft，不伪造 reader grounding；用户在 Review Inbox 中 Apply 后，带 `conceptRefs` 的 reader-grounded AI Chat card 才会生成 draft ConceptGraph relation 和 pending relation ReviewItem；纯聊天 card 不生成 `conceptRefs`；没有持久化 reader SourceRef 的旧历史只保留 conversation provenance，不用当前阅读位置伪造 reader grounding。 |
 | Responses 兼容模型提问 | `Settings -> AI -> Provider Center` 选择 OpenAI Responses 兼容 provider，按 provider 配置打开或保留 `Use previous_response_id continuation`。 | 本分支已接入 `previous_response_id` 兼容 fallback：当 Responses provider 返回 HTTP 400 且错误体明确指向 `Unsupported parameter: previous_response_id` 时，当前请求会标记该运行时实例不再发送 `previous_response_id`，并用同一消息/工具输出重建 replay body 重试一次；正常 provider 仍使用 server-side continuation。 | 只对明确的 `previous_response_id` unsupported 生效；非该参数的 HTTP 400 保留原始错误并不重试；fallback 是当前运行时实例内的兼容保护，不是 provider capability schema 的永久迁移；仍需用户在 Provider Center 正确配置 base URL、model、streaming 和 reasoning 选项。 |
-| 当前书语义检索资源保护 | 阅读页搜索、AI Seminar current-book evidence、`semantic_search_current_book` 工具。 | 本分支已把当前书语义搜索改成分页向量扫描：扫描页只取 id、章节、hash、context 和 vector blob/norm，不取 `text/raw_text/embedding_json`；只为 topK 命中回查正文；老索引缺少 blob 时按页批量回查 `embedding_json`；搜索服务全局串行，页内/页末让出 UI isolate，向量扫描 progress 会合并快速页通知并强制保留取消/最终状态，工具 registry 也默认串行该工具；阅读页 stale query 会取消旧 token，目录搜索进度条显示 semantic progress，工具 timeout 会取消底层搜索。 | 这是 OOM/发热/掉帧的保护层，不是完整高性能向量引擎；大书仍会做精确全书向量扫描，只是 bounded memory、非并发、可取消，并减少进度 UI 重建；没有实现 sqlite-vec/ANN、候选预筛或自动索引重建提示。 |
+| 当前书语义检索资源保护 | 阅读页搜索、AI Seminar current-book evidence、`semantic_search_current_book` 工具。 | 本分支已把当前书语义搜索改成分页向量扫描：扫描页只取 id、章节、hash、context 和 vector blob/norm，不取 `text/raw_text/embedding_json`；只为 topK 命中回查正文；老索引缺少 blob 时按页批量回查 `embedding_json`；搜索服务全局串行，页内/页末让出 UI isolate，向量扫描 progress 会合并快速页通知并强制保留取消/最终状态，工具 registry 也默认串行该工具；搜索会优先用 `ai_chunks_fts` 做 bounded FTS/BM25 候选预筛，只扫描候选 vector row，FTS5 不可用、MATCH 失败、无候选或候选过期时回退完整分页扫描；阅读页 stale query 会取消旧 token，目录搜索进度条显示 semantic progress，工具 timeout 会取消底层搜索。 | 这是 OOM/发热/掉帧的保护层，不是完整高性能向量引擎；有 FTS 候选时不会完整扫描全书向量；无 FTS 候选、FTS 不可用或候选过期时仍会做完整分页扫描，只是 bounded memory、非并发、可取消，并减少进度 UI 重建；没有实现 sqlite-vec/ANN 或自动索引重建提示。 |
 | AI Chat -> Memory 候选审核 | AI Chat 回答旁书签图标 `Memory actions / 记忆操作` -> `Add to Review inbox / 加入待审核队列` -> `Settings -> AI -> Review inbox`。 | 本分支已接入 MemoryCandidate 到统一 ReviewItem 的 handoff、Memory source-specific apply/dismiss adapter 和 Review Inbox Apply UI；回答旁书签 popup 已有点击级测试覆盖 `Add to review inbox` handoff。 | Memory 候选必须经用户批准和应用；Apply 先追加到目标 daily/long-term Markdown，再推进 ReviewItem；Dismiss 不写 memory；streaming 中或空回答不会写 memory candidate；无书内跳转的 conversation memory 会显示证据摘录和不可跳原因；不写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | Memory 独立浏览 SourceRef 审计 | 首页底部 `Memory / 记忆` tab 打开 daily/long-term memory 列表，再进入条目详情；该 tab 默认隐藏，可先到 `Settings -> Home navigation / 首页导航` 打开。 | 本分支已接入 `MemoryEntrySourceRefAdapter`、Memory home row source audit chips、Memory detail `SourceRefEvidenceList` 和 `Open source` action；只从已应用 MemoryCandidate 只读投影 SourceRef，按目标文档与条目 body 匹配，long-term `MEMORY.md` 按 H1 分段 body 匹配。 | 匹配只认实际写入 memory 的 `text/displayText`，不能只靠 summary 命中；不往 Markdown memory 写隐藏来源字段；没有 book anchor 的 conversation memory 只显示 unavailable/unresolved；可跳来源只使用合法 `paperreader://reader/open?...`；long-term H1 分段不能被批量删除/打标签，避免误操作整份 `MEMORY.md`；浏览页不创建 KnowledgeCard、ReviewItem、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | 旧划线/笔记 SourceRef 审计 | 书籍笔记列表或搜索结果里的笔记条目。 | 本分支已接入 `BookNoteSourceRefAdapter`、`BookNoteTile` source audit、`SourceRefEvidenceList` 和 `PaperReaderSourceJumpAudit`；条目显示 Evidence、可跳转/不可跳状态、来源书名/章节和不可跳原因。 | 有有效 `bookId + cfi` 的条目保持原文跳转；无有效 book anchor 的旧条目点击时显示不可跳原因，不调用阅读页空 CFI 或无效 book anchor 跳转；不写 KnowledgeCard、ReviewItem、Memory、ConceptGraph、SpacedReview 或 Sync。 |
@@ -539,25 +539,28 @@ flutter test --no-pub \
 
 1. 用户先为当前书构建本地 AI semantic index。
 2. 用户在阅读页触发普通搜索、AI Seminar current-book evidence，或 agent tool 调用 `semantic_search_current_book`。
-3. 系统嵌入 query 后按 `ai_chunks.id` 分页扫描当前书向量。
-4. 扫描页只读取 vector 和 provenance 所需列，不读取 `text/raw_text/embedding_json`。
-5. 系统维护 bounded topK 候选，只为最终命中的 chunk 回查正文。
-6. 如果旧索引 chunk 还没有 `embedding_blob`，系统按页批量回查 `embedding_json`，不做逐行 SQL 回查。
-7. 同进程 current-book semantic search 通过全局 lock 串行化；agent tool registry 也把 `semantic_search_current_book` 标为非并发。
-8. 每页向量解码和 cosine scoring 通过 `AiCurrentBookVectorPageScorer` seam 执行，默认使用 background isolate，避免长循环独占 UI isolate。
-9. 阅读页新搜索、清空搜索或离开页面会 cancel stale semantic search；stale query 不写入 partial results。
-10. 阅读页目录搜索进度条显示 semantic progress；`semantic_search_current_book` 工具超时时会 cancel 底层 token 并返回 `cancelled=true` degrade。
+3. 系统嵌入 query 后先尝试用 `ai_chunks_fts` 取得 bounded FTS/BM25 候选 id。
+4. 若 FTS5 不可用、MATCH 失败或候选为空，系统回退到按 `ai_chunks.id` 分页扫描当前书向量。
+5. 无论候选预筛还是完整分页扫描，扫描页只读取 vector 和 provenance 所需列，不读取 `text/raw_text/embedding_json`。
+6. 系统维护 bounded topK 候选，只为最终命中的 chunk 回查正文。
+7. 如果旧索引 chunk 还没有 `embedding_blob`，系统按页批量回查 `embedding_json`，不做逐行 SQL 回查。
+8. 同进程 current-book semantic search 通过全局 lock 串行化；agent tool registry 也把 `semantic_search_current_book` 标为非并发。
+9. 每页向量解码和 cosine scoring 通过 `AiCurrentBookVectorPageScorer` seam 执行，默认使用 background isolate，避免长循环独占 UI isolate。
+10. 阅读页新搜索、清空搜索或离开页面会 cancel stale semantic search；stale query 不写入 partial results。
+11. 阅读页目录搜索进度条显示 semantic progress；`semantic_search_current_book` 工具超时时会 cancel 底层 token 并返回 `cancelled=true` degrade。
 
 Gate：
 
 - hot scan query 不允许选择 `text/raw_text/embedding_json`。
+- FTS/BM25 预筛只允许取候选 id，不能把正文列带入向量扫描热路径。
+- FTS5 缺失、MATCH 抛错或无候选时必须回退完整分页向量扫描。
 - topK 候选必须 bounded，不能把全书 scored rows 常驻内存。
 - text/raw_text 只能为 winners 回查。
 - JSON fallback 只能按页批量回查 blob 缺失行。
 - 直接调用路径和 tool orchestrator 路径都不能并发扫描当前书。
 - 向量 scoring 默认不得在 UI isolate 长循环执行；可替换 backend 必须保留 SourceRef provenance 所需字段。
 - 取消后不得回查 winners 正文或写入 semantic results。
-- 本切片不是 ANN/sqlite-vec/Vec1 后端；大书仍可能触发 timeout，剩余性能任务必须继续保留 SourceRef 和 evidence gate。
+- 本切片不是 ANN/sqlite-vec/Vec1 后端；大书仍可能在无 FTS 候选时触发完整分页扫描，剩余性能任务必须继续保留 SourceRef 和 evidence gate。
 
 验证命令：
 
@@ -578,7 +581,7 @@ flutter test --no-pub \
 | --- | --- | --- | --- |
 | 完整云同步引擎 | 当前已有本地导出、机器可读 sync bundle、远端 bundle preview、远端同步状态面板、安全远端 incoming KnowledgeCard Review 导入、安全远端 review history Review 导入、安全远端 KnowledgeCard 冲突 staged Review 恢复、安全冲突 Review handoff、安全 KnowledgeCard 冲突本地恢复、只读 remote merge planner、带 rollback snapshot 的 remote writeback executor 和 WebDAV ETag/CAS 条件写 guard；还没有跨设备后台同步任务、baseline 持久化、冲突批量恢复和发布版迁移。 | 继续拆跨设备后台同步、baseline source-of-truth、冲突批量恢复和 release promotion。 | API key 永不同步；冲突进入 Review；不得使用 whole-file newer-wins 覆盖用户资产；不能宣称后台跨设备自动同步已完成。 |
 | Seminar 多任务后台队列、进程死亡续跑和 provider 发票导入 | Seminar runtime 已能流式、取消、重试、Review handoff，并显示 provider readiness、capability cache、成本未知原因、provider token usage、本地 token 估算 fallback、本地 role/run token budget、pricing metadata 驱动的估算 `Run cost cap USD`、billing snapshot / reconciliation UI、本机 state 恢复和单 Seminar `Background job` snapshot；running state 重启后保留 job id 并恢复为 interrupted/retryable。当前没有多 Seminar 后台任务队列，没有进程死亡后继续 LLM stream，也没有连接 provider invoice import API；UI 会把估算成本、provider usage metadata、pricing source 和 invoice reconciliation 状态分开展示。 | 拆分多 job queue、scoped cancellation、OS/background execution gate；真实 provider invoice import 另拆 provider-specific adapter、鉴权、只读账单导入和失败恢复 gate。 | 移动资源 gate；长任务可取消、失败可恢复或重试；无 pricing metadata 时继续显示成本未知原因并禁用美元 cap；估算美元成本不等于 provider 发票；本地 token budget 不得声明为 provider billing cap；不能把本机 recovery cache 当作同步资产；不得把单 job interrupted snapshot 描述成进程死亡后继续生成。 |
-| 高性能当前书向量检索后端 | 当前书语义搜索已做分页、topK、串行、background isolate scoring、取消 token、progress callback、阅读页 stale query cancel 和工具超时 cancel，能规避一次性全书向量/正文加载并降低 UI isolate 长循环风险；仍不是 ANN/Vec1/sqlite-vec 后端。 | `UFA-C07-T02` 继续 In Review：接候选预筛或 sqlite-vec/Vec1 实验 backend，并补大书性能验收。 | 不得牺牲 SourceRef；无 evidence 不返回正式结果；旧 DB、无 embedding、FTS5 缺失、书籍删除和 provider 切换都有 degrade path；移动端大书搜索必须有取消或可恢复状态。 |
+| 高性能当前书向量检索后端 | 当前书语义搜索已做分页、topK、串行、background isolate scoring、取消 token、progress callback、阅读页 stale query cancel、工具超时 cancel 和 bounded FTS/BM25 候选预筛，能规避一次性全书向量/正文加载并降低 UI isolate 长循环风险；仍不是 ANN/Vec1/sqlite-vec 后端，无 FTS 候选时仍会完整分页扫描。 | `UFA-C07-T02` 继续 In Review：补大书性能验收；若性能 gate 失败，再拆 sqlite-vec/Vec1 实验 backend。 | 不得牺牲 SourceRef；无 evidence 不返回正式结果；旧 DB、无 embedding、FTS5 缺失、书籍删除和 provider 切换都有 degrade path；移动端大书搜索必须有取消或可恢复状态。 |
 | 复杂无限画布式 ConceptGraph | 当前是局部图谱、dossier、路径和摘要，不做无限画布、缩放手势或跨书外部知识扩展。 | 如需画布，先定义移动端资源、证据可见性和 graph ownership gate。 | 关系必须有 evidence；正式关系必须 Review apply。 |
 | 发布版可用 | 本文件描述 `codex/future-agentic-upgrade` 分支；不代表 `main`、TestFlight 或已安装版本。 | 走 release promotion gate，完成合并、构建、回归、发布说明和用户迁移说明。 | 发布前必须重跑权威验证命令并记录 commit。 |
 
@@ -630,7 +633,7 @@ flutter test --no-pub \
 | UFA-C06-T02 | Accepted | Responses previous_response_id fallback | 第三方 Responses provider 拒绝 `previous_response_id` 时自动降级重试。 | Provider Center Responses config, LangChain runtime | `ChatOpenAIResponses` compatibility latch, fallback request builder | 只有明确 `previous_response_id` unsupported 的 HTTP 400 会 fallback；正常 provider 继续用 server-side continuation；unrelated 400 不 retry；测试覆盖正向 fallback 和负向错误保留。 |
 | UFA-C06-T03 | Accepted | Active Skill picker widget evidence | 从 `Settings -> AI -> Active Skill` 选择已启用 custom skill 的点击级 widget 测试。 | UFA-C06-T01 | `test/page/settings_page/settings_navigation_compile_test.dart` | 已启用 custom skill 出现在 picker；disabled custom skill 不出现；选择后 runtime registry 能读取 active custom skill 并收窄工具。 |
 | UFA-C07-T01 | Accepted | Current-book semantic search resource guard | 当前书语义搜索避免一次性全书向量/正文加载并串行化扫描。 | E02 current-book index, E06 tool governance, mobile resource gate | `SemanticSearchCurrentBook` paged scan/topK/text winner load/global lock, `AiToolRegistry` non-concurrent flag | scan columns 不含 `text/raw_text/embedding_json`；JSON fallback 按页批量；只为 winners 取正文；直接调用与 tool 调用都不并发扫描；测试覆盖分页列、winner text load、直接调用串行和 tool non-concurrent。 |
-| UFA-C07-T02 | In Review | Current-book semantic search background backend | 为当前书语义搜索增加候选预筛/ANN 或后台 isolate，并暴露取消或进度状态。 | UFA-C07-T01, E02 schema gate | `AiCurrentBookVectorPageScorer` backend seam, default background isolate scoring, cancellation/progress tests, `TocSearch.semanticProgress`, reading-page stale search cancel, tool timeout cancel | 已覆盖 background isolate scoring seam、取消后不回查 winners/不写 partial result、阅读页 semantic progress state 和工具 timeout cancel；仍需候选预筛或 ANN/sqlite-vec/Vec1 backend 与大书性能验收，SourceRef evidence 不降级。 |
+| UFA-C07-T02 | In Review | Current-book semantic search background backend | 为当前书语义搜索增加候选预筛/ANN 或后台 isolate，并暴露取消或进度状态。 | UFA-C07-T01, E02 schema gate | `AiCurrentBookVectorPageScorer` backend seam, default background isolate scoring, FTS/BM25 candidate prefilter, cancellation/progress tests, `TocSearch.semanticProgress`, reading-page stale search cancel, tool timeout cancel | 已覆盖 background isolate scoring seam、FTS/BM25 只取候选 id、候选 vector row 不含 `text/raw_text/embedding_json`、FTS 无候选或表缺失时回退完整分页扫描、JSON fallback 仅覆盖候选页 blob 缺失行、取消后不回查 winners/不写 partial result、阅读页 semantic progress state 和工具 timeout cancel；仍需大书性能验收，SourceRef evidence 不降级。 |
 
 ## 5. Agent 执行约束
 
