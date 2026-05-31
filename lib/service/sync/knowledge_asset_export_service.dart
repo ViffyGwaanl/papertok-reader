@@ -348,6 +348,9 @@ class KnowledgeAssetExportService {
       File(p.join(knowledgeDir.path, 'knowledge_export_anki.tsv'));
   File get syncBundleFile =>
       File(p.join(knowledgeDir.path, 'knowledge_sync_bundle_v1.json'));
+  File get remoteSyncBaselineFile => File(
+        p.join(knowledgeDir.path, 'knowledge_sync_remote_baseline_v1.json'),
+      );
 
   Future<KnowledgeAssetExportSnapshot> buildSnapshot({
     bool includeDrafts = false,
@@ -687,6 +690,10 @@ class KnowledgeAssetExportService {
             )
           : null,
     ).execute();
+    await _writeRemoteSyncBaseline(
+      remotePath: remotePath,
+      snapshot: snapshot,
+    );
 
     return KnowledgeRemoteSyncUploadResult(
       snapshot: snapshot,
@@ -777,10 +784,12 @@ class KnowledgeAssetExportService {
       client: client,
       remotePath: remotePath,
     );
+    final baseline = await _readRemoteSyncBaseline(remotePath);
     final local = snapshot.included;
     final mergePlan = KnowledgeRemoteMergePlanner.plan(
       local: local,
       remote: remote,
+      base: baseline,
       currentSchemaVersion: currentSyncBundleSchemaVersion,
     );
 
@@ -841,6 +850,120 @@ class KnowledgeAssetExportService {
         // Best-effort cleanup for downloaded remote preview data.
       }
     }
+  }
+
+  Future<List<KnowledgeSyncEnvelope>> _readRemoteSyncBaseline(
+    String remotePath,
+  ) async {
+    if (!await remoteSyncBaselineFile.exists()) {
+      return const <KnowledgeSyncEnvelope>[];
+    }
+    try {
+      final decoded = jsonDecode(await remoteSyncBaselineFile.readAsString());
+      if (decoded is! Map || decoded['schemaVersion'] != 1) {
+        return const <KnowledgeSyncEnvelope>[];
+      }
+      final remotes = decoded['remotes'];
+      final remoteEntry = remotes is Map ? remotes[remotePath] : null;
+      return _parseRemoteSyncBaselineEntry(remoteEntry) ??
+          const <KnowledgeSyncEnvelope>[];
+    } catch (_) {
+      return const <KnowledgeSyncEnvelope>[];
+    }
+  }
+
+  Future<void> _writeRemoteSyncBaseline({
+    required String remotePath,
+    required KnowledgeAssetExportSnapshot snapshot,
+  }) async {
+    if (!await knowledgeDir.exists()) {
+      await knowledgeDir.create(recursive: true);
+    }
+    final existingRemotes = await _readRemoteSyncBaselineRemotes();
+    final timestamp = _now();
+    final safePlan = KnowledgeSyncPolicy.planDefaultSync(snapshot.included);
+    existingRemotes[remotePath] = {
+      'schemaVersion': currentSyncBundleSchemaVersion,
+      'updatedAt': timestamp,
+      'envelopes':
+          safePlan.included.map((envelope) => envelope.toJson()).toList(),
+    };
+    await remoteSyncBaselineFile.writeAsString(
+      const JsonEncoder.withIndent('  ').convert({
+        'schemaVersion': 1,
+        'updatedAt': timestamp,
+        'remotes': existingRemotes,
+      }),
+    );
+  }
+
+  Future<Map<String, dynamic>> _readRemoteSyncBaselineRemotes() async {
+    if (!await remoteSyncBaselineFile.exists()) {
+      return <String, dynamic>{};
+    }
+    try {
+      final decoded = jsonDecode(await remoteSyncBaselineFile.readAsString());
+      if (decoded is! Map || decoded['schemaVersion'] != 1) {
+        return <String, dynamic>{};
+      }
+      final remotes = decoded['remotes'];
+      if (remotes is! Map) {
+        return <String, dynamic>{};
+      }
+      final sanitized = <String, dynamic>{};
+      for (final entry in remotes.entries) {
+        final remotePath = entry.key.toString();
+        final baseline = _parseRemoteSyncBaselineEntry(entry.value);
+        if (remotePath.trim().isNotEmpty && baseline != null) {
+          sanitized[remotePath] = {
+            'schemaVersion': currentSyncBundleSchemaVersion,
+            'updatedAt': _baselineUpdatedAt(entry.value),
+            'envelopes': baseline.map((envelope) => envelope.toJson()).toList(),
+          };
+        }
+      }
+      return sanitized;
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+  }
+
+  List<KnowledgeSyncEnvelope>? _parseRemoteSyncBaselineEntry(Object? value) {
+    if (value is! Map ||
+        value['schemaVersion'] != currentSyncBundleSchemaVersion) {
+      return null;
+    }
+    final rawEnvelopes = value['envelopes'];
+    if (rawEnvelopes is! List) {
+      return null;
+    }
+    final envelopes = <KnowledgeSyncEnvelope>[];
+    final ids = <String>{};
+    for (final entry in rawEnvelopes) {
+      if (entry is! Map) {
+        return null;
+      }
+      final envelope =
+          KnowledgeSyncEnvelope.fromJson(Map<String, dynamic>.from(entry));
+      final id = envelope.id.trim();
+      if (id.isEmpty ||
+          id != envelope.id ||
+          !ids.add(id) ||
+          envelope.schemaVersion > currentSyncBundleSchemaVersion ||
+          KnowledgeSyncPolicy.exclusionReason(envelope) != null) {
+        return null;
+      }
+      envelopes.add(envelope);
+    }
+    return envelopes;
+  }
+
+  int _baselineUpdatedAt(Object? value) {
+    if (value is! Map) {
+      return _now();
+    }
+    final raw = value['updatedAt'];
+    return raw is num ? raw.toInt() : _now();
   }
 
   SyncClientBase _configuredRemoteClient(SyncClientBase? client) {

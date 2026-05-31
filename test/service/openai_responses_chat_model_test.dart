@@ -425,7 +425,7 @@ void main() {
       first.toString(),
       const _QueuedHttpResponse(
         400,
-        '{"error":{"message":"Unsupported parameter: previous_response_id"}}',
+        '{"error":{"message":"Unsupported parameter: previous_response_id","type":"bad_response_status_code","param":"","code":"bad_response_status_code"}}',
       ),
       retry.toString(),
     ]);

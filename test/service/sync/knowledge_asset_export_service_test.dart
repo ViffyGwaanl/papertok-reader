@@ -15,6 +15,7 @@ import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/service/sync/knowledge_asset_export_service.dart';
 import 'package:papertok_reader/service/sync/sync_client_base.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   late Directory tempRoot;
@@ -872,6 +873,322 @@ void main() {
       controller.approve(items.single.id),
       throwsA(isA<UnsupportedError>()),
     );
+  });
+
+  test('remote sync preview uses persisted baseline for three way merge',
+      () async {
+    final localUnchanged = card(
+      id: 'kc-remote-changed',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Base remote-side evidence.',
+      sourceRefs: [
+        traceableRef(
+          cfi: 'epubcfi(/6/80)',
+          snippet: 'Base remote-side evidence.',
+        ),
+      ],
+    );
+    final localChangedBase = card(
+      id: 'kc-local-changed',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Base local-side evidence.',
+      sourceRefs: [
+        traceableRef(
+          cfi: 'epubcfi(/6/82)',
+          snippet: 'Base local-side evidence.',
+        ),
+      ],
+    );
+    final localChanged = card(
+      id: localChangedBase.id,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Local changed evidence.',
+      sourceRefs: [
+        traceableRef(
+          cfi: 'epubcfi(/6/82)',
+          snippet: 'Local changed evidence.',
+        ),
+      ],
+    );
+    final stagedRemoteSideBase = await stageAppliedCard(
+      localUnchanged.id,
+      quote: localUnchanged.quote,
+      sourceRefs: localUnchanged.sourceRefs,
+    );
+    await stageAppliedCard(
+      localChanged.id,
+      quote: localChanged.quote,
+      sourceRefs: localChanged.sourceRefs,
+    );
+    final baselineFile = File(
+      p.join(
+        tempRoot.path,
+        '.knowledge',
+        'knowledge_sync_remote_baseline_v1.json',
+      ),
+    );
+    await baselineFile.parent.create(recursive: true);
+    await baselineFile.writeAsString(
+      jsonEncode({
+        'schemaVersion': 1,
+        'updatedAt': 1500,
+        'remotes': {
+          KnowledgeAssetExportService.defaultRemoteSyncBundlePath: {
+            'schemaVersion':
+                KnowledgeAssetExportService.currentSyncBundleSchemaVersion,
+            'updatedAt': 1500,
+            'envelopes': [
+              KnowledgeSyncEnvelope(
+                id: stagedRemoteSideBase.id,
+                entityType: KnowledgeSyncEntityType.knowledgeCard,
+                schemaVersion: 1,
+                updatedAt: 1500,
+                sourceRefs: stagedRemoteSideBase.sourceRefs,
+                payload: stagedRemoteSideBase.toJson(),
+              ).toJson(),
+              KnowledgeSyncEnvelope(
+                id: localChangedBase.id,
+                entityType: KnowledgeSyncEntityType.knowledgeCard,
+                schemaVersion: 1,
+                updatedAt: 1500,
+                sourceRefs: localChangedBase.sourceRefs,
+                payload: localChangedBase.toJson(),
+              ).toJson(),
+            ],
+          },
+        },
+      }),
+    );
+    final remoteChanged = card(
+      id: localUnchanged.id,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Remote changed evidence.',
+      sourceRefs: [
+        traceableRef(
+          cfi: 'epubcfi(/6/80)',
+          snippet: 'Remote changed evidence.',
+        ),
+      ],
+    );
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion':
+            KnowledgeAssetExportService.currentSyncBundleSchemaVersion,
+        'createdAt': 2000,
+        'envelopes': [
+          KnowledgeSyncEnvelope(
+            id: remoteChanged.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: remoteChanged.sourceRefs,
+            payload: remoteChanged.toJson(),
+          ).toJson(),
+          KnowledgeSyncEnvelope(
+            id: localChangedBase.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 1500,
+            sourceRefs: localChangedBase.sourceRefs,
+            payload: localChangedBase.toJson(),
+          ).toJson(),
+        ],
+      }),
+    });
+
+    final preview = await service.previewRemoteSync(client: remoteClient);
+
+    expect(
+        preview.incoming.map((envelope) => envelope.id), ['kc-remote-changed']);
+    expect(
+        preview.outgoing.map((envelope) => envelope.id), ['kc-local-changed']);
+    expect(preview.conflicts, isEmpty);
+  });
+
+  test('successful remote upload persists safe baseline for future previews',
+      () async {
+    await stageAppliedCard('kc-baseline');
+    await cardStore.upsertCandidate(
+      card(
+        id: 'kc-draft-baseline',
+        quote: 'Draft must not enter baseline.',
+        sourceRefs: [
+          traceableRef(
+            cfi: 'epubcfi(/6/88)',
+            snippet: 'Draft must not enter baseline.',
+          ),
+        ],
+      ),
+    );
+    final remoteClient = _FakeSyncClient(<String, String>{});
+
+    await service.uploadRemoteSyncBundle(client: remoteClient);
+
+    final baselineFile = File(
+      p.join(
+        tempRoot.path,
+        '.knowledge',
+        'knowledge_sync_remote_baseline_v1.json',
+      ),
+    );
+    expect(await baselineFile.exists(), true);
+    final decoded =
+        jsonDecode(await baselineFile.readAsString()) as Map<String, dynamic>;
+    final encoded = jsonEncode(decoded);
+    expect(decoded['schemaVersion'], 1);
+    expect(
+      (decoded['remotes'] as Map)
+          .containsKey(KnowledgeAssetExportService.defaultRemoteSyncBundlePath),
+      true,
+    );
+    expect(encoded, contains('kc-baseline'));
+    expect(encoded, isNot(contains('kc-draft-baseline')));
+    expect(encoded, isNot(contains('Draft must not enter baseline')));
+    expect(encoded, isNot(contains('apiKey')));
+  });
+
+  test('remote baseline write drops previously unsafe baseline entries',
+      () async {
+    await stageAppliedCard('kc-clean-baseline');
+    final baselineFile = File(
+      p.join(
+        tempRoot.path,
+        '.knowledge',
+        'knowledge_sync_remote_baseline_v1.json',
+      ),
+    );
+    await baselineFile.parent.create(recursive: true);
+    await baselineFile.writeAsString(
+      jsonEncode({
+        'schemaVersion': 1,
+        'updatedAt': 900,
+        'remotes': {
+          'paper_reader/.knowledge/old.json': {
+            'schemaVersion':
+                KnowledgeAssetExportService.currentSyncBundleSchemaVersion,
+            'updatedAt': 900,
+            'envelopes': [
+              const KnowledgeSyncEnvelope(
+                id: 'unsafe-old-baseline',
+                entityType: KnowledgeSyncEntityType.knowledgeCard,
+                schemaVersion: 1,
+                updatedAt: 900,
+                payload: {
+                  'title': 'Unsafe',
+                  'apiKey': '***',
+                },
+              ).toJson(),
+            ],
+          },
+        },
+      }),
+    );
+    final remoteClient = _FakeSyncClient(<String, String>{});
+
+    await service.uploadRemoteSyncBundle(client: remoteClient);
+
+    final encoded = await baselineFile.readAsString();
+    expect(encoded, contains('kc-clean-baseline'));
+    expect(encoded, isNot(contains('unsafe-old-baseline')));
+    expect(encoded, isNot(contains('apiKey')));
+  });
+
+  test('future-schema remote baseline falls back to conservative preview',
+      () async {
+    final localBase = card(
+      id: 'kc-unsafe-baseline',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Original baseline evidence.',
+      sourceRefs: [
+        traceableRef(
+          cfi: 'epubcfi(/6/90)',
+          snippet: 'Original baseline evidence.',
+        ),
+      ],
+    );
+    final localChanged = await stageAppliedCard(
+      localBase.id,
+      quote: 'Local changed evidence.',
+      sourceRefs: [
+        traceableRef(
+          cfi: 'epubcfi(/6/90)',
+          snippet: 'Local changed evidence.',
+        ),
+      ],
+    );
+    final baselineFile = File(
+      p.join(
+        tempRoot.path,
+        '.knowledge',
+        'knowledge_sync_remote_baseline_v1.json',
+      ),
+    );
+    await baselineFile.parent.create(recursive: true);
+    await baselineFile.writeAsString(
+      jsonEncode({
+        'schemaVersion': 1,
+        'updatedAt': 1500,
+        'remotes': {
+          KnowledgeAssetExportService.defaultRemoteSyncBundlePath: {
+            'schemaVersion':
+                KnowledgeAssetExportService.currentSyncBundleSchemaVersion,
+            'updatedAt': 1500,
+            'envelopes': [
+              KnowledgeSyncEnvelope(
+                id: localBase.id,
+                entityType: KnowledgeSyncEntityType.knowledgeCard,
+                schemaVersion: 99,
+                updatedAt: 1500,
+                sourceRefs: localBase.sourceRefs,
+                payload: localBase.toJson(),
+              ).toJson(),
+            ],
+          },
+        },
+      }),
+    );
+    final remoteChanged = card(
+      id: localChanged.id,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Remote changed evidence.',
+      sourceRefs: [
+        traceableRef(
+          cfi: 'epubcfi(/6/90)',
+          snippet: 'Remote changed evidence.',
+        ),
+      ],
+    );
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion':
+            KnowledgeAssetExportService.currentSyncBundleSchemaVersion,
+        'createdAt': 2000,
+        'envelopes': [
+          KnowledgeSyncEnvelope(
+            id: remoteChanged.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: remoteChanged.sourceRefs,
+            payload: remoteChanged.toJson(),
+          ).toJson(),
+        ],
+      }),
+    });
+
+    final preview = await service.previewRemoteSync(client: remoteClient);
+
+    expect(preview.incoming, isEmpty);
+    expect(preview.outgoing, isEmpty);
+    expect(preview.conflicts.map((envelope) => envelope.id),
+        ['kc-unsafe-baseline']);
+    expect(preview.conflicts.single.conflictReason, 'content-conflict');
   });
 
   test('staged remote card conflict applies only after Review approval',
