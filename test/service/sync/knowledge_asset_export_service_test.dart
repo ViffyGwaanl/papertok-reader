@@ -1179,6 +1179,73 @@ void main() {
     ]);
   });
 
+  test('remote writeback restores rollback snapshot when replace upload fails',
+      () async {
+    final confirmed = await stageAppliedCard('kc-rollback');
+    final manifest = await service.writeManifest();
+    final previousRemote = await manifest.syncBundleFile!.readAsString();
+    final remoteClient = _FailingUploadSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: previousRemote,
+    });
+
+    Object? caught;
+    try {
+      await service.uploadRemoteSyncBundle(client: remoteClient);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught, isA<KnowledgeRemoteWritebackException>());
+    final error = caught as KnowledgeRemoteWritebackException;
+    expect(error.rollbackRestored, true);
+    expect(error.removedPartialRemote, false);
+    expect(error.rollbackSnapshotPath, isNotNull);
+    expect(
+        await File(error.rollbackSnapshotPath!).readAsString(), previousRemote);
+    expect(
+      remoteClient
+          .files[KnowledgeAssetExportService.defaultRemoteSyncBundlePath],
+      previousRemote,
+    );
+    expect(remoteClient.uploadedPaths, [
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+    ]);
+    final after = await cardStore.getById(confirmed.id);
+    expect(after?.toJson(), confirmed.toJson());
+    expect(
+      (await cardStore.listSyncEnvelopes()).single.payload,
+      containsPair('id', confirmed.id),
+    );
+  });
+
+  test('remote writeback removes partial new remote when create upload fails',
+      () async {
+    await stageAppliedCard('kc-create-rollback');
+    final remoteClient = _FailingUploadSyncClient(<String, String>{});
+
+    Object? caught;
+    try {
+      await service.uploadRemoteSyncBundle(client: remoteClient);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught, isA<KnowledgeRemoteWritebackException>());
+    final error = caught as KnowledgeRemoteWritebackException;
+    expect(error.rollbackRestored, false);
+    expect(error.removedPartialRemote, true);
+    expect(error.rollbackSnapshotPath, isNull);
+    expect(
+      remoteClient.files
+          .containsKey(KnowledgeAssetExportService.defaultRemoteSyncBundlePath),
+      false,
+    );
+    expect(remoteClient.removedPaths, [
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+    ]);
+  });
+
   test('remote incoming knowledge cards are staged as review candidates',
       () async {
     final remoteCard = card(
@@ -1757,6 +1824,42 @@ class _FakeSyncClient extends SyncClientBase {
     files[remotePath] = content;
     uploadedPaths.add(remotePath);
     onProgress?.call(content.length, content.length);
+  }
+}
+
+class _FailingUploadSyncClient extends _FakeSyncClient {
+  _FailingUploadSyncClient(super.files);
+
+  final removedPaths = <String>[];
+  var _uploadAttempts = 0;
+
+  @override
+  Future<void> uploadFile(
+    String localPath,
+    String remotePath, {
+    bool replace = true,
+    void Function(int sent, int total)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    _uploadAttempts++;
+    if (_uploadAttempts == 1) {
+      files[remotePath] = 'partial remote write';
+      uploadedPaths.add(remotePath);
+      throw StateError('simulated remote upload failure');
+    }
+    return super.uploadFile(
+      localPath,
+      remotePath,
+      replace: replace,
+      onProgress: onProgress,
+      cancelToken: cancelToken,
+    );
+  }
+
+  @override
+  Future<void> remove(String path) async {
+    removedPaths.add(path);
+    files.remove(path);
   }
 }
 

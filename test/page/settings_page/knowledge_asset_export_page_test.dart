@@ -241,6 +241,51 @@ void main() {
     expect(find.textContaining('remote unavailable'), findsOneWidget);
   });
 
+  testWidgets('remote writeback rollback status is visible', (tester) async {
+    final service = _FakeKnowledgeAssetExportService()
+      ..failRemoteWritebackWithRollback = true;
+    final reviewController = _FakeReviewInboxController();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          knowledgeAssetExportServiceProvider.overrideWithValue(service),
+          reviewInboxControllerProvider.overrideWithValue(reviewController),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: const KnowledgeAssetExportPage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Upload sync bundle'));
+    await tester.pump();
+
+    expect(find.text('Remote sync status: Failed'), findsOneWidget);
+    expect(find.textContaining('remote writeback failed'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('Rollback snapshot: /tmp/remote-rollback.json'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Rollback snapshot: /tmp/remote-rollback.json'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('the previous remote bundle was restored'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('remote preview without blockers shows ready-to-upload status',
       (tester) async {
     final service = _FakeKnowledgeAssetExportService()
@@ -305,6 +350,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool submittedRemoteReviewHistoryToReview = false;
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
+  bool failRemoteWritebackWithRollback = false;
   bool remotePreviewHasBlockers = true;
 
   @override
@@ -464,6 +510,14 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     if (failRemotePreview) {
       throw StateError('remote unavailable');
     }
+    if (failRemoteWritebackWithRollback) {
+      throw const KnowledgeRemoteWritebackException(
+        message: 'remote writeback failed',
+        remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+        rollbackSnapshotPath: '/tmp/remote-rollback.json',
+        rollbackRestored: true,
+      );
+    }
     uploadedRemoteSyncBundle = true;
     return KnowledgeRemoteSyncUploadResult(
       snapshot: await buildSnapshot(),
@@ -471,6 +525,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       remotePath: remotePath,
       uploadedAt: 200,
       createdRemote: false,
+      rollbackSnapshotFile: File('/tmp/remote-rollback.json'),
       preview: _remotePreview(await buildSnapshot()),
     );
   }

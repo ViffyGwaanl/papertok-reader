@@ -1025,6 +1025,16 @@
       }
     }
   },
+  "knowledgeExportRemoteRollbackSnapshotPath": "回滚快照：{path}",
+  "@knowledgeExportRemoteRollbackSnapshotPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportRemoteRollbackRestored": "远端写回失败；已恢复旧的远端 bundle，本机已确认知识资产未被修改。",
+  "knowledgeExportRemotePartialRemoved": "远端写回失败；已删除半写入的新远端 bundle，本机已确认知识资产未被修改。",
   "knowledgeExportSafeDefault": "默认排除草稿、派生索引、API key 和待审冲突。",
   "knowledgeExportLoadFailed": "无法加载知识导出计划",
   "reviewInboxActionFailed": "审核操作失败",

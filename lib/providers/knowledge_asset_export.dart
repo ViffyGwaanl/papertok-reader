@@ -41,6 +41,9 @@ class KnowledgeAssetExportState {
     this.lastRemoteReviewHistorySkippedCount,
     this.lastRemoteUploadPath,
     this.lastRemoteUploadCount,
+    this.lastRemoteRollbackPath,
+    this.lastRemoteRollbackRestored,
+    this.lastRemotePartialRemoved,
     this.remotePreview,
     this.lastError,
   });
@@ -79,6 +82,9 @@ class KnowledgeAssetExportState {
   final int? lastRemoteReviewHistorySkippedCount;
   final String? lastRemoteUploadPath;
   final int? lastRemoteUploadCount;
+  final String? lastRemoteRollbackPath;
+  final bool? lastRemoteRollbackRestored;
+  final bool? lastRemotePartialRemoved;
   final KnowledgeRemoteSyncPreview? remotePreview;
   final String? lastError;
 
@@ -117,6 +123,9 @@ class KnowledgeAssetExportState {
     int? lastRemoteReviewHistorySkippedCount,
     String? lastRemoteUploadPath,
     int? lastRemoteUploadCount,
+    String? lastRemoteRollbackPath,
+    bool? lastRemoteRollbackRestored,
+    bool? lastRemotePartialRemoved,
     KnowledgeRemoteSyncPreview? remotePreview,
     String? lastError,
     bool clearError = false,
@@ -155,6 +164,15 @@ class KnowledgeAssetExportState {
       lastRemoteUploadCount: clearRemoteUpload
           ? null
           : lastRemoteUploadCount ?? this.lastRemoteUploadCount,
+      lastRemoteRollbackPath: clearRemoteUpload
+          ? null
+          : lastRemoteRollbackPath ?? this.lastRemoteRollbackPath,
+      lastRemoteRollbackRestored: clearRemoteUpload
+          ? null
+          : lastRemoteRollbackRestored ?? this.lastRemoteRollbackRestored,
+      lastRemotePartialRemoved: clearRemoteUpload
+          ? null
+          : lastRemotePartialRemoved ?? this.lastRemotePartialRemoved,
       remotePreview:
           clearRemotePreview ? null : remotePreview ?? this.remotePreview,
       lastError: clearError ? null : lastError ?? this.lastError,
@@ -380,7 +398,11 @@ class KnowledgeAssetExportNotifier
   }
 
   Future<void> uploadRemoteSyncBundle() async {
-    state = state.copyWith(busy: true, clearError: true);
+    state = state.copyWith(
+      busy: true,
+      clearError: true,
+      clearRemoteUpload: true,
+    );
     try {
       final result = await _service.uploadRemoteSyncBundle();
       state = state.copyWith(
@@ -391,12 +413,20 @@ class KnowledgeAssetExportNotifier
         remotePreview: result.preview,
         lastRemoteUploadPath: result.remotePath,
         lastRemoteUploadCount: result.uploadedCount,
+        lastRemoteRollbackPath: result.rollbackSnapshotFile?.path,
+        lastRemoteRollbackRestored: result.rollbackRestored,
+        lastRemotePartialRemoved: result.removedPartialRemote,
         lastSyncBundlePath: result.file.path,
         clearError: true,
       );
     } catch (error) {
+      final writebackError =
+          error is KnowledgeRemoteWritebackException ? error : null;
       state = state.copyWith(
         busy: false,
+        lastRemoteRollbackPath: writebackError?.rollbackSnapshotPath,
+        lastRemoteRollbackRestored: writebackError?.rollbackRestored,
+        lastRemotePartialRemoved: writebackError?.removedPartialRemote,
         lastError: error.toString(),
       );
     }

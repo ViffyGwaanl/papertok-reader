@@ -1128,6 +1128,16 @@
       }
     }
   },
+  "knowledgeExportRemoteRollbackSnapshotPath": "Rollback snapshot: {path}",
+  "@knowledgeExportRemoteRollbackSnapshotPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportRemoteRollbackRestored": "Remote writeback failed; the previous remote bundle was restored and local confirmed assets were unchanged.",
+  "knowledgeExportRemotePartialRemoved": "Remote writeback failed; the partial new remote bundle was removed and local confirmed assets were unchanged.",
   "knowledgeExportSafeDefault": "Drafts, derived indexes, API keys, and conflicts are excluded by default.",
   "knowledgeExportLoadFailed": "Could not load knowledge export plan",
   "reviewInboxActionFailed": "Review action failed",

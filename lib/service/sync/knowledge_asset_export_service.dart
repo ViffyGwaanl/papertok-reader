@@ -145,6 +145,9 @@ class KnowledgeRemoteSyncUploadResult {
     required this.remotePath,
     required this.uploadedAt,
     required this.createdRemote,
+    this.rollbackSnapshotFile,
+    this.rollbackRestored = false,
+    this.removedPartialRemote = false,
     this.preview,
   });
 
@@ -153,9 +156,123 @@ class KnowledgeRemoteSyncUploadResult {
   final String remotePath;
   final int uploadedAt;
   final bool createdRemote;
+  final File? rollbackSnapshotFile;
+  final bool rollbackRestored;
+  final bool removedPartialRemote;
   final KnowledgeRemoteSyncPreview? preview;
 
   int get uploadedCount => snapshot.includedCount;
+}
+
+class KnowledgeRemoteWritebackResult {
+  const KnowledgeRemoteWritebackResult({
+    this.rollbackSnapshotFile,
+    this.rollbackRestored = false,
+    this.removedPartialRemote = false,
+  });
+
+  final File? rollbackSnapshotFile;
+  final bool rollbackRestored;
+  final bool removedPartialRemote;
+}
+
+class KnowledgeRemoteWritebackException implements Exception {
+  const KnowledgeRemoteWritebackException({
+    required this.message,
+    required this.remotePath,
+    this.rollbackSnapshotPath,
+    this.rollbackRestored = false,
+    this.removedPartialRemote = false,
+    this.rollbackError,
+  });
+
+  final String message;
+  final String remotePath;
+  final String? rollbackSnapshotPath;
+  final bool rollbackRestored;
+  final bool removedPartialRemote;
+  final String? rollbackError;
+
+  @override
+  String toString() {
+    final details = <String>[
+      message,
+      'remotePath=$remotePath',
+      if (rollbackSnapshotPath != null)
+        'rollbackSnapshot=$rollbackSnapshotPath',
+      if (rollbackRestored) 'rollbackRestored=true',
+      if (removedPartialRemote) 'removedPartialRemote=true',
+      if (rollbackError != null) 'rollbackError=$rollbackError',
+    ];
+    return details.join('; ');
+  }
+}
+
+class KnowledgeRemoteWritebackExecutor {
+  const KnowledgeRemoteWritebackExecutor({
+    required this.client,
+    required this.localBundleFile,
+    required this.remotePath,
+    required this.remoteExists,
+    required this.rollbackSnapshotFile,
+  });
+
+  final SyncClientBase client;
+  final File localBundleFile;
+  final String remotePath;
+  final bool remoteExists;
+  final File? rollbackSnapshotFile;
+
+  Future<KnowledgeRemoteWritebackResult> execute() async {
+    final remoteDir = p.posix.dirname(remotePath);
+    final rollbackFile = rollbackSnapshotFile;
+    if (remoteExists && rollbackFile != null) {
+      await rollbackFile.parent.create(recursive: true);
+      await client.downloadFile(remotePath, rollbackFile.path);
+    }
+
+    try {
+      await client.mkdirAll(remoteDir);
+      await client.uploadFile(
+        localBundleFile.path,
+        remotePath,
+        replace: true,
+      );
+      return KnowledgeRemoteWritebackResult(
+        rollbackSnapshotFile: rollbackFile,
+      );
+    } catch (error) {
+      var rollbackRestored = false;
+      var removedPartialRemote = false;
+      Object? rollbackError;
+      try {
+        if (remoteExists &&
+            rollbackFile != null &&
+            await rollbackFile.exists()) {
+          await client.uploadFile(
+            rollbackFile.path,
+            remotePath,
+            replace: true,
+          );
+          rollbackRestored = true;
+        } else if (await client.isExist(remotePath)) {
+          await client.remove(remotePath);
+          removedPartialRemote = true;
+        }
+      } catch (e) {
+        rollbackError = e;
+      }
+
+      throw KnowledgeRemoteWritebackException(
+        message: 'Remote sync writeback failed: $error',
+        remotePath: remotePath,
+        rollbackSnapshotPath: rollbackFile?.path,
+        rollbackRestored: rollbackRestored,
+        removedPartialRemote: removedPartialRemote,
+        rollbackError: rollbackError?.toString(),
+      );
+    }
+  }
 }
 
 class KnowledgeAssetExportService {
@@ -498,12 +615,20 @@ class KnowledgeAssetExportService {
       await knowledgeDir.create(recursive: true);
     }
     await syncBundleFile.writeAsString(_buildSyncBundle(snapshot));
-    await resolvedClient.mkdirAll(remoteDir);
-    await resolvedClient.uploadFile(
-      syncBundleFile.path,
-      remotePath,
-      replace: true,
-    );
+    final writeback = await KnowledgeRemoteWritebackExecutor(
+      client: resolvedClient,
+      localBundleFile: syncBundleFile,
+      remotePath: remotePath,
+      remoteExists: remoteExists,
+      rollbackSnapshotFile: remoteExists
+          ? File(
+              p.join(
+                knowledgeDir.path,
+                'knowledge_sync_remote_rollback_${_now()}.json',
+              ),
+            )
+          : null,
+    ).execute();
 
     return KnowledgeRemoteSyncUploadResult(
       snapshot: snapshot,
@@ -511,6 +636,9 @@ class KnowledgeAssetExportService {
       remotePath: remotePath,
       uploadedAt: _now(),
       createdRemote: !remoteExists,
+      rollbackSnapshotFile: writeback.rollbackSnapshotFile,
+      rollbackRestored: writeback.rollbackRestored,
+      removedPartialRemote: writeback.removedPartialRemote,
       preview: preview,
     );
   }

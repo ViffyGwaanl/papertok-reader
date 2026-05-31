@@ -256,6 +256,20 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
               _TinyChip(label: l10n.knowledgeExportRemoteUploadCount(count)),
             ],
           ],
+          if (state.lastRemoteRollbackPath case final path?) ...[
+            const SizedBox(height: 8),
+            _PolicyNote(
+              text: l10n.knowledgeExportRemoteRollbackSnapshotPath(path),
+            ),
+          ],
+          if (state.lastRemoteRollbackRestored == true) ...[
+            const SizedBox(height: 6),
+            _PolicyNote(text: l10n.knowledgeExportRemoteRollbackRestored),
+          ],
+          if (state.lastRemotePartialRemoved == true) ...[
+            const SizedBox(height: 6),
+            _PolicyNote(text: l10n.knowledgeExportRemotePartialRemoved),
+          ],
           if (snapshot.conflictCount > 0) ...[
             const SizedBox(height: 8),
             OutlinedButton.icon(

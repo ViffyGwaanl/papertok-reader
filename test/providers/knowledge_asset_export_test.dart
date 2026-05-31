@@ -294,6 +294,62 @@ void main() {
     expect(state.snapshot.value?.includedCount, 1);
   });
 
+  test('uploadRemoteSyncBundle exposes rollback state on writeback failure',
+      () async {
+    final service = _FakeKnowledgeAssetExportService()
+      ..failRemoteWritebackWithRollback = true;
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .uploadRemoteSyncBundle();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(state.remoteSyncStatus, KnowledgeRemoteSyncStatus.failed);
+    expect(state.lastRemoteRollbackRestored, true);
+    expect(state.lastRemoteRollbackPath, '/tmp/remote-rollback.json');
+    expect(state.lastError, contains('remote writeback failed'));
+  });
+
+  test('uploadRemoteSyncBundle clears stale rollback state on later success',
+      () async {
+    final service = _FakeKnowledgeAssetExportService()
+      ..failRemoteWritebackWithRollback = true;
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .uploadRemoteSyncBundle();
+    expect(
+      container.read(knowledgeAssetExportProvider).lastRemoteRollbackPath,
+      '/tmp/remote-rollback.json',
+    );
+
+    service
+      ..failRemoteWritebackWithRollback = false
+      ..remoteUploadRollbackSnapshotFile = null;
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .uploadRemoteSyncBundle();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(state.remoteSyncStatus, KnowledgeRemoteSyncStatus.uploaded);
+    expect(state.lastRemoteRollbackPath, isNull);
+    expect(state.lastRemoteRollbackRestored, false);
+    expect(state.lastRemotePartialRemoved, false);
+    expect(state.lastError, isNull);
+  });
+
   test('previewRemoteSync clears stale preview when remote read fails',
       () async {
     final service = _FakeKnowledgeAssetExportService();
@@ -494,6 +550,8 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool submittedRemoteReviewHistoryToReview = false;
   bool uploadedRemoteSyncBundle = false;
   bool failRemotePreview = false;
+  bool failRemoteWritebackWithRollback = false;
+  File? remoteUploadRollbackSnapshotFile = File('/tmp/remote-rollback.json');
   bool remotePreviewHasBlockers = true;
 
   @override
@@ -652,6 +710,14 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     if (failRemotePreview) {
       throw StateError('remote unavailable');
     }
+    if (failRemoteWritebackWithRollback) {
+      throw const KnowledgeRemoteWritebackException(
+        message: 'remote writeback failed',
+        remotePath: KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+        rollbackSnapshotPath: '/tmp/remote-rollback.json',
+        rollbackRestored: true,
+      );
+    }
     uploadedRemoteSyncBundle = true;
     return KnowledgeRemoteSyncUploadResult(
       snapshot: await buildSnapshot(),
@@ -659,6 +725,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
       remotePath: remotePath,
       uploadedAt: 200,
       createdRemote: false,
+      rollbackSnapshotFile: remoteUploadRollbackSnapshotFile,
       preview: _remotePreview(await buildSnapshot()),
     );
   }
