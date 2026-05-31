@@ -72,6 +72,20 @@ class KnowledgeAssetConflictReviewResult {
   final KnowledgeRemoteSyncPreview? remotePreview;
 }
 
+class KnowledgeRemoteConflictStageResult {
+  const KnowledgeRemoteConflictStageResult({
+    required this.stagedCount,
+    required this.skippedCount,
+    required this.snapshot,
+    required this.remotePreview,
+  });
+
+  final int stagedCount;
+  final int skippedCount;
+  final KnowledgeAssetExportSnapshot snapshot;
+  final KnowledgeRemoteSyncPreview remotePreview;
+}
+
 class KnowledgeRemoteIncomingReviewResult {
   const KnowledgeRemoteIncomingReviewResult({
     required this.submittedCount,
@@ -302,6 +316,63 @@ class KnowledgeAssetExportService {
 
     return KnowledgeAssetConflictReviewResult(
       submittedCount: submitted,
+      skippedCount: skipped,
+      snapshot: snapshot,
+      remotePreview: preview,
+    );
+  }
+
+  Future<KnowledgeRemoteConflictStageResult>
+      stageRemoteKnowledgeCardConflictsToReview({
+    SyncClientBase? client,
+    String remotePath = defaultRemoteSyncBundlePath,
+  }) async {
+    final snapshot = await buildSnapshot();
+    final preview = await _previewRemoteSync(
+      snapshot: snapshot,
+      client: client,
+      remotePath: remotePath,
+    );
+    final timestamp = _now();
+    var stagedCount = 0;
+    var skipped = 0;
+
+    for (final envelope in preview.conflicts) {
+      final reviewId = _remoteStagedConflictReviewId(envelope.id);
+      if (await reviewStore.getById(reviewId) != null ||
+          await knowledgeCardStore.getStagedRemoteSyncConflictById(
+                envelope.id,
+              ) !=
+              null) {
+        skipped++;
+        continue;
+      }
+      KnowledgeSyncEnvelope? staged;
+      try {
+        staged = await knowledgeCardStore.stageRemoteSyncConflict(envelope);
+        await reviewStore.upsert(
+          _reviewItemForConflict(
+            staged,
+            excludedReason: null,
+            timestamp: timestamp,
+            reviewId: reviewId,
+            extraPayload: {
+              'remoteStaged': true,
+              'stagedConflictId': staged.id,
+            },
+          ),
+        );
+        stagedCount++;
+      } catch (_) {
+        if (staged != null) {
+          await knowledgeCardStore.removeStagedRemoteSyncConflict(staged.id);
+        }
+        skipped++;
+      }
+    }
+
+    return KnowledgeRemoteConflictStageResult(
+      stagedCount: stagedCount,
       skippedCount: skipped,
       snapshot: snapshot,
       remotePreview: preview,
@@ -669,6 +740,8 @@ class KnowledgeAssetExportService {
     KnowledgeSyncEnvelope envelope, {
     required String? excludedReason,
     required int timestamp,
+    String? reviewId,
+    Map<String, dynamic> extraPayload = const <String, dynamic>{},
   }) {
     final conflictReason =
         envelope.conflictReason ?? excludedReason ?? 'pending-conflict-review';
@@ -677,7 +750,7 @@ class KnowledgeAssetExportService {
         ? false
         : _canResolveConflict(envelope);
     return ReviewItem(
-      id: 'sync-conflict:${envelope.id}',
+      id: reviewId ?? 'sync-conflict:${envelope.id}',
       sourceType: ReviewItemSourceType.syncConflict,
       sourceId: envelope.id,
       title: 'Sync conflict: ${envelope.id}',
@@ -707,8 +780,13 @@ class KnowledgeAssetExportService {
             .toList(growable: false)
           ..sort(),
         'sourceRefCount': safeSourceRefs.length,
+        ...extraPayload,
       },
     );
+  }
+
+  String _remoteStagedConflictReviewId(String entityId) {
+    return 'sync-conflict-remote-staged:$entityId';
   }
 
   bool _canResolveConflict(KnowledgeSyncEnvelope envelope) {

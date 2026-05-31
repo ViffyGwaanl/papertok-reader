@@ -211,7 +211,11 @@ class ReviewInboxController {
           return const _ReviewSourceMirrorResult();
         }
         if (item.status == ReviewItemStatus.applied) {
-          await knowledgeCardStore.resolveSyncConflict(item.sourceId, now: now);
+          await knowledgeCardStore.resolveSyncConflict(
+            item.sourceId,
+            stagedConflictId: _stagedSyncConflictId(item),
+            now: now,
+          );
         }
         return const _ReviewSourceMirrorResult();
       case ReviewItemSourceType.memoryCandidate:
@@ -251,6 +255,15 @@ class ReviewInboxController {
   bool _canResolveSyncConflict(ReviewItem item) {
     return item.sourceType == ReviewItemSourceType.syncConflict &&
         item.payload['canApply'] == true;
+  }
+
+  String? _stagedSyncConflictId(ReviewItem item) {
+    if (item.payload['remoteStaged'] != true) return null;
+    final id = item.payload['stagedConflictId']?.toString().trim();
+    if (id == null || id.isEmpty) {
+      throw StateError('Remote staged sync conflict is missing staged id.');
+    }
+    return id;
   }
 
   Future<ReviewItem> _persistTransitionAfterSourceMirror(

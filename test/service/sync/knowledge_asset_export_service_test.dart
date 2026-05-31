@@ -82,8 +82,18 @@ void main() {
         updatedAt: 100,
       );
 
-  Future<KnowledgeCard> stageAppliedCard(String id) async {
-    final staged = await cardStore.upsertCandidate(card(id: id));
+  Future<KnowledgeCard> stageAppliedCard(
+    String id, {
+    String? quote,
+    List<SourceRef>? sourceRefs,
+  }) async {
+    final staged = await cardStore.upsertCandidate(
+      card(
+        id: id,
+        quote: quote ?? 'Traceable export evidence.',
+        sourceRefs: sourceRefs,
+      ),
+    );
     final pending = KnowledgeCardReviewAdapter.fromKnowledgeCard(staged.card);
     final approved = pending.transitionTo(
       ReviewItemStatus.approved,
@@ -864,6 +874,274 @@ void main() {
     );
   });
 
+  test('staged remote card conflict applies only after Review approval',
+      () async {
+    final localCard = await stageAppliedCard('kc-remote-conflict');
+    final remoteConflictCard = card(
+      id: localCard.id,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Remote reviewed evidence.',
+      explanation: 'Remote card should win only after user applies it.',
+      sourceRefs: [
+        traceableRef(snippet: 'Remote reviewed evidence.'),
+      ],
+    );
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion': 1,
+        'createdAt': 2000,
+        'envelopes': [
+          KnowledgeSyncEnvelope(
+            id: remoteConflictCard.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: remoteConflictCard.sourceRefs,
+            payload: remoteConflictCard.toJson(),
+          ).toJson(),
+        ],
+      }),
+    });
+
+    final result = await service.stageRemoteKnowledgeCardConflictsToReview(
+      client: remoteClient,
+    );
+
+    expect(result.remotePreview.local.map((envelope) => envelope.id),
+        contains(localCard.id));
+    expect(result.remotePreview.incoming.map((envelope) => envelope.id),
+        isNot(contains(localCard.id)));
+    expect(result.remotePreview.conflictCount, 1);
+    expect(result.stagedCount, 1);
+    expect(result.skippedCount, 0);
+    expect((await cardStore.getById(localCard.id))?.quote, localCard.quote);
+    final stagedConflict =
+        await cardStore.getStagedRemoteSyncConflictById(localCard.id);
+    expect(stagedConflict, isNotNull);
+    expect(stagedConflict?.requiresConflictReview, true);
+    expect(
+      KnowledgeCard.fromJson(stagedConflict!.payload).quote,
+      'Remote reviewed evidence.',
+    );
+    final reviewItem = (await reviewStore.list(
+      sourceType: ReviewItemSourceType.syncConflict,
+    ))
+        .single;
+    expect(reviewItem.id, 'sync-conflict-remote-staged:${localCard.id}');
+    expect(reviewItem.sourceId, localCard.id);
+    expect(reviewItem.status, ReviewItemStatus.pending);
+    expect(reviewItem.payload['canApply'], true);
+    expect(reviewItem.payload['remoteStaged'], true);
+    expect(reviewItem.payload['remotePreviewOnly'], isNull);
+    expect(reviewItem.payload['stagedConflictId'], localCard.id);
+    expect(jsonEncode(reviewItem.payload),
+        isNot(contains('Remote card should win only after user applies it')));
+
+    final controller = ReviewInboxController(
+      rootDir: tempRoot,
+      reviewStore: reviewStore,
+      knowledgeCardStore: cardStore,
+      spacedReviewStore: spacedReviewStore,
+      now: () => 3000,
+    );
+    await controller.approve(reviewItem.id);
+    await controller.apply(reviewItem.id);
+
+    final resolved = await cardStore.getById(localCard.id);
+    final snapshot = await service.buildSnapshot();
+    expect(resolved?.quote, 'Remote reviewed evidence.');
+    expect(resolved?.reviewState, KnowledgeCardReviewState.applied);
+    expect(resolved?.ownership, AiOutputOwnership.aiGeneratedApproved);
+    expect(
+        await cardStore.getStagedRemoteSyncConflictById(localCard.id), isNull);
+    expect(
+      snapshot.included.map((envelope) => envelope.id),
+      contains(localCard.id),
+    );
+  });
+
+  test('remote card conflict staging skips unsafe untraceable and duplicate',
+      () async {
+    final safeLocal = await stageAppliedCard('kc-safe-remote-conflict');
+    await stageAppliedCard(
+      'kc-unsafe-remote-conflict',
+      quote: 'Local unsafe conflict evidence.',
+      sourceRefs: [
+        traceableRef(
+          bookId: 10,
+          cfi: 'epubcfi(/6/10)',
+          snippet: 'Local unsafe conflict evidence.',
+        ),
+      ],
+    );
+    await stageAppliedCard(
+      'kc-untraceable-remote-conflict',
+      quote: 'Local untraceable conflict evidence.',
+      sourceRefs: [
+        traceableRef(
+          bookId: 11,
+          cfi: 'epubcfi(/6/12)',
+          snippet: 'Local untraceable conflict evidence.',
+        ),
+      ],
+    );
+    await stageAppliedCard(
+      'kc-schema-remote-conflict',
+      quote: 'Local schema conflict evidence.',
+      sourceRefs: [
+        traceableRef(
+          bookId: 12,
+          cfi: 'epubcfi(/6/14)',
+          snippet: 'Local schema conflict evidence.',
+        ),
+      ],
+    );
+    final safeRemote = card(
+      id: safeLocal.id,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Safe staged remote evidence.',
+      sourceRefs: [traceableRef(snippet: 'Safe staged remote evidence.')],
+    );
+    final unsafeRemote = card(
+      id: 'kc-unsafe-remote-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Unsafe remote evidence.',
+    );
+    final untraceableRemote = card(
+      id: 'kc-untraceable-remote-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Untraceable remote evidence.',
+      sourceRefs: const <SourceRef>[],
+    );
+    final schemaRemote = card(
+      id: 'kc-schema-remote-conflict',
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Future schema remote evidence.',
+    );
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion': 1,
+        'createdAt': 2000,
+        'envelopes': [
+          KnowledgeSyncEnvelope(
+            id: safeRemote.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: safeRemote.sourceRefs,
+            payload: safeRemote.toJson(),
+          ).toJson(),
+          KnowledgeSyncEnvelope(
+            id: unsafeRemote.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: unsafeRemote.sourceRefs,
+            payload: {
+              ...unsafeRemote.toJson(),
+              'apiKey': 'remote-secret-must-not-stage',
+            },
+          ).toJson(),
+          KnowledgeSyncEnvelope(
+            id: untraceableRemote.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            payload: untraceableRemote.toJson(),
+          ).toJson(),
+          KnowledgeSyncEnvelope(
+            id: schemaRemote.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 2,
+            updatedAt: 2000,
+            sourceRefs: schemaRemote.sourceRefs,
+            payload: schemaRemote.toJson(),
+          ).toJson(),
+        ],
+      }),
+    });
+
+    final first = await service.stageRemoteKnowledgeCardConflictsToReview(
+      client: remoteClient,
+    );
+    final second = await service.stageRemoteKnowledgeCardConflictsToReview(
+      client: remoteClient,
+    );
+
+    expect(first.stagedCount, 1);
+    expect(first.skippedCount, 3);
+    expect(second.stagedCount, 0);
+    expect(second.skippedCount, 4);
+    final reviewItems = await reviewStore.list(
+      sourceType: ReviewItemSourceType.syncConflict,
+    );
+    expect(reviewItems, hasLength(1));
+    expect(reviewItems.single.sourceId, safeRemote.id);
+    expect(jsonEncode(reviewItems.single.payload),
+        isNot(contains('remote-secret-must-not-stage')));
+    expect(
+      (await cardStore.listStagedRemoteSyncConflicts()).map((e) => e.id),
+      [safeRemote.id],
+    );
+  });
+
+  test('remote card conflict staging rolls back staged entry when review fails',
+      () async {
+    final localCard = await stageAppliedCard('kc-review-upsert-fails');
+    final remoteConflictCard = card(
+      id: localCard.id,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      quote: 'Remote conflict needs a Review row.',
+      sourceRefs: [
+        traceableRef(snippet: 'Remote conflict needs a Review row.'),
+      ],
+    );
+    final remoteClient = _FakeSyncClient({
+      KnowledgeAssetExportService.defaultRemoteSyncBundlePath: jsonEncode({
+        'schemaVersion': 1,
+        'createdAt': 2000,
+        'envelopes': [
+          KnowledgeSyncEnvelope(
+            id: remoteConflictCard.id,
+            entityType: KnowledgeSyncEntityType.knowledgeCard,
+            schemaVersion: 1,
+            updatedAt: 2000,
+            sourceRefs: remoteConflictCard.sourceRefs,
+            payload: remoteConflictCard.toJson(),
+          ).toJson(),
+        ],
+      }),
+    });
+    final failingReviewStore = _FailingReviewItemStore(rootDir: tempRoot);
+    final failingService = KnowledgeAssetExportService(
+      rootDir: tempRoot,
+      knowledgeCardStore: cardStore,
+      reviewStore: failingReviewStore,
+      spacedReviewStore: spacedReviewStore,
+      now: () => 1000,
+    );
+
+    final result =
+        await failingService.stageRemoteKnowledgeCardConflictsToReview(
+      client: remoteClient,
+    );
+
+    expect(result.stagedCount, 0);
+    expect(result.skippedCount, 1);
+    expect(await cardStore.listStagedRemoteSyncConflicts(), isEmpty);
+    expect(
+      await failingReviewStore.list(
+          sourceType: ReviewItemSourceType.syncConflict),
+      isEmpty,
+    );
+  });
+
   test('remote sync upload writes bundle only when remote has no blockers',
       () async {
     await stageAppliedCard('kc-upload');
@@ -1479,5 +1757,18 @@ class _FakeSyncClient extends SyncClientBase {
     files[remotePath] = content;
     uploadedPaths.add(remotePath);
     onProgress?.call(content.length, content.length);
+  }
+}
+
+class _FailingReviewItemStore extends ReviewItemStore {
+  _FailingReviewItemStore({required Directory rootDir})
+      : super(rootDir: rootDir);
+
+  @override
+  Future<ReviewItem> upsert(ReviewItem item) {
+    if (item.id.startsWith('sync-conflict-remote-staged:')) {
+      throw StateError('simulated review upsert failure');
+    }
+    return super.upsert(item);
   }
 }

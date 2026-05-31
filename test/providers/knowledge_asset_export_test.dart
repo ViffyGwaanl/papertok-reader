@@ -131,6 +131,27 @@ void main() {
     expect(state.remotePreview?.conflictCount, 1);
   });
 
+  test('stageRemoteKnowledgeCardConflictsToReview exposes staged count',
+      () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final container = ProviderContainer(
+      overrides: [
+        knowledgeAssetExportServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(knowledgeAssetExportProvider.notifier)
+        .stageRemoteKnowledgeCardConflictsToReview();
+    final state = container.read(knowledgeAssetExportProvider);
+
+    expect(service.stagedRemoteKnowledgeCardConflictsToReview, true);
+    expect(state.lastRemoteConflictStageCount, 1);
+    expect(state.lastRemoteConflictStageSkippedCount, 0);
+    expect(state.remotePreview?.conflictCount, 1);
+  });
+
   test('submitRemoteIncomingToReview exposes submitted incoming count',
       () async {
     final service = _FakeKnowledgeAssetExportService();
@@ -389,6 +410,7 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
   bool submittedConflictsToReview = false;
   bool previewedRemoteSync = false;
   bool submittedRemoteConflictsToReview = false;
+  bool stagedRemoteKnowledgeCardConflictsToReview = false;
   bool submittedRemoteIncomingToReview = false;
   bool submittedRemoteReviewHistoryToReview = false;
   bool uploadedRemoteSyncBundle = false;
@@ -483,6 +505,24 @@ class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {
     submittedRemoteConflictsToReview = true;
     return KnowledgeAssetConflictReviewResult(
       submittedCount: 1,
+      skippedCount: 0,
+      snapshot: await buildSnapshot(),
+      remotePreview: _remotePreview(await buildSnapshot()),
+    );
+  }
+
+  @override
+  Future<KnowledgeRemoteConflictStageResult>
+      stageRemoteKnowledgeCardConflictsToReview({
+    SyncClientBase? client,
+    String remotePath = KnowledgeAssetExportService.defaultRemoteSyncBundlePath,
+  }) async {
+    if (failRemotePreview) {
+      throw StateError('remote unavailable');
+    }
+    stagedRemoteKnowledgeCardConflictsToReview = true;
+    return KnowledgeRemoteConflictStageResult(
+      stagedCount: 1,
       skippedCount: 0,
       snapshot: await buildSnapshot(),
       remotePreview: _remotePreview(await buildSnapshot()),

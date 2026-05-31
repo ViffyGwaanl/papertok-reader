@@ -971,6 +971,15 @@
       }
     }
   },
+  "knowledgeExportStageRemoteCardConflictsToReview": "暂存安全远端知识卡冲突到 Review",
+  "knowledgeExportRemoteConflictStageSent": "{count} 个安全远端知识卡冲突已暂存到 Review inbox",
+  "@knowledgeExportRemoteConflictStageSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgeExportSendRemoteIncomingToReview": "发送远端待引入到 Review",
   "knowledgeExportRemoteIncomingReviewSent": "{count} 个远端待引入已发送到 Review inbox",
   "@knowledgeExportRemoteIncomingReviewSent": {

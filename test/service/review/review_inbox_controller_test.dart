@@ -472,6 +472,90 @@ void main() {
     expect(await graphStore.listEdges(), isEmpty);
   });
 
+  test('staged remote sync conflict fails closed without staged envelope',
+      () async {
+    final item = ReviewItem(
+      id: 'sync-conflict-remote-staged:kc-missing-stage',
+      sourceType: ReviewItemSourceType.syncConflict,
+      sourceId: 'kc-missing-stage',
+      title: 'Sync conflict: kc-missing-stage',
+      body: 'Conflict reason: content-conflict',
+      status: ReviewItemStatus.pending,
+      sourceRefs: [traceableRef()],
+      payload: const {
+        'canApply': true,
+        'remoteStaged': true,
+        'stagedConflictId': 'kc-missing-stage',
+      },
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    await reviewStore.upsert(item);
+    await controller.approve(item.id);
+
+    await expectLater(
+      controller.apply(item.id),
+      throwsA(isA<StateError>()),
+    );
+
+    final unchanged = await reviewStore.getById(item.id);
+    expect(unchanged?.status, ReviewItemStatus.approved);
+    expect(unchanged?.appliedAt, isNull);
+    expect(await cardStore.getById(item.sourceId), isNull);
+  });
+
+  test('staged remote sync conflict rejects mismatched staged envelope',
+      () async {
+    final stagedRemoteCard = card(id: 'kc-other-staged').copyWith(
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+    );
+    await cardStore.stageRemoteSyncConflict(
+      KnowledgeSyncEnvelope(
+        id: stagedRemoteCard.id,
+        entityType: KnowledgeSyncEntityType.knowledgeCard,
+        schemaVersion: 1,
+        updatedAt: 200,
+        conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+        conflictReason: 'content-conflict',
+        sourceRefs: stagedRemoteCard.sourceRefs,
+        payload: stagedRemoteCard.toJson(),
+      ),
+    );
+    final item = ReviewItem(
+      id: 'sync-conflict-remote-staged:kc-forged-source',
+      sourceType: ReviewItemSourceType.syncConflict,
+      sourceId: 'kc-forged-source',
+      title: 'Sync conflict: kc-forged-source',
+      body: 'Conflict reason: content-conflict',
+      status: ReviewItemStatus.pending,
+      sourceRefs: [traceableRef()],
+      payload: const {
+        'canApply': true,
+        'remoteStaged': true,
+        'stagedConflictId': 'kc-other-staged',
+      },
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    await reviewStore.upsert(item);
+    await controller.approve(item.id);
+
+    await expectLater(
+      controller.apply(item.id),
+      throwsA(isA<StateError>()),
+    );
+
+    final unchanged = await reviewStore.getById(item.id);
+    expect(unchanged?.status, ReviewItemStatus.approved);
+    expect(unchanged?.appliedAt, isNull);
+    expect(await cardStore.getById(item.sourceId), isNull);
+    expect(
+      await cardStore.getStagedRemoteSyncConflictById('kc-other-staged'),
+      isNotNull,
+    );
+  });
+
   test('apply mirrors concept graph relation source state', () async {
     await stageConceptRelationForReview('edge-apply');
 

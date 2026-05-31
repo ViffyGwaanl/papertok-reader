@@ -34,6 +34,8 @@ class KnowledgeCardStore {
   Directory get knowledgeDir => Directory(p.join(rootDir.path, '.knowledge'));
   File get cardsFile =>
       File(p.join(knowledgeDir.path, 'knowledge_cards_v1.json'));
+  File get stagedRemoteSyncConflictsFile =>
+      File(p.join(knowledgeDir.path, 'remote_sync_conflicts_v1.json'));
 
   Future<void> ensureInitialized() async {
     if (!await knowledgeDir.exists()) {
@@ -41,6 +43,11 @@ class KnowledgeCardStore {
     }
     if (!await cardsFile.exists()) {
       await cardsFile.writeAsString(_encode(const <KnowledgeCard>[]));
+    }
+    if (!await stagedRemoteSyncConflictsFile.exists()) {
+      await stagedRemoteSyncConflictsFile.writeAsString(
+        _encodeStagedRemoteSyncConflicts(const <KnowledgeSyncEnvelope>[]),
+      );
     }
   }
 
@@ -69,6 +76,31 @@ class KnowledgeCardStore {
           .map(_envelopeFromStoredEntry)
           .whereType<KnowledgeSyncEnvelope>()
           .toList(growable: false);
+    });
+  }
+
+  Future<List<KnowledgeSyncEnvelope>> listStagedRemoteSyncConflicts() {
+    return _enqueue(_readStagedRemoteSyncConflictsUnlocked);
+  }
+
+  Future<KnowledgeSyncEnvelope?> getStagedRemoteSyncConflictById(String id) {
+    return _enqueue(() async {
+      final entries = await _readStagedRemoteSyncConflictsUnlocked();
+      for (final entry in entries) {
+        if (entry.id == id) return entry;
+      }
+      return null;
+    });
+  }
+
+  Future<bool> removeStagedRemoteSyncConflict(String id) {
+    return _enqueue(() async {
+      final entries = await _readStagedRemoteSyncConflictsUnlocked();
+      final before = entries.length;
+      entries.removeWhere((entry) => entry.id == id);
+      if (entries.length == before) return false;
+      await _writeStagedRemoteSyncConflictsUnlocked(entries);
+      return true;
     });
   }
 
@@ -149,11 +181,36 @@ class KnowledgeCardStore {
     });
   }
 
+  Future<KnowledgeSyncEnvelope> stageRemoteSyncConflict(
+    KnowledgeSyncEnvelope remote,
+  ) {
+    return _enqueue(() async {
+      final staged = _validatedRemoteSyncConflictEnvelope(remote);
+      final entries = await _readStagedRemoteSyncConflictsUnlocked();
+      final index = entries.indexWhere((entry) => entry.id == staged.id);
+      if (index >= 0) {
+        entries[index] = staged;
+      } else {
+        entries.add(staged);
+      }
+      await _writeStagedRemoteSyncConflictsUnlocked(entries);
+      return staged;
+    });
+  }
+
   Future<KnowledgeCard> resolveSyncConflict(
     String id, {
+    String? stagedConflictId,
     int? now,
   }) {
     return _enqueue(() async {
+      if (stagedConflictId != null) {
+        return _resolveStagedRemoteSyncConflictUnlocked(
+          id,
+          stagedConflictId: stagedConflictId,
+          now: now,
+        );
+      }
       final entries = await _readStoredEntriesUnlocked();
       final index = entries.indexWhere((entry) {
         final envelope = _envelopeFromStoredEntry(entry);
@@ -164,44 +221,11 @@ class KnowledgeCardStore {
       }
 
       final envelope = _envelopeFromStoredEntry(entries[index]);
-      if (envelope == null || !envelope.requiresConflictReview) {
-        throw StateError('KnowledgeCard sync conflict is not pending: $id');
-      }
-      if (envelope.entityType != KnowledgeSyncEntityType.knowledgeCard) {
-        throw StateError(
-          'Sync conflict is not a KnowledgeCard: '
-          '${envelope.entityType.asString}',
-        );
-      }
-      if (envelope.schemaVersion != 1) {
-        throw StateError(
-          'Unsupported KnowledgeCard sync schema: ${envelope.schemaVersion}',
-        );
-      }
-      if (KnowledgeSyncPolicy.containsSecretPayload(envelope.payload)) {
-        throw StateError(
-            'KnowledgeCard sync conflict contains secret payload.');
-      }
-
-      final card = KnowledgeCard.fromJson(envelope.payload);
-      final sourceRefs =
-          card.sourceRefs.isNotEmpty ? card.sourceRefs : envelope.sourceRefs;
-      if (!_hasTraceableSyncSource(sourceRefs)) {
-        throw StateError(
-          'KnowledgeCard sync conflict cannot be resolved without source refs.',
-        );
-      }
-
-      final resolved = card.copyWith(
-        id: envelope.id,
-        sourceRefs: sourceRefs,
-        reviewState: KnowledgeCardReviewState.applied,
-        ownership: AiOutputOwnership.aiGeneratedApproved,
-        updatedAt: now ?? envelope.updatedAt,
+      final resolved = _resolvedCardFromConflictEnvelope(
+        envelope,
+        expectedId: id,
+        now: now,
       );
-      if (!resolved.isUserAsset) {
-        throw StateError('Resolved KnowledgeCard is not a user asset.');
-      }
 
       entries[index] = _envelopeForCard(resolved).toJson();
       await _writeStoredEntriesUnlocked(entries);
@@ -242,6 +266,41 @@ class KnowledgeCardStore {
     return <Map<String, dynamic>>[];
   }
 
+  Future<List<KnowledgeSyncEnvelope>>
+      _readStagedRemoteSyncConflictsUnlocked() async {
+    await ensureInitialized();
+    final raw = await stagedRemoteSyncConflictsFile.readAsString();
+    if (raw.trim().isEmpty) return <KnowledgeSyncEnvelope>[];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        final list = decoded['conflicts'];
+        if (list is List) {
+          return list
+              .whereType<Map>()
+              .map((entry) =>
+                  KnowledgeSyncEnvelope.fromJson(Map<String, dynamic>.from(
+                    entry,
+                  )))
+              .toList();
+        }
+      }
+    } catch (_) {
+      // Treat malformed staged remote conflicts as empty; remote can be
+      // previewed and staged again.
+    }
+    return <KnowledgeSyncEnvelope>[];
+  }
+
+  Future<void> _writeStagedRemoteSyncConflictsUnlocked(
+    List<KnowledgeSyncEnvelope> entries,
+  ) async {
+    await ensureInitialized();
+    await stagedRemoteSyncConflictsFile.writeAsString(
+      _encodeStagedRemoteSyncConflicts(entries),
+    );
+  }
+
   Future<void> _writeAllUnlocked(List<KnowledgeCard> cards) async {
     await _writeStoredEntriesUnlocked(
       cards.map((card) => _envelopeForCard(card).toJson()).toList(),
@@ -267,6 +326,16 @@ class KnowledgeCardStore {
       'cards': cards
           .map((card) => _envelopeForCard(card).toJson())
           .toList(growable: false),
+    };
+    return const JsonEncoder.withIndent('  ').convert(payload);
+  }
+
+  String _encodeStagedRemoteSyncConflicts(
+    List<KnowledgeSyncEnvelope> entries,
+  ) {
+    final payload = <String, dynamic>{
+      'version': 1,
+      'conflicts': entries.map((entry) => entry.toJson()).toList(),
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
   }
@@ -326,6 +395,151 @@ class KnowledgeCardStore {
       }
     }
     return null;
+  }
+
+  KnowledgeSyncEnvelope _validatedRemoteSyncConflictEnvelope(
+    KnowledgeSyncEnvelope remote,
+  ) {
+    if (!remote.requiresConflictReview) {
+      throw StateError('Remote sync conflict is not pending review.');
+    }
+    if (remote.entityType != KnowledgeSyncEntityType.knowledgeCard) {
+      throw StateError(
+        'Remote sync conflict is not a KnowledgeCard: '
+        '${remote.entityType.asString}',
+      );
+    }
+    if (remote.schemaVersion != 1) {
+      throw StateError(
+        'Unsupported remote KnowledgeCard sync schema: ${remote.schemaVersion}',
+      );
+    }
+    if (KnowledgeSyncPolicy.containsSecretPayload(remote.payload)) {
+      throw StateError(
+          'Remote KnowledgeCard conflict contains secret payload.');
+    }
+
+    final card = KnowledgeCard.fromJson(remote.payload);
+    final sourceRefs =
+        card.sourceRefs.isNotEmpty ? card.sourceRefs : remote.sourceRefs;
+    if (!_hasTraceableSyncSource(sourceRefs)) {
+      throw StateError(
+        'Remote KnowledgeCard conflict cannot be staged without source refs.',
+      );
+    }
+    final safeSourceRefs = sourceRefs
+        .map((ref) => SourceRef.fromJson(ref.toSafeJson()))
+        .toList(growable: false);
+    final safeCard = card.copyWith(
+      id: remote.id,
+      sourceRefs: safeSourceRefs,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      updatedAt: remote.updatedAt,
+    );
+    return KnowledgeSyncEnvelope(
+      id: remote.id,
+      entityType: KnowledgeSyncEntityType.knowledgeCard,
+      schemaVersion: 1,
+      updatedAt: remote.updatedAt,
+      deletedAt: remote.deletedAt,
+      sourceRefs: safeSourceRefs,
+      conflictStatus: KnowledgeSyncConflictStatus.pendingReview,
+      conflictReason: remote.conflictReason ?? 'remote-content-conflict',
+      payload: safeCard.toJson(),
+    );
+  }
+
+  KnowledgeCard _resolvedCardFromConflictEnvelope(
+    KnowledgeSyncEnvelope? envelope, {
+    required String expectedId,
+    int? now,
+  }) {
+    if (envelope == null || !envelope.requiresConflictReview) {
+      throw StateError(
+        'KnowledgeCard sync conflict is not pending: $expectedId',
+      );
+    }
+    if (envelope.id != expectedId) {
+      throw StateError(
+        'KnowledgeCard sync conflict id mismatch: ${envelope.id}',
+      );
+    }
+    if (envelope.entityType != KnowledgeSyncEntityType.knowledgeCard) {
+      throw StateError(
+        'Sync conflict is not a KnowledgeCard: '
+        '${envelope.entityType.asString}',
+      );
+    }
+    if (envelope.schemaVersion != 1) {
+      throw StateError(
+        'Unsupported KnowledgeCard sync schema: ${envelope.schemaVersion}',
+      );
+    }
+    if (KnowledgeSyncPolicy.containsSecretPayload(envelope.payload)) {
+      throw StateError('KnowledgeCard sync conflict contains secret payload.');
+    }
+
+    final card = KnowledgeCard.fromJson(envelope.payload);
+    final sourceRefs =
+        card.sourceRefs.isNotEmpty ? card.sourceRefs : envelope.sourceRefs;
+    if (!_hasTraceableSyncSource(sourceRefs)) {
+      throw StateError(
+        'KnowledgeCard sync conflict cannot be resolved without source refs.',
+      );
+    }
+
+    final safeSourceRefs = sourceRefs
+        .map((ref) => SourceRef.fromJson(ref.toSafeJson()))
+        .toList(growable: false);
+    final resolved = card.copyWith(
+      id: envelope.id,
+      sourceRefs: safeSourceRefs,
+      reviewState: KnowledgeCardReviewState.applied,
+      ownership: AiOutputOwnership.aiGeneratedApproved,
+      updatedAt: now ?? envelope.updatedAt,
+    );
+    if (!resolved.isUserAsset) {
+      throw StateError('Resolved KnowledgeCard is not a user asset.');
+    }
+    return resolved;
+  }
+
+  Future<KnowledgeCard> _resolveStagedRemoteSyncConflictUnlocked(
+    String id, {
+    required String stagedConflictId,
+    int? now,
+  }) async {
+    final stagedEntries = await _readStagedRemoteSyncConflictsUnlocked();
+    final stagedIndex =
+        stagedEntries.indexWhere((entry) => entry.id == stagedConflictId);
+    if (stagedIndex < 0) {
+      throw StateError(
+        'Staged remote KnowledgeCard sync conflict not found: '
+        '$stagedConflictId',
+      );
+    }
+    final staged = stagedEntries[stagedIndex];
+    final resolved = _resolvedCardFromConflictEnvelope(
+      staged,
+      expectedId: id,
+      now: now,
+    );
+
+    final entries = await _readStoredEntriesUnlocked();
+    final index = entries.indexWhere((entry) {
+      final envelope = _envelopeFromStoredEntry(entry);
+      return envelope?.id == id;
+    });
+    if (index >= 0) {
+      entries[index] = _envelopeForCard(resolved).toJson();
+    } else {
+      entries.add(_envelopeForCard(resolved).toJson());
+    }
+    stagedEntries.removeAt(stagedIndex);
+    await _writeStoredEntriesUnlocked(entries);
+    await _writeStagedRemoteSyncConflictsUnlocked(stagedEntries);
+    return resolved;
   }
 
   KnowledgeCard _reviewCandidate(KnowledgeCard candidate) {

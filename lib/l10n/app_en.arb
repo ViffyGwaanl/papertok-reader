@@ -1074,6 +1074,15 @@
       }
     }
   },
+  "knowledgeExportStageRemoteCardConflictsToReview": "Stage safe remote card conflicts to Review",
+  "knowledgeExportRemoteConflictStageSent": "{count} safe remote card conflict staged for Review inbox",
+  "@knowledgeExportRemoteConflictStageSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgeExportSendRemoteIncomingToReview": "Send remote incoming to Review",
   "knowledgeExportRemoteIncomingReviewSent": "{count} remote incoming sent to Review inbox",
   "@knowledgeExportRemoteIncomingReviewSent": {
