@@ -419,6 +419,170 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Start Seminar'), findsOneWidget);
   });
+
+  testWidgets('selected-text AI action opens chat draft with reader SourceRef',
+      (tester) async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+
+    final launches = <_AiDraftLaunch>[];
+    var closeCount = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider
+              .overrideWithValue(_EmptyConceptGraphStore()),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: Scaffold(
+            body: Center(
+              child: ExcerptMenu(
+                annoCfi: 'epubcfi(/6/4)',
+                annoContent: 'Evidence-backed learning needs jump links.',
+                onClose: () => closeCount += 1,
+                footnote: false,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black12),
+                ),
+                onTranslate: () async {},
+                toggleReaderNoteMenu: ({bool? show}) {},
+                openReaderNoteMenu: (_) async {},
+                onNoteCreated: (_) {},
+                axis: Axis.horizontal,
+                reverse: false,
+                knowledgeCardReaderContext:
+                    const ExcerptKnowledgeCardReaderContext(
+                  bookId: 42,
+                  bookTitle: 'Evidence Book',
+                  chapterTitle: 'Chapter 1',
+                ),
+                aiChatDraftOpener: ({
+                  required content,
+                  sourceRef,
+                }) async {
+                  launches.add(
+                    _AiDraftLaunch(
+                      content: content,
+                      sourceRef: sourceRef,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(-360, 0),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('AI', skipOffstage: false));
+    await _pumpMenuActionFrames(tester);
+
+    expect(closeCount, 1);
+    expect(launches, hasLength(1));
+    expect(
+        launches.single.content, 'Evidence-backed learning needs jump links.');
+    final sourceRef = launches.single.sourceRef;
+    expect(sourceRef, isNotNull);
+    expect(sourceRef!.bookId, 42);
+    expect(sourceRef.cfi, 'epubcfi(/6/4)');
+    expect(sourceRef.sourceTextSnippet,
+        'Evidence-backed learning needs jump links.');
+    expect(sourceRef.sourceKind, SourceRefKind.reader);
+    expect(sourceRef.sourceTitle, 'Evidence Book');
+    expect(sourceRef.locationLabel, 'Chapter 1');
+    expect(sourceRef.canJumpBack, true);
+    expect(sourceRef.jumpLink, startsWith('paperreader://reader/open?'));
+  });
+
+  testWidgets('selected-text AI action does not fake grounding without anchor',
+      (tester) async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+
+    final launches = <_AiDraftLaunch>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider
+              .overrideWithValue(_EmptyConceptGraphStore()),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: Scaffold(
+            body: Center(
+              child: ExcerptMenu(
+                annoCfi: '   ',
+                annoContent: 'Ungrounded selection still opens a draft.',
+                onClose: () {},
+                footnote: false,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black12),
+                ),
+                onTranslate: () async {},
+                toggleReaderNoteMenu: ({bool? show}) {},
+                openReaderNoteMenu: (_) async {},
+                onNoteCreated: (_) {},
+                axis: Axis.horizontal,
+                reverse: false,
+                knowledgeCardReaderContext:
+                    const ExcerptKnowledgeCardReaderContext(
+                  bookId: 42,
+                  bookTitle: 'Evidence Book',
+                  chapterTitle: 'Chapter 1',
+                ),
+                aiChatDraftOpener: ({
+                  required content,
+                  sourceRef,
+                }) async {
+                  launches.add(
+                    _AiDraftLaunch(
+                      content: content,
+                      sourceRef: sourceRef,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(-360, 0),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('AI', skipOffstage: false));
+    await _pumpMenuActionFrames(tester);
+
+    expect(launches, hasLength(1));
+    expect(
+        launches.single.content, 'Ungrounded selection still opens a draft.');
+    expect(launches.single.sourceRef, isNull);
+  });
 }
 
 Future<void> _pumpMenuActionFrames(WidgetTester tester) async {
@@ -441,6 +605,16 @@ class _KnowledgeCardCall {
   final String selectedText;
   final String? chapterTitle;
   final String? bookTitle;
+}
+
+class _AiDraftLaunch {
+  const _AiDraftLaunch({
+    required this.content,
+    required this.sourceRef,
+  });
+
+  final String content;
+  final SourceRef? sourceRef;
 }
 
 class _EmptyConceptGraphStore extends ConceptGraphStore {

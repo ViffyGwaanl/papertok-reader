@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/knowledge_sync.dart';
 import 'package:papertok_reader/page/home_page/settings_page.dart';
 import 'package:papertok_reader/page/settings_page/ai.dart';
@@ -17,10 +18,12 @@ import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/spaced_review.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/providers/knowledge_asset_export.dart';
+import 'package:papertok_reader/providers/review_inbox.dart';
 import 'package:papertok_reader/providers/spaced_review.dart';
 import 'package:papertok_reader/service/ai/skills/custom_skill_store.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/review/review_inbox_controller.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/service/sync/knowledge_asset_export_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -130,6 +133,129 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Slow Reader'), findsOneWidget);
+  });
+
+  testWidgets('AI settings opens Review Inbox entry', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewInboxControllerProvider.overrideWithValue(
+            _EmptyReviewInboxController(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AISettings(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Review inbox'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Review inbox'));
+    await _pumpNavigationFrames(tester);
+
+    expect(find.byType(ReviewInboxPage), findsOneWidget);
+    expect(find.text('Nothing waiting for review'), findsOneWidget);
+  });
+
+  testWidgets('home Settings top AI section opens Review Inbox directly',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewInboxControllerProvider.overrideWithValue(
+            _EmptyReviewInboxController(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: SettingsPage(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Review inbox'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Review inbox'));
+    await _pumpNavigationFrames(tester);
+
+    expect(find.byType(ReviewInboxPage), findsOneWidget);
+    expect(find.text('Nothing waiting for review'), findsOneWidget);
+  });
+
+  testWidgets('AI settings picker activates enabled custom skill only',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+    await CustomSkillStore().importJson('''
+{
+  "schemaVersion": 1,
+  "id": "local_terms",
+  "name": "Local Terms",
+  "description": "Explain local concepts.",
+  "systemPromptAppend": "Prefer local term definitions.",
+  "allowedToolIds": ["current_chapter_content"],
+  "scenes": ["reading"],
+  "enabled": true
+}
+''');
+    await CustomSkillStore().importJson('''
+{
+  "schemaVersion": 1,
+  "id": "disabled_terms",
+  "name": "Disabled Terms",
+  "description": "Should stay hidden.",
+  "systemPromptAppend": "This disabled skill must not be selectable.",
+  "allowedToolIds": ["current_chapter_content"],
+  "scenes": ["reading"],
+  "enabled": false
+}
+''');
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AISettings(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Active Skill'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Active Skill'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Local Terms'), findsOneWidget);
+    expect(find.text('Disabled Terms'), findsNothing);
+
+    await tester.tap(find.text('Local Terms'));
+    await tester.pumpAndSettle();
+
+    expect(Prefs().activeAiSkillId, 'local_terms');
+    expect(find.text('Local Terms'), findsOneWidget);
   });
 
   testWidgets('AI settings opens knowledge sync export entry', (tester) async {
@@ -273,6 +399,16 @@ Future<void> _pumpNavigationFrames(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
   await tester.pump(const Duration(milliseconds: 300));
+}
+
+class _EmptyReviewInboxController extends ReviewInboxController {
+  @override
+  Future<List<ReviewItem>> list({
+    ReviewItemStatus? status,
+    ReviewItemSourceType? sourceType,
+  }) async {
+    return const <ReviewItem>[];
+  }
 }
 
 class _FakeKnowledgeAssetExportService extends KnowledgeAssetExportService {

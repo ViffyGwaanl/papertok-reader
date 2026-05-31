@@ -71,6 +71,7 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.resizeToAvoidBottomInset = true,
     this.emptyStateBuilder,
     this.chatKnowledgeCardProducer,
+    this.memoryWorkflowService,
     this.initialSourceRef,
   });
 
@@ -113,6 +114,7 @@ class AiChatStream extends ConsumerStatefulWidget {
       emptyStateBuilder;
 
   final AiChatKnowledgeCardProducer? chatKnowledgeCardProducer;
+  final MemoryWorkflowService? memoryWorkflowService;
   final SourceRef? initialSourceRef;
 
   @override
@@ -128,7 +130,8 @@ enum _MessageMemoryAction {
 class AiChatStreamState extends ConsumerState<AiChatStream> {
   final TextEditingController inputController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final MemoryWorkflowService _memoryWorkflow = MemoryWorkflowService();
+  late final MemoryWorkflowService _memoryWorkflow =
+      widget.memoryWorkflowService ?? MemoryWorkflowService();
   late final AiChatKnowledgeCardProducer _chatKnowledgeCards =
       widget.chatKnowledgeCardProducer ?? AiChatKnowledgeCardProducer();
 
@@ -2496,7 +2499,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     String? messageNodeId,
   }) {
     final l10n = L10n.of(context);
-    final enabled = text.trim().isNotEmpty;
+    final enabled = text.trim().isNotEmpty && !_isStreaming;
 
     return PopupMenuButton<_MessageMemoryAction>(
       enabled: enabled,

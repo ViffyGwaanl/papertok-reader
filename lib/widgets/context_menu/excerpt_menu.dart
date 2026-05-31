@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/constants/note_annotations.dart';
 import 'package:papertok_reader/dao/book_note.dart';
@@ -33,6 +35,11 @@ typedef ExcerptKnowledgeCardCreator
 typedef ExcerptKnowledgeCardReaderContextResolver
     = ExcerptKnowledgeCardReaderContext? Function();
 
+typedef ExcerptAiChatDraftOpener = Future<void> Function({
+  required String content,
+  SourceRef? sourceRef,
+});
+
 @visibleForTesting
 ExcerptKnowledgeCardReaderContextResolver?
     debugExcerptKnowledgeCardReaderContextResolverOverride;
@@ -65,6 +72,7 @@ class ExcerptMenu extends StatefulWidget {
   final ExcerptKnowledgeCardReaderContext? knowledgeCardReaderContext;
   final ExcerptKnowledgeCardCreator? knowledgeCardCreator;
   final ValueChanged<String>? knowledgeCardFeedback;
+  final ExcerptAiChatDraftOpener? aiChatDraftOpener;
 
   const ExcerptMenu({
     super.key,
@@ -83,6 +91,7 @@ class ExcerptMenu extends StatefulWidget {
     this.knowledgeCardReaderContext,
     this.knowledgeCardCreator,
     this.knowledgeCardFeedback,
+    this.aiChatDraftOpener,
   });
 
   @override
@@ -355,21 +364,45 @@ class ExcerptMenuState extends State<ExcerptMenu> {
   }
 
   SourceRef? _selectionSourceRef() {
-    final player = epubPlayerKey.currentState;
-    if (player == null) return null;
-    final bookId = player.widget.book.id;
     final cfi = widget.annoCfi.trim();
+    if (cfi.isEmpty) return null;
+
+    final player = epubPlayerKey.currentState;
+    final readerContext = player == null ? _knowledgeCardReaderContext() : null;
+    final bookId = player?.widget.book.id ?? readerContext?.bookId;
+    if (bookId == null) return null;
+
     final intent = PaperReaderReaderIntent(bookId: bookId, cfi: cfi);
     return SourceRef(
       bookId: bookId,
       cfi: cfi,
       jumpLink: intent.hasTarget ? intent.toUri().toString() : null,
-      sourceTitle: player.book.title,
-      locationLabel: player.chapterTitle,
+      sourceTitle: player?.book.title ?? readerContext?.bookTitle,
+      locationLabel: player?.chapterTitle ?? readerContext?.chapterTitle,
       sourceTextSnippet: widget.annoContent,
       sourceTextForHash: widget.annoContent,
       sourceKind: SourceRefKind.reader,
       createdAt: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  void _openAiChatFromSelection() {
+    widget.onClose();
+    final sourceRef = _selectionSourceRef();
+    final injectedOpener = widget.aiChatDraftOpener;
+    if (injectedOpener != null) {
+      unawaited(
+        injectedOpener(
+          content: widget.annoContent,
+          sourceRef: sourceRef,
+        ),
+      );
+      return;
+    }
+
+    readingPageKey.currentState?.openAiChatDraft(
+      content: widget.annoContent,
+      sourceRef: sourceRef,
     );
   }
 
@@ -598,22 +631,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
           context: context,
           icon: EvaIcons.message_circle_outline,
           label: L10n.of(context).navBarAI,
-          onTap: () {
-            widget.onClose();
-            final key = readingPageKey.currentState;
-            if (key != null) {
-              final sourceRef = _selectionSourceRef();
-              key.showAiChat(
-                content: widget.annoContent,
-                sendImmediate: false,
-                sourceRef: sourceRef,
-              );
-              key.aiChatKey.currentState?.prefillDraft(
-                message: widget.annoContent,
-                sourceRef: sourceRef,
-              );
-            }
-          },
+          onTap: _openAiChatFromSelection,
         ),
       _actionButton(
         context: context,
