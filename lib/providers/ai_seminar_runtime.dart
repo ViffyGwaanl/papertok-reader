@@ -197,6 +197,7 @@ class AiSeminarRuntimeState {
     this.partialRoleText,
     this.turns = const <AiSeminarRoleTurn>[],
     this.whiteboardEntries = const <AiSeminarWhiteboardEntry>[],
+    this.directorState,
     this.synthesis,
     this.lastRun,
     this.error,
@@ -224,6 +225,7 @@ class AiSeminarRuntimeState {
   final String? partialRoleText;
   final List<AiSeminarRoleTurn> turns;
   final List<AiSeminarWhiteboardEntry> whiteboardEntries;
+  final AiSeminarDirectorState? directorState;
   final AiSeminarSynthesis? synthesis;
   final AiSeminarRun? lastRun;
   final String? error;
@@ -255,6 +257,7 @@ class AiSeminarRuntimeState {
     Object? partialRoleText = _unset,
     List<AiSeminarRoleTurn>? turns,
     List<AiSeminarWhiteboardEntry>? whiteboardEntries,
+    Object? directorState = _unset,
     Object? synthesis = _unset,
     Object? lastRun = _unset,
     String? error,
@@ -278,6 +281,9 @@ class AiSeminarRuntimeState {
           : partialRoleText as String?,
       turns: turns ?? this.turns,
       whiteboardEntries: whiteboardEntries ?? this.whiteboardEntries,
+      directorState: identical(directorState, _unset)
+          ? this.directorState
+          : directorState as AiSeminarDirectorState?,
       synthesis: identical(synthesis, _unset)
           ? this.synthesis
           : synthesis as AiSeminarSynthesis?,
@@ -306,6 +312,7 @@ class AiSeminarRuntimeState {
         'whiteboardEntries': whiteboardEntries
             .map((entry) => entry.toJson())
             .toList(growable: false),
+        if (directorState != null) 'directorState': directorState!.toJson(),
         if (synthesis != null) 'synthesis': synthesis!.toJson(),
         if (lastRun != null) 'lastRun': lastRun!.toJson(),
         if (error != null) 'error': error,
@@ -362,6 +369,11 @@ class AiSeminarRuntimeState {
                   ))
               .toList(growable: false) ??
           const <AiSeminarWhiteboardEntry>[],
+      directorState: json['directorState'] is Map
+          ? AiSeminarDirectorState.fromJson(
+              Map<String, dynamic>.from(json['directorState'] as Map),
+            )
+          : null,
       synthesis: json['synthesis'] is Map
           ? AiSeminarSynthesis.fromJson(
               Map<String, dynamic>.from(json['synthesis'] as Map),
@@ -470,6 +482,11 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       state.backgroundJobs,
       runningJob,
     );
+    final checkpointWhiteboardEntries = checkpoint == null
+        ? const <AiSeminarWhiteboardEntry>[]
+        : checkpoint.completedTurns
+            .expand((turn) => turn.whiteboardEntries)
+            .toList(growable: false);
     state = AiSeminarRuntimeState.initial(
       providerDiagnostics: providerDiagnostics,
     ).copyWith(
@@ -482,11 +499,13 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       lastRun: null,
       evidenceBundle: checkpoint?.evidenceBundle,
       turns: checkpoint?.completedTurns ?? const <AiSeminarRoleTurn>[],
-      whiteboardEntries: checkpoint == null
-          ? const <AiSeminarWhiteboardEntry>[]
-          : checkpoint.completedTurns
-              .expand((turn) => turn.whiteboardEntries)
-              .toList(growable: false),
+      whiteboardEntries: checkpointWhiteboardEntries,
+      directorState: _directorStateFor(
+        session: resolvedSession,
+        evidenceBundle: checkpoint?.evidenceBundle,
+        turns: checkpoint?.completedTurns ?? const <AiSeminarRoleTurn>[],
+        whiteboardEntries: checkpointWhiteboardEntries,
+      ),
       startedAt: runningJob.startedAt,
       backgroundJob: runningJob,
       backgroundJobs: backgroundJobs,
@@ -605,6 +624,12 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       lastRun: run,
       activeRole: null,
       partialRoleText: null,
+      directorState: _directorStateFor(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        turns: restored.turns,
+        whiteboardEntries: restored.whiteboardEntries,
+      ),
       backgroundJob: _backgroundJobFromList(backgroundJob, interruptedJobs),
       backgroundJobs: interruptedJobs,
       error:
@@ -836,12 +861,26 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           backgroundJob: backgroundJob,
           backgroundJobs:
               _upsertBackgroundJob(state.backgroundJobs, backgroundJob),
+          directorState: _directorStateFor(
+            session: state.session,
+            evidenceBundle: state.evidenceBundle,
+            turns: state.turns,
+            whiteboardEntries: state.whiteboardEntries,
+            previous: state.directorState,
+          ),
           clearError: true,
         );
         break;
       case AiSeminarRuntimeEventType.evidenceReady:
         state = state.copyWith(
           evidenceBundle: event.evidenceBundle,
+          directorState: _directorStateFor(
+            session: state.session,
+            evidenceBundle: event.evidenceBundle,
+            turns: state.turns,
+            whiteboardEntries: state.whiteboardEntries,
+            previous: state.directorState,
+          ),
           clearError: true,
         );
         break;
@@ -864,6 +903,13 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         state = state.copyWith(
           turns: event.turns,
           whiteboardEntries: event.whiteboardEntries,
+          directorState: _directorStateFor(
+            session: state.session,
+            evidenceBundle: state.evidenceBundle,
+            turns: event.turns,
+            whiteboardEntries: event.whiteboardEntries,
+            previous: state.directorState,
+          ),
           activeRole: null,
           partialRoleText: null,
           clearError: true,
@@ -882,6 +928,14 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           status: AiSeminarRunStatus.completed,
           turns: event.turns,
           whiteboardEntries: event.whiteboardEntries,
+          directorState: _directorStateFor(
+            session: state.session,
+            evidenceBundle: state.evidenceBundle,
+            turns: event.turns,
+            whiteboardEntries: event.whiteboardEntries,
+            previous: state.directorState,
+            nextIntent: AiSeminarDirectorNextIntent.end,
+          ),
           synthesis: event.synthesis,
           lastRun: event.run,
           activeRole: null,
@@ -910,6 +964,17 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           evidenceBundle: event.evidenceBundle,
           turns: event.turns,
           whiteboardEntries: event.whiteboardEntries,
+          directorState: _directorStateFor(
+            session: state.session,
+            evidenceBundle: event.evidenceBundle,
+            turns: event.turns,
+            whiteboardEntries: event.whiteboardEntries,
+            previous: state.directorState,
+            nextIntent: event.status == AiSeminarRunStatus.needsEvidence
+                ? AiSeminarDirectorNextIntent.refreshEvidence
+                : state.directorState?.nextIntent ??
+                    AiSeminarDirectorNextIntent.runRole,
+          ),
           synthesis: event.synthesis,
           lastRun: event.run,
           activeRole: null,
@@ -922,6 +987,61 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         );
         break;
     }
+  }
+
+  AiSeminarDirectorState? _directorStateFor({
+    required AiSeminarSessionContract? session,
+    required AiSeminarEvidenceBundle? evidenceBundle,
+    required List<AiSeminarRoleTurn> turns,
+    required List<AiSeminarWhiteboardEntry> whiteboardEntries,
+    AiSeminarDirectorState? previous,
+    AiSeminarDirectorNextIntent nextIntent =
+        AiSeminarDirectorNextIntent.runRole,
+  }) {
+    if (session == null) return previous;
+    final completedTurns =
+        turns.where((turn) => !turn.isFailed).toList(growable: false);
+    final evidenceIds = <String>[
+      if (previous != null) ...previous.evidenceLedger,
+      if (evidenceBundle != null)
+        ...evidenceBundle.evidence.map((item) => item.id),
+    ];
+    final allWhiteboardEntries = <AiSeminarWhiteboardEntry>[
+      for (final turn in completedTurns) ...turn.whiteboardEntries,
+      ...whiteboardEntries,
+    ];
+    final dedupedWhiteboardEntries = _dedupeWhiteboardEntries(
+      allWhiteboardEntries,
+    );
+    return AiSeminarDirectorState(
+      sessionId: session.id,
+      turnCount: completedTurns.length,
+      completedRoles: completedTurns.map((turn) => turn.role).toList(),
+      completedRoleTurnIds: completedTurns.map((turn) => turn.id).toList(),
+      evidenceLedger: evidenceIds,
+      whiteboardLedger:
+          dedupedWhiteboardEntries.map((entry) => entry.id).toList(),
+      disagreementIds: dedupedWhiteboardEntries
+          .where((entry) => entry.kind == AiSeminarWhiteboardKind.disagreement)
+          .map((entry) => entry.id)
+          .toList(),
+      evidenceRefreshCount: previous?.evidenceRefreshCount ?? 0,
+      nextIntent: nextIntent,
+      lastUserIntervention: previous?.lastUserIntervention,
+    );
+  }
+
+  static List<AiSeminarWhiteboardEntry> _dedupeWhiteboardEntries(
+    List<AiSeminarWhiteboardEntry> entries,
+  ) {
+    final out = <AiSeminarWhiteboardEntry>[];
+    final seen = <String>{};
+    for (final entry in entries) {
+      final id = entry.id.trim();
+      if (id.isEmpty) continue;
+      if (seen.add(id)) out.add(entry);
+    }
+    return List.unmodifiable(out);
   }
 
   static AiSeminarRuntimeState _initialState(
@@ -1060,6 +1180,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           evidenceBundle: fallbackEvidenceBundle,
           turns: fallbackTurns,
           whiteboardEntries: const <AiSeminarWhiteboardEntry>[],
+          directorState: null,
           lastRun: run,
           activeRole: null,
           partialRoleText: null,

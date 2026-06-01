@@ -951,7 +951,7 @@ class AiSeminarTokenUsage {
   }
 
   static int? _positiveInt(Object? value) {
-    final parsed = (value as num?)?.toInt();
+    final parsed = value is num ? value.toInt() : null;
     if (parsed == null || parsed <= 0) return null;
     return parsed;
   }
@@ -1163,6 +1163,208 @@ class AiSeminarRoleTurn {
             )
           : null,
     );
+  }
+}
+
+enum AiSeminarDirectorNextIntent {
+  runRole('run-role'),
+  refreshEvidence('refresh-evidence'),
+  askUser('ask-user'),
+  synthesize('synthesize'),
+  end('end');
+
+  const AiSeminarDirectorNextIntent(this.asString);
+
+  final String asString;
+
+  static AiSeminarDirectorNextIntent fromString(String? value) {
+    for (final intent in AiSeminarDirectorNextIntent.values) {
+      if (intent.asString == value) return intent;
+    }
+    return AiSeminarDirectorNextIntent.runRole;
+  }
+}
+
+enum AiSeminarUserInterventionAction {
+  clarify('clarify'),
+  askRole('ask-role'),
+  refreshEvidence('refresh-evidence'),
+  synthesize('synthesize');
+
+  const AiSeminarUserInterventionAction(this.asString);
+
+  final String asString;
+
+  static AiSeminarUserInterventionAction fromString(String? value) {
+    for (final action in AiSeminarUserInterventionAction.values) {
+      if (action.asString == value) return action;
+    }
+    return AiSeminarUserInterventionAction.clarify;
+  }
+}
+
+@immutable
+class AiSeminarUserIntervention {
+  const AiSeminarUserIntervention({
+    required this.id,
+    required this.text,
+    required this.requestedAction,
+    this.targetRole,
+    this.createdAt,
+  });
+
+  final String id;
+  final String text;
+  final AiSeminarUserInterventionAction requestedAction;
+  final AiSeminarRole? targetRole;
+  final int? createdAt;
+
+  bool get isEvidence => false;
+
+  Map<String, dynamic> toJson() {
+    final id = this.id.trim();
+    final text = this.text.trim();
+    return {
+      'id': id,
+      'text': text,
+      'requestedAction': requestedAction.asString,
+      if (targetRole != null) 'targetRole': targetRole!.asString,
+      if (_positiveInt(createdAt) != null) 'createdAt': createdAt,
+    };
+  }
+
+  factory AiSeminarUserIntervention.fromJson(Map<String, dynamic> json) {
+    return AiSeminarUserIntervention(
+      id: (json['id'] ?? '').toString().trim(),
+      text: (json['text'] ?? '').toString().trim(),
+      requestedAction: AiSeminarUserInterventionAction.fromString(
+        json['requestedAction']?.toString(),
+      ),
+      targetRole: AiSeminarRole.fromString(json['targetRole']?.toString()),
+      createdAt: _positiveInt(json['createdAt']),
+    );
+  }
+
+  static int? _positiveInt(Object? value) {
+    final parsed = value is num ? value.toInt() : null;
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
+  }
+}
+
+@immutable
+class AiSeminarDirectorState {
+  const AiSeminarDirectorState({
+    required this.sessionId,
+    this.turnCount = 0,
+    this.completedRoles = const <AiSeminarRole>[],
+    this.completedRoleTurnIds = const <String>[],
+    this.evidenceLedger = const <String>[],
+    this.whiteboardLedger = const <String>[],
+    this.disagreementIds = const <String>[],
+    this.evidenceRefreshCount = 0,
+    this.nextIntent = AiSeminarDirectorNextIntent.runRole,
+    this.lastUserIntervention,
+  });
+
+  final String sessionId;
+  final int turnCount;
+  final List<AiSeminarRole> completedRoles;
+  final List<String> completedRoleTurnIds;
+  final List<String> evidenceLedger;
+  final List<String> whiteboardLedger;
+  final List<String> disagreementIds;
+  final int evidenceRefreshCount;
+  final AiSeminarDirectorNextIntent nextIntent;
+  final AiSeminarUserIntervention? lastUserIntervention;
+
+  bool get needsUserInput => nextIntent == AiSeminarDirectorNextIntent.askUser;
+
+  List<AiSeminarRole> remainingRolesFor(List<AiSeminarRole> plannedRoles) {
+    final completed = completedRoles.toSet();
+    return List.unmodifiable(
+      plannedRoles.where((role) => !completed.contains(role)),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'sessionId': sessionId.trim(),
+        'turnCount': _nonNegativeInt(turnCount),
+        'completedRoles':
+            _dedupeRoles(completedRoles).map((role) => role.asString).toList(
+                  growable: false,
+                ),
+        'completedRoleTurnIds': _dedupeStrings(completedRoleTurnIds),
+        'evidenceLedger': _dedupeStrings(evidenceLedger),
+        'whiteboardLedger': _dedupeStrings(whiteboardLedger),
+        'disagreementIds': _dedupeStrings(disagreementIds),
+        'evidenceRefreshCount': _nonNegativeInt(evidenceRefreshCount),
+        'nextIntent': nextIntent.asString,
+        if (lastUserIntervention != null)
+          'lastUserIntervention': lastUserIntervention!.toJson(),
+      };
+
+  factory AiSeminarDirectorState.fromJson(Map<String, dynamic> json) {
+    return AiSeminarDirectorState(
+      sessionId: (json['sessionId'] ?? '').toString().trim(),
+      turnCount: _nonNegativeInt(json['turnCount']),
+      completedRoles: _rolesFromJson(json['completedRoles']),
+      completedRoleTurnIds: _dedupeStringsFromJson(
+        json['completedRoleTurnIds'],
+      ),
+      evidenceLedger: _dedupeStringsFromJson(json['evidenceLedger']),
+      whiteboardLedger: _dedupeStringsFromJson(json['whiteboardLedger']),
+      disagreementIds: _dedupeStringsFromJson(json['disagreementIds']),
+      evidenceRefreshCount: _nonNegativeInt(json['evidenceRefreshCount']),
+      nextIntent: AiSeminarDirectorNextIntent.fromString(
+        json['nextIntent']?.toString(),
+      ),
+      lastUserIntervention: json['lastUserIntervention'] is Map
+          ? AiSeminarUserIntervention.fromJson(
+              Map<String, dynamic>.from(json['lastUserIntervention'] as Map),
+            )
+          : null,
+    );
+  }
+
+  static List<AiSeminarRole> _rolesFromJson(Object? raw) {
+    if (raw is! List) return const <AiSeminarRole>[];
+    final roles = raw
+        .map((role) => AiSeminarRole.fromString(role?.toString()))
+        .whereType<AiSeminarRole>()
+        .toList(growable: false);
+    return _dedupeRoles(roles);
+  }
+
+  static List<AiSeminarRole> _dedupeRoles(List<AiSeminarRole> roles) {
+    final out = <AiSeminarRole>[];
+    for (final role in roles) {
+      if (!out.contains(role)) out.add(role);
+    }
+    return List.unmodifiable(out);
+  }
+
+  static List<String> _dedupeStringsFromJson(Object? raw) {
+    if (raw is! List) return const <String>[];
+    return _dedupeStrings(
+      raw.map((item) => item.toString()).toList(growable: false),
+    );
+  }
+
+  static List<String> _dedupeStrings(List<String> items) {
+    final out = <String>[];
+    final seen = <String>{};
+    for (final item in items) {
+      final normalized = item.trim();
+      if (normalized.isEmpty) continue;
+      if (seen.add(normalized)) out.add(normalized);
+    }
+    return List.unmodifiable(out);
+  }
+
+  static int _nonNegativeInt(Object? value) {
+    final parsed = value is num ? value.toInt() : 0;
+    return parsed < 0 ? 0 : parsed;
   }
 }
 

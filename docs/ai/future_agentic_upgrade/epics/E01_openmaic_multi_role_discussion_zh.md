@@ -13,6 +13,14 @@
 - 写入知识资产前必须进入 Review 或用户显式确认。
 - 不复制 OpenMAIC 代码。
 
+OpenMAIC 当前实现可借鉴的工程结构：
+
+- `lib/chat/agent-loop.ts`：客户端/前端循环维护 `DirectorState`，每次请求只让 Director 选择一个下一位 agent，收到 `END`、`USER` cue 或异常空轮后停止。
+- `lib/orchestration/director-graph.ts`：服务端 LangGraph 图是 `START -> director -> agent_generate -> END` 的单轮拓扑；多轮讨论由客户端串行多次请求驱动，而不是服务端长循环。
+- `lib/prompts/templates/director/system.md`：Director prompt 显式要求不要重复已发言 agent、优先回答真人学生问题、允许输出 `USER` 让用户参与。
+- `lib/orchestration/registry/store.ts`：agent 由 `name / role / persona / allowedActions / priority / voice` 等字段配置；PaperTok 只能借鉴这个“可治理 profile”结构，不能复制 AGPL 代码或默认人格内容。
+- `lib/action/engine.ts` 与 action schema：agent 输出 text/action 交错事件，whiteboard/action 由客户端执行并写 ledger；PaperTok 应把它降级为移动端轻量 evidence/whiteboard ledger，不引入完整课堂白板。
+
 ## 2. 默认角色
 
 | 角色 | 责任 | 默认工具范围 |
@@ -96,7 +104,7 @@ Seminar 结束时输出：
 | E01-C04-T07 | 接入 Seminar local token budget | E01-C04-T05, E07 Ready | `AiSeminarBudgetPolicy`, `AiSeminarRuntimeService` budget gate, `AiSeminarRuntimePage` budget UI | 用户可设置 role output/run token budget；超出本地估算时停止后续步骤、保留失败原因并可重试；不得当作 provider 账单或美元成本上限。 |
 | E01-C04-T08 | 接入 Seminar provider token usage | E01-C04-T05, E01-C04-T07 | `CancelableLangchainRunner.stream` usage tracker、`AiSeminarModelRoleExecutor` usage delta、`AiSeminarRuntimePage` provider usage UI | provider/SDK 返回 usage metadata 时，role turn 和 run 保存 `provider-reported` token usage；无 usage metadata 时降级本地估算；local budget gate 仍只使用本地估算，不把 provider usage 当作实时账单或美元成本。 |
 | E01-C04-T09 | 接入 Seminar estimated USD cost cap | E01-C04-T04, E01-C04-T08 | `AiModelCapability` pricing metadata、`AiSeminarBudgetPolicy.maxRunCostUsd`、`AiSeminarRuntimeService` cost gate、`AiSeminarRuntimePage` cost cap UI | provider capability cache 带 pricing metadata 时，用户可设置估算 `Run cost cap USD`；runtime 聚合 provider/local usage 估算美元成本，超出 cap 时停止后续步骤并可重试；无 pricing metadata 时禁用美元 cap；不得声明为真实 provider invoice。 |
-| E01-C05-T01 | 定义 Chat Seminar DirectorState | E01-C03-T02, UFA-C02-T15 | `AiSeminarDirectorState` / migration | 能记录轮次、已发言角色、分歧、证据刷新次数、用户插话和下一步 intent；恢复时不得重放已完成角色。 |
+| E01-C05-T01 | 定义 Chat Seminar DirectorState | E01-C03-T02, UFA-C02-T15 | `AiSeminarDirectorState` / migration | 第一片已接入模型和 runtime state JSON：可记录轮次、已完成角色、已完成 turn id、证据账本、白板账本、分歧 id、证据刷新次数、用户插话和下一步 intent；用户插话不算 formal evidence；恢复时不得重放已完成角色。后续必须让 Director loop 真正消费该状态。 |
 | E01-C05-T02 | 增加角色 prompt 设置 | E01-C01-T02, E06 skill governance | Seminar role profile store + Settings/AI Chat 配置入口 | 基础切片已支持默认角色显示名和 custom prompt，设置会持久化、写入 session contract 并注入 role prompt；后续仍需角色启用状态、证据策略、工具范围、空 prompt validator 和 AI Chat 内嵌配置入口；无效 prompt 或越权工具不得进入 runtime。 |
 | E01-C05-T03 | 接入多轮分歧与证据刷新 | E01-C02-T02, E01-C05-T01 | Director loop service | 至少支持初始证据、第一轮观点、contradiction scan、按 gap 重新检索、反驳轮和 synthesis；每次刷新证据都有 SourceRef。 |
 | E01-C05-T04 | 接入用户插话/澄清回合 | E01-C05-T01, E07 Chat UI | Chat Seminar user-turn model | Director 可暂停为 `needsUserInput`；用户可指定追问某角色、要求重新找证据或回答澄清；用户输入不被当作 AI 证据。 |

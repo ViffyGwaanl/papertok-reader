@@ -320,6 +320,121 @@ void main() {
     });
   });
 
+  group('AiSeminarDirectorState', () {
+    test('round-trips director ledger and user intervention', () {
+      const state = AiSeminarDirectorState(
+        sessionId: 's-director',
+        turnCount: 2,
+        completedRoles: [AiSeminarRole.critical],
+        completedRoleTurnIds: ['turn-critical-1'],
+        evidenceLedger: ['e1', 'e2'],
+        whiteboardLedger: ['w-claim-1', 'w-disagreement-1'],
+        disagreementIds: ['w-disagreement-1'],
+        evidenceRefreshCount: 1,
+        nextIntent: AiSeminarDirectorNextIntent.refreshEvidence,
+        lastUserIntervention: AiSeminarUserIntervention(
+          id: 'u1',
+          text: '请让批判者重新查证据。',
+          requestedAction: AiSeminarUserInterventionAction.refreshEvidence,
+          targetRole: AiSeminarRole.critical,
+          createdAt: 1234,
+        ),
+      );
+
+      final restored = AiSeminarDirectorState.fromJson(state.toJson());
+
+      expect(restored.sessionId, 's-director');
+      expect(restored.turnCount, 2);
+      expect(restored.completedRoles, [AiSeminarRole.critical]);
+      expect(restored.completedRoleTurnIds, ['turn-critical-1']);
+      expect(restored.evidenceLedger, ['e1', 'e2']);
+      expect(restored.whiteboardLedger, ['w-claim-1', 'w-disagreement-1']);
+      expect(restored.disagreementIds, ['w-disagreement-1']);
+      expect(restored.evidenceRefreshCount, 1);
+      expect(restored.nextIntent, AiSeminarDirectorNextIntent.refreshEvidence);
+      expect(restored.lastUserIntervention!.targetRole, AiSeminarRole.critical);
+      expect(restored.lastUserIntervention!.isEvidence, false);
+      expect(
+        restored.lastUserIntervention!.toJson().containsKey('evidenceRefIds'),
+        false,
+      );
+    });
+
+    test('skips completed roles when deciding what still needs a turn', () {
+      const state = AiSeminarDirectorState(
+        sessionId: 's-director',
+        completedRoles: [AiSeminarRole.critical, AiSeminarRole.verifier],
+        completedRoleTurnIds: ['turn-critical-1', 'turn-verifier-1'],
+      );
+
+      expect(
+        state.remainingRolesFor(const [
+          AiSeminarRole.critical,
+          AiSeminarRole.supportive,
+          AiSeminarRole.verifier,
+          AiSeminarRole.synthesizer,
+        ]),
+        [AiSeminarRole.supportive, AiSeminarRole.synthesizer],
+      );
+    });
+
+    test('normalizes unknown wire values and duplicate ledger entries', () {
+      final restored = AiSeminarDirectorState.fromJson(const {
+        'sessionId': ' s-director ',
+        'turnCount': -3,
+        'completedRoles': ['critical', 'invented-role', 'critical'],
+        'completedRoleTurnIds': [' turn-critical-1 ', '', 'turn-critical-1'],
+        'evidenceLedger': ['e1', 'e1', ''],
+        'whiteboardLedger': ['w1', 'w1'],
+        'disagreementIds': ['w-disagreement', 'w-disagreement'],
+        'evidenceRefreshCount': -2,
+        'nextIntent': 'invented-intent',
+        'lastUserIntervention': {
+          'id': ' u1 ',
+          'text': '  请总结。 ',
+          'requestedAction': 'invented-action',
+          'targetRole': 'invented-role',
+          'createdAt': 'not-a-number',
+          'evidenceRefIds': ['should-not-survive'],
+        },
+      });
+
+      expect(restored.sessionId, 's-director');
+      expect(restored.turnCount, 0);
+      expect(restored.completedRoles, [AiSeminarRole.critical]);
+      expect(restored.completedRoleTurnIds, ['turn-critical-1']);
+      expect(restored.evidenceLedger, ['e1']);
+      expect(restored.whiteboardLedger, ['w1']);
+      expect(restored.disagreementIds, ['w-disagreement']);
+      expect(restored.evidenceRefreshCount, 0);
+      expect(restored.nextIntent, AiSeminarDirectorNextIntent.runRole);
+      expect(
+        restored.lastUserIntervention!.requestedAction,
+        AiSeminarUserInterventionAction.clarify,
+      );
+      expect(restored.lastUserIntervention!.targetRole, isNull);
+      expect(restored.lastUserIntervention!.createdAt, isNull);
+    });
+
+    test('ignores malformed ledger list wire shapes', () {
+      final restored = AiSeminarDirectorState.fromJson(const {
+        'sessionId': 's-director',
+        'completedRoles': 'critical',
+        'completedRoleTurnIds': {'turn': 'critical'},
+        'evidenceLedger': true,
+        'whiteboardLedger': 42,
+        'disagreementIds': {'id': 'w1'},
+      });
+
+      expect(restored.sessionId, 's-director');
+      expect(restored.completedRoles, isEmpty);
+      expect(restored.completedRoleTurnIds, isEmpty);
+      expect(restored.evidenceLedger, isEmpty);
+      expect(restored.whiteboardLedger, isEmpty);
+      expect(restored.disagreementIds, isEmpty);
+    });
+  });
+
   group('AiSeminarBillingSnapshot', () {
     test('run round-trips pricing usage estimate and invoice status', () {
       const usage = AiSeminarTokenUsage(

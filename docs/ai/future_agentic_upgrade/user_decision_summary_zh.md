@@ -43,7 +43,7 @@
 | `SourceRef` / provenance 统一 | 所有 AI 结论、知识卡、图谱关系、复习项需要知道来自哪本书、哪个 CFI、哪个 chunk、哪个模型。 | 用户点击卡片或复习题能解释“这条知识从哪里来”，也能跳回原文。 |
 | Review source-specific adapters | KnowledgeCard、Memory、ConceptGraph、flashcard、sync conflict 的 Apply 逻辑不同，不能只改一个状态字段。 | 审批动作更可追踪，减少“点了 Apply 但资产没真正写入”的错位。 |
 | Seminar runtime contract | 多角色讨论需要结构化保存 session、evidence、turn、whiteboard、synthesis、billing snapshot。 | 用户看到的是一个可取消、可重试、能送 Review 的讨论界面，而不是一次 prompt-only 输出。 |
-| OpenMAIC-style Director 思路 | OpenMAIC 把多 agent 讨论拆成 DirectorState、agent turn summary、whiteboard ledger 和 USER cue；这个结构适合 PaperTok 的长讨论。 | 基础角色显示名/custom prompt 已先接到 Seminar settings；下一步可以让 AI Chat 内嵌 Seminar 支持 DirectorState、多轮分歧、证据刷新、用户插话、角色启用状态和工具治理，而不是固定一轮就总结。 |
+| OpenMAIC-style Director 思路 | OpenMAIC 把多 agent 讨论拆成 DirectorState、agent turn summary、whiteboard ledger 和 USER cue；这个结构适合 PaperTok 的长讨论。 | 基础角色显示名/custom prompt 已先接到 Seminar settings；`AiSeminarDirectorState` 第一片已能在 runtime state 里记录轮次、已完成角色、证据账本、白板账本、分歧和用户插话。下一步是让 AI Chat 内嵌 Seminar 真正用它驱动多轮分歧、证据刷新、用户插话、角色启用状态和工具治理，而不是固定一轮就总结。 |
 | Provider capability / billing snapshot | provider 是否支持 tools、vision、thinking、streaming、pricing metadata，需要和运行记录分开。 | 页面能说清楚“provider 用量”和“本地估算”区别，不把估算当账单。 |
 | Current-book semantic search paging | 旧实现一次拉全书 chunk 和 embedding，容易 OOM。 | 用户感知为搜索更不容易卡死，AI 提问时更少把阅读页拖慢。 |
 | CustomSkill schema/parser/validator | 自定义 skill 不能只靠一段 YAML/JSON 文本直接注入。 | 用户能导入能力，但写操作、递归、未知字段被挡在运行时外面。 |
@@ -98,7 +98,7 @@
 还要做什么：
 
 - 把当前内嵌 runtime 面板升级为持久化 AI Chat message part / run 卡片，而不是只挂在页面底部。
-- 建 `DirectorState`：记录轮次、已发言角色、分歧、证据刷新次数、用户插话和下一步 intent。
+- 让 `DirectorState` 从已接入的可恢复账本升级为真实调度器输入：根据已发言角色、分歧、证据刷新次数、用户插话和下一步 intent 决定继续找证据、让某个角色反驳、向用户提问或总结。
 - 补齐角色 profile 治理：默认角色仍是 `critical/supportive/synthesizer/verifier`；显示名和 custom prompt 已有基础设置，后续还要增加启用状态、证据策略、工具范围、空 prompt 校验和角色级预算。
 - 增加多轮机制：第一轮观点后做 contradiction scan；证据不足或角色冲突时重新检索，再进入反驳轮，最后 synthesis。
 - 加入用户讨论环节：用户可以追问某个角色、要求重新找证据、回答澄清问题或要求直接总结。

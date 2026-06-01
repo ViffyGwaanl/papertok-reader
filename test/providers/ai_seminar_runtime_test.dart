@@ -157,6 +157,10 @@ void main() {
     expect(state.synthesis!.summary, 'synthesizer response');
     expect(state.turns.first.tokenUsage, isNotNull);
     expect(state.lastRun!.tokenUsage!.totalTokens, greaterThan(0));
+    expect(
+      state.directorState!.whiteboardLedger,
+      ['card-1', 'review-1'],
+    );
     expect(state.canRetry, false);
   });
 
@@ -824,6 +828,23 @@ void main() {
           ),
         ),
       ],
+      directorState: const AiSeminarDirectorState(
+        sessionId: 's3',
+        turnCount: 1,
+        completedRoles: [AiSeminarRole.critical],
+        completedRoleTurnIds: ['turn-critical'],
+        evidenceLedger: ['e1'],
+        whiteboardLedger: ['w-disagreement'],
+        disagreementIds: ['w-disagreement'],
+        evidenceRefreshCount: 1,
+        nextIntent: AiSeminarDirectorNextIntent.refreshEvidence,
+        lastUserIntervention: AiSeminarUserIntervention(
+          id: 'u1',
+          text: '请重新找证据。',
+          requestedAction: AiSeminarUserInterventionAction.refreshEvidence,
+          createdAt: 1234,
+        ),
+      ),
       lastRun: AiSeminarRun(
         session: AiSeminarSessionContract(id: 's3', question: 'Restore?'),
         status: AiSeminarRunStatus.completed,
@@ -864,7 +885,70 @@ void main() {
     expect(restored.providerDiagnostics!.costUnknownReason,
         contains('pricing metadata'));
     expect(restored.turns.single.tokenUsage!.totalTokens, 16);
+    expect(restored.directorState!.sessionId, 's3');
+    expect(restored.directorState!.completedRoles, [AiSeminarRole.critical]);
+    expect(restored.directorState!.evidenceLedger, ['e1']);
+    expect(
+      restored.directorState!.nextIntent,
+      AiSeminarDirectorNextIntent.refreshEvidence,
+    );
+    expect(restored.directorState!.lastUserIntervention!.isEvidence, false);
     expect(restored.lastRun!.tokenUsage!.totalTokens, 16);
+  });
+
+  test('malformed director state does not discard runtime recovery cache',
+      () async {
+    configureProvider();
+    final cachedState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-malformed-director',
+        question: 'Recover around malformed director state?',
+      ),
+      status: AiSeminarRunStatus.completed,
+      evidenceBundle: bundle(),
+      directorState: const AiSeminarDirectorState(
+        sessionId: 's-malformed-director',
+        completedRoles: [AiSeminarRole.critical],
+        completedRoleTurnIds: ['turn-critical'],
+        evidenceLedger: ['e1'],
+        whiteboardLedger: ['w1'],
+        disagreementIds: ['w1'],
+      ),
+    );
+    final raw = cachedState.toJson();
+    raw['directorState'] = {
+      ...(raw['directorState'] as Map<String, dynamic>),
+      'completedRoles': 'critical',
+      'completedRoleTurnIds': {'turn': 'critical'},
+      'evidenceLedger': true,
+      'whiteboardLedger': 42,
+      'disagreementIds': {'id': 'w1'},
+    };
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(raw),
+        );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(restored.session!.id, 's-malformed-director');
+    expect(restored.status, AiSeminarRunStatus.completed);
+    expect(restored.evidenceBundle!.evidence.single.id, 'e1');
+    expect(restored.directorState!.completedRoles, isEmpty);
+    expect(restored.directorState!.completedRoleTurnIds, isEmpty);
+    expect(restored.directorState!.evidenceLedger, isEmpty);
+    expect(restored.directorState!.whiteboardLedger, isEmpty);
+    expect(restored.directorState!.disagreementIds, isEmpty);
+    expect(
+      Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey),
+      isNotNull,
+    );
   });
 
   test('completed seminar runtime state is persisted and restored', () async {
@@ -1054,6 +1138,14 @@ void main() {
           evidenceRefIds: ['e1'],
         ),
       ],
+      directorState: const AiSeminarDirectorState(
+        sessionId: 's-invalid-running-resume',
+        turnCount: 5,
+        completedRoles: [AiSeminarRole.critical, AiSeminarRole.supportive],
+        completedRoleTurnIds: ['stale-turn'],
+        evidenceLedger: ['stale-evidence'],
+        whiteboardLedger: ['stale-whiteboard'],
+      ),
     );
     await Prefs().prefs.setString(
           aiSeminarRuntimeStateV1PrefsKey,
@@ -1080,6 +1172,7 @@ void main() {
     expect(restored.status, AiSeminarRunStatus.cancelled);
     expect(restored.canRetry, true);
     expect(restored.turns, isEmpty);
+    expect(restored.directorState, isNull);
     expect(restored.lastRun!.turns, isEmpty);
     expect(
       restored.backgroundJob!.status,
@@ -1177,6 +1270,14 @@ void main() {
           ),
         ),
       ],
+      directorState: const AiSeminarDirectorState(
+        sessionId: 's-provider-changed',
+        turnCount: 6,
+        completedRoles: [AiSeminarRole.synthesizer],
+        completedRoleTurnIds: ['stale-turn'],
+        evidenceLedger: ['stale-evidence'],
+        whiteboardLedger: ['stale-whiteboard'],
+      ),
     );
     await Prefs().prefs.setString(
           aiSeminarRuntimeStateV1PrefsKey,
@@ -1288,6 +1389,7 @@ void main() {
     expect(restored.status, AiSeminarRunStatus.cancelled);
     expect(restored.canRetry, true);
     expect(restored.turns, isEmpty);
+    expect(restored.directorState, isNull);
     expect(
       restored.backgroundJob!.status,
       AiSeminarBackgroundJobStatus.interrupted,
