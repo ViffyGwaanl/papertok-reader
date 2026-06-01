@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 
@@ -15,6 +16,8 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
   late final TextEditingController _roleOutputBudgetController;
   late final TextEditingController _runBudgetController;
   late final TextEditingController _runCostCapController;
+  late final Map<AiSeminarRole, TextEditingController> _roleNameControllers;
+  late final Map<AiSeminarRole, TextEditingController> _rolePromptControllers;
   late bool _includeVerifier;
 
   @override
@@ -30,6 +33,18 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
     _runCostCapController = TextEditingController(
       text: Prefs().aiSeminarDefaultRunCostCapUsd?.toString() ?? '',
     );
+    _roleNameControllers = {
+      for (final role in AiSeminarRole.values)
+        role: TextEditingController(
+          text: Prefs().aiSeminarRoleProfileFor(role)?.name ?? '',
+        ),
+    };
+    _rolePromptControllers = {
+      for (final role in AiSeminarRole.values)
+        role: TextEditingController(
+          text: Prefs().aiSeminarRoleProfileFor(role)?.customPrompt ?? '',
+        ),
+    };
   }
 
   @override
@@ -37,6 +52,12 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
     _roleOutputBudgetController.dispose();
     _runBudgetController.dispose();
     _runCostCapController.dispose();
+    for (final controller in _roleNameControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _rolePromptControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -108,6 +129,35 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          _ConfigSection(
+            title: _configText(
+              context,
+              en: 'Role prompt profiles',
+              zh: '角色提示词设置',
+            ),
+            icon: Icons.badge_outlined,
+            children: [
+              Text(
+                _configText(
+                  context,
+                  en: 'Customize each Seminar role name and prompt while keeping evidence and Review approval gates enforced. Do not paste API keys or credentials into role prompts.',
+                  zh: '可以自定义每个研讨角色的名称和提示词；证据引用和 Review 审批边界仍由系统强制执行。不要把 API key 或密钥写进角色提示词。',
+                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
+              ),
+              const SizedBox(height: 8),
+              for (final role in AiSeminarRole.values)
+                _RoleProfileFields(
+                  role: role,
+                  nameController: _roleNameControllers[role]!,
+                  promptController: _rolePromptControllers[role]!,
+                  onChanged: () => _saveRoleProfile(role),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -123,6 +173,71 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
     final parsed = double.tryParse(value.trim());
     if (parsed == null || parsed <= 0) return null;
     return parsed;
+  }
+
+  void _saveRoleProfile(AiSeminarRole role) {
+    Prefs().setAiSeminarRoleProfile(
+      role,
+      name: _roleNameControllers[role]?.text,
+      customPrompt: _rolePromptControllers[role]?.text,
+    );
+  }
+}
+
+class _RoleProfileFields extends StatelessWidget {
+  const _RoleProfileFields({
+    required this.role,
+    required this.nameController,
+    required this.promptController,
+    required this.onChanged,
+  });
+
+  final AiSeminarRole role;
+  final TextEditingController nameController;
+  final TextEditingController promptController;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final roleLabel = _roleProfileLabel(context, role);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        initiallyExpanded: role == AiSeminarRole.critical,
+        title: Text(roleLabel),
+        childrenPadding: const EdgeInsets.only(bottom: 8),
+        children: [
+          TextField(
+            controller: nameController,
+            decoration: InputDecoration(
+              labelText: _configText(
+                context,
+                en: '$roleLabel role name',
+                zh: '$roleLabel角色名称',
+              ),
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (_) => onChanged(),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: promptController,
+            minLines: 3,
+            maxLines: 6,
+            decoration: InputDecoration(
+              labelText: _configText(
+                context,
+                en: '$roleLabel custom prompt',
+                zh: '$roleLabel自定义提示词',
+              ),
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (_) => onChanged(),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -199,6 +314,24 @@ class _DefaultBudgetFields extends StatelessWidget {
       },
     );
   }
+}
+
+String _configText(
+  BuildContext context, {
+  required String en,
+  required String zh,
+}) {
+  return Localizations.localeOf(context).languageCode == 'zh' ? zh : en;
+}
+
+String _roleProfileLabel(BuildContext context, AiSeminarRole role) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  return switch (role) {
+    AiSeminarRole.critical => zh ? '批判者' : 'Critical',
+    AiSeminarRole.supportive => zh ? '支持者' : 'Supportive',
+    AiSeminarRole.synthesizer => zh ? '综合者' : 'Synthesizer',
+    AiSeminarRole.verifier => zh ? '核验者' : 'Verifier',
+  };
 }
 
 class _ConfigSection extends StatelessWidget {

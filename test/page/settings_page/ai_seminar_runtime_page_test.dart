@@ -459,6 +459,112 @@ void main() {
     expect(Prefs().aiSeminarDefaultRunCostCapUsd, 0.25);
   });
 
+  testWidgets('Seminar settings page persists role prompt profiles',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: L10n.localizationsDelegates,
+        supportedLocales: L10n.supportedLocales,
+        home: AiSeminarConfigPage(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -520));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Role prompt profiles'), findsOneWidget);
+    expect(textFieldWithLabel('Critical role name'), findsOneWidget);
+    expect(textFieldWithLabel('Critical custom prompt'), findsOneWidget);
+
+    await tester.enterText(
+      textFieldWithLabel('Critical role name'),
+      'Evidence Challenger',
+    );
+    await tester.enterText(
+      textFieldWithLabel('Critical custom prompt'),
+      'Challenge causal claims and name missing evidence.',
+    );
+
+    final raw = Prefs().prefs.getString('aiSeminarRoleProfilesV1');
+    expect(raw, isNotNull);
+    final decoded = jsonDecode(raw!) as Map<String, dynamic>;
+    expect(decoded['critical']['name'], 'Evidence Challenger');
+    expect(
+      decoded['critical']['customPrompt'],
+      'Challenge causal claims and name missing evidence.',
+    );
+  });
+
+  testWidgets('start injects configured role prompt into seminar invocation',
+      (tester) async {
+    await Prefs().prefs.setString(
+          'aiSeminarRoleProfilesV1',
+          jsonEncode({
+            'critical': {
+              'name': 'Evidence Challenger',
+              'customPrompt':
+                  'Challenge causal claims and name missing evidence.',
+            },
+          }),
+        );
+    expect(Prefs().aiSeminarRoleProfiles.single.name, 'Evidence Challenger');
+    String? criticalPrompt;
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => AiSeminarEvidenceBundle(
+        query: 'What is the claim?',
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'Traceable evidence.',
+            sourceRef: traceableRef(),
+          ),
+        ],
+      ),
+      streamRole: (invocation, _) async* {
+        if (invocation.role == AiSeminarRole.critical) {
+          criticalPrompt = invocation.prompt;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pumpAndSettle();
+
+    expect(criticalPrompt, contains('Evidence Challenger'));
+    expect(
+      criticalPrompt,
+      contains('Challenge causal claims and name missing evidence.'),
+    );
+  });
+
   testWidgets('start passes reader selection SourceRef into seminar session',
       (tester) async {
     AiSeminarSessionContract? capturedSession;

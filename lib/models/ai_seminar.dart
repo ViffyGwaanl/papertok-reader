@@ -30,6 +30,56 @@ enum AiSeminarRole {
   }
 }
 
+@immutable
+class AiSeminarRoleProfile {
+  factory AiSeminarRoleProfile({
+    required AiSeminarRole role,
+    String? name,
+    String? customPrompt,
+  }) {
+    return AiSeminarRoleProfile._(
+      role: role,
+      name: _trimmedOrNull(name),
+      customPrompt: _trimmedOrNull(customPrompt),
+    );
+  }
+
+  const AiSeminarRoleProfile._({
+    required this.role,
+    required this.name,
+    required this.customPrompt,
+  });
+
+  final AiSeminarRole role;
+  final String? name;
+  final String? customPrompt;
+
+  bool get hasOverrides => name != null || customPrompt != null;
+
+  Map<String, dynamic> toJson() => {
+        'role': role.asString,
+        if (name != null) 'name': name,
+        if (customPrompt != null) 'customPrompt': customPrompt,
+      };
+
+  factory AiSeminarRoleProfile.fromJson(
+    AiSeminarRole role,
+    Map<String, dynamic> json,
+  ) {
+    return AiSeminarRoleProfile(
+      role: role,
+      name: json['name']?.toString(),
+      customPrompt: json['customPrompt']?.toString(),
+    );
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
+}
+
 enum AiSeminarEvidenceScope {
   currentChapter('current-chapter'),
   currentBook('current-book'),
@@ -399,6 +449,7 @@ class AiSeminarSessionContract {
     int maxRounds = 2,
     AiSeminarBudgetPolicy? budgetPolicy,
     AiSeminarBillingContext? billingContext,
+    List<AiSeminarRoleProfile> roleProfiles = const <AiSeminarRoleProfile>[],
     int? createdAt,
   }) {
     final normalizedRoles = _normalizeRoles(roles);
@@ -406,6 +457,7 @@ class AiSeminarSessionContract {
     final normalizedSourceRefs = _dedupeSourceRefs(sourceRefs);
     final normalizedBudget = budgetPolicy?.normalized;
     final normalizedBillingContext = billingContext?.normalized;
+    final normalizedRoleProfiles = _normalizeRoleProfiles(roleProfiles);
     return AiSeminarSessionContract._(
       id: id.trim(),
       question: question.trim(),
@@ -423,6 +475,7 @@ class AiSeminarSessionContract {
       budgetPolicy:
           normalizedBudget?.hasLimits == true ? normalizedBudget : null,
       billingContext: normalizedBillingContext,
+      roleProfiles: normalizedRoleProfiles,
       createdAt: createdAt,
     );
   }
@@ -439,6 +492,7 @@ class AiSeminarSessionContract {
     required this.maxRounds,
     required this.budgetPolicy,
     required this.billingContext,
+    required this.roleProfiles,
     required this.createdAt,
   });
 
@@ -453,10 +507,17 @@ class AiSeminarSessionContract {
   final int maxRounds;
   final AiSeminarBudgetPolicy? budgetPolicy;
   final AiSeminarBillingContext? billingContext;
+  final List<AiSeminarRoleProfile> roleProfiles;
   final int? createdAt;
 
   bool get hasVerifier => roles.contains(AiSeminarRole.verifier);
   bool get canUseLibrary => scopes.contains(AiSeminarEvidenceScope.library);
+  AiSeminarRoleProfile? roleProfileFor(AiSeminarRole role) {
+    for (final profile in roleProfiles) {
+      if (profile.role == role) return profile;
+    }
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -473,6 +534,11 @@ class AiSeminarSessionContract {
         if (budgetPolicy?.hasLimits == true)
           'budgetPolicy': budgetPolicy!.toJson(),
         if (billingContext != null) 'billingContext': billingContext!.toJson(),
+        if (roleProfiles.isNotEmpty)
+          'roleProfiles': {
+            for (final profile in roleProfiles)
+              profile.role.asString: profile.toJson(),
+          },
         if (createdAt != null) 'createdAt': createdAt,
       };
 
@@ -512,6 +578,7 @@ class AiSeminarSessionContract {
               Map<String, dynamic>.from(json['billingContext'] as Map),
             )
           : null,
+      roleProfiles: _roleProfilesFromJson(json['roleProfiles']),
       createdAt: (json['createdAt'] as num?)?.toInt(),
     );
   }
@@ -540,6 +607,48 @@ class AiSeminarSessionContract {
       return order[a]!.compareTo(order[b]!);
     });
     return List.unmodifiable(out);
+  }
+
+  static List<AiSeminarRoleProfile> _normalizeRoleProfiles(
+    List<AiSeminarRoleProfile> roleProfiles,
+  ) {
+    final byRole = <AiSeminarRole, AiSeminarRoleProfile>{};
+    for (final profile in roleProfiles) {
+      if (profile.hasOverrides) {
+        byRole[profile.role] = profile;
+      }
+    }
+    return List.unmodifiable(byRole.values);
+  }
+
+  static List<AiSeminarRoleProfile> _roleProfilesFromJson(Object? raw) {
+    if (raw is Map) {
+      final out = <AiSeminarRoleProfile>[];
+      for (final entry in raw.entries) {
+        final role = AiSeminarRole.fromString(entry.key.toString());
+        if (role == null || entry.value is! Map) continue;
+        final profile = AiSeminarRoleProfile.fromJson(
+          role,
+          Map<String, dynamic>.from(entry.value as Map),
+        );
+        if (profile.hasOverrides) out.add(profile);
+      }
+      return List.unmodifiable(out);
+    }
+    if (raw is List) {
+      final out = <AiSeminarRoleProfile>[];
+      for (final item in raw.whereType<Map>()) {
+        final role = AiSeminarRole.fromString(item['role']?.toString());
+        if (role == null) continue;
+        final profile = AiSeminarRoleProfile.fromJson(
+          role,
+          Map<String, dynamic>.from(item),
+        );
+        if (profile.hasOverrides) out.add(profile);
+      }
+      return List.unmodifiable(out);
+    }
+    return const <AiSeminarRoleProfile>[];
   }
 
   static List<AiSeminarEvidenceScope> _dedupeScopes(

@@ -165,12 +165,18 @@ class AiSeminarOrchestrationService {
     required AiSeminarEvidenceBundle evidenceBundle,
     required List<AiSeminarRoleTurn> priorTurns,
   }) {
+    final profile = session.roleProfileFor(role);
     return [
       'PaperTok AI Seminar role: ${role.asString}',
+      if (profile?.name != null) 'Configured role name: ${profile!.name}',
       'Question: ${session.question}',
       'Evidence ids: ${evidenceBundle.evidence.map((e) => e.id).join(', ')}',
       if (priorTurns.isNotEmpty)
         'Prior roles: ${priorTurns.map((turn) => turn.role.asString).join(', ')}',
+      if (profile?.customPrompt != null) ...[
+        'Configured role instructions:',
+        profile!.customPrompt!,
+      ],
       'Use only the supplied evidence ids when making claims.',
     ].join('\n');
   }

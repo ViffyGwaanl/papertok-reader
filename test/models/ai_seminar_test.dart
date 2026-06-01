@@ -71,6 +71,29 @@ void main() {
       expect(restored.budgetPolicy!.hasCostLimit, true);
     });
 
+    test('round-trips role prompt profiles', () {
+      final session = AiSeminarSessionContract(
+        id: 's-role-profile',
+        question: 'Who should challenge this claim?',
+        roleProfiles: [
+          AiSeminarRoleProfile(
+            role: AiSeminarRole.critical,
+            name: 'Evidence Challenger',
+            customPrompt: 'Challenge causal claims and name missing evidence.',
+          ),
+        ],
+      );
+
+      final restored = AiSeminarSessionContract.fromJson(session.toJson());
+      final profile = restored.roleProfileFor(AiSeminarRole.critical);
+
+      expect(profile?.name, 'Evidence Challenger');
+      expect(
+        profile?.customPrompt,
+        'Challenge causal claims and name missing evidence.',
+      );
+    });
+
     test('round-trips reader selection source refs', () {
       final sourceRef = SourceRef(
         bookId: 42,

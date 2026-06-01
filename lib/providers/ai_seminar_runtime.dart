@@ -1293,6 +1293,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       maxRounds: session.maxRounds,
       budgetPolicy: budgetPolicy,
       billingContext: _billingContextForCurrentProvider(diagnostics),
+      roleProfiles: session.roleProfiles,
       createdAt: session.createdAt,
     );
   }

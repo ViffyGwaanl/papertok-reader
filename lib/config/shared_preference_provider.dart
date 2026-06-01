@@ -38,6 +38,7 @@ import 'package:papertok_reader/models/user_prompt.dart';
 import 'package:papertok_reader/models/share_prompt_preset.dart';
 import 'package:papertok_reader/models/ai_model_capability.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/mcp_server_meta.dart';
 import 'package:papertok_reader/models/mcp_tool_meta.dart';
 import 'package:papertok_reader/service/papertok/models.dart';
@@ -4025,6 +4026,76 @@ Requirements:
     }
     touchAiSettingsUpdatedAt();
     notifyListeners();
+  }
+
+  List<AiSeminarRoleProfile> get aiSeminarRoleProfiles {
+    final raw = prefs.getString('aiSeminarRoleProfilesV1');
+    if (raw == null || raw.trim().isEmpty) {
+      return const <AiSeminarRoleProfile>[];
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        return const <AiSeminarRoleProfile>[];
+      }
+      final out = <AiSeminarRoleProfile>[];
+      for (final entry in decoded.entries) {
+        final role = AiSeminarRole.fromString(entry.key.toString());
+        if (role == null || entry.value is! Map) continue;
+        final profile = AiSeminarRoleProfile.fromJson(
+          role,
+          Map<String, dynamic>.from(entry.value as Map),
+        );
+        if (profile.hasOverrides) out.add(profile);
+      }
+      return List.unmodifiable(out);
+    } catch (_) {
+      return const <AiSeminarRoleProfile>[];
+    }
+  }
+
+  set aiSeminarRoleProfiles(List<AiSeminarRoleProfile> profiles) {
+    final map = <String, dynamic>{};
+    for (final profile in profiles) {
+      if (profile.hasOverrides) {
+        map[profile.role.asString] = profile.toJson();
+      }
+    }
+    if (map.isEmpty) {
+      prefs.remove('aiSeminarRoleProfilesV1');
+    } else {
+      prefs.setString('aiSeminarRoleProfilesV1', jsonEncode(map));
+    }
+    touchAiSettingsUpdatedAt();
+    notifyListeners();
+  }
+
+  AiSeminarRoleProfile? aiSeminarRoleProfileFor(AiSeminarRole role) {
+    for (final profile in aiSeminarRoleProfiles) {
+      if (profile.role == role) return profile;
+    }
+    return null;
+  }
+
+  void setAiSeminarRoleProfile(
+    AiSeminarRole role, {
+    String? name,
+    String? customPrompt,
+  }) {
+    final byRole = <AiSeminarRole, AiSeminarRoleProfile>{
+      for (final profile in aiSeminarRoleProfiles) profile.role: profile,
+    };
+    final next = AiSeminarRoleProfile(
+      role: role,
+      name: name,
+      customPrompt: customPrompt,
+    );
+    if (next.hasOverrides) {
+      byRole[role] = next;
+    } else {
+      byRole.remove(role);
+    }
+    aiSeminarRoleProfiles = byRole.values.toList(growable: false);
   }
 
   // --- KAIROS proactive level ---

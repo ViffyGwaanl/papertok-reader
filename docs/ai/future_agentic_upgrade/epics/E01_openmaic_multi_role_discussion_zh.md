@@ -72,7 +72,7 @@ Seminar 结束时输出：
 
 - Director 每轮只决定一个下一位角色，runtime 持久化 `turnCount`、已发言摘要、证据 ledger、白板 ledger 和用户插话状态。
 - AI Chat composer 是同一输入入口；用户可以在角色之间插话、要求重新找证据、追问某个角色、回答澄清问题。
-- 角色配置不再只藏在固定 prompt：每个角色有可编辑显示名、system prompt、发言目标、证据策略、工具白名单、是否启用和 token/cost guardrail。
+- 角色配置不再只藏在固定 prompt：当前基础切片已支持每个角色的显示名和 custom prompt；后续继续补发言目标、证据策略、工具白名单、是否启用和 token/cost guardrail。
 - 讨论不是固定一轮：`evidence -> 角色观点 -> contradiction scan -> evidence refresh -> rebuttal -> synthesis -> Review handoff`，由 Director 根据 evidence gap、分歧和用户插话决定继续或暂停。
 - AI Chat 中渲染为一条可展开的 Seminar run 卡片，包含 `证据 / 分歧 / 白板 / 总结 / 送审` 子视图；不强迫用户离开当前对话上下文。
 - 任何 synthesis、candidate card、flashcard 仍只进入 Review，不直接写长期资产。
@@ -97,7 +97,7 @@ Seminar 结束时输出：
 | E01-C04-T08 | 接入 Seminar provider token usage | E01-C04-T05, E01-C04-T07 | `CancelableLangchainRunner.stream` usage tracker、`AiSeminarModelRoleExecutor` usage delta、`AiSeminarRuntimePage` provider usage UI | provider/SDK 返回 usage metadata 时，role turn 和 run 保存 `provider-reported` token usage；无 usage metadata 时降级本地估算；local budget gate 仍只使用本地估算，不把 provider usage 当作实时账单或美元成本。 |
 | E01-C04-T09 | 接入 Seminar estimated USD cost cap | E01-C04-T04, E01-C04-T08 | `AiModelCapability` pricing metadata、`AiSeminarBudgetPolicy.maxRunCostUsd`、`AiSeminarRuntimeService` cost gate、`AiSeminarRuntimePage` cost cap UI | provider capability cache 带 pricing metadata 时，用户可设置估算 `Run cost cap USD`；runtime 聚合 provider/local usage 估算美元成本，超出 cap 时停止后续步骤并可重试；无 pricing metadata 时禁用美元 cap；不得声明为真实 provider invoice。 |
 | E01-C05-T01 | 定义 Chat Seminar DirectorState | E01-C03-T02, UFA-C02-T15 | `AiSeminarDirectorState` / migration | 能记录轮次、已发言角色、分歧、证据刷新次数、用户插话和下一步 intent；恢复时不得重放已完成角色。 |
-| E01-C05-T02 | 增加角色 prompt 设置 | E01-C01-T02, E06 skill governance | Seminar role profile store + Settings/AI Chat 配置入口 | 用户可编辑默认角色 prompt、名称、启用状态、证据策略和工具范围；无效 prompt 或越权工具不进入 runtime。 |
+| E01-C05-T02 | 增加角色 prompt 设置 | E01-C01-T02, E06 skill governance | Seminar role profile store + Settings/AI Chat 配置入口 | 基础切片已支持默认角色显示名和 custom prompt，设置会持久化、写入 session contract 并注入 role prompt；后续仍需角色启用状态、证据策略、工具范围、空 prompt validator 和 AI Chat 内嵌配置入口；无效 prompt 或越权工具不得进入 runtime。 |
 | E01-C05-T03 | 接入多轮分歧与证据刷新 | E01-C02-T02, E01-C05-T01 | Director loop service | 至少支持初始证据、第一轮观点、contradiction scan、按 gap 重新检索、反驳轮和 synthesis；每次刷新证据都有 SourceRef。 |
 | E01-C05-T04 | 接入用户插话/澄清回合 | E01-C05-T01, E07 Chat UI | Chat Seminar user-turn model | Director 可暂停为 `needsUserInput`；用户可指定追问某角色、要求重新找证据或回答澄清；用户输入不被当作 AI 证据。 |
 | E01-C05-T05 | 在 AI Chat 渲染 Seminar run 卡片 | E01-C05-T01, E07 Chat UI | AI Chat message part / run card widgets | 同一 AI Chat 页面展示证据、角色发言、分歧、白板、总结和送审；不跳转独立 Seminar 页面也能走完讨论。 |

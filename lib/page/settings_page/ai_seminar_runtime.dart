@@ -85,6 +85,7 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
             ],
             roles: _selectedRoles,
             budgetPolicy: _budgetPolicyFromInputs(diagnostics),
+            roleProfiles: Prefs().aiSeminarRoleProfiles,
           ),
         );
   }
