@@ -10,6 +10,7 @@ import 'package:papertok_reader/service/rag/ai_book_indexer.dart';
 import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
 import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/ai_native_vector_index.dart';
 import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_progress_text.dart';
@@ -60,6 +61,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
 
   Future<List<_BookRow>>? _booksFuture;
   Future<List<AiGlobalIndexBookLayerStatus>>? _globalLayerFuture;
+  Future<AiNativeVectorIndexStatus>? _nativeVectorFuture;
 
   Timer? _refreshDebounce;
   Timer? _activeQueueHeartbeatTimer;
@@ -68,6 +70,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   bool _globalLayerBackfilling = false;
   bool _globalLayerCancelRequested = false;
   AiGlobalIndexBackfillProgress? _globalLayerProgress;
+  bool _nativeVectorBackfilling = false;
+  bool _nativeVectorCancelRequested = false;
+  AiNativeVectorBackfillProgress? _nativeVectorProgress;
 
   @override
   void initState() {
@@ -75,6 +80,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
 
     _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
     _globalLayerFuture = _loadMissingGlobalLayers();
+    _nativeVectorFuture = _loadNativeVectorStatus();
   }
 
   @override
@@ -91,6 +97,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       setState(() {
         _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
         _globalLayerFuture = _loadMissingGlobalLayers();
+        _nativeVectorFuture = _loadNativeVectorStatus();
       });
     });
   }
@@ -214,6 +221,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
             ),
             _buildConfigTile(context),
             _buildGlobalLayerTile(context),
+            _buildNativeVectorTile(context),
             _buildFilterBar(context),
             const Divider(height: 1),
             _buildQueueSection(context, queue, queueSvc),
@@ -292,6 +300,11 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     return AiGlobalIndexBuilder().listBooksMissingGlobalLayer(
       limit: _bookListLimit * 10,
     );
+  }
+
+  Future<AiNativeVectorIndexStatus> _loadNativeVectorStatus() async {
+    final db = await AiIndexDatabase.instance.database;
+    return const AiNativeVectorIndexBuilder().inspectIndexedBooks(db);
   }
 
   Widget _buildGlobalLayerTile(BuildContext context) {
@@ -395,20 +408,184 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       if (!mounted) return;
       AnxToast.show(l10n.aiLibraryIndexGlobalLayerFailed(e.toString()));
     } finally {
+      if (mounted) {
+        setState(() {
+          _globalLayerBackfilling = false;
+          _globalLayerCancelRequested = false;
+          _globalLayerProgress = null;
+          _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
+          _globalLayerFuture = _loadMissingGlobalLayers();
+        });
+      }
+    }
+  }
+
+  Widget _buildNativeVectorTile(BuildContext context) {
+    final l10n = L10n.of(context);
+    final future = _nativeVectorFuture ?? _loadNativeVectorStatus();
+    _nativeVectorFuture ??= future;
+
+    return FutureBuilder<AiNativeVectorIndexStatus>(
+      future: future,
+      builder: (context, snapshot) {
+        final status = snapshot.data;
+        final progress = _nativeVectorProgress;
+        final subtitle = _nativeVectorBackfilling && progress != null
+            ? _nativeVectorRunningText(context, progress)
+            : snapshot.connectionState == ConnectionState.waiting &&
+                    snapshot.data == null
+                ? _nativeVectorCheckingText(context)
+                : _nativeVectorStatusText(context, status);
+        final canBackfill = !_nativeVectorBackfilling &&
+            status != null &&
+            status.missingBookCount > 0;
+
+        return ListTile(
+          leading: const Icon(Icons.speed_outlined),
+          title: Text(_nativeVectorTitle(context)),
+          subtitle: Text('${_nativeVectorDesc(context)}\n$subtitle'),
+          isThreeLine: true,
+          trailing: _nativeVectorBackfilling
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _nativeVectorCancelRequested
+                          ? null
+                          : () => setState(
+                                () => _nativeVectorCancelRequested = true,
+                              ),
+                      child: Text(l10n.commonCancel),
+                    ),
+                  ],
+                )
+              : TextButton(
+                  onPressed: canBackfill
+                      ? () => unawaited(_backfillNativeVectors())
+                      : null,
+                  child: Text(_nativeVectorAction(context)),
+                ),
+        );
+      },
+    );
+  }
+
+  Future<void> _backfillNativeVectors() async {
+    if (_nativeVectorBackfilling) return;
+
+    setState(() {
+      _nativeVectorBackfilling = true;
+      _nativeVectorCancelRequested = false;
+      _nativeVectorProgress = null;
+    });
+
+    try {
+      final db = await AiIndexDatabase.instance.database;
+      final result =
+          await const AiNativeVectorIndexBuilder().backfillIndexedBooks(
+        db,
+        shouldCancel: () => _nativeVectorCancelRequested,
+        onProgress: (progress) {
+          if (!mounted) return;
+          setState(() => _nativeVectorProgress = progress);
+        },
+      );
       if (!mounted) return;
-      setState(() {
-        _globalLayerBackfilling = false;
-        _globalLayerCancelRequested = false;
-        _globalLayerProgress = null;
-        _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
-        _globalLayerFuture = _loadMissingGlobalLayers();
-      });
+
+      AnxToast.show(
+        result.cancelled
+            ? _nativeVectorCancelledToast(context, result)
+            : _nativeVectorDoneToast(context, result),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AnxToast.show(_nativeVectorFailedToast(context, e.toString()));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _nativeVectorBackfilling = false;
+          _nativeVectorCancelRequested = false;
+          _nativeVectorProgress = null;
+          _nativeVectorFuture = _loadNativeVectorStatus();
+        });
+      }
     }
   }
 
   bool _isZh(BuildContext context) {
     return Localizations.localeOf(context).languageCode == 'zh';
   }
+
+  String _nativeVectorTitle(BuildContext context) =>
+      _isZh(context) ? '向量索引升级' : 'Native vector index';
+
+  String _nativeVectorDesc(BuildContext context) => _isZh(context)
+      ? '把旧索引里的 Embedding 转成紧凑向量层；不重嵌入，给 sqlite-vec/ANN 后端做准备。'
+      : 'Convert existing embeddings into a compact vector layer without re-embedding, ready for sqlite-vec/ANN backends.';
+
+  String _nativeVectorCheckingText(BuildContext context) =>
+      _isZh(context) ? '正在检查向量层状态...' : 'Checking vector layer status...';
+
+  String _nativeVectorAction(BuildContext context) =>
+      _isZh(context) ? '升级' : 'Upgrade';
+
+  String _nativeVectorStatusText(
+    BuildContext context,
+    AiNativeVectorIndexStatus? status,
+  ) {
+    if (status == null) return _nativeVectorCheckingText(context);
+    if (status.indexedBookCount <= 0) {
+      return _isZh(context)
+          ? '还没有已完成的书库索引。'
+          : 'No completed library indexes yet.';
+    }
+    if (status.missingBookCount <= 0) {
+      return _isZh(context)
+          ? '所有已索引书籍都已有向量层；${status.vectorRowCount} 行可用于 native 检索。'
+          : 'All indexed books have vector rows; ${status.vectorRowCount} rows are ready for native retrieval.';
+    }
+    return _isZh(context)
+        ? '${status.missingBookCount} 本旧索引书籍可升级；完整准备 ${status.readyBookCount}/${status.indexedBookCount} 本。'
+        : '${status.missingBookCount} old indexed book(s) can be upgraded; ${status.readyBookCount}/${status.indexedBookCount} fully ready.';
+  }
+
+  String _nativeVectorRunningText(
+    BuildContext context,
+    AiNativeVectorBackfillProgress progress,
+  ) {
+    return _isZh(context)
+        ? '正在升级向量层 ${progress.done}/${progress.total} · 写入 ${progress.rowsWritten} 行'
+        : 'Upgrading vector layer ${progress.done}/${progress.total} · ${progress.rowsWritten} rows written';
+  }
+
+  String _nativeVectorDoneToast(
+    BuildContext context,
+    AiNativeVectorIndexedBooksBackfillResult result,
+  ) {
+    return _isZh(context)
+        ? '向量索引升级完成：处理 ${result.booksProcessed} 本，写入 ${result.rowsWritten} 行。'
+        : 'Vector index upgraded: ${result.booksProcessed} book(s), ${result.rowsWritten} row(s) written.';
+  }
+
+  String _nativeVectorCancelledToast(
+    BuildContext context,
+    AiNativeVectorIndexedBooksBackfillResult result,
+  ) {
+    return _isZh(context)
+        ? '向量索引升级已取消：完成 ${result.booksProcessed}/${result.totalCandidates} 本。'
+        : 'Vector index upgrade cancelled after ${result.booksProcessed}/${result.totalCandidates} book(s).';
+  }
+
+  String _nativeVectorFailedToast(BuildContext context, String message) =>
+      _isZh(context)
+          ? '向量索引升级失败：$message'
+          : 'Vector index upgrade failed: $message';
 
   String _rerankSummaryText(
     BuildContext context, {

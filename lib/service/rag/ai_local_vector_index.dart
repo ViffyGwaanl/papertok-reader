@@ -1,9 +1,11 @@
+import 'package:papertok_reader/service/rag/ai_native_vector_index.dart';
 import 'package:papertok_reader/service/rag/ai_vector_index.dart';
 import 'package:sqflite/sqflite.dart';
 
 class AiLocalVectorIndex {
   const AiLocalVectorIndex({
-    AiVectorSearchBackend backend = const AiExactVectorSearchBackend(),
+    AiVectorSearchBackend backend =
+        const AiNativeThenExactVectorSearchBackend(),
   }) : _backend = backend;
 
   final AiVectorSearchBackend _backend;

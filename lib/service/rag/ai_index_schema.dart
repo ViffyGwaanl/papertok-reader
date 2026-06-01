@@ -2,7 +2,7 @@ import 'package:papertok_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
 
 // NOTE: This DB is intended to be rebuildable. Keep migrations forward-only.
-const int kAiIndexDbVersion = 11;
+const int kAiIndexDbVersion = 12;
 
 class AiIndexMigrations {
   const AiIndexMigrations._();
@@ -44,6 +44,8 @@ class AiIndexMigrations {
           await _v10(db);
         case 11:
           await _v11(db);
+        case 12:
+          await _v12(db);
       }
     }
   }
@@ -492,6 +494,55 @@ CREATE TABLE IF NOT EXISTS ai_graph_community_nodes (
     );
     await addColumn(
       'ALTER TABLE ai_book_index ADD COLUMN total_chapters INTEGER DEFAULT 0',
+    );
+  }
+
+  static Future<void> _v12(Database db) async {
+    // Native vector shadow index. This table keeps compact vector rows separate
+    // from large chunk text so sqlite-vector/sqlite-vec style backends can own
+    // semantic recall while the app hydrates only the winning chunks.
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS ai_vector_index_rows (
+  chunk_id INTEGER PRIMARY KEY,
+  book_id INTEGER NOT NULL,
+  provider_id TEXT NOT NULL DEFAULT '',
+  embedding_model TEXT NOT NULL DEFAULT '',
+  embedding_dim INTEGER NOT NULL,
+  embedding_blob BLOB NOT NULL,
+  embedding_norm REAL,
+  created_at INTEGER,
+  updated_at INTEGER,
+  FOREIGN KEY (chunk_id) REFERENCES ai_chunks(id) ON DELETE CASCADE,
+  FOREIGN KEY (book_id) REFERENCES ai_book_index(book_id) ON DELETE CASCADE
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS ai_vector_index_meta (
+  id TEXT PRIMARY KEY,
+  backend TEXT NOT NULL,
+  provider_id TEXT NOT NULL DEFAULT '',
+  embedding_model TEXT NOT NULL DEFAULT '',
+  embedding_dim INTEGER NOT NULL,
+  index_status TEXT NOT NULL DEFAULT 'idle',
+  row_count INTEGER DEFAULT 0,
+  last_error TEXT,
+  created_at INTEGER,
+  updated_at INTEGER
+)
+''');
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_vector_rows_model_dim '
+      'ON ai_vector_index_rows(provider_id, embedding_model, embedding_dim)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_vector_rows_book '
+      'ON ai_vector_index_rows(book_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_vector_meta_status '
+      'ON ai_vector_index_meta(index_status)',
     );
   }
 }

@@ -20,7 +20,7 @@
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` | 读到重点时点一下，生成带原文证据和跳转来源的 KnowledgeCard，先进入 Review。 | 不自动写长期记忆、笔记或复习；重复点击不会制造重复卡。 |
 | 图片解析生成知识卡 | 图片大图 -> `AI图片解析` -> `知识卡` | 对 EPUB 图片、图表、插图做 AI 解析后，把结果变成待审知识卡。 | 图片本体和 base64 不写进卡片；只保存解析结果、来源和证据摘录。 |
 | AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` | 普通问答结束后，把有价值回答沉淀为待审知识卡，并保留能否跳回原文的来源状态。 | streaming 中按钮禁用；无 reader grounding 的旧聊天只保留 conversation provenance。 |
-| 多角色 Seminar | 阅读页选中文本 -> `研讨`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结。 | 结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
+| 多角色 Seminar | 阅读页选中文本 -> `研讨`，AI Chat `+` -> `AI 研讨会`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文或一个聊天问题启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结。 | 当前仍打开独立 Seminar runtime，不是在 AI Chat 消息流内展开；结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
 | Seminar 预算与恢复 | Seminar 页面本地 budget 区、Provider readiness 区、job 状态区 | 用户能看到 provider/model 能力、token 用量、本地估算成本、当前 job id/status；可取消、重试、排队下一场。 | 这是本机 job/cache，不是跨进程后台续跑；重启中的 running job 会恢复为 interrupted/retryable。 |
 | Review Inbox | `Settings -> AI -> Review inbox` | 所有 AI 生成的卡片、记忆、图谱关系、flashcard、同步冲突都先进入审批入口。 | 空 inbox 只代表没有 producer 写入，不代表入口不存在。 |
 | Memory 候选审核 | AI Chat 回答旁书签图标 -> `Add to Review inbox` | 有价值的聊天内容先进入 Review，再由用户决定写入 daily/long-term memory。 | Apply 才写 Markdown memory；Dismiss 不写 memory。 |
@@ -32,8 +32,9 @@
 | Custom Skills | `Settings -> AI -> 自定义技能`，再到 `当前技能` 选择 | 用户可导入受治理的 JSON skill，让 AI 在指定 scene 中追加行为和只读工具。 | 写工具、递归 sub-agent、未知字段和禁用 skill 都不会注入运行时。 |
 | OpenAI Responses 兼容诊断 | `Settings -> AI -> Provider Center` 配置 Responses provider | 官方支持 `previous_response_id` 的 provider 继续走 server-side continuation；拒绝该参数的兼容网关会自动降级重试，并在错误里给出 endpoint/model/参数诊断。 | 只对明确 `previous_response_id` unsupported 的 HTTP 400 重试；非该错误保留原始失败。 |
 | 当前书语义检索保护 | 阅读页搜索、Seminar evidence、`semantic_search_current_book` 工具 | 当前书向量搜索改为分页、串行、可取消、带进度，并优先 bounded FTS/BM25 候选，降低 OOM、发热和掉帧风险。 | 这是保护层，不是真 ANN 向量索引；无候选时只做预算内 fallback 扫描。 |
-| 书库 Hybrid RAG 召回 | AI Chat、Seminar library fallback、agent tool、ConceptGraph 空态等调用 `semantic_search_library` 的入口 | 书库检索已从“文本 miss 后才走 vector fallback”改成“FTS/BM25 精确召回 + 向量后端语义召回共同进入候选池”，结果可用 `usedVectorRecall` 判断向量是否参与；默认 exact backend 扫描时不再读取正文大字段，只 hydrate top winner。 | 默认后端仍是 exact backend，不是真 sqlite-vec/ANN；ConceptGraph 本地文本入口仍关闭 embedding/vector/rerank，避免外发正文；旧索引缺 blob 时仍保留 JSON fallback。 |
+| 书库 Hybrid RAG 召回 | AI Chat、Seminar library fallback、agent tool、ConceptGraph 空态等调用 `semantic_search_library` 的入口 | 书库检索已从“文本 miss 后才走 vector fallback”改成“FTS/BM25 精确召回 + 向量后端语义召回共同进入候选池”，结果可用 `usedVectorRecall` 判断向量是否参与；默认 backend 是 native-then-exact seam，native shadow layer 不完整时会合并 exact rows，避免漏掉未升级书籍。 | 不是真 sqlite-vec/ANN 生产后端；ConceptGraph 本地文本入口仍关闭 embedding/vector/rerank，避免外发正文；旧索引缺 blob 时仍保留 JSON fallback。 |
 | 旧索引全局层补建 | `Settings -> AI Index / Library Index` -> `全局层索引` -> `补建` | 用已有 chunk 给旧索引书籍补建 RAPTOR 全局摘要层和当前 GraphRAG 派生层，页面显示进度并可取消。 | 不重新生成 embedding；不是 sqlite-vec/ANN；当前纯中文 graph node 抽取仍需后续增强。 |
+| 旧索引向量层升级 | `Settings -> AI Index / Library Index` -> `向量索引升级` -> `升级` | 用已有 embedding 给旧索引书籍补建紧凑 native vector shadow layer，为后续 sqlite-vec/ANN 后端做迁移准备；页面显示缺失数量、进度和取消。 | 不重嵌入；当前是 schema/backend seam 和升级入口，不是已打包的 sqlite-vec/ANN 生产后端。 |
 
 ## 3. 已做但用户不直接感知的功能
 
@@ -42,6 +43,7 @@
 | `SourceRef` / provenance 统一 | 所有 AI 结论、知识卡、图谱关系、复习项需要知道来自哪本书、哪个 CFI、哪个 chunk、哪个模型。 | 用户点击卡片或复习题能解释“这条知识从哪里来”，也能跳回原文。 |
 | Review source-specific adapters | KnowledgeCard、Memory、ConceptGraph、flashcard、sync conflict 的 Apply 逻辑不同，不能只改一个状态字段。 | 审批动作更可追踪，减少“点了 Apply 但资产没真正写入”的错位。 |
 | Seminar runtime contract | 多角色讨论需要结构化保存 session、evidence、turn、whiteboard、synthesis、billing snapshot。 | 用户看到的是一个可取消、可重试、能送 Review 的讨论界面，而不是一次 prompt-only 输出。 |
+| OpenMAIC-style Director 思路 | OpenMAIC 把多 agent 讨论拆成 DirectorState、agent turn summary、whiteboard ledger 和 USER cue；这个结构适合 PaperTok 的长讨论。 | 下一步可以让 AI Chat 内嵌 Seminar 支持角色 prompt 设置、多轮分歧、证据刷新和用户插话，而不是固定一轮就总结。 |
 | Provider capability / billing snapshot | provider 是否支持 tools、vision、thinking、streaming、pricing metadata，需要和运行记录分开。 | 页面能说清楚“provider 用量”和“本地估算”区别，不把估算当账单。 |
 | Current-book semantic search paging | 旧实现一次拉全书 chunk 和 embedding，容易 OOM。 | 用户感知为搜索更不容易卡死，AI 提问时更少把阅读页拖慢。 |
 | CustomSkill schema/parser/validator | 自定义 skill 不能只靠一段 YAML/JSON 文本直接注入。 | 用户能导入能力，但写操作、递归、未知字段被挡在运行时外面。 |
@@ -82,7 +84,36 @@
 - 如果目标是多设备真实学习闭环，优先级高。
 - 如果当前主要是单设备阅读和 AI 辅助，现有前台安全 sync/export 已经够支撑试用。
 
-### 4.2 Seminar 进程死亡后继续跑
+### 4.2 AI Chat 内嵌多轮 Seminar
+
+当前已经有：
+
+- AI Chat `+` 中有独立 `AI 研讨会` 功能卡。
+- `Choose style / 选择风格` 中有 `研讨会设置` 入口。
+- 独立 Seminar runtime 已支持 evidence、角色输出、共享白板、synthesis、Review handoff、budget、job 状态和本机恢复。
+- 阅读页选中文本入口能带入真实 SourceRef。
+
+还要做什么：
+
+- 把 Seminar runtime 嵌入 AI Chat 消息流，渲染为可展开的 run 卡片，而不是强制跳到独立页面。
+- 建 `DirectorState`：记录轮次、已发言角色、分歧、证据刷新次数、用户插话和下一步 intent。
+- 增加角色 prompt/profile 设置：默认角色仍是 `critical/supportive/synthesizer/verifier`，但用户可改显示名、prompt、启用状态、证据策略、工具范围和预算。
+- 增加多轮机制：第一轮观点后做 contradiction scan；证据不足或角色冲突时重新检索，再进入反驳轮，最后 synthesis。
+- 加入用户讨论环节：用户可以追问某个角色、要求重新找证据、回答澄清问题或要求直接总结。
+- 把独立 Seminar 页面降为详情/恢复入口，并与 Chat run card 共用同一个 runtime state。
+
+做成后的效果：
+
+- 用户不需要离开 AI Chat，就能看到多个角色围绕同一个问题交锋、补证据、反驳和总结。
+- 角色不再只是固定 prompt，用户能调出自己喜欢的“严格质疑者 / 支持解释者 / 总结者 / 核证者”风格。
+- 讨论遇到矛盾不会一轮结束，而是会把争议点列出来，再按证据缺口重新查书内或书库 evidence。
+
+是否值得优先做：
+
+- 如果你喜欢 OpenMAIC 那种多人讨论感，这是 Seminar 方向最值得优先做的一块。
+- 它比 OS 后台续跑更直接影响日常体验，也比无限画布更贴近“读不懂时点一下”的主线。
+
+### 4.3 Seminar 进程死亡后继续跑
 
 当前已经有：
 
@@ -111,7 +142,7 @@
 - 如果 Seminar 会成为核心卖点，值得做。
 - 如果当前使用场景是短文本讨论，本机 interrupted/retryable 已足够，不必先做 OS background。
 
-### 4.3 Provider 发票导入
+### 4.4 Provider 发票导入
 
 当前已经有：
 
@@ -140,21 +171,24 @@
 - 如果用户会频繁跑高成本模型或团队共享 provider，值得做。
 - 如果主要是个人试用，先保留本地估算和 provider usage 已经够用。
 
-### 4.4 sqlite-vec / ANN 真向量索引
+### 4.5 sqlite-vec / ANN 真向量索引
 
 当前已经有：
 
 - 当前书搜索分页扫描。
 - bounded FTS/BM25 候选预筛。
 - 书库 RAG 的 hybrid recall 管线：向量后端和 FTS/BM25 一起召回，不再只是文本 miss 后兜底。
-- 默认 exact 向量后端主扫描只取 compact vector/provenance row，再 hydrate winner 正文。
+- exact 向量后端主扫描只取 compact vector/provenance row，再 hydrate winner 正文。
+- `kAiIndexDbVersion = 12` 的 native vector shadow schema：`ai_vector_index_rows` 和 `ai_vector_index_meta`。
+- 旧索引向量层升级入口：用已有 blob/JSON embedding 补建 compact float32 rows，不重嵌入。
+- native-then-exact backend seam：能检测 native SQL capability，不可用时自动降级 exact。
 - 搜索取消、进度、串行、background isolate scoring。
 - 老索引 JSON fallback 的分页回查。
 
 还要做什么：
 
 - 选型：sqlite-vec、sqlite-vss、FAISS wrapper、平台原生向量库，必须考虑 iOS 可打包性。
-- 新增 schema migration，从当前 `kAiIndexDbVersion` 递增。
+- 接入真实 sqlite-vec/Vec1 package 或平台向量扩展，并验证 iOS/Android 打包。
 - 建立 ANN index build job：可取消、可恢复、可重建、删除书籍后清理。
 - 定义向量维度兼容：不同 embedding model 切换时必须让旧索引失效。
 - 增加召回质量 gate：ANN topK 与当前 exact scan 在固定 fixture 上的重合率。
@@ -171,7 +205,7 @@
 - 如果目标用户会导入很多大书、论文集或长 PDF，值得做。
 - 如果当前 OOM/发热已由分页和 FTS 候选压住，可以先用现有实现收集真实数据。
 
-### 4.5 复杂无限画布图谱
+### 4.6 复杂无限画布图谱
 
 当前已经有：
 
@@ -208,9 +242,10 @@
 | 1 | 先验证当前已接入的用户路径 | 这些入口已经能形成“阅读 -> 生成 -> Review -> Apply -> 复习/图谱/导出”的闭环，最容易发现真实体验问题。 |
 | 2 | 先收集 Seminar、AI Chat、语义检索的真实使用数据 | 这能判断发热、掉帧、成本、检索质量是不是已经被现有保护层压住。 |
 | 3 | 如果多设备是刚需，推进完整后台云同步 | 它影响用户资产安全和跨设备学习连续性，工程风险也最高。 |
-| 4 | 如果 Seminar 是主卖点，推进进程死亡续跑 | 它能把多角色讨论从短任务提升为可恢复长任务。 |
-| 5 | 如果大书检索仍慢，再推进 sqlite-vec/ANN | 先用真实数据证明分页 + FTS 候选不够，再引入复杂索引后端。 |
-| 6 | 如果知识地图成为核心差异化，再推进无限画布图谱 | 它很有吸引力，但移动端成本和证据可见性 gate 都重。 |
+| 4 | 如果 Seminar 是主卖点，先推进 AI Chat 内嵌多轮 Seminar | 它直接解决“不要单独页面、角色可设置、多轮争论、用户能插话”的体验问题。 |
+| 5 | 如果长讨论会被频繁打断，再推进进程死亡续跑 | 它能把多角色讨论从短任务提升为可恢复长任务。 |
+| 6 | 如果大书检索仍慢，再推进 sqlite-vec/ANN | 先用真实数据证明分页 + FTS 候选不够，再引入复杂索引后端。 |
+| 7 | 如果知识地图成为核心差异化，再推进无限画布图谱 | 它很有吸引力，但移动端成本和证据可见性 gate 都重。 |
 
 ## 6. 当前优先体验闭环
 
