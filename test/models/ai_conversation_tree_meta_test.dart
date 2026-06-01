@@ -10,11 +10,64 @@ void main() {
         model: 'gpt-4o',
         inputTokens: 320,
         outputTokens: 880,
+        seminarRunCard: AiSeminarRunCardMeta(
+          question: 'How should I read this claim?',
+          bookId: 7,
+          status: 'ready',
+          createdAt: 1234,
+        ),
       );
       final restored = AiSegmentMeta.fromJson(meta.toJson());
       expect(restored.model, 'gpt-4o');
       expect(restored.inputTokens, 320);
       expect(restored.outputTokens, 880);
+      expect(
+          restored.seminarRunCard?.question, 'How should I read this claim?');
+      expect(restored.seminarRunCard?.bookId, 7);
+      expect(restored.seminarRunCard?.status, 'ready');
+      expect(restored.seminarRunCard?.createdAt, 1234);
+    });
+
+    test('seminar run card preserves reader SourceRef', () {
+      final sourceRef = SourceRef(
+        bookId: 7,
+        cfi: 'epubcfi(/6/4[selection])',
+        jumpLink:
+            'paperreader://reader/open?bookId=7&cfi=epubcfi%28%2F6%2F4%5Bselection%5D%29',
+        sourceTitle: 'Scoped Book',
+        locationLabel: 'Chapter 1',
+        sourceTextSnippet: 'Evidence-backed passage.',
+        sourceTextForHash: 'Evidence-backed passage.',
+        sourceKind: SourceRefKind.reader,
+        createdAt: 1,
+      );
+      final meta = AiSegmentMeta(
+        seminarRunCard: AiSeminarRunCardMeta(
+          question: 'Debate this passage.',
+          bookId: 7,
+          sourceRef: sourceRef,
+          status: 'ready',
+          createdAt: 1234,
+        ),
+      );
+
+      final restored = AiSegmentMeta.fromJson(meta.toJson());
+
+      expect(restored.seminarRunCard?.sourceRef?.bookId, 7);
+      expect(
+          restored.seminarRunCard?.sourceRef?.cfi, 'epubcfi(/6/4[selection])');
+      expect(restored.isEmpty, false);
+    });
+
+    test('seminar run card falls back to stable createdAt for malformed json',
+        () {
+      final restored = AiSeminarRunCardMeta.fromJson(const {
+        'question': 'Debate this passage.',
+        'createdAt': 'bad',
+      });
+
+      expect(restored.question, 'Debate this passage.');
+      expect(restored.createdAt, 0);
     });
 
     test('fromJson tolerates missing fields', () {

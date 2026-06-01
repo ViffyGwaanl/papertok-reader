@@ -402,6 +402,7 @@ class AiSegmentMeta {
     this.model,
     this.inputTokens,
     this.outputTokens,
+    this.seminarRunCard,
   });
 
   /// The model name used for this turn (e.g. `gpt-4o`).
@@ -413,27 +414,42 @@ class AiSegmentMeta {
   /// Output tokens produced by this turn (delta of the session tracker).
   final int? outputTokens;
 
+  /// Optional AI Seminar launcher/restoration card attached to an assistant
+  /// node. Older clients ignore this field and render the assistant fallback
+  /// text from [AiConversationNode.message].
+  final AiSeminarRunCardMeta? seminarRunCard;
+
   bool get isEmpty =>
       (model == null || model!.isEmpty) &&
       inputTokens == null &&
-      outputTokens == null;
+      outputTokens == null &&
+      seminarRunCard == null;
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{};
     if (model != null && model!.isNotEmpty) map['model'] = model;
     if (inputTokens != null) map['inputTokens'] = inputTokens;
     if (outputTokens != null) map['outputTokens'] = outputTokens;
+    if (seminarRunCard != null) {
+      map['seminarRunCard'] = seminarRunCard!.toJson();
+    }
     return map;
   }
 
   factory AiSegmentMeta.fromJson(Map<String, dynamic> json) {
     final rawIn = json['inputTokens'];
     final rawOut = json['outputTokens'];
+    final rawSeminarRunCard = json['seminarRunCard'];
     return AiSegmentMeta(
       model: json['model']?.toString(),
       inputTokens: rawIn is int ? rawIn : (rawIn is num ? rawIn.toInt() : null),
       outputTokens:
           rawOut is int ? rawOut : (rawOut is num ? rawOut.toInt() : null),
+      seminarRunCard: rawSeminarRunCard is Map
+          ? AiSeminarRunCardMeta.fromJson(
+              rawSeminarRunCard.map((k, v) => MapEntry(k.toString(), v)),
+            )
+          : null,
     );
   }
 
@@ -458,5 +474,54 @@ class AiSegmentMeta {
     if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
     if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
     return count.toString();
+  }
+}
+
+@immutable
+class AiSeminarRunCardMeta {
+  const AiSeminarRunCardMeta({
+    required this.question,
+    required this.createdAt,
+    this.bookId,
+    this.sourceRef,
+    this.status = 'ready',
+  });
+
+  final String question;
+  final int? bookId;
+  final SourceRef? sourceRef;
+  final String status;
+  final int createdAt;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'question': question,
+      if (bookId != null) 'bookId': bookId,
+      if (sourceRef != null) 'sourceRef': sourceRef!.toJson(),
+      'status': status,
+      'createdAt': createdAt,
+    };
+  }
+
+  factory AiSeminarRunCardMeta.fromJson(Map<String, dynamic> json) {
+    final rawBookId = json['bookId'];
+    SourceRef? sourceRef;
+    final rawSourceRef = json['sourceRef'];
+    if (rawSourceRef is Map) {
+      sourceRef = SourceRef.fromJson(
+        rawSourceRef.map((k, v) => MapEntry(k.toString(), v)),
+      );
+    }
+    return AiSeminarRunCardMeta(
+      question: json['question']?.toString() ?? '',
+      bookId: rawBookId is int
+          ? rawBookId
+          : rawBookId is num
+              ? rawBookId.toInt()
+              : int.tryParse(rawBookId?.toString() ?? ''),
+      sourceRef: sourceRef,
+      status: json['status']?.toString() ?? 'ready',
+      createdAt: json['createdAt'] is int ? json['createdAt'] as int : 0,
+    );
   }
 }

@@ -37,6 +37,7 @@ import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:papertok_reader/service/knowledge/ai_chat_knowledge_card_producer.dart';
+import 'package:papertok_reader/models/ai_conversation_tree.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
 import 'package:papertok_reader/models/book_import_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
@@ -2190,6 +2191,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final sourceRef = _draftSourceRefSeedText == inputController.text
         ? _draftSourceRef
         : null;
+    unawaited(
+      ref.read(aiChatProvider.notifier).appendSeminarRunCard(
+            question: question,
+            bookId: reading.book?.id,
+            sourceRef: sourceRef,
+          ),
+    );
+    _suppressDraftSync = true;
+    inputController.clear();
+    _suppressDraftSync = false;
+    try {
+      ref.read(aiChatDraftInputProvider.notifier).set('');
+    } catch (_) {}
 
     setState(() {
       _inlineSeminarVisible = true;
@@ -3794,10 +3808,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         isUser ? index : _findPrevHumanIndex(allMessages, index);
     final isLastTurn =
         prevHumanIndex != null && prevHumanIndex == lastHumanIndex;
+    final seminarRunCard = isUser
+        ? null
+        : ref
+            .read(aiChatProvider.notifier)
+            .seminarRunCardForMessageIndex(index);
     final assistantReaderSourceRef = !isUser && prevHumanIndex != null
         ? _readerSourceRefForUserIndex(prevHumanIndex)
         : null;
-    final assistantSourceStatus = isUser
+    final assistantSourceStatus = isUser || seminarRunCard != null
         ? null
         : _knowledgeCardSourceStatus(
             readerSourceRef: assistantReaderSourceRef,
@@ -3806,7 +3825,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final maxBubbleWidth = MediaQuery.sizeOf(context).width * 0.8;
 
     Widget? footer;
-    if (!isUser) {
+    if (!isUser && seminarRunCard == null) {
       final segMeta =
           ref.read(aiChatProvider.notifier).segmentMetaForMessageIndex(index);
       final segText = segMeta?.footerText() ?? '';
@@ -3863,7 +3882,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     _buildScaledMessageContent(
                       isUser
                           ? _buildHumanMessageBody(message)
-                          : _buildAssistantSections(content, isStreaming),
+                          : seminarRunCard == null
+                              ? _buildAssistantSections(content, isStreaming)
+                              : _buildSeminarRunCard(seminarRunCard),
                     ),
                     Wrap(
                       alignment: WrapAlignment.end,
@@ -3888,7 +3909,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                             sourceType: 'chat',
                             messageNodeId: 'user:$index',
                           ),
-                        ] else ...[
+                        ] else if (seminarRunCard == null) ...[
                           if (prevHumanIndex != null)
                             TextButton(
                               onPressed: () => _confirmRegenerateFromUserIndex(
@@ -3937,6 +3958,76 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSeminarRunCard(AiSeminarRunCardMeta card) {
+    final l10n = L10n.of(context);
+    final question = card.question.trim();
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => openInlineSeminar(
+          question: question.isEmpty ? null : question,
+          bookId: card.sourceRef?.bookId ?? card.bookId,
+          sourceRef: card.sourceRef,
+        ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: ClaudePalette.divider(context)),
+            color: ClaudePalette.card(context),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.groups_2_outlined,
+                    size: 18,
+                    color: ClaudePalette.accent(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.aiChatSeminarFeatureTitle,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: ClaudePalette.fg(context),
+                          ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => openInlineSeminar(
+                      question: question.isEmpty ? null : question,
+                      bookId: card.sourceRef?.bookId ?? card.bookId,
+                      sourceRef: card.sourceRef,
+                    ),
+                    child: Text(l10n.aiChatSeminarFeatureAction),
+                  ),
+                ],
+              ),
+              if (question.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  question,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: ClaudePalette.fg(context),
+                        height: 1.35,
+                      ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -141,6 +141,91 @@ void main() {
     expect(history.single.bookTitle, isNull);
   });
 
+  test('appendSeminarRunCard persists a reloadable chat seminar card',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('ai-chat-seminar-card-');
+    _mockPathProvider(tempDir.path);
+    addTearDown(() {
+      _mockPathProvider(null);
+      tempDir.deleteSync(recursive: true);
+    });
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await container.read(aiChatProvider.future);
+
+    final book = Book.mock().copyWith(id: 7, title: 'Scoped Book');
+    container.read(currentReadingProvider.notifier).start(
+          CurrentReadingState(book: book),
+        );
+    container.read(aiChatProvider.notifier).restore(
+      [ChatMessage.humanText('已有会话')],
+      sessionId: 'session-seminar-card',
+    );
+
+    await container.read(aiChatProvider.notifier).appendSeminarRunCard(
+          question: '这个概念怎么理解？',
+          bookId: 7,
+        );
+
+    final history = await AiHistoryStore.readHistory();
+    expect(history, hasLength(1));
+    final entry = history.single;
+    final nodes = entry.conversationV2!['nodes'] as Map;
+    final seminarCards = nodes.values.where((raw) {
+      if (raw is! Map) return false;
+      final meta = raw['meta'];
+      return meta is Map && meta['seminarRunCard'] is Map;
+    }).toList();
+    expect(seminarCards, hasLength(1));
+    final card = (seminarCards.single as Map)['meta']['seminarRunCard'] as Map;
+    expect(card['question'], '这个概念怎么理解？');
+    expect(card['bookId'], 7);
+    expect(card['status'], 'ready');
+
+    container.read(aiChatProvider.notifier).clear();
+    container.read(aiChatProvider.notifier).loadHistoryEntry(entry);
+
+    final restoredMessages = container.read(aiChatProvider).value!;
+    expect(restoredMessages.map((message) => message.contentAsString), [
+      '已有会话',
+      '这个概念怎么理解？',
+      contains('AI Seminar'),
+    ]);
+    final restoredCard = container
+        .read(aiChatProvider.notifier)
+        .seminarRunCardForMessageIndex(2);
+    expect(restoredCard?.question, '这个概念怎么理解？');
+    expect(restoredCard?.bookId, 7);
+  });
+
+  test('appendSeminarRunCard ignores empty cards without source evidence',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('ai-chat-empty-seminar-card-');
+    _mockPathProvider(tempDir.path);
+    addTearDown(() {
+      _mockPathProvider(null);
+      tempDir.deleteSync(recursive: true);
+    });
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await container.read(aiChatProvider.future);
+
+    await container.read(aiChatProvider.notifier).appendSeminarRunCard(
+          question: '   ',
+          bookId: 7,
+        );
+
+    final history = await AiHistoryStore.readHistory();
+    expect(history, isEmpty);
+    expect(container.read(aiChatProvider.notifier).currentSessionId, isNull);
+  });
+
   test('startStreaming coalesces rapid assistant chunk updates for scrolling',
       () async {
     final tempDir =

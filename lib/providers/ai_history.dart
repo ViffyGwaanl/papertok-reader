@@ -15,8 +15,10 @@ class AiHistoryNotifier
   Future<void> _load() async {
     try {
       final history = await AiHistoryStore.readHistory();
+      if (!mounted) return;
       state = AsyncValue.data(history);
     } catch (error, stack) {
+      if (!mounted) return;
       state = AsyncValue.error(error, stack);
     }
   }

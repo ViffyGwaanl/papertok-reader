@@ -81,6 +81,7 @@ class AiChat extends _$AiChat {
   Timer? _streamingUiFlushTimer;
   String? _pendingStreamingContent;
   int _lastStreamingUiFlushMs = 0;
+  bool _disposed = false;
 
   String _draftModel = '';
   int _draftTokenInSnapshot = 0;
@@ -90,6 +91,7 @@ class AiChat extends _$AiChat {
   FutureOr<List<ChatMessage>> build() async {
     ref.onDispose(_disposeActiveStreamingScope);
 
+    _disposed = false;
     _currentSessionId = null;
     _tree = AiConversationTree.empty();
     _activeNodeIds = const [];
@@ -110,6 +112,7 @@ class AiChat extends _$AiChat {
   }
 
   void _disposeActiveStreamingScope() {
+    _disposed = true;
     cancelActiveAiRequest();
     final generationSub = _generationSub;
     _generationSub = null;
@@ -473,9 +476,13 @@ class AiChat extends _$AiChat {
       );
       final persisted = _queueDraftHistoryUpsert(historyNotifier, finalEntry);
       unawaited(
-        persisted.then(
-          (_) => _refreshGeneratedTitle(finalEntry, historyNotifier),
-        ),
+        persisted
+            .then(
+              (_) => _refreshGeneratedTitle(finalEntry, historyNotifier),
+            )
+            .catchError(
+              (_) {},
+            ),
       );
     }
 
@@ -639,6 +646,9 @@ class AiChat extends _$AiChat {
     AiChatHistoryEntry entry,
     AiHistoryNotifier historyNotifier,
   ) async {
+    if (_disposed) {
+      return;
+    }
     if (entry.titleSource == 'manual') {
       return;
     }
@@ -651,6 +661,9 @@ class AiChat extends _$AiChat {
     }
 
     final generated = await _titleService.generateTitle(messages);
+    if (_disposed) {
+      return;
+    }
     final normalized = generated.trim();
     if (normalized.isEmpty || normalized == entry.title) {
       return;
@@ -889,6 +902,10 @@ class AiChat extends _$AiChat {
     return _tree.nodes[_activeNodeIds[messageIndex]]?.meta;
   }
 
+  AiSeminarRunCardMeta? seminarRunCardForMessageIndex(int messageIndex) {
+    return segmentMetaForMessageIndex(messageIndex)?.seminarRunCard;
+  }
+
   /// Returns the persisted reader/source provenance for the active-path message
   /// at [messageIndex], or null for legacy entries without per-turn provenance.
   SourceRef? sourceRefForMessageIndex(int messageIndex) {
@@ -896,6 +913,114 @@ class AiChat extends _$AiChat {
       return null;
     }
     return _tree.nodes[_activeNodeIds[messageIndex]]?.sourceRef;
+  }
+
+  Future<void> appendSeminarRunCard({
+    required String question,
+    int? bookId,
+    SourceRef? sourceRef,
+  }) async {
+    final trimmedQuestion = question.trim();
+    if (trimmedQuestion.isEmpty && sourceRef == null) {
+      return;
+    }
+
+    final sessionId = _ensureSessionId();
+    final serviceId = Prefs().selectedAiService;
+    final config = Prefs().getAiConfig(serviceId);
+    final model = (config['model'])?.trim() ?? '';
+    final historyNotifier = ref.read(aiHistoryProvider.notifier);
+    final existing = historyNotifier.findById(sessionId);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final bookContext = _readCurrentBookContext(ref.read);
+    final historyBookContext = _historyBookContextFor(
+      existing: existing,
+      current: bookContext,
+    );
+    final resolvedBookId = sourceRef?.bookId ?? bookId ?? bookContext.bookId;
+
+    if (_tree.nodes.isEmpty) {
+      _tree = AiConversationTree.empty();
+    }
+
+    var parentId = _activeNodeIds.isEmpty ? _tree.rootId : _activeNodeIds.last;
+    if (trimmedQuestion.isNotEmpty) {
+      _tree = _tree.appendChild(
+        parentId: parentId,
+        message: ChatMessage.humanText(trimmedQuestion),
+        sourceRef: sourceRef,
+      );
+      parentId = _tree.nodes[parentId]!.activeChildId!;
+    }
+
+    final card = AiSeminarRunCardMeta(
+      question: trimmedQuestion,
+      bookId: resolvedBookId,
+      sourceRef: sourceRef,
+      status: 'ready',
+      createdAt: now,
+    );
+    _tree = _tree.appendChild(
+      parentId: parentId,
+      message: ChatMessage.ai(_seminarRunCardFallbackText(card)),
+    );
+    final cardNodeId = _tree.nodes[parentId]!.activeChildId!;
+    final cardNode = _tree.nodes[cardNodeId];
+    if (cardNode != null) {
+      _tree = _tree.copyWithNode(
+        cardNodeId,
+        cardNode.copyWith(
+          meta: AiSegmentMeta(seminarRunCard: card),
+        ),
+      );
+    }
+
+    _rebuildFromTree();
+
+    final currentMessages = List<ChatMessage>.from(state.value ?? const []);
+    final fallbackTitle = _titleService.deriveFallbackTitle(currentMessages);
+    final entry = (existing ??
+            AiChatHistoryEntry(
+              id: sessionId,
+              serviceId: serviceId,
+              model: model,
+              createdAt: now,
+              updatedAt: now,
+              title: fallbackTitle,
+              titleSource: 'heuristic',
+              bookId: historyBookContext.bookId,
+              bookTitle: historyBookContext.bookTitle,
+              messages: currentMessages,
+              completed: true,
+            ))
+        .copyWith(
+      serviceId: serviceId,
+      messages: currentMessages,
+      updatedAt: now,
+      completed: true,
+      model: model,
+      title: (existing?.title?.trim().isNotEmpty ?? false)
+          ? existing!.title
+          : fallbackTitle,
+      titleSource: (existing?.titleSource?.trim().isNotEmpty ?? false)
+          ? existing!.titleSource
+          : 'heuristic',
+      bookId: historyBookContext.bookId,
+      bookTitle: historyBookContext.bookTitle,
+      conversationV2: _tree.toJson(),
+    );
+    if (_draftEntry?.id == entry.id) {
+      _draftEntry = entry;
+    }
+    await _queueDraftHistoryUpsert(historyNotifier, entry);
+  }
+
+  String _seminarRunCardFallbackText(AiSeminarRunCardMeta card) {
+    final question = card.question.trim();
+    if (question.isEmpty) {
+      return 'AI Seminar';
+    }
+    return 'AI Seminar: $question';
   }
 
   void persistCurrentConversation(WidgetRef ref) {
