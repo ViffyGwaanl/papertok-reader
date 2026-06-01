@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 class AiLocalVectorIndex {
   const AiLocalVectorIndex({
     AiVectorSearchBackend backend =
-        const AiNativeThenExactVectorSearchBackend(),
+        const AiAnnThenNativeThenExactVectorSearchBackend(),
   }) : _backend = backend;
 
   final AiVectorSearchBackend _backend;

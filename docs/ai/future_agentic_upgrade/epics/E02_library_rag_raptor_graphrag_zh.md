@@ -81,6 +81,6 @@ GraphRAG 的 node/edge/community 必须保留 chunk evidence。模型推断和�
 
 ## 6. Non-Goals
 
-- 不把 ANN/native vector 作为默认生产路径。
+- 不在缺少平台 extension/package、build job UI、删除清理和 provider/model 失效 gate 时，把 ANN/native vector 宣称为发布级生产能力；默认检索路径必须保留 exact fallback。
 - 不默认同步 `ai_index.db`。
 - 不在无证据时生成正式 GraphRAG 节点。

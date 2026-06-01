@@ -18,10 +18,11 @@ OpenMAIC 当前实现可借鉴的工程结构：
 - `lib/chat/agent-loop.ts`：客户端/前端循环维护 `DirectorState`，每次请求只让 Director 选择一个下一位 agent，收到 `END`、`USER` cue 或异常空轮后停止。
 - `lib/orchestration/director-graph.ts`：服务端 LangGraph 图是 `START -> director -> agent_generate -> END` 的单轮拓扑；多轮讨论由客户端串行多次请求驱动，而不是服务端长循环。
 - `app/api/chat/route.ts`：Chat endpoint 以 SSE 输出 `agent_start / text_delta / action / cue_user / done / error`，并用 request abort 和 heartbeat 管理流式生命周期；PaperTok 应采用 run-scoped stream event，而不是把整场 Seminar 包成一次不可中断调用。
+- `lib/orchestration/stateless-generate.ts`：角色输出采用结构化 JSON array，把 `text` 与 `action` 交错流式解析；PaperTok 不需要复制白板动作系统，但应借鉴“结构化 message part + 增量解析 + fallback text finalize”的 robustness。
 - `lib/prompts/templates/director/system.md`：Director prompt 显式要求不要重复已发言 agent、优先回答真人学生问题、允许输出 `USER` 让用户参与。
 - `components/chat/use-chat-sessions.ts` 与 `lib/buffer/stream-buffer.ts`：Chat 侧把 SSE 事件写入 UI buffer，等本轮显示和 action 执行完成后再让 agent loop 进入下一轮；buffer 支持 pause/resume、逐字显示、action 延迟执行和 `cue_user`。这比一次性跑完整场更适合移动端暂停、取消和恢复。
 - `lib/orchestration/registry/store.ts`：agent 由 `name / role / persona / allowedActions / priority / voice` 等字段配置；PaperTok 只能借鉴这个“可治理 profile”结构，不能复制 AGPL 代码或默认人格内容。
-- `lib/orchestration/tool-schemas.ts` 与 action schema：agent 输出 text/action 交错事件，whiteboard/action 由客户端执行并写 ledger；PaperTok 应把它降级为移动端轻量 evidence/whiteboard ledger，不引入完整课堂白板。
+- `lib/orchestration/tool-schemas.ts`、`summarizers/whiteboard-ledger.ts` 与 `summarizers/whiteboard-conflicts.ts`：agent 输出 text/action 交错事件，whiteboard/action 由客户端执行并写 ledger，下一轮 prompt 能看到白板摘要和布局冲突；PaperTok 应把它降级为移动端轻量 evidence/disagreement/whiteboard ledger，不引入完整课堂白板。
 
 ## 2. 默认角色
 

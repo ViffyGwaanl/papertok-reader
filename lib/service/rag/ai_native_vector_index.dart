@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:papertok_reader/service/rag/ai_vector_codec.dart';
 import 'package:papertok_reader/service/rag/ai_vector_index.dart';
 import 'package:sqflite/sqflite.dart';
@@ -290,6 +293,332 @@ GROUP BY provider_id, embedding_model, embedding_dim
   }
 }
 
+class AiVec1VectorIndexAvailability {
+  const AiVec1VectorIndexAvailability({
+    required this.available,
+    this.info,
+    this.lastError,
+  });
+
+  final bool available;
+  final String? info;
+  final String? lastError;
+}
+
+class AiVec1VectorIndexBuildResult {
+  const AiVec1VectorIndexBuildResult({
+    required this.available,
+    required this.tablesBuilt,
+    required this.rowsWritten,
+    this.totalGroups = 0,
+    this.cancelled = false,
+    this.lastError,
+  });
+
+  final bool available;
+  final int tablesBuilt;
+  final int rowsWritten;
+  final int totalGroups;
+  final bool cancelled;
+  final String? lastError;
+}
+
+class AiVec1VectorIndexBuildProgress {
+  const AiVec1VectorIndexBuildProgress({
+    required this.done,
+    required this.total,
+    required this.rowsWritten,
+  });
+
+  final int done;
+  final int total;
+  final int rowsWritten;
+}
+
+class AiVec1VectorIndexBuilder {
+  const AiVec1VectorIndexBuilder();
+
+  static const backendId = 'vec1-ann';
+
+  static String tableNameFor({
+    required String providerId,
+    required String embeddingModel,
+    required int embeddingDim,
+  }) {
+    final key = '$providerId\u001f$embeddingModel\u001f$embeddingDim';
+    final digest = sha1.convert(utf8.encode(key)).toString().substring(0, 16);
+    return 'ai_vec1_index_$digest';
+  }
+
+  Future<AiVec1VectorIndexAvailability> inspectAvailability(
+    Database db,
+  ) async {
+    try {
+      final rows = await db.rawQuery('SELECT vec1_info() AS info');
+      return AiVec1VectorIndexAvailability(
+        available: true,
+        info: rows.isEmpty ? null : rows.first['info']?.toString(),
+      );
+    } catch (e) {
+      return AiVec1VectorIndexAvailability(
+        available: false,
+        lastError: e.toString(),
+      );
+    }
+  }
+
+  Future<bool> isAvailable(Database db) async {
+    return (await inspectAvailability(db)).available;
+  }
+
+  Future<AiVec1VectorIndexBuildResult> rebuildFromNativeShadowRows(
+    Database db, {
+    bool Function()? shouldCancel,
+    void Function(AiVec1VectorIndexBuildProgress progress)? onProgress,
+  }) async {
+    final availability = await inspectAvailability(db);
+    if (!availability.available) {
+      return AiVec1VectorIndexBuildResult(
+        available: false,
+        tablesBuilt: 0,
+        rowsWritten: 0,
+        lastError: availability.lastError,
+      );
+    }
+
+    final groups = await db.rawQuery('''
+SELECT provider_id, embedding_model, embedding_dim, COUNT(*) AS row_count
+FROM ai_vector_index_rows
+GROUP BY provider_id, embedding_model, embedding_dim
+ORDER BY provider_id, embedding_model, embedding_dim
+''');
+    var done = 0;
+    var tablesBuilt = 0;
+    var rowsWritten = 0;
+    var cancelled = false;
+
+    for (final group in groups) {
+      if (shouldCancel?.call() == true) {
+        cancelled = true;
+        break;
+      }
+      final providerId = group['provider_id']?.toString() ?? '';
+      final embeddingModel = group['embedding_model']?.toString() ?? '';
+      final embeddingDim = (group['embedding_dim'] as num?)?.toInt() ?? 0;
+      if (embeddingDim <= 0) continue;
+      final tableName = tableNameFor(
+        providerId: providerId,
+        embeddingModel: embeddingModel,
+        embeddingDim: embeddingDim,
+      );
+      await db.execute(
+        'CREATE VIRTUAL TABLE IF NOT EXISTS $tableName '
+        'USING vec1(embedding, chunk_id, book_id)',
+      );
+      await db.delete(tableName);
+
+      final vectorRows = await db.rawQuery(
+        '''
+SELECT chunk_id, book_id, embedding_blob
+FROM ai_vector_index_rows
+WHERE COALESCE(provider_id, '') = ?
+  AND COALESCE(embedding_model, '') = ?
+  AND embedding_dim = ?
+ORDER BY chunk_id ASC
+''',
+        [providerId, embeddingModel, embeddingDim],
+      );
+      var groupRowsWritten = 0;
+      for (final row in vectorRows) {
+        if (shouldCancel?.call() == true) {
+          cancelled = true;
+          break;
+        }
+        final chunkId = (row['chunk_id'] as num?)?.toInt();
+        final bookId = (row['book_id'] as num?)?.toInt();
+        final blob = row['embedding_blob'];
+        if (chunkId == null || bookId == null || blob == null) continue;
+        final inserted = await db.insert(
+          tableName,
+          {
+            'rowid': chunkId,
+            'embedding': blob,
+            'chunk_id': chunkId,
+            'book_id': bookId,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        if (inserted != 0) {
+          rowsWritten += 1;
+          groupRowsWritten += 1;
+        }
+        if (shouldCancel?.call() == true) {
+          cancelled = true;
+          break;
+        }
+      }
+
+      if (cancelled) {
+        break;
+      }
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.insert(
+        'ai_vector_index_meta',
+        {
+          'id': '$backendId::$providerId::$embeddingModel::$embeddingDim',
+          'backend': backendId,
+          'provider_id': providerId,
+          'embedding_model': embeddingModel,
+          'embedding_dim': embeddingDim,
+          'index_status': 'ready',
+          'row_count': groupRowsWritten,
+          'last_error': null,
+          'created_at': now,
+          'updated_at': now,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      tablesBuilt += 1;
+      done += 1;
+      onProgress?.call(
+        AiVec1VectorIndexBuildProgress(
+          done: done,
+          total: groups.length,
+          rowsWritten: rowsWritten,
+        ),
+      );
+    }
+
+    return AiVec1VectorIndexBuildResult(
+      available: true,
+      tablesBuilt: tablesBuilt,
+      rowsWritten: rowsWritten,
+      totalGroups: groups.length,
+      cancelled: cancelled,
+    );
+  }
+
+  Future<bool> hasMissingIndexedBookVectors(
+    Database db, {
+    required String providerId,
+    required String embeddingModel,
+    required int embeddingDim,
+  }) async {
+    final tableName = tableNameFor(
+      providerId: providerId,
+      embeddingModel: embeddingModel,
+      embeddingDim: embeddingDim,
+    );
+    if (!await _tableExists(db, tableName)) {
+      return true;
+    }
+    try {
+      final rows = await db.rawQuery(
+        '''
+SELECT 1
+FROM ai_vector_index_rows v
+JOIN ai_book_index b ON b.book_id = v.book_id
+LEFT JOIN $tableName ann ON ann.chunk_id = v.chunk_id
+WHERE COALESCE(v.provider_id, '') = ?
+  AND COALESCE(v.embedding_model, '') = ?
+  AND v.embedding_dim = ?
+  AND b.chunk_count > 0
+  AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
+  AND ann.chunk_id IS NULL
+LIMIT 1
+''',
+        [providerId, embeddingModel, embeddingDim],
+      );
+      return rows.isNotEmpty;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<bool> _tableExists(Database db, String tableName) async {
+    try {
+      final rows = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE name = ? LIMIT 1",
+        [tableName],
+      );
+      return rows.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
+class AiVec1VectorSearchBackend implements AiVectorSearchBackend {
+  const AiVec1VectorSearchBackend();
+
+  @override
+  Future<List<Map<String, Object?>>> searchRows(
+    Database db, {
+    required List<double> queryVector,
+    required String providerId,
+    required String embeddingModel,
+    required int limit,
+    bool onlyIndexed = true,
+    int maxScanRows = 5000,
+  }) async {
+    if (queryVector.isEmpty) return const [];
+    const builder = AiVec1VectorIndexBuilder();
+    if (!await builder.isAvailable(db)) return const [];
+
+    final tableName = AiVec1VectorIndexBuilder.tableNameFor(
+      providerId: providerId,
+      embeddingModel: embeddingModel,
+      embeddingDim: queryVector.length,
+    );
+    if (!await builder._tableExists(db, tableName)) return const [];
+
+    final safeLimit = limit.clamp(1, 500);
+    final queryBlob = AiVectorCodec.encodeFloat32(queryVector);
+    final options = '{"k":$safeLimit}';
+    final vectorRows = await db.rawQuery(
+      '''
+SELECT
+  vv.chunk_id AS chunk_id,
+  (1.0 - vv.distance) AS local_vector_score
+FROM $tableName(?, ?) vv
+JOIN ai_book_index b ON b.book_id = vv.book_id
+WHERE (? = 0 OR (
+  b.chunk_count > 0 AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
+))
+ORDER BY vv.distance ASC
+LIMIT ?
+''',
+      [queryBlob, options, onlyIndexed ? 1 : 0, safeLimit],
+    );
+    final scoredByChunkId = <int, double>{};
+    for (final row in vectorRows) {
+      final chunkId = (row['chunk_id'] as num?)?.toInt();
+      if (chunkId == null) continue;
+      scoredByChunkId[chunkId] =
+          (row['local_vector_score'] as num?)?.toDouble() ?? 0.0;
+    }
+    if (scoredByChunkId.isEmpty) return const [];
+
+    final hydrated =
+        await _hydrateVectorWinnerRows(db, scoredByChunkId.keys.toList());
+    final hydratedById = <int, Map<String, Object?>>{
+      for (final row in hydrated)
+        if (row['chunk_id'] is num)
+          (row['chunk_id'] as num).toInt(): Map<String, Object?>.from(row),
+    };
+
+    return [
+      for (final entry in scoredByChunkId.entries)
+        if (hydratedById[entry.key] != null)
+          {
+            ...hydratedById[entry.key]!,
+            'local_vector_score': entry.value,
+          }
+    ];
+  }
+}
+
 class AiSqliteVectorSearchBackend implements AiVectorSearchBackend {
   const AiSqliteVectorSearchBackend();
 
@@ -340,7 +669,8 @@ LIMIT ?
     }
     if (scoredByChunkId.isEmpty) return const [];
 
-    final hydrated = await _hydrateRows(db, scoredByChunkId.keys.toList());
+    final hydrated =
+        await _hydrateVectorWinnerRows(db, scoredByChunkId.keys.toList());
     final hydratedById = <int, Map<String, Object?>>{
       for (final row in hydrated)
         if (row['chunk_id'] is num)
@@ -367,39 +697,73 @@ LIMIT ?
       return false;
     }
   }
+}
 
-  Future<List<Map<String, Object?>>> _hydrateRows(
-    Database db,
-    List<int> chunkIds,
-  ) {
-    final placeholders = List.filled(chunkIds.length, '?').join(',');
-    return db.rawQuery(
-      '''
-SELECT
-  c.id AS chunk_id,
-  c.book_id,
-  c.chapter_href,
-  c.chapter_title,
-  c.chunk_index,
-  c.start_char,
-  c.end_char,
-  c.text,
-  c.raw_text,
-  c.context_text,
-  c.embedding_input_hash,
-  c.context_version,
-  c.context_created_at,
-  c.embedding_blob,
-  c.embedding_json,
-  c.embedding_norm,
-  b.embedding_model,
-  b.provider_id,
-  b.index_version
-FROM ai_chunks c
-JOIN ai_book_index b ON b.book_id = c.book_id
-WHERE c.id IN ($placeholders)
-''',
-      chunkIds,
+class AiAnnThenNativeThenExactVectorSearchBackend
+    implements AiVectorSearchBackend {
+  const AiAnnThenNativeThenExactVectorSearchBackend({
+    this.annBackend = const AiVec1VectorSearchBackend(),
+    this.nativeThenExactBackend = const AiNativeThenExactVectorSearchBackend(),
+  });
+
+  final AiVectorSearchBackend annBackend;
+  final AiVectorSearchBackend nativeThenExactBackend;
+
+  @override
+  Future<List<Map<String, Object?>>> searchRows(
+    Database db, {
+    required List<double> queryVector,
+    required String providerId,
+    required String embeddingModel,
+    required int limit,
+    bool onlyIndexed = true,
+    int maxScanRows = 5000,
+  }) async {
+    try {
+      final annRows = await annBackend.searchRows(
+        db,
+        queryVector: queryVector,
+        providerId: providerId,
+        embeddingModel: embeddingModel,
+        limit: limit,
+        onlyIndexed: onlyIndexed,
+        maxScanRows: maxScanRows,
+      );
+      if (annRows.isNotEmpty) {
+        final hasMissingAnnRows =
+            await const AiVec1VectorIndexBuilder().hasMissingIndexedBookVectors(
+          db,
+          providerId: providerId,
+          embeddingModel: embeddingModel,
+          embeddingDim: queryVector.length,
+        );
+        if (!hasMissingAnnRows) {
+          return annRows;
+        }
+        final fallbackRows = await nativeThenExactBackend.searchRows(
+          db,
+          queryVector: queryVector,
+          providerId: providerId,
+          embeddingModel: embeddingModel,
+          limit: limit,
+          onlyIndexed: onlyIndexed,
+          maxScanRows: maxScanRows,
+        );
+        return _mergeVectorRows(annRows, fallbackRows, limit: limit);
+      }
+    } catch (_) {
+      // ANN extensions are optional and may be unavailable on a platform or
+      // during migration; keep the stable native/exact path alive.
+    }
+
+    return nativeThenExactBackend.searchRows(
+      db,
+      queryVector: queryVector,
+      providerId: providerId,
+      embeddingModel: embeddingModel,
+      limit: limit,
+      onlyIndexed: onlyIndexed,
+      maxScanRows: maxScanRows,
     );
   }
 }
@@ -448,7 +812,7 @@ class AiNativeThenExactVectorSearchBackend implements AiVectorSearchBackend {
           onlyIndexed: onlyIndexed,
           maxScanRows: maxScanRows,
         );
-        return _mergeRows(nativeRows, exactRows, limit: limit);
+        return _mergeVectorRows(nativeRows, exactRows, limit: limit);
       }
     } catch (_) {
       // Missing vector extension or uninitialized native index: fall back to
@@ -485,45 +849,81 @@ class AiNativeThenExactVectorSearchBackend implements AiVectorSearchBackend {
       maxScanRows: maxScanRows,
     );
   }
+}
 
-  List<Map<String, Object?>> _mergeRows(
-    List<Map<String, Object?>> nativeRows,
-    List<Map<String, Object?>> exactRows, {
-    required int limit,
-  }) {
-    final mergedById = <int, Map<String, Object?>>{};
+Future<List<Map<String, Object?>>> _hydrateVectorWinnerRows(
+  Database db,
+  List<int> chunkIds,
+) {
+  final ids = chunkIds.toSet().toList(growable: false);
+  final placeholders = List.filled(ids.length, '?').join(',');
+  return db.rawQuery(
+    '''
+SELECT
+  c.id AS chunk_id,
+  c.book_id,
+  c.chapter_href,
+  c.chapter_title,
+  c.chunk_index,
+  c.start_char,
+  c.end_char,
+  c.text,
+  c.raw_text,
+  c.context_text,
+  c.embedding_input_hash,
+  c.context_version,
+  c.context_created_at,
+  c.embedding_blob,
+  c.embedding_json,
+  c.embedding_norm,
+  b.embedding_model,
+  b.provider_id,
+  b.index_version
+FROM ai_chunks c
+JOIN ai_book_index b ON b.book_id = c.book_id
+WHERE c.id IN ($placeholders)
+''',
+    ids,
+  );
+}
 
-    void addRows(List<Map<String, Object?>> rows) {
-      for (final row in rows) {
-        final chunkId = (row['chunk_id'] as num?)?.toInt();
-        if (chunkId == null) continue;
-        final existing = mergedById[chunkId];
-        if (existing == null ||
-            _score(row).compareTo(_score(existing)) > 0 ||
-            (row['text'] != null && existing['text'] == null)) {
-          mergedById[chunkId] = row;
-        }
+List<Map<String, Object?>> _mergeVectorRows(
+  List<Map<String, Object?>> primaryRows,
+  List<Map<String, Object?>> fallbackRows, {
+  required int limit,
+}) {
+  final mergedById = <int, Map<String, Object?>>{};
+
+  void addRows(List<Map<String, Object?>> rows) {
+    for (final row in rows) {
+      final chunkId = (row['chunk_id'] as num?)?.toInt();
+      if (chunkId == null) continue;
+      final existing = mergedById[chunkId];
+      if (existing == null ||
+          _scoreVectorRow(row).compareTo(_scoreVectorRow(existing)) > 0 ||
+          (row['text'] != null && existing['text'] == null)) {
+        mergedById[chunkId] = row;
       }
     }
-
-    addRows(nativeRows);
-    addRows(exactRows);
-
-    final safeLimit = limit.clamp(1, 500);
-    final out = mergedById.values.toList(growable: false)
-      ..sort((a, b) {
-        final byScore = _score(b).compareTo(_score(a));
-        if (byScore != 0) return byScore;
-        final aId = (a['chunk_id'] as num?)?.toInt() ?? 0;
-        final bId = (b['chunk_id'] as num?)?.toInt() ?? 0;
-        return bId.compareTo(aId);
-      });
-    return out.take(safeLimit).toList(growable: false);
   }
 
-  double _score(Map<String, Object?> row) {
-    return (row['local_vector_score'] as num?)?.toDouble() ?? 0.0;
-  }
+  addRows(primaryRows);
+  addRows(fallbackRows);
+
+  final safeLimit = limit.clamp(1, 500);
+  final out = mergedById.values.toList(growable: false)
+    ..sort((a, b) {
+      final byScore = _scoreVectorRow(b).compareTo(_scoreVectorRow(a));
+      if (byScore != 0) return byScore;
+      final aId = (a['chunk_id'] as num?)?.toInt() ?? 0;
+      final bId = (b['chunk_id'] as num?)?.toInt() ?? 0;
+      return bId.compareTo(aId);
+    });
+  return out.take(safeLimit).toList(growable: false);
+}
+
+double _scoreVectorRow(Map<String, Object?> row) {
+  return (row['local_vector_score'] as num?)?.toDouble() ?? 0.0;
 }
 
 class _VectorMetaKey {

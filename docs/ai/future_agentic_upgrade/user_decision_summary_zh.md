@@ -32,9 +32,9 @@
 | Custom Skills | `Settings -> AI -> 自定义技能`，再到 `当前技能` 选择 | 用户可导入受治理的 JSON skill，让 AI 在指定 scene 中追加行为和只读工具。 | 写工具、递归 sub-agent、未知字段和禁用 skill 都不会注入运行时。 |
 | OpenAI Responses 兼容诊断 | `Settings -> AI -> Provider Center` 配置 Responses provider | 官方支持 `previous_response_id` 的 provider 继续走 server-side continuation；拒绝该参数的兼容网关会自动降级重试，并在错误里给出 endpoint/model/参数诊断。 | 只对明确 `previous_response_id` unsupported 的 HTTP 400 重试；非该错误保留原始失败。 |
 | 当前书语义检索保护 | 阅读页搜索、Seminar evidence、`semantic_search_current_book` 工具 | 当前书向量搜索改为分页、串行、可取消、带进度，并优先 bounded FTS/BM25 候选，降低 OOM、发热和掉帧风险。 | 这是保护层，不是真 ANN 向量索引；无候选时只做预算内 fallback 扫描。 |
-| 书库 Hybrid RAG 召回 | AI Chat、Seminar library fallback、agent tool、ConceptGraph 空态等调用 `semantic_search_library` 的入口 | 书库检索已从“文本 miss 后才走 vector fallback”改成“FTS/BM25 精确召回 + 向量后端语义召回共同进入候选池”，结果可用 `usedVectorRecall` 判断向量是否参与；默认 backend 是 native-then-exact seam，native shadow layer 不完整时会合并 exact rows，避免漏掉未升级书籍。 | 不是真 sqlite-vec/ANN 生产后端；ConceptGraph 本地文本入口仍关闭 embedding/vector/rerank，避免外发正文；旧索引缺 blob 时仍保留 JSON fallback。 |
+| 书库 Hybrid RAG 召回 | AI Chat、Seminar library fallback、agent tool、ConceptGraph 空态等调用 `semantic_search_library` 的入口 | 书库检索已从“文本 miss 后才走 vector fallback”改成“FTS/BM25 精确召回 + 向量后端语义召回共同进入候选池”，结果可用 `usedVectorRecall` 判断向量是否参与；默认 backend 是 ANN -> native -> exact，Vec1/sqlite-vec function 和对应 ANN 表存在且完整时先用 ANN，只 hydrate winner 正文；不可用或不完整时合并/降级 native/exact，避免漏掉未升级书籍。 | 已有 extension-ready Vec1 路径，但还不是真正发布级 sqlite-vec/ANN：移动端 extension 打包、UI build job、删除清理和 provider/model 失效没闭环；ConceptGraph 本地文本入口仍关闭 embedding/vector/rerank，避免外发正文；旧索引缺 blob 时仍保留 JSON fallback。 |
 | 旧索引全局层补建 | `Settings -> AI Index / Library Index` -> `全局层索引` -> `补建` | 用已有 chunk 给旧索引书籍补建 RAPTOR 全局摘要层和当前 GraphRAG 派生层，页面显示进度并可取消。 | 不重新生成 embedding；不是 sqlite-vec/ANN；当前纯中文 graph node 抽取仍需后续增强。 |
-| 旧索引向量层升级 | `Settings -> AI Index / Library Index` -> `向量索引升级` -> `升级` | 用已有 embedding 给旧索引书籍补建紧凑 native vector shadow layer，为后续 sqlite-vec/ANN 后端做迁移准备；页面显示缺失数量、进度和取消。 | 不重嵌入；当前是 schema/backend seam 和升级入口，不是已打包的 sqlite-vec/ANN 生产后端。 |
+| 旧索引向量层升级 | `Settings -> AI Index / Library Index` -> `向量索引升级` -> `升级` | 用已有 embedding 给旧索引书籍补建紧凑 native vector shadow layer，为 sqlite-vec/ANN 后端做迁移准备；页面显示缺失数量、进度和取消；代码层已有 `AiVec1VectorIndexBuilder` 可从 shadow rows 重建 provider/model/dim 隔离的 Vec1 ANN 表。 | 不重嵌入；页面当前只补 shadow rows，不自动构建 Vec1 表；当前是 extension-ready schema/backend seam，不是已打包的 sqlite-vec/ANN 发布能力。 |
 | 全书自动图谱预览 | `Settings -> AI -> Concept graph`，或阅读页选中文本 -> `图谱` | Settings 入口会列出已有全局层的已索引书，用户可直接选择一本书查看只读全书关系图；阅读页入口会直接显示当前书的全书派生图谱。 | 只读派生缓存，不写正式知识资产；没有全局层时先去 AI Index 补建；不是无限画布。 |
 
 ## 3. 已做但用户不直接感知的功能
@@ -185,18 +185,19 @@
 - exact 向量后端主扫描只取 compact vector/provenance row，再 hydrate winner 正文。
 - `kAiIndexDbVersion = 12` 的 native vector shadow schema：`ai_vector_index_rows` 和 `ai_vector_index_meta`。
 - 旧索引向量层升级入口：用已有 blob/JSON embedding 补建 compact float32 rows，不重嵌入。
-- native-then-exact backend seam：能检测 native SQL capability，不可用时自动降级 exact。
+- ANN -> native -> exact backend seam：能检测 Vec1/sqlite-vec capability 和 per-model ANN table，不可用或不完整时自动降级 native/exact。
+- Vec1 table builder：能按 provider/model/dim 从 `ai_vector_index_rows` 重建独立 Vec1 virtual table，并写 `vec1-ann` meta。
 - ANN/exact recall overlap gate：能用固定 fixture 比对候选 ANN/native backend 与 exact backend 的 topK chunk id 重合率。
 - 搜索取消、进度、串行、background isolate scoring。
 - 老索引 JSON fallback 的分页回查。
 
 还要做什么：
 
-- 选型：sqlite-vec、sqlite-vss、FAISS wrapper、平台原生向量库，必须考虑 iOS 可打包性。
+- 最终选型：当前优先预留 sqlite-vec/Vec1 路径；若换 sqlite-vss、FAISS wrapper 或平台原生向量库，必须证明 iOS 可打包性和 fallback contract 不变。
 - 接入真实 sqlite-vec/Vec1 package 或平台向量扩展，并验证 iOS/Android 打包。
-- 建立 ANN index build job：可取消、可恢复、可重建、删除书籍后清理。
+- 建立 ANN index build job UI：可取消、可恢复、可重建、删除书籍后清理。
 - 定义向量维度兼容：不同 embedding model 切换时必须让旧索引失效。
-- 把真实 ANN backend 接入召回质量 gate：ANN topK 与当前 exact scan 在固定 fixture 上必须达到阈值。
+- 把真实 ANN backend 接入召回质量 gate：ANN topK 与当前 exact scan 在固定 fixture 上必须达到阈值；当前 extension-ready seam 已有测试，真机 extension 仍需验收。
 - 增加移动端资源 gate：大书索引构建、查询延迟、内存峰值、发热和后台中断恢复。
 
 做成后的效果：
