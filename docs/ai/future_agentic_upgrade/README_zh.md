@@ -13,8 +13,9 @@
 4. `03_epic_index_zh.md`：全部 Epic 的 DAG 依赖图。
 5. `implementation_status_zh.md`：本分支代码 artifact、gate 和验证证据。
 6. `04_user_facing_activation_plan_zh.md`：用户现在从哪里用、当前还不能用什么、入口任务验收状态和下一步 agent task。
-7. `epics/`：每条能力线的执行规格。
-8. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
+7. `user_decision_summary_zh.md`：用产品决策视角说明哪些功能能用、哪些是内部地基、长期大块要怎么做以及做成后的效果。
+8. `epics/`：每条能力线的执行规格。
+9. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
 
 ## 2. 状态词
 
@@ -50,7 +51,7 @@
 
 ## 5. 当前用户可用性
 
-本目录不是说“所有 Epic 都已产品化”。本节只放用户入口摘要；完整的功能使用路径、入口缺口、agent 任务和验收边界以 `04_user_facing_activation_plan_zh.md` 为准；代码级完成状态和验证命令以 `implementation_status_zh.md` 为准。
+本目录不是说“所有 Epic 都已产品化”。本节只放用户入口摘要；完整的功能使用路径、入口缺口、agent 任务和验收边界以 `04_user_facing_activation_plan_zh.md` 为准；代码级完成状态和验证命令以 `implementation_status_zh.md` 为准；如果要判断哪些能力值得继续投入，先看 `user_decision_summary_zh.md`。
 
 如果只打开本 README，需要按下面两层理解：
 
@@ -66,7 +67,7 @@
 - AI Chat 的 Memory 入口是回答旁的书签图标，tooltip 为 `Memory actions / 记忆操作`，菜单项是 `Add to review inbox / 加入待审核队列`。
 - 图片知识卡入口不会在打开图片时直接出现；需要先点图片工具栏的魔法棒 `AI Image Analysis / AI图片解析`，等解析结果弹层出现后再点 `Card / 知识卡`。
 - AI Chat 的回答必须生成完成后，回答旁 `知识卡` 才可点击；streaming 中保持禁用。
-- `Custom skills` 当前 UI label 仍是英文；中文文档中的“自定义 Skill”对应这一项。
+- `Custom skills` 已做中文适配；中文界面中对应 `自定义技能`，英文界面仍显示 `Custom skills`。
 - Sync 冲突批量处理入口在 `Review inbox` 中：切到 `Approved` 状态和 `Sync conflict` 类型后，安全可应用冲突会显示 `Apply Sync conflict`；部分失败后保留失败项并显示 `Retry Sync conflict`。
 
 | 能力 | 用户怎么用 | 状态 |
@@ -81,7 +82,7 @@
 | Memory 候选审核 | AI Chat 回答旁书签图标 `Memory actions / 记忆操作` -> `Add to Review inbox / 加入待审核队列`，再到 `Settings -> AI -> Review inbox` 审核、批准、应用。 | 本分支已接入 Memory source-specific apply adapter，并补齐回答旁书签 popup 的点击级测试：`MemoryWorkflowService.addToReviewInbox` 会同时写 MemoryCandidate 和统一 ReviewItem；streaming 中或空回答不会写 memory candidate；Review Inbox 的 `Approve -> Apply` 会先通过 `MemoryWorkflowService.applyCandidate` 追加到目标 daily/long-term Markdown，再推进 ReviewItem；`Dismiss` 会同步 MemoryCandidate 且不写 memory；无书内跳转的 conversation memory 会带证据摘录和不可跳原因。不会写 KnowledgeCard、ConceptGraph、SpacedReview、Sync 或 Note。 |
 | Memory 独立浏览来源审计 | 首页底部 `Memory / 记忆` tab 打开 daily/long-term memory 列表；该 tab 默认隐藏，可先到 `Settings -> Home navigation / 首页导航` 打开；有来源的条目显示 `traceable/unavailable/unresolved` 状态，进入详情可查看 `Evidence` 并 `Open source`。 | 本分支已接入 `MemoryEntrySourceRefAdapter`、Memory home row source audit chips、Memory detail evidence list 和 source opener；来源来自已应用 `MemoryCandidate` 的只读投影，只按实际写入的 `text/displayText` 与条目正文匹配，long-term `MEMORY.md` 按 H1 分段 body 匹配；可跳来源打开 `paperreader://reader/open?...`，conversation-only memory 显示不可跳原因；long-term H1 分段不能被批量删除/打标签，避免误操作整份 `MEMORY.md`；不往 Markdown memory 写隐藏来源元数据，不绕过 Review 写资产。 |
 | 旧划线/笔记来源审计 | 打开书籍笔记列表或全局搜索命中的笔记条目，查看 `Evidence`、`traceable/unavailable` 状态；点击无有效 book anchor 的旧笔记会提示不可跳原因，不进入空跳转。 | 本分支已接入 BookNote/highlight SourceRef audit：`BookNoteSourceRefAdapter` 生成 highlight/note SourceRef，`BookNoteTile` 复用 `SourceRefEvidenceList` 和 `PaperReaderSourceJumpAudit` 显示证据、来源位置、不可跳原因；Notes 列表和搜索结果会传入书名作为 source title，有有效 `bookId + cfi` 的笔记保持原文跳转，无有效 book anchor 的旧笔记只显示 snackbar 原因。 |
-| 自定义 Skill 导入 | `Settings -> AI -> Custom skills` 粘贴 governed JSON -> `Import skill`，再到 `Active Skill` 选择已启用的自定义 skill。 | 本分支已接入 `CustomSkillStore`、导入页面、Settings 入口、Active Skill picker 点击级选择测试和运行时 skill registry 合并；只接受 `CustomSkillContract(schemaVersion=1)`，导入时校验 unknown field、unknown scene、system scene、写工具、递归 sub-agent 和字段类型；运行时只暴露自定义 skill 声明过且通过 permission matrix 的只读工具，scene 不匹配时不注入 prompt，不加载 MCP 工具。禁用或校验失败的 skill 不进入 Active Skill 列表。 |
+| 自定义 Skill 导入 | `Settings -> AI -> 自定义技能 / Custom skills` 粘贴 governed JSON -> `导入技能 / Import skill`，再到 `当前技能 / Active Skill` 选择已启用的自定义 skill。 | 本分支已接入 `CustomSkillStore`、导入页面、Settings 入口、Active Skill picker 点击级选择测试、中文界面适配和运行时 skill registry 合并；只接受 `CustomSkillContract(schemaVersion=1)`，导入时校验 unknown field、unknown scene、system scene、写工具、递归 sub-agent 和字段类型；运行时只暴露自定义 skill 声明过且通过 permission matrix 的只读工具，scene 不匹配时不注入 prompt，不加载 MCP 工具。禁用或校验失败的 skill 不进入 Active Skill 列表。 |
 | 图谱可视化探索 | `Settings -> AI -> Concept graph / 概念图谱`，或阅读页选中文本 -> `图谱/Graph`。 | 本分支已接入 Explorer、Settings 点击入口、阅读页选中文本入口、KnowledgeCard -> draft ConceptGraph producer 和空态 `Create draft candidate` 显性 action；可查看已有图谱、按选中文本筛选相关概念、查看局部图谱摘要、局部路径、证据、draft/formal 状态和 orphan/broken link。当前 producer 可从 `applied + traceable + conceptRefs` 的 KnowledgeCard 生成待审图谱关系；Seminar candidate card 和 reader-grounded AI Chat card 都可携带 `conceptRefs`，经 Review apply 后进入同一图谱候选链路；`Create draft candidate` 使用关闭 query embedding、vector fallback、rerank 的本地文本检索，只让带 traceable chunk SourceRef 的 RAG/GraphRAG derived search result 生成 draft concept relation 和 pending ReviewItem；空态动作会显示已进入 Review 或跳过原因。 |
 | RAG/GraphRAG 结果生成知识卡 | 阅读页选中文本 -> `图谱/Graph` -> 无相关概念空态 -> `Card / 知识卡` -> `Settings -> AI -> Review inbox` 审核。 | 本分支已接入；使用同一条本地文本 library RAG search，关闭 query embedding、vector fallback、rerank，只把带 traceable chunk SourceRef 和可保存 chunk snippet 的 RAG 结果写成 pending KnowledgeCard，不写正式图谱或长期资产；写入后页面会提示已加入 Review inbox。 |
 | Spaced Review | `Settings -> AI -> Spaced review / 间隔复习`；知识卡或 Seminar 候选 flashcard 在 Review Inbox 中 `Apply` 后入队。 | 本分支已接入 Settings 点击入口、队列、复习页、证据摘录预览、Again/Hard/Good/Easy 评分和来源跳转状态；已接 KnowledgeCard apply 和 Seminar reviewSuggestion -> flashcard candidate -> Review Inbox Apply UI -> Spaced Review。 |
@@ -99,7 +100,7 @@
 | 复杂无限画布式图谱 | 当前 ConceptGraph 是局部探索、dossier 和本地摘要，不做无限画布、缩放手势或跨书外部知识扩展。 | 若要做画布，先定义移动端资源 gate、证据可见性和 graph asset ownership。 |
 | 发布版可用 | 本表描述 `codex/future-agentic-upgrade` 分支，不代表 `main`、TestFlight 或用户已安装版本。 | 走 release promotion gate：合并、构建、回归、发布说明和用户迁移说明。 |
 
-入口计划以 `04_user_facing_activation_plan_zh.md` 为准；`implementation_status_zh.md` 只记录代码和验证证据。
+入口计划以 `04_user_facing_activation_plan_zh.md` 为准；长期取舍以 `user_decision_summary_zh.md` 为准；`implementation_status_zh.md` 只记录代码和验证证据。
 
 ## 7. 历史锚点
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/page/settings_page/custom_skills.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,10 +14,9 @@ void main() {
 
   testWidgets('imports valid custom skill from pasted JSON', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: CustomSkillsPage(),
-      ),
+      _wrap(const CustomSkillsPage()),
     );
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '''
 {
@@ -43,10 +43,9 @@ void main() {
 
   testWidgets('shows validation errors for unsafe pasted JSON', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: CustomSkillsPage(),
-      ),
+      _wrap(const CustomSkillsPage()),
     );
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '''
 {
@@ -67,4 +66,12 @@ void main() {
     expect(find.text('Unsafe Writer'), findsNothing);
     expect(AiSkillRegistry.byId('unsafe_writer'), isNull);
   });
+}
+
+Widget _wrap(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: L10n.localizationsDelegates,
+    supportedLocales: L10n.supportedLocales,
+    home: child,
+  );
 }

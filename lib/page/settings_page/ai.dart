@@ -441,8 +441,8 @@ class _AISettingsState extends ConsumerState<AISettings> {
           ),
           SettingsTile.navigation(
             leading: const Icon(Icons.extension_outlined),
-            title: const Text('Custom skills'),
-            description: const Text('Import governed JSON skill contracts'),
+            title: Text(l10n.settingsAiCustomSkillsTitle),
+            description: Text(l10n.settingsAiCustomSkillsDesc),
             onPressed: (context) {
               Navigator.of(context).push(
                 CupertinoStyleRoute(page: const CustomSkillsPage()),

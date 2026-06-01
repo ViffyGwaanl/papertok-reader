@@ -96,9 +96,14 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       trimmed = trimmed.substring(0, trimmed.length - 1);
     }
 
-    // baseUrl is expected to be something like https://api.openai.com/v1
-    // We always call /responses.
-    return Uri.parse('$trimmed/responses');
+    // baseUrl is expected to be something like https://api.openai.com/v1,
+    // but users sometimes paste the full /responses endpoint.
+    final parsed = Uri.parse(trimmed);
+    final normalizedPath = parsed.path.replaceAll(RegExp(r'/+$'), '');
+    final endpointPath = normalizedPath.endsWith('/responses')
+        ? normalizedPath
+        : '$normalizedPath/responses';
+    return parsed.replace(path: endpointPath, query: null, fragment: null);
   }
 
   http.Client _ensureClient() => _client ??= http.Client();
@@ -189,6 +194,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       try {
         var response = await _sendRequest(client, requestBody);
         String? errorBody;
+        var fallbackRetried = false;
         if (response.statusCode < 200 || response.statusCode >= 300) {
           errorBody = await response.stream.bytesToString();
           if (_isUnsupportedPreviousResponseId(
@@ -201,6 +207,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
               'provider rejected previous_response_id; retrying in compatibility mode',
             );
             requestBody = _buildRequestBody(messages, effective);
+            fallbackRetried = true;
             response = await _sendRequest(client, requestBody);
             errorBody = null;
           }
@@ -208,7 +215,8 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
         if (response.statusCode < 200 || response.statusCode >= 300) {
           errorBody ??= await response.stream.bytesToString();
           throw StateError(
-            'OpenAI Responses HTTP ${response.statusCode}: $errorBody',
+            'OpenAI Responses HTTP ${response.statusCode}: $errorBody'
+            '\n${_requestDiagnostics(requestBody, fallbackRetried)}',
           );
         }
 
@@ -724,6 +732,17 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     final lower = errorBody.toLowerCase();
     return lower.contains('previous_response_id') &&
         lower.contains('unsupported');
+  }
+
+  String _requestDiagnostics(
+    Map<String, dynamic> requestBody,
+    bool fallbackRetried,
+  ) {
+    final model = requestBody['model']?.toString() ?? '<unset>';
+    return 'Diagnostics: endpoint=${_endpoint()} model=$model '
+        'sent_previous_response_id=${requestBody.containsKey('previous_response_id')} '
+        'sent_conversation=${requestBody.containsKey('conversation')} '
+        'fallback_retried=$fallbackRetried';
   }
 
   String _dataUrlFromBase64(String base64, String mimeType) {

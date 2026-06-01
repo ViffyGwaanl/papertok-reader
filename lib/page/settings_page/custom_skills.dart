@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/service/ai/skills/custom_skill_store.dart';
@@ -37,13 +40,14 @@ class _CustomSkillsPageState extends State<CustomSkillsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     return SettingsSubpageScaffold(
-      title: 'Custom skills',
+      title: l10n.settingsAiCustomSkillsTitle,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Text(
-            'Import governed JSON skills. Accepted skills can add prompt behavior and only use the read-only tools declared in the contract.',
+            l10n.customSkillsDescription,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: ClaudePalette.secondary(context),
                 ),
@@ -53,10 +57,10 @@ class _CustomSkillsPageState extends State<CustomSkillsPage> {
             controller: _controller,
             minLines: 8,
             maxLines: 16,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'Skill JSON',
-              hintText: '{ "schemaVersion": 1, ... }',
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: l10n.customSkillsJsonLabel,
+              hintText: l10n.customSkillsJsonHint,
             ),
           ),
           const SizedBox(height: 12),
@@ -66,12 +70,12 @@ class _CustomSkillsPageState extends State<CustomSkillsPage> {
             children: [
               OutlinedButton.icon(
                 icon: const Icon(Icons.content_paste_go_outlined),
-                label: const Text('Paste safe example'),
+                label: Text(l10n.customSkillsPasteExample),
                 onPressed: _pasteSafeExample,
               ),
               FilledButton.icon(
                 icon: const Icon(Icons.upload_file_outlined),
-                label: const Text('Import skill'),
+                label: Text(l10n.customSkillsImport),
                 onPressed: _importSkill,
               ),
             ],
@@ -85,7 +89,7 @@ class _CustomSkillsPageState extends State<CustomSkillsPage> {
           ],
           const SizedBox(height: 24),
           Text(
-            'Installed skills',
+            l10n.customSkillsInstalled,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
@@ -113,7 +117,7 @@ class _CustomSkillsPageState extends State<CustomSkillsPage> {
   }
 
   void _pasteSafeExample() {
-    _controller.text = _safeExampleJson;
+    _controller.text = _safeExampleJson(L10n.of(context));
     setState(() {
       _errors = const <String>[];
       _imported = false;
@@ -144,10 +148,11 @@ class _CustomSkillTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final runtimeReady =
         contract.canInject(AiToolPermissionMatrix.defaultMatrix);
     final toolNames = contract.allowedToolIds.isEmpty
-        ? 'No tools'
+        ? l10n.customSkillsNoTools
         : contract.allowedToolIds
             .map((id) => AiToolRegistry.displayNameForId(id))
             .join(', ');
@@ -169,13 +174,17 @@ class _CustomSkillTile extends StatelessWidget {
             Text(contract.id),
             if ((contract.description ?? '').isNotEmpty)
               Text(contract.description!),
-            Text('Scenes: $sceneNames'),
-            Text('Tools: $toolNames'),
+            Text(l10n.customSkillsScenes(sceneNames)),
+            Text(l10n.customSkillsTools(toolNames)),
             const SizedBox(height: 4),
             Align(
               alignment: Alignment.centerLeft,
               child: Chip(
-                label: Text(runtimeReady ? 'Runtime ready' : 'Disabled'),
+                label: Text(
+                  runtimeReady
+                      ? l10n.customSkillsRuntimeReady
+                      : l10n.customSkillsDisabled,
+                ),
                 visualDensity: VisualDensity.compact,
               ),
             ),
@@ -190,7 +199,7 @@ class _CustomSkillTile extends StatelessWidget {
               onChanged: onEnabledChanged,
             ),
             IconButton(
-              tooltip: 'Delete skill',
+              tooltip: l10n.customSkillsDelete,
               icon: const Icon(Icons.delete_outline),
               onPressed: onDelete,
             ),
@@ -208,6 +217,7 @@ class _ErrorPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.errorContainer,
@@ -219,7 +229,7 @@ class _ErrorPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Import blocked',
+              l10n.customSkillsImportBlocked,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: Theme.of(context).colorScheme.onErrorContainer,
                   ),
@@ -244,6 +254,7 @@ class _SuccessPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
@@ -252,7 +263,7 @@ class _SuccessPanel extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Text(
-          'Skill imported. Enable it from Active Skill before chatting.',
+          l10n.customSkillsImported,
           style: TextStyle(
             color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
@@ -267,10 +278,11 @@ class _EmptySkills extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Text(
-        'No custom skills yet.',
+        l10n.customSkillsEmpty,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: ClaudePalette.secondary(context),
             ),
@@ -279,15 +291,15 @@ class _EmptySkills extends StatelessWidget {
   }
 }
 
-const _safeExampleJson = '''
-{
-  "schemaVersion": 1,
-  "id": "slow_reader",
-  "name": "Slow Reader",
-  "description": "Explain one passage with local evidence.",
-  "systemPromptAppend": "Move slowly. Use current-book evidence and name uncertainty before making a claim.",
-  "allowedToolIds": ["current_chapter_content", "resolve_cfi"],
-  "scenes": ["reading"],
-  "enabled": true
+String _safeExampleJson(L10n l10n) {
+  return const JsonEncoder.withIndent('  ').convert({
+    'schemaVersion': 1,
+    'id': 'slow_reader',
+    'name': l10n.customSkillsExampleName,
+    'description': l10n.customSkillsExampleDescription,
+    'systemPromptAppend': l10n.customSkillsExamplePrompt,
+    'allowedToolIds': ['current_chapter_content', 'resolve_cfi'],
+    'scenes': ['reading'],
+    'enabled': true,
+  });
 }
-''';

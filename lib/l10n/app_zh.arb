@@ -99,7 +99,7 @@
   "contextMenuConceptGraph": "图谱",
   "contextMenuSeminar": "研讨",
   "contextMenuSeminarOpenFailed": "无法打开研讨",
-  "contextMenuSeminarPrompt": "围绕这段选中文本开启一场 PaperTok AI Seminar。请使用 critical、supportive、synthesizer 三个视角，优先引用当前书内证据，候选知识卡只作为草稿建议。\n\n选中文本：\n{text}",
+  "contextMenuSeminarPrompt": "围绕这段选中文本开启一场 PaperTok AI Seminar。请使用批判者、支持者、综合者三个视角（内部角色 ID：critical、supportive、synthesizer），优先引用当前书内证据，候选知识卡只作为草稿建议。\n\n选中文本：\n{text}",
   "@contextMenuSeminarPrompt": {
     "placeholders": {
       "text": {}
@@ -1107,8 +1107,8 @@
   "memorySelectTextToInsert": "请选择要插入到 AI 输入框的文本",
   "memoryInsertedToAiInput": "已插入到 AI 输入框",
   "memoryInsertToAiAction": "插入到 AI 输入框",
-  "memoryLongTermHint": "用 Markdown 记录长期记忆\u2026",
-  "memoryDailyHint": "用 Markdown 记录每日笔记\u2026",
+  "memoryLongTermHint": "用 Markdown 记录长期记忆…",
+  "memoryDailyHint": "用 Markdown 记录每日笔记…",
   "memoryUnsavedTitle": "未保存的更改",
   "memoryUnsavedBody": "要丢弃未保存的更改吗？",
   "memoryDiscard": "丢弃",
@@ -1274,6 +1274,57 @@
   "aiChatEndSessionBodyAutoDaily": "当前会话会保留在历史记录里，然后从本轮对话整理最多 3 条记忆候选，并自动写入今日日记。",
   "aiChatEndSessionAction": "结束会话",
   "settingsAiProviderCenterTitle": "AI供应商中心",
+  "settingsAiProviderCenterDesc": "配置 AI 供应商、接口地址、模型与思考选项",
+  "settingsAiProviderCenterSortAz": "自定义供应商按名称排序（A→Z）",
+  "settingsAiProviderCenterSortZa": "自定义供应商按名称排序（Z→A）",
+  "settingsAiProviderCenterReorder": "拖拽排序（自定义供应商）",
+  "settingsAiProviderCenterReorderDone": "完成排序",
+  "settingsAiProviderCenterAddTitle": "添加供应商",
+  "settingsAiProviderCenterProviderNameLabel": "供应商名称",
+  "settingsAiProviderCenterProviderNameHint": "例如：我的网关",
+  "settingsAiProviderCenterUntitledProvider": "未命名供应商",
+  "settingsAiProviderCenterProviderTypeLabel": "供应商类型",
+  "settingsAiProviderCenterTypeOpenAICompatible": "OpenAI 兼容",
+  "settingsAiProviderCenterTypeOpenAIResponses": "OpenAI Responses",
+  "settingsAiProviderCenterTypeAnthropic": "Anthropic",
+  "settingsAiProviderCenterTypeGemini": "Gemini",
+  "settingsAiProviderCenterDefaultApplied": "已设为默认：{name}",
+  "@settingsAiProviderCenterDefaultApplied": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "settingsAiProviderCenterUrlLabel": "URL（baseUrl 或 endpoint）",
+  "settingsAiProviderCenterEffectiveBaseUrlLabel": "实际 baseUrl",
+  "settingsAiProviderCenterModelLabel": "模型",
+  "settingsAiProviderCenterApiKeyLabel": "API Key",
+  "settingsAiProviderCenterSetAsDefault": "设为默认",
+  "settingsAiProviderCenterDeleteTitle": "删除供应商？",
+  "settingsAiProviderCenterDeleteBody": "将删除“{name}”及其本地配置，且无法撤销。",
+  "@settingsAiProviderCenterDeleteBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "aiChatEditModelTitle": "编辑模型",
+  "aiChatModelLabel": "模型",
+  "settingsAiProviderCenterFetchModels": "获取模型列表",
+  "settingsAiProviderCenterFetchModelsEmpty": "该供应商未返回模型列表。",
+  "settingsAiProviderCenterFetchModelsSuccess": "已获取 {count} 个模型",
+  "@settingsAiProviderCenterFetchModelsSuccess": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "settingsAiProviderCenterIncludeThoughtsTitle": "包含思考摘要",
+  "settingsAiProviderCenterIncludeThoughtsDesc": "开启后，Gemini 会返回可用于“思考”区域展示的思考摘要，可能会增加费用与首字延迟。",
+  "settingsAiProviderCenterUsePreviousResponseIdTitle": "使用 previous_response_id 续写（Responses）",
+  "settingsAiProviderCenterUsePreviousResponseIdDesc": "这是 OpenAI Responses 的 conversation state 能力，用于工具调用后的续写。若 endpoint、模型或代理层不接受该参数，可以关闭或依赖兼容重试。",
+  "settingsAiProviderCenterRequestReasoningSummaryTitle": "请求思考输出（Responses）",
+  "settingsAiProviderCenterRequestReasoningSummaryDesc": "请求供应商返回用于“思考”区域展示的 reasoning summary。部分 endpoint、模型或代理层可能不支持该参数。",
+  "aiChatRegenerateFromHereConfirmTitle": "从这里创建分支？",
+  "aiChatRegenerateFromHereConfirmBody": "将基于该消息创建一个新的对话分支继续生成；旧版本及其后续对话都会保留，你可以用消息下方的左右切换回滚。是否继续？",
+  "aiChatEditUserMessageTitle": "编辑消息",
   "imageAnalyze": "AI图片解析",
   "settingsAiImageAnalysisTitle": "AI图片解析",
   "imageAnalyzeAskAi": "AI对话",
@@ -1363,6 +1414,151 @@
   "settingsAiSkillPickerDesc": "激活技能，让 AI 专注于特定的阅读辅助模式。",
   "settingsAiSkillPickerNoneTitle": "无",
   "settingsAiSkillPickerNoneDesc": "默认助手模式",
+  "settingsAiCustomSkillsTitle": "自定义技能",
+  "settingsAiCustomSkillsDesc": "导入受治理的 JSON 技能契约",
+  "customSkillsDescription": "导入受治理的 JSON 技能。通过校验的技能可以追加提示词行为，并且只能使用契约声明的只读工具。",
+  "customSkillsJsonLabel": "技能 JSON",
+  "customSkillsJsonHint": "schemaVersion: 1, ...",
+  "customSkillsPasteExample": "粘贴安全示例",
+  "customSkillsImport": "导入技能",
+  "customSkillsInstalled": "已安装技能",
+  "customSkillsNoTools": "无工具",
+  "customSkillsScenes": "场景：{scenes}",
+  "@customSkillsScenes": {
+    "placeholders": {
+      "scenes": {}
+    }
+  },
+  "customSkillsTools": "工具：{tools}",
+  "@customSkillsTools": {
+    "placeholders": {
+      "tools": {}
+    }
+  },
+  "customSkillsRuntimeReady": "运行时可用",
+  "customSkillsDisabled": "已禁用",
+  "customSkillsDelete": "删除技能",
+  "customSkillsImportBlocked": "导入已阻止",
+  "customSkillsImported": "技能已导入。聊天前请先在当前技能中启用。",
+  "customSkillsEmpty": "还没有自定义技能。",
+  "seminarQuestionLabel": "研讨问题",
+  "seminarStart": "开始研讨",
+  "seminarQueue": "加入研讨队列",
+  "seminarBudgetGuardrails": "本地预算保护",
+  "seminarRoleOutputBudget": "单角色输出 token 预算",
+  "seminarRunTokenBudget": "整场运行 token 预算",
+  "seminarRunCostCapUsd": "运行成本上限 USD",
+  "seminarBudgetPricingDesc": "优先使用 provider 回传的 token usage，并结合 pricing metadata 估算美元成本上限；真实账单可能不同。",
+  "seminarBudgetLocalDesc": "使用本地 token 估算来停止下一步研讨；provider 账单可能不同。",
+  "seminarPricingLine": "价格来源：{source}",
+  "@seminarPricingLine": {
+    "placeholders": {
+      "source": {}
+    }
+  },
+  "seminarPricingFallback": "provider capability metadata",
+  "seminarCostCapUnavailable": "需要 pricing metadata 后才能使用成本上限。",
+  "seminarProviderReadiness": "Provider 就绪状态",
+  "seminarProviderDiagnosticsUnavailable": "暂时没有 Provider 诊断信息。",
+  "seminarContextLine": "上下文：{tokens}",
+  "@seminarContextLine": {
+    "placeholders": {
+      "tokens": {}
+    }
+  },
+  "seminarMaxOutputLine": "最大输出：{tokens}",
+  "@seminarMaxOutputLine": {
+    "placeholders": {
+      "tokens": {}
+    }
+  },
+  "seminarNoModelSelected": "未选择模型",
+  "seminarTools": "工具",
+  "seminarVision": "视觉",
+  "seminarThinking": "思考",
+  "seminarStreaming": "流式",
+  "seminarCapabilityYes": "{label}",
+  "@seminarCapabilityYes": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "seminarCapabilityNo": "不支持 {label}",
+  "@seminarCapabilityNo": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "seminarCapabilityUnknown": "{label} 未知",
+  "@seminarCapabilityUnknown": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "seminarStatusLine": "状态：{status}",
+  "@seminarStatusLine": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "seminarRecoveredInterrupted": "已恢复本机中断的研讨状态。可重试重新运行。",
+  "seminarRecoveredLocal": "已从本设备恢复本机研讨状态。",
+  "seminarBackgroundJobLine": "后台任务：{status} · {id}",
+  "@seminarBackgroundJobLine": {
+    "placeholders": {
+      "status": {},
+      "id": {}
+    }
+  },
+  "seminarJobQueue": "研讨任务队列",
+  "seminarCancelQueued": "取消排队研讨",
+  "seminarEstimatedCostNotInvoice": "估算成本（非账单）：${cost}",
+  "@seminarEstimatedCostNotInvoice": {
+    "placeholders": {
+      "cost": {}
+    }
+  },
+  "seminarEstimatedCostWithSource": "估算成本（非账单）：${cost} · {source}",
+  "@seminarEstimatedCostWithSource": {
+    "placeholders": {
+      "cost": {},
+      "source": {}
+    }
+  },
+  "seminarBillingReconciliation": "账单对账",
+  "seminarUsageSnapshot": "用量快照：{usage}",
+  "@seminarUsageSnapshot": {
+    "placeholders": {
+      "usage": {}
+    }
+  },
+  "seminarPricingSnapshot": "价格快照：{pricing}",
+  "@seminarPricingSnapshot": {
+    "placeholders": {
+      "pricing": {}
+    }
+  },
+  "seminarInvoiceReconciliation": "发票对账：{status}",
+  "@seminarInvoiceReconciliation": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "seminarUnavailable": "不可用",
+  "seminarProviderReportedUsage": "Provider 回传用量",
+  "seminarProviderReportedUsageDesc": "来自 provider usage metadata",
+  "seminarTokenUsage": "Token 用量",
+  "seminarTokenUsageDesc": "混合 provider 用量与本地估算",
+  "seminarLocalTokenEstimate": "本地 token 估算",
+  "seminarLocalTokenEstimateDesc": "Provider 账单可能不同",
+  "seminarProviderUsage": "Provider 用量",
+  "seminarMixedUsage": "混合用量",
+  "seminarLocalEstimate": "本地估算",
+  "seminarProviderMetadata": "Provider metadata",
+  "seminarMixedProviderLocal": "Provider metadata 与本地估算混合",
+  "seminarInvoiceNotConnected": "未连接",
+  "seminarInvoiceReconciled": "已对账",
+  "seminarInvoiceFailed": "失败",
   "settingsAiWebSearch": "网络搜索 API Key",
   "settingsAiWebSearchConfigured": "已配置 Serper.dev",
   "settingsAiWebSearchDefault": "使用 DuckDuckGo（无需 Key）",
@@ -1398,14 +1594,22 @@
   "memoryHomeLongTermEmpty": "长期记忆为空。从收件箱批准一条记忆即可开始。",
   "memoryBulkSelectionCount": "已选 {count} 项",
   "@memoryBulkSelectionCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "memoryBulkDeleteTooltip": "删除所选",
   "memoryBulkAddTagTooltip": "添加标签",
   "memoryBulkDeleteConfirmTitle": "删除记忆？",
   "memoryBulkDeleteConfirmBody": "将永久删除 {count} 条记忆。",
   "@memoryBulkDeleteConfirmBody": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "memoryBulkDeleteAction": "删除",
   "memoryBulkAddTagTitle": "为所选添加标签",
@@ -1413,5 +1617,118 @@
   "memoryRuleSessionDigestTitle": "会话摘要",
   "memoryRuleSessionDigestDesc": "会话结束时最多捕获 3 条记忆。",
   "memoryRuleProviderSwitchTitle": "切换提供商",
-  "memoryRuleProviderSwitchDesc": "在对话中切换 AI 提供商时捕获摘要。"
+  "memoryRuleProviderSwitchDesc": "在对话中切换 AI 提供商时捕获摘要。",
+  "seminarRolesTitle": "角色讨论",
+  "seminarNoRoleTurns": "还没有角色发言。",
+  "seminarSharedWhiteboard": "共享白板",
+  "seminarNoWhiteboardEntries": "还没有白板条目。",
+  "seminarSynthesisTitle": "综合总结",
+  "seminarNoSynthesis": "还没有综合总结。",
+  "seminarSupportiveView": "支持视角：{text}",
+  "@seminarSupportiveView": {
+    "placeholders": {
+      "text": {}
+    }
+  },
+  "seminarCriticalView": "批判视角：{text}",
+  "@seminarCriticalView": {
+    "placeholders": {
+      "text": {}
+    }
+  },
+  "seminarSendToReview": "发送到待审",
+  "seminarSentToReview": "已将综合总结和 {count} 张卡片发送到待审。",
+  "@seminarSentToReview": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "seminarRunStatusDraft": "草稿",
+  "seminarRunStatusRunning": "运行中",
+  "seminarRunStatusCompleted": "已完成",
+  "seminarRunStatusNeedsEvidence": "需要证据",
+  "seminarRunStatusCancelled": "已取消",
+  "seminarRunStatusFailed": "失败",
+  "seminarJobStatusRunning": "运行中",
+  "seminarJobStatusQueued": "排队中",
+  "seminarJobStatusCompleted": "已完成",
+  "seminarJobStatusNeedsEvidence": "需要证据",
+  "seminarJobStatusCancelled": "已取消",
+  "seminarJobStatusFailed": "失败",
+  "seminarJobStatusInterrupted": "已中断",
+  "seminarRoleCritical": "批判者",
+  "seminarRoleSupportive": "支持者",
+  "seminarRoleSynthesizer": "综合者",
+  "seminarRoleVerifier": "核验者",
+  "seminarWhiteboardClaim": "论点",
+  "seminarWhiteboardEvidenceRef": "证据引用",
+  "seminarWhiteboardDisagreement": "分歧",
+  "seminarWhiteboardOpenQuestion": "开放问题",
+  "seminarWhiteboardCandidateCard": "候选卡片",
+  "seminarWhiteboardReviewSuggestion": "待审建议",
+  "backupIncludeMemory": "包含 Memory（memory/）",
+  "backupImportRestoreMemory": "恢复 Memory（覆盖本地）",
+  "memorySemanticSearchTitle": "语义记忆检索",
+  "memorySemanticSearchAutoOn": "自动：已启用（检测到 embeddings 配置）",
+  "memorySemanticSearchAutoOff": "自动：已关闭（未配置 embeddings 供应商/密钥）",
+  "memorySemanticSearchManual": "手动覆盖",
+  "memorySemanticSearchResetAuto": "恢复自动",
+  "memorySearchAdvancedTitle": "检索参数",
+  "memorySearchHybridEnabledTitle": "混合排序（BM25 + 向量）",
+  "memorySearchHybridEnabledDesc": "开启后，会将关键词相关性（BM25）混入最终排序。",
+  "memorySearchVectorWeightTitle": "向量/文本权重",
+  "memorySearchVectorWeightValue": "向量 {vector}% / 文本 {text}%",
+  "@memorySearchVectorWeightValue": {
+    "placeholders": {
+      "vector": {},
+      "text": {}
+    }
+  },
+  "memorySearchCandidateMultiplierTitle": "候选池大小",
+  "memorySearchMmrEnabledTitle": "MMR 多样性重排",
+  "memorySearchMmrEnabledDesc": "减少近重复结果，提升覆盖面。",
+  "memorySearchMmrLambdaTitle": "相关性/多样性权衡",
+  "memorySearchMmrLambdaValue": "相关性 {lambda}%",
+  "@memorySearchMmrLambdaValue": {
+    "placeholders": {
+      "lambda": {}
+    }
+  },
+  "memorySearchTemporalDecayEnabledTitle": "时间衰减（daily）",
+  "memorySearchTemporalDecayEnabledDesc": "在相关性接近时优先近期日记；MEMORY.md 不参与衰减。",
+  "memorySearchTemporalHalfLifeTitle": "半衰期",
+  "seminarCostValue": "成本：${cost}",
+  "@seminarCostValue": {
+    "placeholders": {
+      "cost": {}
+    }
+  },
+  "seminarCostPricingReady": "成本：已准备价格信息，可估算美元上限",
+  "seminarCostUnknown": "成本：未知",
+  "seminarTokenUsageLine": "{title}：总计 {total} token（输入 {input} / 输出 {output}）",
+  "@seminarTokenUsageLine": {
+    "placeholders": {
+      "title": {},
+      "total": {},
+      "input": {},
+      "output": {}
+    }
+  },
+  "seminarRoleUsageLine": "{prefix}：输入 {input} / 输出 {output} token",
+  "@seminarRoleUsageLine": {
+    "placeholders": {
+      "prefix": {},
+      "input": {},
+      "output": {}
+    }
+  },
+  "seminarEvidenceScopeCurrentChapter": "当前章节",
+  "seminarEvidenceScopeCurrentBook": "当前书籍",
+  "seminarEvidenceScopeLibrary": "书库",
+  "seminarEvidenceScopeNotes": "笔记",
+  "seminarEvidenceScopeMemory": "记忆",
+  "seminarEvidenceScopeConceptGraph": "概念图谱",
+  "customSkillsExampleName": "慢读助手",
+  "customSkillsExampleDescription": "用本地证据解释一段文字。",
+  "customSkillsExamplePrompt": "慢一点解释。优先使用当前书籍证据，提出判断前先说明不确定性。"
 }

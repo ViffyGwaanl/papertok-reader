@@ -846,8 +846,8 @@
   "memorySelectTextToInsert": "请选择要插入到 AI 输入框的文本",
   "memoryInsertedToAiInput": "已插入到 AI 输入框",
   "memoryInsertToAiAction": "插入到 AI 输入框",
-  "memoryLongTermHint": "用 Markdown 记录长期记忆\u2026",
-  "memoryDailyHint": "用 Markdown 记录每日笔记\u2026",
+  "memoryLongTermHint": "用 Markdown 记录长期记忆…",
+  "memoryDailyHint": "用 Markdown 记录每日笔记…",
   "memoryUnsavedTitle": "未保存的更改",
   "memoryUnsavedBody": "要丢弃未保存的更改吗？",
   "memoryDiscard": "丢弃",
@@ -872,7 +872,6 @@
   "settingsShortcutsSendMessageShowDialogDefaultDesc": "动作结束后在快捷指令里弹出结果对话框。",
   "settingsShareSheetAskPapertokEnabled": "分享面板：分享图片直接问 PaperTok Reader",
   "settingsShareSheetAskPapertokEnabledDesc": "从任意 App 分享图片/文字到本 App 时，触发快速 AI 回复流程（超出上限会自动截取到前 50 张图）。",
-
   "settingsShareAndShortcutsPanel": "分享与快捷面板",
   "settingsShareAndShortcutsPanelDesc": "统一配置共享表单（分享面板）与快捷指令的行为。",
   "settingsSharePanelSectionTitle": "共享表单（分享面板）",
@@ -882,7 +881,6 @@
   "settingsSharePanelModeAiChat": "发送到 AI 对话框",
   "settingsSharePanelModeBookshelf": "导入到书架",
   "settingsSharePanelModeAsk": "每次都询问我",
-
   "settingsSharePromptPresetsTitle": "提示词预设",
   "settingsSharePromptPresetsDesc": "管理分享进入 AI 对话框时可选择的提示词。",
   "settingsSharePromptPresetAdd": "新增提示词",
@@ -891,11 +889,9 @@
   "settingsSharePromptPresetPrompt": "提示词",
   "settingsSharePromptPresetEnabled": "启用",
   "settingsSharePromptPresetDeleteConfirm": "确定删除该提示词预设？",
-
   "settingsSharePanelPromptTitle": "默认提问提示词",
   "settingsSharePanelPromptDesc": "发送到 AI 对话框时，会把此提示词和分享内容一起发送。",
   "settingsSharePanelPromptHint": "例如：请先总结分享内容的要点，再给出建议。",
-
   "settingsSharePanelTtlTitle": "分享文件保留时长",
   "settingsSharePanelTtlDesc": "用于清理共享表单（分享面板）与快捷指令产生的临时文件。",
   "settingsSharePanelTtlNever": "永不自动清理",
@@ -907,7 +903,6 @@
       }
     }
   },
-
   "settingsSharePanelCleanupAfterUse": "处理后清理分享文件",
   "settingsSharePanelCleanupAfterUseDesc": "将分享进来的临时文件在处理完成后删除，以节省空间。",
   "settingsShareConversationModeTitle": "发送到 AI：会话目标",
@@ -954,7 +949,6 @@
   "settingsCommonEnabled": "启用",
   "settingsCommonDisabled": "禁用",
   "settingsShortcutsSectionTitle": "快捷指令",
-
   "settingsShortcutsSendMessageTimeout": "快捷指令：最长执行时间",
   "settingsShortcutsSendMessageTimeoutDesc": "为避免被系统中断，在此时间内返回 best-effort 回复（可能不完整）。",
   "settingsShortcutsSendMessagePresentation": "快捷指令：对话窗口",
@@ -968,7 +962,7 @@
   "settingsShortcutsPromptPresetModePrepend": "在前面附加所选预设",
   "settingsShortcutsPromptPresetTitle": "快捷指令：默认提示词预设",
   "settingsShortcutsPromptPresetDesc": "可选为快捷指令选择一个默认预设；只有上面的模式启用时才会生效。",
-  "settingsShortcutsCallbackMaxChars": "快捷指令回传结果长度上限", 
+  "settingsShortcutsCallbackMaxChars": "快捷指令回传结果长度上限",
   "settingsShortcutsCallbackMaxCharsDesc": "限制 paperreader://shortcuts/result 回传数据的最大字符数（超过会截断）。",
   "settingsShortcutsCallbackTimeout": "快捷指令回传等待超时",
   "settingsShortcutsCallbackTimeoutDesc": "等待快捷指令回到 App / 回传结果的最长秒数。",
@@ -1314,9 +1308,9 @@
   "settingsAiProviderCenterIncludeThoughtsTitle": "包含思考摘要",
   "settingsAiProviderCenterIncludeThoughtsDesc": "开启后，Gemini 会返回可用于“思考”区域展示的思考摘要，可能会增加费用与首字延迟。",
   "settingsAiProviderCenterUsePreviousResponseIdTitle": "使用 previous_response_id 续写（Responses）",
-  "settingsAiProviderCenterUsePreviousResponseIdDesc": "用于工具调用后的续写（conversation state）。部分第三方 Responses 网关不支持该参数时请关闭。",
+  "settingsAiProviderCenterUsePreviousResponseIdDesc": "这是 OpenAI Responses 的 conversation state 能力，用于工具调用后的续写。若 endpoint、模型或代理层不接受该参数，可以关闭或依赖兼容重试。",
   "settingsAiProviderCenterRequestReasoningSummaryTitle": "请求思考输出（Responses）",
-  "settingsAiProviderCenterRequestReasoningSummaryDesc": "请求供应商返回用于“思考”区域展示的 reasoning summary。部分第三方网关可能不支持该参数。",
+  "settingsAiProviderCenterRequestReasoningSummaryDesc": "请求供应商返回用于“思考”区域展示的 reasoning summary。部分 endpoint、模型或代理层可能不支持该参数。",
   "aiThinkingTitle": "思考强度",
   "aiThinkingOff": "关闭",
   "aiThinkingAuto": "自动",
@@ -1386,7 +1380,6 @@
   "settingsAiImageAnalysisModelCustomDesc": "手动输入模型 ID。",
   "settingsAiImageAnalysisModelCustomHint": "例如：gpt-4o、claude-3-7-sonnet",
   "settingsAiImageAnalysisModelEmpty": "未缓存模型列表，请点击刷新。",
-
   "settingsAiLibraryIndexTitle": "AI索引（书库）",
   "settingsAiLibraryIndexSubtitle": "批量为书库建立索引，用于全库检索与引用",
   "aiLibraryIndexConfigTitle": "索引参数",
@@ -1465,7 +1458,6 @@
   "aiLibraryIndexActionResume": "继续",
   "aiLibraryIndexActionCancel": "取消",
   "aiLibraryIndexActionClearFinished": "清理已完成",
-
   "settingsAiImageAnalysisPrompt": "提示词",
   "settingsAiImageAnalysisPromptDescTile": "可自定义“图注解析/图片解析”的提示词模板。",
   "settingsAiImageAnalysisPromptDefaultShort": "默认",
@@ -1547,14 +1539,22 @@
   "memoryHomeLongTermEmpty": "长期记忆为空。从收件箱批准一条记忆即可开始。",
   "memoryBulkSelectionCount": "已选 {count} 项",
   "@memoryBulkSelectionCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "memoryBulkDeleteTooltip": "删除所选",
   "memoryBulkAddTagTooltip": "添加标签",
   "memoryBulkDeleteConfirmTitle": "删除记忆？",
   "memoryBulkDeleteConfirmBody": "将永久删除 {count} 条记忆。",
   "@memoryBulkDeleteConfirmBody": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "memoryBulkDeleteAction": "删除",
   "memoryBulkAddTagTitle": "为所选添加标签",
@@ -1562,5 +1562,594 @@
   "memoryRuleSessionDigestTitle": "会话摘要",
   "memoryRuleSessionDigestDesc": "会话结束时最多捕获 3 条记忆。",
   "memoryRuleProviderSwitchTitle": "切换提供商",
-  "memoryRuleProviderSwitchDesc": "在对话中切换 AI 提供商时捕获摘要。"
+  "memoryRuleProviderSwitchDesc": "在对话中切换 AI 提供商时捕获摘要。",
+  "seminarRolesTitle": "角色讨论",
+  "seminarNoRoleTurns": "还没有角色发言。",
+  "seminarSharedWhiteboard": "共享白板",
+  "seminarNoWhiteboardEntries": "还没有白板条目。",
+  "seminarSynthesisTitle": "综合总结",
+  "seminarNoSynthesis": "还没有综合总结。",
+  "seminarSupportiveView": "支持视角：{text}",
+  "@seminarSupportiveView": {
+    "placeholders": {
+      "text": {}
+    }
+  },
+  "seminarCriticalView": "批判视角：{text}",
+  "@seminarCriticalView": {
+    "placeholders": {
+      "text": {}
+    }
+  },
+  "seminarSendToReview": "发送到待审",
+  "seminarSentToReview": "已将综合总结和 {count} 张卡片发送到待审。",
+  "@seminarSentToReview": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "seminarRunStatusDraft": "草稿",
+  "seminarRunStatusRunning": "运行中",
+  "seminarRunStatusCompleted": "已完成",
+  "seminarRunStatusNeedsEvidence": "需要证据",
+  "seminarRunStatusCancelled": "已取消",
+  "seminarRunStatusFailed": "失败",
+  "seminarJobStatusRunning": "运行中",
+  "seminarJobStatusQueued": "排队中",
+  "seminarJobStatusCompleted": "已完成",
+  "seminarJobStatusNeedsEvidence": "需要证据",
+  "seminarJobStatusCancelled": "已取消",
+  "seminarJobStatusFailed": "失败",
+  "seminarJobStatusInterrupted": "已中断",
+  "seminarRoleCritical": "批判者",
+  "seminarRoleSupportive": "支持者",
+  "seminarRoleSynthesizer": "综合者",
+  "seminarRoleVerifier": "核验者",
+  "seminarWhiteboardClaim": "论点",
+  "seminarWhiteboardEvidenceRef": "证据引用",
+  "seminarWhiteboardDisagreement": "分歧",
+  "seminarWhiteboardOpenQuestion": "开放问题",
+  "seminarWhiteboardCandidateCard": "候选卡片",
+  "seminarWhiteboardReviewSuggestion": "待审建议",
+  "contextMenuSeminar": "研讨",
+  "contextMenuSeminarOpenFailed": "无法打开研讨",
+  "contextMenuSeminarPrompt": "围绕这段选中文本开启一场 PaperTok AI Seminar。请使用批判者、支持者、综合者三个视角（内部角色 ID：critical、supportive、synthesizer），优先引用当前书内证据，候选知识卡只作为草稿建议。\n\n选中文本：\n{text}",
+  "@contextMenuSeminarPrompt": {
+    "placeholders": {
+      "text": {}
+    }
+  },
+  "knowledgeCardAddedToReviewInbox": "已加入知识待审队列",
+  "knowledgeCardAlreadyInReviewInbox": "知识卡已在待审队列",
+  "knowledgeCardAlreadySaved": "知识卡已保存",
+  "knowledgeCardAddFailed": "创建知识卡失败",
+  "reviewInboxTitle": "知识待审队列",
+  "reviewInboxDescription": "AI 生成的卡片、研讨结论、图谱关系和记忆候选，需要先审核再成为用户资产。",
+  "reviewInboxEmptyBody": "AI 生成的知识资产会先进入这里，审核或应用后才会沉淀。",
+  "reviewInboxStatusDraft": "草稿",
+  "reviewInboxStatusPending": "待审核",
+  "reviewInboxStatusApproved": "已批准",
+  "reviewInboxStatusDismissed": "已忽略",
+  "reviewInboxStatusApplied": "已应用",
+  "reviewInboxSourceAll": "全部来源",
+  "reviewInboxSourceMemoryCandidate": "记忆",
+  "reviewInboxSourceKnowledgeCard": "知识卡",
+  "reviewInboxSourceSeminarSynthesis": "研讨总结",
+  "reviewInboxSourceConceptGraphRelation": "概念图谱",
+  "reviewInboxSourceFlashcardCandidate": "复习卡",
+  "reviewInboxSourceImageAnalysisCard": "图片分析",
+  "reviewInboxSourceReviewHistoryImport": "复习记录",
+  "reviewInboxSourceSyncConflict": "同步冲突",
+  "reviewInboxSourceUnknown": "未知来源",
+  "reviewInboxApproveAction": "批准",
+  "reviewInboxDismissAction": "忽略",
+  "reviewInboxApplyAction": "应用",
+  "reviewInboxOpenSourceAction": "打开来源",
+  "reviewInboxTraceableSources": "{count} 个可跳转来源",
+  "reviewInboxUnavailableSources": "{count} 个已标记不可用",
+  "reviewInboxUnresolvedSources": "{count} 个未解析来源",
+  "conceptGraphTitle": "概念图谱",
+  "conceptGraphDescription": "探索已确认和草稿中的概念关系，并保留可跳回原文的证据。",
+  "conceptGraphRelatedToSelection": "和选中文本相关",
+  "conceptGraphNoRelatedTitle": "还没有相关概念",
+  "conceptGraphNoRelatedBody": "当前没有概念匹配这段选中文本。图谱生成器可以先创建待审核草稿候选，不会直接生成正式节点。",
+  "conceptGraphCreateDraftCandidate": "创建草稿候选",
+  "conceptGraphEmptyTitle": "还没有概念",
+  "conceptGraphEmptyBody": "审核过的概念关系和后续图谱生成器会出现在这里。",
+  "conceptGraphSelectPrompt": "选择一个概念，查看它的证据、局部路径和附近关系。",
+  "conceptGraphIntegrityClean": "没有孤立节点或断开的图谱关系",
+  "conceptGraphIntegrityIssueCount": "{orphans} 个孤立 / {broken} 个断开",
+  "@conceptGraphIntegrityIssueCount": {
+    "placeholders": {
+      "orphans": {
+        "type": "int"
+      },
+      "broken": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphSourceCount": "{count} 个来源",
+  "@conceptGraphSourceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphRelatedCount": "{count} 个关联",
+  "@conceptGraphRelatedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphLocalPath": "局部路径",
+  "conceptGraphLocalMapTitle": "局部图谱",
+  "conceptGraphMapCenter": "中心",
+  "conceptGraphDirectNeighborCount": "{count} 个直接",
+  "@conceptGraphDirectNeighborCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphTwoHopCount": "{count} 个二跳",
+  "@conceptGraphTwoHopCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphEvidenceLinkCount": "{count} 条证据关系",
+  "@conceptGraphEvidenceLinkCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphDraftItemCount": "{count} 个草稿项",
+  "@conceptGraphDraftItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conceptGraphDraftBadge": "草稿",
+  "conceptGraphFormalBadge": "正式",
+  "conceptGraphEvidenceBadge": "有证据",
+  "conceptGraphNoEvidenceBadge": "无证据",
+  "conceptGraphRelatedTitle": "关联概念",
+  "conceptGraphEvidenceTitle": "证据",
+  "conceptGraphNoRelated": "还没有可回溯的关联概念。",
+  "conceptGraphNoEvidence": "没有可用来源证据。",
+  "conceptGraphLoadFailed": "无法加载概念图谱",
+  "spacedReviewTitle": "间隔复习",
+  "spacedReviewDescription": "复习已应用的知识卡，并保留可跳回原文的来源链接。",
+  "spacedReviewDueOnly": "到期",
+  "spacedReviewAllItems": "全部",
+  "spacedReviewEmptyTitle": "暂无到期复习",
+  "spacedReviewEmptyBody": "应用后的知识卡会在需要复习时出现在这里。",
+  "spacedReviewDueNow": "现在到期",
+  "spacedReviewScheduled": "已排期",
+  "spacedReviewAgain": "再来",
+  "spacedReviewHard": "困难",
+  "spacedReviewGood": "掌握",
+  "spacedReviewEasy": "简单",
+  "spacedReviewIntervalDays": "{count} 天间隔",
+  "@spacedReviewIntervalDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spacedReviewHistoryCount": "{count} 次复习",
+  "@spacedReviewHistoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportTitle": "知识同步 / 导出",
+  "knowledgeExportDescription": "预览已确认知识资产、待审冲突和安全的来源引用 manifest。",
+  "knowledgeExportEmptyTitle": "还没有已确认知识资产",
+  "knowledgeExportEmptyBody": "应用后的知识卡和复习记录会先出现在这里，再进入导出。",
+  "knowledgeExportIncludedCount": "{count} 个纳入",
+  "@knowledgeExportIncludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportExcludedCount": "{count} 个排除",
+  "@knowledgeExportExcludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportConflictCount": "{count} 个冲突",
+  "@knowledgeExportConflictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportCreateManifest": "创建 manifest",
+  "knowledgeExportCreateBundle": "创建导出",
+  "knowledgeExportSendConflictsToReview": "发送冲突到 Review",
+  "knowledgeExportConflictReviewSent": "{count} 个冲突已发送到 Review inbox",
+  "@knowledgeExportConflictReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportManifestPath": "Manifest：{path}",
+  "@knowledgeExportManifestPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportMarkdownPath": "Markdown：{path}",
+  "@knowledgeExportMarkdownPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportHtmlReportPath": "HTML 报告：{path}",
+  "@knowledgeExportHtmlReportPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportAnkiPath": "Anki TSV：{path}",
+  "@knowledgeExportAnkiPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportSyncBundlePath": "Sync bundle：{path}",
+  "@knowledgeExportSyncBundlePath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportPreviewRemoteSync": "预览远端同步",
+  "knowledgeExportCheckRemoteChanges": "检查远端变更",
+  "knowledgeExportRemoteCheckFound": "发现远端变更：{incomingCount} 个待引入 · {conflictCount} 个冲突",
+  "@knowledgeExportRemoteCheckFound": {
+    "placeholders": {
+      "incomingCount": {
+        "type": "int"
+      },
+      "conflictCount": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteCheckClean": "远端检查完成：没有发现待引入项或冲突",
+  "knowledgeExportRemoteCheckReadOnly": "前台只读检查。除非你选择下一步操作，否则不会上传、应用或发送到 Review。",
+  "knowledgeExportRunSafeRemoteSync": "运行安全远端同步",
+  "knowledgeExportRemotePreviewTitle": "远端同步预览",
+  "knowledgeExportRemoteCount": "{count} 个远端",
+  "@knowledgeExportRemoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportIncomingCount": "{count} 个待引入",
+  "@knowledgeExportIncomingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportOutgoingCount": "{count} 个待写出",
+  "@knowledgeExportOutgoingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteConflictCount": "{count} 个远端冲突",
+  "@knowledgeExportRemoteConflictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteBundlePath": "远端 bundle：{path}",
+  "@knowledgeExportRemoteBundlePath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportRemoteStatusNotPreviewed": "远端同步状态：未预览",
+  "knowledgeExportRemoteStatusNotPreviewedBody": "上传或导入远端条目前，先预览远端 sync bundle。",
+  "knowledgeExportRemoteStatusReviewRequired": "远端同步状态：需要 Review",
+  "knowledgeExportRemoteStatusReviewRequiredBody": "先把远端待引入项或冲突送入 Review，完成 Apply 后再重新预览并上传。",
+  "knowledgeExportRemoteStatusReadyToUpload": "远端同步状态：可上传",
+  "knowledgeExportRemoteStatusReadyToUploadBody": "最近一次预览没有发现远端待引入项或冲突。",
+  "knowledgeExportRemoteStatusUploaded": "远端同步状态：已上传",
+  "knowledgeExportRemoteStatusUploadedBody": "受保护上传已完成；下一台设备写入前建议重新预览。",
+  "knowledgeExportRemoteStatusRepreviewRequired": "远端同步状态：需要重新预览",
+  "knowledgeExportRemoteStatusRepreviewRequiredBody": "远端 bundle 在预览后发生变化，上传已停止。请重新预览远端同步后再上传。",
+  "knowledgeExportRemoteStatusConcurrencyGuardUnavailable": "远端同步状态：缺少并发写保护",
+  "knowledgeExportRemoteStatusConcurrencyGuardUnavailableBody": "当前同步服务没有提供 ETag/CAS 条件写保护，PaperTok 已拒绝覆盖远端 bundle。请使用支持条件写的同步服务，或重新配置同步。",
+  "knowledgeExportRemoteStatusFailed": "远端同步状态：失败",
+  "knowledgeExportRemoteStatusFailedBody": "上一次远端操作失败。修复连接后刷新或重新预览。",
+  "knowledgeExportSendRemoteConflictsToReview": "发送远端冲突到 Review",
+  "knowledgeExportRemoteConflictReviewSent": "{count} 个远端冲突已发送到 Review inbox",
+  "@knowledgeExportRemoteConflictReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportStageRemoteCardConflictsToReview": "暂存安全远端知识卡冲突到 Review",
+  "knowledgeExportRemoteConflictStageSent": "{count} 个安全远端知识卡冲突已暂存到 Review inbox",
+  "@knowledgeExportRemoteConflictStageSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportSendRemoteIncomingToReview": "发送远端待引入到 Review",
+  "knowledgeExportRemoteIncomingReviewSent": "{count} 个远端待引入已发送到 Review inbox",
+  "@knowledgeExportRemoteIncomingReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportSendRemoteReviewHistoryToReview": "发送远端复习记录到 Review",
+  "knowledgeExportRemoteReviewHistoryReviewSent": "{count} 个远端复习记录已发送到 Review inbox",
+  "@knowledgeExportRemoteReviewHistoryReviewSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportUploadRemoteSync": "上传 sync bundle",
+  "knowledgeExportRemoteUploadPath": "已上传 sync bundle：{path}",
+  "@knowledgeExportRemoteUploadPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportRemoteUploadCount": "{count} 个已上传",
+  "@knowledgeExportRemoteUploadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteRollbackSnapshotPath": "回滚快照：{path}",
+  "@knowledgeExportRemoteRollbackSnapshotPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "knowledgeExportRemoteRollbackRestored": "远端写回失败；已恢复旧的远端 bundle，本机已确认知识资产未被修改。",
+  "knowledgeExportRemotePartialRemoved": "远端写回失败；已删除半写入的新远端 bundle，本机已确认知识资产未被修改。",
+  "knowledgeExportSafeDefault": "默认排除草稿、派生索引、API key 和待审冲突。",
+  "knowledgeExportLoadFailed": "无法加载知识导出计划",
+  "reviewInboxActionFailed": "审核操作失败",
+  "settingsAiCustomSkillsTitle": "自定义技能",
+  "settingsAiCustomSkillsDesc": "导入受治理的 JSON 技能契约",
+  "customSkillsDescription": "导入受治理的 JSON 技能。通过校验的技能可以追加提示词行为，并且只能使用契约声明的只读工具。",
+  "customSkillsJsonLabel": "技能 JSON",
+  "customSkillsJsonHint": "schemaVersion: 1, ...",
+  "customSkillsPasteExample": "粘贴安全示例",
+  "customSkillsImport": "导入技能",
+  "customSkillsInstalled": "已安装技能",
+  "customSkillsNoTools": "无工具",
+  "customSkillsScenes": "场景：{scenes}",
+  "@customSkillsScenes": {
+    "placeholders": {
+      "scenes": {}
+    }
+  },
+  "customSkillsTools": "工具：{tools}",
+  "@customSkillsTools": {
+    "placeholders": {
+      "tools": {}
+    }
+  },
+  "customSkillsRuntimeReady": "运行时可用",
+  "customSkillsDisabled": "已禁用",
+  "customSkillsDelete": "删除技能",
+  "customSkillsImportBlocked": "导入已阻止",
+  "customSkillsImported": "技能已导入。聊天前请先在当前技能中启用。",
+  "customSkillsEmpty": "还没有自定义技能。",
+  "seminarQuestionLabel": "研讨问题",
+  "seminarStart": "开始研讨",
+  "seminarQueue": "加入研讨队列",
+  "seminarBudgetGuardrails": "本地预算保护",
+  "seminarRoleOutputBudget": "单角色输出 token 预算",
+  "seminarRunTokenBudget": "整场运行 token 预算",
+  "seminarRunCostCapUsd": "运行成本上限 USD",
+  "seminarBudgetPricingDesc": "优先使用 provider 回传的 token usage，并结合 pricing metadata 估算美元成本上限；真实账单可能不同。",
+  "seminarBudgetLocalDesc": "使用本地 token 估算来停止下一步研讨；provider 账单可能不同。",
+  "seminarPricingLine": "价格来源：{source}",
+  "@seminarPricingLine": {
+    "placeholders": {
+      "source": {}
+    }
+  },
+  "seminarPricingFallback": "provider capability metadata",
+  "seminarCostCapUnavailable": "需要 pricing metadata 后才能使用成本上限。",
+  "seminarProviderReadiness": "Provider 就绪状态",
+  "seminarProviderDiagnosticsUnavailable": "暂时没有 Provider 诊断信息。",
+  "seminarContextLine": "上下文：{tokens}",
+  "@seminarContextLine": {
+    "placeholders": {
+      "tokens": {}
+    }
+  },
+  "seminarMaxOutputLine": "最大输出：{tokens}",
+  "@seminarMaxOutputLine": {
+    "placeholders": {
+      "tokens": {}
+    }
+  },
+  "seminarNoModelSelected": "未选择模型",
+  "seminarTools": "工具",
+  "seminarVision": "视觉",
+  "seminarThinking": "思考",
+  "seminarStreaming": "流式",
+  "seminarCapabilityYes": "{label}",
+  "@seminarCapabilityYes": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "seminarCapabilityNo": "不支持 {label}",
+  "@seminarCapabilityNo": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "seminarCapabilityUnknown": "{label} 未知",
+  "@seminarCapabilityUnknown": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "seminarStatusLine": "状态：{status}",
+  "@seminarStatusLine": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "seminarRecoveredInterrupted": "已恢复本机中断的研讨状态。可重试重新运行。",
+  "seminarRecoveredLocal": "已从本设备恢复本机研讨状态。",
+  "seminarBackgroundJobLine": "后台任务：{status} · {id}",
+  "@seminarBackgroundJobLine": {
+    "placeholders": {
+      "status": {},
+      "id": {}
+    }
+  },
+  "seminarJobQueue": "研讨任务队列",
+  "seminarCancelQueued": "取消排队研讨",
+  "seminarEstimatedCostNotInvoice": "估算成本（非账单）：${cost}",
+  "@seminarEstimatedCostNotInvoice": {
+    "placeholders": {
+      "cost": {}
+    }
+  },
+  "seminarEstimatedCostWithSource": "估算成本（非账单）：${cost} · {source}",
+  "@seminarEstimatedCostWithSource": {
+    "placeholders": {
+      "cost": {},
+      "source": {}
+    }
+  },
+  "seminarBillingReconciliation": "账单对账",
+  "seminarUsageSnapshot": "用量快照：{usage}",
+  "@seminarUsageSnapshot": {
+    "placeholders": {
+      "usage": {}
+    }
+  },
+  "seminarPricingSnapshot": "价格快照：{pricing}",
+  "@seminarPricingSnapshot": {
+    "placeholders": {
+      "pricing": {}
+    }
+  },
+  "seminarInvoiceReconciliation": "发票对账：{status}",
+  "@seminarInvoiceReconciliation": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "seminarUnavailable": "不可用",
+  "seminarProviderReportedUsage": "Provider 回传用量",
+  "seminarProviderReportedUsageDesc": "来自 provider usage metadata",
+  "seminarTokenUsage": "Token 用量",
+  "seminarTokenUsageDesc": "混合 provider 用量与本地估算",
+  "seminarLocalTokenEstimate": "本地 token 估算",
+  "seminarLocalTokenEstimateDesc": "Provider 账单可能不同",
+  "seminarProviderUsage": "Provider 用量",
+  "seminarMixedUsage": "混合用量",
+  "seminarLocalEstimate": "本地估算",
+  "seminarProviderMetadata": "Provider metadata",
+  "seminarMixedProviderLocal": "Provider metadata 与本地估算混合",
+  "seminarInvoiceNotConnected": "未连接",
+  "seminarInvoiceReconciled": "已对账",
+  "seminarInvoiceFailed": "失败",
+  "seminarCostValue": "成本：${cost}",
+  "@seminarCostValue": {
+    "placeholders": {
+      "cost": {}
+    }
+  },
+  "seminarCostPricingReady": "成本：已准备价格信息，可估算美元上限",
+  "seminarCostUnknown": "成本：未知",
+  "seminarTokenUsageLine": "{title}：总计 {total} token（输入 {input} / 输出 {output}）",
+  "@seminarTokenUsageLine": {
+    "placeholders": {
+      "title": {},
+      "total": {},
+      "input": {},
+      "output": {}
+    }
+  },
+  "seminarRoleUsageLine": "{prefix}：输入 {input} / 输出 {output} token",
+  "@seminarRoleUsageLine": {
+    "placeholders": {
+      "prefix": {},
+      "input": {},
+      "output": {}
+    }
+  },
+  "seminarEvidenceScopeCurrentChapter": "当前章节",
+  "seminarEvidenceScopeCurrentBook": "当前书籍",
+  "seminarEvidenceScopeLibrary": "书库",
+  "seminarEvidenceScopeNotes": "笔记",
+  "seminarEvidenceScopeMemory": "记忆",
+  "seminarEvidenceScopeConceptGraph": "概念图谱",
+  "customSkillsExampleName": "慢读助手",
+  "customSkillsExampleDescription": "用本地证据解释一段文字。",
+  "customSkillsExamplePrompt": "慢一点解释。优先使用当前书籍证据，提出判断前先说明不确定性。"
 }

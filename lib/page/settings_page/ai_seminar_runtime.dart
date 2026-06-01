@@ -125,9 +125,9 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
             controller: _questionController,
             minLines: 2,
             maxLines: 5,
-            decoration: const InputDecoration(
-              labelText: 'Seminar question',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.seminarQuestionLabel,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -149,7 +149,7 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
                 icon: Icon(
                   busy ? Icons.playlist_add_outlined : Icons.groups_2_outlined,
                 ),
-                label: Text(busy ? 'Queue Seminar' : 'Start Seminar'),
+                label: Text(busy ? l10n.seminarQueue : l10n.seminarStart),
                 onPressed: _start,
               ),
               const SizedBox(width: 8),
@@ -300,10 +300,11 @@ class _BudgetSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final hasPricing = diagnostics?.hasPricingMetadata == true;
     final pricingSource = diagnostics?.costPriceSource?.trim();
     return _Section(
-      title: 'Local budget guardrails',
+      title: l10n.seminarBudgetGuardrails,
       icon: Icons.speed_outlined,
       children: [
         LayoutBuilder(
@@ -314,18 +315,18 @@ class _BudgetSection extends StatelessWidget {
                 controller: roleOutputBudgetController,
                 enabled: enabled,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Role output token budget',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.seminarRoleOutputBudget,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               TextField(
                 controller: runBudgetController,
                 enabled: enabled,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Run token budget',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.seminarRunTokenBudget,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               TextField(
@@ -333,9 +334,9 @@ class _BudgetSection extends StatelessWidget {
                 enabled: enabled && hasPricing,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Run cost cap USD',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.seminarRunCostCapUsd,
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ];
@@ -362,8 +363,8 @@ class _BudgetSection extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           hasPricing
-              ? 'Uses provider-reported token usage when available and pricing metadata for estimated USD caps; provider invoices may differ.'
-              : 'Uses local token estimates to stop the next Seminar step; provider billing may differ.',
+              ? l10n.seminarBudgetPricingDesc
+              : l10n.seminarBudgetLocalDesc,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: ClaudePalette.secondary(context),
               ),
@@ -371,7 +372,11 @@ class _BudgetSection extends StatelessWidget {
         if (hasPricing) ...[
           const SizedBox(height: 4),
           Text(
-            'Pricing: ${pricingSource?.isNotEmpty == true ? pricingSource : 'provider capability metadata'}',
+            l10n.seminarPricingLine(
+              pricingSource?.isNotEmpty == true
+                  ? pricingSource!
+                  : l10n.seminarPricingFallback,
+            ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: ClaudePalette.secondary(context),
                 ),
@@ -379,7 +384,7 @@ class _BudgetSection extends StatelessWidget {
         ] else ...[
           const SizedBox(height: 4),
           Text(
-            'Cost cap unavailable until pricing metadata is available.',
+            l10n.seminarCostCapUnavailable,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: ClaudePalette.secondary(context),
                 ),
@@ -397,26 +402,27 @@ class _ProviderReadinessSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final d = diagnostics;
     if (d == null) {
-      return const _Section(
-        title: 'Provider readiness',
+      return _Section(
+        title: l10n.seminarProviderReadiness,
         icon: Icons.memory_outlined,
         children: [
-          Text('Provider diagnostics are not available yet.'),
+          Text(l10n.seminarProviderDiagnosticsUnavailable),
         ],
       );
     }
 
     final capabilityLine = [
       if (d.contextWindow != null)
-        'Context: ${_formatTokenCount(d.contextWindow!)}',
+        l10n.seminarContextLine(_formatTokenCount(d.contextWindow!)),
       if (d.maxOutputTokens != null)
-        'Max output: ${_formatTokenCount(d.maxOutputTokens!)}',
+        l10n.seminarMaxOutputLine(_formatTokenCount(d.maxOutputTokens!)),
     ].join(' · ');
     final warnings = d.warnings;
     return _Section(
-      title: 'Provider readiness',
+      title: l10n.seminarProviderReadiness,
       icon: Icons.memory_outlined,
       children: [
         Row(
@@ -428,7 +434,7 @@ class _ProviderReadinessSection extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '${d.providerName} · ${d.modelId.isEmpty ? 'No model selected' : d.modelId}',
+                '${d.providerName} · ${d.modelId.isEmpty ? l10n.seminarNoModelSelected : d.modelId}',
               ),
             ),
           ],
@@ -442,18 +448,38 @@ class _ProviderReadinessSection extends StatelessWidget {
           spacing: 6,
           runSpacing: 6,
           children: [
-            _TinyChip(label: _capabilityLabel('Tools', d.supportsTools)),
-            _TinyChip(label: _capabilityLabel('Vision', d.supportsImages)),
             _TinyChip(
-              label: _capabilityLabel('Thinking', d.supportsThinking),
+              label: _capabilityLabel(
+                l10n,
+                l10n.seminarTools,
+                d.supportsTools,
+              ),
             ),
             _TinyChip(
-              label: _capabilityLabel('Streaming', d.supportsStreaming),
+              label: _capabilityLabel(
+                l10n,
+                l10n.seminarVision,
+                d.supportsImages,
+              ),
+            ),
+            _TinyChip(
+              label: _capabilityLabel(
+                l10n,
+                l10n.seminarThinking,
+                d.supportsThinking,
+              ),
+            ),
+            _TinyChip(
+              label: _capabilityLabel(
+                l10n,
+                l10n.seminarStreaming,
+                d.supportsStreaming,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        Text(_providerCostLine(d)),
+        Text(_providerCostLine(l10n, d)),
         if (d.costUnknownReason?.trim().isNotEmpty == true) ...[
           const SizedBox(height: 4),
           Text(
@@ -485,8 +511,10 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final error = state.error?.trim();
     final backgroundJob = state.backgroundJob;
+    final statusLabel = _runStatusLabel(l10n, state.status);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ClaudePalette.card(context),
@@ -504,19 +532,19 @@ class _StatusBanner extends StatelessWidget {
                 Expanded(
                   child: Text(
                     error == null || error.isEmpty
-                        ? 'Status: ${state.status.asString}'
+                        ? l10n.seminarStatusLine(statusLabel)
                         : error,
                   ),
                 ),
-                _TinyChip(label: state.status.asString),
+                _TinyChip(label: statusLabel),
               ],
             ),
             if (state.restoredFromLocalCache) ...[
               const SizedBox(height: 6),
               Text(
                 state.status == AiSeminarRunStatus.cancelled
-                    ? 'Recovered interrupted local Seminar state. Retry to run it again.'
-                    : 'Recovered local Seminar state from this device.',
+                    ? l10n.seminarRecoveredInterrupted
+                    : l10n.seminarRecoveredLocal,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: ClaudePalette.secondary(context),
                     ),
@@ -525,8 +553,10 @@ class _StatusBanner extends StatelessWidget {
             if (backgroundJob != null) ...[
               const SizedBox(height: 6),
               Text(
-                'Background job: ${backgroundJob.status.asString} · '
-                '${backgroundJob.id}',
+                l10n.seminarBackgroundJobLine(
+                  _backgroundJobStatusLabel(l10n, backgroundJob.status),
+                  backgroundJob.id,
+                ),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: ClaudePalette.secondary(context),
                     ),
@@ -546,9 +576,10 @@ class _BackgroundJobsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final visibleJobs = jobs.reversed.take(6).toList(growable: false);
     return _Section(
-      title: 'Seminar job queue',
+      title: l10n.seminarJobQueue,
       icon: Icons.playlist_add_check_outlined,
       children: [
         for (final job in visibleJobs)
@@ -557,7 +588,7 @@ class _BackgroundJobsSection extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             leading: Icon(_jobIcon(job.status), size: 20),
             title: Text(
-              '${job.status.asString} · ${job.id}',
+              '${_backgroundJobStatusLabel(l10n, job.status)} · ${job.id}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -577,7 +608,7 @@ class _BackgroundJobsSection extends StatelessWidget {
             trailing: job.isQueued
                 ? Consumer(
                     builder: (context, ref, _) => IconButton(
-                      tooltip: 'Cancel queued Seminar',
+                      tooltip: l10n.seminarCancelQueued,
                       icon: const Icon(Icons.close),
                       onPressed: () => ref
                           .read(aiSeminarRuntimeProvider.notifier)
@@ -624,7 +655,9 @@ class _EvidenceSection extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.article_outlined),
                   title: Text(item.text),
-                  subtitle: Text('${item.id} · ${item.scope.asString}'),
+                  subtitle: Text(
+                    '${item.id} · ${_evidenceScopeLabel(l10n, item.scope)}',
+                  ),
                 ),
             ],
     );
@@ -638,13 +671,14 @@ class _RolesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final turns = state.turns;
     final activeRole = state.activeRole;
     final children = <Widget>[];
     final tokenUsage = state.tokenUsage;
     final billingSnapshot = state.lastRun?.billingSnapshot;
     if (tokenUsage != null) {
-      final summary = _tokenUsageSummary(tokenUsage);
+      final summary = _tokenUsageSummary(l10n, tokenUsage);
       final estimatedCost = state.lastRun?.estimatedCostUsd;
       final priceSource = state.lastRun?.costPriceSource?.trim();
       children.add(
@@ -652,9 +686,12 @@ class _RolesSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${summary.title}: ${_formatTokenCount(tokenUsage.totalTokens)} tokens '
-              '(${_formatTokenCount(tokenUsage.inputTokens)} in / '
-              '${_formatTokenCount(tokenUsage.outputTokens)} out)',
+              l10n.seminarTokenUsageLine(
+                summary.title,
+                _formatTokenCount(tokenUsage.totalTokens),
+                _formatTokenCount(tokenUsage.inputTokens),
+                _formatTokenCount(tokenUsage.outputTokens),
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -666,9 +703,14 @@ class _RolesSection extends StatelessWidget {
             if (estimatedCost != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Estimated cost, not invoice: '
-                '\$${estimatedCost.toStringAsFixed(4)}'
-                '${priceSource?.isNotEmpty == true ? ' · $priceSource' : ''}',
+                priceSource?.isNotEmpty == true
+                    ? l10n.seminarEstimatedCostWithSource(
+                        estimatedCost.toStringAsFixed(4),
+                        priceSource!,
+                      )
+                    : l10n.seminarEstimatedCostNotInvoice(
+                        estimatedCost.toStringAsFixed(4),
+                      ),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: ClaudePalette.secondary(context),
                     ),
@@ -687,21 +729,26 @@ class _RolesSection extends StatelessWidget {
           children: [
             if (children.isNotEmpty) const Divider(height: 20),
             Text(
-              'Billing reconciliation',
+              l10n.seminarBillingReconciliation,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 4),
             Text(
-              'Usage snapshot: '
-              '${_billingUsageLabel(billingSnapshot.usageSnapshot)}',
+              l10n.seminarUsageSnapshot(
+                _billingUsageLabel(l10n, billingSnapshot.usageSnapshot),
+              ),
             ),
             Text(
-              'Pricing snapshot: '
-              '${pricingSource?.isNotEmpty == true ? pricingSource : 'Unavailable'}',
+              l10n.seminarPricingSnapshot(
+                pricingSource?.isNotEmpty == true
+                    ? pricingSource!
+                    : l10n.seminarUnavailable,
+              ),
             ),
             Text(
-              'Invoice reconciliation: '
-              '${_invoiceStatusLabel(billingSnapshot.invoiceStatus)}',
+              l10n.seminarInvoiceReconciliation(
+                _invoiceStatusLabel(l10n, billingSnapshot.invoiceStatus),
+              ),
             ),
             if (invoiceReason?.isNotEmpty == true)
               Text(
@@ -716,20 +763,23 @@ class _RolesSection extends StatelessWidget {
     }
     for (final turn in turns) {
       final usage = turn.tokenUsage;
-      final usagePrefix = usage == null ? null : _roleUsagePrefix(usage);
+      final usagePrefix = usage == null ? null : _roleUsagePrefix(l10n, usage);
       children.add(
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(_roleIcon(turn.role)),
-          title: Text(turn.role.asString),
+          title: Text(_seminarRoleLabel(l10n, turn.role)),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(turn.responseText),
               if (usage != null)
                 Text(
-                  '$usagePrefix: ${_formatTokenCount(usage.inputTokens)} in / '
-                  '${_formatTokenCount(usage.outputTokens)} out tokens',
+                  l10n.seminarRoleUsageLine(
+                    usagePrefix!,
+                    _formatTokenCount(usage.inputTokens),
+                    _formatTokenCount(usage.outputTokens),
+                  ),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: ClaudePalette.secondary(context),
                       ),
@@ -748,16 +798,15 @@ class _RolesSection extends StatelessWidget {
             height: 20,
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          title: Text(activeRole.asString),
+          title: Text(_seminarRoleLabel(l10n, activeRole)),
           subtitle: Text(state.partialRoleText ?? ''),
         ),
       );
     }
     return _Section(
-      title: 'Roles',
+      title: l10n.seminarRolesTitle,
       icon: Icons.groups_2_outlined,
-      children:
-          children.isEmpty ? [const Text('No role turns yet.')] : children,
+      children: children.isEmpty ? [Text(l10n.seminarNoRoleTurns)] : children,
     );
   }
 }
@@ -769,11 +818,12 @@ class _WhiteboardSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     return _Section(
-      title: 'Shared whiteboard',
+      title: l10n.seminarSharedWhiteboard,
       icon: Icons.dashboard_customize_outlined,
       children: entries.isEmpty
-          ? [const Text('No whiteboard entries yet.')]
+          ? [Text(l10n.seminarNoWhiteboardEntries)]
           : [
               for (final entry in entries)
                 ListTile(
@@ -781,7 +831,7 @@ class _WhiteboardSection extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.sticky_note_2_outlined),
                   title: Text(entry.text),
-                  subtitle: Text(entry.kind.asString),
+                  subtitle: Text(_whiteboardKindLabel(l10n, entry.kind)),
                 ),
             ],
     );
@@ -795,23 +845,24 @@ class _SynthesisSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
     final synthesis = state.synthesis;
     return _Section(
-      title: 'Synthesis',
+      title: l10n.seminarSynthesisTitle,
       icon: Icons.auto_awesome_outlined,
       children: [
         if (synthesis == null)
-          const Text('No synthesis yet.')
+          Text(l10n.seminarNoSynthesis)
         else ...[
           Text(synthesis.summary),
           const SizedBox(height: 8),
-          Text('Supportive: ${synthesis.supportiveView}'),
+          Text(l10n.seminarSupportiveView(synthesis.supportiveView)),
           const SizedBox(height: 4),
-          Text('Critical: ${synthesis.criticalView}'),
+          Text(l10n.seminarCriticalView(synthesis.criticalView)),
           const SizedBox(height: 10),
           FilledButton.icon(
             icon: const Icon(Icons.fact_check_outlined),
-            label: const Text('Send to Review'),
+            label: Text(l10n.seminarSendToReview),
             onPressed: state.canSendToReview
                 ? () async {
                     final messenger = ScaffoldMessenger.of(context);
@@ -822,7 +873,9 @@ class _SynthesisSection extends ConsumerWidget {
                       messenger.showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Sent synthesis and ${result.knowledgeCardIds.length} card(s) to Review.',
+                            l10n.seminarSentToReview(
+                              result.knowledgeCardIds.length,
+                            ),
                           ),
                         ),
                       );
@@ -922,63 +975,136 @@ IconData _roleIcon(AiSeminarRole role) {
   };
 }
 
-String _capabilityLabel(String label, bool? value) {
-  if (value == true) return label;
-  if (value == false) return 'No $label';
-  return '$label unknown';
+String _capabilityLabel(L10n l10n, String label, bool? value) {
+  if (value == true) return l10n.seminarCapabilityYes(label);
+  if (value == false) return l10n.seminarCapabilityNo(label);
+  return l10n.seminarCapabilityUnknown(label);
 }
 
-String _providerCostLine(AiSeminarProviderDiagnostics diagnostics) {
+String _providerCostLine(
+  L10n l10n,
+  AiSeminarProviderDiagnostics diagnostics,
+) {
   if (diagnostics.estimatedCostUsd != null) {
-    return 'Cost: \$${diagnostics.estimatedCostUsd!.toStringAsFixed(4)}';
+    return l10n.seminarCostValue(
+      diagnostics.estimatedCostUsd!.toStringAsFixed(4),
+    );
   }
   if (diagnostics.hasPricingMetadata) {
-    return 'Cost: pricing ready for estimated USD caps';
+    return l10n.seminarCostPricingReady;
   }
-  return 'Cost: unknown';
+  return l10n.seminarCostUnknown;
 }
 
 ({String title, String subtitle}) _tokenUsageSummary(
+  L10n l10n,
   AiSeminarTokenUsage usage,
 ) {
   return switch (usage.source) {
     AiSeminarTokenUsage.sourceProviderReported => (
-        title: 'Provider reported usage',
-        subtitle: 'Stored from provider usage metadata',
+        title: l10n.seminarProviderReportedUsage,
+        subtitle: l10n.seminarProviderReportedUsageDesc,
       ),
     AiSeminarTokenUsage.sourceMixed => (
-        title: 'Token usage',
-        subtitle: 'Mixed provider usage and local estimates',
+        title: l10n.seminarTokenUsage,
+        subtitle: l10n.seminarTokenUsageDesc,
       ),
     _ => (
-        title: 'Local token estimate',
-        subtitle: 'Provider billing may differ',
+        title: l10n.seminarLocalTokenEstimate,
+        subtitle: l10n.seminarLocalTokenEstimateDesc,
       ),
   };
 }
 
-String _roleUsagePrefix(AiSeminarTokenUsage usage) {
+String _roleUsagePrefix(L10n l10n, AiSeminarTokenUsage usage) {
   return switch (usage.source) {
-    AiSeminarTokenUsage.sourceProviderReported => 'Provider usage',
-    AiSeminarTokenUsage.sourceMixed => 'Mixed usage',
-    _ => 'Local estimate',
+    AiSeminarTokenUsage.sourceProviderReported => l10n.seminarProviderUsage,
+    AiSeminarTokenUsage.sourceMixed => l10n.seminarMixedUsage,
+    _ => l10n.seminarLocalEstimate,
   };
 }
 
-String _billingUsageLabel(AiSeminarTokenUsage usage) {
+String _billingUsageLabel(L10n l10n, AiSeminarTokenUsage usage) {
   return switch (usage.source) {
-    AiSeminarTokenUsage.sourceProviderReported => 'Provider metadata',
-    AiSeminarTokenUsage.sourceMixed =>
-      'Mixed provider metadata and local estimate',
-    _ => 'Local estimate',
+    AiSeminarTokenUsage.sourceProviderReported => l10n.seminarProviderMetadata,
+    AiSeminarTokenUsage.sourceMixed => l10n.seminarMixedProviderLocal,
+    _ => l10n.seminarLocalEstimate,
   };
 }
 
-String _invoiceStatusLabel(AiSeminarInvoiceReconciliationStatus status) {
+String _invoiceStatusLabel(
+  L10n l10n,
+  AiSeminarInvoiceReconciliationStatus status,
+) {
   return switch (status) {
-    AiSeminarInvoiceReconciliationStatus.notConnected => 'Not connected',
-    AiSeminarInvoiceReconciliationStatus.reconciled => 'Reconciled',
-    AiSeminarInvoiceReconciliationStatus.failed => 'Failed',
+    AiSeminarInvoiceReconciliationStatus.notConnected =>
+      l10n.seminarInvoiceNotConnected,
+    AiSeminarInvoiceReconciliationStatus.reconciled =>
+      l10n.seminarInvoiceReconciled,
+    AiSeminarInvoiceReconciliationStatus.failed => l10n.seminarInvoiceFailed,
+  };
+}
+
+String _runStatusLabel(L10n l10n, AiSeminarRunStatus status) {
+  return switch (status) {
+    AiSeminarRunStatus.draft => l10n.seminarRunStatusDraft,
+    AiSeminarRunStatus.running => l10n.seminarRunStatusRunning,
+    AiSeminarRunStatus.completed => l10n.seminarRunStatusCompleted,
+    AiSeminarRunStatus.needsEvidence => l10n.seminarRunStatusNeedsEvidence,
+    AiSeminarRunStatus.cancelled => l10n.seminarRunStatusCancelled,
+    AiSeminarRunStatus.failed => l10n.seminarRunStatusFailed,
+  };
+}
+
+String _backgroundJobStatusLabel(
+  L10n l10n,
+  AiSeminarBackgroundJobStatus status,
+) {
+  return switch (status) {
+    AiSeminarBackgroundJobStatus.running => l10n.seminarJobStatusRunning,
+    AiSeminarBackgroundJobStatus.queued => l10n.seminarJobStatusQueued,
+    AiSeminarBackgroundJobStatus.completed => l10n.seminarJobStatusCompleted,
+    AiSeminarBackgroundJobStatus.needsEvidence =>
+      l10n.seminarJobStatusNeedsEvidence,
+    AiSeminarBackgroundJobStatus.cancelled => l10n.seminarJobStatusCancelled,
+    AiSeminarBackgroundJobStatus.failed => l10n.seminarJobStatusFailed,
+    AiSeminarBackgroundJobStatus.interrupted =>
+      l10n.seminarJobStatusInterrupted,
+  };
+}
+
+String _seminarRoleLabel(L10n l10n, AiSeminarRole role) {
+  return switch (role) {
+    AiSeminarRole.critical => l10n.seminarRoleCritical,
+    AiSeminarRole.supportive => l10n.seminarRoleSupportive,
+    AiSeminarRole.synthesizer => l10n.seminarRoleSynthesizer,
+    AiSeminarRole.verifier => l10n.seminarRoleVerifier,
+  };
+}
+
+String _whiteboardKindLabel(L10n l10n, AiSeminarWhiteboardKind kind) {
+  return switch (kind) {
+    AiSeminarWhiteboardKind.claim => l10n.seminarWhiteboardClaim,
+    AiSeminarWhiteboardKind.evidenceRef => l10n.seminarWhiteboardEvidenceRef,
+    AiSeminarWhiteboardKind.disagreement => l10n.seminarWhiteboardDisagreement,
+    AiSeminarWhiteboardKind.openQuestion => l10n.seminarWhiteboardOpenQuestion,
+    AiSeminarWhiteboardKind.candidateCard =>
+      l10n.seminarWhiteboardCandidateCard,
+    AiSeminarWhiteboardKind.reviewSuggestion =>
+      l10n.seminarWhiteboardReviewSuggestion,
+  };
+}
+
+String _evidenceScopeLabel(L10n l10n, AiSeminarEvidenceScope scope) {
+  return switch (scope) {
+    AiSeminarEvidenceScope.currentChapter =>
+      l10n.seminarEvidenceScopeCurrentChapter,
+    AiSeminarEvidenceScope.currentBook => l10n.seminarEvidenceScopeCurrentBook,
+    AiSeminarEvidenceScope.library => l10n.seminarEvidenceScopeLibrary,
+    AiSeminarEvidenceScope.notes => l10n.seminarEvidenceScopeNotes,
+    AiSeminarEvidenceScope.memory => l10n.seminarEvidenceScopeMemory,
+    AiSeminarEvidenceScope.conceptGraph =>
+      l10n.seminarEvidenceScopeConceptGraph,
   };
 }
 

@@ -15,9 +15,11 @@ class _QueuedStreamClient extends http.BaseClient {
 
   final List<Object> _queue;
   final List<Map<String, dynamic>> sentJsonBodies = [];
+  final List<Uri> sentUris = [];
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    sentUris.add(request.url);
     if (request is http.Request) {
       sentJsonBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
     }
@@ -105,6 +107,41 @@ void main() {
 
     expect(agg, isNotNull);
     expect(agg!.output.content, 'Hi there');
+  });
+
+  test('normalizes responses endpoint when full endpoint is configured',
+      () async {
+    final sse = StringBuffer()
+      ..write(_sseEvent('response.output_text.delta', {'delta': 'OK'}))
+      ..write(_sseEvent('response.completed', {
+        'response': {
+          'id': 'resp_1',
+          'reasoning': {'summary': null}
+        }
+      }));
+
+    final client = _QueuedStreamClient([sse.toString()]);
+
+    final model = ChatOpenAIResponses(
+      baseUrl: 'https://api.openai.com/v1/responses/',
+      apiKey: 'k',
+      defaultOptions: const ChatOpenAIOptions(model: 'gpt-5.1-codex'),
+      client: client,
+    );
+
+    await model
+        .stream(
+          PromptValue.chat([
+            ChatMessage.humanText('hello'),
+          ]),
+        )
+        .toList();
+
+    expect(client.sentUris, hasLength(1));
+    expect(
+      client.sentUris.single.toString(),
+      'https://api.openai.com/v1/responses',
+    );
   });
 
   test('emits reasoning_content metadata for reasoning summary items',
@@ -261,7 +298,7 @@ void main() {
     final model = ChatOpenAIResponses(
       baseUrl: 'https://example.com/v1',
       apiKey: 'k',
-      defaultOptions: const ChatOpenAIOptions(model: 'gpt-test'),
+      defaultOptions: const ChatOpenAIOptions(model: 'gpt-5.1-codex'),
       client: client,
     );
 
@@ -295,6 +332,8 @@ void main() {
     final secondBody = client.sentJsonBodies[1];
 
     expect(secondBody['previous_response_id'], 'resp_1');
+    expect(secondBody['model'], 'gpt-5.1-codex');
+    expect(secondBody.containsKey('conversation'), isFalse);
 
     final input = (secondBody['input'] as List).cast<dynamic>();
     expect(input, hasLength(1));
@@ -503,7 +542,14 @@ void main() {
         isA<StateError>().having(
           (error) => error.message,
           'message',
-          contains('Unsupported parameter: reasoning'),
+          allOf(
+            contains('Unsupported parameter: reasoning'),
+            contains('endpoint=https://example.com/v1/responses'),
+            contains('model=gpt-test'),
+            contains('sent_previous_response_id=false'),
+            contains('sent_conversation=false'),
+            contains('fallback_retried=false'),
+          ),
         ),
       ),
     );

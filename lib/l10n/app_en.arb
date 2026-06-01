@@ -1915,6 +1915,119 @@
   "settingsAiSkillPickerDesc": "Activate a skill to shape the AI's behavior and expertise.",
   "settingsAiSkillPickerNoneTitle": "None",
   "settingsAiSkillPickerNoneDesc": "Default assistant mode",
+  "settingsAiCustomSkillsTitle": "Custom skills",
+  "settingsAiCustomSkillsDesc": "Import governed JSON skill contracts",
+  "customSkillsDescription": "Import governed JSON skills. Accepted skills can add prompt behavior and only use the read-only tools declared in the contract.",
+  "customSkillsJsonLabel": "Skill JSON",
+  "customSkillsJsonHint": "schemaVersion: 1, ...",
+  "customSkillsPasteExample": "Paste safe example",
+  "customSkillsImport": "Import skill",
+  "customSkillsInstalled": "Installed skills",
+  "customSkillsNoTools": "No tools",
+  "customSkillsScenes": "Scenes: {scenes}",
+  "@customSkillsScenes": {
+    "placeholders": { "scenes": {} }
+  },
+  "customSkillsTools": "Tools: {tools}",
+  "@customSkillsTools": {
+    "placeholders": { "tools": {} }
+  },
+  "customSkillsRuntimeReady": "Runtime ready",
+  "customSkillsDisabled": "Disabled",
+  "customSkillsDelete": "Delete skill",
+  "customSkillsImportBlocked": "Import blocked",
+  "customSkillsImported": "Skill imported. Enable it from Active Skill before chatting.",
+  "customSkillsEmpty": "No custom skills yet.",
+  "seminarQuestionLabel": "Seminar question",
+  "seminarStart": "Start Seminar",
+  "seminarQueue": "Queue Seminar",
+  "seminarBudgetGuardrails": "Local budget guardrails",
+  "seminarRoleOutputBudget": "Role output token budget",
+  "seminarRunTokenBudget": "Run token budget",
+  "seminarRunCostCapUsd": "Run cost cap USD",
+  "seminarBudgetPricingDesc": "Uses provider-reported token usage when available and pricing metadata for estimated USD caps; provider invoices may differ.",
+  "seminarBudgetLocalDesc": "Uses local token estimates to stop the next Seminar step; provider billing may differ.",
+  "seminarPricingLine": "Pricing: {source}",
+  "@seminarPricingLine": {
+    "placeholders": { "source": {} }
+  },
+  "seminarPricingFallback": "provider capability metadata",
+  "seminarCostCapUnavailable": "Cost cap unavailable until pricing metadata is available.",
+  "seminarProviderReadiness": "Provider readiness",
+  "seminarProviderDiagnosticsUnavailable": "Provider diagnostics are not available yet.",
+  "seminarContextLine": "Context: {tokens}",
+  "@seminarContextLine": {
+    "placeholders": { "tokens": {} }
+  },
+  "seminarMaxOutputLine": "Max output: {tokens}",
+  "@seminarMaxOutputLine": {
+    "placeholders": { "tokens": {} }
+  },
+  "seminarNoModelSelected": "No model selected",
+  "seminarTools": "Tools",
+  "seminarVision": "Vision",
+  "seminarThinking": "Thinking",
+  "seminarStreaming": "Streaming",
+  "seminarCapabilityYes": "{label}",
+  "@seminarCapabilityYes": {
+    "placeholders": { "label": {} }
+  },
+  "seminarCapabilityNo": "No {label}",
+  "@seminarCapabilityNo": {
+    "placeholders": { "label": {} }
+  },
+  "seminarCapabilityUnknown": "{label} unknown",
+  "@seminarCapabilityUnknown": {
+    "placeholders": { "label": {} }
+  },
+  "seminarStatusLine": "Status: {status}",
+  "@seminarStatusLine": {
+    "placeholders": { "status": {} }
+  },
+  "seminarRecoveredInterrupted": "Recovered interrupted local Seminar state. Retry to run it again.",
+  "seminarRecoveredLocal": "Recovered local Seminar state from this device.",
+  "seminarBackgroundJobLine": "Background job: {status} · {id}",
+  "@seminarBackgroundJobLine": {
+    "placeholders": { "status": {}, "id": {} }
+  },
+  "seminarJobQueue": "Seminar job queue",
+  "seminarCancelQueued": "Cancel queued Seminar",
+  "seminarEstimatedCostNotInvoice": "Estimated cost, not invoice: ${cost}",
+  "@seminarEstimatedCostNotInvoice": {
+    "placeholders": { "cost": {} }
+  },
+  "seminarEstimatedCostWithSource": "Estimated cost, not invoice: ${cost} · {source}",
+  "@seminarEstimatedCostWithSource": {
+    "placeholders": { "cost": {}, "source": {} }
+  },
+  "seminarBillingReconciliation": "Billing reconciliation",
+  "seminarUsageSnapshot": "Usage snapshot: {usage}",
+  "@seminarUsageSnapshot": {
+    "placeholders": { "usage": {} }
+  },
+  "seminarPricingSnapshot": "Pricing snapshot: {pricing}",
+  "@seminarPricingSnapshot": {
+    "placeholders": { "pricing": {} }
+  },
+  "seminarInvoiceReconciliation": "Invoice reconciliation: {status}",
+  "@seminarInvoiceReconciliation": {
+    "placeholders": { "status": {} }
+  },
+  "seminarUnavailable": "Unavailable",
+  "seminarProviderReportedUsage": "Provider reported usage",
+  "seminarProviderReportedUsageDesc": "Stored from provider usage metadata",
+  "seminarTokenUsage": "Token usage",
+  "seminarTokenUsageDesc": "Mixed provider usage and local estimates",
+  "seminarLocalTokenEstimate": "Local token estimate",
+  "seminarLocalTokenEstimateDesc": "Provider billing may differ",
+  "seminarProviderUsage": "Provider usage",
+  "seminarMixedUsage": "Mixed usage",
+  "seminarLocalEstimate": "Local estimate",
+  "seminarProviderMetadata": "Provider metadata",
+  "seminarMixedProviderLocal": "Mixed provider metadata and local estimate",
+  "seminarInvoiceNotConnected": "Not connected",
+  "seminarInvoiceReconciled": "Reconciled",
+  "seminarInvoiceFailed": "Failed",
   "settingsAiWebSearch": "Web Search API Key",
   "settingsAiWebSearchConfigured": "Serper.dev configured",
   "settingsAiWebSearchDefault": "Using DuckDuckGo (no key needed)",
@@ -1965,5 +2078,87 @@
   "memoryRuleSessionDigestTitle": "Session digest",
   "memoryRuleSessionDigestDesc": "Capture up to 3 memories when a chat session ends.",
   "memoryRuleProviderSwitchTitle": "Provider switch",
-  "memoryRuleProviderSwitchDesc": "Capture a digest when you switch AI providers mid-conversation."
+  "memoryRuleProviderSwitchDesc": "Capture a digest when you switch AI providers mid-conversation.",
+  "seminarRolesTitle": "Roles",
+  "seminarNoRoleTurns": "No role turns yet.",
+  "seminarSharedWhiteboard": "Shared whiteboard",
+  "seminarNoWhiteboardEntries": "No whiteboard entries yet.",
+  "seminarSynthesisTitle": "Synthesis",
+  "seminarNoSynthesis": "No synthesis yet.",
+  "seminarSupportiveView": "Supportive: {text}",
+  "@seminarSupportiveView": {
+    "placeholders": {
+      "text": {}
+    }
+  },
+  "seminarCriticalView": "Critical: {text}",
+  "@seminarCriticalView": {
+    "placeholders": {
+      "text": {}
+    }
+  },
+  "seminarSendToReview": "Send to Review",
+  "seminarSentToReview": "Sent synthesis and {count} card(s) to Review.",
+  "@seminarSentToReview": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "seminarRunStatusDraft": "draft",
+  "seminarRunStatusRunning": "running",
+  "seminarRunStatusCompleted": "completed",
+  "seminarRunStatusNeedsEvidence": "needs evidence",
+  "seminarRunStatusCancelled": "cancelled",
+  "seminarRunStatusFailed": "failed",
+  "seminarJobStatusRunning": "running",
+  "seminarJobStatusQueued": "queued",
+  "seminarJobStatusCompleted": "completed",
+  "seminarJobStatusNeedsEvidence": "needs evidence",
+  "seminarJobStatusCancelled": "cancelled",
+  "seminarJobStatusFailed": "failed",
+  "seminarJobStatusInterrupted": "interrupted",
+  "seminarRoleCritical": "critical",
+  "seminarRoleSupportive": "supportive",
+  "seminarRoleSynthesizer": "synthesizer",
+  "seminarRoleVerifier": "verifier",
+  "seminarWhiteboardClaim": "claim",
+  "seminarWhiteboardEvidenceRef": "evidence reference",
+  "seminarWhiteboardDisagreement": "disagreement",
+  "seminarWhiteboardOpenQuestion": "open question",
+  "seminarWhiteboardCandidateCard": "candidate card",
+  "seminarWhiteboardReviewSuggestion": "review suggestion",
+  "seminarCostValue": "Cost: ${cost}",
+  "@seminarCostValue": {
+    "placeholders": {
+      "cost": {}
+    }
+  },
+  "seminarCostPricingReady": "Cost: pricing ready for estimated USD caps",
+  "seminarCostUnknown": "Cost: unknown",
+  "seminarTokenUsageLine": "{title}: {total} tokens ({input} in / {output} out)",
+  "@seminarTokenUsageLine": {
+    "placeholders": {
+      "title": {},
+      "total": {},
+      "input": {},
+      "output": {}
+    }
+  },
+  "seminarRoleUsageLine": "{prefix}: {input} in / {output} out tokens",
+  "@seminarRoleUsageLine": {
+    "placeholders": {
+      "prefix": {},
+      "input": {},
+      "output": {}
+    }
+  },
+  "seminarEvidenceScopeCurrentChapter": "current-chapter",
+  "seminarEvidenceScopeCurrentBook": "current-book",
+  "seminarEvidenceScopeLibrary": "library",
+  "seminarEvidenceScopeNotes": "notes",
+  "seminarEvidenceScopeMemory": "memory",
+  "seminarEvidenceScopeConceptGraph": "concept-graph",
+  "customSkillsExampleName": "Slow Reader",
+  "customSkillsExampleDescription": "Explain one passage with local evidence.",
+  "customSkillsExamplePrompt": "Move slowly. Use current-book evidence and name uncertainty before making a claim."
 }
