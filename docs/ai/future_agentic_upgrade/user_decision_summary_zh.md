@@ -21,7 +21,7 @@
 | 图片解析生成知识卡 | 图片大图 -> `AI图片解析` -> `知识卡` | 对 EPUB 图片、图表、插图做 AI 解析后，把结果变成待审知识卡。 | 图片本体和 base64 不写进卡片；只保存解析结果、来源和证据摘录。 |
 | AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` | 普通问答结束后，把有价值回答沉淀为待审知识卡，并保留能否跳回原文的来源状态。 | streaming 中按钮禁用；无 reader grounding 的旧聊天只保留 conversation provenance。 |
 | 多角色 Seminar | 阅读页选中文本 -> `研讨`，AI Chat `+` -> `AI 研讨会`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文或一个聊天问题启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结；阅读页选中文本和 AI Chat 入口都会在当前 AI Chat 页面内展开 Seminar 面板，且阅读页入口保留 SourceRef；Seminar settings 可编辑每个角色的显示名和 custom prompt。 | AI Chat 内嵌面板还不是持久化消息卡片；还不是多轮分歧/证据刷新/用户插话式 Director loop；结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
-| Seminar 预算与恢复 | Seminar 页面本地 budget 区、Provider readiness 区、job 状态区 | 用户能看到 provider/model 能力、token 用量、本地估算成本、当前 job id/status；可取消、重试、排队下一场。 | 这是本机 job/cache，不是跨进程后台续跑；重启中的 running job 会恢复为 interrupted/retryable。 |
+| Seminar 预算与恢复 | Seminar 页面本地 budget 区、Provider readiness 区、job 状态区 | 用户能看到 provider/model 能力、token 用量、本地估算成本、当前 job id/status；可取消、重试、排队下一场。 | 这是本机 job/cache，不是跨进程后台续跑；重启中的 running job 只有在证据可追踪且 provider/model/pricing 仍匹配时才会重新生成缺失角色，旧 LLM stream 不会原地续传。 |
 | Review Inbox | `Settings -> AI -> Review inbox` | 所有 AI 生成的卡片、记忆、图谱关系、flashcard、同步冲突都先进入审批入口。 | 空 inbox 只代表没有 producer 写入，不代表入口不存在。 |
 | Memory 候选审核 | AI Chat 回答旁书签图标 -> `Add to Review inbox` | 有价值的聊天内容先进入 Review，再由用户决定写入 daily/long-term memory。 | Apply 才写 Markdown memory；Dismiss 不写 memory。 |
 | Memory 来源审计 | 首页 `Memory / 记忆` tab -> 条目详情 | 已应用的 memory 能显示 evidence、来源状态和可跳回原文的链接。 | 不往 Markdown 写隐藏来源字段；只做只读投影。 |
@@ -124,21 +124,21 @@
 - 本机 runtime state cache。
 - current job id/status。
 - queued job 串行队列。
-- running job 重启后，如果已经有连续、证据可追踪且 provider/model/pricing 仍匹配当前配置的 completed role turn，可以复用已保存 evidence，从下一个缺失角色继续。
-- 没有 completed role、只有 active partial stream、checkpoint 无效、provider 已切换或 queued job 时，仍恢复为 interrupted/retryable。
+- running job 重启后，如果已经有证据可追踪且 provider/model/pricing 仍匹配当前配置的 checkpoint，可以复用已保存 evidence，从第一个缺失角色继续；已有 completed role 会跳过不重跑。
+- 如果只有 active partial stream 但 evidence 已保存，partial 会被丢弃并重新生成当前缺失角色；checkpoint 无效、evidence 不可追踪、provider 已切换或 queued job 时，仍恢复为 interrupted/retryable。
 - 页面不会假装旧 LLM stream 仍在继续，也不会把它说成 OS 后台执行。
 
 还要做什么：
 
 - 定义真正的 background execution contract：iOS/Android 对长时间网络流式任务的限制不同。
-- 扩展 checkpoint 粒度：当前已支持 completed role prefix；后续还要覆盖 evidence-only、review handoff ready 和 provider idempotency。
+- 扩展 checkpoint 粒度：当前已支持 traceable evidence checkpoint 和 completed role prefix；后续还要覆盖 review handoff ready 和 provider idempotency。
 - provider request 需要 idempotency key 或本地去重策略，避免重启后重复扣费、重复写 turn。
 - 中断恢复时明确提示用户：从哪个角色继续、是否会再次调用 provider、预估成本如何计算。
 - queued job 重启后由用户确认继续，避免 App 被系统杀掉后自动外发正文。
 
 做成后的效果：
 
-- Seminar 跑到一半 App 被系统杀掉，重新打开后可以从已完成角色继续，而不是只能整场重试。
+- Seminar 跑到一半 App 被系统杀掉，重新打开后可以复用已保存证据，从当前缺失角色继续；如果已有完成角色则跳过这些角色，而不是只能整场重试。
 - 多角色讨论可以承载更长任务，但仍保持用户确认和证据链。
 
 是否值得优先做：

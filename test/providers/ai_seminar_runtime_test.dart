@@ -1180,12 +1180,48 @@ void main() {
     );
   });
 
-  test('running seminar runtime state restores as interrupted retryable state',
+  test(
+      'running seminar with evidence but no completed roles resumes from first role',
       () async {
     configureProvider();
+    final invokedRoles = <AiSeminarRole>[];
+    final resumeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fail('restored evidence should be reused instead of refetched');
+      },
+      streamRole: (invocation, _) async* {
+        invokedRoles.add(invocation.role);
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
     final runningState = AiSeminarRuntimeState.initial().copyWith(
-      session: AiSeminarSessionContract(id: 's-running', question: 'Resume?'),
+      session: AiSeminarSessionContract(
+        id: 's-running',
+        question: 'Resume?',
+        billingContext: const AiSeminarBillingContext(
+          providerId: 'local-gateway',
+          providerName: 'Local Gateway',
+          providerType: 'openai-compatible',
+          modelId: 'gpt-5.5',
+        ),
+      ),
       status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-s-running',
+        sessionId: 's-running',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 11111,
+        updatedAt: 11111,
+      ),
       evidenceBundle: bundle(),
       activeRole: AiSeminarRole.critical,
       partialRoleText: 'partial answer',
@@ -1198,22 +1234,39 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        aiSeminarRuntimeServiceProvider.overrideWithValue(resumeService),
       ],
     );
     addTearDown(container.dispose);
+    container.read(aiSeminarRuntimeProvider);
+    for (var i = 0; i < 20; i += 1) {
+      if (container.read(aiSeminarRuntimeProvider).status !=
+          AiSeminarRunStatus.running) {
+        break;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
     final restored = container.read(aiSeminarRuntimeProvider);
 
-    expect(restored.status, AiSeminarRunStatus.cancelled);
-    expect(restored.canRetry, true);
+    expect(restored.status, AiSeminarRunStatus.completed);
     expect(restored.activeRole, isNull);
     expect(restored.partialRoleText, isNull);
-    expect(restored.error, contains('interrupted'));
-    await Future<void>.delayed(Duration.zero);
+    expect(restored.error, isNull);
+    expect(invokedRoles, [
+      AiSeminarRole.critical,
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+    ]);
+    expect(restored.lastRun!.turns.map((turn) => turn.role), invokedRoles);
+    expect(restored.backgroundJob!.id, 'job-s-running');
+    expect(
+      restored.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.completed,
+    );
     final persisted = jsonDecode(
       Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey)!,
     ) as Map<String, dynamic>;
-    expect(persisted['status'], AiSeminarRunStatus.cancelled.asString);
+    expect(persisted['status'], AiSeminarRunStatus.completed.asString);
     expect(persisted.containsKey('activeRole'), isFalse);
     expect(persisted.containsKey('partialRoleText'), isFalse);
   });

@@ -129,8 +129,7 @@ class AiSeminarRuntimeService {
     required AiSeminarEvidenceBundle evidenceBundle,
     required List<AiSeminarRoleTurn> completedTurns,
   }) {
-    if (completedTurns.isEmpty ||
-        evidenceBundle.evidence.isEmpty ||
+    if (evidenceBundle.evidence.isEmpty ||
         !evidenceBundle.allEvidenceTraceable) {
       return false;
     }

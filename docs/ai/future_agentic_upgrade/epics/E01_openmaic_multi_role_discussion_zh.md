@@ -17,10 +17,11 @@ OpenMAIC 当前实现可借鉴的工程结构：
 
 - `lib/chat/agent-loop.ts`：客户端/前端循环维护 `DirectorState`，每次请求只让 Director 选择一个下一位 agent，收到 `END`、`USER` cue 或异常空轮后停止。
 - `lib/orchestration/director-graph.ts`：服务端 LangGraph 图是 `START -> director -> agent_generate -> END` 的单轮拓扑；多轮讨论由客户端串行多次请求驱动，而不是服务端长循环。
+- `app/api/chat/route.ts`：Chat endpoint 以 SSE 输出 `agent_start / text_delta / action / cue_user / done / error`，并用 request abort 和 heartbeat 管理流式生命周期；PaperTok 应采用 run-scoped stream event，而不是把整场 Seminar 包成一次不可中断调用。
 - `lib/prompts/templates/director/system.md`：Director prompt 显式要求不要重复已发言 agent、优先回答真人学生问题、允许输出 `USER` 让用户参与。
-- `components/chat/use-chat-sessions.tsx`：Chat 侧把 SSE 事件写入 UI buffer，等本轮显示和 action 执行完成后再让 agent loop 进入下一轮；这比一次性跑完整场更适合移动端暂停、取消和恢复。
+- `components/chat/use-chat-sessions.tsx` 与 `lib/buffer/stream-buffer.ts`：Chat 侧把 SSE 事件写入 UI buffer，等本轮显示和 action 执行完成后再让 agent loop 进入下一轮；buffer 支持 pause/resume、逐字显示、action 延迟执行和 `cue_user`。这比一次性跑完整场更适合移动端暂停、取消和恢复。
 - `lib/orchestration/registry/store.ts`：agent 由 `name / role / persona / allowedActions / priority / voice` 等字段配置；PaperTok 只能借鉴这个“可治理 profile”结构，不能复制 AGPL 代码或默认人格内容。
-- `lib/action/engine.ts` 与 action schema：agent 输出 text/action 交错事件，whiteboard/action 由客户端执行并写 ledger；PaperTok 应把它降级为移动端轻量 evidence/whiteboard ledger，不引入完整课堂白板。
+- `lib/orchestration/tool-schemas.ts` 与 action schema：agent 输出 text/action 交错事件，whiteboard/action 由客户端执行并写 ledger；PaperTok 应把它降级为移动端轻量 evidence/whiteboard ledger，不引入完整课堂白板。
 
 ## 2. 默认角色
 
@@ -109,7 +110,7 @@ Seminar 结束时输出：
 | E01-C04-T03 | 接入 synthesis Review handoff | E01-C04-T01, E05-C01-T01 | `SeminarSynthesisReviewAdapter`、`AiSeminarRuntimeNotifier.sendToReview` | readyForReview 且 traceable handoff 才能进入 pending Review；候选卡保持 draft/pending。 |
 | E01-C04-T04 | 接入 Seminar provider readiness | E06-C04-T01, E07 Ready | `AiSeminarProviderContextService`、`AiSeminarRuntimeState.providerDiagnostics`、`AiSeminarRuntimePage` readiness UI | 启动前显示当前 provider/model/capability cache 和成本未知原因；缺少 pricing/usage metadata 时不伪造成本估算。 |
 | E01-C04-T05 | 接入 Seminar local token usage | E01-C04-T02, E01-C04-T04 | `AiSeminarTokenUsage`、`AiSeminarRuntimeService` local estimator、`AiSeminarRuntimePage` usage UI | 每个完成角色 turn 记录 input/output 本地估算，run 聚合 usage，页面显示 `Provider billing may differ`；不得当作 provider 账单或美元成本。 |
-| E01-C04-T06 | 接入 Seminar local recovery | E01-C04-T02, E07 Ready | `aiSeminarRuntimeStateV1`, `AiSeminarRuntimeNotifier` restore, `AiSeminarRuntimePage` recovered banner | completed/cancelled/failed state 可在同一书籍/同一入口问题本机恢复；换书或换选区清除旧 runtime/cache；有连续、可追踪且 provider/model/pricing 匹配当前配置的 completed role turn 的 running state 重启后可复用已保存 evidence，从下一个缺失角色继续；无 completed turn、只有 active partial stream、checkpoint 无效、provider 已切换或 queued job 仍降级为 interrupted/retryable；恢复缓存不进普通 prefs backup。 |
+| E01-C04-T06 | 接入 Seminar local recovery | E01-C04-T02, E07 Ready | `aiSeminarRuntimeStateV1`, `AiSeminarRuntimeNotifier` restore, `AiSeminarRuntimePage` recovered banner | completed/cancelled/failed state 可在同一书籍/同一入口问题本机恢复；换书或换选区清除旧 runtime/cache；有可追踪 evidence 且 provider/model/pricing 匹配当前配置的 running state 重启后可复用已保存 evidence，从第一个缺失角色继续；已有连续 completed role prefix 会跳过不重跑；只有 active partial stream 时丢弃半截文本并重发缺失角色；checkpoint 无效、evidence 不可追踪、provider 已切换或 queued job 仍降级为 interrupted/retryable；恢复缓存不进普通 prefs backup。 |
 | E01-C04-T07 | 接入 Seminar local token budget | E01-C04-T05, E07 Ready | `AiSeminarBudgetPolicy`, `AiSeminarRuntimeService` budget gate, `AiSeminarRuntimePage` budget UI | 用户可设置 role output/run token budget；超出本地估算时停止后续步骤、保留失败原因并可重试；不得当作 provider 账单或美元成本上限。 |
 | E01-C04-T08 | 接入 Seminar provider token usage | E01-C04-T05, E01-C04-T07 | `CancelableLangchainRunner.stream` usage tracker、`AiSeminarModelRoleExecutor` usage delta、`AiSeminarRuntimePage` provider usage UI | provider/SDK 返回 usage metadata 时，role turn 和 run 保存 `provider-reported` token usage；无 usage metadata 时降级本地估算；local budget gate 仍只使用本地估算，不把 provider usage 当作实时账单或美元成本。 |
 | E01-C04-T09 | 接入 Seminar estimated USD cost cap | E01-C04-T04, E01-C04-T08 | `AiModelCapability` pricing metadata、`AiSeminarBudgetPolicy.maxRunCostUsd`、`AiSeminarRuntimeService` cost gate、`AiSeminarRuntimePage` cost cap UI | provider capability cache 带 pricing metadata 时，用户可设置估算 `Run cost cap USD`；runtime 聚合 provider/local usage 估算美元成本，超出 cap 时停止后续步骤并可重试；无 pricing metadata 时禁用美元 cap；不得声明为真实 provider invoice。 |
