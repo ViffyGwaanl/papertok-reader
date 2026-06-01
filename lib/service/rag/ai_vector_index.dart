@@ -44,14 +44,10 @@ SELECT
   c.chunk_index,
   c.start_char,
   c.end_char,
-  c.text,
-  c.raw_text,
-  c.context_text,
   c.embedding_input_hash,
   c.context_version,
   c.context_created_at,
   c.embedding_blob,
-  c.embedding_json,
   c.embedding_norm,
   b.embedding_model,
   b.provider_id,
@@ -67,12 +63,14 @@ LIMIT ?
       [providerId, embeddingModel, safeScanRows],
     );
 
+    final jsonFallbackById = await _loadJsonFallbacksForRows(db, rows);
     final queryNorm = VectorMath.l2Norm(queryVector);
     final scored = <_ScoredVectorRow>[];
     for (final row in rows) {
+      final chunkId = (row['chunk_id'] as num?)?.toInt();
       final vector = AiVectorCodec.decodeVector(
         blob: row['embedding_blob'],
-        jsonText: row['embedding_json']?.toString(),
+        jsonText: chunkId == null ? null : jsonFallbackById[chunkId],
       );
       if (vector == null || vector.isEmpty) continue;
       final score = VectorMath.cosineSimilarity(
@@ -100,10 +98,93 @@ LIMIT ?
       return bId.compareTo(aId);
     });
 
-    return scored
+    final winners = scored
         .take(safeLimit)
-        .map((e) => Map<String, Object?>.from(e.row))
+        .where((e) => e.row['chunk_id'] is num)
         .toList(growable: false);
+    if (winners.isEmpty) return const [];
+
+    final hydratedRows = await _hydrateWinnerRows(
+      db,
+      winners.map((e) => (e.row['chunk_id'] as num).toInt()).toList(),
+    );
+    final hydratedById = <int, Map<String, Object?>>{
+      for (final row in hydratedRows)
+        if (row['chunk_id'] is num)
+          (row['chunk_id'] as num).toInt(): Map<String, Object?>.from(row),
+    };
+
+    return [
+      for (final winner in winners)
+        if (hydratedById[(winner.row['chunk_id'] as num).toInt()] != null)
+          {
+            ...hydratedById[(winner.row['chunk_id'] as num).toInt()]!,
+            'local_vector_score': winner.score,
+          }
+    ];
+  }
+
+  Future<Map<int, String>> _loadJsonFallbacksForRows(
+    Database db,
+    List<Map<String, Object?>> rows,
+  ) async {
+    final missingBlobIds = rows
+        .where((row) => row['embedding_blob'] == null && row['chunk_id'] is num)
+        .map((row) => (row['chunk_id'] as num).toInt())
+        .toSet()
+        .toList(growable: false);
+    if (missingBlobIds.isEmpty) return const {};
+
+    final placeholders = List.filled(missingBlobIds.length, '?').join(',');
+    final fallbackRows = await db.rawQuery(
+      '''
+SELECT id AS chunk_id, embedding_json
+FROM ai_chunks
+WHERE id IN ($placeholders)
+''',
+      missingBlobIds,
+    );
+    return {
+      for (final row in fallbackRows)
+        if (row['chunk_id'] is num && row['embedding_json'] != null)
+          (row['chunk_id'] as num).toInt(): row['embedding_json'].toString(),
+    };
+  }
+
+  Future<List<Map<String, Object?>>> _hydrateWinnerRows(
+    Database db,
+    List<int> chunkIds,
+  ) {
+    final ids = chunkIds.toSet().toList(growable: false);
+    final placeholders = List.filled(ids.length, '?').join(',');
+    return db.rawQuery(
+      '''
+SELECT
+  c.id AS chunk_id,
+  c.book_id,
+  c.chapter_href,
+  c.chapter_title,
+  c.chunk_index,
+  c.start_char,
+  c.end_char,
+  c.text,
+  c.raw_text,
+  c.context_text,
+  c.embedding_input_hash,
+  c.context_version,
+  c.context_created_at,
+  c.embedding_blob,
+  c.embedding_json,
+  c.embedding_norm,
+  b.embedding_model,
+  b.provider_id,
+  b.index_version
+FROM ai_chunks c
+JOIN ai_book_index b ON b.book_id = c.book_id
+WHERE c.id IN ($placeholders)
+''',
+      ids,
+    );
   }
 }
 

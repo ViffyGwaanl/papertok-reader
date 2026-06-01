@@ -55,6 +55,56 @@ void main() {
     ]);
   });
 
+  test('exact vector backend scans compact vectors before hydrating winners',
+      () async {
+    final db = _RecordingVectorDatabase(
+      scanRows: [
+        _vectorScanRow(
+          id: 1,
+          href: 'miss.xhtml',
+          vector: const [0, 1],
+        ),
+        _vectorScanRow(
+          id: 2,
+          href: 'hit.xhtml',
+          vector: const [1, 0],
+        ),
+      ],
+      hydratedRows: [
+        _hydratedVectorRow(
+          id: 2,
+          href: 'hit.xhtml',
+          text: 'winner body text',
+          vector: const [1, 0],
+        ),
+      ],
+    );
+
+    const backend = AiExactVectorSearchBackend();
+    final hits = await backend.searchRows(
+      db,
+      queryVector: const [1, 0],
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      limit: 1,
+    );
+
+    expect(hits, hasLength(1));
+    expect(hits.single['chapter_href'], 'hit.xhtml');
+    expect(hits.single['text'], 'winner body text');
+    expect(db.sqlLog, hasLength(2));
+    final scanSql = db.sqlLog.first;
+    expect(scanSql, isNot(contains('c.text')));
+    expect(scanSql, isNot(contains('c.raw_text')));
+    expect(scanSql, isNot(contains('c.context_text')));
+    expect(scanSql, isNot(contains('c.embedding_json')));
+    final hydrateSql = db.sqlLog.last;
+    expect(hydrateSql, contains('c.text'));
+    expect(hydrateSql, contains('c.raw_text'));
+    expect(hydrateSql, contains('c.context_text'));
+    expect(db.argsLog.last, contains(2));
+  });
+
   test('SemanticSearchLibrary vector fallback uses injected backend', () async {
     final aiDb = AiIndexDatabase.forTesting(
       path: inMemoryDatabasePath,
@@ -112,6 +162,34 @@ LIMIT 1
   });
 }
 
+class _RecordingVectorDatabase implements Database {
+  _RecordingVectorDatabase({
+    required this.scanRows,
+    required this.hydratedRows,
+  });
+
+  final List<Map<String, Object?>> scanRows;
+  final List<Map<String, Object?>> hydratedRows;
+  final sqlLog = <String>[];
+  final argsLog = <List<Object?>?>[];
+
+  @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
+    sqlLog.add(sql);
+    argsLog.add(arguments);
+    if (sqlLog.length == 1) {
+      return scanRows;
+    }
+    return hydratedRows;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _FakeVectorBackend implements AiVectorSearchBackend {
   _FakeVectorBackend(this.rows);
 
@@ -131,6 +209,45 @@ class _FakeVectorBackend implements AiVectorSearchBackend {
     calls++;
     return rows;
   }
+}
+
+Map<String, Object?> _vectorScanRow({
+  required int id,
+  required String href,
+  required List<double> vector,
+}) {
+  return {
+    'chunk_id': id,
+    'book_id': 1,
+    'chapter_href': href,
+    'chapter_title': href,
+    'chunk_index': 0,
+    'start_char': 0,
+    'end_char': 10,
+    'embedding_input_hash': 'hash-$id',
+    'context_version': 0,
+    'context_created_at': 0,
+    'embedding_blob': AiVectorCodec.encodeFloat32(vector),
+    'embedding_norm': 1.0,
+    'embedding_model': 'model-a',
+    'provider_id': 'provider-a',
+    'index_version': 1,
+  };
+}
+
+Map<String, Object?> _hydratedVectorRow({
+  required int id,
+  required String href,
+  required String text,
+  required List<double> vector,
+}) {
+  return {
+    ..._vectorScanRow(id: id, href: href, vector: vector),
+    'text': text,
+    'raw_text': text,
+    'context_text': text,
+    'embedding_json': '[${vector.join(',')}]',
+  };
 }
 
 Future<void> _insertBook(
