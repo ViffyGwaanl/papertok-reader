@@ -3982,6 +3982,51 @@ Requirements:
     notifyListeners();
   }
 
+  int? get aiSeminarDefaultRoleOutputTokenBudget {
+    final value = prefs.getInt('aiSeminarDefaultRoleOutputTokenBudget');
+    return value == null || value <= 0 ? null : value;
+  }
+
+  set aiSeminarDefaultRoleOutputTokenBudget(int? value) {
+    if (value == null || value <= 0) {
+      prefs.remove('aiSeminarDefaultRoleOutputTokenBudget');
+    } else {
+      prefs.setInt('aiSeminarDefaultRoleOutputTokenBudget', value);
+    }
+    touchAiSettingsUpdatedAt();
+    notifyListeners();
+  }
+
+  int? get aiSeminarDefaultRunTokenBudget {
+    final value = prefs.getInt('aiSeminarDefaultRunTokenBudget');
+    return value == null || value <= 0 ? null : value;
+  }
+
+  set aiSeminarDefaultRunTokenBudget(int? value) {
+    if (value == null || value <= 0) {
+      prefs.remove('aiSeminarDefaultRunTokenBudget');
+    } else {
+      prefs.setInt('aiSeminarDefaultRunTokenBudget', value);
+    }
+    touchAiSettingsUpdatedAt();
+    notifyListeners();
+  }
+
+  double? get aiSeminarDefaultRunCostCapUsd {
+    final value = prefs.getDouble('aiSeminarDefaultRunCostCapUsd');
+    return value == null || value <= 0 ? null : value;
+  }
+
+  set aiSeminarDefaultRunCostCapUsd(double? value) {
+    if (value == null || value <= 0) {
+      prefs.remove('aiSeminarDefaultRunCostCapUsd');
+    } else {
+      prefs.setDouble('aiSeminarDefaultRunCostCapUsd', value);
+    }
+    touchAiSettingsUpdatedAt();
+    notifyListeners();
+  }
+
   // --- KAIROS proactive level ---
 
   /// KAIROS proactive reading assistant level.

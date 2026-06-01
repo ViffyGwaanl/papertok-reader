@@ -9,6 +9,7 @@ import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/knowledge_sync.dart';
 import 'package:papertok_reader/page/home_page/settings_page.dart';
 import 'package:papertok_reader/page/settings_page/ai.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/settings_page/custom_skills.dart';
@@ -32,6 +33,7 @@ void main() {
   test('AI settings navigation widgets compile', () {
     expect(const SettingsPage(), isA<SettingsPage>());
     expect(const AISettings(), isA<AISettings>());
+    expect(const AiSeminarConfigPage(), isA<AiSeminarConfigPage>());
     expect(const AiSeminarRuntimePage(), isA<AiSeminarRuntimePage>());
     expect(const CustomSkillsPage(), isA<CustomSkillsPage>());
     expect(const ReviewInboxPage(), isA<ReviewInboxPage>());
@@ -69,6 +71,37 @@ void main() {
 
     expect(find.byType(AiSeminarRuntimePage), findsOneWidget);
     expect(find.text('Start Seminar'), findsOneWidget);
+  });
+
+  testWidgets('AI settings opens Seminar settings entry', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AISettings(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Seminar settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Seminar settings'));
+    await _pumpNavigationFrames(tester);
+
+    expect(find.byType(AiSeminarConfigPage), findsOneWidget);
+    expect(find.text('How Seminar runs'), findsOneWidget);
+    expect(
+      find.textContaining('role agents orchestrated by generated prompts'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('AI settings opens custom skills entry', (tester) async {

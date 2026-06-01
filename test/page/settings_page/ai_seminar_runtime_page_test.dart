@@ -12,6 +12,7 @@ import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
@@ -308,6 +309,154 @@ void main() {
     expect(capturedSession, isNotNull);
     expect(capturedSession!.roles, contains(AiSeminarRole.verifier));
     expect(Prefs().aiSeminarIncludeVerifier, true);
+  });
+
+  testWidgets('Seminar settings prefill verifier and budget defaults',
+      (tester) async {
+    Prefs().aiSeminarIncludeVerifier = true;
+    Prefs().aiSeminarDefaultRoleOutputTokenBudget = 1200;
+    Prefs().aiSeminarDefaultRunTokenBudget = 3600;
+    Prefs().aiSeminarDefaultRunCostCapUsd = 0.42;
+    configurePricingCapability();
+
+    AiSeminarSessionContract? capturedSession;
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (session) async {
+        capturedSession = session;
+        return AiSeminarEvidenceBundle(
+          query: session.question,
+          evidence: [
+            AiSeminarEvidence(
+              id: 'e1',
+              scope: AiSeminarEvidenceScope.currentBook,
+              text: 'The source passage.',
+              sourceRef: traceableRef(),
+            ),
+          ],
+        );
+      },
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.byIcon(Icons.tune_outlined), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(
+            textFieldWithLabel('Role output token budget'),
+          )
+          .controller
+          ?.text,
+      '1200',
+    );
+    expect(
+      tester
+          .widget<TextField>(
+            textFieldWithLabel('Run token budget'),
+          )
+          .controller
+          ?.text,
+      '3600',
+    );
+    expect(
+      tester
+          .widget<TextField>(
+            textFieldWithLabel('Run cost cap USD'),
+          )
+          .controller
+          ?.text,
+      '0.42',
+    );
+    await tester.scrollUntilVisible(
+      find.text('Agent roles'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<SwitchListTile>(
+              find.widgetWithText(SwitchListTile, 'Verifier'),
+            )
+            .value,
+        true);
+
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(capturedSession, isNotNull);
+    expect(capturedSession!.roles, contains(AiSeminarRole.verifier));
+    expect(capturedSession!.budgetPolicy?.maxRoleOutputTokens, 1200);
+    expect(capturedSession!.budgetPolicy?.maxRunTokens, 3600);
+    expect(capturedSession!.budgetPolicy?.maxRunCostUsd, 0.42);
+  });
+
+  testWidgets('Seminar settings page persists default run configuration',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: L10n.localizationsDelegates,
+        supportedLocales: L10n.supportedLocales,
+        home: AiSeminarConfigPage(),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('How Seminar runs'), findsOneWidget);
+    expect(
+      find.textContaining('role agents orchestrated by generated prompts'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Verifier'));
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Role output token budget'),
+      '900',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Run token budget'),
+      '2400',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Run cost cap USD'),
+      '0.25',
+    );
+
+    expect(Prefs().aiSeminarIncludeVerifier, true);
+    expect(Prefs().aiSeminarDefaultRoleOutputTokenBudget, 900);
+    expect(Prefs().aiSeminarDefaultRunTokenBudget, 2400);
+    expect(Prefs().aiSeminarDefaultRunCostCapUsd, 0.25);
   });
 
   testWidgets('start passes reader selection SourceRef into seminar session',

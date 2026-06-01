@@ -8,6 +8,7 @@ import 'package:papertok_reader/providers/user_prompts.dart';
 import 'package:papertok_reader/service/ai/ai_services.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:papertok_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/ai_title_generation.dart';
 import 'package:papertok_reader/page/settings_page/ai_tools.dart';
@@ -369,6 +370,16 @@ class _AISettingsState extends ConsumerState<AISettings> {
             onPressed: (context) {
               Navigator.of(context).push(
                 CupertinoStyleRoute(page: const AiSeminarRuntimePage()),
+              );
+            },
+          ),
+          SettingsTile.navigation(
+            leading: const Icon(Icons.tune_outlined),
+            title: Text(l10n.seminarConfigTitle),
+            description: Text(l10n.seminarConfigEntryDesc),
+            onPressed: (context) {
+              Navigator.of(context).push(
+                CupertinoStyleRoute(page: const AiSeminarConfigPage()),
               );
             },
           ),

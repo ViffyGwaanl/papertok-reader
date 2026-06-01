@@ -4,6 +4,7 @@ import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
@@ -45,8 +46,14 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
       text: widget.initialQuestion?.trim() ?? '',
     );
     _roleOutputBudgetController = TextEditingController();
-    _runBudgetController = TextEditingController();
-    _runCostCapController = TextEditingController();
+    _roleOutputBudgetController.text =
+        Prefs().aiSeminarDefaultRoleOutputTokenBudget?.toString() ?? '';
+    _runBudgetController = TextEditingController(
+      text: Prefs().aiSeminarDefaultRunTokenBudget?.toString() ?? '',
+    );
+    _runCostCapController = TextEditingController(
+      text: Prefs().aiSeminarDefaultRunCostCapUsd?.toString() ?? '',
+    );
     _includeVerifier = Prefs().aiSeminarIncludeVerifier;
     if (widget.autoStart && _questionController.text.trim().isNotEmpty) {
       Future.microtask(_start);
@@ -101,6 +108,13 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
     return SettingsSubpageScaffold(
       title: l10n.aiSkillSeminarModeName,
       actions: [
+        IconButton(
+          tooltip: l10n.seminarConfigTitle,
+          icon: const Icon(Icons.tune_outlined),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AiSeminarConfigPage()),
+          ),
+        ),
         if (state.canCancel)
           IconButton(
             tooltip: l10n.commonCancel,
