@@ -100,6 +100,7 @@ class AiSemanticSearchLibraryResult {
     required this.evidence,
     this.message,
     this.usedFts,
+    this.usedVectorRecall,
     this.usedVectorFallback,
     this.indexedBooks,
     this.indexedChunks,
@@ -113,6 +114,12 @@ class AiSemanticSearchLibraryResult {
 
   /// Whether the DB-level query used SQLite FTS5.
   final bool? usedFts;
+
+  /// Whether vector recall contributed candidate rows to the hybrid pool.
+  ///
+  /// When an ANN/sqlite-vec backend is configured, this is the primary
+  /// semantic recall stage. FTS/BM25 remains the exact-text recall stage.
+  final bool? usedVectorRecall;
 
   /// Whether we fell back to a small vector-only scan when text retrieval
   /// returned no candidates.
@@ -132,6 +139,7 @@ class AiSemanticSearchLibraryResult {
         'query': query,
         if (message != null) 'message': message,
         if (usedFts != null) 'usedFts': usedFts,
+        if (usedVectorRecall != null) 'usedVectorRecall': usedVectorRecall,
         if (usedVectorFallback != null)
           'usedVectorFallback': usedVectorFallback,
         if (indexedBooks != null) 'indexedBooks': indexedBooks,
@@ -334,6 +342,7 @@ LIMIT ?
           query: query,
           evidence: const [],
           usedFts: false,
+          usedVectorRecall: false,
           indexedBooks: indexedBooks,
           indexedChunks: indexedChunks,
           message: 'query is not searchable',
@@ -390,61 +399,28 @@ LIMIT ?
       return value;
     }
 
+    var usedVectorRecall = false;
     var usedVectorFallback = false;
 
-    if (rows.isEmpty &&
-        onlyIndexed &&
-        allowVectorFallback &&
-        allowQueryEmbedding) {
-      // Final fallback: exact local vector search over indexed chunks.
-      // The helper is intentionally isolated so an ANN/sqlite-vec backend can
-      // replace the exact scanner without changing the search pipeline.
-      final vectorLimit = (candidateLimit * 3).clamp(120, 360);
-      final groups = await db.rawQuery(
-        '''
-SELECT DISTINCT
-  COALESCE(provider_id, '') AS provider_id,
-  COALESCE(embedding_model, '') AS embedding_model
-FROM ai_book_index b
-WHERE ($indexedFilter)
-LIMIT 12
-''',
+    if (onlyIndexed && allowVectorFallback && allowQueryEmbedding) {
+      final vectorRows = await _fetchVectorRecallRows(
+        db,
+        indexedFilter: indexedFilter,
+        candidateLimit: candidateLimit,
+        onlyIndexed: onlyIndexed,
+        getQueryVec: getQueryVec,
       );
-      final vectorRows = <Map<String, Object?>>[];
-      for (final group in groups) {
-        final model =
-            (group['embedding_model']?.toString().trim().isNotEmpty ?? false)
-                ? group['embedding_model']!.toString().trim()
-                : AiEmbeddingsService.defaultEmbeddingModel;
-        final providerId = (group['provider_id']?.toString() ?? '').trim();
-        final q = await getQueryVec(
-          model,
-          providerId: providerId.isEmpty ? null : providerId,
-        );
-        vectorRows.addAll(
-          await _vectorIndex.searchRows(
-            db,
-            queryVector: q.v,
-            providerId: providerId,
-            embeddingModel: model,
-            limit: vectorLimit,
-            onlyIndexed: onlyIndexed,
-          ),
-        );
-      }
-      vectorRows.sort((a, b) {
-        final aScore = (a['local_vector_score'] as num?)?.toDouble() ?? 0.0;
-        final bScore = (b['local_vector_score'] as num?)?.toDouble() ?? 0.0;
-        final byScore = bScore.compareTo(aScore);
-        if (byScore != 0) return byScore;
-        final aId = (a['chunk_id'] as num?)?.toInt() ?? 0;
-        final bId = (b['chunk_id'] as num?)?.toInt() ?? 0;
-        return bId.compareTo(aId);
-      });
-      rows = vectorRows.take(vectorLimit).toList(growable: false);
-
-      if (rows.isNotEmpty) {
-        usedVectorFallback = true;
+      if (vectorRows.isNotEmpty) {
+        usedVectorRecall = true;
+        if (rows.isEmpty) {
+          rows = vectorRows;
+          usedVectorFallback = true;
+        } else {
+          final fused = <int, _FusedRow>{};
+          _mergeRowsByRrf(fused, rows);
+          _mergeRowsByRrf(fused, vectorRows);
+          rows = _rowsFromFusion(fused, limit: candidateLimit);
+        }
       }
     }
 
@@ -461,6 +437,7 @@ LIMIT 12
         query: query,
         evidence: const [],
         usedFts: usedFts,
+        usedVectorRecall: usedVectorRecall,
         usedVectorFallback: usedVectorFallback,
         indexedBooks: indexedBooks,
         indexedChunks: indexedChunks,
@@ -540,6 +517,7 @@ LIMIT 12
         query: query,
         evidence: const [],
         usedFts: usedFts,
+        usedVectorRecall: usedVectorRecall,
         usedVectorFallback: usedVectorFallback,
         indexedBooks: indexedBooks,
         indexedChunks: indexedChunks,
@@ -673,11 +651,67 @@ LIMIT 12
       query: query,
       evidence: evidence,
       usedFts: usedFts,
+      usedVectorRecall: usedVectorRecall,
       usedVectorFallback: usedVectorFallback,
       indexedBooks: indexedBooks,
       indexedChunks: indexedChunks,
       candidates: rows.length,
     );
+  }
+
+  Future<List<Map<String, Object?>>> _fetchVectorRecallRows(
+    Database db, {
+    required String indexedFilter,
+    required int candidateLimit,
+    required bool onlyIndexed,
+    required Future<({List<double> v, double norm})> Function(
+      String model, {
+      String? providerId,
+    }) getQueryVec,
+  }) async {
+    final vectorLimit = (candidateLimit * 3).clamp(120, 360);
+    final groups = await db.rawQuery(
+      '''
+SELECT DISTINCT
+  COALESCE(provider_id, '') AS provider_id,
+  COALESCE(embedding_model, '') AS embedding_model
+FROM ai_book_index b
+WHERE ($indexedFilter)
+LIMIT 12
+''',
+    );
+    final vectorRows = <Map<String, Object?>>[];
+    for (final group in groups) {
+      final model =
+          (group['embedding_model']?.toString().trim().isNotEmpty ?? false)
+              ? group['embedding_model']!.toString().trim()
+              : AiEmbeddingsService.defaultEmbeddingModel;
+      final providerId = (group['provider_id']?.toString() ?? '').trim();
+      final q = await getQueryVec(
+        model,
+        providerId: providerId.isEmpty ? null : providerId,
+      );
+      vectorRows.addAll(
+        await _vectorIndex.searchRows(
+          db,
+          queryVector: q.v,
+          providerId: providerId,
+          embeddingModel: model,
+          limit: vectorLimit,
+          onlyIndexed: onlyIndexed,
+        ),
+      );
+    }
+    vectorRows.sort((a, b) {
+      final aScore = (a['local_vector_score'] as num?)?.toDouble() ?? 0.0;
+      final bScore = (b['local_vector_score'] as num?)?.toDouble() ?? 0.0;
+      final byScore = bScore.compareTo(aScore);
+      if (byScore != 0) return byScore;
+      final aId = (a['chunk_id'] as num?)?.toInt() ?? 0;
+      final bId = (b['chunk_id'] as num?)?.toInt() ?? 0;
+      return bId.compareTo(aId);
+    });
+    return vectorRows.take(vectorLimit).toList(growable: false);
   }
 
   List<_Candidate> _selectWithMmr(List<_Candidate> candidates, int k) {

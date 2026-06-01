@@ -1,4 +1,5 @@
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/ai_vector_index.dart';
 import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -85,6 +86,81 @@ void main() {
     expect(result.ok, true);
     expect(result.usedVectorFallback, false);
     expect(result.evidence.single.href, 'Text/car.xhtml');
+  });
+
+  test('hybrid search uses vector recall even when FTS has candidates',
+      () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+
+    final db = await aiDb.database;
+    await _insertBook(db, 1);
+    await _insertChunk(
+      db,
+      bookId: 1,
+      href: 'Text/lexical.xhtml',
+      title: 'Lexical',
+      chunkIndex: 0,
+      text: 'lexical-keyword appears here but the meaning is wrong',
+      embeddingJson: '[0,1]',
+    );
+    await _insertChunk(
+      db,
+      bookId: 1,
+      href: 'Text/semantic.xhtml',
+      title: 'Semantic',
+      chunkIndex: 1,
+      text: 'semantic-only answer passage',
+      embeddingJson: '[1,0]',
+    );
+    final semanticRow = (await db.rawQuery('''
+SELECT
+  c.id AS chunk_id,
+  c.book_id,
+  c.chapter_href,
+  c.chapter_title,
+  c.chunk_index,
+  c.start_char,
+  c.end_char,
+  c.text,
+  c.raw_text,
+  c.context_text,
+  c.embedding_input_hash,
+  c.context_version,
+  c.context_created_at,
+  c.embedding_blob,
+  c.embedding_json,
+  c.embedding_norm,
+  b.embedding_model,
+  b.provider_id,
+  b.index_version
+FROM ai_chunks c
+JOIN ai_book_index b ON b.book_id = c.book_id
+WHERE c.chapter_href = 'Text/semantic.xhtml'
+LIMIT 1
+''')).single;
+    final backend = _FakeVectorBackend([semanticRow]);
+    final service = SemanticSearchLibrary(
+      database: aiDb,
+      vectorSearch: backend,
+      embedQuery: (q, {required model, providerId}) async => <double>[1, 0],
+    );
+
+    final result = await service.search(
+      query: 'lexical-keyword',
+      maxResults: 1,
+      neighborWindow: 0,
+    );
+
+    expect(backend.calls, 1);
+    expect(result.ok, true);
+    expect(result.usedFts, true);
+    expect(result.usedVectorRecall, true);
+    expect(result.usedVectorFallback, false);
+    expect(result.evidence.single.href, 'Text/semantic.xhtml');
   });
 
   test('local text-only mode does not call embedding or rerank providers',
@@ -584,6 +660,27 @@ void main() {
     );
     expect(result.evidence.single.derivedLayer, 'graph');
   });
+}
+
+class _FakeVectorBackend implements AiVectorSearchBackend {
+  _FakeVectorBackend(this.rows);
+
+  final List<Map<String, Object?>> rows;
+  int calls = 0;
+
+  @override
+  Future<List<Map<String, Object?>>> searchRows(
+    Database db, {
+    required List<double> queryVector,
+    required String providerId,
+    required String embeddingModel,
+    required int limit,
+    bool onlyIndexed = true,
+    int maxScanRows = 5000,
+  }) async {
+    calls += 1;
+    return rows.take(limit).toList(growable: false);
+  }
 }
 
 Future<void> _insertBook(dynamic db, int bookId) async {
