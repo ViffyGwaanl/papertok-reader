@@ -236,6 +236,10 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
         ),
         const SizedBox(height: 16),
         _StatusBanner(state: state),
+        if (state.directorState?.needsUserInput == true) ...[
+          const SizedBox(height: 12),
+          _SeminarUserInterventionSection(state: state),
+        ],
         if (_shouldShowJobQueue(state.backgroundJobs)) ...[
           const SizedBox(height: 12),
           _BackgroundJobsSection(jobs: state.backgroundJobs),
@@ -802,6 +806,182 @@ String? _directorNextIntentLine(
       zh ? '主持人下一步：整理阶段结论' : 'Director next: synthesize',
     _ => null,
   };
+}
+
+class _SeminarUserInterventionSection extends ConsumerStatefulWidget {
+  const _SeminarUserInterventionSection({required this.state});
+
+  final AiSeminarRuntimeState state;
+
+  @override
+  ConsumerState<_SeminarUserInterventionSection> createState() =>
+      _SeminarUserInterventionSectionState();
+}
+
+class _SeminarUserInterventionSectionState
+    extends ConsumerState<_SeminarUserInterventionSection> {
+  late final TextEditingController _controller;
+  late AiSeminarRole _selectedRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+    _selectedRole = _availableRoles().first;
+  }
+
+  @override
+  void didUpdateWidget(covariant _SeminarUserInterventionSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final roles = _availableRoles();
+    if (!roles.contains(_selectedRole)) {
+      _selectedRole = roles.first;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSubmit = _controller.text.trim().isNotEmpty;
+    return _Section(
+      title: _runtimeText(
+        context,
+        en: 'Reader turn',
+        zh: '读者参与',
+      ),
+      icon: Icons.person_outline,
+      children: [
+        TextField(
+          controller: _controller,
+          minLines: 2,
+          maxLines: 4,
+          decoration: InputDecoration(
+            labelText: _runtimeText(
+              context,
+              en: 'Your Seminar reply',
+              zh: '你的研讨回复',
+            ),
+            border: const OutlineInputBorder(),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<AiSeminarRole>(
+          initialValue: _selectedRole,
+          decoration: InputDecoration(
+            labelText: _runtimeText(
+              context,
+              en: 'Target role',
+              zh: '回应角色',
+            ),
+            border: const OutlineInputBorder(),
+          ),
+          items: [
+            for (final role in _availableRoles())
+              DropdownMenuItem(
+                value: role,
+                child: Text(_seminarRoleLabel(L10n.of(context), role)),
+              ),
+          ],
+          onChanged: (role) {
+            if (role == null) return;
+            setState(() => _selectedRole = role);
+          },
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.icon(
+              icon: const Icon(Icons.record_voice_over_outlined),
+              label: Text(
+                _runtimeText(
+                  context,
+                  en: 'Ask selected role',
+                  zh: '让所选角色回应',
+                ),
+              ),
+              onPressed: canSubmit
+                  ? () => _submit(
+                        AiSeminarUserInterventionAction.askRole,
+                        targetRole: _selectedRole,
+                      )
+                  : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.travel_explore_outlined),
+              label: Text(
+                _runtimeText(
+                  context,
+                  en: 'Refresh evidence',
+                  zh: '重新找证据',
+                ),
+              ),
+              onPressed: canSubmit
+                  ? () => _submit(
+                        AiSeminarUserInterventionAction.refreshEvidence,
+                      )
+                  : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.auto_awesome_outlined),
+              label: Text(
+                _runtimeText(
+                  context,
+                  en: 'Synthesize',
+                  zh: '整理总结',
+                ),
+              ),
+              onPressed: canSubmit
+                  ? () => _submit(AiSeminarUserInterventionAction.synthesize)
+                  : null,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  List<AiSeminarRole> _availableRoles() {
+    final sessionRoles = widget.state.session?.roles;
+    final roles = (sessionRoles == null || sessionRoles.isEmpty)
+        ? AiSeminarRole.defaultRoles
+        : sessionRoles;
+    final out = roles
+        .where((role) => role != AiSeminarRole.synthesizer)
+        .toList(growable: false);
+    return out.isEmpty ? const [AiSeminarRole.critical] : out;
+  }
+
+  Future<void> _submit(
+    AiSeminarUserInterventionAction action, {
+    AiSeminarRole? targetRole,
+  }) async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    await ref.read(aiSeminarRuntimeProvider.notifier).recordUserIntervention(
+          text: text,
+          requestedAction: action,
+          targetRole: targetRole,
+        );
+    if (!mounted) return;
+    _controller.clear();
+    setState(() {});
+  }
+}
+
+String _runtimeText(
+  BuildContext context, {
+  required String en,
+  required String zh,
+}) {
+  return Localizations.localeOf(context).languageCode == 'zh' ? zh : en;
 }
 
 class _BackgroundJobsSection extends StatelessWidget {

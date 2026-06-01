@@ -301,6 +301,33 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.textContaining('Director next: ask reader'), findsOneWidget);
+    expect(textFieldWithLabel('Your Seminar reply'), findsOneWidget);
+    expect(find.text('Refresh evidence'), findsOneWidget);
+    expect(find.text('Synthesize'), findsOneWidget);
+
+    await tester.enterText(
+      textFieldWithLabel('Your Seminar reply'),
+      'Please ask the critical role to respond.',
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ask selected role'));
+    await tester.tap(find.text('Ask selected role'));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiSeminarRuntimePanel)),
+    );
+    final state = container.read(aiSeminarRuntimeProvider);
+    expect(state.directorState!.lastUserIntervention!.text,
+        'Please ask the critical role to respond.');
+    expect(
+      state.directorState!.lastUserIntervention!.requestedAction,
+      AiSeminarUserInterventionAction.askRole,
+    );
+    expect(state.directorState!.lastUserIntervention!.targetRole,
+        AiSeminarRole.critical);
+    expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+    expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e1']);
   });
 
   testWidgets('role configuration can add verifier to a Seminar agent run',

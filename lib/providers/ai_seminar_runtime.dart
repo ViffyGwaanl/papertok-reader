@@ -728,6 +728,65 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     await start(session);
   }
 
+  Future<void> recordUserIntervention({
+    required String text,
+    required AiSeminarUserInterventionAction requestedAction,
+    AiSeminarRole? targetRole,
+    int? now,
+  }) async {
+    final session = state.session;
+    if (session == null) {
+      const message = 'AI Seminar user turn requires an active session.';
+      state = state.copyWith(error: message);
+      throw StateError(message);
+    }
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      const message = 'AI Seminar user turn cannot be empty.';
+      state = state.copyWith(error: message);
+      throw StateError(message);
+    }
+    final baseDirector = state.directorState ??
+        _directorStateFor(
+          session: session,
+          evidenceBundle: state.evidenceBundle,
+          turns: state.turns,
+          whiteboardEntries: state.whiteboardEntries,
+        );
+    if (baseDirector == null) {
+      const message = 'AI Seminar Director state is not available.';
+      state = state.copyWith(error: message);
+      throw StateError(message);
+    }
+    final createdAt = now ?? DateTime.now().millisecondsSinceEpoch;
+    final intervention = AiSeminarUserIntervention(
+      id: 'user-$createdAt',
+      text: trimmed,
+      requestedAction: requestedAction,
+      targetRole: requestedAction == AiSeminarUserInterventionAction.askRole
+          ? targetRole ?? AiSeminarRole.critical
+          : null,
+      createdAt: createdAt,
+    );
+    final nextDirector = AiSeminarDirectorState(
+      sessionId: baseDirector.sessionId,
+      turnCount: baseDirector.turnCount,
+      completedRoles: baseDirector.completedRoles,
+      completedRoleTurnIds: baseDirector.completedRoleTurnIds,
+      evidenceLedger: baseDirector.evidenceLedger,
+      whiteboardLedger: baseDirector.whiteboardLedger,
+      disagreementIds: baseDirector.disagreementIds,
+      evidenceRefreshCount: baseDirector.evidenceRefreshCount,
+      nextIntent: _nextIntentForUserIntervention(requestedAction),
+      lastUserIntervention: intervention,
+    );
+    state = state.copyWith(
+      directorState: nextDirector,
+      clearError: true,
+    );
+    await _persistState();
+  }
+
   void restore(AiSeminarRuntimeState restored) {
     _activeToken?.cancel();
     _activeToken = null;
@@ -1082,6 +1141,20 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     }
 
     return AiSeminarDirectorNextIntent.end;
+  }
+
+  static AiSeminarDirectorNextIntent _nextIntentForUserIntervention(
+    AiSeminarUserInterventionAction action,
+  ) {
+    return switch (action) {
+      AiSeminarUserInterventionAction.refreshEvidence =>
+        AiSeminarDirectorNextIntent.refreshEvidence,
+      AiSeminarUserInterventionAction.synthesize =>
+        AiSeminarDirectorNextIntent.synthesize,
+      AiSeminarUserInterventionAction.askRole ||
+      AiSeminarUserInterventionAction.clarify =>
+        AiSeminarDirectorNextIntent.runRole,
+    };
   }
 
   static List<AiSeminarWhiteboardEntry> _dedupeWhiteboardEntries(

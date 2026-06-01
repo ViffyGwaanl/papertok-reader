@@ -287,6 +287,73 @@ void main() {
     expect(state.directorState!.disagreementIds, ['disagreement-1']);
   });
 
+  test('records user intervention without turning it into evidence', () async {
+    configureProvider();
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+            whiteboardEntries: [
+              if (invocation.role == AiSeminarRole.synthesizer)
+                const AiSeminarWhiteboardEntry(
+                  id: 'open-question-1',
+                  kind: AiSeminarWhiteboardKind.openQuestion,
+                  text: 'Which interpretation should the reader test next?',
+                  role: AiSeminarRole.synthesizer,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    await notifier.start(
+      AiSeminarSessionContract(id: 's-user-turn', question: 'Explain.'),
+    );
+    await notifier.recordUserIntervention(
+      text: '我认为这里应该先区分定义和例子。',
+      requestedAction: AiSeminarUserInterventionAction.askRole,
+      targetRole: AiSeminarRole.critical,
+      now: 1234,
+    );
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(
+        state.directorState!.nextIntent, AiSeminarDirectorNextIntent.runRole);
+    expect(
+      state.directorState!.lastUserIntervention!.requestedAction,
+      AiSeminarUserInterventionAction.askRole,
+    );
+    expect(state.directorState!.lastUserIntervention!.targetRole,
+        AiSeminarRole.critical);
+    expect(state.directorState!.lastUserIntervention!.text, '我认为这里应该先区分定义和例子。');
+    expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+    expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e1']);
+
+    final persisted = jsonDecode(
+      Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey)!,
+    ) as Map<String, dynamic>;
+    final intervention =
+        persisted['directorState']['lastUserIntervention'] as Map;
+    expect(intervention['text'], '我认为这里应该先区分定义和例子。');
+    expect(intervention.containsKey('evidenceRefIds'), false);
+  });
+
   test('start tracks a persisted background job through completion', () async {
     configureProvider();
     final container = ProviderContainer(
