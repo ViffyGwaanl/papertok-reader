@@ -335,6 +335,31 @@ class AiVec1VectorIndexBuildProgress {
   final int rowsWritten;
 }
 
+class AiVec1VectorIndexStatus {
+  const AiVec1VectorIndexStatus({
+    required this.available,
+    required this.totalGroups,
+    required this.readyGroups,
+    required this.nativeRowCount,
+    required this.annRowCount,
+    this.info,
+    this.lastError,
+  });
+
+  final bool available;
+  final int totalGroups;
+  final int readyGroups;
+  final int nativeRowCount;
+  final int annRowCount;
+  final String? info;
+  final String? lastError;
+
+  int get missingGroupCount =>
+      (totalGroups - readyGroups).clamp(0, totalGroups);
+
+  bool get canBuild => available && nativeRowCount > 0 && missingGroupCount > 0;
+}
+
 class AiVec1VectorIndexBuilder {
   const AiVec1VectorIndexBuilder();
 
@@ -369,6 +394,71 @@ class AiVec1VectorIndexBuilder {
 
   Future<bool> isAvailable(Database db) async {
     return (await inspectAvailability(db)).available;
+  }
+
+  Future<AiVec1VectorIndexStatus> inspectBuildStatus(Database db) async {
+    final availability = await inspectAvailability(db);
+    if (!availability.available) {
+      return AiVec1VectorIndexStatus(
+        available: false,
+        totalGroups: 0,
+        readyGroups: 0,
+        nativeRowCount: 0,
+        annRowCount: 0,
+        info: availability.info,
+        lastError: availability.lastError,
+      );
+    }
+
+    final groups = await db.rawQuery('''
+SELECT provider_id, embedding_model, embedding_dim, COUNT(*) AS row_count
+FROM ai_vector_index_rows
+GROUP BY provider_id, embedding_model, embedding_dim
+ORDER BY provider_id, embedding_model, embedding_dim
+''');
+    var readyGroups = 0;
+    var nativeRowCount = 0;
+    var annRowCount = 0;
+    String? lastError;
+
+    for (final group in groups) {
+      final providerId = group['provider_id']?.toString() ?? '';
+      final embeddingModel = group['embedding_model']?.toString() ?? '';
+      final embeddingDim = (group['embedding_dim'] as num?)?.toInt() ?? 0;
+      final groupRowCount = (group['row_count'] as num?)?.toInt() ?? 0;
+      nativeRowCount += groupRowCount;
+      if (embeddingDim <= 0 || groupRowCount <= 0) continue;
+      final tableName = tableNameFor(
+        providerId: providerId,
+        embeddingModel: embeddingModel,
+        embeddingDim: embeddingDim,
+      );
+      try {
+        if (!await _tableExists(db, tableName)) continue;
+        final tableRows = await db.rawQuery(
+          'SELECT COUNT(*) AS row_count FROM $tableName',
+        );
+        final tableRowCount = tableRows.isEmpty
+            ? 0
+            : (tableRows.first['row_count'] as num?)?.toInt() ?? 0;
+        annRowCount += tableRowCount;
+        if (tableRowCount >= groupRowCount) {
+          readyGroups += 1;
+        }
+      } catch (e) {
+        lastError = e.toString();
+      }
+    }
+
+    return AiVec1VectorIndexStatus(
+      available: true,
+      totalGroups: groups.length,
+      readyGroups: readyGroups,
+      nativeRowCount: nativeRowCount,
+      annRowCount: annRowCount,
+      info: availability.info,
+      lastError: lastError,
+    );
   }
 
   Future<AiVec1VectorIndexBuildResult> rebuildFromNativeShadowRows(

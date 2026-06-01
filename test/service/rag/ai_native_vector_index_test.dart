@@ -257,6 +257,31 @@ void main() {
     );
   });
 
+  test('vec1 status reports partial ANN tables per provider model group',
+      () async {
+    final tableName = AiVec1VectorIndexBuilder.tableNameFor(
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      embeddingDim: 2,
+    );
+    final db = _RecordingVec1StatusDatabase(
+      tableName: tableName,
+      nativeRowCount: 2,
+      annRowCount: 1,
+    );
+
+    final status =
+        await const AiVec1VectorIndexBuilder().inspectBuildStatus(db);
+
+    expect(status.available, true);
+    expect(status.totalGroups, 1);
+    expect(status.readyGroups, 0);
+    expect(status.missingGroupCount, 1);
+    expect(status.nativeRowCount, 2);
+    expect(status.annRowCount, 1);
+    expect(status.canBuild, true);
+  });
+
   test('ann then native backend prefers complete vec1 rows before fallback',
       () async {
     final aiDb = AiIndexDatabase.forTesting(
@@ -747,6 +772,54 @@ class _RecordingVec1BuildDatabase implements Database {
           'book_id': 1,
           'embedding_blob': AiVectorCodec.encodeFloat32(const [0, 1]),
         },
+      ];
+    }
+    return const [];
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _RecordingVec1StatusDatabase implements Database {
+  _RecordingVec1StatusDatabase({
+    required this.tableName,
+    required this.nativeRowCount,
+    required this.annRowCount,
+  });
+
+  final String tableName;
+  final int nativeRowCount;
+  final int annRowCount;
+
+  @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
+    if (sql.contains('vec1_info()')) {
+      return const [
+        {'info': 'vec1 test'}
+      ];
+    }
+    if (sql.contains('GROUP BY provider_id')) {
+      return [
+        {
+          'provider_id': 'provider-a',
+          'embedding_model': 'model-a',
+          'embedding_dim': 2,
+          'row_count': nativeRowCount,
+        }
+      ];
+    }
+    if (sql.contains('sqlite_master')) {
+      return [
+        {'name': tableName}
+      ];
+    }
+    if (sql.contains('COUNT(*)') && sql.contains(tableName)) {
+      return [
+        {'row_count': annRowCount}
       ];
     }
     return const [];

@@ -62,6 +62,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   Future<List<_BookRow>>? _booksFuture;
   Future<List<AiGlobalIndexBookLayerStatus>>? _globalLayerFuture;
   Future<AiNativeVectorIndexStatus>? _nativeVectorFuture;
+  Future<AiVec1VectorIndexStatus>? _annVectorFuture;
 
   Timer? _refreshDebounce;
   Timer? _activeQueueHeartbeatTimer;
@@ -73,6 +74,9 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   bool _nativeVectorBackfilling = false;
   bool _nativeVectorCancelRequested = false;
   AiNativeVectorBackfillProgress? _nativeVectorProgress;
+  bool _annVectorBuilding = false;
+  bool _annVectorCancelRequested = false;
+  AiVec1VectorIndexBuildProgress? _annVectorProgress;
 
   @override
   void initState() {
@@ -81,6 +85,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
     _globalLayerFuture = _loadMissingGlobalLayers();
     _nativeVectorFuture = _loadNativeVectorStatus();
+    _annVectorFuture = _loadAnnVectorStatus();
   }
 
   @override
@@ -98,6 +103,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
         _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
         _globalLayerFuture = _loadMissingGlobalLayers();
         _nativeVectorFuture = _loadNativeVectorStatus();
+        _annVectorFuture = _loadAnnVectorStatus();
       });
     });
   }
@@ -222,6 +228,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
             _buildConfigTile(context),
             _buildGlobalLayerTile(context),
             _buildNativeVectorTile(context),
+            _buildAnnVectorTile(context),
             _buildFilterBar(context),
             const Divider(height: 1),
             _buildQueueSection(context, queue, queueSvc),
@@ -305,6 +312,11 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   Future<AiNativeVectorIndexStatus> _loadNativeVectorStatus() async {
     final db = await AiIndexDatabase.instance.database;
     return const AiNativeVectorIndexBuilder().inspectIndexedBooks(db);
+  }
+
+  Future<AiVec1VectorIndexStatus> _loadAnnVectorStatus() async {
+    final db = await AiIndexDatabase.instance.database;
+    return const AiVec1VectorIndexBuilder().inspectBuildStatus(db);
   }
 
   Widget _buildGlobalLayerTile(BuildContext context) {
@@ -513,6 +525,105 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
           _nativeVectorCancelRequested = false;
           _nativeVectorProgress = null;
           _nativeVectorFuture = _loadNativeVectorStatus();
+          _annVectorFuture = _loadAnnVectorStatus();
+        });
+      }
+    }
+  }
+
+  Widget _buildAnnVectorTile(BuildContext context) {
+    final l10n = L10n.of(context);
+    final future = _annVectorFuture ?? _loadAnnVectorStatus();
+    _annVectorFuture ??= future;
+
+    return FutureBuilder<AiVec1VectorIndexStatus>(
+      future: future,
+      builder: (context, snapshot) {
+        final status = snapshot.data;
+        final progress = _annVectorProgress;
+        final subtitle = _annVectorBuilding && progress != null
+            ? _annVectorRunningText(context, progress)
+            : snapshot.connectionState == ConnectionState.waiting &&
+                    snapshot.data == null
+                ? _annVectorCheckingText(context)
+                : _annVectorStatusText(context, status);
+        final canBuild =
+            !_annVectorBuilding && status != null && status.canBuild;
+
+        return ListTile(
+          leading: const Icon(Icons.hub_outlined),
+          title: Text(_annVectorTitle(context)),
+          subtitle: Text('${_annVectorDesc(context)}\n$subtitle'),
+          isThreeLine: true,
+          trailing: _annVectorBuilding
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _annVectorCancelRequested
+                          ? null
+                          : () => setState(
+                                () => _annVectorCancelRequested = true,
+                              ),
+                      child: Text(l10n.commonCancel),
+                    ),
+                  ],
+                )
+              : TextButton(
+                  onPressed:
+                      canBuild ? () => unawaited(_buildAnnVectors()) : null,
+                  child: Text(_annVectorAction(context)),
+                ),
+        );
+      },
+    );
+  }
+
+  Future<void> _buildAnnVectors() async {
+    if (_annVectorBuilding) return;
+
+    setState(() {
+      _annVectorBuilding = true;
+      _annVectorCancelRequested = false;
+      _annVectorProgress = null;
+    });
+
+    try {
+      final db = await AiIndexDatabase.instance.database;
+      final result =
+          await const AiVec1VectorIndexBuilder().rebuildFromNativeShadowRows(
+        db,
+        shouldCancel: () => _annVectorCancelRequested,
+        onProgress: (progress) {
+          if (!mounted) return;
+          setState(() => _annVectorProgress = progress);
+        },
+      );
+      if (!mounted) return;
+
+      AnxToast.show(
+        result.cancelled
+            ? _annVectorCancelledToast(context, result)
+            : result.available
+                ? _annVectorDoneToast(context, result)
+                : _annVectorUnavailableToast(context, result.lastError),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AnxToast.show(_annVectorFailedToast(context, e.toString()));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _annVectorBuilding = false;
+          _annVectorCancelRequested = false;
+          _annVectorProgress = null;
+          _annVectorFuture = _loadAnnVectorStatus();
         });
       }
     }
@@ -586,6 +697,80 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       _isZh(context)
           ? '向量索引升级失败：$message'
           : 'Vector index upgrade failed: $message';
+
+  String _annVectorTitle(BuildContext context) =>
+      _isZh(context) ? 'ANN 向量索引' : 'ANN vector index';
+
+  String _annVectorDesc(BuildContext context) => _isZh(context)
+      ? '用紧凑向量层构建 Vec1/sqlite-vec ANN 表；有扩展时用于主语义召回，没有扩展时自动降级。'
+      : 'Build Vec1/sqlite-vec ANN tables from compact vectors for primary semantic recall when the extension is available.';
+
+  String _annVectorCheckingText(BuildContext context) =>
+      _isZh(context) ? '正在检查 ANN 状态...' : 'Checking ANN status...';
+
+  String _annVectorAction(BuildContext context) =>
+      _isZh(context) ? '构建' : 'Build';
+
+  String _annVectorStatusText(
+    BuildContext context,
+    AiVec1VectorIndexStatus? status,
+  ) {
+    if (status == null) return _annVectorCheckingText(context);
+    if (!status.available) {
+      final reason = status.lastError;
+      return _isZh(context)
+          ? '当前数据库未加载 Vec1/sqlite-vec 扩展，ANN 暂不可用${reason == null ? '' : '：$reason'}'
+          : 'Vec1/sqlite-vec is not loaded, so ANN is unavailable${reason == null ? '' : ': $reason'}';
+    }
+    if (status.nativeRowCount <= 0) {
+      return _isZh(context)
+          ? '还没有可构建 ANN 的向量层；请先运行“向量索引升级”。'
+          : 'No compact vector rows are ready yet. Run Native vector index first.';
+    }
+    if (status.missingGroupCount <= 0) {
+      return _isZh(context)
+          ? 'ANN 已就绪：${status.readyGroups}/${status.totalGroups} 组，${status.annRowCount}/${status.nativeRowCount} 行。'
+          : 'ANN ready: ${status.readyGroups}/${status.totalGroups} group(s), ${status.annRowCount}/${status.nativeRowCount} row(s).';
+    }
+    return _isZh(context)
+        ? '可构建 ANN：缺 ${status.missingGroupCount}/${status.totalGroups} 组，已写 ${status.annRowCount}/${status.nativeRowCount} 行。'
+        : 'ANN can be built: ${status.missingGroupCount}/${status.totalGroups} group(s) missing, ${status.annRowCount}/${status.nativeRowCount} row(s) written.';
+  }
+
+  String _annVectorRunningText(
+    BuildContext context,
+    AiVec1VectorIndexBuildProgress progress,
+  ) {
+    return _isZh(context)
+        ? '正在构建 ANN ${progress.done}/${progress.total} · 写入 ${progress.rowsWritten} 行'
+        : 'Building ANN ${progress.done}/${progress.total} · ${progress.rowsWritten} rows written';
+  }
+
+  String _annVectorDoneToast(
+    BuildContext context,
+    AiVec1VectorIndexBuildResult result,
+  ) {
+    return _isZh(context)
+        ? 'ANN 构建完成：${result.tablesBuilt}/${result.totalGroups} 组，写入 ${result.rowsWritten} 行。'
+        : 'ANN built: ${result.tablesBuilt}/${result.totalGroups} group(s), ${result.rowsWritten} row(s) written.';
+  }
+
+  String _annVectorCancelledToast(
+    BuildContext context,
+    AiVec1VectorIndexBuildResult result,
+  ) {
+    return _isZh(context)
+        ? 'ANN 构建已取消：完成 ${result.tablesBuilt}/${result.totalGroups} 组，写入 ${result.rowsWritten} 行。'
+        : 'ANN build cancelled after ${result.tablesBuilt}/${result.totalGroups} group(s), ${result.rowsWritten} row(s) written.';
+  }
+
+  String _annVectorUnavailableToast(BuildContext context, String? message) =>
+      _isZh(context)
+          ? 'ANN 暂不可用：${message ?? '未检测到 Vec1/sqlite-vec 扩展'}'
+          : 'ANN unavailable: ${message ?? 'Vec1/sqlite-vec extension was not detected'}';
+
+  String _annVectorFailedToast(BuildContext context, String message) =>
+      _isZh(context) ? 'ANN 构建失败：$message' : 'ANN build failed: $message';
 
   String _rerankSummaryText(
     BuildContext context, {
