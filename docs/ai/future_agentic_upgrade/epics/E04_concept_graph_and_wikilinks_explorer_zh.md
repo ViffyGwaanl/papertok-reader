@@ -62,6 +62,16 @@ WikiLinks 式探索必须可控：
 - 记录返回路径。
 - 外部百科补充默认 opt-in。
 
+### E04-C05 Full-Book Derived Graph Preview
+
+全书图谱是只读派生层，不等于用户确认资产：
+
+- Settings Explorer 可列出已有全局层索引的书。
+- 阅读页图谱入口可直接带入当前 bookId。
+- 只展示有 chunk SourceRef 的 GraphRAG node/edge。
+- 无全局层时提示去 AI Index 补建，不自动外发正文。
+- 不写正式 ConceptGraphStore，不进入 Review，除非用户显式把局部证据转成候选。
+
 ## 3. Agent Tasks
 
 | TaskID | Goal | Depends On | Output Artifact | Acceptance |
@@ -71,6 +81,8 @@ WikiLinks 式探索必须可控：
 | E04-C02-T02 | 接入 ConceptGraph relation Review apply | E04-C02-T01, E05-C01-T02 In Review slice | `ConceptGraphReviewAdapter`, `ConceptGraphStore.applyReviewDecision` | approved 不进入正式图谱；applied 且有 evidence 的关系才升级 ownership。 |
 | E04-C03-T01 | 设计 Concept Dossier | E04-C02-T01 | dossier spec | 概念页可显示证据、相关路径、回跳。 |
 | E04-C04-T01 | 定义 exploration constraints | E04-C03-T01 | path policy | 限制深度、宽度、外部来源和返回路径。 |
+| E04-C05-T01 | 接入 Settings 全书图谱书籍选择 | E02 global layer, E04-C03-T01 | `AiGlobalDerivedBookConceptGraphCatalog`, `conceptGraphDerivedBookCatalogProvider`, Explorer book picker | Settings `Concept graph` 可选择已有全局层的已索引书并显示只读全书图谱；不补建索引、不外发正文、不写正式图谱。 |
+| E04-C05-T02 | 接入阅读页当前书全书图谱 | E04-C05-T01, E07 reader entry | `ConceptGraphExplorerPage.bookId`, reader graph action | 阅读页 `图谱` 入口显示当前书只读全书派生图谱，并保留局部探索入口。 |
 
 ## 4. Task Execution Defaults
 

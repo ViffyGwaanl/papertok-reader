@@ -18,6 +18,7 @@ OpenMAIC 当前实现可借鉴的工程结构：
 - `lib/chat/agent-loop.ts`：客户端/前端循环维护 `DirectorState`，每次请求只让 Director 选择一个下一位 agent，收到 `END`、`USER` cue 或异常空轮后停止。
 - `lib/orchestration/director-graph.ts`：服务端 LangGraph 图是 `START -> director -> agent_generate -> END` 的单轮拓扑；多轮讨论由客户端串行多次请求驱动，而不是服务端长循环。
 - `lib/prompts/templates/director/system.md`：Director prompt 显式要求不要重复已发言 agent、优先回答真人学生问题、允许输出 `USER` 让用户参与。
+- `components/chat/use-chat-sessions.tsx`：Chat 侧把 SSE 事件写入 UI buffer，等本轮显示和 action 执行完成后再让 agent loop 进入下一轮；这比一次性跑完整场更适合移动端暂停、取消和恢复。
 - `lib/orchestration/registry/store.ts`：agent 由 `name / role / persona / allowedActions / priority / voice` 等字段配置；PaperTok 只能借鉴这个“可治理 profile”结构，不能复制 AGPL 代码或默认人格内容。
 - `lib/action/engine.ts` 与 action schema：agent 输出 text/action 交错事件，whiteboard/action 由客户端执行并写 ledger；PaperTok 应把它降级为移动端轻量 evidence/whiteboard ledger，不引入完整课堂白板。
 
@@ -85,6 +86,14 @@ Seminar 结束时输出：
 - AI Chat 中渲染为一条可展开的 Seminar run 卡片，包含 `证据 / 分歧 / 白板 / 总结 / 送审` 子视图；不强迫用户离开当前对话上下文。
 - 任何 synthesis、candidate card、flashcard 仍只进入 Review，不直接写长期资产。
 
+本 Capability 的产品决策：
+
+- `Choose style / 选择风格` 只保留为普通 AI Chat 的 prompt/skill 风格选择；`AI 研讨会` 是独立的 Chat run action，不通过修改 `activeAiSkillId` 来启动。
+- 独立 `AiSeminarRuntimePage` 只作为详情、恢复和兼容入口；主路径应在 AI Chat 页面内完成提问、角色发言、证据刷新、用户插话、总结和送审。
+- Director 不是一次固定模板调用，而是显式状态机：`collectEvidence -> roleTurn -> contradictionScan -> refreshEvidence -> userCheck -> rebuttal -> synthesize -> reviewHandoff`。每次进入 `refreshEvidence` 都必须追加可追踪 SourceRef。
+- 用户是讨论参与者，不是 evidence producer。用户可以要求某个角色反驳、要求重新找证据、回答 Director 澄清问题；这些输入只进入 user-turn ledger，不能冒充书内证据。
+- 角色提示词设置必须在 Settings 和 Chat run 内都可达；Chat run 内改动只影响当前 run，Settings 改动影响新 run 默认值。
+
 ## 4. Agent Tasks
 
 | TaskID | Goal | Depends On | Output Artifact | Acceptance |
@@ -109,7 +118,11 @@ Seminar 结束时输出：
 | E01-C05-T03 | 接入多轮分歧与证据刷新 | E01-C02-T02, E01-C05-T01 | Director loop service | 至少支持初始证据、第一轮观点、contradiction scan、按 gap 重新检索、反驳轮和 synthesis；每次刷新证据都有 SourceRef。 |
 | E01-C05-T04 | 接入用户插话/澄清回合 | E01-C05-T01, E07 Chat UI | Chat Seminar user-turn model | Director 可暂停为 `needsUserInput`；用户可指定追问某角色、要求重新找证据或回答澄清；用户输入不被当作 AI 证据。 |
 | E01-C05-T05 | 在 AI Chat 渲染 Seminar run 卡片 | E01-C05-T01, E07 Chat UI | `AiSeminarRuntimePanel` first slice; AI Chat message part / run card widgets | 已完成第一片：AI Chat `+` -> `AI 研讨会` 在当前 AI Chat 页面内展开 runtime panel，不改 active skill，并可跳到完整 runtime page；后续需升级为持久化 message part，包含证据、角色发言、分歧、白板、总结和送审，且不跳转独立 Seminar 页面也能走完讨论。 |
-| E01-C05-T06 | 迁移独立 Seminar 入口为可选详情页 | E01-C05-T05 | entry routing + compatibility tests | 阅读页 `研讨` 和 AI Chat `AI 研讨会` 默认进入 Chat 内嵌 run；保留独立页面作为详情/恢复入口时必须共享同一 runtime state。 |
+| E01-C05-T06 | 迁移独立 Seminar 入口为可选详情页 | E01-C05-T05 | entry routing + compatibility tests | 已完成第一片：阅读页 `研讨` 和 AI Chat `AI 研讨会` 都进入 Chat 内嵌 runtime panel，且阅读页入口保留 reader SourceRef、不改 active skill；后续保留独立页面作为详情/恢复入口时必须共享同一 run-scoped runtime state。 |
+| E01-C05-T07 | 定义 Chat Seminar director action contract | E01-C05-T01 | `SeminarDirectorAction` enum + reducer tests | Director 每轮只能输出 `runRole / refreshEvidence / askUser / synthesize / stop` 之一；非法 action、重复已完成角色、无证据 synthesis 都被拒绝。 |
+| E01-C05-T08 | 接入 Chat composer 用户回合 | E01-C05-T04, E01-C05-T05 | Chat run input router | 用户在 Seminar run 卡片内输入时，可选择 `继续讨论 / 问某角色 / 重找证据 / 总结送审`；输入写入 user-turn ledger，不触发普通 AI Chat 单轮回答。 |
+| E01-C05-T09 | 接入 Chat 内角色配置入口 | E01-C05-T02, E06 skill governance | run-scoped role config sheet | 用户可在当前 run 内改角色名称、prompt、启用状态、发言顺序、证据范围和只读工具范围；越权工具、空 prompt、secret-like 文本被 validator 拦截。 |
+| E01-C05-T10 | 接入分歧面板和证据刷新按钮 | E01-C05-T03, E01-C05-T05 | disagreement view + evidence refresh event | 每个 contradiction 绑定两个以上 role turn 和 evidence ids；用户可点 `重新找证据`，刷新只读检索后追加 evidence ledger，并让 Director 决定反驳或总结。 |
 
 ## 5. Task Execution Defaults
 

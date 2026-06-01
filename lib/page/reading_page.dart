@@ -914,14 +914,44 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     bool replaceAttachments = false,
     SourceRef? sourceRef,
   }) async {
-    showAiChat(content: content, sendImmediate: false, sourceRef: sourceRef);
-    await Future<void>.delayed(const Duration(milliseconds: 16));
-    aiChatKey.currentState?.prefillDraft(
+    await showAiChat(
+      content: content,
+      sendImmediate: false,
+      sourceRef: sourceRef,
+    );
+    final aiChat = await _waitForAiChatState();
+    aiChat?.prefillDraft(
       message: content,
       attachments: attachments,
       replaceAttachments: replaceAttachments,
       sourceRef: sourceRef,
     );
+  }
+
+  Future<void> openAiChatSeminar({
+    String? question,
+    SourceRef? sourceRef,
+    int? bookId,
+  }) async {
+    await showAiChat(sourceRef: sourceRef);
+    final aiChat = await _waitForAiChatState();
+    aiChat?.openSeminar(
+      question: question,
+      bookId: sourceRef?.bookId ?? bookId,
+      sourceRef: sourceRef,
+    );
+  }
+
+  Future<AiMultiTabChatState?> _waitForAiChatState({
+    int maxFrames = 8,
+  }) async {
+    for (var attempt = 0; attempt < maxFrames; attempt += 1) {
+      final state = aiChatKey.currentState;
+      if (state != null) return state;
+      if (!mounted) return null;
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    return aiChatKey.currentState;
   }
 
   void updateState() {

@@ -117,7 +117,12 @@ class _ConceptGraphBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final visibleNodes = _filterNodesForQuery(nodes, initialQuery);
     List<Widget> derivedSection({required bool compact}) {
-      if (bookId == null || bookId! <= 0) return const <Widget>[];
+      if (bookId == null || bookId! <= 0) {
+        return <Widget>[
+          _DerivedBookGraphBrowser(compact: compact),
+          const SizedBox(height: 12),
+        ];
+      }
       return <Widget>[
         _DerivedBookGraphSection(bookId: bookId!, compact: compact),
         const SizedBox(height: 12),
@@ -140,7 +145,7 @@ class _ConceptGraphBody extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 720;
+        final wide = constraints.maxWidth >= 720 && bookId != null;
         if (wide) {
           return Column(
             children: [
@@ -244,6 +249,175 @@ class _NodeListPane extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _DerivedBookGraphBrowser extends ConsumerStatefulWidget {
+  const _DerivedBookGraphBrowser({this.compact = false});
+
+  final bool compact;
+
+  @override
+  ConsumerState<_DerivedBookGraphBrowser> createState() =>
+      _DerivedBookGraphBrowserState();
+}
+
+class _DerivedBookGraphBrowserState
+    extends ConsumerState<_DerivedBookGraphBrowser> {
+  late Future<List<DerivedBookConceptGraphBook>> _future;
+  int? _selectedBookId;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<DerivedBookConceptGraphBook>> _load() {
+    return ref.read(conceptGraphDerivedBookCatalogProvider).listBooks();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    return FutureBuilder<List<DerivedBookConceptGraphBook>>(
+      future: _future,
+      builder: (context, snapshot) {
+        final books = snapshot.data ?? const <DerivedBookConceptGraphBook>[];
+        final loading = snapshot.connectionState != ConnectionState.done;
+        if ((loading && books.isEmpty) || books.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final selectedBook = _selectedBook(books);
+        final selectedBookId = selectedBook?.bookId;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: ClaudePalette.elevated(context),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.travel_explore_outlined, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            zh ? '全书自动图谱' : 'Full-book auto graph',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      zh
+                          ? '选择一本已完成全局层索引的书，直接查看自动生成的只读关系图。正式知识资产仍需要 Review 确认。'
+                          : 'Choose an indexed book with a global layer to inspect its generated read-only relationship graph. Confirmed knowledge still goes through Review.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: ClaudePalette.secondary(context),
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (selectedBook != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedBook.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          DropdownButton<int>(
+                            key: const ValueKey(
+                              'full-book-derived-graph-book-picker',
+                            ),
+                            isExpanded: true,
+                            value: selectedBook.bookId,
+                            items: [
+                              for (final book in books)
+                                DropdownMenuItem<int>(
+                                  value: book.bookId,
+                                  child: Text(
+                                    book.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => _selectedBookId = value);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _TinyChip(
+                                label: zh
+                                    ? '${selectedBook.chunkCount} 个 chunk'
+                                    : '${selectedBook.chunkCount} chunks',
+                              ),
+                              _TinyChip(
+                                label: zh
+                                    ? '${selectedBook.raptorNodes} 个全局摘要'
+                                    : '${selectedBook.raptorNodes} summaries',
+                              ),
+                              _TinyChip(
+                                label: zh
+                                    ? '${selectedBook.graphNodes} 个图节点'
+                                    : '${selectedBook.graphNodes} graph nodes',
+                              ),
+                              _TinyChip(
+                                label: zh
+                                    ? '${selectedBook.graphEdges} 条关系'
+                                    : '${selectedBook.graphEdges} relations',
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (selectedBookId != null) ...[
+              const SizedBox(height: 12),
+              _DerivedBookGraphSection(
+                bookId: selectedBookId,
+                compact: widget.compact,
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  DerivedBookConceptGraphBook? _selectedBook(
+    List<DerivedBookConceptGraphBook> books,
+  ) {
+    if (books.isEmpty) return null;
+    final selectedId = _selectedBookId;
+    if (selectedId != null) {
+      for (final book in books) {
+        if (book.bookId == selectedId) return book;
+      }
+    }
+    return books.first;
   }
 }
 

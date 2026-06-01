@@ -57,6 +57,11 @@ final conceptGraphDerivedBookLoaderProvider =
   return AiGlobalDerivedBookConceptGraphLoader();
 });
 
+final conceptGraphDerivedBookCatalogProvider =
+    Provider<DerivedBookConceptGraphCatalog>((ref) {
+  return AiGlobalDerivedBookConceptGraphCatalog();
+});
+
 final conceptGraphExplorerProvider = StateNotifierProvider<
     ConceptGraphExplorerNotifier, ConceptGraphExplorerState>((ref) {
   return ConceptGraphExplorerNotifier(

@@ -2,7 +2,12 @@ import 'dart:collection';
 
 import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/service/ai/tools/repository/books_repository.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
+
+typedef DerivedBookTitleLookup = Future<Map<int, String>> Function(
+  Iterable<int> ids,
+);
 
 abstract class DerivedBookConceptGraphLoader {
   Future<DerivedBookConceptGraphSnapshot> loadBook({
@@ -27,6 +32,123 @@ class DerivedBookConceptGraphSnapshot {
   final List<ConceptEdge> edges;
 
   bool get isEmpty => nodes.isEmpty;
+}
+
+abstract class DerivedBookConceptGraphCatalog {
+  Future<List<DerivedBookConceptGraphBook>> listBooks({int limit = 200});
+}
+
+class DerivedBookConceptGraphBook {
+  const DerivedBookConceptGraphBook({
+    required this.bookId,
+    required this.title,
+    required this.chunkCount,
+    required this.raptorNodes,
+    required this.graphNodes,
+    required this.graphEdges,
+    this.graphCommunities = 0,
+  });
+
+  final int bookId;
+  final String title;
+  final int chunkCount;
+  final int raptorNodes;
+  final int graphNodes;
+  final int graphEdges;
+  final int graphCommunities;
+
+  bool get hasGlobalLayer => raptorNodes > 0;
+  bool get hasGraphPreview => graphNodes > 0;
+}
+
+class AiGlobalDerivedBookConceptGraphCatalog
+    implements DerivedBookConceptGraphCatalog {
+  AiGlobalDerivedBookConceptGraphCatalog({
+    AiIndexDatabase? database,
+    DerivedBookTitleLookup? bookTitleLookup,
+  })  : _database = database ?? AiIndexDatabase.instance,
+        _bookTitleLookup = bookTitleLookup ?? _defaultBookTitleLookup;
+
+  final AiIndexDatabase _database;
+  final DerivedBookTitleLookup _bookTitleLookup;
+
+  static Future<Map<int, String>> _defaultBookTitleLookup(
+    Iterable<int> ids,
+  ) async {
+    final books = await const BooksRepository().fetchByIds(ids);
+    return {
+      for (final entry in books.entries) entry.key: entry.value.title,
+    };
+  }
+
+  @override
+  Future<List<DerivedBookConceptGraphBook>> listBooks({int limit = 200}) async {
+    final db = await _database.database;
+    final safeLimit = limit.clamp(1, 500).toInt();
+    final rows = await db.rawQuery(
+      '''
+SELECT
+  b.book_id,
+  COALESCE(b.chunk_count, 0) AS chunk_count,
+  COALESCE(r.raptor_nodes, 0) AS raptor_nodes,
+  COALESCE(gn.graph_nodes, 0) AS graph_nodes,
+  COALESCE(ge.graph_edges, 0) AS graph_edges,
+  COALESCE(gc.graph_communities, 0) AS graph_communities,
+  COALESCE(b.indexed_at, b.updated_at, b.created_at, 0) AS sort_ts
+FROM ai_book_index b
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS raptor_nodes
+  FROM ai_raptor_nodes
+  GROUP BY book_id
+) r ON r.book_id = b.book_id
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS graph_nodes
+  FROM ai_graph_nodes
+  GROUP BY book_id
+) gn ON gn.book_id = b.book_id
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS graph_edges
+  FROM ai_graph_edges
+  GROUP BY book_id
+) ge ON ge.book_id = b.book_id
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS graph_communities
+  FROM ai_graph_communities
+  GROUP BY book_id
+) gc ON gc.book_id = b.book_id
+WHERE COALESCE(b.chunk_count, 0) > 0
+  AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
+  AND (
+    COALESCE(r.raptor_nodes, 0) > 0
+    OR COALESCE(gn.graph_nodes, 0) > 0
+  )
+ORDER BY sort_ts DESC, b.book_id ASC
+LIMIT ?
+''',
+      [safeLimit],
+    );
+    if (rows.isEmpty) return const <DerivedBookConceptGraphBook>[];
+
+    final ids = rows
+        .map((row) => (row['book_id'] as num?)?.toInt() ?? 0)
+        .where((id) => id > 0)
+        .toList(growable: false);
+    final titles = await _bookTitleLookup(ids);
+
+    return rows.map((row) {
+      final bookId = (row['book_id'] as num?)?.toInt() ?? 0;
+      final title = (titles[bookId] ?? '').trim();
+      return DerivedBookConceptGraphBook(
+        bookId: bookId,
+        title: title.isEmpty ? 'Book #$bookId' : title,
+        chunkCount: (row['chunk_count'] as num?)?.toInt() ?? 0,
+        raptorNodes: (row['raptor_nodes'] as num?)?.toInt() ?? 0,
+        graphNodes: (row['graph_nodes'] as num?)?.toInt() ?? 0,
+        graphEdges: (row['graph_edges'] as num?)?.toInt() ?? 0,
+        graphCommunities: (row['graph_communities'] as num?)?.toInt() ?? 0,
+      );
+    }).toList(growable: false);
+  }
 }
 
 class AiGlobalDerivedBookConceptGraphLoader

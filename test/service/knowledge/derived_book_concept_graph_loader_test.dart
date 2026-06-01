@@ -132,6 +132,75 @@ void main() {
 
     expect(snapshot.isEmpty, true);
   });
+
+  test('lists indexed books that have global graph layers', () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+    final db = await aiDb.database;
+
+    await _insertBook(db, 7);
+    await _insertBook(db, 8);
+    await db.insert('ai_raptor_nodes', {
+      'book_id': 7,
+      'level': 1,
+      'title': 'Book summary',
+      'summary': 'Global summary.',
+      'child_count': 2,
+      'created_at': 10,
+      'updated_at': 11,
+    });
+    final source = await db.insert('ai_graph_nodes', {
+      'book_id': 7,
+      'node_type': 'term',
+      'name': 'Working memory',
+      'canonical_name': 'working memory',
+      'summary': 'Memory node.',
+      'confidence': 0.9,
+      'created_at': 12,
+      'updated_at': 13,
+    });
+    final target = await db.insert('ai_graph_nodes', {
+      'book_id': 7,
+      'node_type': 'term',
+      'name': 'Attention',
+      'canonical_name': 'attention',
+      'summary': 'Attention node.',
+      'confidence': 0.8,
+      'created_at': 14,
+      'updated_at': 15,
+    });
+    await db.insert('ai_graph_edges', {
+      'book_id': 7,
+      'src_node_id': source,
+      'dst_node_id': target,
+      'relation': 'related_to',
+      'weight': 0.7,
+      'evidence_count': 1,
+      'created_at': 16,
+      'updated_at': 17,
+    });
+
+    final books = await AiGlobalDerivedBookConceptGraphCatalog(
+      database: aiDb,
+      bookTitleLookup: (_) async => const {
+        7: 'Working Memory Handbook',
+        8: 'Unbuilt Book',
+      },
+    ).listBooks();
+
+    expect(books, hasLength(1));
+    expect(books.single.bookId, 7);
+    expect(books.single.title, 'Working Memory Handbook');
+    expect(books.single.chunkCount, 2);
+    expect(books.single.raptorNodes, 1);
+    expect(books.single.graphNodes, 2);
+    expect(books.single.graphEdges, 1);
+    expect(books.single.hasGlobalLayer, true);
+    expect(books.single.hasGraphPreview, true);
+  });
 }
 
 Future<void> _insertBook(dynamic db, int bookId) async {

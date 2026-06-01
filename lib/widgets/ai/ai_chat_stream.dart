@@ -2148,9 +2148,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   subtitle: _localizedSkillDesc(context, skill),
                   configLabel: l10n.seminarConfigTitle,
                   onSelect: () {
-                    Prefs().activeAiSkillId = skill.id;
-                    setState(() {});
                     Navigator.of(ctx).pop();
+                    Navigator.of(context).push(
+                      CupertinoStyleRoute(
+                        page: const AiSeminarConfigPage(),
+                      ),
+                    );
                   },
                   onConfigure: () {
                     Navigator.of(ctx).pop();
@@ -2192,6 +2195,25 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       _inlineSeminarVisible = true;
       _inlineSeminarQuestion = question.isEmpty ? null : question;
       _inlineSeminarBookId = reading.book?.id;
+      _inlineSeminarSourceRef = sourceRef;
+    });
+  }
+
+  void openInlineSeminar({
+    String? question,
+    int? bookId,
+    SourceRef? sourceRef,
+  }) {
+    if (!mounted) return;
+    final reading = ref.read(currentReadingProvider);
+    final trimmedQuestion = question?.trim();
+    setState(() {
+      _inlineSeminarVisible = true;
+      _inlineSeminarQuestion =
+          trimmedQuestion == null || trimmedQuestion.isEmpty
+              ? null
+              : trimmedQuestion;
+      _inlineSeminarBookId = sourceRef?.bookId ?? bookId ?? reading.book?.id;
       _inlineSeminarSourceRef = sourceRef;
     });
   }

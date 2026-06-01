@@ -10,6 +10,8 @@ import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/main.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/providers/ai_chat.dart';
 import 'package:papertok_reader/service/ai/index.dart';
 import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
@@ -70,6 +72,46 @@ void main() {
 
     expect(firstContainer.read(aiChatUiVisibleProvider), isTrue);
     expect(secondContainer.read(aiChatUiVisibleProvider), isFalse);
+  });
+
+  testWidgets('external openSeminar shows inline runtime panel',
+      (tester) async {
+    await _configureAiProvider();
+    final chatKey = GlobalKey<AiMultiTabChatState>();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: Scaffold(
+            body: AiMultiTabChat(key: chatKey),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    chatKey.currentState!.openSeminar(
+      question: 'Explain the source-grounded disagreement.',
+      bookId: 9,
+      sourceRef: SourceRef(
+        bookId: 9,
+        cfi: 'epubcfi(/6/10)',
+        jumpLink: 'paperreader://reader/open?bookId=9&cfi=epubcfi(/6/10)',
+        sourceTextSnippet: 'Grounded seminar seed.',
+        sourceKind: SourceRefKind.reader,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AiSeminarRuntimePanel), findsOneWidget);
+    expect(
+      find.text('Explain the source-grounded disagreement.'),
+      findsAtLeastNWidgets(1),
+    );
   });
 
   testWidgets('closing a streaming tab cancels its generation subscription',

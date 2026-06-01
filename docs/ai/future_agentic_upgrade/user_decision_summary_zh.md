@@ -20,7 +20,7 @@
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` | 读到重点时点一下，生成带原文证据和跳转来源的 KnowledgeCard，先进入 Review。 | 不自动写长期记忆、笔记或复习；重复点击不会制造重复卡。 |
 | 图片解析生成知识卡 | 图片大图 -> `AI图片解析` -> `知识卡` | 对 EPUB 图片、图表、插图做 AI 解析后，把结果变成待审知识卡。 | 图片本体和 base64 不写进卡片；只保存解析结果、来源和证据摘录。 |
 | AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` | 普通问答结束后，把有价值回答沉淀为待审知识卡，并保留能否跳回原文的来源状态。 | streaming 中按钮禁用；无 reader grounding 的旧聊天只保留 conversation provenance。 |
-| 多角色 Seminar | 阅读页选中文本 -> `研讨`，AI Chat `+` -> `AI 研讨会`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文或一个聊天问题启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结；AI Chat 入口会在当前页面内展开 Seminar 面板；Seminar settings 可编辑每个角色的显示名和 custom prompt。 | AI Chat 内嵌面板还不是持久化消息卡片；还不是多轮分歧/证据刷新/用户插话式 Director loop；结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
+| 多角色 Seminar | 阅读页选中文本 -> `研讨`，AI Chat `+` -> `AI 研讨会`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文或一个聊天问题启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结；阅读页选中文本和 AI Chat 入口都会在当前 AI Chat 页面内展开 Seminar 面板，且阅读页入口保留 SourceRef；Seminar settings 可编辑每个角色的显示名和 custom prompt。 | AI Chat 内嵌面板还不是持久化消息卡片；还不是多轮分歧/证据刷新/用户插话式 Director loop；结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
 | Seminar 预算与恢复 | Seminar 页面本地 budget 区、Provider readiness 区、job 状态区 | 用户能看到 provider/model 能力、token 用量、本地估算成本、当前 job id/status；可取消、重试、排队下一场。 | 这是本机 job/cache，不是跨进程后台续跑；重启中的 running job 会恢复为 interrupted/retryable。 |
 | Review Inbox | `Settings -> AI -> Review inbox` | 所有 AI 生成的卡片、记忆、图谱关系、flashcard、同步冲突都先进入审批入口。 | 空 inbox 只代表没有 producer 写入，不代表入口不存在。 |
 | Memory 候选审核 | AI Chat 回答旁书签图标 -> `Add to Review inbox` | 有价值的聊天内容先进入 Review，再由用户决定写入 daily/long-term memory。 | Apply 才写 Markdown memory；Dismiss 不写 memory。 |
@@ -35,6 +35,7 @@
 | 书库 Hybrid RAG 召回 | AI Chat、Seminar library fallback、agent tool、ConceptGraph 空态等调用 `semantic_search_library` 的入口 | 书库检索已从“文本 miss 后才走 vector fallback”改成“FTS/BM25 精确召回 + 向量后端语义召回共同进入候选池”，结果可用 `usedVectorRecall` 判断向量是否参与；默认 backend 是 native-then-exact seam，native shadow layer 不完整时会合并 exact rows，避免漏掉未升级书籍。 | 不是真 sqlite-vec/ANN 生产后端；ConceptGraph 本地文本入口仍关闭 embedding/vector/rerank，避免外发正文；旧索引缺 blob 时仍保留 JSON fallback。 |
 | 旧索引全局层补建 | `Settings -> AI Index / Library Index` -> `全局层索引` -> `补建` | 用已有 chunk 给旧索引书籍补建 RAPTOR 全局摘要层和当前 GraphRAG 派生层，页面显示进度并可取消。 | 不重新生成 embedding；不是 sqlite-vec/ANN；当前纯中文 graph node 抽取仍需后续增强。 |
 | 旧索引向量层升级 | `Settings -> AI Index / Library Index` -> `向量索引升级` -> `升级` | 用已有 embedding 给旧索引书籍补建紧凑 native vector shadow layer，为后续 sqlite-vec/ANN 后端做迁移准备；页面显示缺失数量、进度和取消。 | 不重嵌入；当前是 schema/backend seam 和升级入口，不是已打包的 sqlite-vec/ANN 生产后端。 |
+| 全书自动图谱预览 | `Settings -> AI -> Concept graph`，或阅读页选中文本 -> `图谱` | Settings 入口会列出已有全局层的已索引书，用户可直接选择一本书查看只读全书关系图；阅读页入口会直接显示当前书的全书派生图谱。 | 只读派生缓存，不写正式知识资产；没有全局层时先去 AI Index 补建；不是无限画布。 |
 
 ## 3. 已做但用户不直接感知的功能
 
@@ -89,6 +90,7 @@
 当前已经有：
 
 - AI Chat `+` 中有独立 `AI 研讨会` 功能卡，点击后可在当前 AI Chat 页面内展开 Seminar runtime 面板。
+- 阅读页选中文本 `研讨` 已迁到阅读页 AI Chat 内嵌 Seminar 面板，携带 reader SourceRef，不再把当前 active skill 改成 `seminar_mode`。
 - 内嵌面板可关闭，也可跳到完整 Seminar runtime page。
 - `Choose style / 选择风格` 中有 `研讨会设置` 入口。
 - 独立 Seminar runtime 已支持 evidence、角色输出、共享白板、synthesis、Review handoff、budget、job 状态和本机恢复。

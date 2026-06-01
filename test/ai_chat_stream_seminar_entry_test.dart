@@ -82,7 +82,7 @@ void main() {
   );
 
   testWidgets(
-    'Choose style exposes Seminar settings without selecting Seminar skill',
+    'Choose style Seminar row opens settings without selecting Seminar skill',
     (tester) async {
       const providerId = 'openai';
       final providers = [
@@ -125,7 +125,7 @@ void main() {
 
       expect(find.text('研讨会设置'), findsOneWidget);
 
-      await tester.tap(find.text('研讨会设置'));
+      await tester.tap(find.text('研讨会模式'));
       await tester.pumpAndSettle();
 
       expect(find.byType(AiSeminarConfigPage), findsOneWidget);

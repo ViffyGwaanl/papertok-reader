@@ -58,6 +58,8 @@ class AiMultiTabChat extends StatefulWidget {
 class AiMultiTabChatState extends State<AiMultiTabChat> {
   int _activeTab = 0;
   final List<_TabSlot> _tabs = [];
+  _PendingSeminarOpen? _pendingSeminarOpen;
+  bool _pendingSeminarFlushScheduled = false;
 
   @override
   void initState() {
@@ -89,6 +91,64 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
   void sendDraft() {
     if (_tabs.isEmpty) return;
     _tabs[_activeTab].chatKey.currentState?.sendCurrentDraft();
+  }
+
+  void openSeminar({
+    String? question,
+    int? bookId,
+    SourceRef? sourceRef,
+  }) {
+    if (_tabs.isEmpty) return;
+    final tab = _tabs[_activeTab];
+    final chatState = tab.chatKey.currentState;
+    if (chatState != null) {
+      chatState.openInlineSeminar(
+        question: question,
+        bookId: bookId,
+        sourceRef: sourceRef,
+      );
+      return;
+    }
+    _pendingSeminarOpen = _PendingSeminarOpen(
+      tabId: tab.id,
+      question: question,
+      bookId: bookId,
+      sourceRef: sourceRef,
+    );
+    _schedulePendingSeminarFlush();
+  }
+
+  void _schedulePendingSeminarFlush() {
+    if (_pendingSeminarFlushScheduled) return;
+    _pendingSeminarFlushScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pendingSeminarFlushScheduled = false;
+      if (!mounted) return;
+      final pending = _pendingSeminarOpen;
+      if (pending == null) return;
+      _TabSlot? targetTab;
+      for (final tab in _tabs) {
+        if (tab.id == pending.tabId) {
+          targetTab = tab;
+          break;
+        }
+      }
+      if (targetTab == null) {
+        _pendingSeminarOpen = null;
+        return;
+      }
+      final chatState = targetTab.chatKey.currentState;
+      if (chatState == null) {
+        _schedulePendingSeminarFlush();
+        return;
+      }
+      _pendingSeminarOpen = null;
+      chatState.openInlineSeminar(
+        question: pending.question,
+        bookId: pending.bookId,
+        sourceRef: pending.sourceRef,
+      );
+    });
   }
 
   @visibleForTesting
@@ -251,6 +311,20 @@ class _TabSlot {
           .overrideWith((ref) => AiChatDraftInputNotifier()),
     ];
   }
+}
+
+class _PendingSeminarOpen {
+  const _PendingSeminarOpen({
+    required this.tabId,
+    required this.question,
+    required this.bookId,
+    required this.sourceRef,
+  });
+
+  final int tabId;
+  final String? question;
+  final int? bookId;
+  final SourceRef? sourceRef;
 }
 
 class _TabChip extends StatelessWidget {

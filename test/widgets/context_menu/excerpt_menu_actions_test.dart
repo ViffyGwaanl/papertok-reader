@@ -9,7 +9,6 @@ import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
-import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
@@ -362,11 +361,15 @@ void main() {
     expect(find.text('Create draft candidate'), findsOneWidget);
   });
 
-  testWidgets('selected-text Seminar action opens structured runtime page',
+  testWidgets('selected-text Seminar action opens inline AI Chat seminar',
       (tester) async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
     await Prefs().initPrefs();
+    Prefs().activeAiSkillId = 'reading_companion';
+
+    final launches = <_SeminarLaunch>[];
+    var closeCount = 0;
 
     await tester.pumpWidget(
       ProviderScope(
@@ -383,7 +386,7 @@ void main() {
               child: ExcerptMenu(
                 annoCfi: 'epubcfi(/6/4)',
                 annoContent: 'Evidence-backed learning needs jump links.',
-                onClose: () {},
+                onClose: () => closeCount += 1,
                 footnote: false,
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -401,6 +404,19 @@ void main() {
                   bookTitle: 'Evidence Book',
                   chapterTitle: 'Chapter 1',
                 ),
+                aiChatSeminarOpener: ({
+                  required question,
+                  bookId,
+                  sourceRef,
+                }) async {
+                  launches.add(
+                    _SeminarLaunch(
+                      question: question,
+                      bookId: bookId,
+                      sourceRef: sourceRef,
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -413,29 +429,21 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     await tester.tap(find.text('Seminar', skipOffstage: false));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
-    expect(find.text('Seminar Mode'), findsOneWidget);
-    expect(find.textContaining('Evidence-backed learning needs jump links.'),
-        findsOneWidget);
-    final page = tester.widget<AiSeminarRuntimePage>(
-      find.byType(AiSeminarRuntimePage),
-    );
-    expect(page.bookId, 42);
-    expect(page.initialSourceRef, isNotNull);
-    expect(page.initialSourceRef!.bookId, 42);
-    expect(page.initialSourceRef!.cfi, 'epubcfi(/6/4)');
-    expect(page.initialSourceRef!.sourceTextSnippet,
+    expect(closeCount, 1);
+    expect(launches, hasLength(1));
+    expect(launches.single.question,
+        contains('Evidence-backed learning needs jump links.'));
+    expect(launches.single.bookId, 42);
+    expect(launches.single.sourceRef, isNotNull);
+    expect(launches.single.sourceRef!.bookId, 42);
+    expect(launches.single.sourceRef!.cfi, 'epubcfi(/6/4)');
+    expect(launches.single.sourceRef!.sourceTextSnippet,
         'Evidence-backed learning needs jump links.');
-    expect(page.initialSourceRef!.sourceKind, SourceRefKind.reader);
-    expect(page.initialSourceRef!.canJumpBack, true);
-    await tester.scrollUntilVisible(
-      find.text('Start Seminar'),
-      220,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Start Seminar'), findsOneWidget);
+    expect(launches.single.sourceRef!.sourceKind, SourceRefKind.reader);
+    expect(launches.single.sourceRef!.canJumpBack, true);
+    expect(Prefs().activeAiSkillId, 'reading_companion');
   });
 
   testWidgets('selected-text AI action opens chat draft with reader SourceRef',
@@ -632,6 +640,18 @@ class _AiDraftLaunch {
   });
 
   final String content;
+  final SourceRef? sourceRef;
+}
+
+class _SeminarLaunch {
+  const _SeminarLaunch({
+    required this.question,
+    required this.bookId,
+    required this.sourceRef,
+  });
+
+  final String question;
+  final int? bookId;
   final SourceRef? sourceRef;
 }
 

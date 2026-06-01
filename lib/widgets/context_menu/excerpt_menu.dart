@@ -6,7 +6,6 @@ import 'package:papertok_reader/dao/book_note.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/book_note.dart';
 import 'package:papertok_reader/models/source_ref.dart';
-import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/reading_page.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
@@ -37,6 +36,12 @@ typedef ExcerptKnowledgeCardReaderContextResolver
 
 typedef ExcerptAiChatDraftOpener = Future<void> Function({
   required String content,
+  SourceRef? sourceRef,
+});
+
+typedef ExcerptAiChatSeminarOpener = Future<void> Function({
+  required String question,
+  int? bookId,
   SourceRef? sourceRef,
 });
 
@@ -73,6 +78,7 @@ class ExcerptMenu extends StatefulWidget {
   final ExcerptKnowledgeCardCreator? knowledgeCardCreator;
   final ValueChanged<String>? knowledgeCardFeedback;
   final ExcerptAiChatDraftOpener? aiChatDraftOpener;
+  final ExcerptAiChatSeminarOpener? aiChatSeminarOpener;
 
   const ExcerptMenu({
     super.key,
@@ -92,6 +98,7 @@ class ExcerptMenu extends StatefulWidget {
     this.knowledgeCardCreator,
     this.knowledgeCardFeedback,
     this.aiChatDraftOpener,
+    this.aiChatSeminarOpener,
   });
 
   @override
@@ -341,16 +348,19 @@ class ExcerptMenuState extends State<ExcerptMenu> {
     final bookId =
         sourceRef?.bookId ?? epubPlayerKey.currentState?.widget.book.id;
     widget.onClose();
-    Prefs().activeAiSkillId = 'seminar_mode';
-    if (!mounted) return;
-    Navigator.of(context).push(
-      CupertinoStyleRoute(
-        page: AiSeminarRuntimePage(
-          initialQuestion: prompt,
-          bookId: bookId,
-          initialSourceRef: sourceRef,
-        ),
-      ),
+    final injectedOpener = widget.aiChatSeminarOpener;
+    if (injectedOpener != null) {
+      await injectedOpener(
+        question: prompt,
+        bookId: bookId,
+        sourceRef: sourceRef,
+      );
+      return;
+    }
+    await readingPageKey.currentState?.openAiChatSeminar(
+      question: prompt,
+      bookId: bookId,
+      sourceRef: sourceRef,
     );
   }
 

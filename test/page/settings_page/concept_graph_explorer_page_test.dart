@@ -43,6 +43,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Concept graph'), findsWidgets);
@@ -64,7 +65,12 @@ void main() {
     expect(find.text('Local path'), findsOneWidget);
     expect(find.text('Open source'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Open source'));
+    await tester.scrollUntilVisible(
+      find.text('Open source'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
     await tester.tap(find.text('Open source'));
     await tester.pump();
 
@@ -153,6 +159,44 @@ void main() {
     );
   });
 
+  testWidgets('settings explorer can choose an indexed book full-book graph',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookCatalogProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphCatalog(),
+          ),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Full-book auto graph'), findsOneWidget);
+    expect(find.text('Working Memory Handbook'), findsWidgets);
+    expect(find.text('Full-book derived graph'), findsOneWidget);
+    expect(find.text('Working memory'), findsWidgets);
+    expect(find.text('2 nodes'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('full-book-derived-graph-map')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Open source explains concept without jumpable evidence',
       (tester) async {
     final opened = <Uri>[];
@@ -181,7 +225,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
     await tester.pump(const Duration(milliseconds: 250));
 
-    await tester.ensureVisible(find.text('Open source'));
+    await tester.scrollUntilVisible(
+      find.text('Open source'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
 
     await tester.tap(find.text('Open source'));
     await tester.pump();
@@ -788,5 +837,22 @@ class _FakeDerivedBookConceptGraphLoader
         ),
       ],
     );
+  }
+}
+
+class _FakeDerivedBookConceptGraphCatalog
+    implements DerivedBookConceptGraphCatalog {
+  @override
+  Future<List<DerivedBookConceptGraphBook>> listBooks({int limit = 200}) async {
+    return const [
+      DerivedBookConceptGraphBook(
+        bookId: 7,
+        title: 'Working Memory Handbook',
+        chunkCount: 12,
+        raptorNodes: 3,
+        graphNodes: 2,
+        graphEdges: 1,
+      ),
+    ];
   }
 }
