@@ -161,6 +161,7 @@ void main() {
       state.directorState!.whiteboardLedger,
       ['card-1', 'review-1'],
     );
+    expect(state.directorState!.nextIntent, AiSeminarDirectorNextIntent.end);
     expect(state.canRetry, false);
   });
 
@@ -186,6 +187,104 @@ void main() {
       state.providerDiagnostics?.costStatus,
       AiSeminarCostStatus.unknown,
     );
+  });
+
+  test('director asks for user input when completed run leaves open questions',
+      () async {
+    configureProvider();
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+            whiteboardEntries: [
+              if (invocation.role == AiSeminarRole.synthesizer)
+                const AiSeminarWhiteboardEntry(
+                  id: 'open-question-1',
+                  kind: AiSeminarWhiteboardKind.openQuestion,
+                  text: 'Which interpretation should the reader test next?',
+                  role: AiSeminarRole.synthesizer,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(id: 's-open-question', question: 'Explain.'),
+        );
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(
+        state.directorState!.nextIntent, AiSeminarDirectorNextIntent.askUser);
+    expect(state.directorState!.needsUserInput, true);
+    expect(state.directorState!.whiteboardLedger, contains('open-question-1'));
+  });
+
+  test('director requests evidence refresh when completed run has disagreement',
+      () async {
+    configureProvider();
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+            whiteboardEntries: [
+              if (invocation.role == AiSeminarRole.critical)
+                const AiSeminarWhiteboardEntry(
+                  id: 'disagreement-1',
+                  kind: AiSeminarWhiteboardKind.disagreement,
+                  text: 'The supportive reading misses a contradiction.',
+                  role: AiSeminarRole.critical,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(
+            id: 's-disagreement',
+            question: 'Compare these readings.',
+          ),
+        );
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(
+      state.directorState!.nextIntent,
+      AiSeminarDirectorNextIntent.refreshEvidence,
+    );
+    expect(state.directorState!.disagreementIds, ['disagreement-1']);
   });
 
   test('start tracks a persisted background job through completion', () async {

@@ -770,11 +770,38 @@ class _StatusBanner extends StatelessWidget {
                     ),
               ),
             ],
+            if (_directorNextIntentLine(context, state.directorState)
+                case final directorLine?) ...[
+              const SizedBox(height: 6),
+              Text(
+                directorLine,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+String? _directorNextIntentLine(
+  BuildContext context,
+  AiSeminarDirectorState? director,
+) {
+  if (director == null) return null;
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  return switch (director.nextIntent) {
+    AiSeminarDirectorNextIntent.askUser =>
+      zh ? '主持人下一步：邀请读者参与讨论' : 'Director next: ask reader',
+    AiSeminarDirectorNextIntent.refreshEvidence =>
+      zh ? '主持人下一步：重新检索证据' : 'Director next: refresh evidence',
+    AiSeminarDirectorNextIntent.synthesize =>
+      zh ? '主持人下一步：整理阶段结论' : 'Director next: synthesize',
+    _ => null,
+  };
 }
 
 class _BackgroundJobsSection extends StatelessWidget {

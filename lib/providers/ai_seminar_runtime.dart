@@ -6,6 +6,7 @@ import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_evidence_broker.dart';
+import 'package:papertok_reader/service/ai/ai_seminar_orchestration_service.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
@@ -934,7 +935,6 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
             turns: event.turns,
             whiteboardEntries: event.whiteboardEntries,
             previous: state.directorState,
-            nextIntent: AiSeminarDirectorNextIntent.end,
           ),
           synthesis: event.synthesis,
           lastRun: event.run,
@@ -995,8 +995,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     required List<AiSeminarRoleTurn> turns,
     required List<AiSeminarWhiteboardEntry> whiteboardEntries,
     AiSeminarDirectorState? previous,
-    AiSeminarDirectorNextIntent nextIntent =
-        AiSeminarDirectorNextIntent.runRole,
+    AiSeminarDirectorNextIntent? nextIntent,
   }) {
     if (session == null) return previous;
     final completedTurns =
@@ -1013,6 +1012,14 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     final dedupedWhiteboardEntries = _dedupeWhiteboardEntries(
       allWhiteboardEntries,
     );
+    final resolvedNextIntent = nextIntent ??
+        _nextDirectorIntent(
+          session: session,
+          evidenceBundle: evidenceBundle,
+          completedTurns: completedTurns,
+          whiteboardEntries: dedupedWhiteboardEntries,
+          previous: previous,
+        );
     return AiSeminarDirectorState(
       sessionId: session.id,
       turnCount: completedTurns.length,
@@ -1026,9 +1033,55 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           .map((entry) => entry.id)
           .toList(),
       evidenceRefreshCount: previous?.evidenceRefreshCount ?? 0,
-      nextIntent: nextIntent,
+      nextIntent: resolvedNextIntent,
       lastUserIntervention: previous?.lastUserIntervention,
     );
+  }
+
+  AiSeminarDirectorNextIntent _nextDirectorIntent({
+    required AiSeminarSessionContract session,
+    required AiSeminarEvidenceBundle? evidenceBundle,
+    required List<AiSeminarRoleTurn> completedTurns,
+    required List<AiSeminarWhiteboardEntry> whiteboardEntries,
+    required AiSeminarDirectorState? previous,
+  }) {
+    if (evidenceBundle == null) {
+      return AiSeminarDirectorNextIntent.runRole;
+    }
+    if (evidenceBundle.evidence.isEmpty ||
+        !evidenceBundle.allEvidenceTraceable) {
+      return AiSeminarDirectorNextIntent.refreshEvidence;
+    }
+    final plannedRoles = AiSeminarOrchestrationService.executionOrder(
+      session.roles,
+    );
+    final completedRoles = completedTurns.map((turn) => turn.role).toSet();
+    final hasRemainingRole =
+        plannedRoles.any((role) => !completedRoles.contains(role));
+    if (hasRemainingRole) {
+      return AiSeminarDirectorNextIntent.runRole;
+    }
+
+    final hasOpenQuestion = whiteboardEntries.any(
+      (entry) => entry.kind == AiSeminarWhiteboardKind.openQuestion,
+    );
+    if (hasOpenQuestion) {
+      return AiSeminarDirectorNextIntent.askUser;
+    }
+
+    final hasDisagreement = whiteboardEntries.any(
+      (entry) => entry.kind == AiSeminarWhiteboardKind.disagreement,
+    );
+    if (hasDisagreement) {
+      final refreshBudget = (session.maxRounds - 1).clamp(0, 4);
+      final refreshCount = previous?.evidenceRefreshCount ?? 0;
+      if (refreshCount < refreshBudget) {
+        return AiSeminarDirectorNextIntent.refreshEvidence;
+      }
+      return AiSeminarDirectorNextIntent.askUser;
+    }
+
+    return AiSeminarDirectorNextIntent.end;
   }
 
   static List<AiSeminarWhiteboardEntry> _dedupeWhiteboardEntries(
