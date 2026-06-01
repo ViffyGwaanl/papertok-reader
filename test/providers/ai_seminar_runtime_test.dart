@@ -236,11 +236,15 @@ void main() {
     expect(state.directorState!.whiteboardLedger, contains('open-question-1'));
   });
 
-  test('director requests evidence refresh when completed run has disagreement',
+  test('auto refresh asks reader when disagreement exhausts round budget',
       () async {
     configureProvider();
+    var fetchCount = 0;
     final runtimeService = AiSeminarRuntimeService(
-      fetchEvidence: (_) async => bundle(),
+      fetchEvidence: (_) async {
+        fetchCount += 1;
+        return bundle();
+      },
       streamRole: (invocation, _) async* {
         yield AiSeminarRoleStreamChunk(
           completedTurn: AiSeminarRoleTurn(
@@ -279,12 +283,92 @@ void main() {
         );
     final state = container.read(aiSeminarRuntimeProvider);
 
+    expect(fetchCount, 2);
     expect(state.status, AiSeminarRunStatus.completed);
     expect(
       state.directorState!.nextIntent,
-      AiSeminarDirectorNextIntent.refreshEvidence,
+      AiSeminarDirectorNextIntent.askUser,
     );
+    expect(state.directorState!.evidenceRefreshCount, 1);
     expect(state.directorState!.disagreementIds, ['disagreement-1']);
+  });
+
+  test('auto refreshes evidence when disagreement still has round budget',
+      () async {
+    configureProvider();
+    var fetchCount = 0;
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fetchCount += 1;
+        final evidenceId = fetchCount == 1 ? 'e1' : 'e2';
+        return AiSeminarEvidenceBundle(
+          query: 'Compare these readings.',
+          evidence: [
+            AiSeminarEvidence(
+              id: evidenceId,
+              scope: AiSeminarEvidenceScope.currentBook,
+              text: fetchCount == 1
+                  ? 'The first source passage.'
+                  : 'The refreshed source passage.',
+              sourceRef: traceableRef(),
+            ),
+          ],
+        );
+      },
+      streamRole: (invocation, _) async* {
+        final evidenceId = invocation.evidenceBundle.evidence.single.id;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}-$evidenceId',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                '${invocation.role.asString} response using $evidenceId',
+            evidenceRefIds: [evidenceId],
+            whiteboardEntries: [
+              if (evidenceId == 'e1' &&
+                  invocation.role == AiSeminarRole.critical)
+                const AiSeminarWhiteboardEntry(
+                  id: 'disagreement-1',
+                  kind: AiSeminarWhiteboardKind.disagreement,
+                  text: 'The supportive reading misses a contradiction.',
+                  role: AiSeminarRole.critical,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(
+            id: 's-auto-refresh-disagreement',
+            question: 'Compare these readings.',
+            maxRounds: 2,
+          ),
+        );
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(fetchCount, 2);
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e2']);
+    expect(state.turns.map((turn) => turn.id), [
+      'turn-critical-e2',
+      'turn-supportive-e2',
+      'turn-synthesizer-e2',
+    ]);
+    expect(state.directorState!.evidenceRefreshCount, 1);
+    expect(state.directorState!.disagreementIds, isEmpty);
+    expect(state.directorState!.nextIntent, AiSeminarDirectorNextIntent.end);
+    expect(state.synthesis!.summary, 'synthesizer response using e2');
   });
 
   test('records user intervention without turning it into evidence', () async {
@@ -927,6 +1011,224 @@ void main() {
       [
         AiSeminarBackgroundJobStatus.completed,
         AiSeminarBackgroundJobStatus.completed,
+      ],
+    );
+  });
+
+  test('stale completed generation does not start queued seminar after restore',
+      () async {
+    configureProvider();
+    final firstRoleStarted = Completer<void>();
+    final releaseFirstRole = Completer<void>();
+    var queuedRoleStarted = false;
+    final customService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        if (invocation.session.id == 's-stale-complete' &&
+            invocation.role == AiSeminarRole.critical) {
+          if (!firstRoleStarted.isCompleted) firstRoleStarted.complete();
+          await releaseFirstRole.future;
+        }
+        if (invocation.session.id == 's-queued-after-stale-restore') {
+          queuedRoleStarted = true;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.session.id}-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(customService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+    var restoredCompletedGeneration = false;
+    final subscription = container.listen<AiSeminarRuntimeState>(
+      aiSeminarRuntimeProvider,
+      (previous, next) {
+        if (restoredCompletedGeneration) return;
+        if (next.status == AiSeminarRunStatus.completed &&
+            next.backgroundJob?.sessionId == 's-stale-complete') {
+          restoredCompletedGeneration = true;
+          notifier.restore(next);
+        }
+      },
+    );
+    addTearDown(subscription.close);
+
+    final firstRun = notifier.start(
+      AiSeminarSessionContract(
+        id: 's-stale-complete',
+        question: 'First run.',
+      ),
+    );
+    await firstRoleStarted.future;
+
+    await notifier.start(
+      AiSeminarSessionContract(
+        id: 's-queued-after-stale-restore',
+        question: 'Queued run.',
+      ),
+    );
+    releaseFirstRole.complete();
+    await firstRun;
+    await Future<void>.delayed(Duration.zero);
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(restoredCompletedGeneration, true);
+    expect(queuedRoleStarted, false);
+    expect(state.backgroundJob!.sessionId, 's-stale-complete');
+    expect(
+      state.backgroundJobs
+          .firstWhere((job) => job.sessionId == 's-queued-after-stale-restore')
+          .status,
+      AiSeminarBackgroundJobStatus.queued,
+    );
+  });
+
+  test('queued seminar starts after automatic evidence refresh settles',
+      () async {
+    configureProvider();
+    var firstFetchCount = 0;
+    final refreshedRoleStarted = Completer<void>();
+    final releaseRefreshedRole = Completer<void>();
+    final queuedCompleted = Completer<void>();
+    final customService = AiSeminarRuntimeService(
+      fetchEvidence: (session) async {
+        if (session.id == 's-queued-after-auto-refresh') {
+          return AiSeminarEvidenceBundle(
+            query: session.question,
+            evidence: [
+              AiSeminarEvidence(
+                id: 'e3',
+                scope: AiSeminarEvidenceScope.currentBook,
+                text: 'The queued source passage.',
+                sourceRef: traceableRef(),
+              ),
+            ],
+          );
+        }
+        firstFetchCount += 1;
+        final evidenceId = firstFetchCount == 1 ? 'e1' : 'e2';
+        return AiSeminarEvidenceBundle(
+          query: session.question,
+          evidence: [
+            AiSeminarEvidence(
+              id: evidenceId,
+              scope: AiSeminarEvidenceScope.currentBook,
+              text: firstFetchCount == 1
+                  ? 'The first source passage.'
+                  : 'The refreshed source passage.',
+              sourceRef: traceableRef(),
+            ),
+          ],
+        );
+      },
+      streamRole: (invocation, _) async* {
+        final sessionId = invocation.session.id;
+        final evidenceId = invocation.evidenceBundle.evidence.single.id;
+        if (sessionId == 's-auto-refresh-with-queue' &&
+            evidenceId == 'e2' &&
+            invocation.role == AiSeminarRole.critical) {
+          if (!refreshedRoleStarted.isCompleted) {
+            refreshedRoleStarted.complete();
+          }
+          await releaseRefreshedRole.future;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-$sessionId-${invocation.role.asString}-$evidenceId',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                '${invocation.role.asString} response using $evidenceId',
+            evidenceRefIds: [evidenceId],
+            whiteboardEntries: [
+              if (sessionId == 's-auto-refresh-with-queue' &&
+                  evidenceId == 'e1' &&
+                  invocation.role == AiSeminarRole.critical)
+                const AiSeminarWhiteboardEntry(
+                  id: 'disagreement-1',
+                  kind: AiSeminarWhiteboardKind.disagreement,
+                  text: 'The supportive reading misses a contradiction.',
+                  role: AiSeminarRole.critical,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+        if (sessionId == 's-queued-after-auto-refresh' &&
+            invocation.role == AiSeminarRole.synthesizer &&
+            !queuedCompleted.isCompleted) {
+          queuedCompleted.complete();
+        }
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(customService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    final firstRun = notifier.start(
+      AiSeminarSessionContract(
+        id: 's-auto-refresh-with-queue',
+        question: 'First run.',
+        maxRounds: 2,
+      ),
+    );
+    await refreshedRoleStarted.future;
+
+    await notifier.start(
+      AiSeminarSessionContract(
+        id: 's-queued-after-auto-refresh',
+        question: 'Queued run.',
+      ),
+    );
+    final queuedState = container.read(aiSeminarRuntimeProvider);
+    expect(queuedState.status, AiSeminarRunStatus.running);
+    expect(
+      queuedState.backgroundJobs
+          .firstWhere((job) => job.sessionId == 's-queued-after-auto-refresh')
+          .status,
+      AiSeminarBackgroundJobStatus.queued,
+    );
+
+    releaseRefreshedRole.complete();
+    await firstRun;
+    await queuedCompleted.future;
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(firstFetchCount, 2);
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(state.session!.id, 's-queued-after-auto-refresh');
+    expect(state.directorState!.evidenceRefreshCount, 0);
+    expect(
+      state.backgroundJobs.map((job) => job.status),
+      [
+        AiSeminarBackgroundJobStatus.completed,
+        AiSeminarBackgroundJobStatus.completed,
+        AiSeminarBackgroundJobStatus.completed,
+      ],
+    );
+    expect(
+      state.backgroundJobs.map((job) => job.sessionId),
+      [
+        's-auto-refresh-with-queue',
+        's-auto-refresh-with-queue',
+        's-queued-after-auto-refresh',
       ],
     );
   });

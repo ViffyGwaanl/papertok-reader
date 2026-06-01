@@ -531,7 +531,13 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         _activeToken = null;
       }
     }
-    if (mounted && generation == _generation && startQueuedAfterCompletion) {
+    var continuedAutomaticDirectorLoop = false;
+    if (mounted && generation == _generation) {
+      continuedAutomaticDirectorLoop = await _continueAutomaticDirectorLoop();
+    }
+    if (mounted &&
+        startQueuedAfterCompletion &&
+        (generation == _generation || continuedAutomaticDirectorLoop)) {
       await _startNextQueuedJobIfAvailable();
     }
   }
@@ -927,8 +933,9 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
 
   Future<void> _executeEvidenceRefreshStep(
     AiSeminarSessionContract session,
-    AiSeminarDirectorState directorState,
-  ) async {
+    AiSeminarDirectorState directorState, {
+    bool startQueuedAfterCompletion = true,
+  }) async {
     final providerDiagnostics = _providerContext.resolve();
     final resolvedSession = _sessionWithCurrentProviderBudget(
       session,
@@ -966,7 +973,36 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       clearError: true,
     );
     await _persistState();
-    await _startNextQueuedJobIfAvailable();
+    if (startQueuedAfterCompletion) {
+      await _startNextQueuedJobIfAvailable();
+    }
+  }
+
+  Future<bool> _continueAutomaticDirectorLoop() async {
+    var guard = 0;
+    var continued = false;
+    while (mounted && guard < 5) {
+      final session = state.session;
+      final directorState = state.directorState;
+      if (session == null || directorState == null) return continued;
+      if (state.status != AiSeminarRunStatus.completed) return continued;
+      if (directorState.nextIntent !=
+          AiSeminarDirectorNextIntent.refreshEvidence) {
+        return continued;
+      }
+      final beforeRefreshCount = directorState.evidenceRefreshCount;
+      await _executeEvidenceRefreshStep(
+        session,
+        directorState,
+        startQueuedAfterCompletion: false,
+      );
+      final afterRefreshCount =
+          state.directorState?.evidenceRefreshCount ?? beforeRefreshCount;
+      if (afterRefreshCount <= beforeRefreshCount) return continued;
+      continued = true;
+      guard += 1;
+    }
+    return continued;
   }
 
   void restore(AiSeminarRuntimeState restored) {
