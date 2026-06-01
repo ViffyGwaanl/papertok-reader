@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'ai_index_schema.dart';
+import 'ai_native_vector_index.dart';
 
 class AiBookIndexInfo {
   const AiBookIndexInfo({
@@ -213,6 +214,27 @@ class AiIndexDatabase {
   Future<void> clearBook(int bookId) async {
     final db = await database;
     await db.transaction((txn) async {
+      await const AiVectorIndexPurger().purgeBook(txn, bookId: bookId);
+      await txn.delete(
+        'ai_raptor_nodes',
+        where: 'book_id = ?',
+        whereArgs: [bookId],
+      );
+      await txn.delete(
+        'ai_graph_edges',
+        where: 'book_id = ?',
+        whereArgs: [bookId],
+      );
+      await txn.delete(
+        'ai_graph_communities',
+        where: 'book_id = ?',
+        whereArgs: [bookId],
+      );
+      await txn.delete(
+        'ai_graph_nodes',
+        where: 'book_id = ?',
+        whereArgs: [bookId],
+      );
       await txn.delete('ai_chunks', where: 'book_id = ?', whereArgs: [bookId]);
       await txn.delete(
         'ai_book_index',

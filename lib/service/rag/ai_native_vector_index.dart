@@ -639,6 +639,208 @@ LIMIT 1
   }
 }
 
+class AiVectorIndexPurger {
+  const AiVectorIndexPurger();
+
+  Future<void> purgeBook(
+    DatabaseExecutor db, {
+    required int bookId,
+  }) async {
+    final groups = await db.rawQuery(
+      '''
+SELECT provider_id, embedding_model, embedding_dim
+FROM ai_vector_index_rows
+WHERE book_id = ?
+GROUP BY provider_id, embedding_model, embedding_dim
+ORDER BY provider_id, embedding_model, embedding_dim
+''',
+      [bookId],
+    );
+
+    await db.delete(
+      'ai_vector_index_rows',
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+    );
+
+    for (final group in groups) {
+      final key = _VectorMetaKey(
+        providerId: group['provider_id']?.toString() ?? '',
+        embeddingModel: group['embedding_model']?.toString() ?? '',
+        embeddingDim: (group['embedding_dim'] as num?)?.toInt() ?? 0,
+      );
+      await _refreshNativeMeta(db, key);
+      await _purgeVec1Group(db, key, bookId: bookId);
+    }
+  }
+
+  Future<void> _refreshNativeMeta(
+    DatabaseExecutor db,
+    _VectorMetaKey key,
+  ) async {
+    final count = await _countRows(
+      db,
+      '''
+SELECT COUNT(*) AS row_count
+FROM ai_vector_index_rows
+WHERE COALESCE(provider_id, '') = ?
+  AND COALESCE(embedding_model, '') = ?
+  AND embedding_dim = ?
+''',
+      [key.providerId, key.embeddingModel, key.embeddingDim],
+    );
+    if (count <= 0) {
+      await _deleteMeta(db, AiNativeVectorIndexBuilder.backendId, key);
+      return;
+    }
+    await _upsertMeta(
+      db,
+      backend: AiNativeVectorIndexBuilder.backendId,
+      id: key.id,
+      key: key,
+      rowCount: count,
+    );
+  }
+
+  Future<void> _purgeVec1Group(
+    DatabaseExecutor db,
+    _VectorMetaKey key, {
+    required int bookId,
+  }) async {
+    if (key.embeddingDim <= 0) {
+      await _deleteMeta(db, AiVec1VectorIndexBuilder.backendId, key);
+      return;
+    }
+    final tableName = AiVec1VectorIndexBuilder.tableNameFor(
+      providerId: key.providerId,
+      embeddingModel: key.embeddingModel,
+      embeddingDim: key.embeddingDim,
+    );
+    if (!await _tableExists(db, tableName)) {
+      await _deleteMeta(db, AiVec1VectorIndexBuilder.backendId, key);
+      return;
+    }
+
+    try {
+      await db.delete(tableName, where: 'book_id = ?', whereArgs: [bookId]);
+      final count = await _countRows(
+        db,
+        'SELECT COUNT(*) AS row_count FROM $tableName',
+        const [],
+      );
+      if (count <= 0) {
+        await _deleteMeta(db, AiVec1VectorIndexBuilder.backendId, key);
+        return;
+      }
+      await _upsertMeta(
+        db,
+        backend: AiVec1VectorIndexBuilder.backendId,
+        id: '${AiVec1VectorIndexBuilder.backendId}::${key.providerId}::${key.embeddingModel}::${key.embeddingDim}',
+        key: key,
+        rowCount: count,
+      );
+    } catch (e) {
+      await _markMetaError(
+        db,
+        backend: AiVec1VectorIndexBuilder.backendId,
+        id: '${AiVec1VectorIndexBuilder.backendId}::${key.providerId}::${key.embeddingModel}::${key.embeddingDim}',
+        key: key,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<int> _countRows(
+    DatabaseExecutor db,
+    String sql,
+    List<Object?> args,
+  ) async {
+    final rows = await db.rawQuery(sql, args);
+    if (rows.isEmpty) return 0;
+    return (rows.first['row_count'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<bool> _tableExists(DatabaseExecutor db, String tableName) async {
+    final rows = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE name = ? LIMIT 1",
+      [tableName],
+    );
+    return rows.isNotEmpty;
+  }
+
+  Future<void> _deleteMeta(
+    DatabaseExecutor db,
+    String backend,
+    _VectorMetaKey key,
+  ) {
+    return db.delete(
+      'ai_vector_index_meta',
+      where:
+          'backend = ? AND COALESCE(provider_id, \'\') = ? AND COALESCE(embedding_model, \'\') = ? AND embedding_dim = ?',
+      whereArgs: [
+        backend,
+        key.providerId,
+        key.embeddingModel,
+        key.embeddingDim
+      ],
+    );
+  }
+
+  Future<void> _upsertMeta(
+    DatabaseExecutor db, {
+    required String backend,
+    required String id,
+    required _VectorMetaKey key,
+    required int rowCount,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _deleteMeta(db, backend, key);
+    await db.insert(
+      'ai_vector_index_meta',
+      {
+        'id': id,
+        'backend': backend,
+        'provider_id': key.providerId,
+        'embedding_model': key.embeddingModel,
+        'embedding_dim': key.embeddingDim,
+        'index_status': 'ready',
+        'row_count': rowCount,
+        'last_error': null,
+        'created_at': now,
+        'updated_at': now,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> _markMetaError(
+    DatabaseExecutor db, {
+    required String backend,
+    required String id,
+    required _VectorMetaKey key,
+    required String error,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _deleteMeta(db, backend, key);
+    await db.insert(
+      'ai_vector_index_meta',
+      {
+        'id': id,
+        'backend': backend,
+        'provider_id': key.providerId,
+        'embedding_model': key.embeddingModel,
+        'embedding_dim': key.embeddingDim,
+        'index_status': 'stale',
+        'row_count': 0,
+        'last_error': error,
+        'created_at': now,
+        'updated_at': now,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+}
+
 class AiVec1VectorSearchBackend implements AiVectorSearchBackend {
   const AiVec1VectorSearchBackend();
 
