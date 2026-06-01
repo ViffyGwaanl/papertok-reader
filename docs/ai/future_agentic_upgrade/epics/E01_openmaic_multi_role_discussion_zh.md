@@ -100,7 +100,7 @@ Seminar 结束时输出：
 | E01-C05-T02 | 增加角色 prompt 设置 | E01-C01-T02, E06 skill governance | Seminar role profile store + Settings/AI Chat 配置入口 | 基础切片已支持默认角色显示名和 custom prompt，设置会持久化、写入 session contract 并注入 role prompt；后续仍需角色启用状态、证据策略、工具范围、空 prompt validator 和 AI Chat 内嵌配置入口；无效 prompt 或越权工具不得进入 runtime。 |
 | E01-C05-T03 | 接入多轮分歧与证据刷新 | E01-C02-T02, E01-C05-T01 | Director loop service | 至少支持初始证据、第一轮观点、contradiction scan、按 gap 重新检索、反驳轮和 synthesis；每次刷新证据都有 SourceRef。 |
 | E01-C05-T04 | 接入用户插话/澄清回合 | E01-C05-T01, E07 Chat UI | Chat Seminar user-turn model | Director 可暂停为 `needsUserInput`；用户可指定追问某角色、要求重新找证据或回答澄清；用户输入不被当作 AI 证据。 |
-| E01-C05-T05 | 在 AI Chat 渲染 Seminar run 卡片 | E01-C05-T01, E07 Chat UI | AI Chat message part / run card widgets | 同一 AI Chat 页面展示证据、角色发言、分歧、白板、总结和送审；不跳转独立 Seminar 页面也能走完讨论。 |
+| E01-C05-T05 | 在 AI Chat 渲染 Seminar run 卡片 | E01-C05-T01, E07 Chat UI | `AiSeminarRuntimePanel` first slice; AI Chat message part / run card widgets | 已完成第一片：AI Chat `+` -> `AI 研讨会` 在当前 AI Chat 页面内展开 runtime panel，不改 active skill，并可跳到完整 runtime page；后续需升级为持久化 message part，包含证据、角色发言、分歧、白板、总结和送审，且不跳转独立 Seminar 页面也能走完讨论。 |
 | E01-C05-T06 | 迁移独立 Seminar 入口为可选详情页 | E01-C05-T05 | entry routing + compatibility tests | 阅读页 `研讨` 和 AI Chat `AI 研讨会` 默认进入 Chat 内嵌 run；保留独立页面作为详情/恢复入口时必须共享同一 runtime state。 |
 
 ## 5. Task Execution Defaults

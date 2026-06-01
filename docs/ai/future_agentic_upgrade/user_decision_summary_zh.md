@@ -20,7 +20,7 @@
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` | 读到重点时点一下，生成带原文证据和跳转来源的 KnowledgeCard，先进入 Review。 | 不自动写长期记忆、笔记或复习；重复点击不会制造重复卡。 |
 | 图片解析生成知识卡 | 图片大图 -> `AI图片解析` -> `知识卡` | 对 EPUB 图片、图表、插图做 AI 解析后，把结果变成待审知识卡。 | 图片本体和 base64 不写进卡片；只保存解析结果、来源和证据摘录。 |
 | AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` | 普通问答结束后，把有价值回答沉淀为待审知识卡，并保留能否跳回原文的来源状态。 | streaming 中按钮禁用；无 reader grounding 的旧聊天只保留 conversation provenance。 |
-| 多角色 Seminar | 阅读页选中文本 -> `研讨`，AI Chat `+` -> `AI 研讨会`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文或一个聊天问题启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结；Seminar settings 可编辑每个角色的显示名和 custom prompt。 | 当前仍打开独立 Seminar runtime，不是在 AI Chat 消息流内展开；还不是多轮分歧/证据刷新/用户插话式 Director loop；结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
+| 多角色 Seminar | 阅读页选中文本 -> `研讨`，AI Chat `+` -> `AI 研讨会`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文或一个聊天问题启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结；AI Chat 入口会在当前页面内展开 Seminar 面板；Seminar settings 可编辑每个角色的显示名和 custom prompt。 | AI Chat 内嵌面板还不是持久化消息卡片；还不是多轮分歧/证据刷新/用户插话式 Director loop；结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
 | Seminar 预算与恢复 | Seminar 页面本地 budget 区、Provider readiness 区、job 状态区 | 用户能看到 provider/model 能力、token 用量、本地估算成本、当前 job id/status；可取消、重试、排队下一场。 | 这是本机 job/cache，不是跨进程后台续跑；重启中的 running job 会恢复为 interrupted/retryable。 |
 | Review Inbox | `Settings -> AI -> Review inbox` | 所有 AI 生成的卡片、记忆、图谱关系、flashcard、同步冲突都先进入审批入口。 | 空 inbox 只代表没有 producer 写入，不代表入口不存在。 |
 | Memory 候选审核 | AI Chat 回答旁书签图标 -> `Add to Review inbox` | 有价值的聊天内容先进入 Review，再由用户决定写入 daily/long-term memory。 | Apply 才写 Markdown memory；Dismiss 不写 memory。 |
@@ -88,7 +88,8 @@
 
 当前已经有：
 
-- AI Chat `+` 中有独立 `AI 研讨会` 功能卡。
+- AI Chat `+` 中有独立 `AI 研讨会` 功能卡，点击后可在当前 AI Chat 页面内展开 Seminar runtime 面板。
+- 内嵌面板可关闭，也可跳到完整 Seminar runtime page。
 - `Choose style / 选择风格` 中有 `研讨会设置` 入口。
 - 独立 Seminar runtime 已支持 evidence、角色输出、共享白板、synthesis、Review handoff、budget、job 状态和本机恢复。
 - Seminar settings 已支持每个默认角色的显示名和 custom prompt；新 session 会把这些设置注入角色 prompt，session JSON 和恢复缓存会保留 profile。
@@ -96,7 +97,7 @@
 
 还要做什么：
 
-- 把 Seminar runtime 嵌入 AI Chat 消息流，渲染为可展开的 run 卡片，而不是强制跳到独立页面。
+- 把当前内嵌 runtime 面板升级为持久化 AI Chat message part / run 卡片，而不是只挂在页面底部。
 - 建 `DirectorState`：记录轮次、已发言角色、分歧、证据刷新次数、用户插话和下一步 intent。
 - 补齐角色 profile 治理：默认角色仍是 `critical/supportive/synthesizer/verifier`；显示名和 custom prompt 已有基础设置，后续还要增加启用状态、证据策略、工具范围、空 prompt 校验和角色级预算。
 - 增加多轮机制：第一轮观点后做 contradiction scan；证据不足或角色冲突时重新检索，再进入反驳轮，最后 synthesis。

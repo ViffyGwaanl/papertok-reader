@@ -11,7 +11,7 @@ import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/markdown/styled_markdown.dart';
 
-class AiSeminarRuntimePage extends ConsumerStatefulWidget {
+class AiSeminarRuntimePage extends ConsumerWidget {
   const AiSeminarRuntimePage({
     super.key,
     this.initialQuestion,
@@ -26,11 +26,70 @@ class AiSeminarRuntimePage extends ConsumerStatefulWidget {
   final bool autoStart;
 
   @override
-  ConsumerState<AiSeminarRuntimePage> createState() =>
-      _AiSeminarRuntimePageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final state = ref.watch(aiSeminarRuntimeProvider);
+    return SettingsSubpageScaffold(
+      title: l10n.aiSkillSeminarModeName,
+      actions: [
+        IconButton(
+          tooltip: l10n.seminarConfigTitle,
+          icon: const Icon(Icons.tune_outlined),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AiSeminarConfigPage()),
+          ),
+        ),
+        if (state.canCancel)
+          IconButton(
+            tooltip: l10n.commonCancel,
+            icon: const Icon(Icons.stop_circle_outlined),
+            onPressed: () =>
+                ref.read(aiSeminarRuntimeProvider.notifier).cancel(),
+          ),
+        if (state.canRetry)
+          IconButton(
+            tooltip: l10n.commonRetry,
+            icon: const Icon(Icons.refresh),
+            onPressed: () =>
+                ref.read(aiSeminarRuntimeProvider.notifier).retry(),
+          ),
+      ],
+      child: AiSeminarRuntimePanel(
+        initialQuestion: initialQuestion,
+        bookId: bookId,
+        initialSourceRef: initialSourceRef,
+        autoStart: autoStart,
+      ),
+    );
+  }
 }
 
-class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
+class AiSeminarRuntimePanel extends ConsumerStatefulWidget {
+  const AiSeminarRuntimePanel({
+    super.key,
+    this.initialQuestion,
+    this.bookId,
+    this.initialSourceRef,
+    this.autoStart = false,
+    this.embedded = false,
+    this.onClose,
+    this.onOpenFullPage,
+  });
+
+  final String? initialQuestion;
+  final int? bookId;
+  final SourceRef? initialSourceRef;
+  final bool autoStart;
+  final bool embedded;
+  final VoidCallback? onClose;
+  final VoidCallback? onOpenFullPage;
+
+  @override
+  ConsumerState<AiSeminarRuntimePanel> createState() =>
+      _AiSeminarRuntimePanelState();
+}
+
+class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
   late final TextEditingController _questionController;
   late final TextEditingController _roleOutputBudgetController;
   late final TextEditingController _runBudgetController;
@@ -106,114 +165,111 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
         : rawState;
     final busy = state.status == AiSeminarRunStatus.running;
 
-    return SettingsSubpageScaffold(
-      title: l10n.aiSkillSeminarModeName,
-      actions: [
-        IconButton(
-          tooltip: l10n.seminarConfigTitle,
-          icon: const Icon(Icons.tune_outlined),
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const AiSeminarConfigPage()),
+    final content = ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        Text(
+          l10n.aiSkillSeminarModeDesc,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: ClaudePalette.secondary(context),
+              ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _questionController,
+          minLines: 2,
+          maxLines: 5,
+          decoration: InputDecoration(
+            labelText: l10n.seminarQuestionLabel,
+            border: const OutlineInputBorder(),
           ),
         ),
-        if (state.canCancel)
-          IconButton(
-            tooltip: l10n.commonCancel,
-            icon: const Icon(Icons.stop_circle_outlined),
-            onPressed: () =>
-                ref.read(aiSeminarRuntimeProvider.notifier).cancel(),
-          ),
-        if (state.canRetry)
-          IconButton(
-            tooltip: l10n.commonRetry,
-            icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                ref.read(aiSeminarRuntimeProvider.notifier).retry(),
-          ),
-      ],
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          Text(
-            l10n.aiSkillSeminarModeDesc,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: ClaudePalette.secondary(context),
-                ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _questionController,
-            minLines: 2,
-            maxLines: 5,
-            decoration: InputDecoration(
-              labelText: l10n.seminarQuestionLabel,
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _ProviderReadinessSection(
-            diagnostics: state.providerDiagnostics,
-          ),
-          const SizedBox(height: 10),
-          _BudgetSection(
-            roleOutputBudgetController: _roleOutputBudgetController,
-            runBudgetController: _runBudgetController,
-            runCostCapController: _runCostCapController,
-            diagnostics: state.providerDiagnostics,
-            enabled: !busy,
-          ),
-          const SizedBox(height: 10),
-          _AgentRolesSection(
-            includeVerifier: _includeVerifier,
-            enabled: !busy,
-            onVerifierChanged: (value) {
-              setState(() {
-                _includeVerifier = value;
-              });
-              Prefs().aiSeminarIncludeVerifier = value;
-            },
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              FilledButton.icon(
-                icon: Icon(
-                  busy ? Icons.playlist_add_outlined : Icons.groups_2_outlined,
-                ),
-                label: Text(busy ? l10n.seminarQueue : l10n.seminarStart),
-                onPressed: _start,
+        const SizedBox(height: 12),
+        _ProviderReadinessSection(
+          diagnostics: state.providerDiagnostics,
+        ),
+        const SizedBox(height: 10),
+        _BudgetSection(
+          roleOutputBudgetController: _roleOutputBudgetController,
+          runBudgetController: _runBudgetController,
+          runCostCapController: _runCostCapController,
+          diagnostics: state.providerDiagnostics,
+          enabled: !busy,
+        ),
+        const SizedBox(height: 10),
+        _AgentRolesSection(
+          includeVerifier: _includeVerifier,
+          enabled: !busy,
+          onVerifierChanged: (value) {
+            setState(() {
+              _includeVerifier = value;
+            });
+            Prefs().aiSeminarIncludeVerifier = value;
+          },
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            FilledButton.icon(
+              icon: Icon(
+                busy ? Icons.playlist_add_outlined : Icons.groups_2_outlined,
               ),
-              const SizedBox(width: 8),
-              if (state.canRetry)
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.refresh),
-                  label: Text(l10n.commonRetry),
-                  onPressed: () =>
-                      ref.read(aiSeminarRuntimeProvider.notifier).retry(),
-                ),
-              if (state.canCancel)
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.stop_circle_outlined),
-                  label: Text(l10n.commonCancel),
-                  onPressed: () =>
-                      ref.read(aiSeminarRuntimeProvider.notifier).cancel(),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _StatusBanner(state: state),
-          if (_shouldShowJobQueue(state.backgroundJobs)) ...[
-            const SizedBox(height: 12),
-            _BackgroundJobsSection(jobs: state.backgroundJobs),
+              label: Text(busy ? l10n.seminarQueue : l10n.seminarStart),
+              onPressed: _start,
+            ),
+            const SizedBox(width: 8),
+            if (state.canRetry)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.commonRetry),
+                onPressed: () =>
+                    ref.read(aiSeminarRuntimeProvider.notifier).retry(),
+              ),
+            if (state.canCancel)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.stop_circle_outlined),
+                label: Text(l10n.commonCancel),
+                onPressed: () =>
+                    ref.read(aiSeminarRuntimeProvider.notifier).cancel(),
+              ),
           ],
+        ),
+        const SizedBox(height: 16),
+        _StatusBanner(state: state),
+        if (_shouldShowJobQueue(state.backgroundJobs)) ...[
           const SizedBox(height: 12),
-          _EvidenceSection(state: state),
-          const SizedBox(height: 12),
-          _RolesSection(state: state),
-          const SizedBox(height: 12),
-          _WhiteboardSection(entries: state.whiteboardEntries),
-          const SizedBox(height: 12),
-          _SynthesisSection(state: state),
+          _BackgroundJobsSection(jobs: state.backgroundJobs),
+        ],
+        const SizedBox(height: 12),
+        _EvidenceSection(state: state),
+        const SizedBox(height: 12),
+        _RolesSection(state: state),
+        const SizedBox(height: 12),
+        _WhiteboardSection(entries: state.whiteboardEntries),
+        const SizedBox(height: 12),
+        _SynthesisSection(state: state),
+      ],
+    );
+
+    if (!widget.embedded) {
+      return content;
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ClaudePalette.bg(context),
+        border: Border(
+          top: BorderSide(color: ClaudePalette.divider(context)),
+        ),
+      ),
+      child: Column(
+        children: [
+          _EmbeddedSeminarHeader(
+            state: state,
+            onClose: widget.onClose,
+            onOpenFullPage: widget.onOpenFullPage,
+          ),
+          Expanded(child: content),
         ],
       ),
     );
@@ -319,6 +375,81 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
         if (_includeVerifier) AiSeminarRole.verifier,
         AiSeminarRole.synthesizer,
       ];
+}
+
+class _EmbeddedSeminarHeader extends ConsumerWidget {
+  const _EmbeddedSeminarHeader({
+    required this.state,
+    required this.onClose,
+    required this.onOpenFullPage,
+  });
+
+  final AiSeminarRuntimeState state;
+  final VoidCallback? onClose;
+  final VoidCallback? onOpenFullPage;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    return Material(
+      color: ClaudePalette.card(context),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+        child: Row(
+          children: [
+            Icon(
+              Icons.groups_2_outlined,
+              size: 20,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.aiSkillSeminarModeName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            _TinyChip(label: _runStatusLabel(l10n, state.status)),
+            IconButton(
+              tooltip: l10n.seminarConfigTitle,
+              icon: const Icon(Icons.tune_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AiSeminarConfigPage()),
+              ),
+            ),
+            if (state.canRetry)
+              IconButton(
+                tooltip: l10n.commonRetry,
+                icon: const Icon(Icons.refresh),
+                onPressed: () =>
+                    ref.read(aiSeminarRuntimeProvider.notifier).retry(),
+              ),
+            if (state.canCancel)
+              IconButton(
+                tooltip: l10n.commonCancel,
+                icon: const Icon(Icons.stop_circle_outlined),
+                onPressed: () =>
+                    ref.read(aiSeminarRuntimeProvider.notifier).cancel(),
+              ),
+            if (onOpenFullPage != null)
+              IconButton(
+                tooltip: l10n.aiChatSeminarFeatureAction,
+                icon: const Icon(Icons.open_in_full_outlined),
+                onPressed: onOpenFullPage,
+              ),
+            if (onClose != null)
+              IconButton(
+                tooltip: l10n.commonCancel,
+                icon: const Icon(Icons.close),
+                onPressed: onClose,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _AgentRolesSection extends StatelessWidget {

@@ -244,6 +244,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       widget.chatKnowledgeCardProducer ?? AiChatKnowledgeCardProducer();
 
   bool _suppressDraftSync = false;
+  bool _inlineSeminarVisible = false;
+  String? _inlineSeminarQuestion;
+  int? _inlineSeminarBookId;
+  SourceRef? _inlineSeminarSourceRef;
 
   void _onDraftInputChanged() {
     if (_suppressDraftSync) return;
@@ -2184,12 +2188,51 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ? _draftSourceRef
         : null;
 
+    setState(() {
+      _inlineSeminarVisible = true;
+      _inlineSeminarQuestion = question.isEmpty ? null : question;
+      _inlineSeminarBookId = reading.book?.id;
+      _inlineSeminarSourceRef = sourceRef;
+    });
+  }
+
+  Widget _buildInlineSeminarPanel() {
+    final height =
+        (MediaQuery.of(context).size.height * 0.52).clamp(320.0, 560.0);
+    return SizedBox(
+      height: height,
+      child: AiSeminarRuntimePanel(
+        key: ValueKey(
+          [
+            _inlineSeminarQuestion ?? '',
+            _inlineSeminarBookId?.toString() ?? '',
+            _inlineSeminarSourceRef?.bookId?.toString() ?? '',
+            _inlineSeminarSourceRef?.href ?? '',
+            _inlineSeminarSourceRef?.cfi ?? '',
+            _inlineSeminarSourceRef?.chunkId ?? '',
+          ].join('\u001f'),
+        ),
+        initialQuestion: _inlineSeminarQuestion,
+        bookId: _inlineSeminarBookId,
+        initialSourceRef: _inlineSeminarSourceRef,
+        embedded: true,
+        onClose: () {
+          if (!mounted) return;
+          setState(() => _inlineSeminarVisible = false);
+        },
+        onOpenFullPage: _openInlineSeminarRuntimePage,
+      ),
+    );
+  }
+
+  void _openInlineSeminarRuntimePage() {
+    if (!mounted) return;
     Navigator.of(context).push(
       CupertinoStyleRoute(
         page: AiSeminarRuntimePage(
-          initialQuestion: question.isEmpty ? null : question,
-          bookId: reading.book?.id,
-          initialSourceRef: sourceRef,
+          initialQuestion: _inlineSeminarQuestion,
+          bookId: _inlineSeminarBookId,
+          initialSourceRef: _inlineSeminarSourceRef,
         ),
       ),
     );
@@ -3552,6 +3595,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   error: (error, stack) => Center(child: Text('error: $error')),
                 ),
           ),
+          if (_inlineSeminarVisible) _buildInlineSeminarPanel(),
           inputBox,
         ],
       ),

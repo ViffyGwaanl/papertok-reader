@@ -18,7 +18,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-    'Add-to-Chat Seminar opens runtime without changing active style',
+    'Add-to-Chat Seminar opens inline runtime without changing active style',
     (tester) async {
       const providerId = 'openai';
       final providers = [
@@ -74,8 +74,9 @@ void main() {
       await tester.tap(find.text('AI 研讨会'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AiSeminarRuntimePage), findsOneWidget);
-      expect(find.text('这个概念怎么理解？'), findsOneWidget);
+      expect(find.byType(AiSeminarRuntimePage), findsNothing);
+      expect(find.byType(AiSeminarRuntimePanel), findsOneWidget);
+      expect(find.text('这个概念怎么理解？'), findsAtLeastNWidgets(1));
       expect(Prefs().activeAiSkillId, 'paper_analyzer');
     },
   );
