@@ -24,6 +24,8 @@ OpenMAIC 当前实现可借鉴的工程结构：
 - `lib/orchestration/registry/store.ts`：agent 由 `name / role / persona / allowedActions / priority / voice` 等字段配置；PaperTok 只能借鉴这个“可治理 profile”结构，不能复制 AGPL 代码或默认人格内容。
 - `lib/orchestration/tool-schemas.ts`、`summarizers/whiteboard-ledger.ts` 与 `summarizers/whiteboard-conflicts.ts`：agent 输出 text/action 交错事件，whiteboard/action 由客户端执行并写 ledger，下一轮 prompt 能看到白板摘要和布局冲突；PaperTok 应把它降级为移动端轻量 evidence/disagreement/whiteboard ledger，不引入完整课堂白板。
 
+OpenMAIC 的关键启发已经整理到 `../05_openmaic_discussion_reference_zh.md`。后续实现必须按该文档的许可边界执行：只借鉴 single-round director graph、client-driven loop、USER cue、action whitelist 和 ledger 思路，不复制 AGPL 代码、prompt 模板或 UI。
+
 ## 2. 默认角色
 
 | 角色 | 责任 | 默认工具范围 |
@@ -95,6 +97,8 @@ Seminar 结束时输出：
 - Director 不是一次固定模板调用，而是显式状态机：`collectEvidence -> roleTurn -> contradictionScan -> refreshEvidence -> userCheck -> rebuttal -> synthesize -> reviewHandoff`。每次进入 `refreshEvidence` 都必须追加可追踪 SourceRef。
 - 用户是讨论参与者，不是 evidence producer。用户可以要求某个角色反驳、要求重新找证据、回答 Director 澄清问题；这些输入只进入 user-turn ledger，不能冒充书内证据。
 - 角色提示词设置必须在 Settings 和 Chat run 内都可达；Chat run 内改动只影响当前 run，Settings 改动影响新 run 默认值。
+- AI Chat 的 thinking、tool call、skill/plugin UI 已经是用户熟悉的 AI 工作台；Seminar 应复用同一个 composer、stream、tool/cost/status surface，并以结构化 run card 呈现多角色讨论，不再把“研讨会模式”做成另一套主要交互。
+- 角色当前是固定 role contract + role prompt + evidence gate 的顺序执行，不是任意递归 sub-agent 群聊；后续如接入 `spawn_sub_agent` 或 agent tool 平台，也必须保持禁止递归、只读检索默认串行、写入 Review 审批。
 
 ## 4. Agent Tasks
 
@@ -125,6 +129,11 @@ Seminar 结束时输出：
 | E01-C05-T08 | 接入 Chat composer 用户回合 | E01-C05-T04, E01-C05-T05 | Chat run input router | 用户在 Seminar run 卡片内输入时，可选择 `继续讨论 / 问某角色 / 重找证据 / 总结送审`；输入写入 user-turn ledger，不触发普通 AI Chat 单轮回答。 |
 | E01-C05-T09 | 接入 Chat 内角色配置入口 | E01-C05-T02, E06 skill governance | run-scoped role config sheet | 用户可在当前 run 内改角色名称、prompt、启用状态、发言顺序、证据范围和只读工具范围；越权工具、空 prompt、secret-like 文本被 validator 拦截。 |
 | E01-C05-T10 | 接入分歧面板和证据刷新按钮 | E01-C05-T03, E01-C05-T05 | disagreement view + evidence refresh event | 每个 contradiction 绑定两个以上 role turn 和 evidence ids；用户可点 `重新找证据`，刷新只读检索后追加 evidence ledger，并让 Director 决定反驳或总结。 |
+| E01-C05-T11 | 升级 AI Chat Seminar run card 为完整 message part | E01-C05-T05, E01-C05-T08 | `seminarRun` message part schema + widgets + history migration | 历史重载后仍显示证据、角色、分歧、白板、总结、送审子视图；Seminar 卡片不暴露普通 assistant 回答的 KnowledgeCard/Memory/regenerate 操作，避免伪造来源。 |
+| E01-C05-T12 | 增加 role profile governance v2 | E01-C05-T09, E06 governance | role enabled/scope/tools/budget schema + validator + UI | Settings 保存全局默认；Chat run 内设置只影响当前 run；空 prompt、secret-like 文本、越权工具、递归 spawn 和写工具被拒绝。 |
+| E01-C05-T13 | 接入 contradiction gap scan 和 rebuttal turn | E01-C05-T03, E01-C05-T10 | contradiction scanner + target rebuttal runner | 分歧必须绑定至少两个 role turn 和 evidence ids；Director 可选择 targeted evidence refresh 或指定角色反驳；刷新预算耗尽后进入用户确认，不无限循环。 |
+| E01-C05-T14 | 把用户插话接入 Chat run composer | E01-C05-T08, E07 Chat UI | run-scoped composer routing | 用户在同一 Chat run card 里选择继续讨论、问某角色、重新找证据、总结送审；输入只写 user-turn ledger，不进入 formal evidence。 |
+| E01-C05-T15 | 实现 per-run runtime state 隔离 | E01-C05-T11, E07 state recovery | run id keyed runtime store + detail page route | 同一 AI Chat 会话可有多个 Seminar run；每个 run 独立保存 turns/evidence/budget/job id；独立详情页和恢复缓存按 run id 读取同一状态源。 |
 
 ## 5. Task Execution Defaults
 

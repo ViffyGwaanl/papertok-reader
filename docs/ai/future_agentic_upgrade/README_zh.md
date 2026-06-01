@@ -14,8 +14,9 @@
 5. `implementation_status_zh.md`：本分支代码 artifact、gate 和验证证据。
 6. `04_user_facing_activation_plan_zh.md`：用户现在从哪里用、当前还不能用什么、入口任务验收状态和下一步 agent task。
 7. `user_decision_summary_zh.md`：用产品决策视角说明哪些功能能用、哪些是内部地基、长期大块要怎么做以及做成后的效果。
-8. `epics/`：每条能力线的执行规格。
-9. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
+8. `05_openmaic_discussion_reference_zh.md`：OpenMAIC 研讨实现方式和 PaperTok 可借鉴边界。
+9. `epics/`：每条能力线的执行规格。
+10. `gates/`：跨 Epic 复用的质量、安全、资源和 rescue review gate。
 
 ## 2. 状态词
 
@@ -68,6 +69,7 @@
 - 图片知识卡入口不会在打开图片时直接出现；需要先点图片工具栏的魔法棒 `AI Image Analysis / AI图片解析`，等解析结果弹层出现后再点 `Card / 知识卡`。
 - AI Chat 的回答必须生成完成后，回答旁 `知识卡` 才可点击；streaming 中保持禁用。
 - AI Chat 里的 `AI 研讨会` 当前会在 AI 对话页内展开 Seminar runtime 面板，并在当前会话中写入一张轻量 `AI 研讨会` 入口卡片；这张卡片随 `conversationV2` 历史保存，重新打开历史后可点击恢复 inline runtime。`AiSeminarDirectorState` 已能随本机 runtime state 记录第一片 Director 账本，并能把 completed run 中的开放问题标为 `askUser`、分歧标为 `refreshEvidence`，页面会显示主持人下一步；`askUser` 状态下用户可以输入回复并选择让角色回应、重新找证据或整理总结，回复只作为 human intervention 保存，不进入 formal evidence；其中“让角色回应”已会调用所选角色生成 follow-up turn 并更新 synthesis，“重新找证据”已会重新检索 evidence、重跑角色并更新 synthesis，“整理总结”已会用现有 evidence 和 turns 执行本地 synthesis 并收束 Director；当 completed run 只留下 disagreement 且仍有 `maxRounds` 刷新预算时，runtime 会在启动 queued job 前自动重新检索 evidence、重跑角色，并在新证据仍无法解决分歧且预算耗尽时转为 `askUser`；但“完整分歧反驳 loop、Chat 消息流中的多角色多轮 Director 结构化卡片、per-run 多实例隔离”仍列在当前还不能用，不应描述为已接入。
+- 产品决策：Seminar 的长期主入口是 AI Chat 内的 run action 和结构化消息卡，不是另一个割裂页面，也不是 `Choose style` 的普通 prompt 风格。独立 Seminar page 只保留为详情、调试、恢复和兼容入口；角色设置分为 Settings 全局默认和单次 Chat run 临时配置。
 - `Custom skills` 已做中文适配；中文界面中对应 `自定义技能`，英文界面仍显示 `Custom skills`。
 - Sync 冲突批量处理入口在 `Review inbox` 中：切到 `Approved` 状态和 `Sync conflict` 类型后，安全可应用冲突会显示 `Apply Sync conflict`；部分失败后保留失败项并显示 `Retry Sync conflict`。
 
