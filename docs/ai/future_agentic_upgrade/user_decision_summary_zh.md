@@ -186,6 +186,7 @@
 - `kAiIndexDbVersion = 12` 的 native vector shadow schema：`ai_vector_index_rows` 和 `ai_vector_index_meta`。
 - 旧索引向量层升级入口：用已有 blob/JSON embedding 补建 compact float32 rows，不重嵌入。
 - native-then-exact backend seam：能检测 native SQL capability，不可用时自动降级 exact。
+- ANN/exact recall overlap gate：能用固定 fixture 比对候选 ANN/native backend 与 exact backend 的 topK chunk id 重合率。
 - 搜索取消、进度、串行、background isolate scoring。
 - 老索引 JSON fallback 的分页回查。
 
@@ -195,7 +196,7 @@
 - 接入真实 sqlite-vec/Vec1 package 或平台向量扩展，并验证 iOS/Android 打包。
 - 建立 ANN index build job：可取消、可恢复、可重建、删除书籍后清理。
 - 定义向量维度兼容：不同 embedding model 切换时必须让旧索引失效。
-- 增加召回质量 gate：ANN topK 与当前 exact scan 在固定 fixture 上的重合率。
+- 把真实 ANN backend 接入召回质量 gate：ANN topK 与当前 exact scan 在固定 fixture 上必须达到阈值。
 - 增加移动端资源 gate：大书索引构建、查询延迟、内存峰值、发热和后台中断恢复。
 
 做成后的效果：
