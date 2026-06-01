@@ -1296,6 +1296,17 @@
   "aiShowAtBottom": "在底部显示",
   "aiShowAtRight": "在右侧显示",
   "aiChatEditModelTitle": "编辑模型",
+  "aiChatAddToChatTitle": "添加到对话",
+  "aiChatAttachCamera": "相机",
+  "aiChatAttachPhotos": "照片",
+  "aiChatAttachFiles": "文件",
+  "aiChatWebSearch": "联网搜索",
+  "aiChatExtendedThinking": "深度思考",
+  "aiChatChooseStyle": "选择风格",
+  "aiChatSeminarFeatureTitle": "AI 研讨会",
+  "aiChatSeminarFeatureDesc": "开启批判者、支持者、综合者的多角色讨论。",
+  "aiChatSeminarFeatureAction": "打开",
+  "aiChatAddToProject": "添加到项目",
   "aiChatModelLabel": "模型",
   "settingsAiProviderCenterFetchModels": "获取模型列表",
   "settingsAiProviderCenterFetchModelsEmpty": "该供应商未返回模型列表。",
@@ -1437,6 +1448,45 @@
       "min": {},
       "overlap": {},
       "chapterMax": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerTitle": "全局层索引",
+  "aiLibraryIndexGlobalLayerDesc": "用已有 chunk 补建整本书摘要和关系层，不重新生成 Embedding。",
+  "aiLibraryIndexGlobalLayerChecking": "正在检查全局层状态...",
+  "aiLibraryIndexGlobalLayerReady": "所有已索引书籍都已有全局层。",
+  "aiLibraryIndexGlobalLayerMissing": "{count} 本已索引书籍可从旧的 chunk-only 索引升级。",
+  "@aiLibraryIndexGlobalLayerMissing": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerAction": "补建",
+  "aiLibraryIndexGlobalLayerCancel": "取消",
+  "aiLibraryIndexGlobalLayerRunning": "正在补建全局层 {done}/{total}",
+  "@aiLibraryIndexGlobalLayerRunning": {
+    "placeholders": {
+      "done": {},
+      "total": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerDone": "全局层补建完成：成功 {rebuilt}，失败 {failed}。",
+  "@aiLibraryIndexGlobalLayerDone": {
+    "placeholders": {
+      "rebuilt": {},
+      "failed": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerCancelled": "全局层补建已取消：已完成 {rebuilt}/{total}。",
+  "@aiLibraryIndexGlobalLayerCancelled": {
+    "placeholders": {
+      "rebuilt": {},
+      "total": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerFailed": "全局层补建失败：{message}",
+  "@aiLibraryIndexGlobalLayerFailed": {
+    "placeholders": {
+      "message": {}
     }
   },
   "aiLibraryIndexFilterUnindexed": "未索引",

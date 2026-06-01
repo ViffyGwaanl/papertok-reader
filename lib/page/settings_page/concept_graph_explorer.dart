@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
@@ -524,6 +526,12 @@ class _LocalGraphMap extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+            _ConceptGraphCanvas(
+              nodes: localNodes.take(9).toList(growable: false),
+              edges: dossier.relatedEdges,
+              centerNodeId: dossier.node.id,
+            ),
+            const SizedBox(height: 12),
             _MapNodePill(node: dossier.node, isCenter: true),
             if (directNodes.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -554,6 +562,215 @@ class _LocalGraphMap extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _ConceptGraphCanvas extends StatelessWidget {
+  const _ConceptGraphCanvas({
+    required this.nodes,
+    required this.edges,
+    required this.centerNodeId,
+  });
+
+  final List<ConceptNode> nodes;
+  final List<ConceptEdge> edges;
+  final String centerNodeId;
+
+  @override
+  Widget build(BuildContext context) {
+    if (nodes.isEmpty) return const SizedBox.shrink();
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 180,
+      child: CustomPaint(
+        key: const ValueKey('concept-graph-visual-map'),
+        painter: _ConceptGraphMapPainter(
+          nodes: nodes,
+          edges: edges,
+          centerNodeId: centerNodeId,
+          backgroundColor: ClaudePalette.card(context),
+          edgeColor: colorScheme.outline.withValues(alpha: 0.58),
+          evidenceEdgeColor: colorScheme.primary.withValues(alpha: 0.72),
+          centerColor: colorScheme.primaryContainer,
+          draftNodeColor:
+              colorScheme.secondaryContainer.withValues(alpha: 0.78),
+          formalNodeColor: colorScheme.tertiaryContainer.withValues(alpha: 0.9),
+          nodeBorderColor: colorScheme.outline.withValues(alpha: 0.36),
+          textColor: ClaudePalette.fg(context),
+          mutedTextColor: ClaudePalette.secondary(context),
+        ),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _ConceptGraphMapPainter extends CustomPainter {
+  const _ConceptGraphMapPainter({
+    required this.nodes,
+    required this.edges,
+    required this.centerNodeId,
+    required this.backgroundColor,
+    required this.edgeColor,
+    required this.evidenceEdgeColor,
+    required this.centerColor,
+    required this.draftNodeColor,
+    required this.formalNodeColor,
+    required this.nodeBorderColor,
+    required this.textColor,
+    required this.mutedTextColor,
+  });
+
+  final List<ConceptNode> nodes;
+  final List<ConceptEdge> edges;
+  final String centerNodeId;
+  final Color backgroundColor;
+  final Color edgeColor;
+  final Color evidenceEdgeColor;
+  final Color centerColor;
+  final Color draftNodeColor;
+  final Color formalNodeColor;
+  final Color nodeBorderColor;
+  final Color textColor;
+  final Color mutedTextColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (nodes.isEmpty) return;
+    final bounds = Offset.zero & size;
+    final radius = const Radius.circular(8);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bounds, radius),
+      Paint()..color = backgroundColor,
+    );
+
+    final positions = _layoutNodes(size);
+    final nodeIds = positions.keys.toSet();
+    final edgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+
+    for (final edge in edges) {
+      final source = positions[edge.sourceNodeId];
+      final target = positions[edge.targetNodeId];
+      if (source == null || target == null) continue;
+      edgePaint.color = edge.hasEvidence ? evidenceEdgeColor : edgeColor;
+      canvas.drawLine(source, target, edgePaint);
+      final midpoint = Offset(
+        (source.dx + target.dx) / 2,
+        (source.dy + target.dy) / 2,
+      );
+      canvas.drawCircle(
+        midpoint,
+        edge.hasEvidence ? 3.2 : 2.4,
+        Paint()
+          ..color = edge.hasEvidence ? evidenceEdgeColor : edgeColor
+          ..style = PaintingStyle.fill,
+      );
+    }
+
+    for (final node in nodes.where((node) => nodeIds.contains(node.id))) {
+      final center = positions[node.id]!;
+      final isCenter = node.id == centerNodeId;
+      final nodeRadius = isCenter ? 24.0 : 19.0;
+      final fill = isCenter
+          ? centerColor
+          : node.isFormal
+              ? formalNodeColor
+              : draftNodeColor;
+      canvas.drawCircle(center, nodeRadius, Paint()..color = fill);
+      canvas.drawCircle(
+        center,
+        nodeRadius,
+        Paint()
+          ..color = nodeBorderColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = node.hasEvidence ? 2 : 1,
+      );
+      _paintLabel(
+        canvas,
+        node.label,
+        Offset(center.dx, center.dy + nodeRadius + 10),
+        maxWidth: math.min(104, size.width / 3),
+        color: isCenter ? textColor : mutedTextColor,
+        fontWeight: isCenter ? FontWeight.w700 : FontWeight.w500,
+      );
+    }
+  }
+
+  Map<String, Offset> _layoutNodes(Size size) {
+    final centerNode = nodes.firstWhere(
+      (node) => node.id == centerNodeId,
+      orElse: () => nodes.first,
+    );
+    final others = nodes
+        .where((node) => node.id != centerNode.id)
+        .take(8)
+        .toList(growable: false);
+    final center = Offset(size.width / 2, size.height / 2 - 10);
+    final positions = <String, Offset>{centerNode.id: center};
+    if (others.isEmpty) return positions;
+
+    final ringRadius = math.max(
+      54.0,
+      math.min(size.width, size.height) * 0.34,
+    );
+    for (var i = 0; i < others.length; i++) {
+      final angle = -math.pi / 2 + (math.pi * 2 * i / others.length);
+      final x = center.dx + math.cos(angle) * ringRadius;
+      final y = center.dy + math.sin(angle) * ringRadius;
+      positions[others[i].id] = Offset(
+        x.clamp(34.0, size.width - 34.0).toDouble(),
+        y.clamp(34.0, size.height - 42.0).toDouble(),
+      );
+    }
+    return positions;
+  }
+
+  void _paintLabel(
+    Canvas canvas,
+    String label,
+    Offset anchor, {
+    required double maxWidth,
+    required Color color,
+    required FontWeight fontWeight,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          height: 1.1,
+          fontWeight: fontWeight,
+        ),
+      ),
+      maxLines: 2,
+      ellipsis: '...',
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxWidth);
+    painter.paint(
+      canvas,
+      Offset(anchor.dx - painter.width / 2, anchor.dy),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConceptGraphMapPainter oldDelegate) {
+    return oldDelegate.nodes != nodes ||
+        oldDelegate.edges != edges ||
+        oldDelegate.centerNodeId != centerNodeId ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.edgeColor != edgeColor ||
+        oldDelegate.evidenceEdgeColor != evidenceEdgeColor ||
+        oldDelegate.centerColor != centerColor ||
+        oldDelegate.draftNodeColor != draftNodeColor ||
+        oldDelegate.formalNodeColor != formalNodeColor ||
+        oldDelegate.nodeBorderColor != nodeBorderColor ||
+        oldDelegate.textColor != textColor ||
+        oldDelegate.mutedTextColor != mutedTextColor;
   }
 }
 

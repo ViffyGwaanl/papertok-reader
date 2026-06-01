@@ -1674,6 +1674,17 @@
   "aiShowAtBottom": "Show at Bottom",
   "aiShowAtRight": "Show at Right",
   "aiChatEditModelTitle": "Edit model",
+  "aiChatAddToChatTitle": "Add to Chat",
+  "aiChatAttachCamera": "Camera",
+  "aiChatAttachPhotos": "Photos",
+  "aiChatAttachFiles": "Files",
+  "aiChatWebSearch": "Web search",
+  "aiChatExtendedThinking": "Extended thinking",
+  "aiChatChooseStyle": "Choose style",
+  "aiChatSeminarFeatureTitle": "AI Seminar",
+  "aiChatSeminarFeatureDesc": "Start a multi-role discussion with critical, supportive, and synthesis views.",
+  "aiChatSeminarFeatureAction": "Open",
+  "aiChatAddToProject": "Add to project",
   "aiChatModelLabel": "Model",
   "settingsAiProviderCenterFetchModels": "Fetch models",
   "settingsAiProviderCenterFetchModelsEmpty": "No models returned by this provider.",
@@ -1816,6 +1827,45 @@
       "min": {},
       "overlap": {},
       "chapterMax": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerTitle": "Global layer index",
+  "aiLibraryIndexGlobalLayerDesc": "Build book-level summaries and relationship layers from existing chunks without re-embedding.",
+  "aiLibraryIndexGlobalLayerChecking": "Checking global layer status...",
+  "aiLibraryIndexGlobalLayerReady": "All indexed books already have a global layer.",
+  "aiLibraryIndexGlobalLayerMissing": "{count} indexed book(s) can be upgraded from the old chunk-only index.",
+  "@aiLibraryIndexGlobalLayerMissing": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerAction": "Build",
+  "aiLibraryIndexGlobalLayerCancel": "Cancel",
+  "aiLibraryIndexGlobalLayerRunning": "Building global layer {done}/{total}",
+  "@aiLibraryIndexGlobalLayerRunning": {
+    "placeholders": {
+      "done": {},
+      "total": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerDone": "Global layer built: {rebuilt} done, {failed} failed.",
+  "@aiLibraryIndexGlobalLayerDone": {
+    "placeholders": {
+      "rebuilt": {},
+      "failed": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerCancelled": "Global layer build cancelled after {rebuilt}/{total}.",
+  "@aiLibraryIndexGlobalLayerCancelled": {
+    "placeholders": {
+      "rebuilt": {},
+      "total": {}
+    }
+  },
+  "aiLibraryIndexGlobalLayerFailed": "Global layer build failed: {message}",
+  "@aiLibraryIndexGlobalLayerFailed": {
+    "placeholders": {
+      "message": {}
     }
   },
   "aiLibraryIndexFilterUnindexed": "Unindexed",

@@ -1,7 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:sqflite/sqflite.dart';
+
+typedef AiGlobalIndexBackfillCancellationCheck = bool Function();
+typedef AiGlobalIndexBackfillProgressCallback = void Function(
+  AiGlobalIndexBackfillProgress progress,
+);
 
 class AiGlobalIndexStats {
   const AiGlobalIndexStats({
@@ -17,11 +23,173 @@ class AiGlobalIndexStats {
   final int graphCommunities;
 }
 
+class AiGlobalIndexBookLayerStatus {
+  const AiGlobalIndexBookLayerStatus({
+    required this.bookId,
+    required this.chunkCount,
+    required this.raptorNodes,
+    required this.graphNodes,
+    required this.graphEdges,
+    required this.graphCommunities,
+  });
+
+  final int bookId;
+  final int chunkCount;
+  final int raptorNodes;
+  final int graphNodes;
+  final int graphEdges;
+  final int graphCommunities;
+
+  /// RAPTOR nodes are the durable marker that a book has a global layer.
+  ///
+  /// Graph nodes can legitimately be empty for non-English or very short books
+  /// with the current deterministic extractor, so they must not be used as the
+  /// "missing global layer" signal.
+  bool get hasGlobalLayer => raptorNodes > 0;
+}
+
+class AiGlobalIndexBackfillProgress {
+  const AiGlobalIndexBackfillProgress({
+    required this.bookId,
+    required this.done,
+    required this.total,
+    required this.stats,
+  });
+
+  final int bookId;
+  final int done;
+  final int total;
+  final AiGlobalIndexStats stats;
+
+  double get progress {
+    if (total <= 0) return 0;
+    return (done / total).clamp(0.0, 1.0).toDouble();
+  }
+}
+
+class AiGlobalIndexBackfillResult {
+  const AiGlobalIndexBackfillResult({
+    required this.totalCandidates,
+    required this.rebuiltBookIds,
+    required this.failedBookIds,
+    this.cancelled = false,
+  });
+
+  final int totalCandidates;
+  final List<int> rebuiltBookIds;
+  final List<int> failedBookIds;
+  final bool cancelled;
+
+  bool get ok => failedBookIds.isEmpty;
+}
+
 class AiGlobalIndexBuilder {
   AiGlobalIndexBuilder({AiIndexDatabase? database})
       : _database = database ?? AiIndexDatabase.instance;
 
   final AiIndexDatabase _database;
+
+  Future<List<AiGlobalIndexBookLayerStatus>> listBooksMissingGlobalLayer({
+    int limit = 500,
+  }) async {
+    final db = await _database.database;
+    final rows = await db.rawQuery(
+      '''
+SELECT
+  b.book_id,
+  COALESCE(b.chunk_count, 0) AS chunk_count,
+  COALESCE(r.raptor_nodes, 0) AS raptor_nodes,
+  COALESCE(gn.graph_nodes, 0) AS graph_nodes,
+  COALESCE(ge.graph_edges, 0) AS graph_edges,
+  COALESCE(gc.graph_communities, 0) AS graph_communities
+FROM ai_book_index b
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS raptor_nodes
+  FROM ai_raptor_nodes
+  GROUP BY book_id
+) r ON r.book_id = b.book_id
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS graph_nodes
+  FROM ai_graph_nodes
+  GROUP BY book_id
+) gn ON gn.book_id = b.book_id
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS graph_edges
+  FROM ai_graph_edges
+  GROUP BY book_id
+) ge ON ge.book_id = b.book_id
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS graph_communities
+  FROM ai_graph_communities
+  GROUP BY book_id
+) gc ON gc.book_id = b.book_id
+WHERE COALESCE(b.chunk_count, 0) > 0
+  AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
+  AND COALESCE(r.raptor_nodes, 0) = 0
+ORDER BY COALESCE(b.indexed_at, b.updated_at, b.created_at, 0) DESC,
+  b.book_id ASC
+LIMIT ?
+''',
+      [limit.clamp(1, 5000)],
+    );
+
+    return rows.map(_mapLayerStatus).toList(growable: false);
+  }
+
+  Future<AiGlobalIndexBackfillResult> backfillMissingGlobalLayers({
+    int limit = 500,
+    int? nowMs,
+    AiGlobalIndexBackfillCancellationCheck? shouldCancel,
+    AiGlobalIndexBackfillProgressCallback? onProgress,
+  }) async {
+    final candidates = await listBooksMissingGlobalLayer(limit: limit);
+    final rebuilt = <int>[];
+    final failed = <int>[];
+    var cancelled = false;
+
+    for (var i = 0; i < candidates.length; i++) {
+      final status = candidates[i];
+      if (shouldCancel?.call() == true) {
+        cancelled = true;
+        break;
+      }
+      try {
+        final stats = await rebuildBook(bookId: status.bookId, nowMs: nowMs);
+        rebuilt.add(status.bookId);
+        onProgress?.call(
+          AiGlobalIndexBackfillProgress(
+            bookId: status.bookId,
+            done: i + 1,
+            total: candidates.length,
+            stats: stats,
+          ),
+        );
+      } catch (e) {
+        failed.add(status.bookId);
+        AnxLog.warning(
+          'AiGlobalIndex: backfill failed bookId=${status.bookId} error=$e',
+        );
+      }
+    }
+
+    return AiGlobalIndexBackfillResult(
+      totalCandidates: candidates.length,
+      rebuiltBookIds: rebuilt,
+      failedBookIds: failed,
+      cancelled: cancelled,
+    );
+  }
+
+  AiGlobalIndexBookLayerStatus _mapLayerStatus(Map<String, Object?> row) {
+    return AiGlobalIndexBookLayerStatus(
+      bookId: (row['book_id'] as num?)?.toInt() ?? 0,
+      chunkCount: (row['chunk_count'] as num?)?.toInt() ?? 0,
+      raptorNodes: (row['raptor_nodes'] as num?)?.toInt() ?? 0,
+      graphNodes: (row['graph_nodes'] as num?)?.toInt() ?? 0,
+      graphEdges: (row['graph_edges'] as num?)?.toInt() ?? 0,
+      graphCommunities: (row['graph_communities'] as num?)?.toInt() ?? 0,
+    );
+  }
 
   Future<AiGlobalIndexStats> rebuildBook({
     required int bookId,

@@ -106,6 +106,9 @@ void main() {
     expect(find.text('1 two-hop'), findsOneWidget);
     expect(find.text('1 evidence link'), findsOneWidget);
     expect(find.text('4 draft items'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('concept-graph-visual-map')), findsOneWidget);
+    expect(find.byType(CustomPaint), findsWidgets);
     expect(find.text('Attention -> Memory'), findsWidgets);
     expect(find.text('Recall'), findsWidgets);
   });

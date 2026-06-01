@@ -16,6 +16,7 @@ import 'package:papertok_reader/service/ai/ai_history.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/enums/ai_thinking_mode.dart';
 import 'package:papertok_reader/models/current_reading_state.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/memory/memory_candidate.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_policy.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
@@ -46,6 +47,7 @@ import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/common/pt_collapsible_card.dart';
 import 'package:papertok_reader/widgets/common/anx_segmented_button.dart';
 import 'package:papertok_reader/utils/get_path/get_cache_dir.dart';
+import 'package:papertok_reader/utils/page_transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1813,117 +1815,194 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       );
     }
 
+    Widget seminarFeatureCard(BuildContext sheetContext) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            Navigator.of(sheetContext).pop();
+            _openSeminarRuntimeFromChat();
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.22),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.groups_2_outlined,
+                  size: 22,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.aiChatSeminarFeatureTitle,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: ClaudePalette.fg(context),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.aiChatSeminarFeatureDesc,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.25,
+                          color: ClaudePalette.secondary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.aiChatSeminarFeatureAction,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     await PTBottomSheet.show<void>(
       context,
-      title: 'Add to Chat',
+      title: l10n.aiChatAddToChatTitle,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setLocalState) {
             final provider = _currentProvider;
             final thinkingMode = _thinkingModeForProvider(provider.id);
             final thinkingOn = thinkingMode != AiThinkingMode.off;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    bigCard(
-                      icon: Icons.photo_camera_outlined,
-                      label: 'Camera',
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        _showAttachmentPicker();
-                      },
-                    ),
-                    const SizedBox(width: 10),
-                    bigCard(
-                      icon: Icons.photo_library_outlined,
-                      label: 'Photos',
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        _showAttachmentPicker();
-                      },
-                    ),
-                    const SizedBox(width: 10),
-                    bigCard(
-                      icon: Icons.folder_outlined,
-                      label: 'Files',
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        _showAttachmentPicker();
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Divider(height: 1, color: ClaudePalette.divider(context)),
-                const SizedBox(height: 6),
-                toggleRow(
-                  icon: Icons.travel_explore_outlined,
-                  title: 'Web search',
-                  value: _webSearchEnabled,
-                  onChanged: (v) {
-                    setLocalState(() => _webSearchEnabled = v);
-                    setState(() {});
-                  },
-                ),
-                toggleRow(
-                  icon: Icons.psychology_outlined,
-                  title: 'Extended thinking',
-                  value: thinkingOn,
-                  onChanged: (v) {
-                    final next = Map<String, String>.from(
-                      Prefs().getAiConfig(provider.id),
-                    );
-                    next['thinking_mode'] = aiThinkingModeToString(
-                      v ? AiThinkingMode.high : AiThinkingMode.off,
-                    );
-                    Prefs().saveAiConfig(provider.id, next);
-                    setLocalState(() {});
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 6),
-                Divider(height: 1, color: ClaudePalette.divider(context)),
-                const SizedBox(height: 6),
-                navRow(
-                  icon: Icons.style_outlined,
-                  title: 'Choose style',
-                  trailingValue: activeSkill == null
-                      ? l10n.aiSkillNone
-                      : _localizedSkillName(context, activeSkill),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _showSkillPickerSheet();
-                  },
-                ),
-                navRow(
-                  icon: Icons.tune,
-                  title: l10n.aiChatEditModelTitle,
-                  trailingValue: _modelLabel(_selectedProviderId),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _editCurrentModel();
-                  },
-                ),
-                navRow(
-                  icon: Icons.psychology_alt_outlined,
-                  title: l10n.aiThinkingTitle,
-                  trailingValue: _thinkingModeLabel(thinkingMode, l10n),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _editThinkingMode();
-                  },
-                ),
-                navRow(
-                  icon: Icons.folder_special_outlined,
-                  title: 'Add to project',
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                  },
-                ),
-              ],
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      bigCard(
+                        icon: Icons.photo_camera_outlined,
+                        label: l10n.aiChatAttachCamera,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _showAttachmentPicker();
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      bigCard(
+                        icon: Icons.photo_library_outlined,
+                        label: l10n.aiChatAttachPhotos,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _showAttachmentPicker();
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      bigCard(
+                        icon: Icons.folder_outlined,
+                        label: l10n.aiChatAttachFiles,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _showAttachmentPicker();
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Divider(height: 1, color: ClaudePalette.divider(context)),
+                  const SizedBox(height: 6),
+                  toggleRow(
+                    icon: Icons.travel_explore_outlined,
+                    title: l10n.aiChatWebSearch,
+                    value: _webSearchEnabled,
+                    onChanged: (v) {
+                      setLocalState(() => _webSearchEnabled = v);
+                      setState(() {});
+                    },
+                  ),
+                  toggleRow(
+                    icon: Icons.psychology_outlined,
+                    title: l10n.aiChatExtendedThinking,
+                    value: thinkingOn,
+                    onChanged: (v) {
+                      final next = Map<String, String>.from(
+                        Prefs().getAiConfig(provider.id),
+                      );
+                      next['thinking_mode'] = aiThinkingModeToString(
+                        v ? AiThinkingMode.high : AiThinkingMode.off,
+                      );
+                      Prefs().saveAiConfig(provider.id, next);
+                      setLocalState(() {});
+                      setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 6),
+                  Divider(height: 1, color: ClaudePalette.divider(context)),
+                  const SizedBox(height: 6),
+                  seminarFeatureCard(ctx),
+                  const SizedBox(height: 6),
+                  navRow(
+                    icon: Icons.style_outlined,
+                    title: l10n.aiChatChooseStyle,
+                    trailingValue: activeSkill == null
+                        ? l10n.aiSkillNone
+                        : _localizedSkillName(context, activeSkill),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _showSkillPickerSheet();
+                    },
+                  ),
+                  navRow(
+                    icon: Icons.tune,
+                    title: l10n.aiChatEditModelTitle,
+                    trailingValue: _modelLabel(_selectedProviderId),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _editCurrentModel();
+                    },
+                  ),
+                  navRow(
+                    icon: Icons.psychology_alt_outlined,
+                    title: l10n.aiThinkingTitle,
+                    trailingValue: _thinkingModeLabel(thinkingMode, l10n),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _editThinkingMode();
+                    },
+                  ),
+                  navRow(
+                    icon: Icons.folder_special_outlined,
+                    title: l10n.aiChatAddToProject,
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -1936,7 +2015,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final activeId = Prefs().activeAiSkillId;
     await PTBottomSheet.show<void>(
       context,
-      title: 'Choose style',
+      title: l10n.aiChatChooseStyle,
       builder: (ctx) {
         final skills = AiSkillRegistry.allSkills();
         return Column(
@@ -1969,6 +2048,25 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ],
         );
       },
+    );
+  }
+
+  void _openSeminarRuntimeFromChat() {
+    if (!mounted) return;
+    final reading = ref.read(currentReadingProvider);
+    final question = inputController.text.trim();
+    final sourceRef = _draftSourceRefSeedText == inputController.text
+        ? _draftSourceRef
+        : null;
+
+    Navigator.of(context).push(
+      CupertinoStyleRoute(
+        page: AiSeminarRuntimePage(
+          initialQuestion: question.isEmpty ? null : question,
+          bookId: reading.book?.id,
+          initialSourceRef: sourceRef,
+        ),
+      ),
     );
   }
 

@@ -8,6 +8,7 @@ import 'package:papertok_reader/service/ai/tools/repository/books_repository.dar
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/service/rag/ai_book_indexer.dart';
 import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
+import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
 import 'package:papertok_reader/service/rag/library/ai_library_index_job.dart';
@@ -58,17 +59,22 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   final Set<int> _selectedBookIds = {};
 
   Future<List<_BookRow>>? _booksFuture;
+  Future<List<AiGlobalIndexBookLayerStatus>>? _globalLayerFuture;
 
   Timer? _refreshDebounce;
   Timer? _activeQueueHeartbeatTimer;
   int _loadToken = 0;
   List<int> _currentVisibleBookIds = const [];
+  bool _globalLayerBackfilling = false;
+  bool _globalLayerCancelRequested = false;
+  AiGlobalIndexBackfillProgress? _globalLayerProgress;
 
   @override
   void initState() {
     super.initState();
 
     _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
+    _globalLayerFuture = _loadMissingGlobalLayers();
   }
 
   @override
@@ -84,6 +90,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       if (!mounted) return;
       setState(() {
         _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
+        _globalLayerFuture = _loadMissingGlobalLayers();
       });
     });
   }
@@ -206,6 +213,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
               ),
             ),
             _buildConfigTile(context),
+            _buildGlobalLayerTile(context),
             _buildFilterBar(context),
             const Divider(height: 1),
             _buildQueueSection(context, queue, queueSvc),
@@ -278,6 +286,124 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
       isThreeLine: true,
       onTap: () => _showIndexConfigDialog(context),
     );
+  }
+
+  Future<List<AiGlobalIndexBookLayerStatus>> _loadMissingGlobalLayers() {
+    return AiGlobalIndexBuilder().listBooksMissingGlobalLayer(
+      limit: _bookListLimit * 10,
+    );
+  }
+
+  Widget _buildGlobalLayerTile(BuildContext context) {
+    final l10n = L10n.of(context);
+    final future = _globalLayerFuture ?? _loadMissingGlobalLayers();
+    _globalLayerFuture ??= future;
+
+    return FutureBuilder<List<AiGlobalIndexBookLayerStatus>>(
+      future: future,
+      builder: (context, snapshot) {
+        final missing = snapshot.data ?? const <AiGlobalIndexBookLayerStatus>[];
+        final missingCount = missing.length;
+        final progress = _globalLayerProgress;
+        final subtitle = _globalLayerBackfilling && progress != null
+            ? l10n.aiLibraryIndexGlobalLayerRunning(
+                progress.done,
+                progress.total,
+              )
+            : snapshot.connectionState == ConnectionState.waiting &&
+                    snapshot.data == null
+                ? l10n.aiLibraryIndexGlobalLayerChecking
+                : missingCount <= 0
+                    ? l10n.aiLibraryIndexGlobalLayerReady
+                    : l10n.aiLibraryIndexGlobalLayerMissing(missingCount);
+
+        return ListTile(
+          leading: const Icon(Icons.account_tree_outlined),
+          title: Text(l10n.aiLibraryIndexGlobalLayerTitle),
+          subtitle: Text(
+            '${l10n.aiLibraryIndexGlobalLayerDesc}\n$subtitle',
+          ),
+          isThreeLine: true,
+          trailing: _globalLayerBackfilling
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _globalLayerCancelRequested
+                          ? null
+                          : () => setState(
+                                () => _globalLayerCancelRequested = true,
+                              ),
+                      child: Text(l10n.aiLibraryIndexGlobalLayerCancel),
+                    ),
+                  ],
+                )
+              : TextButton(
+                  onPressed: missingCount <= 0
+                      ? null
+                      : () => unawaited(_backfillGlobalLayers()),
+                  child: Text(l10n.aiLibraryIndexGlobalLayerAction),
+                ),
+        );
+      },
+    );
+  }
+
+  Future<void> _backfillGlobalLayers() async {
+    if (_globalLayerBackfilling) return;
+    final l10n = L10n.of(context);
+
+    setState(() {
+      _globalLayerBackfilling = true;
+      _globalLayerCancelRequested = false;
+      _globalLayerProgress = null;
+    });
+
+    try {
+      final result = await AiGlobalIndexBuilder().backfillMissingGlobalLayers(
+        limit: _bookListLimit * 10,
+        shouldCancel: () => _globalLayerCancelRequested,
+        onProgress: (progress) {
+          if (!mounted) return;
+          setState(() => _globalLayerProgress = progress);
+        },
+      );
+      if (!mounted) return;
+
+      if (result.cancelled) {
+        AnxToast.show(
+          l10n.aiLibraryIndexGlobalLayerCancelled(
+            result.rebuiltBookIds.length,
+            result.totalCandidates,
+          ),
+        );
+      } else {
+        AnxToast.show(
+          l10n.aiLibraryIndexGlobalLayerDone(
+            result.rebuiltBookIds.length,
+            result.failedBookIds.length,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      AnxToast.show(l10n.aiLibraryIndexGlobalLayerFailed(e.toString()));
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _globalLayerBackfilling = false;
+        _globalLayerCancelRequested = false;
+        _globalLayerProgress = null;
+        _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
+        _globalLayerFuture = _loadMissingGlobalLayers();
+      });
+    }
   }
 
   bool _isZh(BuildContext context) {

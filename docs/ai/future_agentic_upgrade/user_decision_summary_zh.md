@@ -25,13 +25,14 @@
 | Review Inbox | `Settings -> AI -> Review inbox` | 所有 AI 生成的卡片、记忆、图谱关系、flashcard、同步冲突都先进入审批入口。 | 空 inbox 只代表没有 producer 写入，不代表入口不存在。 |
 | Memory 候选审核 | AI Chat 回答旁书签图标 -> `Add to Review inbox` | 有价值的聊天内容先进入 Review，再由用户决定写入 daily/long-term memory。 | Apply 才写 Markdown memory；Dismiss 不写 memory。 |
 | Memory 来源审计 | 首页 `Memory / 记忆` tab -> 条目详情 | 已应用的 memory 能显示 evidence、来源状态和可跳回原文的链接。 | 不往 Markdown 写隐藏来源字段；只做只读投影。 |
-| Concept Graph 局部探索 | `Settings -> AI -> Concept graph`，或阅读页选中文本 -> `图谱` | 像 WikiLinks 一样围绕局部概念看关联、证据、草稿关系、孤立节点和断链。 | 图谱是派生层；用户确认过的关系才是资产；不做无限画布。 |
+| Concept Graph 局部探索 | `Settings -> AI -> Concept graph`，或阅读页选中文本 -> `图谱` | 像 WikiLinks 一样围绕局部概念看节点-连线图、关联、证据、草稿关系、孤立节点和断链。 | 图谱是派生层；用户确认过的关系才是资产；当前是轻量局部 canvas，不做无限画布。 |
 | RAG 结果生成知识卡 | Concept Graph 空态 -> `知识卡` | 没有现成概念时，从本地 RAG 证据生成待审知识卡。 | 只接受带 traceable chunk SourceRef 的结果。 |
 | Spaced Review | `Settings -> AI -> Spaced review` | 已应用知识卡或 Seminar flashcard 可以进入复习队列，按 Again/Hard/Good/Easy 更新间隔。 | 跨设备复习同步还没接。 |
 | Knowledge Sync / Export | `Settings -> AI -> Knowledge sync/export` | 可导出 manifest、Markdown、HTML report、Anki TSV、sync bundle；可预览远端 bundle，安全冲突进 Review。 | 这是前台安全编排，不是完整后台云同步。 |
 | Custom Skills | `Settings -> AI -> 自定义技能`，再到 `当前技能` 选择 | 用户可导入受治理的 JSON skill，让 AI 在指定 scene 中追加行为和只读工具。 | 写工具、递归 sub-agent、未知字段和禁用 skill 都不会注入运行时。 |
 | OpenAI Responses 兼容诊断 | `Settings -> AI -> Provider Center` 配置 Responses provider | 官方支持 `previous_response_id` 的 provider 继续走 server-side continuation；拒绝该参数的兼容网关会自动降级重试，并在错误里给出 endpoint/model/参数诊断。 | 只对明确 `previous_response_id` unsupported 的 HTTP 400 重试；非该错误保留原始失败。 |
 | 当前书语义检索保护 | 阅读页搜索、Seminar evidence、`semantic_search_current_book` 工具 | 当前书向量搜索改为分页、串行、可取消、带进度，并优先 bounded FTS/BM25 候选，降低 OOM、发热和掉帧风险。 | 这是保护层，不是真 ANN 向量索引；无候选时只做预算内 fallback 扫描。 |
+| 旧索引全局层补建 | `Settings -> AI Index / Library Index` -> `全局层索引` -> `补建` | 用已有 chunk 给旧索引书籍补建 RAPTOR 全局摘要层和当前 GraphRAG 派生层，页面显示进度并可取消。 | 不重新生成 embedding；不是 sqlite-vec/ANN；当前纯中文 graph node 抽取仍需后续增强。 |
 
 ## 3. 已做但用户不直接感知的功能
 
@@ -171,7 +172,7 @@
 
 当前已经有：
 
-- Concept Graph 局部探索。
+- Concept Graph 局部探索和轻量节点-连线 canvas。
 - dossier。
 - 局部路径。
 - evidence badge。
