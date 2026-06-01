@@ -129,7 +129,9 @@ void main() {
         ),
       );
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
+      expect(find.byType(AiChatStream), findsOneWidget);
       await tester.tap(find.byIcon(Icons.add_rounded));
       await tester.pumpAndSettle();
       await tester.tap(find.text('选择风格'));

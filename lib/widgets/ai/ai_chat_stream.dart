@@ -16,6 +16,7 @@ import 'package:papertok_reader/service/ai/ai_history.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/enums/ai_thinking_mode.dart';
 import 'package:papertok_reader/models/current_reading_state.dart';
+import 'package:papertok_reader/page/settings_page/custom_skills.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/memory/memory_candidate.dart';
@@ -61,11 +62,12 @@ import 'package:photo_view/photo_view_gallery.dart';
 
 import 'package:papertok_reader/models/ai_quick_prompt_chip.dart';
 
-class _SeminarSkillPickerRow extends StatelessWidget {
-  const _SeminarSkillPickerRow({
+class _ConfigurableSkillPickerRow extends StatelessWidget {
+  const _ConfigurableSkillPickerRow({
     required this.selected,
     required this.title,
     required this.subtitle,
+    required this.icon,
     required this.configLabel,
     required this.onSelect,
     required this.onConfigure,
@@ -74,6 +76,7 @@ class _SeminarSkillPickerRow extends StatelessWidget {
   final bool selected;
   final String title;
   final String subtitle;
+  final IconData icon;
   final String configLabel;
   final VoidCallback onSelect;
   final VoidCallback onConfigure;
@@ -101,7 +104,7 @@ class _SeminarSkillPickerRow extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                Icons.groups_2_outlined,
+                icon,
                 size: 20,
                 color: selected
                     ? ClaudePalette.accent(context)
@@ -2127,8 +2130,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       title: l10n.aiChatChooseStyle,
       builder: (ctx) {
         final skills = AiSkillRegistry.allSkills();
-        return Column(
-          mainAxisSize: MainAxisSize.min,
+        return ListView(
+          shrinkWrap: true,
           children: [
             PTPickerRow<String>(
               value: '',
@@ -2143,10 +2146,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
             for (final skill in skills)
               if (skill.id == 'seminar_mode')
-                _SeminarSkillPickerRow(
+                _ConfigurableSkillPickerRow(
                   selected: activeId == skill.id,
                   title: _localizedSkillName(context, skill),
                   subtitle: _localizedSkillDesc(context, skill),
+                  icon: Icons.groups_2_outlined,
                   configLabel: l10n.seminarConfigTitle,
                   onSelect: () {
                     Navigator.of(ctx).pop();
@@ -2161,6 +2165,27 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     Navigator.of(context).push(
                       CupertinoStyleRoute(
                         page: const AiSeminarConfigPage(),
+                      ),
+                    );
+                  },
+                )
+              else if (!skill.isBuiltIn)
+                _ConfigurableSkillPickerRow(
+                  selected: activeId == skill.id,
+                  title: _localizedSkillName(context, skill),
+                  subtitle: _localizedSkillDesc(context, skill),
+                  icon: Icons.extension_outlined,
+                  configLabel: l10n.settingsAiCustomSkillsTitle,
+                  onSelect: () {
+                    Prefs().activeAiSkillId = skill.id;
+                    setState(() {});
+                    Navigator.of(ctx).pop();
+                  },
+                  onConfigure: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).push(
+                      CupertinoStyleRoute(
+                        page: const CustomSkillsPage(),
                       ),
                     );
                   },
