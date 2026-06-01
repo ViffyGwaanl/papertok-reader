@@ -356,11 +356,15 @@ class ExcerptMenuState extends State<ExcerptMenu> {
 
   void _openConceptGraphFromSelection() {
     final query = widget.annoContent.trim();
+    final sourceRef = _selectionSourceRef();
+    final bookId =
+        sourceRef?.bookId ?? epubPlayerKey.currentState?.widget.book.id;
     widget.onClose();
     Navigator.of(context).push(
       CupertinoStyleRoute(
         page: ConceptGraphExplorerPage(
           initialQuery: query.isEmpty ? null : query,
+          bookId: bookId,
         ),
       ),
     );

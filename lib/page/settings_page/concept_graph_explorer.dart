@@ -9,16 +9,19 @@ import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaf
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
+import 'package:papertok_reader/service/knowledge/derived_book_concept_graph_loader.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 
 class ConceptGraphExplorerPage extends ConsumerStatefulWidget {
   const ConceptGraphExplorerPage({
     super.key,
     this.initialQuery,
+    this.bookId,
     this.sourceOpener,
   });
 
   final String? initialQuery;
+  final int? bookId;
   final PaperReaderSourceOpener? sourceOpener;
 
   @override
@@ -82,6 +85,7 @@ class _ConceptGraphExplorerPageState
                 initialQuery: initialQuery == null || initialQuery.isEmpty
                     ? null
                     : initialQuery,
+                bookId: widget.bookId,
                 sourceOpener: widget.sourceOpener ?? openPaperReaderSource,
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -99,21 +103,37 @@ class _ConceptGraphBody extends StatelessWidget {
     required this.nodes,
     required this.state,
     required this.initialQuery,
+    required this.bookId,
     required this.sourceOpener,
   });
 
   final List<ConceptNode> nodes;
   final ConceptGraphExplorerState state;
   final String? initialQuery;
+  final int? bookId;
   final PaperReaderSourceOpener sourceOpener;
 
   @override
   Widget build(BuildContext context) {
     final visibleNodes = _filterNodesForQuery(nodes, initialQuery);
+    List<Widget> derivedSection({required bool compact}) {
+      if (bookId == null || bookId! <= 0) return const <Widget>[];
+      return <Widget>[
+        _DerivedBookGraphSection(bookId: bookId!, compact: compact),
+        const SizedBox(height: 12),
+      ];
+    }
+
     if (visibleNodes.isEmpty) {
-      return _EmptyGraph(
-        selectionQuery: initialQuery,
-        state: state,
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        children: [
+          ...derivedSection(compact: false),
+          _EmptyGraph(
+            selectionQuery: initialQuery,
+            state: state,
+          ),
+        ],
       );
     }
     final actionFeedback = _conceptGraphActionFeedback(context, state);
@@ -124,6 +144,7 @@ class _ConceptGraphBody extends StatelessWidget {
         if (wide) {
           return Column(
             children: [
+              ...derivedSection(compact: true),
               ...actionFeedback,
               Expanded(
                 child: Row(
@@ -153,6 +174,7 @@ class _ConceptGraphBody extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
+            ...derivedSection(compact: false),
             ...actionFeedback,
             SizedBox(
               height: 300,
@@ -222,6 +244,161 @@ class _NodeListPane extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _DerivedBookGraphSection extends ConsumerStatefulWidget {
+  const _DerivedBookGraphSection({
+    required this.bookId,
+    this.compact = false,
+  });
+
+  final int bookId;
+  final bool compact;
+
+  @override
+  ConsumerState<_DerivedBookGraphSection> createState() =>
+      _DerivedBookGraphSectionState();
+}
+
+class _DerivedBookGraphSectionState
+    extends ConsumerState<_DerivedBookGraphSection> {
+  late Future<DerivedBookConceptGraphSnapshot> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
+  void didUpdateWidget(_DerivedBookGraphSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bookId != widget.bookId) {
+      _future = _load();
+    }
+  }
+
+  Future<DerivedBookConceptGraphSnapshot> _load() {
+    return ref
+        .read(conceptGraphDerivedBookLoaderProvider)
+        .loadBook(bookId: widget.bookId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    return FutureBuilder<DerivedBookConceptGraphSnapshot>(
+      future: _future,
+      builder: (context, snapshot) {
+        final graph = snapshot.data;
+        final loading = snapshot.connectionState != ConnectionState.done;
+        final title = zh ? '全书派生图谱' : 'Full-book derived graph';
+        final description = zh
+            ? '来自当前书全局层索引的只读 GraphRAG 关系预览；它是可重建缓存，不会直接写入你的正式知识资产。'
+            : 'Read-only GraphRAG relationship preview from this book global layer; it is rebuildable cache and is not saved as confirmed knowledge.';
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: ClaudePalette.elevated(context),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.account_tree_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    if (loading)
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else if (graph != null && !graph.isEmpty)
+                      Wrap(
+                        spacing: 6,
+                        children: [
+                          _TinyChip(label: _nodeCountLabel(context, graph)),
+                          _TinyChip(label: _edgeCountLabel(context, graph)),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: ClaudePalette.secondary(context),
+                      ),
+                ),
+                if (!loading && graph != null && graph.isEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    zh
+                        ? '当前书还没有可展示的全书关系图。可先在 AI Index / Library Index 中补建全局层索引。'
+                        : 'No full-book relationship graph is available yet. Build the global layer from AI Index / Library Index first.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                        ),
+                  ),
+                ],
+                if (graph != null && !graph.isEmpty) ...[
+                  const SizedBox(height: 12),
+                  _ConceptGraphCanvas(
+                    paintKey: const ValueKey('full-book-derived-graph-map'),
+                    height: widget.compact ? 120 : 180,
+                    nodes: graph.nodes.take(10).toList(growable: false),
+                    edges: graph.edges,
+                    centerNodeId: graph.nodes.first.id,
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final node in graph.nodes.take(8))
+                        _MapNodePill(node: node),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _nodeCountLabel(
+    BuildContext context,
+    DerivedBookConceptGraphSnapshot graph,
+  ) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    if (zh) return '${graph.nodes.length} 个节点';
+    return graph.nodes.length == 1 ? '1 node' : '${graph.nodes.length} nodes';
+  }
+
+  String _edgeCountLabel(
+    BuildContext context,
+    DerivedBookConceptGraphSnapshot graph,
+  ) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    if (zh) return '${graph.edges.length} 条关系';
+    return graph.edges.length == 1
+        ? '1 relation'
+        : '${graph.edges.length} relations';
   }
 }
 
@@ -567,11 +744,15 @@ class _LocalGraphMap extends StatelessWidget {
 
 class _ConceptGraphCanvas extends StatelessWidget {
   const _ConceptGraphCanvas({
+    this.paintKey = const ValueKey('concept-graph-visual-map'),
+    this.height = 180,
     required this.nodes,
     required this.edges,
     required this.centerNodeId,
   });
 
+  final Key paintKey;
+  final double height;
   final List<ConceptNode> nodes;
   final List<ConceptEdge> edges;
   final String centerNodeId;
@@ -581,9 +762,9 @@ class _ConceptGraphCanvas extends StatelessWidget {
     if (nodes.isEmpty) return const SizedBox.shrink();
     final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
-      height: 180,
+      height: height,
       child: CustomPaint(
-        key: const ValueKey('concept-graph-visual-map'),
+        key: paintKey,
         painter: _ConceptGraphMapPainter(
           nodes: nodes,
           edges: edges,

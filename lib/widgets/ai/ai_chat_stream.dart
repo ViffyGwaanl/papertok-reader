@@ -16,6 +16,7 @@ import 'package:papertok_reader/service/ai/ai_history.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/enums/ai_thinking_mode.dart';
 import 'package:papertok_reader/models/current_reading_state.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/memory/memory_candidate.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_policy.dart';
@@ -58,6 +59,109 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
 import 'package:papertok_reader/models/ai_quick_prompt_chip.dart';
+
+class _SeminarSkillPickerRow extends StatelessWidget {
+  const _SeminarSkillPickerRow({
+    required this.selected,
+    required this.title,
+    required this.subtitle,
+    required this.configLabel,
+    required this.onSelect,
+    required this.onConfigure,
+  });
+
+  final bool selected;
+  final String title;
+  final String subtitle;
+  final String configLabel;
+  final VoidCallback onSelect;
+  final VoidCallback onConfigure;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onSelect();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: selected
+                ? ClaudePalette.accentTint(context)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.groups_2_outlined,
+                size: 20,
+                color: selected
+                    ? ClaudePalette.accent(context)
+                    : ClaudePalette.secondary(context),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.w400,
+                        color: ClaudePalette.fg(context),
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: ClaudePalette.secondary(context),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (selected) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.check_rounded,
+                  size: 20,
+                  color: ClaudePalette.accent(context),
+                ),
+              ],
+              const SizedBox(width: 8),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: onConfigure,
+                icon: const Icon(Icons.tune_outlined, size: 16),
+                label: Text(configLabel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class AiChatStream extends ConsumerStatefulWidget {
   const AiChatStream({
@@ -2033,18 +2137,39 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               },
             ),
             for (final skill in skills)
-              PTPickerRow<String>(
-                value: skill.id,
-                groupValue: activeId ?? '',
-                title: _localizedSkillName(context, skill),
-                subtitle: _localizedSkillDesc(context, skill),
-                leading: Icons.auto_fix_high,
-                onChanged: (v) {
-                  Prefs().activeAiSkillId = v;
-                  setState(() {});
-                  Navigator.of(ctx).pop();
-                },
-              ),
+              if (skill.id == 'seminar_mode')
+                _SeminarSkillPickerRow(
+                  selected: activeId == skill.id,
+                  title: _localizedSkillName(context, skill),
+                  subtitle: _localizedSkillDesc(context, skill),
+                  configLabel: l10n.seminarConfigTitle,
+                  onSelect: () {
+                    Prefs().activeAiSkillId = skill.id;
+                    setState(() {});
+                    Navigator.of(ctx).pop();
+                  },
+                  onConfigure: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).push(
+                      CupertinoStyleRoute(
+                        page: const AiSeminarConfigPage(),
+                      ),
+                    );
+                  },
+                )
+              else
+                PTPickerRow<String>(
+                  value: skill.id,
+                  groupValue: activeId ?? '',
+                  title: _localizedSkillName(context, skill),
+                  subtitle: _localizedSkillDesc(context, skill),
+                  leading: Icons.auto_fix_high,
+                  onChanged: (v) {
+                    Prefs().activeAiSkillId = v;
+                    setState(() {});
+                    Navigator.of(ctx).pop();
+                  },
+                ),
           ],
         );
       },

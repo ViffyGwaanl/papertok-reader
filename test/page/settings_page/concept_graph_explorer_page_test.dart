@@ -8,6 +8,7 @@ import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
+import 'package:papertok_reader/service/knowledge/derived_book_concept_graph_loader.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/rag/semantic_search_library.dart';
@@ -111,6 +112,45 @@ void main() {
     expect(find.byType(CustomPaint), findsWidgets);
     expect(find.text('Attention -> Memory'), findsWidgets);
     expect(find.text('Recall'), findsWidgets);
+  });
+
+  testWidgets('book scoped explorer shows full-book derived graph preview',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Full-book derived graph'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Working memory'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Working memory'), findsWidgets);
+    expect(find.text('Attention control'), findsWidgets);
+    expect(find.text('2 nodes'), findsOneWidget);
+    expect(find.text('1 relation'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('full-book-derived-graph-map')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Open source explains concept without jumpable evidence',
@@ -705,5 +745,48 @@ class _MemoryKnowledgeCardStore extends KnowledgeCardStore {
     );
     cards.add(staged);
     return KnowledgeCardStoreUpsertResult(card: staged, inserted: true);
+  }
+}
+
+class _FakeDerivedBookConceptGraphLoader
+    implements DerivedBookConceptGraphLoader {
+  @override
+  Future<DerivedBookConceptGraphSnapshot> loadBook({
+    required int bookId,
+    int nodeLimit = 18,
+  }) async {
+    return DerivedBookConceptGraphSnapshot(
+      bookId: bookId,
+      nodes: [
+        ConceptNode(
+          id: 'derived:working-memory',
+          type: ConceptNodeType.concept,
+          label: 'Working memory',
+          summary: 'A whole-book graph node from the global layer.',
+          sourceRefs: [refFor('Working memory evidence.')],
+          ownership: AiOutputOwnership.derivedCache,
+        ),
+        ConceptNode(
+          id: 'derived:attention-control',
+          type: ConceptNodeType.concept,
+          label: 'Attention control',
+          summary: 'A related full-book graph node.',
+          sourceRefs: [refFor('Attention control evidence.')],
+          ownership: AiOutputOwnership.derivedCache,
+        ),
+      ],
+      edges: [
+        ConceptEdge(
+          id: 'derived:edge:1',
+          sourceNodeId: 'derived:working-memory',
+          targetNodeId: 'derived:attention-control',
+          type: ConceptEdgeType.relatedTo,
+          label: 'co_occurs',
+          evidenceRefs: [refFor('Working memory and attention co-occur.')],
+          confidence: 0.82,
+          ownership: AiOutputOwnership.derivedCache,
+        ),
+      ],
+    );
   }
 }

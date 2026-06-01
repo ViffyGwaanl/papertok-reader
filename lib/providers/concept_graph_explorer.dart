@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
+import 'package:papertok_reader/service/knowledge/derived_book_concept_graph_loader.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/knowledge/rag_evidence_knowledge_card_producer.dart';
@@ -49,6 +50,11 @@ final conceptGraphLibrarySearchProvider =
         allowVectorFallback: false,
         allowRerank: false,
       );
+});
+
+final conceptGraphDerivedBookLoaderProvider =
+    Provider<DerivedBookConceptGraphLoader>((ref) {
+  return AiGlobalDerivedBookConceptGraphLoader();
 });
 
 final conceptGraphExplorerProvider = StateNotifierProvider<
