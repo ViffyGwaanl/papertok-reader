@@ -88,14 +88,14 @@
 - 本机 runtime state cache。
 - current job id/status。
 - queued job 串行队列。
-- running job 重启后恢复为 interrupted/retryable。
-- 页面不会假装 LLM stream 仍在继续。
+- running job 重启后，如果已经有连续、证据可追踪且 provider/model/pricing 仍匹配当前配置的 completed role turn，可以复用已保存 evidence，从下一个缺失角色继续。
+- 没有 completed role、只有 active partial stream、checkpoint 无效、provider 已切换或 queued job 时，仍恢复为 interrupted/retryable。
+- 页面不会假装旧 LLM stream 仍在继续，也不会把它说成 OS 后台执行。
 
 还要做什么：
 
 - 定义真正的 background execution contract：iOS/Android 对长时间网络流式任务的限制不同。
-- 把 Seminar 每一步拆成 checkpoint：evidence ready、critical done、supportive done、synthesizer done、review handoff ready。
-- 每个 checkpoint 都要能重放，而不是依赖内存里的 streaming subscription。
+- 扩展 checkpoint 粒度：当前已支持 completed role prefix；后续还要覆盖 evidence-only、review handoff ready 和 provider idempotency。
 - provider request 需要 idempotency key 或本地去重策略，避免重启后重复扣费、重复写 turn。
 - 中断恢复时明确提示用户：从哪个角色继续、是否会再次调用 provider、预估成本如何计算。
 - queued job 重启后由用户确认继续，避免 App 被系统杀掉后自动外发正文。

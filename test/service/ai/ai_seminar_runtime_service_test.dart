@@ -117,6 +117,124 @@ void main() {
         completedTurn.tokenUsage!.estimationMethod, 'local-char-estimate-v1');
   });
 
+  test('resumes from completed role checkpoint without rerunning it', () async {
+    final invokedRoles = <AiSeminarRole>[];
+    final priorTurnRoles = <AiSeminarRole, List<AiSeminarRole>>{};
+    final completedCriticalTurn = AiSeminarRoleTurn(
+      id: 'turn-critical',
+      role: AiSeminarRole.critical,
+      prompt: 'critical prompt',
+      responseText: 'critical response',
+      evidenceRefIds: const ['e1'],
+    );
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fail('resume should use persisted evidence instead of refetching');
+      },
+      streamRole: (invocation, _) async* {
+        invokedRoles.add(invocation.role);
+        priorTurnRoles[invocation.role] =
+            invocation.priorTurns.map((turn) => turn.role).toList();
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(
+          AiSeminarSessionContract(id: 's-resume', question: 'Resume?'),
+          checkpoint: AiSeminarRuntimeCheckpoint(
+            evidenceBundle: bundle(),
+            completedTurns: [completedCriticalTurn],
+            startedAt: 900,
+          ),
+        )
+        .toList();
+
+    expect(invokedRoles, [
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+    ]);
+    expect(priorTurnRoles[AiSeminarRole.supportive], [
+      AiSeminarRole.critical,
+    ]);
+    expect(priorTurnRoles[AiSeminarRole.synthesizer], [
+      AiSeminarRole.critical,
+      AiSeminarRole.supportive,
+    ]);
+    expect(
+      events.where(
+        (event) =>
+            event.type == AiSeminarRuntimeEventType.roleStarted &&
+            event.activeRole == AiSeminarRole.critical,
+      ),
+      isEmpty,
+    );
+    expect(events.first.turns.single.role, AiSeminarRole.critical);
+    expect(events.last.type, AiSeminarRuntimeEventType.synthesisReady);
+    expect(events.last.run!.startedAt, 900);
+    expect(events.last.run!.turns.map((turn) => turn.role), [
+      AiSeminarRole.critical,
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+    ]);
+    final restoredCritical = events.last.run!.turns.first;
+    expect(restoredCritical.tokenUsage, isNotNull);
+    expect(
+      restoredCritical.tokenUsage!.estimationMethod,
+      'local-char-estimate-v1',
+    );
+    expect(events.last.run!.tokenUsage!.totalTokens, greaterThan(0));
+  });
+
+  test('rejects unsafe checkpoint before invoking roles', () async {
+    var invoked = false;
+    final service = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fail('resume should use persisted evidence instead of refetching');
+      },
+      streamRole: (_, __) async* {
+        invoked = true;
+      },
+      now: () => 1000,
+    );
+
+    final events = await service
+        .run(
+          AiSeminarSessionContract(id: 's-invalid-resume', question: 'Resume?'),
+          checkpoint: AiSeminarRuntimeCheckpoint(
+            evidenceBundle: bundle(),
+            completedTurns: const [
+              AiSeminarRoleTurn(
+                id: 'turn-supportive',
+                role: AiSeminarRole.supportive,
+                prompt: 'supportive prompt',
+                responseText: 'supportive response',
+                evidenceRefIds: ['e1'],
+              ),
+            ],
+            startedAt: 900,
+          ),
+        )
+        .toList();
+
+    expect(invoked, false);
+    expect(events.last.type, AiSeminarRuntimeEventType.failed);
+    expect(
+      events.last.message,
+      'AI Seminar checkpoint is invalid and cannot be resumed safely.',
+    );
+    expect(events.last.run!.turns, isEmpty);
+  });
+
   test('stops before synthesis when role output budget is exceeded', () async {
     final service = AiSeminarRuntimeService(
       fetchEvidence: (_) async => bundle(),

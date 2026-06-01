@@ -53,6 +53,18 @@ class AiSeminarRoleStreamChunk {
   final AiSeminarRoleTurn? completedTurn;
 }
 
+class AiSeminarRuntimeCheckpoint {
+  const AiSeminarRuntimeCheckpoint({
+    required this.evidenceBundle,
+    this.completedTurns = const <AiSeminarRoleTurn>[],
+    this.startedAt,
+  });
+
+  final AiSeminarEvidenceBundle evidenceBundle;
+  final List<AiSeminarRoleTurn> completedTurns;
+  final int? startedAt;
+}
+
 enum AiSeminarRuntimeEventType {
   sessionStarted,
   evidenceReady,
@@ -112,32 +124,63 @@ class AiSeminarRuntimeService {
   static const String _providerInvoiceNotConnectedReason =
       'Provider invoice import is not connected for this run.';
 
+  static bool canResumeCheckpoint({
+    required AiSeminarSessionContract session,
+    required AiSeminarEvidenceBundle evidenceBundle,
+    required List<AiSeminarRoleTurn> completedTurns,
+  }) {
+    if (completedTurns.isEmpty ||
+        evidenceBundle.evidence.isEmpty ||
+        !evidenceBundle.allEvidenceTraceable) {
+      return false;
+    }
+    final executionOrder = AiSeminarOrchestrationService.executionOrder(
+      session.roles,
+    );
+    return _validatedCheckpointTurns(
+          completedTurns,
+          executionOrder,
+          _traceableEvidenceIds(evidenceBundle),
+        ) !=
+        null;
+  }
+
   Stream<AiSeminarRuntimeEvent> run(
     AiSeminarSessionContract session, {
     AiSeminarCancellationToken? cancelToken,
+    AiSeminarRuntimeCheckpoint? checkpoint,
   }) async* {
     final token = cancelToken ?? AiSeminarCancellationToken();
-    final startedAt = _nowMs();
+    final startedAt = checkpoint?.startedAt ?? _nowMs();
     yield AiSeminarRuntimeEvent(
       type: AiSeminarRuntimeEventType.sessionStarted,
       session: session,
       status: AiSeminarRunStatus.running,
+      evidenceBundle: checkpoint?.evidenceBundle,
+      turns: checkpoint?.completedTurns ?? const <AiSeminarRoleTurn>[],
+      whiteboardEntries: checkpoint == null
+          ? const <AiSeminarWhiteboardEntry>[]
+          : _whiteboardEntries(checkpoint.completedTurns),
     );
 
     late final AiSeminarEvidenceBundle evidenceBundle;
-    try {
-      evidenceBundle = await _fetchEvidence(session);
-    } catch (error) {
-      yield _failedEvent(
-        session: session,
-        evidenceBundle: const AiSeminarEvidenceBundle(
-          query: '',
-          evidence: <AiSeminarEvidence>[],
-        ),
-        startedAt: startedAt,
-        message: error.toString(),
-      );
-      return;
+    if (checkpoint != null) {
+      evidenceBundle = checkpoint.evidenceBundle;
+    } else {
+      try {
+        evidenceBundle = await _fetchEvidence(session);
+      } catch (error) {
+        yield _failedEvent(
+          session: session,
+          evidenceBundle: const AiSeminarEvidenceBundle(
+            query: '',
+            evidence: <AiSeminarEvidence>[],
+          ),
+          startedAt: startedAt,
+          message: error.toString(),
+        );
+        return;
+      }
     }
 
     if (token.isCancelled) {
@@ -168,12 +211,39 @@ class AiSeminarRuntimeService {
     }
 
     final traceableEvidenceIds = _traceableEvidenceIds(evidenceBundle);
-    final turns = <AiSeminarRoleTurn>[];
-    final localBudgetTurns = <AiSeminarRoleTurn>[];
-
-    for (final role in AiSeminarOrchestrationService.executionOrder(
+    final executionOrder = AiSeminarOrchestrationService.executionOrder(
       session.roles,
-    )) {
+    );
+    final resumeTurns = checkpoint == null
+        ? const <AiSeminarRoleTurn>[]
+        : _validatedCheckpointTurns(
+            checkpoint.completedTurns,
+            executionOrder,
+            traceableEvidenceIds,
+          );
+    if (resumeTurns == null) {
+      yield _failedEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        message:
+            'AI Seminar checkpoint is invalid and cannot be resumed safely.',
+      );
+      return;
+    }
+    final resumeTurnsWithUsage = _checkpointTurnsWithTokenUsage(
+      session: session,
+      evidenceBundle: evidenceBundle,
+      turns: resumeTurns,
+    );
+    final turns = List<AiSeminarRoleTurn>.from(resumeTurnsWithUsage);
+    final localBudgetTurns = _localBudgetTurnsForCheckpoint(
+      session: session,
+      evidenceBundle: evidenceBundle,
+      turns: resumeTurns,
+    );
+
+    for (final role in executionOrder.skip(turns.length)) {
       if (token.isCancelled) {
         yield _cancelledEvent(
           session: session,
@@ -581,6 +651,68 @@ class AiSeminarRuntimeService {
     return turns
         .expand((turn) => turn.whiteboardEntries)
         .toList(growable: false);
+  }
+
+  static List<AiSeminarRoleTurn>? _validatedCheckpointTurns(
+    List<AiSeminarRoleTurn> checkpointTurns,
+    List<AiSeminarRole> executionOrder,
+    Set<String> traceableEvidenceIds,
+  ) {
+    if (checkpointTurns.length > executionOrder.length) return null;
+    final out = <AiSeminarRoleTurn>[];
+    for (var index = 0; index < checkpointTurns.length; index += 1) {
+      final turn = checkpointTurns[index];
+      if (turn.role != executionOrder[index]) return null;
+      if (turn.isFailed) return null;
+      if (!turn.hasTraceableEvidence(traceableEvidenceIds)) return null;
+      out.add(turn);
+    }
+    return List.unmodifiable(out);
+  }
+
+  static List<AiSeminarRoleTurn> _localBudgetTurnsForCheckpoint({
+    required AiSeminarSessionContract session,
+    required AiSeminarEvidenceBundle evidenceBundle,
+    required List<AiSeminarRoleTurn> turns,
+  }) {
+    final budgetTurns = <AiSeminarRoleTurn>[];
+    for (final turn in turns) {
+      final invocation = AiSeminarRoleInvocation(
+        session: session,
+        role: turn.role,
+        evidenceBundle: evidenceBundle,
+        priorTurns: List.unmodifiable(budgetTurns),
+        prompt: turn.prompt,
+      );
+      budgetTurns.add(
+        _copyTurnWithTokenUsage(
+          turn,
+          _estimatedTokenUsage(invocation: invocation, turn: turn),
+        ),
+      );
+    }
+    return budgetTurns;
+  }
+
+  static List<AiSeminarRoleTurn> _checkpointTurnsWithTokenUsage({
+    required AiSeminarSessionContract session,
+    required AiSeminarEvidenceBundle evidenceBundle,
+    required List<AiSeminarRoleTurn> turns,
+  }) {
+    final restoredTurns = <AiSeminarRoleTurn>[];
+    for (final turn in turns) {
+      final invocation = AiSeminarRoleInvocation(
+        session: session,
+        role: turn.role,
+        evidenceBundle: evidenceBundle,
+        priorTurns: List.unmodifiable(restoredTurns),
+        prompt: turn.prompt,
+      );
+      restoredTurns.add(
+        _attachEstimatedTokenUsage(invocation: invocation, turn: turn),
+      );
+    }
+    return restoredTurns;
   }
 
   static AiSeminarRoleTurn _attachEstimatedTokenUsage({

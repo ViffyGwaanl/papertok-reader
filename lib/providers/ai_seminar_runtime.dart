@@ -396,7 +396,12 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     this._providerContext,
   ) : super(
           _initialState(_providerContext),
-        );
+        ) {
+    if (state.restoredFromLocalCache &&
+        state.status == AiSeminarRunStatus.running) {
+      unawaited(_resumeRestoredRunningSession());
+    }
+  }
 
   final AiSeminarRuntimeService _service;
   final ReviewItemStore _reviewStore;
@@ -446,12 +451,14 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   Future<void> _runResolvedSession(
     AiSeminarSessionContract resolvedSession,
     AiSeminarBackgroundJobSnapshot backgroundJob,
-    AiSeminarProviderDiagnostics providerDiagnostics,
-  ) async {
+    AiSeminarProviderDiagnostics providerDiagnostics, {
+    AiSeminarRuntimeCheckpoint? checkpoint,
+  }) async {
     final generation = ++_generation;
     final token = AiSeminarCancellationToken();
     _activeToken?.cancel();
     _activeToken = token;
+    if (!mounted) return;
     final runningJob = backgroundJob.copyWith(
       status: AiSeminarBackgroundJobStatus.running,
       updatedAt: DateTime.now().millisecondsSinceEpoch,
@@ -473,19 +480,26 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       partialRoleText: null,
       synthesis: null,
       lastRun: null,
-      turns: const <AiSeminarRoleTurn>[],
-      whiteboardEntries: const <AiSeminarWhiteboardEntry>[],
+      evidenceBundle: checkpoint?.evidenceBundle,
+      turns: checkpoint?.completedTurns ?? const <AiSeminarRoleTurn>[],
+      whiteboardEntries: checkpoint == null
+          ? const <AiSeminarWhiteboardEntry>[]
+          : checkpoint.completedTurns
+              .expand((turn) => turn.whiteboardEntries)
+              .toList(growable: false),
       startedAt: runningJob.startedAt,
       backgroundJob: runningJob,
       backgroundJobs: backgroundJobs,
     );
     await _persistState();
+    if (!mounted) return;
 
     await for (final event in _service.run(
       resolvedSession,
       cancelToken: token,
+      checkpoint: checkpoint,
     )) {
-      if (generation != _generation) return;
+      if (!mounted || generation != _generation) return;
       _applyEvent(event);
       if (event.type != AiSeminarRuntimeEventType.roleDelta) {
         await _persistState();
@@ -494,9 +508,110 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         _activeToken = null;
       }
     }
-    if (generation == _generation) {
+    if (mounted && generation == _generation) {
       await _startNextQueuedJobIfAvailable();
     }
+  }
+
+  Future<void> _resumeRestoredRunningSession() async {
+    if (!mounted) return;
+    final session = state.session;
+    final evidenceBundle = state.evidenceBundle;
+    final backgroundJob = state.backgroundJob;
+    if (session == null || evidenceBundle == null || backgroundJob == null) {
+      _markRestoredRunningInterrupted();
+      return;
+    }
+    if (backgroundJob.status != AiSeminarBackgroundJobStatus.running) {
+      _markRestoredRunningInterrupted();
+      return;
+    }
+    final currentDiagnostics = _providerContext.resolve();
+    if (!_canResumeWithCurrentProvider(session, currentDiagnostics)) {
+      _markRestoredRunningInterrupted();
+      return;
+    }
+    await _runResolvedSession(
+      _sessionWithCurrentProviderBudget(session, currentDiagnostics),
+      backgroundJob,
+      currentDiagnostics,
+      checkpoint: AiSeminarRuntimeCheckpoint(
+        evidenceBundle: evidenceBundle,
+        completedTurns: state.turns,
+        startedAt: state.startedAt ?? backgroundJob.startedAt,
+      ),
+    );
+  }
+
+  void _markRestoredRunningInterrupted() {
+    if (!mounted) return;
+    final restored = state;
+    final session = restored.session;
+    final completedAt = DateTime.now().millisecondsSinceEpoch;
+    final backgroundJob = _markBackgroundJob(
+      restored.backgroundJob ??
+          (session == null
+              ? null
+              : _newBackgroundJob(
+                  session,
+                  startedAt: restored.startedAt ?? completedAt,
+                )),
+      AiSeminarBackgroundJobStatus.interrupted,
+      updatedAt: completedAt,
+      completedAt: completedAt,
+      message:
+          'AI Seminar was interrupted before it could finish. Retry to run it again.',
+    );
+    final evidenceBundle = restored.evidenceBundle ??
+        AiSeminarEvidenceBundle(
+          query: session?.question ?? '',
+          evidence: const <AiSeminarEvidence>[],
+        );
+    final billingSnapshot = session == null
+        ? null
+        : _billingSnapshot(
+            session: session,
+            turns: restored.turns,
+            completedAt: completedAt,
+          );
+    final tokenUsage = AiSeminarTokenUsage.aggregateRoleTurns(
+      restored.turns,
+    );
+    final run = session == null
+        ? null
+        : AiSeminarRun(
+            session: session,
+            status: AiSeminarRunStatus.cancelled,
+            evidenceBundle: evidenceBundle,
+            turns: restored.turns,
+            startedAt: restored.startedAt,
+            completedAt: completedAt,
+            tokenUsage: tokenUsage,
+            estimatedCostUsd: billingSnapshot?.estimatedCostUsd ??
+                _estimatedRunCostUsd(session.budgetPolicy, restored.turns),
+            costPriceSource: billingSnapshot?.pricingSource ??
+                _costPriceSource(session.budgetPolicy, restored.turns),
+            billingSnapshot: billingSnapshot,
+            message:
+                'AI Seminar was interrupted before it could finish. Retry to run it again.',
+          );
+    final interruptedJobs = _interruptNonTerminalBackgroundJobs(
+      _upsertBackgroundJob(restored.backgroundJobs, backgroundJob),
+      completedAt,
+    );
+    state = restored.copyWith(
+      status: AiSeminarRunStatus.cancelled,
+      evidenceBundle: evidenceBundle,
+      lastRun: run,
+      activeRole: null,
+      partialRoleText: null,
+      backgroundJob: _backgroundJobFromList(backgroundJob, interruptedJobs),
+      backgroundJobs: interruptedJobs,
+      error:
+          'AI Seminar was interrupted before it could finish. Retry to run it again.',
+      completedAt: completedAt,
+    );
+    unawaited(_persistState());
   }
 
   void cancel() {
@@ -610,6 +725,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   }
 
   Future<void> _startNextQueuedJobIfAvailable() async {
+    if (!mounted) return;
     if (_activeToken != null || state.status == AiSeminarRunStatus.running) {
       return;
     }
@@ -621,6 +737,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       }
     }
     if (queuedJob == null) return;
+    if (!mounted) return;
     await _runResolvedSession(
       queuedJob.session!,
       queuedJob,
@@ -690,6 +807,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
 
   Future<void> _persistState() async {
     try {
+      if (!mounted) return;
       if (state.session == null && state.status == AiSeminarRunStatus.draft) {
         await Prefs().prefs.remove(aiSeminarRuntimeStateV1PrefsKey);
         return;
@@ -830,6 +948,51 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       if (restored.status == AiSeminarRunStatus.running) {
         final completedAt = DateTime.now().millisecondsSinceEpoch;
         final session = restored.session;
+        final evidenceBundle = restored.evidenceBundle;
+        if (session != null &&
+            evidenceBundle != null &&
+            _canResumeWithCurrentProvider(session, diagnostics) &&
+            AiSeminarRuntimeService.canResumeCheckpoint(
+              session: session,
+              evidenceBundle: evidenceBundle,
+              completedTurns: restored.turns,
+            )) {
+          final resumableSession = _sessionWithCurrentProviderBudget(
+            session,
+            diagnostics,
+          );
+          final activeJob = (restored.backgroundJob ??
+                  _newBackgroundJob(
+                    resumableSession,
+                    startedAt: restored.startedAt ?? completedAt,
+                  ))
+              .copyWith(
+            status: AiSeminarBackgroundJobStatus.running,
+            updatedAt: completedAt,
+            completedAt: null,
+            message:
+                'AI Seminar restored from local checkpoint and will resume.',
+            session: resumableSession,
+          );
+          final repairedJobs = _interruptNonActiveRestoredJobs(
+            _upsertBackgroundJob(restored.backgroundJobs, activeJob),
+            activeJob,
+            completedAt,
+          );
+          final resumable = restored.copyWith(
+            session: resumableSession,
+            status: AiSeminarRunStatus.running,
+            providerDiagnostics: diagnostics,
+            evidenceBundle: evidenceBundle,
+            activeRole: null,
+            partialRoleText: null,
+            backgroundJob: _backgroundJobFromList(activeJob, repairedJobs),
+            backgroundJobs: repairedJobs,
+            clearError: true,
+          );
+          _rewriteLocalRecoveryCache(resumable);
+          return resumable;
+        }
         final backgroundJob = _markBackgroundJob(
           restored.backgroundJob ??
               (session == null
@@ -844,35 +1007,36 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           message:
               'AI Seminar was interrupted before it could finish. Retry to run it again.',
         );
-        final evidenceBundle = restored.evidenceBundle ??
+        final fallbackEvidenceBundle = restored.evidenceBundle ??
             AiSeminarEvidenceBundle(
               query: session?.question ?? '',
               evidence: const <AiSeminarEvidence>[],
             );
+        const fallbackTurns = <AiSeminarRoleTurn>[];
         final billingSnapshot = session == null
             ? null
             : _billingSnapshot(
                 session: session,
-                turns: restored.turns,
+                turns: fallbackTurns,
                 completedAt: completedAt,
               );
         final tokenUsage = AiSeminarTokenUsage.aggregateRoleTurns(
-          restored.turns,
+          fallbackTurns,
         );
         final run = session == null
             ? null
             : AiSeminarRun(
                 session: session,
                 status: AiSeminarRunStatus.cancelled,
-                evidenceBundle: evidenceBundle,
-                turns: restored.turns,
+                evidenceBundle: fallbackEvidenceBundle,
+                turns: fallbackTurns,
                 startedAt: restored.startedAt,
                 completedAt: completedAt,
                 tokenUsage: tokenUsage,
                 estimatedCostUsd: billingSnapshot?.estimatedCostUsd ??
-                    _estimatedRunCostUsd(session.budgetPolicy, restored.turns),
+                    _estimatedRunCostUsd(session.budgetPolicy, fallbackTurns),
                 costPriceSource: billingSnapshot?.pricingSource ??
-                    _costPriceSource(session.budgetPolicy, restored.turns),
+                    _costPriceSource(session.budgetPolicy, fallbackTurns),
                 billingSnapshot: billingSnapshot,
                 message:
                     'AI Seminar was interrupted before it could finish. Retry to run it again.',
@@ -893,7 +1057,9 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         }
         final interrupted = restored.copyWith(
           status: AiSeminarRunStatus.cancelled,
-          evidenceBundle: evidenceBundle,
+          evidenceBundle: fallbackEvidenceBundle,
+          turns: fallbackTurns,
+          whiteboardEntries: const <AiSeminarWhiteboardEntry>[],
           lastRun: run,
           activeRole: null,
           partialRoleText: null,
@@ -1052,6 +1218,27 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     );
   }
 
+  static List<AiSeminarBackgroundJobSnapshot> _interruptNonActiveRestoredJobs(
+    List<AiSeminarBackgroundJobSnapshot> jobs,
+    AiSeminarBackgroundJobSnapshot activeJob,
+    int completedAt,
+  ) {
+    return _normalizeBackgroundJobs(
+      jobs.map((job) {
+        if (job.id == activeJob.id) return activeJob;
+        if (job.status.isTerminal) return job;
+        return job.copyWith(
+          status: AiSeminarBackgroundJobStatus.interrupted,
+          updatedAt: completedAt,
+          completedAt: completedAt,
+          message: job.isQueued
+              ? 'Queued AI Seminar was interrupted before it could start. Start it again manually.'
+              : 'AI Seminar was interrupted before it could finish. Retry to run it again.',
+        );
+      }).toList(growable: false),
+    );
+  }
+
   static AiSeminarBackgroundJobSnapshot? _backgroundJobFromList(
     AiSeminarBackgroundJobSnapshot? backgroundJob,
     List<AiSeminarBackgroundJobSnapshot> jobs,
@@ -1126,6 +1313,44 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       cacheWriteCostPerMillionTokens:
           diagnostics.cacheWriteCostPerMillionTokens,
     ).normalized;
+  }
+
+  static bool _canResumeWithCurrentProvider(
+    AiSeminarSessionContract session,
+    AiSeminarProviderDiagnostics diagnostics,
+  ) {
+    final context = session.billingContext;
+    if (context == null) return false;
+    if (context.providerId.trim() != diagnostics.providerId.trim()) {
+      return false;
+    }
+    if (context.modelId.trim() != diagnostics.modelId.trim()) {
+      return false;
+    }
+    return _billingPricingMatchesCurrentProvider(context, diagnostics);
+  }
+
+  static bool _billingPricingMatchesCurrentProvider(
+    AiSeminarBillingContext context,
+    AiSeminarProviderDiagnostics diagnostics,
+  ) {
+    final capturedHasPricing = context.inputCostPerMillionTokens != null ||
+        context.outputCostPerMillionTokens != null ||
+        context.cacheReadCostPerMillionTokens != null ||
+        context.cacheWriteCostPerMillionTokens != null ||
+        (context.pricingSource?.trim().isNotEmpty == true);
+    if (!capturedHasPricing) return !diagnostics.hasPricingMetadata;
+    if (!diagnostics.hasPricingMetadata) return false;
+    return context.inputCostPerMillionTokens ==
+            diagnostics.inputCostPerMillionTokens &&
+        context.outputCostPerMillionTokens ==
+            diagnostics.outputCostPerMillionTokens &&
+        context.cacheReadCostPerMillionTokens ==
+            diagnostics.cacheReadCostPerMillionTokens &&
+        context.cacheWriteCostPerMillionTokens ==
+            diagnostics.cacheWriteCostPerMillionTokens &&
+        (context.pricingSource?.trim() ?? '') ==
+            (diagnostics.costPriceSource?.trim() ?? '');
   }
 
   static AiSeminarBudgetPolicy? _budgetPolicyWithCurrentProviderPricing(

@@ -898,6 +898,195 @@ void main() {
     expect(restored.lastRun!.tokenUsage!.totalTokens, greaterThan(0));
   });
 
+  test('running seminar runtime state resumes from persisted checkpoint',
+      () async {
+    configureProvider();
+    final invokedRoles = <AiSeminarRole>[];
+    final resumeCompleted = Completer<void>();
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-running-resume',
+        question: 'Resume?',
+        billingContext: AiSeminarBillingContext(
+          providerId: 'local-gateway',
+          providerName: 'Local Gateway',
+          providerType: 'openai-compatible',
+          modelId: 'gpt-5.5',
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-running-resume',
+        sessionId: 's-running-resume',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: const [
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-running-resume',
+          sessionId: 's-running-resume',
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+      ],
+      evidenceBundle: bundle(),
+      activeRole: AiSeminarRole.supportive,
+      partialRoleText: 'partial text should be ignored',
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'critical prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+          tokenUsage: AiSeminarTokenUsage(
+            inputTokens: 10,
+            outputTokens: 4,
+            isEstimated: true,
+            estimationMethod: 'local-char-estimate-v1',
+          ),
+        ),
+      ],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+    final resumeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fail('restored resume should use persisted evidence');
+      },
+      streamRole: (invocation, _) async* {
+        invokedRoles.add(invocation.role);
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+        if (invocation.role == AiSeminarRole.synthesizer &&
+            !resumeCompleted.isCompleted) {
+          resumeCompleted.complete();
+        }
+      },
+      now: () => 1000,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(resumeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(aiSeminarRuntimeProvider);
+    await resumeCompleted.future.timeout(const Duration(seconds: 2));
+    for (var i = 0; i < 20; i += 1) {
+      if (container.read(aiSeminarRuntimeProvider).status !=
+          AiSeminarRunStatus.running) {
+        break;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(invokedRoles, [
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+    ]);
+    expect(restored.status, AiSeminarRunStatus.completed);
+    expect(restored.backgroundJob!.id, 'job-running-resume');
+    expect(
+      restored.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.completed,
+    );
+    expect(restored.activeRole, isNull);
+    expect(restored.partialRoleText, isNull);
+    expect(restored.turns.map((turn) => turn.role), [
+      AiSeminarRole.critical,
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+    ]);
+  });
+
+  test('invalid restored checkpoint falls back to interrupted without resume',
+      () async {
+    configureProvider();
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-invalid-running-resume',
+        question: 'Resume?',
+        billingContext: const AiSeminarBillingContext(
+          providerId: 'local-gateway',
+          providerName: 'Local Gateway',
+          providerType: 'openai-compatible',
+          modelId: 'gpt-5.5',
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-invalid-running-resume',
+        sessionId: 's-invalid-running-resume',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: const [
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-invalid-running-resume',
+          sessionId: 's-invalid-running-resume',
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+      ],
+      evidenceBundle: bundle(),
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-supportive',
+          role: AiSeminarRole.supportive,
+          prompt: 'supportive prompt',
+          responseText: 'supportive response',
+          evidenceRefIds: ['e1'],
+        ),
+      ],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+    var invoked = false;
+    final resumeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (_, __) async* {
+        invoked = true;
+      },
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(resumeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final restored = container.read(aiSeminarRuntimeProvider);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(invoked, false);
+    expect(restored.status, AiSeminarRunStatus.cancelled);
+    expect(restored.canRetry, true);
+    expect(restored.turns, isEmpty);
+    expect(restored.lastRun!.turns, isEmpty);
+    expect(
+      restored.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.interrupted,
+    );
+  });
+
   test('running seminar runtime state restores as interrupted retryable state',
       () async {
     configureProvider();
@@ -936,8 +1125,7 @@ void main() {
     expect(persisted.containsKey('partialRoleText'), isFalse);
   });
 
-  test(
-      'interrupted restore keeps captured billing snapshot for completed turns',
+  test('checkpoint restore uses matching current billing context after resume',
       () async {
     configureProvider(withPricing: true);
     final runningState = AiSeminarRuntimeState.initial().copyWith(
@@ -950,14 +1138,16 @@ void main() {
           costPriceSource: 'current-pricing-should-not-win',
         ),
         billingContext: const AiSeminarBillingContext(
-          providerId: 'captured-provider',
-          providerName: 'Captured Provider',
+          providerId: 'local-gateway',
+          providerName: 'Local Gateway',
           providerType: 'openai-compatible',
-          modelId: 'captured-model',
-          pricingSource: 'captured-pricing-v1',
+          modelId: 'gpt-5.5',
+          pricingSource: 'current-pricing-v1',
           pricingCapturedAt: 12345,
           inputCostPerMillionTokens: 2,
           outputCostPerMillionTokens: 8,
+          cacheReadCostPerMillionTokens: 0.2,
+          cacheWriteCostPerMillionTokens: 1,
         ),
       ),
       status: AiSeminarRunStatus.running,
@@ -999,26 +1189,108 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    container.read(aiSeminarRuntimeProvider);
+    for (var i = 0; i < 20; i += 1) {
+      if (container.read(aiSeminarRuntimeProvider).status !=
+          AiSeminarRunStatus.running) {
+        break;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
     final restored = container.read(aiSeminarRuntimeProvider);
     final billing = restored.lastRun!.billingSnapshot!;
 
-    expect(restored.status, AiSeminarRunStatus.cancelled);
-    expect(restored.lastRun!.status, AiSeminarRunStatus.cancelled);
+    expect(restored.status, AiSeminarRunStatus.completed);
+    expect(restored.lastRun!.status, AiSeminarRunStatus.completed);
     expect(restored.backgroundJob!.id, 'job-s-running-billing');
     expect(
       restored.backgroundJob!.status,
-      AiSeminarBackgroundJobStatus.interrupted,
+      AiSeminarBackgroundJobStatus.completed,
     );
-    expect(billing.providerId, 'captured-provider');
-    expect(billing.modelId, 'captured-model');
-    expect(billing.pricingSource, 'captured-pricing-v1');
-    expect(billing.pricingCapturedAt, 12345);
-    expect(billing.usageSnapshot.source,
-        AiSeminarTokenUsage.sourceProviderReported);
-    expect(billing.estimatedCostUsd, closeTo(0.0036, 0.000001));
+    expect(billing.providerId, 'local-gateway');
+    expect(billing.modelId, 'gpt-5.5');
+    expect(billing.pricingSource, 'current-pricing-v1');
+    expect(billing.pricingCapturedAt, isNotNull);
+    expect(billing.usageSnapshot.source, AiSeminarTokenUsage.sourceMixed);
+    expect(billing.estimatedCostUsd, greaterThan(0.0036));
     expect(
       billing.invoiceStatus,
       AiSeminarInvoiceReconciliationStatus.notConnected,
+    );
+  });
+
+  test('restored checkpoint interrupts when provider context changed',
+      () async {
+    configureProvider(withPricing: true);
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-provider-changed',
+        question: 'Provider changed?',
+        billingContext: AiSeminarBillingContext(
+          providerId: 'captured-provider',
+          providerName: 'Captured Provider',
+          providerType: 'openai-compatible',
+          modelId: 'captured-model',
+          pricingSource: 'captured-pricing-v1',
+          pricingCapturedAt: 12345,
+          inputCostPerMillionTokens: 2,
+          outputCostPerMillionTokens: 8,
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-provider-changed',
+        sessionId: 's-provider-changed',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 11111,
+        updatedAt: 11111,
+      ),
+      evidenceBundle: bundle(),
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+          tokenUsage: AiSeminarTokenUsage(
+            inputTokens: 1000,
+            outputTokens: 200,
+            isEstimated: false,
+            estimationMethod: 'provider-usage-tracker-v1',
+            source: AiSeminarTokenUsage.sourceProviderReported,
+          ),
+        ),
+      ],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+    var invoked = false;
+    final resumeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (_, __) async* {
+        invoked = true;
+      },
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(resumeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final restored = container.read(aiSeminarRuntimeProvider);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(invoked, false);
+    expect(restored.status, AiSeminarRunStatus.cancelled);
+    expect(restored.canRetry, true);
+    expect(restored.turns, isEmpty);
+    expect(
+      restored.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.interrupted,
     );
   });
 

@@ -847,21 +847,7 @@ void main() {
                 },
               ],
             },
-            'turns': [
-              {
-                'id': 'turn-critical',
-                'role': 'critical',
-                'prompt': 'prompt',
-                'responseText': 'critical restored response',
-                'evidenceRefIds': ['e1'],
-                'tokenUsage': {
-                  'inputTokens': 8,
-                  'outputTokens': 4,
-                  'isEstimated': true,
-                  'estimationMethod': 'local-char-estimate-v1',
-                },
-              },
-            ],
+            'turns': [],
           }),
         );
 
