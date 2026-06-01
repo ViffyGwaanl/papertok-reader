@@ -921,6 +921,20 @@
     }
   },
   "knowledgeExportPreviewRemoteSync": "预览远端同步",
+  "knowledgeExportCheckRemoteChanges": "检查远端变更",
+  "knowledgeExportRemoteCheckFound": "发现远端变更：{incomingCount} 个待引入 · {conflictCount} 个冲突",
+  "@knowledgeExportRemoteCheckFound": {
+    "placeholders": {
+      "incomingCount": {
+        "type": "int"
+      },
+      "conflictCount": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteCheckClean": "远端检查完成：没有发现待引入项或冲突",
+  "knowledgeExportRemoteCheckReadOnly": "前台只读检查。除非你选择下一步操作，否则不会上传、应用或发送到 Review。",
   "knowledgeExportRunSafeRemoteSync": "运行安全远端同步",
   "knowledgeExportRemotePreviewTitle": "远端同步预览",
   "knowledgeExportRemoteCount": "{count} 个远端",

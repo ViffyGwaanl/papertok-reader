@@ -1024,6 +1024,20 @@
     }
   },
   "knowledgeExportPreviewRemoteSync": "Preview remote sync",
+  "knowledgeExportCheckRemoteChanges": "Check remote changes",
+  "knowledgeExportRemoteCheckFound": "Remote changes found: {incomingCount} incoming · {conflictCount} conflict",
+  "@knowledgeExportRemoteCheckFound": {
+    "placeholders": {
+      "incomingCount": {
+        "type": "int"
+      },
+      "conflictCount": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeExportRemoteCheckClean": "Remote check complete: no incoming items or conflicts found",
+  "knowledgeExportRemoteCheckReadOnly": "Foreground read-only check. Nothing is uploaded, applied, or sent to Review until you choose the next action.",
   "knowledgeExportRunSafeRemoteSync": "Run safe remote sync",
   "knowledgeExportRemotePreviewTitle": "Remote sync preview",
   "knowledgeExportRemoteCount": "{count} remote",

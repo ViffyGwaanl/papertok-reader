@@ -111,6 +111,75 @@ void main() {
     expect(container.read(knowledgeAssetExportProvider).remotePreview, isNull);
   });
 
+  test('checkRemoteChanges is read-only and records latest check', () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final notifier = KnowledgeAssetExportNotifier(
+      service,
+      clock: () => 123456789,
+    );
+    addTearDown(notifier.dispose);
+
+    await notifier.checkRemoteChanges();
+    final state = notifier.state;
+
+    expect(service.previewedRemoteSync, true);
+    expect(service.uploadedRemoteSyncBundle, false);
+    expect(service.submittedRemoteConflictsToReview, false);
+    expect(service.stagedRemoteKnowledgeCardConflictsToReview, false);
+    expect(service.submittedRemoteIncomingToReview, false);
+    expect(service.submittedRemoteReviewHistoryToReview, false);
+    expect(state.lastRemoteCheckAt, 123456789);
+    expect(state.remotePreview?.incomingCount, 2);
+    expect(state.remotePreview?.conflictCount, 1);
+    expect(state.remoteSyncStatus, KnowledgeRemoteSyncStatus.reviewRequired);
+  });
+
+  test('checkRemoteChanges failure clears stale preview without upload',
+      () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final notifier = KnowledgeAssetExportNotifier(
+      service,
+      clock: () => 123456789,
+    );
+    addTearDown(notifier.dispose);
+
+    await notifier.checkRemoteChanges();
+    expect(notifier.state.remotePreview, isNotNull);
+
+    service.failRemotePreview = true;
+    await notifier.checkRemoteChanges();
+    final state = notifier.state;
+
+    expect(service.uploadedRemoteSyncBundle, false);
+    expect(state.remotePreview, isNull);
+    expect(state.lastRemoteCheckAt, isNull);
+    expect(state.remoteSyncStatus, KnowledgeRemoteSyncStatus.failed);
+    expect(state.lastError, contains('remote unavailable'));
+  });
+
+  test('remote mutating actions clear stale read-only check state', () async {
+    final service = _FakeKnowledgeAssetExportService();
+    final notifier = KnowledgeAssetExportNotifier(
+      service,
+      clock: () => 123456789,
+    );
+    addTearDown(notifier.dispose);
+
+    await notifier.checkRemoteChanges();
+    expect(notifier.state.lastRemoteCheckAt, 123456789);
+
+    await notifier.submitRemoteIncomingToReview();
+    expect(service.submittedRemoteIncomingToReview, true);
+    expect(notifier.state.lastRemoteCheckAt, isNull);
+
+    await notifier.checkRemoteChanges();
+    expect(notifier.state.lastRemoteCheckAt, 123456789);
+
+    await notifier.uploadRemoteSyncBundle();
+    expect(service.uploadedRemoteSyncBundle, true);
+    expect(notifier.state.lastRemoteCheckAt, isNull);
+  });
+
   test('remote sync status tracks preview blockers upload and failures',
       () async {
     final service = _FakeKnowledgeAssetExportService();

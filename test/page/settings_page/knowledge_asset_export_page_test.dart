@@ -48,13 +48,31 @@ void main() {
     await tester.pump();
 
     expect(service.submittedConflictsToReview, true);
+    await tester.scrollUntilVisible(
+      find.text('1 conflict sent to Review inbox'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('1 conflict sent to Review inbox'), findsOneWidget);
     expect(find.text('Review inbox'), findsOneWidget);
 
+    await tester.scrollUntilVisible(
+      find.text('Create export'),
+      -180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Create export'));
     await tester.pump();
 
     expect(service.createdManifest, true);
+    await tester.scrollUntilVisible(
+      find.textContaining('knowledge_export_manifest_v1.json'),
+      -180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.textContaining('knowledge_export_manifest_v1.json'), findsOne);
     expect(find.textContaining('knowledge_export_v1.md'), findsOne);
     expect(
@@ -68,6 +86,12 @@ void main() {
     await tester.pump();
 
     expect(service.previewedRemoteSync, true);
+    await tester.scrollUntilVisible(
+      find.text('Remote sync status: Review required'),
+      -180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Remote sync status: Review required'), findsOneWidget);
     expect(
       find.textContaining('Send incoming items or conflicts to Review'),
@@ -245,6 +269,58 @@ void main() {
     );
     expect(find.text('Remote sync preview'), findsNothing);
     expect(find.textContaining('remote unavailable'), findsOneWidget);
+  });
+
+  testWidgets('check remote changes is visibly read-only', (tester) async {
+    final service = _FakeKnowledgeAssetExportService();
+    final reviewController = _FakeReviewInboxController();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          knowledgeAssetExportServiceProvider.overrideWithValue(service),
+          reviewInboxControllerProvider.overrideWithValue(reviewController),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: const KnowledgeAssetExportPage(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Check remote changes'));
+    await tester.pump();
+
+    expect(service.previewedRemoteSync, true);
+    expect(service.uploadedRemoteSyncBundle, false);
+    expect(service.stagedRemoteKnowledgeCardConflictsToReview, false);
+    expect(service.submittedRemoteConflictsToReview, false);
+    expect(service.submittedRemoteIncomingToReview, false);
+    expect(service.submittedRemoteReviewHistoryToReview, false);
+    expect(find.text('Remote sync status: Review required'), findsOneWidget);
+    expect(
+      find.textContaining('Remote changes found: 2 incoming · 1 conflict'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('read-only check'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Run safe remote sync'));
+    await tester.pumpAndSettle();
+
+    expect(service.submittedRemoteIncomingToReview, true);
+    expect(
+      find.textContaining('read-only check'),
+      findsNothing,
+    );
   });
 
   testWidgets('run safe remote sync batches blockers into Review',

@@ -113,6 +113,11 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
           _PolicyNote(text: l10n.knowledgeExportSafeDefault),
           const SizedBox(height: 8),
           _RemoteSyncStatusPanel(status: state.remoteSyncStatus),
+          if (state.lastRemoteCheckAt != null)
+            if (state.remotePreview case final preview?) ...[
+              const SizedBox(height: 8),
+              _RemoteCheckSummary(preview: preview),
+            ],
           if (state.lastManifestPath case final path?) ...[
             const SizedBox(height: 12),
             _PolicyNote(text: l10n.knowledgeExportManifestPath(path)),
@@ -148,6 +153,16 @@ class _KnowledgeAssetExportBody extends ConsumerWidget {
                 : () => ref
                     .read(knowledgeAssetExportProvider.notifier)
                     .createManifest(),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.cloud_queue_outlined),
+            label: Text(l10n.knowledgeExportCheckRemoteChanges),
+            onPressed: state.busy
+                ? null
+                : () => ref
+                    .read(knowledgeAssetExportProvider.notifier)
+                    .checkRemoteChanges(),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -418,6 +433,64 @@ class _RemoteSyncStatusPanel extends StatelessWidget {
         Icons.gpp_maybe_outlined,
       KnowledgeRemoteSyncStatus.failed => Icons.error_outline,
     };
+  }
+}
+
+class _RemoteCheckSummary extends StatelessWidget {
+  const _RemoteCheckSummary({required this.preview});
+
+  final KnowledgeRemoteSyncPreview preview;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final hasRemoteChanges =
+        preview.incomingCount > 0 || preview.conflictCount > 0;
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: ClaudePalette.card(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              hasRemoteChanges
+                  ? Icons.move_to_inbox_outlined
+                  : Icons.cloud_done_outlined,
+              size: 18,
+              color: ClaudePalette.accent(context),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasRemoteChanges
+                        ? l10n.knowledgeExportRemoteCheckFound(
+                            preview.incomingCount,
+                            preview.conflictCount,
+                          )
+                        : l10n.knowledgeExportRemoteCheckClean,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.knowledgeExportRemoteCheckReadOnly,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

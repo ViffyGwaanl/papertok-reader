@@ -48,6 +48,7 @@ class KnowledgeAssetExportState {
     this.lastRemotePartialRemoved,
     this.lastRemoteConditionalWriteSupported,
     this.lastRemotePreconditionFailed,
+    this.lastRemoteCheckAt,
     this.remotePreview,
     this.lastError,
   });
@@ -91,6 +92,7 @@ class KnowledgeAssetExportState {
   final bool? lastRemotePartialRemoved;
   final bool? lastRemoteConditionalWriteSupported;
   final bool? lastRemotePreconditionFailed;
+  final int? lastRemoteCheckAt;
   final KnowledgeRemoteSyncPreview? remotePreview;
   final String? lastError;
 
@@ -140,11 +142,13 @@ class KnowledgeAssetExportState {
     bool? lastRemotePartialRemoved,
     bool? lastRemoteConditionalWriteSupported,
     bool? lastRemotePreconditionFailed,
+    int? lastRemoteCheckAt,
     KnowledgeRemoteSyncPreview? remotePreview,
     String? lastError,
     bool clearError = false,
     bool clearRemotePreview = false,
     bool clearRemoteUpload = false,
+    bool clearRemoteCheck = false,
     bool clearReviewHandoffCounts = false,
     bool clearRemoteReviewHandoffCounts = false,
   }) {
@@ -208,6 +212,8 @@ class KnowledgeAssetExportState {
       lastRemotePreconditionFailed: clearRemoteUpload
           ? null
           : lastRemotePreconditionFailed ?? this.lastRemotePreconditionFailed,
+      lastRemoteCheckAt:
+          clearRemoteCheck ? null : lastRemoteCheckAt ?? this.lastRemoteCheckAt,
       remotePreview:
           clearRemotePreview ? null : remotePreview ?? this.remotePreview,
       lastError: clearError ? null : lastError ?? this.lastError,
@@ -217,10 +223,14 @@ class KnowledgeAssetExportState {
 
 class KnowledgeAssetExportNotifier
     extends StateNotifier<KnowledgeAssetExportState> {
-  KnowledgeAssetExportNotifier(this._service)
-      : super(KnowledgeAssetExportState.initial());
+  KnowledgeAssetExportNotifier(
+    this._service, {
+    int Function()? clock,
+  })  : _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch),
+        super(KnowledgeAssetExportState.initial());
 
   final KnowledgeAssetExportService _service;
+  final int Function() _clock;
 
   Future<void> refresh() async {
     state = state.copyWith(
@@ -228,6 +238,7 @@ class KnowledgeAssetExportNotifier
       clearError: true,
       clearRemotePreview: true,
       clearRemoteUpload: true,
+      clearRemoteCheck: true,
     );
     try {
       final snapshot = await _service.buildSnapshot();
@@ -252,6 +263,7 @@ class KnowledgeAssetExportNotifier
       clearError: true,
       clearRemotePreview: true,
       clearRemoteUpload: true,
+      clearRemoteCheck: true,
     );
     try {
       final result = await _service.writeManifest();
@@ -280,7 +292,11 @@ class KnowledgeAssetExportNotifier
   }
 
   Future<void> submitConflictsToReview() async {
-    state = state.copyWith(busy: true, clearError: true);
+    state = state.copyWith(
+      busy: true,
+      clearError: true,
+      clearRemoteCheck: true,
+    );
     try {
       final result = await _service.submitConflictsToReview();
       state = state.copyWith(
@@ -304,16 +320,29 @@ class KnowledgeAssetExportNotifier
   }
 
   Future<void> previewRemoteSync() async {
+    await _readRemotePreview(recordRemoteCheck: false);
+  }
+
+  Future<void> checkRemoteChanges() async {
+    await _readRemotePreview(recordRemoteCheck: true);
+  }
+
+  Future<void> _readRemotePreview({
+    required bool recordRemoteCheck,
+  }) async {
     state = state.copyWith(
       busy: true,
       clearError: true,
       clearRemoteUpload: true,
+      clearRemoteCheck: !recordRemoteCheck,
+      clearRemoteReviewHandoffCounts: recordRemoteCheck,
     );
     try {
       final preview = await _service.previewRemoteSync();
       state = state.copyWith(
         busy: false,
         remotePreview: preview,
+        lastRemoteCheckAt: recordRemoteCheck ? _clock() : null,
         clearError: true,
       );
     } catch (error) {
@@ -321,6 +350,7 @@ class KnowledgeAssetExportNotifier
         busy: false,
         lastError: error.toString(),
         clearRemotePreview: true,
+        clearRemoteCheck: recordRemoteCheck,
       );
     }
   }
@@ -330,6 +360,7 @@ class KnowledgeAssetExportNotifier
       busy: true,
       clearError: true,
       clearRemoteUpload: true,
+      clearRemoteCheck: true,
     );
     try {
       final result = await _service.submitRemoteConflictsToReview();
@@ -356,6 +387,7 @@ class KnowledgeAssetExportNotifier
       busy: true,
       clearError: true,
       clearRemoteUpload: true,
+      clearRemoteCheck: true,
     );
     try {
       final result = await _service.stageRemoteKnowledgeCardConflictsToReview();
@@ -383,6 +415,7 @@ class KnowledgeAssetExportNotifier
       busy: true,
       clearError: true,
       clearRemoteUpload: true,
+      clearRemoteCheck: true,
     );
     try {
       final result = await _service.submitRemoteIncomingToReview();
@@ -410,6 +443,7 @@ class KnowledgeAssetExportNotifier
       busy: true,
       clearError: true,
       clearRemoteUpload: true,
+      clearRemoteCheck: true,
     );
     try {
       final result = await _service.submitRemoteReviewHistoryToReview();
@@ -437,6 +471,7 @@ class KnowledgeAssetExportNotifier
       busy: true,
       clearError: true,
       clearRemoteUpload: true,
+      clearRemoteCheck: true,
     );
     try {
       final result = await _service.uploadRemoteSyncBundle();
@@ -478,6 +513,7 @@ class KnowledgeAssetExportNotifier
       busy: true,
       clearError: true,
       clearRemoteUpload: true,
+      clearRemoteCheck: true,
     );
     try {
       final preview = await _service.previewRemoteSync();
