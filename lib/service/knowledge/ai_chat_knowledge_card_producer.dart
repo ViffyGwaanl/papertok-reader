@@ -146,8 +146,7 @@ class AiChatKnowledgeCardProducer {
         sourceKind: SourceRefKind.conversation,
         modelId: _blankToNull(modelId),
         createdAt: now,
-        unavailableReason:
-            'AI chat message is stored in conversation history; no reader deep link is available for the chat bubble.',
+        unavailableReason: 'ai-chat-no-reader-deep-link',
       ),
     ];
 

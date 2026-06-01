@@ -17,6 +17,7 @@ import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
+import 'package:papertok_reader/widgets/markdown/styled_markdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -224,9 +225,10 @@ void main() {
     expect(find.textContaining('Local token estimate'), findsOneWidget);
     expect(find.textContaining('Provider billing may differ'), findsOneWidget);
     expect(find.textContaining('local-char-estimate-v1'), findsOneWidget);
-    expect(find.text('critical response'), findsOneWidget);
-    expect(find.text('supportive response'), findsOneWidget);
+    expect(find.text('critical response'), findsWidgets);
+    expect(find.text('supportive response'), findsWidgets);
     expect(find.text('synthesizer response'), findsWidgets);
+    expect(find.byType(StyledMarkdown), findsWidgets);
     await tester.scrollUntilVisible(
       find.text('Shared whiteboard'),
       220,
@@ -237,6 +239,75 @@ void main() {
     expect(find.text('Candidate card'), findsOneWidget);
     expect(find.text('Synthesis'), findsOneWidget);
     expect(find.text('Send to Review'), findsOneWidget);
+  });
+
+  testWidgets('role configuration can add verifier to a Seminar agent run',
+      (tester) async {
+    AiSeminarSessionContract? capturedSession;
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (session) async {
+        capturedSession = session;
+        return AiSeminarEvidenceBundle(
+          query: session.question,
+          evidence: [
+            AiSeminarEvidence(
+              id: 'e1',
+              scope: AiSeminarEvidenceScope.currentBook,
+              text: 'The source passage.',
+              sourceRef: traceableRef(),
+            ),
+          ],
+        );
+      },
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.scrollUntilVisible(
+      find.text('Agent roles'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Agent roles'), findsOneWidget);
+    expect(find.textContaining('Evidence-gated role agents'), findsOneWidget);
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Verifier'));
+    await tester.pump();
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(capturedSession, isNotNull);
+    expect(capturedSession!.roles, contains(AiSeminarRole.verifier));
+    expect(Prefs().aiSeminarIncludeVerifier, true);
   });
 
   testWidgets('start passes reader selection SourceRef into seminar session',

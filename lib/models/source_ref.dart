@@ -159,6 +159,8 @@ class SourceRef {
       bookId! > 0 &&
       ((href != null && href!.isNotEmpty) || (cfi != null && cfi!.isNotEmpty));
 
+  bool get hasReaderBacklink => hasBookAnchor || canJumpBack;
+
   bool get canJumpBack {
     final link = jumpLink?.trim();
     if (link == null || link.isEmpty) return false;

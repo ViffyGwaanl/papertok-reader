@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/knowledge/source_ref_unavailable_reason_label.dart';
 
 class SourceRefEvidenceList extends StatelessWidget {
   const SourceRefEvidenceList({
@@ -61,8 +62,9 @@ class _SourceRefEvidenceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = _primaryText(sourceRef);
-    final subtitle = _subtitle(sourceRef);
+    final l10n = L10n.of(context);
+    final text = _primaryText(l10n, sourceRef);
+    final subtitle = _subtitle(l10n, sourceRef);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,23 +106,29 @@ class _SourceRefEvidenceTile extends StatelessWidget {
     );
   }
 
-  String _primaryText(SourceRef sourceRef) {
+  String _primaryText(L10n l10n, SourceRef sourceRef) {
     final snippet = sourceRef.sourceTextSnippet?.trim();
     if (snippet != null && snippet.isNotEmpty) return snippet;
     final unavailableReason = sourceRef.unavailableReason?.trim();
     if (unavailableReason != null && unavailableReason.isNotEmpty) {
-      return unavailableReason;
+      return localizedSourceRefUnavailableReason(l10n, unavailableReason);
     }
     return sourceRef.sourceKind.asString;
   }
 
-  String _subtitle(SourceRef sourceRef) {
+  String _subtitle(L10n l10n, SourceRef sourceRef) {
     final hasSnippet = sourceRef.sourceTextSnippet != null &&
         sourceRef.sourceTextSnippet!.trim().isNotEmpty;
     return [
       sourceRef.sourceTitle,
       sourceRef.locationLabel,
-      if (hasSnippet && !sourceRef.canJumpBack) sourceRef.unavailableReason,
+      if (hasSnippet &&
+          !sourceRef.canJumpBack &&
+          sourceRef.unavailableReason?.trim().isNotEmpty == true)
+        localizedSourceRefUnavailableReason(
+          l10n,
+          sourceRef.unavailableReason!,
+        ),
     ].whereType<String>().where((part) => part.trim().isNotEmpty).join(' · ');
   }
 }

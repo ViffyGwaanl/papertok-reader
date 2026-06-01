@@ -7,6 +7,7 @@ import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/providers/review_inbox.dart';
 import 'package:papertok_reader/service/review/review_inbox_controller.dart';
+import 'package:papertok_reader/widgets/markdown/styled_markdown.dart';
 
 void main() {
   late ReviewInboxController controller;
@@ -40,6 +41,11 @@ void main() {
     await _pumpPage(tester, controller);
 
     expect(find.text('Review inbox'), findsWidgets);
+    expect(
+      find.textContaining(
+          'Knowledge cards combine MarginNote-style excerpt cards'),
+      findsOneWidget,
+    );
     expect(find.text('Widget review card'), findsOneWidget);
     expect(find.text('Knowledge card'), findsOneWidget);
     expect(find.text('Pending'), findsWidgets);
@@ -48,6 +54,34 @@ void main() {
     expect(find.text('Widget Book · Chapter 2'), findsOneWidget);
     expect(find.text('Approve'), findsOneWidget);
     expect(find.text('Dismiss'), findsOneWidget);
+  });
+
+  testWidgets('renders review item body as Markdown instead of raw text',
+      (tester) async {
+    final markdownController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'knowledge-card:kc-markdown',
+        sourceType: ReviewItemSourceType.knowledgeCard,
+        sourceId: 'kc-markdown',
+        title: 'Markdown review card',
+        body: '**Bold claim**\n\n- supporting bullet',
+        status: ReviewItemStatus.pending,
+        sourceRefs: [
+          SourceRef(
+            bookId: 9,
+            href: 'Text/chapter.xhtml',
+            cfi: 'epubcfi(/6/12)',
+            sourceTextSnippet: 'A visible evidence quote.',
+            sourceKind: SourceRefKind.reader,
+          ),
+        ],
+      ),
+    ]);
+
+    await _pumpPage(tester, markdownController);
+
+    expect(find.byType(StyledMarkdown), findsOneWidget);
+    expect(find.textContaining('**Bold claim**'), findsNothing);
   });
 
   testWidgets('Open source emits reader URI through injected opener',
@@ -99,15 +133,61 @@ void main() {
     );
 
     expect(find.text('Sync conflict: missing-source'), findsOneWidget);
-    expect(find.text('sync-conflict-no-source'), findsOneWidget);
+    expect(
+        find.text('Sync conflict has no reader source link.'), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -360));
     await tester.pump();
 
-    await tester.tap(find.text('Open source'));
+    await tester.tap(find.text('Source details'));
     await tester.pump();
 
-    expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.text('sync-conflict-no-source'), findsWidgets);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('Source details'), findsWidgets);
+    expect(find.text('Sync conflict has no reader source link.'), findsWidgets);
+    expect(opened, isEmpty);
+  });
+
+  testWidgets(
+      'conversation-only AI Chat source opens source details instead of reader',
+      (tester) async {
+    final opened = <Uri>[];
+    final chatController = _FakeReviewInboxController([
+      ReviewItem(
+        id: 'knowledge-card:kc-ai-chat',
+        sourceType: ReviewItemSourceType.knowledgeCard,
+        sourceId: 'kc-ai-chat',
+        title: 'AI Chat card',
+        body: 'Answer saved from AI Chat.',
+        status: ReviewItemStatus.pending,
+        sourceRefs: [
+          SourceRef(
+            sourceTitle: 'AI Chat',
+            locationLabel: 'chat-ui-1#node-1',
+            sourceTextSnippet: 'Answer saved from AI Chat.',
+            sourceKind: SourceRefKind.conversation,
+            unavailableReason: 'ai-chat-no-reader-deep-link',
+          ),
+        ],
+      ),
+    ]);
+
+    await _pumpPage(
+      tester,
+      chatController,
+      sourceOpener: (_, uri) async => opened.add(uri),
+    );
+
+    expect(
+      find.textContaining('AI Chat history item has no reader jump link.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Source details'));
+    await tester.pump();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('Source details'), findsWidgets);
+    expect(find.text('AI Chat history item has no reader jump link.'),
+        findsWidgets);
     expect(opened, isEmpty);
   });
 
@@ -173,7 +253,8 @@ void main() {
     expect(find.text('Dismiss'), findsOneWidget);
     expect(find.text('Approve'), findsNothing);
     expect(find.text('Apply'), findsNothing);
-    expect(find.text('sync-conflict-no-source'), findsOneWidget);
+    expect(
+        find.text('Sync conflict has no reader source link.'), findsOneWidget);
   });
 
   testWidgets('safe sync conflict exposes approve and apply actions',

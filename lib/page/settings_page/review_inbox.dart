@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/review_item.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/providers/review_inbox.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/knowledge/source_ref_evidence_list.dart';
+import 'package:papertok_reader/widgets/knowledge/source_ref_unavailable_reason_label.dart';
+import 'package:papertok_reader/widgets/markdown/styled_markdown.dart';
 
 class ReviewInboxPage extends ConsumerStatefulWidget {
   const ReviewInboxPage({
@@ -85,6 +88,13 @@ class _ReviewInboxHeader extends ConsumerWidget {
           Text(
             l10n.reviewInboxDescription,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l10n.reviewInboxKnowledgeCardAiDesc,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: ClaudePalette.secondary(context),
                 ),
           ),
@@ -297,10 +307,14 @@ class _ReviewInboxCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 10),
-            Text(
-              item.body,
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 180),
+              child: ClipRect(
+                child: StyledMarkdown(
+                  data: item.body,
+                  selectable: false,
+                ),
+              ),
             ),
             if (item.sourceRefs.any((ref) => ref.hasEvidence)) ...[
               const SizedBox(height: 10),
@@ -313,13 +327,20 @@ class _ReviewInboxCard extends ConsumerWidget {
               overflowSpacing: 8,
               children: [
                 TextButton.icon(
-                  icon: const Icon(Icons.open_in_new),
-                  label: Text(l10n.reviewInboxOpenSourceAction),
+                  icon: Icon(
+                    firstIntent == null
+                        ? Icons.info_outline
+                        : Icons.open_in_new,
+                  ),
+                  label: Text(
+                    firstIntent == null
+                        ? l10n.reviewInboxSourceDetailsAction
+                        : l10n.reviewInboxOpenSourceAction,
+                  ),
                   onPressed: firstIntent == null
-                      ? () => showPaperReaderSourceUnavailable(
+                      ? () => _showReviewSourceDetails(
                             context,
                             item.sourceRefs,
-                            l10n.conceptGraphNoEvidence,
                           )
                       : () => sourceOpener(
                             ref,
@@ -376,6 +397,49 @@ class _ReviewInboxCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+void _showReviewSourceDetails(
+  BuildContext context,
+  List<SourceRef> sourceRefs,
+) {
+  final l10n = L10n.of(context);
+  final message = localizedSourceRefUnavailableMessage(
+    l10n,
+    sourceRefs,
+    fallbackMessage: l10n.conceptGraphNoEvidence,
+  );
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(l10n.reviewInboxSourceDetailsTitle),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message),
+              if (sourceRefs.any((ref) => ref.hasEvidence)) ...[
+                const SizedBox(height: 12),
+                SourceRefEvidenceList(
+                  sourceRefs: sourceRefs,
+                  maxItems: 6,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.commonOk),
+        ),
+      ],
+    ),
+  );
 }
 
 class _ReviewInboxError extends ConsumerWidget {

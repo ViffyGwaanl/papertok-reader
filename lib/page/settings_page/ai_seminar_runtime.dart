@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/source_ref.dart';
@@ -7,6 +8,7 @@ import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaf
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
+import 'package:papertok_reader/widgets/markdown/styled_markdown.dart';
 
 class AiSeminarRuntimePage extends ConsumerStatefulWidget {
   const AiSeminarRuntimePage({
@@ -32,6 +34,7 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
   late final TextEditingController _roleOutputBudgetController;
   late final TextEditingController _runBudgetController;
   late final TextEditingController _runCostCapController;
+  late bool _includeVerifier;
   bool _autoStarted = false;
   bool _discardedMismatchedEntryState = false;
 
@@ -44,6 +47,7 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
     _roleOutputBudgetController = TextEditingController();
     _runBudgetController = TextEditingController();
     _runCostCapController = TextEditingController();
+    _includeVerifier = Prefs().aiSeminarIncludeVerifier;
     if (widget.autoStart && _questionController.text.trim().isNotEmpty) {
       Future.microtask(_start);
     }
@@ -72,6 +76,7 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
             sourceRefs: [
               if (widget.initialSourceRef != null) widget.initialSourceRef!,
             ],
+            roles: _selectedRoles,
             budgetPolicy: _budgetPolicyFromInputs(diagnostics),
           ),
         );
@@ -141,6 +146,17 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
             runCostCapController: _runCostCapController,
             diagnostics: state.providerDiagnostics,
             enabled: !busy,
+          ),
+          const SizedBox(height: 10),
+          _AgentRolesSection(
+            includeVerifier: _includeVerifier,
+            enabled: !busy,
+            onVerifierChanged: (value) {
+              setState(() {
+                _includeVerifier = value;
+              });
+              Prefs().aiSeminarIncludeVerifier = value;
+            },
           ),
           const SizedBox(height: 10),
           Row(
@@ -280,6 +296,52 @@ class _AiSeminarRuntimePageState extends ConsumerState<AiSeminarRuntimePage> {
   bool _shouldShowJobQueue(List<AiSeminarBackgroundJobSnapshot> jobs) {
     if (jobs.length > 1) return true;
     return jobs.any((job) => job.isQueued);
+  }
+
+  List<AiSeminarRole> get _selectedRoles => [
+        AiSeminarRole.critical,
+        AiSeminarRole.supportive,
+        if (_includeVerifier) AiSeminarRole.verifier,
+        AiSeminarRole.synthesizer,
+      ];
+}
+
+class _AgentRolesSection extends StatelessWidget {
+  const _AgentRolesSection({
+    required this.includeVerifier,
+    required this.enabled,
+    required this.onVerifierChanged,
+  });
+
+  final bool includeVerifier;
+  final bool enabled;
+  final ValueChanged<bool> onVerifierChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    return _Section(
+      title: l10n.seminarAgentRolesTitle,
+      icon: Icons.account_tree_outlined,
+      children: [
+        Text(
+          l10n.seminarAgentRolesDesc,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: ClaudePalette.secondary(context),
+              ),
+        ),
+        const SizedBox(height: 8),
+        Text(l10n.seminarAgentRolesFixed),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.verified_outlined),
+          title: Text(l10n.seminarRoleVerifier),
+          subtitle: Text(l10n.seminarVerifierDesc),
+          value: includeVerifier,
+          onChanged: enabled ? onVerifierChanged : null,
+        ),
+      ],
+    );
   }
 }
 
@@ -765,27 +827,10 @@ class _RolesSection extends StatelessWidget {
       final usage = turn.tokenUsage;
       final usagePrefix = usage == null ? null : _roleUsagePrefix(l10n, usage);
       children.add(
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(_roleIcon(turn.role)),
-          title: Text(_seminarRoleLabel(l10n, turn.role)),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(turn.responseText),
-              if (usage != null)
-                Text(
-                  l10n.seminarRoleUsageLine(
-                    usagePrefix!,
-                    _formatTokenCount(usage.inputTokens),
-                    _formatTokenCount(usage.outputTokens),
-                  ),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
-                      ),
-                ),
-            ],
-          ),
+        _RoleTurnTile(
+          turn: turn,
+          usage: usage,
+          usagePrefix: usagePrefix,
         ),
       );
     }
@@ -799,7 +844,10 @@ class _RolesSection extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           title: Text(_seminarRoleLabel(l10n, activeRole)),
-          subtitle: Text(state.partialRoleText ?? ''),
+          subtitle: StyledMarkdown(
+            data: state.partialRoleText ?? '',
+            selectable: false,
+          ),
         ),
       );
     }
@@ -807,6 +855,82 @@ class _RolesSection extends StatelessWidget {
       title: l10n.seminarRolesTitle,
       icon: Icons.groups_2_outlined,
       children: children.isEmpty ? [Text(l10n.seminarNoRoleTurns)] : children,
+    );
+  }
+}
+
+class _RoleTurnTile extends StatelessWidget {
+  const _RoleTurnTile({
+    required this.turn,
+    required this.usage,
+    required this.usagePrefix,
+  });
+
+  final AiSeminarRoleTurn turn;
+  final AiSeminarTokenUsage? usage;
+  final String? usagePrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: ClaudePalette.elevated(context),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: theme.colorScheme.primaryContainer,
+            foregroundColor: theme.colorScheme.onPrimaryContainer,
+            child: Icon(_roleIcon(turn.role), size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      _seminarRoleLabel(l10n, turn.role),
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    for (final evidenceId in turn.evidenceRefIds.take(4))
+                      _TinyChip(label: evidenceId),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                StyledMarkdown(
+                  data: turn.responseText,
+                  selectable: false,
+                ),
+                if (usage != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.seminarRoleUsageLine(
+                      usagePrefix!,
+                      _formatTokenCount(usage!.inputTokens),
+                      _formatTokenCount(usage!.outputTokens),
+                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -854,11 +978,22 @@ class _SynthesisSection extends ConsumerWidget {
         if (synthesis == null)
           Text(l10n.seminarNoSynthesis)
         else ...[
-          Text(synthesis.summary),
+          StyledMarkdown(
+            data: synthesis.summary,
+            selectable: false,
+          ),
           const SizedBox(height: 8),
-          Text(l10n.seminarSupportiveView(synthesis.supportiveView)),
+          _SynthesisViewTile(
+            icon: Icons.thumb_up_alt_outlined,
+            label: l10n.seminarRoleSupportive,
+            text: synthesis.supportiveView,
+          ),
           const SizedBox(height: 4),
-          Text(l10n.seminarCriticalView(synthesis.criticalView)),
+          _SynthesisViewTile(
+            icon: Icons.report_problem_outlined,
+            label: l10n.seminarRoleCritical,
+            text: synthesis.criticalView,
+          ),
           const SizedBox(height: 10),
           FilledButton.icon(
             icon: const Icon(Icons.fact_check_outlined),
@@ -889,6 +1024,54 @@ class _SynthesisSection extends ConsumerWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _SynthesisViewTile extends StatelessWidget {
+  const _SynthesisViewTile({
+    required this.icon,
+    required this.label,
+    required this.text,
+  });
+
+  final IconData icon;
+  final String label;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ClaudePalette.elevated(context),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18, color: ClaudePalette.secondary(context)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  StyledMarkdown(
+                    data: text,
+                    selectable: false,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

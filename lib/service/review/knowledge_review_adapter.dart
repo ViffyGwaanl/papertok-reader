@@ -45,7 +45,7 @@ class KnowledgeCardReviewAdapter {
 
     final nextState = _cardStateForReview(item.status);
     if (nextState == KnowledgeCardReviewState.applied &&
-        !card.hasTraceableSource) {
+        !card.hasReaderBacklink) {
       throw StateError('KnowledgeCard cannot be applied without SourceRef.');
     }
 

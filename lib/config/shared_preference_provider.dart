@@ -3973,6 +3973,15 @@ Requirements:
     notifyListeners();
   }
 
+  bool get aiSeminarIncludeVerifier =>
+      prefs.getBool('aiSeminarIncludeVerifier') ?? false;
+
+  set aiSeminarIncludeVerifier(bool value) {
+    prefs.setBool('aiSeminarIncludeVerifier', value);
+    touchAiSettingsUpdatedAt();
+    notifyListeners();
+  }
+
   // --- KAIROS proactive level ---
 
   /// KAIROS proactive reading assistant level.

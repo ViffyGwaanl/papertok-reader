@@ -45,6 +45,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Concept graph'), findsWidgets);
+    expect(
+      find.textContaining(
+          'AI assists this graph through reviewed Knowledge Cards'),
+      findsOneWidget,
+    );
     expect(find.text('Attention'), findsOneWidget);
     expect(find.text('1 orphan / 1 broken'), findsOneWidget);
 

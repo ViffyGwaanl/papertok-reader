@@ -74,7 +74,11 @@ class ReviewItem {
     String? decisionSource,
     Map<String, dynamic> payload = const <String, dynamic>{},
   }) {
-    final normalizedStatus = _normalizeStatus(status, sourceRefs);
+    final normalizedStatus = _normalizeStatus(
+      status,
+      sourceType,
+      sourceRefs,
+    );
     return ReviewItem._(
       id: id,
       sourceType: sourceType,
@@ -124,8 +128,13 @@ class ReviewItem {
   final Map<String, dynamic> payload;
 
   bool get hasTraceableSource => sourceRefs.any((ref) => ref.hasEvidence);
+  bool get hasReaderBacklink => sourceRefs.any((ref) => ref.hasReaderBacklink);
+  bool get hasApplicableSource => switch (sourceType) {
+        ReviewItemSourceType.knowledgeCard => hasReaderBacklink,
+        _ => hasTraceableSource,
+      };
   bool get canApply =>
-      status == ReviewItemStatus.approved && hasTraceableSource;
+      status == ReviewItemStatus.approved && hasApplicableSource;
 
   ReviewItem transitionTo(
     ReviewItemStatus next, {
@@ -137,7 +146,7 @@ class ReviewItem {
         'Invalid ReviewItem transition: ${status.asString} -> ${next.asString}',
       );
     }
-    if (next == ReviewItemStatus.applied && !hasTraceableSource) {
+    if (next == ReviewItemStatus.applied && !hasApplicableSource) {
       throw StateError('ReviewItem cannot be applied without SourceRef.');
     }
     return copyWith(
@@ -207,15 +216,17 @@ class ReviewItem {
             .map((e) => SourceRef.fromJson(Map<String, dynamic>.from(e)))
             .toList(growable: false) ??
         const <SourceRef>[];
+    final sourceType = ReviewItemSourceType.fromString(
+      json['sourceType']?.toString(),
+    );
     final status = _normalizeStatus(
       ReviewItemStatus.fromString(json['status']?.toString()),
+      sourceType,
       refs,
     );
     return ReviewItem(
       id: (json['id'] ?? '').toString(),
-      sourceType: ReviewItemSourceType.fromString(
-        json['sourceType']?.toString(),
-      ),
+      sourceType: sourceType,
       sourceId: (json['sourceId'] ?? '').toString(),
       title: (json['title'] ?? '').toString(),
       body: (json['body'] ?? '').toString(),
@@ -234,10 +245,15 @@ class ReviewItem {
 
   static ReviewItemStatus _normalizeStatus(
     ReviewItemStatus status,
+    ReviewItemSourceType sourceType,
     List<SourceRef> sourceRefs,
   ) {
-    if (status == ReviewItemStatus.applied &&
-        !sourceRefs.any((ref) => ref.hasEvidence)) {
+    final hasApplicableSource = switch (sourceType) {
+      ReviewItemSourceType.knowledgeCard =>
+        sourceRefs.any((ref) => ref.hasReaderBacklink),
+      _ => sourceRefs.any((ref) => ref.hasEvidence),
+    };
+    if (status == ReviewItemStatus.applied && !hasApplicableSource) {
       return ReviewItemStatus.approved;
     }
     return status;

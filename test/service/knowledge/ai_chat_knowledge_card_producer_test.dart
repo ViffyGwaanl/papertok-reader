@@ -185,6 +185,35 @@ void main() {
     expect(result.card.conceptRefs, isEmpty);
   });
 
+  test('pure chat card without reader anchor cannot be applied as user asset',
+      () async {
+    final controller = ReviewInboxController(
+      rootDir: tempRoot,
+      reviewStore: reviewStore,
+      knowledgeCardStore: cardStore,
+      now: () => 200,
+    );
+    final result = await producer.createFromAssistantAnswer(
+      assistantAnswer: 'This is a reusable study insight.',
+      userPrompt: 'What should I remember?',
+      conversationId: 'chat-no-reader-source',
+      messageNodeId: 'assistant:1',
+      now: 100,
+    );
+
+    final approved = await controller.approve(result.reviewItem!.id);
+    expect(approved.canApply, isFalse);
+
+    await expectLater(
+      controller.apply(result.reviewItem!.id),
+      throwsA(isA<StateError>()),
+    );
+
+    final storedCard = await cardStore.getById(result.card.id);
+    expect(storedCard!.reviewState, KnowledgeCardReviewState.approved);
+    expect(storedCard.isUserAsset, isFalse);
+  });
+
   test('duplicate chat answer does not create duplicate cards', () async {
     final first = await producer.createFromAssistantAnswer(
       assistantAnswer: 'Duplicate insight.',

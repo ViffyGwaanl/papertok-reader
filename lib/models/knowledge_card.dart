@@ -117,14 +117,15 @@ class KnowledgeCard {
   final int? updatedAt;
 
   bool get hasTraceableSource => sourceRefs.any((ref) => ref.hasEvidence);
+  bool get hasReaderBacklink => sourceRefs.any((ref) => ref.hasReaderBacklink);
 
   bool get canApply =>
-      reviewState == KnowledgeCardReviewState.approved && hasTraceableSource;
+      reviewState == KnowledgeCardReviewState.approved && hasReaderBacklink;
 
   bool get isUserAsset =>
       reviewState == KnowledgeCardReviewState.applied &&
       ownership != AiOutputOwnership.aiGeneratedDraft &&
-      hasTraceableSource;
+      hasReaderBacklink;
 
   KnowledgeCard copyWith({
     String? id,
@@ -214,9 +215,8 @@ class KnowledgeCard {
     if (reviewState != KnowledgeCardReviewState.applied) {
       return reviewState;
     }
-    final hasTraceableSource = sourceRefs.any((ref) => ref.hasEvidence);
-    if (!hasTraceableSource ||
-        ownership == AiOutputOwnership.aiGeneratedDraft) {
+    final hasReaderBacklink = sourceRefs.any((ref) => ref.hasReaderBacklink);
+    if (!hasReaderBacklink || ownership == AiOutputOwnership.aiGeneratedDraft) {
       return KnowledgeCardReviewState.approved;
     }
     return reviewState;

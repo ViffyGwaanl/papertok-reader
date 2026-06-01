@@ -62,6 +62,15 @@ class _ConceptGraphExplorerPageState
                   ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Text(
+              l10n.conceptGraphAiModeDescription,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: ClaudePalette.secondary(context),
+                  ),
+            ),
+          ),
           _IntegrityBanner(state: state),
           Expanded(
             child: state.nodes.when(
