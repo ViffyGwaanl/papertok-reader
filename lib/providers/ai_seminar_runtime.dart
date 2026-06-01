@@ -551,6 +551,10 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       _markRestoredRunningInterrupted();
       return;
     }
+    if (_shouldResumeUserDirectedRole(state)) {
+      await executeDirectorNextStep();
+      return;
+    }
     await _runResolvedSession(
       _sessionWithCurrentProviderBudget(session, currentDiagnostics),
       backgroundJob,
@@ -561,6 +565,14 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         startedAt: state.startedAt ?? backgroundJob.startedAt,
       ),
     );
+  }
+
+  static bool _shouldResumeUserDirectedRole(AiSeminarRuntimeState state) {
+    final directorState = state.directorState;
+    if (state.status != AiSeminarRunStatus.running) return false;
+    if (directorState == null) return false;
+    return directorState.nextIntent == AiSeminarDirectorNextIntent.runRole &&
+        directorState.lastUserIntervention != null;
   }
 
   void _markRestoredRunningInterrupted() {
@@ -785,6 +797,88 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       clearError: true,
     );
     await _persistState();
+  }
+
+  Future<void> executeDirectorNextStep() async {
+    final session = state.session;
+    final evidenceBundle = state.evidenceBundle;
+    final directorState = state.directorState;
+    final intervention = directorState?.lastUserIntervention;
+    if (session == null || evidenceBundle == null || directorState == null) {
+      const message = 'AI Seminar Director step requires an active session.';
+      state = state.copyWith(error: message);
+      throw StateError(message);
+    }
+    if (directorState.nextIntent != AiSeminarDirectorNextIntent.runRole ||
+        intervention == null) {
+      const message =
+          'AI Seminar Director step is not ready for a reader-directed role.';
+      state = state.copyWith(error: message);
+      throw StateError(message);
+    }
+
+    final targetRole = intervention.targetRole ?? AiSeminarRole.critical;
+    final generation = ++_generation;
+    final token = AiSeminarCancellationToken();
+    _activeToken?.cancel();
+    _activeToken = token;
+    final existingRunningJob =
+        state.backgroundJob?.isActive == true ? state.backgroundJob : null;
+    final startedAt = existingRunningJob?.startedAt ??
+        _nextBackgroundJobStartedAt(DateTime.now().millisecondsSinceEpoch);
+    final backgroundJob = existingRunningJob ??
+        _newBackgroundJob(
+          session,
+          startedAt: startedAt,
+          message: 'AI Seminar reader-directed role turn.',
+        );
+    final runningJob = backgroundJob.copyWith(
+      status: AiSeminarBackgroundJobStatus.running,
+      updatedAt: startedAt,
+      completedAt: null,
+      message: null,
+      session: session,
+    );
+    state = state.copyWith(
+      status: AiSeminarRunStatus.running,
+      activeRole: null,
+      partialRoleText: null,
+      synthesis: null,
+      lastRun: null,
+      startedAt: state.startedAt ?? startedAt,
+      completedAt: null,
+      backgroundJob: runningJob,
+      backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, runningJob),
+      clearError: true,
+    );
+    await _persistState();
+
+    await for (final event in _service.runUserDirectedRole(
+      session,
+      evidenceBundle: evidenceBundle,
+      priorTurns: state.turns,
+      intervention: intervention,
+      targetRole: targetRole,
+      cancelToken: token,
+    )) {
+      if (!mounted || generation != _generation) return;
+      _applyEvent(event);
+      if (event.type != AiSeminarRuntimeEventType.roleDelta) {
+        await _persistState();
+      }
+      if (event.status?.isTerminal == true) {
+        _activeToken = null;
+      }
+    }
+    if (!mounted || generation != _generation) return;
+    if (state.status == AiSeminarRunStatus.running) {
+      _completeUserDirectedRoleStep(session, evidenceBundle);
+      await _persistState();
+    }
+    if (mounted && generation == _generation) {
+      _activeToken = null;
+      await _startNextQueuedJobIfAvailable();
+    }
   }
 
   void restore(AiSeminarRuntimeState restored) {
@@ -1046,6 +1140,64 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         );
         break;
     }
+  }
+
+  void _completeUserDirectedRoleStep(
+    AiSeminarSessionContract session,
+    AiSeminarEvidenceBundle evidenceBundle,
+  ) {
+    final completedAt = DateTime.now().millisecondsSinceEpoch;
+    final synthesis = AiSeminarOrchestrationService.synthesize(
+      session: session,
+      evidenceBundle: evidenceBundle,
+      turns: state.turns,
+    );
+    final billingSnapshot = _billingSnapshot(
+      session: session,
+      turns: state.turns,
+      completedAt: completedAt,
+    );
+    final tokenUsage = AiSeminarTokenUsage.aggregateRoleTurns(state.turns);
+    final run = AiSeminarRun(
+      session: session,
+      status: AiSeminarRunStatus.completed,
+      evidenceBundle: evidenceBundle,
+      turns: List.unmodifiable(state.turns),
+      synthesis: synthesis,
+      startedAt: state.startedAt,
+      completedAt: completedAt,
+      tokenUsage: tokenUsage,
+      estimatedCostUsd: billingSnapshot?.estimatedCostUsd ??
+          _estimatedRunCostUsd(session.budgetPolicy, state.turns),
+      costPriceSource: billingSnapshot?.pricingSource ??
+          _costPriceSource(session.budgetPolicy, state.turns),
+      billingSnapshot: billingSnapshot,
+    );
+    final backgroundJob = _markBackgroundJob(
+      state.backgroundJob,
+      AiSeminarBackgroundJobStatus.completed,
+      updatedAt: completedAt,
+      completedAt: completedAt,
+    );
+    state = state.copyWith(
+      status: AiSeminarRunStatus.completed,
+      synthesis: synthesis,
+      lastRun: run,
+      activeRole: null,
+      partialRoleText: null,
+      completedAt: completedAt,
+      directorState: _directorStateFor(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        turns: state.turns,
+        whiteboardEntries: state.whiteboardEntries,
+        previous: state.directorState,
+        nextIntent: AiSeminarDirectorNextIntent.end,
+      ),
+      backgroundJob: backgroundJob,
+      backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, backgroundJob),
+      clearError: true,
+    );
   }
 
   AiSeminarDirectorState? _directorStateFor({

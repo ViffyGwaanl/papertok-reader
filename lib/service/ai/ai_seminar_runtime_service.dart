@@ -506,6 +506,242 @@ class AiSeminarRuntimeService {
     );
   }
 
+  Stream<AiSeminarRuntimeEvent> runUserDirectedRole(
+    AiSeminarSessionContract session, {
+    required AiSeminarEvidenceBundle evidenceBundle,
+    required List<AiSeminarRoleTurn> priorTurns,
+    required AiSeminarUserIntervention intervention,
+    required AiSeminarRole targetRole,
+    AiSeminarCancellationToken? cancelToken,
+  }) async* {
+    final token = cancelToken ?? AiSeminarCancellationToken();
+    final startedAt = _nowMs();
+    if (evidenceBundle.evidence.isEmpty ||
+        !evidenceBundle.allEvidenceTraceable) {
+      yield _needsEvidenceEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        turns: priorTurns,
+        message: 'AI Seminar requires traceable current-source evidence.',
+      );
+      return;
+    }
+
+    final traceableEvidenceIds = _traceableEvidenceIds(evidenceBundle);
+    if (priorTurns.any(
+      (turn) =>
+          turn.isFailed || !turn.hasTraceableEvidence(traceableEvidenceIds),
+    )) {
+      yield _needsEvidenceEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        turns: priorTurns,
+        message:
+            'AI Seminar prior turns need traceable evidence before a reader-directed role can continue.',
+      );
+      return;
+    }
+
+    final turns = List<AiSeminarRoleTurn>.from(
+      _checkpointTurnsWithTokenUsage(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        turns: priorTurns,
+      ),
+    );
+    final localBudgetTurns = _localBudgetTurnsForCheckpoint(
+      session: session,
+      evidenceBundle: evidenceBundle,
+      turns: priorTurns,
+    );
+    final whiteboardEntries = _whiteboardEntries(turns);
+    yield AiSeminarRuntimeEvent(
+      type: AiSeminarRuntimeEventType.roleStarted,
+      session: session,
+      status: AiSeminarRunStatus.running,
+      evidenceBundle: evidenceBundle,
+      activeRole: targetRole,
+      turns: List.unmodifiable(turns),
+      whiteboardEntries: whiteboardEntries,
+    );
+
+    final invocation = AiSeminarRoleInvocation(
+      session: session,
+      role: targetRole,
+      evidenceBundle: evidenceBundle,
+      priorTurns: List.unmodifiable(turns),
+      prompt: AiSeminarOrchestrationService.promptForUserInterventionRole(
+        session: session,
+        role: targetRole,
+        evidenceBundle: evidenceBundle,
+        priorTurns: turns,
+        intervention: intervention,
+      ),
+    );
+    AiSeminarRoleTurn? completedTurn;
+    try {
+      await for (final chunk in _streamRole(invocation, token)) {
+        if (token.isCancelled) {
+          yield _cancelledEvent(
+            session: session,
+            evidenceBundle: evidenceBundle,
+            startedAt: startedAt,
+            turns: turns,
+          );
+          return;
+        }
+        final partialText = chunk.partialText;
+        if (partialText != null) {
+          final roleOutputLimit = session.budgetPolicy?.maxRoleOutputTokens;
+          final partialOutputTokens = _estimateTokenCount(partialText);
+          if (roleOutputLimit != null &&
+              partialOutputTokens > roleOutputLimit) {
+            token.cancel();
+            yield _failedEvent(
+              session: session,
+              evidenceBundle: evidenceBundle,
+              startedAt: startedAt,
+              turns: turns,
+              message:
+                  'AI Seminar role ${targetRole.asString} exceeded local role output token budget '
+                  '($partialOutputTokens > $roleOutputLimit).',
+            );
+            return;
+          }
+          yield AiSeminarRuntimeEvent(
+            type: AiSeminarRuntimeEventType.roleDelta,
+            session: session,
+            status: AiSeminarRunStatus.running,
+            evidenceBundle: evidenceBundle,
+            activeRole: targetRole,
+            partialText: partialText,
+            turns: List.unmodifiable(turns),
+            whiteboardEntries: _whiteboardEntries(turns),
+          );
+        }
+        if (chunk.completedTurn != null) {
+          completedTurn = chunk.completedTurn;
+        }
+      }
+    } catch (error) {
+      yield _failedEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        turns: turns,
+        message: error.toString(),
+      );
+      return;
+    }
+
+    final turn = completedTurn;
+    if (turn == null) {
+      yield _failedEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        turns: turns,
+        message: 'AI Seminar role ${targetRole.asString} produced no turn.',
+      );
+      return;
+    }
+    if (turn.role != targetRole) {
+      yield _failedEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        turns: turns,
+        message:
+            'AI Seminar executor returned ${turn.role.asString} for ${targetRole.asString}.',
+      );
+      return;
+    }
+    if (turn.isFailed) {
+      yield _failedEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        turns: [...turns, _stripTokenUsage(turn)],
+        message: turn.error,
+      );
+      return;
+    }
+    if (!turn.hasTraceableEvidence(traceableEvidenceIds)) {
+      yield _needsEvidenceEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        turns: turns,
+        message:
+            'AI Seminar role ${targetRole.asString} cited missing or untraceable evidence.',
+      );
+      return;
+    }
+
+    final localBudgetTurn = _copyTurnWithTokenUsage(
+      turn,
+      _estimatedTokenUsage(invocation: invocation, turn: turn),
+    );
+    final nextBudgetTurns = [...localBudgetTurns, localBudgetTurn];
+    final budgetFailure = _budgetFailureMessage(
+      session.budgetPolicy,
+      localBudgetTurn,
+      nextBudgetTurns,
+    );
+    if (budgetFailure != null) {
+      yield _failedEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        turns: nextBudgetTurns,
+        message: budgetFailure,
+      );
+      return;
+    }
+
+    final turnWithUsage = _attachEstimatedTokenUsage(
+      invocation: invocation,
+      turn: turn,
+    );
+    final nextTurns = [...turns, turnWithUsage];
+    final costFailure = _costBudgetFailureMessage(
+      session.budgetPolicy,
+      nextTurns,
+    );
+    if (costFailure != null) {
+      yield _failedEvent(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        startedAt: startedAt,
+        turns: nextTurns,
+        message: costFailure,
+      );
+      return;
+    }
+
+    final nextWhiteboardEntries = _whiteboardEntries(nextTurns);
+    yield AiSeminarRuntimeEvent(
+      type: AiSeminarRuntimeEventType.roleCompleted,
+      session: session,
+      status: AiSeminarRunStatus.running,
+      evidenceBundle: evidenceBundle,
+      activeRole: targetRole,
+      turn: turnWithUsage,
+      turns: List.unmodifiable(nextTurns),
+      whiteboardEntries: nextWhiteboardEntries,
+    );
+    yield AiSeminarRuntimeEvent(
+      type: AiSeminarRuntimeEventType.whiteboardUpdated,
+      session: session,
+      status: AiSeminarRunStatus.running,
+      evidenceBundle: evidenceBundle,
+      turns: List.unmodifiable(nextTurns),
+      whiteboardEntries: nextWhiteboardEntries,
+    );
+  }
+
   AiSeminarRuntimeEvent _failedEvent({
     required AiSeminarSessionContract session,
     required AiSeminarEvidenceBundle evidenceBundle,

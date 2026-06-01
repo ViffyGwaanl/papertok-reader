@@ -257,15 +257,20 @@ void main() {
         ],
       ),
       streamRole: (invocation, _) async* {
+        final isFollowUp = invocation.priorTurns.length >= 3;
         yield AiSeminarRoleStreamChunk(
           completedTurn: AiSeminarRoleTurn(
-            id: 'turn-${invocation.role.asString}',
+            id: isFollowUp
+                ? 'turn-${invocation.role.asString}-follow-up'
+                : 'turn-${invocation.role.asString}',
             role: invocation.role,
             prompt: invocation.prompt,
-            responseText: '${invocation.role.asString} response',
+            responseText: isFollowUp
+                ? '${invocation.role.asString} follow-up response'
+                : '${invocation.role.asString} response',
             evidenceRefIds: const ['e1'],
             whiteboardEntries: [
-              if (invocation.role == AiSeminarRole.synthesizer)
+              if (invocation.role == AiSeminarRole.synthesizer && !isFollowUp)
                 const AiSeminarWhiteboardEntry(
                   id: 'question-1',
                   kind: AiSeminarWhiteboardKind.openQuestion,
@@ -328,6 +333,17 @@ void main() {
         AiSeminarRole.critical);
     expect(state.directorState!.lastUserIntervention!.isEvidence, false);
     expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e1']);
+    expect(state.turns.last.id, 'turn-critical-follow-up');
+    expect(
+      state.turns.last.prompt,
+      contains('Please ask the critical role to respond.'),
+    );
+    await tester.scrollUntilVisible(
+      find.text('critical follow-up response'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('critical follow-up response'), findsOneWidget);
   });
 
   testWidgets('role configuration can add verifier to a Seminar agent run',

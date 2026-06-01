@@ -181,6 +181,25 @@ class AiSeminarOrchestrationService {
     ].join('\n');
   }
 
+  static String promptForUserInterventionRole({
+    required AiSeminarSessionContract session,
+    required AiSeminarRole role,
+    required AiSeminarEvidenceBundle evidenceBundle,
+    required List<AiSeminarRoleTurn> priorTurns,
+    required AiSeminarUserIntervention intervention,
+  }) {
+    return [
+      promptForRole(
+        session: session,
+        role: role,
+        evidenceBundle: evidenceBundle,
+        priorTurns: priorTurns,
+      ),
+      'Reader intervention: ${intervention.text}',
+      'Respond directly to the reader intervention before updating the shared discussion.',
+    ].join('\n');
+  }
+
   static AiSeminarSynthesis synthesize({
     required AiSeminarSessionContract session,
     required AiSeminarEvidenceBundle evidenceBundle,

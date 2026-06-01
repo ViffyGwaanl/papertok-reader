@@ -354,6 +354,79 @@ void main() {
     expect(intervention.containsKey('evidenceRefIds'), false);
   });
 
+  test('executes user requested role turn after reader intervention', () async {
+    configureProvider();
+    final prompts = <String>[];
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        prompts.add(invocation.prompt);
+        final isFollowUp = invocation.priorTurns.length >= 3;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: isFollowUp
+                ? 'turn-${invocation.role.asString}-follow-up'
+                : 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: isFollowUp
+                ? '${invocation.role.asString} follow-up response'
+                : '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+            whiteboardEntries: [
+              if (invocation.role == AiSeminarRole.synthesizer && !isFollowUp)
+                const AiSeminarWhiteboardEntry(
+                  id: 'open-question-1',
+                  kind: AiSeminarWhiteboardKind.openQuestion,
+                  text: 'Which interpretation should the reader test next?',
+                  role: AiSeminarRole.synthesizer,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    await notifier.start(
+      AiSeminarSessionContract(id: 's-user-follow-up', question: 'Explain.'),
+    );
+    await notifier.recordUserIntervention(
+      text: '请 critical 角色直接回应这个疑点。',
+      requestedAction: AiSeminarUserInterventionAction.askRole,
+      targetRole: AiSeminarRole.critical,
+      now: 1234,
+    );
+    await notifier.executeDirectorNextStep();
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(state.turns.map((turn) => turn.id), [
+      'turn-critical',
+      'turn-supportive',
+      'turn-synthesizer',
+      'turn-critical-follow-up',
+    ]);
+    expect(state.turns.last.role, AiSeminarRole.critical);
+    expect(state.turns.last.responseText, 'critical follow-up response');
+    expect(state.turns.last.prompt, contains('请 critical 角色直接回应这个疑点。'));
+    expect(
+        prompts.last, contains('Reader intervention: 请 critical 角色直接回应这个疑点。'));
+    expect(state.synthesis!.criticalView, 'critical follow-up response');
+    expect(state.lastRun!.turns.map((turn) => turn.id),
+        contains('turn-critical-follow-up'));
+    expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+    expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e1']);
+  });
+
   test('start tracks a persisted background job through completion', () async {
     configureProvider();
     final container = ProviderContainer(
@@ -1261,6 +1334,140 @@ void main() {
       AiSeminarRole.supportive,
       AiSeminarRole.synthesizer,
     ]);
+  });
+
+  test('running user-directed role state resumes the requested follow-up',
+      () async {
+    configureProvider();
+    final invokedRoles = <AiSeminarRole>[];
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-running-user-follow-up',
+        question: 'Resume user follow-up?',
+        billingContext: const AiSeminarBillingContext(
+          providerId: 'local-gateway',
+          providerName: 'Local Gateway',
+          providerType: 'openai-compatible',
+          modelId: 'gpt-5.5',
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-running-user-follow-up',
+        sessionId: 's-running-user-follow-up',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: const [
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-running-user-follow-up',
+          sessionId: 's-running-user-follow-up',
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+      ],
+      evidenceBundle: bundle(),
+      activeRole: AiSeminarRole.critical,
+      partialRoleText: 'partial user-directed answer',
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'critical prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+        ),
+        AiSeminarRoleTurn(
+          id: 'turn-supportive',
+          role: AiSeminarRole.supportive,
+          prompt: 'supportive prompt',
+          responseText: 'supportive response',
+          evidenceRefIds: ['e1'],
+        ),
+        AiSeminarRoleTurn(
+          id: 'turn-synthesizer',
+          role: AiSeminarRole.synthesizer,
+          prompt: 'synthesizer prompt',
+          responseText: 'synthesizer response',
+          evidenceRefIds: ['e1'],
+        ),
+      ],
+      directorState: const AiSeminarDirectorState(
+        sessionId: 's-running-user-follow-up',
+        turnCount: 3,
+        completedRoles: [
+          AiSeminarRole.critical,
+          AiSeminarRole.supportive,
+          AiSeminarRole.synthesizer,
+        ],
+        completedRoleTurnIds: [
+          'turn-critical',
+          'turn-supportive',
+          'turn-synthesizer',
+        ],
+        evidenceLedger: ['e1'],
+        nextIntent: AiSeminarDirectorNextIntent.runRole,
+        lastUserIntervention: AiSeminarUserIntervention(
+          id: 'user-1234',
+          text: '请 critical 继续回应我的疑问。',
+          requestedAction: AiSeminarUserInterventionAction.askRole,
+          targetRole: AiSeminarRole.critical,
+          createdAt: 1234,
+        ),
+      ),
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+    final resumeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fail('restored user-directed resume should use persisted evidence');
+      },
+      streamRole: (invocation, _) async* {
+        invokedRoles.add(invocation.role);
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}-follow-up',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} follow-up response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(resumeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(aiSeminarRuntimeProvider);
+    for (var i = 0; i < 20; i += 1) {
+      if (container.read(aiSeminarRuntimeProvider).status !=
+          AiSeminarRunStatus.running) {
+        break;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(invokedRoles, [AiSeminarRole.critical]);
+    expect(restored.status, AiSeminarRunStatus.completed);
+    expect(restored.backgroundJob!.id, 'job-running-user-follow-up');
+    expect(
+      restored.backgroundJob!.status,
+      AiSeminarBackgroundJobStatus.completed,
+    );
+    expect(restored.turns.last.id, 'turn-critical-follow-up');
+    expect(restored.turns.last.prompt, contains('请 critical 继续回应我的疑问。'));
+    expect(restored.partialRoleText, isNull);
+    expect(restored.synthesis!.criticalView, 'critical follow-up response');
   });
 
   test('invalid restored checkpoint falls back to interrupted without resume',

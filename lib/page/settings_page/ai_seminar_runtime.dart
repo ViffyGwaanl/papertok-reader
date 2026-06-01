@@ -970,6 +970,11 @@ class _SeminarUserInterventionSectionState
           requestedAction: action,
           targetRole: targetRole,
         );
+    if (action == AiSeminarUserInterventionAction.askRole) {
+      await ref
+          .read(aiSeminarRuntimeProvider.notifier)
+          .executeDirectorNextStep();
+    }
     if (!mounted) return;
     _controller.clear();
     setState(() {});
