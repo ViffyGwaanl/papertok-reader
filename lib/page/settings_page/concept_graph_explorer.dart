@@ -10,6 +10,7 @@ import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
 import 'package:papertok_reader/service/knowledge/derived_book_concept_graph_loader.dart';
+import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 
 class ConceptGraphExplorerPage extends ConsumerStatefulWidget {
@@ -438,11 +439,15 @@ class _DerivedBookGraphSection extends ConsumerStatefulWidget {
 class _DerivedBookGraphSectionState
     extends ConsumerState<_DerivedBookGraphSection> {
   late Future<DerivedBookConceptGraphSnapshot> _future;
+  late Future<AiGlobalIndexBookLayerStatus?> _statusFuture;
+  bool _isRebuilding = false;
+  String? _rebuildError;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    _statusFuture = _loadStatus();
   }
 
   @override
@@ -450,6 +455,9 @@ class _DerivedBookGraphSectionState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.bookId != widget.bookId) {
       _future = _load();
+      _statusFuture = _loadStatus();
+      _isRebuilding = false;
+      _rebuildError = null;
     }
   }
 
@@ -457,6 +465,34 @@ class _DerivedBookGraphSectionState
     return ref
         .read(conceptGraphDerivedBookLoaderProvider)
         .loadBook(bookId: widget.bookId);
+  }
+
+  Future<AiGlobalIndexBookLayerStatus?> _loadStatus() {
+    return ref.read(conceptGraphGlobalLayerStatusProvider)(widget.bookId);
+  }
+
+  Future<void> _rebuildGlobalLayer() async {
+    if (_isRebuilding) return;
+    setState(() {
+      _isRebuilding = true;
+      _rebuildError = null;
+    });
+    try {
+      await ref.read(conceptGraphGlobalLayerRebuilderProvider)(
+          bookId: widget.bookId);
+      if (!mounted) return;
+      setState(() {
+        _future = _load();
+        _statusFuture = _loadStatus();
+        _isRebuilding = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isRebuilding = false;
+        _rebuildError = error.toString();
+      });
+    }
   }
 
   @override
@@ -521,12 +557,27 @@ class _DerivedBookGraphSectionState
                   const SizedBox(height: 8),
                   Text(
                     zh
-                        ? '当前书还没有可展示的全书关系图。可先在 AI Index / Library Index 中补建全局层索引。'
-                        : 'No full-book relationship graph is available yet. Build the global layer from AI Index / Library Index first.',
+                        ? '当前书还没有可展示的全书关系图。若这本书已有旧版 AI 索引，可在这里直接补建全局层索引。'
+                        : 'No full-book relationship graph is available yet. If this book already has an older AI index, build its global layer here.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: ClaudePalette.secondary(context),
                         ),
                   ),
+                  const SizedBox(height: 8),
+                  _GlobalLayerBuildAction(
+                    statusFuture: _statusFuture,
+                    isRebuilding: _isRebuilding,
+                    onBuild: _rebuildGlobalLayer,
+                  ),
+                  if (_rebuildError != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      _rebuildError!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                    ),
+                  ],
                 ],
                 if (graph != null && !graph.isEmpty) ...[
                   const SizedBox(height: 12),
@@ -573,6 +624,98 @@ class _DerivedBookGraphSectionState
     return graph.edges.length == 1
         ? '1 relation'
         : '${graph.edges.length} relations';
+  }
+}
+
+class _GlobalLayerBuildAction extends StatelessWidget {
+  const _GlobalLayerBuildAction({
+    required this.statusFuture,
+    required this.isRebuilding,
+    required this.onBuild,
+  });
+
+  final Future<AiGlobalIndexBookLayerStatus?> statusFuture;
+  final bool isRebuilding;
+  final Future<void> Function() onBuild;
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    return FutureBuilder<AiGlobalIndexBookLayerStatus?>(
+      future: statusFuture,
+      builder: (context, snapshot) {
+        final status = snapshot.data;
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                zh ? '正在检查全局层状态...' : 'Checking global layer status...',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
+              ),
+            ],
+          );
+        }
+        if (status == null) {
+          return Text(
+            zh
+                ? '当前书还没有可用的 AI chunk 索引；请先完成书籍 AI 索引。'
+                : 'This book has no AI chunk index yet. Build the book AI index first.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          );
+        }
+        if (status.hasGlobalLayer) {
+          return Text(
+            zh
+                ? '全局摘要层已存在；当前没有可展示关系，通常是自动概念抽取暂时不足。'
+                : 'The global summary layer exists; no displayable relations were extracted yet.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          );
+        }
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            FilledButton.icon(
+              onPressed: isRebuilding ? null : onBuild,
+              icon: isRebuilding
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.auto_fix_high_outlined),
+              label: Text(
+                isRebuilding
+                    ? (zh ? '正在生成...' : 'Building...')
+                    : (zh ? '立即生成全局层索引' : 'Build global layer now'),
+              ),
+            ),
+            Text(
+              zh
+                  ? '${status.chunkCount} 个旧索引 chunk 将用于本地补建。'
+                  : '${status.chunkCount} indexed chunks will be reused locally.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: ClaudePalette.secondary(context),
+                  ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 

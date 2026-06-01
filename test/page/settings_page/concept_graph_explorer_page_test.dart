@@ -11,6 +11,7 @@ import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/knowledge/derived_book_concept_graph_loader.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
 import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 
@@ -157,6 +158,74 @@ void main() {
       find.byKey(const ValueKey('full-book-derived-graph-map')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('book scoped explorer can build a missing global layer in place',
+      (tester) async {
+    final loader = _MutableDerivedBookConceptGraphLoader();
+    final rebuiltBookIds = <int>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(loader),
+          conceptGraphGlobalLayerStatusProvider.overrideWithValue(
+            (bookId) async {
+              return AiGlobalIndexBookLayerStatus(
+                bookId: bookId,
+                chunkCount: 4,
+                raptorNodes: loader.hasGraph ? 2 : 0,
+                graphNodes: loader.hasGraph ? 2 : 0,
+                graphEdges: loader.hasGraph ? 1 : 0,
+                graphCommunities: loader.hasGraph ? 1 : 0,
+              );
+            },
+          ),
+          conceptGraphGlobalLayerRebuilderProvider.overrideWithValue(
+            ({required int bookId}) async {
+              rebuiltBookIds.add(bookId);
+              loader.hasGraph = true;
+              return const AiGlobalIndexStats(
+                raptorNodes: 2,
+                graphNodes: 2,
+                graphEdges: 1,
+                graphCommunities: 1,
+              );
+            },
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Full-book derived graph'), findsOneWidget);
+    expect(
+      find.textContaining('No full-book relationship graph is available yet'),
+      findsOneWidget,
+    );
+    await tester.pump();
+    expect(find.text('Build global layer now'), findsOneWidget);
+
+    await tester.tap(find.text('Build global layer now'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(rebuiltBookIds, [7]);
+    expect(find.text('Working memory'), findsWidgets);
+    expect(find.text('2 nodes'), findsOneWidget);
+    expect(find.text('Build global layer now'), findsNothing);
   });
 
   testWidgets('settings explorer can choose an indexed book full-book graph',
@@ -804,40 +873,62 @@ class _FakeDerivedBookConceptGraphLoader
     required int bookId,
     int nodeLimit = 18,
   }) async {
-    return DerivedBookConceptGraphSnapshot(
-      bookId: bookId,
-      nodes: [
-        ConceptNode(
-          id: 'derived:working-memory',
-          type: ConceptNodeType.concept,
-          label: 'Working memory',
-          summary: 'A whole-book graph node from the global layer.',
-          sourceRefs: [refFor('Working memory evidence.')],
-          ownership: AiOutputOwnership.derivedCache,
-        ),
-        ConceptNode(
-          id: 'derived:attention-control',
-          type: ConceptNodeType.concept,
-          label: 'Attention control',
-          summary: 'A related full-book graph node.',
-          sourceRefs: [refFor('Attention control evidence.')],
-          ownership: AiOutputOwnership.derivedCache,
-        ),
-      ],
-      edges: [
-        ConceptEdge(
-          id: 'derived:edge:1',
-          sourceNodeId: 'derived:working-memory',
-          targetNodeId: 'derived:attention-control',
-          type: ConceptEdgeType.relatedTo,
-          label: 'co_occurs',
-          evidenceRefs: [refFor('Working memory and attention co-occur.')],
-          confidence: 0.82,
-          ownership: AiOutputOwnership.derivedCache,
-        ),
-      ],
-    );
+    return _derivedBookGraphSnapshot(bookId);
   }
+}
+
+class _MutableDerivedBookConceptGraphLoader
+    implements DerivedBookConceptGraphLoader {
+  bool hasGraph = false;
+  int loadCount = 0;
+
+  @override
+  Future<DerivedBookConceptGraphSnapshot> loadBook({
+    required int bookId,
+    int nodeLimit = 18,
+  }) {
+    loadCount++;
+    if (!hasGraph) {
+      return Future.value(DerivedBookConceptGraphSnapshot.empty(bookId));
+    }
+    return Future.value(_derivedBookGraphSnapshot(bookId));
+  }
+}
+
+DerivedBookConceptGraphSnapshot _derivedBookGraphSnapshot(int bookId) {
+  return DerivedBookConceptGraphSnapshot(
+    bookId: bookId,
+    nodes: [
+      ConceptNode(
+        id: 'derived:working-memory',
+        type: ConceptNodeType.concept,
+        label: 'Working memory',
+        summary: 'A whole-book graph node from the global layer.',
+        sourceRefs: [refFor('Working memory evidence.')],
+        ownership: AiOutputOwnership.derivedCache,
+      ),
+      ConceptNode(
+        id: 'derived:attention-control',
+        type: ConceptNodeType.concept,
+        label: 'Attention control',
+        summary: 'A related full-book graph node.',
+        sourceRefs: [refFor('Attention control evidence.')],
+        ownership: AiOutputOwnership.derivedCache,
+      ),
+    ],
+    edges: [
+      ConceptEdge(
+        id: 'derived:edge:1',
+        sourceNodeId: 'derived:working-memory',
+        targetNodeId: 'derived:attention-control',
+        type: ConceptEdgeType.relatedTo,
+        label: 'co_occurs',
+        evidenceRefs: [refFor('Working memory and attention co-occur.')],
+        confidence: 0.82,
+        ownership: AiOutputOwnership.derivedCache,
+      ),
+    ],
+  );
 }
 
 class _FakeDerivedBookConceptGraphCatalog

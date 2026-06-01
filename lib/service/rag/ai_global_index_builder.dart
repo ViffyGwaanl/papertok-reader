@@ -89,6 +89,50 @@ class AiGlobalIndexBuilder {
 
   final AiIndexDatabase _database;
 
+  Future<AiGlobalIndexBookLayerStatus?> getBookLayerStatus(int bookId) async {
+    if (bookId <= 0) return null;
+    final db = await _database.database;
+    final rows = await db.rawQuery(
+      '''
+SELECT
+  b.book_id,
+  COALESCE(b.chunk_count, 0) AS chunk_count,
+  COALESCE(r.raptor_nodes, 0) AS raptor_nodes,
+  COALESCE(gn.graph_nodes, 0) AS graph_nodes,
+  COALESCE(ge.graph_edges, 0) AS graph_edges,
+  COALESCE(gc.graph_communities, 0) AS graph_communities
+FROM ai_book_index b
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS raptor_nodes
+  FROM ai_raptor_nodes
+  GROUP BY book_id
+) r ON r.book_id = b.book_id
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS graph_nodes
+  FROM ai_graph_nodes
+  GROUP BY book_id
+) gn ON gn.book_id = b.book_id
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS graph_edges
+  FROM ai_graph_edges
+  GROUP BY book_id
+) ge ON ge.book_id = b.book_id
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS graph_communities
+  FROM ai_graph_communities
+  GROUP BY book_id
+) gc ON gc.book_id = b.book_id
+WHERE b.book_id = ?
+  AND COALESCE(b.chunk_count, 0) > 0
+  AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
+LIMIT 1
+''',
+      [bookId],
+    );
+    if (rows.isEmpty) return null;
+    return _mapLayerStatus(rows.first);
+  }
+
   Future<List<AiGlobalIndexBookLayerStatus>> listBooksMissingGlobalLayer({
     int limit = 500,
   }) async {

@@ -69,7 +69,8 @@ WikiLinks 式探索必须可控：
 - Settings Explorer 可列出已有全局层索引的书。
 - 阅读页图谱入口可直接带入当前 bookId。
 - 只展示有 chunk SourceRef 的 GraphRAG node/edge。
-- 无全局层时提示去 AI Index 补建，不自动外发正文。
+- 当前书已有旧 AI chunk 索引但缺全局层时，书籍级 Explorer 可在原地触发单本书全局层补建；没有可用 chunk 索引时再提示先完成 AI Index。
+- 单本书补建只复用本地 chunk，不重新生成 embedding，不自动外发正文。
 - 不写正式 ConceptGraphStore，不进入 Review，除非用户显式把局部证据转成候选。
 
 ## 3. Agent Tasks
@@ -83,6 +84,7 @@ WikiLinks 式探索必须可控：
 | E04-C04-T01 | 定义 exploration constraints | E04-C03-T01 | path policy | 限制深度、宽度、外部来源和返回路径。 |
 | E04-C05-T01 | 接入 Settings 全书图谱书籍选择 | E02 global layer, E04-C03-T01 | `AiGlobalDerivedBookConceptGraphCatalog`, `conceptGraphDerivedBookCatalogProvider`, Explorer book picker | Settings `Concept graph` 可选择已有全局层的已索引书并显示只读全书图谱；不补建索引、不外发正文、不写正式图谱。 |
 | E04-C05-T02 | 接入阅读页当前书全书图谱 | E04-C05-T01, E07 reader entry | `ConceptGraphExplorerPage.bookId`, reader graph action | 阅读页 `图谱` 入口显示当前书只读全书派生图谱，并保留局部探索入口。 |
+| E04-C05-T03 | 接入当前书全局层原地补建 | E02 global layer, E04-C05-T02 | `AiGlobalIndexBuilder.getBookLayerStatus`, `conceptGraphGlobalLayerRebuilderProvider`, Explorer empty graph action | 当前书已有旧 chunk 索引但没有 RAPTOR/GraphRAG 全局层时，Explorer 显示 `立即生成全局层索引`；补建完成后刷新只读全书图谱；没有 chunk 索引时只提示先索引。 |
 
 ## 4. Task Execution Defaults
 

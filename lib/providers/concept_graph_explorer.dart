@@ -5,11 +5,17 @@ import 'package:papertok_reader/service/knowledge/derived_book_concept_graph_loa
 import 'package:papertok_reader/service/knowledge/concept_graph_producer.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/knowledge/rag_evidence_knowledge_card_producer.dart';
+import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
 import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
 
 typedef ConceptGraphLibrarySearch = Future<AiSemanticSearchLibraryResult>
     Function(String query);
+typedef ConceptGraphGlobalLayerStatusLoader
+    = Future<AiGlobalIndexBookLayerStatus?> Function(int bookId);
+typedef ConceptGraphGlobalLayerRebuilder = Future<AiGlobalIndexStats> Function({
+  required int bookId,
+});
 
 final conceptGraphStoreProvider = Provider<ConceptGraphStore>((ref) {
   return ConceptGraphStore();
@@ -60,6 +66,18 @@ final conceptGraphDerivedBookLoaderProvider =
 final conceptGraphDerivedBookCatalogProvider =
     Provider<DerivedBookConceptGraphCatalog>((ref) {
   return AiGlobalDerivedBookConceptGraphCatalog();
+});
+
+final conceptGraphGlobalLayerStatusProvider =
+    Provider<ConceptGraphGlobalLayerStatusLoader>((ref) {
+  final builder = AiGlobalIndexBuilder();
+  return builder.getBookLayerStatus;
+});
+
+final conceptGraphGlobalLayerRebuilderProvider =
+    Provider<ConceptGraphGlobalLayerRebuilder>((ref) {
+  final builder = AiGlobalIndexBuilder();
+  return ({required int bookId}) => builder.rebuildBook(bookId: bookId);
 });
 
 final conceptGraphExplorerProvider = StateNotifierProvider<

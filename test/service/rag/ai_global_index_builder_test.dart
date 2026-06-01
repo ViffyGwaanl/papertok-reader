@@ -158,6 +158,43 @@ void main() {
     expect(raptorRows, isNotEmpty);
   });
 
+  test('loads a single book global layer status for in-place rebuild prompts',
+      () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+    final db = await aiDb.database;
+
+    await _insertBook(db, 7);
+    await _insertChunk(
+      db,
+      bookId: 7,
+      href: 'Text/legacy.xhtml',
+      title: 'Legacy Index',
+      chunkIndex: 0,
+      rawText: 'Legacy indexed chunk about attention and retrieval practice.',
+    );
+
+    final builder = AiGlobalIndexBuilder(database: aiDb);
+
+    final missing = await builder.getBookLayerStatus(7);
+    expect(missing, isNotNull);
+    expect(missing!.bookId, 7);
+    expect(missing.chunkCount, 1);
+    expect(missing.hasGlobalLayer, false);
+
+    await builder.rebuildBook(bookId: 7, nowMs: 123);
+
+    final upgraded = await builder.getBookLayerStatus(7);
+    expect(upgraded, isNotNull);
+    expect(upgraded!.hasGlobalLayer, true);
+    expect(upgraded.raptorNodes, greaterThan(0));
+
+    expect(await builder.getBookLayerStatus(999), isNull);
+  });
+
   test('backfill cancellation reports cancelled and leaves remaining books',
       () async {
     final aiDb = AiIndexDatabase.forTesting(
