@@ -427,6 +427,85 @@ void main() {
     expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e1']);
   });
 
+  test('executes reader requested synthesize without rerunning roles',
+      () async {
+    configureProvider();
+    var fetchCount = 0;
+    var roleCount = 0;
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fetchCount += 1;
+        return bundle();
+      },
+      streamRole: (invocation, _) async* {
+        roleCount += 1;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+            whiteboardEntries: [
+              if (invocation.role == AiSeminarRole.synthesizer)
+                const AiSeminarWhiteboardEntry(
+                  id: 'open-question-1',
+                  kind: AiSeminarWhiteboardKind.openQuestion,
+                  text: 'Should the reader ask for more evidence?',
+                  role: AiSeminarRole.synthesizer,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    await notifier.start(
+      AiSeminarSessionContract(id: 's-synthesize', question: 'Explain.'),
+    );
+    expect(fetchCount, 1);
+    expect(roleCount, 3);
+    await notifier.recordUserIntervention(
+      text: '这些观点够了，请先整理阶段结论。',
+      requestedAction: AiSeminarUserInterventionAction.synthesize,
+      now: 1234,
+    );
+    await notifier.executeDirectorNextStep();
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(fetchCount, 1);
+    expect(roleCount, 3);
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(state.turns.map((turn) => turn.id), [
+      'turn-critical',
+      'turn-supportive',
+      'turn-synthesizer',
+    ]);
+    expect(state.synthesis!.summary, 'synthesizer response');
+    expect(state.lastRun!.synthesis!.summary, 'synthesizer response');
+    expect(state.directorState!.nextIntent, AiSeminarDirectorNextIntent.end);
+    expect(
+      state.directorState!.lastUserIntervention!.requestedAction,
+      AiSeminarUserInterventionAction.synthesize,
+    );
+    expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+    expect(
+      state.directorState!.lastUserIntervention!.toJson().containsKey(
+            'evidenceRefIds',
+          ),
+      false,
+    );
+  });
+
   test('executes reader requested evidence refresh before rerunning roles',
       () async {
     configureProvider();

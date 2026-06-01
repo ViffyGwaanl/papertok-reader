@@ -847,6 +847,12 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       await _executeEvidenceRefreshStep(session, directorState);
       return;
     }
+    if (directorState.nextIntent == AiSeminarDirectorNextIntent.synthesize) {
+      _completeUserDirectedRoleStep(session, evidenceBundle);
+      await _persistState();
+      await _startNextQueuedJobIfAvailable();
+      return;
+    }
     if (directorState.nextIntent != AiSeminarDirectorNextIntent.runRole ||
         intervention == null) {
       const message =

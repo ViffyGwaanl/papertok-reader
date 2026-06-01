@@ -971,7 +971,8 @@ class _SeminarUserInterventionSectionState
           targetRole: targetRole,
         );
     if (action == AiSeminarUserInterventionAction.askRole ||
-        action == AiSeminarUserInterventionAction.refreshEvidence) {
+        action == AiSeminarUserInterventionAction.refreshEvidence ||
+        action == AiSeminarUserInterventionAction.synthesize) {
       await ref
           .read(aiSeminarRuntimeProvider.notifier)
           .executeDirectorNextStep();

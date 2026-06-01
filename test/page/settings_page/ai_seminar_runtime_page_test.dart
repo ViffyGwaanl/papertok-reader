@@ -444,6 +444,99 @@ void main() {
     expect(find.text('synthesizer response using e2'), findsOneWidget);
   });
 
+  testWidgets(
+      'synthesize action closes the reader turn without rerunning roles',
+      (tester) async {
+    var fetchCount = 0;
+    var roleCount = 0;
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fetchCount += 1;
+        return AiSeminarEvidenceBundle(
+          query: 'What should I test?',
+          evidence: [
+            AiSeminarEvidence(
+              id: 'e1',
+              scope: AiSeminarEvidenceScope.currentBook,
+              text: 'The source passage.',
+              sourceRef: traceableRef(),
+            ),
+          ],
+        );
+      },
+      streamRole: (invocation, _) async* {
+        roleCount += 1;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+            whiteboardEntries: [
+              if (invocation.role == AiSeminarRole.synthesizer)
+                const AiSeminarWhiteboardEntry(
+                  id: 'question-1',
+                  kind: AiSeminarWhiteboardKind.openQuestion,
+                  text: 'Which interpretation should the reader test next?',
+                  role: AiSeminarRole.synthesizer,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What should I test?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.textContaining('Director next: ask reader'), findsOneWidget);
+    await tester.enterText(
+      textFieldWithLabel('Your Seminar reply'),
+      'Please synthesize what we have.',
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Synthesize'));
+    await tester.tap(find.text('Synthesize'));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiSeminarRuntimePanel)),
+    );
+    final state = container.read(aiSeminarRuntimeProvider);
+    expect(fetchCount, 1);
+    expect(roleCount, 3);
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(state.directorState!.nextIntent, AiSeminarDirectorNextIntent.end);
+    expect(
+      state.directorState!.lastUserIntervention!.requestedAction,
+      AiSeminarUserInterventionAction.synthesize,
+    );
+    expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+    expect(find.textContaining('Director next: ask reader'), findsNothing);
+    expect(state.synthesis!.summary, 'synthesizer response');
+    expect(find.text('synthesizer response'), findsWidgets);
+  });
+
   testWidgets('role configuration can add verifier to a Seminar agent run',
       (tester) async {
     AiSeminarSessionContract? capturedSession;
