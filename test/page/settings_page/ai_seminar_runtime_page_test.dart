@@ -346,6 +346,104 @@ void main() {
     expect(find.text('critical follow-up response'), findsOneWidget);
   });
 
+  testWidgets('refresh evidence action reruns Seminar with new evidence',
+      (tester) async {
+    var fetchCount = 0;
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fetchCount += 1;
+        return AiSeminarEvidenceBundle(
+          query: 'What should I test?',
+          evidence: [
+            AiSeminarEvidence(
+              id: fetchCount == 1 ? 'e1' : 'e2',
+              scope: AiSeminarEvidenceScope.currentBook,
+              text: fetchCount == 1
+                  ? 'The first source passage.'
+                  : 'The refreshed source passage.',
+              sourceRef: traceableRef(),
+            ),
+          ],
+        );
+      },
+      streamRole: (invocation, _) async* {
+        final evidenceId = invocation.evidenceBundle.evidence.single.id;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}-$evidenceId',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                '${invocation.role.asString} response using $evidenceId',
+            evidenceRefIds: [evidenceId],
+            whiteboardEntries: [
+              if (invocation.role == AiSeminarRole.synthesizer &&
+                  evidenceId == 'e1')
+                const AiSeminarWhiteboardEntry(
+                  id: 'question-1',
+                  kind: AiSeminarWhiteboardKind.openQuestion,
+                  text: 'Which evidence should be refreshed?',
+                  role: AiSeminarRole.synthesizer,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What should I test?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.textContaining('Director next: ask reader'), findsOneWidget);
+    await tester.enterText(
+      textFieldWithLabel('Your Seminar reply'),
+      'Please find better evidence.',
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Refresh evidence'));
+    await tester.tap(find.text('Refresh evidence'));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiSeminarRuntimePanel)),
+    );
+    final state = container.read(aiSeminarRuntimeProvider);
+    expect(fetchCount, 2);
+    expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e2']);
+    expect(state.directorState!.evidenceRefreshCount, 1);
+    expect(
+      state.directorState!.lastUserIntervention!.requestedAction,
+      AiSeminarUserInterventionAction.refreshEvidence,
+    );
+    expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+    await tester.scrollUntilVisible(
+      find.text('synthesizer response using e2'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('The refreshed source passage.'), findsOneWidget);
+    expect(find.text('synthesizer response using e2'), findsOneWidget);
+  });
+
   testWidgets('role configuration can add verifier to a Seminar agent run',
       (tester) async {
     AiSeminarSessionContract? capturedSession;

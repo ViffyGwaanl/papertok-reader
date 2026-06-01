@@ -427,6 +427,84 @@ void main() {
     expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e1']);
   });
 
+  test('executes reader requested evidence refresh before rerunning roles',
+      () async {
+    configureProvider();
+    var fetchCount = 0;
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fetchCount += 1;
+        return AiSeminarEvidenceBundle(
+          query: 'What is the claim?',
+          evidence: [
+            AiSeminarEvidence(
+              id: fetchCount == 1 ? 'e1' : 'e2',
+              scope: AiSeminarEvidenceScope.currentBook,
+              text: fetchCount == 1
+                  ? 'The first source passage.'
+                  : 'The refreshed source passage.',
+              sourceRef: traceableRef(),
+            ),
+          ],
+        );
+      },
+      streamRole: (invocation, _) async* {
+        final evidenceId = invocation.evidenceBundle.evidence.single.id;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}-$evidenceId',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                '${invocation.role.asString} response using $evidenceId',
+            evidenceRefIds: [evidenceId],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    await notifier.start(
+      AiSeminarSessionContract(id: 's-refresh-evidence', question: 'Explain.'),
+    );
+    await notifier.recordUserIntervention(
+      text: '请重新找更直接的证据。',
+      requestedAction: AiSeminarUserInterventionAction.refreshEvidence,
+      now: 1234,
+    );
+    await notifier.executeDirectorNextStep();
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(fetchCount, 2);
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e2']);
+    expect(state.turns.map((turn) => turn.id), [
+      'turn-critical-e2',
+      'turn-supportive-e2',
+      'turn-synthesizer-e2',
+    ]);
+    expect(state.synthesis!.summary, 'synthesizer response using e2');
+    expect(state.directorState!.evidenceRefreshCount, 1);
+    expect(
+      state.directorState!.lastUserIntervention!.requestedAction,
+      AiSeminarUserInterventionAction.refreshEvidence,
+    );
+    expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+    expect(
+      state.directorState!.lastUserIntervention!.toJson().containsKey(
+            'evidenceRefIds',
+          ),
+      false,
+    );
+  });
+
   test('start tracks a persisted background job through completion', () async {
     configureProvider();
     final container = ProviderContainer(
@@ -1468,6 +1546,228 @@ void main() {
     expect(restored.turns.last.prompt, contains('请 critical 继续回应我的疑问。'));
     expect(restored.partialRoleText, isNull);
     expect(restored.synthesis!.criticalView, 'critical follow-up response');
+  });
+
+  test('running refresh evidence checkpoint resumes the refreshed role queue',
+      () async {
+    configureProvider();
+    final invokedRoles = <AiSeminarRole>[];
+    final refreshedBundle = AiSeminarEvidenceBundle(
+      query: 'What is the claim?',
+      evidence: [
+        AiSeminarEvidence(
+          id: 'e2',
+          scope: AiSeminarEvidenceScope.currentBook,
+          text: 'The refreshed source passage.',
+          sourceRef: traceableRef(),
+        ),
+      ],
+    );
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-running-refresh-evidence',
+        question: 'Resume refreshed evidence?',
+        billingContext: const AiSeminarBillingContext(
+          providerId: 'local-gateway',
+          providerName: 'Local Gateway',
+          providerType: 'openai-compatible',
+          modelId: 'gpt-5.5',
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-running-refresh-evidence',
+        sessionId: 's-running-refresh-evidence',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: const [
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-running-refresh-evidence',
+          sessionId: 's-running-refresh-evidence',
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+      ],
+      evidenceBundle: refreshedBundle,
+      activeRole: AiSeminarRole.critical,
+      partialRoleText: 'partial refreshed role should be ignored',
+      directorState: const AiSeminarDirectorState(
+        sessionId: 's-running-refresh-evidence',
+        evidenceLedger: ['e1', 'e2'],
+        evidenceRefreshCount: 1,
+        nextIntent: AiSeminarDirectorNextIntent.runRole,
+        lastUserIntervention: AiSeminarUserIntervention(
+          id: 'user-1234',
+          text: '请重新找更直接的证据。',
+          requestedAction: AiSeminarUserInterventionAction.refreshEvidence,
+          createdAt: 1234,
+        ),
+      ),
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+    final resumeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fail('refreshed checkpoint resume should use persisted evidence');
+      },
+      streamRole: (invocation, _) async* {
+        invokedRoles.add(invocation.role);
+        final evidenceId = invocation.evidenceBundle.evidence.single.id;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}-$evidenceId',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                '${invocation.role.asString} response using $evidenceId',
+            evidenceRefIds: [evidenceId],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(resumeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(aiSeminarRuntimeProvider);
+    for (var i = 0; i < 20; i += 1) {
+      if (container.read(aiSeminarRuntimeProvider).status !=
+          AiSeminarRunStatus.running) {
+        break;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(invokedRoles, [
+      AiSeminarRole.critical,
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+    ]);
+    expect(restored.status, AiSeminarRunStatus.completed);
+    expect(restored.evidenceBundle!.evidence.map((item) => item.id), ['e2']);
+    expect(restored.directorState!.evidenceRefreshCount, 1);
+    expect(
+      restored.directorState!.lastUserIntervention!.requestedAction,
+      AiSeminarUserInterventionAction.refreshEvidence,
+    );
+    expect(restored.turns.map((turn) => turn.id), [
+      'turn-critical-e2',
+      'turn-supportive-e2',
+      'turn-synthesizer-e2',
+    ]);
+  });
+
+  test('queued seminar does not inherit refreshed director state', () async {
+    configureProvider();
+    var refreshFetchCount = 0;
+    var heldRefreshRole = false;
+    final refreshRoleStarted = Completer<void>();
+    final allowRefreshToFinish = Completer<void>();
+    final invokedBySession = <String, List<AiSeminarRole>>{};
+    AiSeminarEvidenceBundle evidenceFor(String id, String text) {
+      return AiSeminarEvidenceBundle(
+        query: 'What is the claim?',
+        evidence: [
+          AiSeminarEvidence(
+            id: id,
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: text,
+            sourceRef: traceableRef(),
+          ),
+        ],
+      );
+    }
+
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (session) async {
+        if (session.id == 's-queued-after-refresh') {
+          return evidenceFor('e3', 'The queued source passage.');
+        }
+        refreshFetchCount += 1;
+        return refreshFetchCount == 1
+            ? evidenceFor('e1', 'The first source passage.')
+            : evidenceFor('e2', 'The refreshed source passage.');
+      },
+      streamRole: (invocation, _) async* {
+        final sessionId = invocation.session.id;
+        final evidenceId = invocation.evidenceBundle.evidence.single.id;
+        invokedBySession.putIfAbsent(sessionId, () => []).add(invocation.role);
+        if (sessionId == 's-refresh-with-queue' &&
+            evidenceId == 'e2' &&
+            !heldRefreshRole) {
+          heldRefreshRole = true;
+          refreshRoleStarted.complete();
+          await allowRefreshToFinish.future;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-$sessionId-${invocation.role.asString}-$evidenceId',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                '${invocation.role.asString} response using $evidenceId',
+            evidenceRefIds: [evidenceId],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    await notifier.start(
+      AiSeminarSessionContract(
+        id: 's-refresh-with-queue',
+        question: 'Explain.',
+      ),
+    );
+    await notifier.recordUserIntervention(
+      text: '请重新找更直接的证据。',
+      requestedAction: AiSeminarUserInterventionAction.refreshEvidence,
+      now: 1234,
+    );
+    final refreshFuture = notifier.executeDirectorNextStep();
+    await refreshRoleStarted.future.timeout(const Duration(seconds: 2));
+    await notifier.start(
+      AiSeminarSessionContract(
+        id: 's-queued-after-refresh',
+        question: 'Queued question.',
+      ),
+    );
+    allowRefreshToFinish.complete();
+    await refreshFuture;
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(state.session!.id, 's-queued-after-refresh');
+    expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e3']);
+    expect(state.turns.map((turn) => turn.id), [
+      'turn-s-queued-after-refresh-critical-e3',
+      'turn-s-queued-after-refresh-supportive-e3',
+      'turn-s-queued-after-refresh-synthesizer-e3',
+    ]);
+    expect(state.directorState!.sessionId, 's-queued-after-refresh');
+    expect(state.directorState!.evidenceRefreshCount, 0);
+    expect(state.directorState!.lastUserIntervention, isNull);
+    expect(invokedBySession['s-queued-after-refresh'], [
+      AiSeminarRole.critical,
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+    ]);
   });
 
   test('invalid restored checkpoint falls back to interrupted without resume',

@@ -466,6 +466,8 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     AiSeminarBackgroundJobSnapshot backgroundJob,
     AiSeminarProviderDiagnostics providerDiagnostics, {
     AiSeminarRuntimeCheckpoint? checkpoint,
+    AiSeminarDirectorState? directorStateSeed,
+    bool startQueuedAfterCompletion = true,
   }) async {
     final generation = ++_generation;
     final token = AiSeminarCancellationToken();
@@ -506,6 +508,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         evidenceBundle: checkpoint?.evidenceBundle,
         turns: checkpoint?.completedTurns ?? const <AiSeminarRoleTurn>[],
         whiteboardEntries: checkpointWhiteboardEntries,
+        previous: directorStateSeed,
       ),
       startedAt: runningJob.startedAt,
       backgroundJob: runningJob,
@@ -528,7 +531,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         _activeToken = null;
       }
     }
-    if (mounted && generation == _generation) {
+    if (mounted && generation == _generation && startQueuedAfterCompletion) {
       await _startNextQueuedJobIfAvailable();
     }
   }
@@ -564,6 +567,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         completedTurns: state.turns,
         startedAt: state.startedAt ?? backgroundJob.startedAt,
       ),
+      directorStateSeed: state.directorState,
     );
   }
 
@@ -571,8 +575,37 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     final directorState = state.directorState;
     if (state.status != AiSeminarRunStatus.running) return false;
     if (directorState == null) return false;
-    return directorState.nextIntent == AiSeminarDirectorNextIntent.runRole &&
-        directorState.lastUserIntervention != null;
+    final intervention = directorState.lastUserIntervention;
+    if (directorState.nextIntent != AiSeminarDirectorNextIntent.runRole ||
+        intervention == null) {
+      return false;
+    }
+    return switch (intervention.requestedAction) {
+      AiSeminarUserInterventionAction.askRole ||
+      AiSeminarUserInterventionAction.clarify =>
+        true,
+      AiSeminarUserInterventionAction.refreshEvidence ||
+      AiSeminarUserInterventionAction.synthesize =>
+        false,
+    };
+  }
+
+  static AiSeminarDirectorState _directorStateWithEvidenceRefresh(
+    AiSeminarDirectorState state,
+    int evidenceRefreshCount,
+  ) {
+    return AiSeminarDirectorState(
+      sessionId: state.sessionId,
+      turnCount: state.turnCount,
+      completedRoles: state.completedRoles,
+      completedRoleTurnIds: state.completedRoleTurnIds,
+      evidenceLedger: state.evidenceLedger,
+      whiteboardLedger: state.whiteboardLedger,
+      disagreementIds: state.disagreementIds,
+      evidenceRefreshCount: evidenceRefreshCount,
+      nextIntent: state.nextIntent,
+      lastUserIntervention: state.lastUserIntervention,
+    );
   }
 
   void _markRestoredRunningInterrupted() {
@@ -809,6 +842,11 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       state = state.copyWith(error: message);
       throw StateError(message);
     }
+    if (directorState.nextIntent ==
+        AiSeminarDirectorNextIntent.refreshEvidence) {
+      await _executeEvidenceRefreshStep(session, directorState);
+      return;
+    }
     if (directorState.nextIntent != AiSeminarDirectorNextIntent.runRole ||
         intervention == null) {
       const message =
@@ -879,6 +917,50 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       _activeToken = null;
       await _startNextQueuedJobIfAvailable();
     }
+  }
+
+  Future<void> _executeEvidenceRefreshStep(
+    AiSeminarSessionContract session,
+    AiSeminarDirectorState directorState,
+  ) async {
+    final providerDiagnostics = _providerContext.resolve();
+    final resolvedSession = _sessionWithCurrentProviderBudget(
+      session,
+      providerDiagnostics,
+    );
+    final startedAt = _nextBackgroundJobStartedAt(
+      DateTime.now().millisecondsSinceEpoch,
+    );
+    final backgroundJob = _newBackgroundJob(
+      resolvedSession,
+      startedAt: startedAt,
+      message: 'AI Seminar refreshing evidence.',
+    );
+    final previous = _directorStateWithEvidenceRefresh(
+      directorState,
+      directorState.evidenceRefreshCount + 1,
+    );
+    await _runResolvedSession(
+      resolvedSession,
+      backgroundJob,
+      providerDiagnostics,
+      directorStateSeed: previous,
+      startQueuedAfterCompletion: false,
+    );
+    if (!mounted) return;
+    final refreshedDirector = _directorStateFor(
+      session: state.session ?? resolvedSession,
+      evidenceBundle: state.evidenceBundle,
+      turns: state.turns,
+      whiteboardEntries: state.whiteboardEntries,
+      previous: previous,
+    );
+    state = state.copyWith(
+      directorState: refreshedDirector ?? previous,
+      clearError: true,
+    );
+    await _persistState();
+    await _startNextQueuedJobIfAvailable();
   }
 
   void restore(AiSeminarRuntimeState restored) {
