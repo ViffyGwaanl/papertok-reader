@@ -451,9 +451,7 @@ LIMIT ?
 
     for (final row in rows) {
       final chunk = _ChunkRow.from(row);
-      final terms = _extractTerms(
-        '${row['chapter_title'] ?? ''}\n${chunk.displayText}',
-      );
+      final terms = _extractTerms(chunk.displayText);
       if (terms.isEmpty) continue;
       chunkTerms[chunk.id] = terms;
       for (final term in terms) {
@@ -521,11 +519,74 @@ LIMIT ?
   }
 
   Set<String> _extractTerms(String text) {
+    final terms = <String>{};
     final matches = RegExp(r'[A-Za-z][A-Za-z0-9_-]{3,}')
         .allMatches(text.toLowerCase())
         .map((match) => match.group(0) ?? '')
         .where((term) => term.length >= 4 && !_stopWords.contains(term));
-    return matches.take(32).toSet();
+    terms.addAll(matches.take(32));
+    terms.addAll(_extractChineseTerms(text));
+    return terms.take(48).toSet();
+  }
+
+  Set<String> _extractChineseTerms(String text) {
+    if (!RegExp(r'[\u4e00-\u9fff]').hasMatch(text)) {
+      return const <String>{};
+    }
+    var normalized = text;
+    for (final word in _zhBoundaryWords) {
+      normalized = normalized.replaceAll(word, ' ');
+    }
+    normalized = normalized.replaceAll(
+      RegExp(r'[^\u4e00-\u9fff]+'),
+      ' ',
+    );
+    normalized = normalized.replaceAll(
+      RegExp('[${RegExp.escape(_zhBoundaryChars)}]+'),
+      ' ',
+    );
+
+    final terms = <String>{};
+    for (final match
+        in RegExp(r'[\u4e00-\u9fff]{2,16}').allMatches(normalized)) {
+      final run = match.group(0) ?? '';
+      _addChineseTermCandidates(run, terms);
+      if (terms.length >= 48) break;
+    }
+    return terms.take(32).toSet();
+  }
+
+  void _addChineseTermCandidates(String run, Set<String> out) {
+    final text = run.trim();
+    if (text.length < 2) return;
+    if (text.length <= 6) {
+      _addChineseTerm(text, out);
+    }
+
+    for (final marker in _zhConceptMarkers) {
+      var start = 0;
+      while (start < text.length) {
+        final index = text.indexOf(marker, start);
+        if (index < 0) break;
+        final end = index + marker.length;
+        final prefixStart = math.max(0, index - 4);
+        _addChineseTerm(text.substring(prefixStart, end), out);
+        if (marker.length >= 3) {
+          _addChineseTerm(marker, out);
+        }
+        start = end;
+      }
+    }
+  }
+
+  void _addChineseTerm(String value, Set<String> out) {
+    final term = value.trim();
+    if (term.length < 2 || term.length > 8) return;
+    if (_zhStopTerms.contains(term)) return;
+    if (term.contains(RegExp('[${RegExp.escape(_zhBoundaryChars)}]'))) {
+      return;
+    }
+    out.add(term);
   }
 
   String _compactText(String value, int maxChars) {
@@ -555,6 +616,98 @@ LIMIT ?
     'there',
     'this',
     'with',
+  };
+
+  static const String _zhBoundaryChars = '的一是在和与及或了着过把被将就都而并中上内外前后为以对从到由';
+
+  static const List<String> _zhBoundaryWords = [
+    '但是',
+    '因此',
+    '因为',
+    '所以',
+    '如果',
+    '那么',
+    '为了',
+    '通过',
+    '进行',
+    '由于',
+    '以及',
+    '并且',
+    '同时',
+    '其中',
+    '过程',
+    '过程中',
+    '互相',
+    '相互',
+    '影响',
+    '限制',
+    '进入',
+    '强化',
+    '削弱',
+    '提高',
+    '降低',
+    '促进',
+    '导致',
+    '形成',
+    '产生',
+    '解释',
+    '说明',
+    '支持',
+    '反驳',
+    '关联',
+    '依赖',
+    '过高',
+    '不足',
+  ];
+
+  static const List<String> _zhConceptMarkers = [
+    '注意力',
+    '记忆',
+    '理解',
+    '负荷',
+    '练习',
+    '策略',
+    '模型',
+    '理论',
+    '方法',
+    '机制',
+    '系统',
+    '能力',
+    '证据',
+    '概念',
+    '论点',
+    '关系',
+    '原因',
+    '结果',
+    '控制',
+    '检索',
+    '知识',
+    '图谱',
+    '节点',
+    '索引',
+    '语义',
+    '主题',
+  ];
+
+  static const Set<String> _zhStopTerms = {
+    '这个',
+    '那个',
+    '这些',
+    '那些',
+    '一种',
+    '多个',
+    '可以',
+    '需要',
+    '没有',
+    '不是',
+    '仍然',
+    '当前',
+    '用户',
+    '页面',
+    '功能',
+    '章节',
+    '中文章节',
+    '文章节',
   };
 }
 

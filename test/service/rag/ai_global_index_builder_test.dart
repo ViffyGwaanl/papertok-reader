@@ -234,7 +234,7 @@ void main() {
     expect(remaining.map((s) => s.bookId), [2]);
   });
 
-  test('Chinese-only global layers are not repeatedly marked missing',
+  test('Chinese-only global layers produce graph nodes and are not missing',
       () async {
     final aiDb = AiIndexDatabase.forTesting(
       path: inMemoryDatabasePath,
@@ -261,10 +261,114 @@ void main() {
       where: 'book_id = ?',
       whereArgs: [3],
     );
-    expect(graphRows, isEmpty);
+    expect(graphRows.map((row) => row['name']), containsAll(['注意力', '记忆']));
 
     final missing = await builder.listBooksMissingGlobalLayer();
     expect(missing, isEmpty);
+  });
+
+  test('global builder extracts grounded Chinese concept graph nodes',
+      () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+    final db = await aiDb.database;
+
+    await _insertBook(db, 8);
+    await _insertChunk(
+      db,
+      bookId: 8,
+      href: 'Text/zh-cognition.xhtml',
+      title: '中文认知章节',
+      chunkIndex: 0,
+      rawText: '注意力和工作记忆在阅读理解过程中互相影响。注意力控制会限制信息进入工作记忆。',
+    );
+    await _insertChunk(
+      db,
+      bookId: 8,
+      href: 'Text/zh-cognition.xhtml',
+      title: '中文认知章节',
+      chunkIndex: 1,
+      rawText: '检索练习能强化长期记忆。认知负荷过高会削弱阅读理解。',
+    );
+
+    final stats = await AiGlobalIndexBuilder(database: aiDb).rebuildBook(
+      bookId: 8,
+      nowMs: 789,
+    );
+
+    expect(stats.graphNodes, greaterThanOrEqualTo(4));
+    expect(stats.graphEdges, greaterThan(0));
+
+    final graphRows = await db.query(
+      'ai_graph_nodes',
+      columns: ['name'],
+      where: 'book_id = ?',
+      whereArgs: [8],
+      orderBy: 'name ASC',
+    );
+    final names = graphRows.map((row) => row['name']).toSet();
+    expect(names, containsAll(['注意力', '工作记忆', '阅读理解', '认知负荷']));
+
+    final groundedRows = await db.rawQuery(
+      '''
+SELECT n.name, c.raw_text, c.text
+FROM ai_graph_nodes n
+JOIN ai_graph_node_chunks nc ON nc.node_id = n.id
+JOIN ai_chunks c ON c.id = nc.chunk_id
+WHERE n.book_id = ?
+''',
+      [8],
+    );
+    final evidenceTextByName = <Object?, List<String>>{};
+    for (final row in groundedRows) {
+      final text = (row['raw_text'] ?? row['text'] ?? '').toString();
+      evidenceTextByName.putIfAbsent(row['name'], () => <String>[]).add(text);
+    }
+    for (final term in ['注意力', '工作记忆', '阅读理解', '认知负荷']) {
+      expect(evidenceTextByName[term], isNotNull, reason: term);
+      expect(
+        evidenceTextByName[term]!.any((text) => text.contains(term)),
+        isTrue,
+        reason: term,
+      );
+    }
+  });
+
+  test('global builder does not ground title-only Chinese terms to chunks',
+      () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+    final db = await aiDb.database;
+
+    await _insertBook(db, 9);
+    await _insertChunk(
+      db,
+      bookId: 9,
+      href: 'Text/title-only.xhtml',
+      title: '认知负荷章节',
+      chunkIndex: 0,
+      rawText: '普通段落只讨论阅读练习，没有提到标题里的核心词。',
+    );
+
+    await AiGlobalIndexBuilder(database: aiDb).rebuildBook(
+      bookId: 9,
+      nowMs: 789,
+    );
+
+    final graphRows = await db.query(
+      'ai_graph_nodes',
+      columns: ['name'],
+      where: 'book_id = ?',
+      whereArgs: [9],
+    );
+    final names = graphRows.map((row) => row['name']).toSet();
+    expect(names, isNot(contains('认知负荷')));
   });
 }
 

@@ -49,6 +49,7 @@ PaperTok 当前已经具备这些地基：
 
 - 固定角色 contract：`critical / supportive / synthesizer`，可选 `verifier`。
 - `AiSeminarRoleProfile` 已支持角色显示名和 custom prompt。
+- Settings 全局默认已支持角色启用状态、会话证据提示和只读工具白名单；AI Chat 的 `本次研讨设置` 已支持单次 run 的角色 prompt、启用状态、verifier 和 `maxRounds`，不写回全局 Settings。
 - runtime prompt 会注入角色 profile，同时仍要求只引用 supplied evidence ids。
 - AI Chat 已可从 `+ -> AI 研讨会` 打开内嵌 runtime panel。
 - 阅读页选中文本 `研讨` 已会进入阅读页 AI Chat 内嵌面板，并带入 reader `SourceRef`。
@@ -61,7 +62,7 @@ PaperTok 当前已经具备这些地基：
 
 - 历史任务卡已有只读 snapshot，但还不是包含完整白板、送审子视图、run-scoped composer 子视图和 per-run 多实例隔离的完整结构化 Chat message part。
 - 还没有完整 contradiction gap scan 和针锋相对的 rebuttal turn。
-- 角色配置还缺启用状态、证据策略、工具范围、空 prompt validator 和 run-scoped 临时设置。
+- 角色配置还缺空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用 loop；当前证据提示会合并到整场 evidence bundle，不是每个角色独立检索。
 - 仍是单个全局 runtime state，不支持同一 AI Chat 中多个 Seminar run 并存。
 - `seminar_mode` 仍是普通 AI Chat prompt 风格，不等同于真正的 `AiSeminarRuntime`；文案和入口需要持续区分。
 - OpenMAIC 当前源码没有强制最终总结节点，主要依赖角色自然总结或 Director `END`；PaperTok 必须保留明确的 `synthesizer` 终局节点，因为 Review、KnowledgeCard 和 Spaced Review 都需要结构化输出。
@@ -71,7 +72,7 @@ PaperTok 当前已经具备这些地基：
 | TaskID | Goal | Acceptance |
 | --- | --- | --- |
 | E01-C05-T11 | 把 AI Chat Seminar run card 升级为完整 message part。 | 历史重载后仍显示证据、角色、分歧、白板、总结和送审；不把 Seminar 卡片当普通 assistant 回答生成知识卡或记忆。 |
-| E01-C05-T12 | 增加 role profile governance v2。 | 每个角色可配置启用状态、证据范围、只读工具范围、角色预算；空 prompt、secret-like 文本、越权工具被拒绝。 |
+| E01-C05-T12 | 增加 role profile governance v2。 | 已完成 Settings 全局默认和 AI Chat 本次 run 第一片：角色显示名、custom prompt、启用状态、会话证据提示和只读工具白名单可保存并注入新 run；secret-like prompt、写工具、联网工具、unknown tool 和递归 sub-agent 被拒绝。剩余验收是空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用 loop。 |
 | E01-C05-T13 | 接入 contradiction gap scan 和 rebuttal turn。 | 分歧必须绑定两个以上 role turns 和 evidence ids；Director 可选择重找证据或让指定角色反驳；预算耗尽进入用户确认。 |
 | E01-C05-T14 | 把用户插话接入 Chat run composer。 | 用户可在同一 Chat run card 内选择继续讨论、问某角色、重找证据、整理总结；输入只写 user-turn ledger，不进入 formal evidence。 |
 | E01-C05-T15 | 实现 per-run runtime state 隔离。 | 同一 AI Chat 会话中多个 Seminar run 不共享 turns/evidence/budget/job id；独立详情页和恢复缓存读取同一 run id。 |
