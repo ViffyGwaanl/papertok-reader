@@ -595,6 +595,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     _activeToken?.cancel();
     _activeToken = token;
     if (!mounted) return;
+    final restoredFromLocalCache = checkpoint != null;
     final runningJob = backgroundJob.copyWith(
       status: AiSeminarBackgroundJobStatus.running,
       updatedAt: DateTime.now().millisecondsSinceEpoch,
@@ -634,6 +635,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       startedAt: runningJob.startedAt,
       backgroundJob: runningJob,
       backgroundJobs: backgroundJobs,
+      restoredFromLocalCache: restoredFromLocalCache,
     );
     await _persistState();
     if (!mounted) return;

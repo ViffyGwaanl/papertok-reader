@@ -21,7 +21,7 @@
 | 图片解析生成知识卡 | 图片大图 -> `AI图片解析` -> `知识卡` | 对 EPUB 图片、图表、插图做 AI 解析后，把结果变成待审知识卡。 | 图片本体和 base64 不写进卡片；只保存解析结果、来源和证据摘录。 |
 | AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` | 普通问答结束后，把有价值回答沉淀为待审知识卡，并保留能否跳回原文的来源状态。 | streaming 中按钮禁用；无 reader grounding 的旧聊天只保留 conversation provenance。 |
 | 多角色 Seminar | 阅读页选中文本 -> `研讨`，AI Chat `+` -> `AI 研讨会`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文或一个聊天问题启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结；阅读页选中文本和 AI Chat 入口都会在当前 AI Chat 页面内展开 Seminar 面板，且阅读页入口保留 SourceRef；阅读页/外部入口也会用同一 `seminarSessionId` 在会话历史里留下可持久化 `AI 研讨会` 任务卡，进程被杀或重启后用户能从 AI Chat 历史重新找到这场讨论；AI Chat `+` 入口同样会写入任务卡，历史重载后可点击重新打开 inline runtime；内嵌 runtime 运行、完成或刷新证据时，会把卡片状态、来源数量、证据快照、角色观点、研讨总结、分歧数、开放问题数和 `研讨白板` 正文回写到同一张卡；AI Chat inline panel、可见任务卡 snapshot 和卡内送审已按 `seminarSessionId` 使用 scoped runtime，多个 scoped runtime 的模型调用会本机串行化；当前活跃同 session 且可送审的任务卡会显示 `发送到待审`，把可追踪 synthesis 和候选项送入 pending Review；Seminar settings 可编辑每个角色的显示名、custom prompt、启用状态、会话证据提示和允许的只读工具；关闭角色后新讨论会跳过该角色，全部关闭时保留 synthesizer 兜底；工具范围会过滤写工具、联网工具、unknown tool 和递归 `spawn_sub_agent`；当白板留下 open question 或 disagreement，状态区会显示主持人下一步是邀请读者参与还是重新检索证据；需要用户参与时，用户可输入回复并选择让某个角色回应、重新找证据或整理总结；选择让角色回应时，所选角色会生成 follow-up turn 并更新 synthesis；选择重新找证据时，会重新检索 evidence、重跑角色并更新 synthesis；选择整理总结时，会用现有 evidence 和 turns 执行本地 synthesis 并收束 Director；如果一轮讨论只留下 disagreement 且仍有轮次预算，runtime 会自动重新找证据并重跑角色，预算用完仍有分歧时再请用户介入。 | 任务卡已有只读证据/角色/总结 snapshot、白板正文首片、首片送审按钮和 AI Chat scoped runtime，但还不是包含历史卡离线送审详情子视图、run-scoped composer 子视图和单次 run 临时角色配置的完整结构化消息卡；独立详情页仍需迁移到同一 scoped store；角色工具范围目前是配置和 prompt 治理，不代表每个角色都能自由调用工具；用户回复不进入 formal evidence；还没有完整角色反驳 loop；结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
-| Seminar 预算与恢复 | Seminar 页面本地 budget 区、Provider readiness 区、job 状态区 | 用户能看到 provider/model 能力、token 用量、本地估算成本、当前 job id/status；可取消、重试、排队下一场。 | 这是本机 job/cache，不是跨进程后台续跑；重启中的 running job 只有在证据可追踪且 provider/model/pricing 仍匹配时才会重新生成缺失角色，旧 LLM stream 不会原地续传。 |
+| Seminar 预算与恢复 | Seminar 页面本地 budget 区、Provider readiness 区、job 状态区 | 用户能看到 provider/model 能力、token 用量、本地估算成本、当前 job id/status；可取消、重试、排队下一场；从本地 checkpoint 恢复 running Seminar 时，状态区会说明从哪个角色继续、provider/model 会为缺失角色或读者点名角色回合再次调用、费用仍是估算而不是 provider 发票。 | 这是本机 job/cache，不是跨进程后台续跑；重启中的 running job 只有在证据可追踪且 provider/model/pricing 仍匹配时才会重新生成缺失角色，旧 LLM stream 不会原地续传。 |
 | Review Inbox | `Settings -> AI -> Review inbox` | 所有 AI 生成的卡片、记忆、图谱关系、flashcard、同步冲突都先进入审批入口。 | 空 inbox 只代表没有 producer 写入，不代表入口不存在。 |
 | Memory 候选审核 | AI Chat 回答旁书签图标 -> `Add to Review inbox` | 有价值的聊天内容先进入 Review，再由用户决定写入 daily/long-term memory。 | Apply 才写 Markdown memory；Dismiss 不写 memory。 |
 | Memory 来源审计 | 首页 `Memory / 记忆` tab -> 条目详情 | 已应用的 memory 能显示 evidence、来源状态和可跳回原文的链接。 | 不往 Markdown 写隐藏来源字段；只做只读投影。 |
@@ -128,6 +128,7 @@
 - queued job 串行队列。
 - running job 重启后，如果已经有证据可追踪且 provider/model/pricing 仍匹配当前配置的 checkpoint，可以复用已保存 evidence，从第一个缺失角色继续；已有 completed role 会跳过不重跑。
 - 如果只有 active partial stream 但 evidence 已保存，partial 会被丢弃并重新生成当前缺失角色；checkpoint 无效、evidence 不可追踪、provider 已切换或 queued job 时，仍恢复为 interrupted/retryable。
+- restored running 状态会在页面提示从哪个角色继续、是否会再次调用当前 provider/model、费用仍按估算显示且不是 provider 发票；读者点名 follow-up 会显示为点名角色回合，不会误写成缺失角色。
 - 页面不会假装旧 LLM stream 仍在继续，也不会把它说成 OS 后台执行。
 
 还要做什么：
@@ -135,7 +136,7 @@
 - 定义真正的 background execution contract：iOS/Android 对长时间网络流式任务的限制不同。
 - 扩展 checkpoint 粒度：当前已支持 traceable evidence checkpoint 和 completed role prefix；后续还要覆盖 review handoff ready 和 provider idempotency。
 - provider request 需要 idempotency key 或本地去重策略，避免重启后重复扣费、重复写 turn。
-- 中断恢复时明确提示用户：从哪个角色继续、是否会再次调用 provider、预估成本如何计算。
+- 增加恢复前的用户确认 gate：当前已提示续跑角色、provider 再调用和估算成本边界，但可恢复 running checkpoint 仍会自动续跑。
 - queued job 重启后由用户确认继续，避免 App 被系统杀掉后自动外发正文。
 
 做成后的效果：

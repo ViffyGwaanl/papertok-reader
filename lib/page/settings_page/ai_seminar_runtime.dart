@@ -7,6 +7,7 @@ import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
+import 'package:papertok_reader/service/ai/ai_seminar_orchestration_service.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/markdown/styled_markdown.dart';
@@ -907,6 +908,16 @@ class _StatusBanner extends StatelessWidget {
                     ),
               ),
             ],
+            if (_recoveryResumeDetailLine(context, state)
+                case final recoveryLine?) ...[
+              const SizedBox(height: 6),
+              Text(
+                recoveryLine,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                    ),
+              ),
+            ],
             if (backgroundJob != null) ...[
               const SizedBox(height: 6),
               Text(
@@ -934,6 +945,115 @@ class _StatusBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _recoveryResumeDetailLine(
+  BuildContext context,
+  AiSeminarRuntimeState state,
+) {
+  if (!state.restoredFromLocalCache ||
+      state.status != AiSeminarRunStatus.running) {
+    return null;
+  }
+  final session = state.session;
+  if (session == null) return null;
+  final l10n = L10n.of(context);
+  final userDirectedRole = _recoveryUserDirectedRole(state);
+  final role = userDirectedRole ?? _recoveryResumeRole(state);
+  final roleLabel = role == null
+      ? _runtimeText(
+          context,
+          en: 'the next Seminar step',
+          zh: '下一步研讨',
+        )
+      : _seminarRoleLabel(l10n, role);
+  final providerLabel = _recoveryProviderLabel(context, state);
+  final callScope = userDirectedRole == null
+      ? _runtimeText(
+          context,
+          en: 'only for missing roles',
+          zh: '只为缺失角色',
+        )
+      : _runtimeText(
+          context,
+          en: 'for the reader-requested $roleLabel turn',
+          zh: '为读者点名的「$roleLabel」回合',
+        );
+  return _runtimeText(
+    context,
+    en: 'Resume detail: will continue from $roleLabel; PaperTok will call '
+        '$providerLabel again $callScope. Cost remains an '
+        'estimate, not a provider invoice.',
+    zh: '恢复续跑：将从「$roleLabel」继续；PaperTok 会再次调用 '
+        '$providerLabel，$callScope。费用仍按估算显示，不是 provider 发票。',
+  );
+}
+
+AiSeminarRole? _recoveryUserDirectedRole(AiSeminarRuntimeState state) {
+  final directorState = state.directorState;
+  final intervention = directorState?.lastUserIntervention;
+  if (directorState?.nextIntent != AiSeminarDirectorNextIntent.runRole ||
+      intervention == null) {
+    return null;
+  }
+  if (intervention.requestedAction != AiSeminarUserInterventionAction.askRole &&
+      intervention.requestedAction != AiSeminarUserInterventionAction.clarify) {
+    return null;
+  }
+  final activeRole = state.activeRole;
+  if (activeRole != null) return activeRole;
+  final targetRole = intervention.targetRole;
+  if (targetRole != null) return targetRole;
+  final session = state.session;
+  if (session == null) return null;
+  for (final role in session.roles) {
+    if (role != AiSeminarRole.synthesizer) return role;
+  }
+  return session.roles.contains(AiSeminarRole.synthesizer)
+      ? AiSeminarRole.synthesizer
+      : null;
+}
+
+AiSeminarRole? _recoveryResumeRole(AiSeminarRuntimeState state) {
+  final activeRole = state.activeRole;
+  if (activeRole != null) return activeRole;
+  final directorState = state.directorState;
+  if (directorState?.nextIntent == AiSeminarDirectorNextIntent.runRole) {
+    final targetRole = directorState?.lastUserIntervention?.targetRole;
+    if (targetRole != null) return targetRole;
+  }
+  final session = state.session;
+  if (session == null) return null;
+  final order = AiSeminarOrchestrationService.executionOrder(session.roles);
+  if (state.turns.length >= order.length) return null;
+  return order[state.turns.length];
+}
+
+String _recoveryProviderLabel(
+  BuildContext context,
+  AiSeminarRuntimeState state,
+) {
+  final diagnostics = state.providerDiagnostics;
+  final billingContext = state.session?.billingContext;
+  final providerName = _trimmedOrNull(diagnostics?.providerName) ??
+      _trimmedOrNull(billingContext?.providerName);
+  final modelId = _trimmedOrNull(diagnostics?.modelId) ??
+      _trimmedOrNull(billingContext?.modelId);
+  if (providerName != null && modelId != null) {
+    return '$providerName · $modelId';
+  }
+  if (providerName != null) return providerName;
+  if (modelId != null) return modelId;
+  return _runtimeText(
+    context,
+    en: 'the current provider',
+    zh: '当前 provider',
+  );
+}
+
+String? _trimmedOrNull(String? value) {
+  final trimmed = value?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
 }
 
 String? _directorNextIntentLine(

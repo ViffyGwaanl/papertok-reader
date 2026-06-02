@@ -352,6 +352,7 @@ void main() {
     ]);
     expect(restored.status, AiSeminarRunStatus.completed);
     expect(restored.session!.id, sessionId);
+    expect(restored.restoredFromLocalCache, isTrue);
     expect(restored.turns.map((turn) => turn.role), [
       AiSeminarRole.critical,
       AiSeminarRole.supportive,
@@ -2322,6 +2323,7 @@ void main() {
     ]);
     expect(restored.status, AiSeminarRunStatus.completed);
     expect(restored.backgroundJob!.sessionId, 's-restored-queued');
+    expect(restored.restoredFromLocalCache, isFalse);
     expect(
       restored.backgroundJobs.map((job) => job.status),
       [
@@ -2329,6 +2331,52 @@ void main() {
         AiSeminarBackgroundJobStatus.completed,
       ],
     );
+  });
+
+  test('manual start after restored state clears recovery marker', () async {
+    configureProvider();
+    final restoredState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: 's-restored-completed',
+        question: 'Restored completed state?',
+      ),
+      status: AiSeminarRunStatus.completed,
+      evidenceBundle: bundle(),
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'critical prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+        ),
+      ],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(restoredState.toJson()),
+        );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    expect(container.read(aiSeminarRuntimeProvider).restoredFromLocalCache,
+        isTrue);
+
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(
+            id: 's-manual-after-restore',
+            question: 'Start a fresh Seminar.',
+          ),
+        );
+    final freshRun = container.read(aiSeminarRuntimeProvider);
+
+    expect(freshRun.status, AiSeminarRunStatus.completed);
+    expect(freshRun.session!.id, 's-manual-after-restore');
+    expect(freshRun.restoredFromLocalCache, isFalse);
   });
 
   test('running user-directed role state resumes the requested follow-up',

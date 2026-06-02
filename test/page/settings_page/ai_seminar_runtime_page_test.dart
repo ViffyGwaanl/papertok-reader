@@ -1566,6 +1566,317 @@ void main() {
     expect(find.text('critical restored response'), findsOneWidget);
   });
 
+  testWidgets('shows resume detail for restored running Seminar',
+      (tester) async {
+    const sessionId = 's-resume-detail';
+    final evidenceBundle = AiSeminarEvidenceBundle(
+      query: 'Restored running question?',
+      evidence: [
+        AiSeminarEvidence(
+          id: 'e1',
+          scope: AiSeminarEvidenceScope.currentBook,
+          text: 'The source passage.',
+          sourceRef: traceableRef(),
+        ),
+      ],
+    );
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: sessionId,
+        question: 'Restored running question?',
+        billingContext: AiSeminarBillingContext(
+          providerId: 'local-gateway',
+          providerName: 'Local Gateway',
+          providerType: 'openai-compatible',
+          modelId: 'gpt-5.5',
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-resume-detail',
+        sessionId: sessionId,
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: const [
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-resume-detail',
+          sessionId: sessionId,
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+      ],
+      evidenceBundle: evidenceBundle,
+      activeRole: AiSeminarRole.supportive,
+      partialRoleText: 'stale partial should not be shown',
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'critical prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+        ),
+      ],
+    );
+    await Prefs().prefs.setString(
+          '$aiSeminarRuntimeScopedStateV1PrefsPrefix'
+          '${Uri.encodeComponent(sessionId)}',
+          jsonEncode(runningState.toJson()),
+        );
+
+    final roleStarted = Completer<void>();
+    final releaseRole = Completer<void>();
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fail('restored resume should use persisted evidence');
+      },
+      streamRole: (invocation, _) async* {
+        if (invocation.role == AiSeminarRole.supportive &&
+            !roleStarted.isCompleted) {
+          roleStarted.complete();
+        }
+        yield AiSeminarRoleStreamChunk(
+          partialText: '${invocation.role.asString} partial',
+        );
+        await releaseRole.future;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: Scaffold(
+            body: AiSeminarRuntimePanel(
+              initialSessionId: sessionId,
+              embedded: true,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    for (var i = 0; i < 20 && !roleStarted.isCompleted; i += 1) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(
+      roleStarted.isCompleted,
+      isTrue,
+      reason: 'restored running Seminar should continue from checkpoint',
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.scrollUntilVisible(
+      find.textContaining('will continue from Supportive'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(
+        find.textContaining('will continue from Supportive'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'will call Local Gateway · gpt-5.5 again only for missing roles',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Cost remains an estimate'), findsOneWidget);
+
+    releaseRole.complete();
+    for (var i = 0; i < 20; i += 1) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  });
+
+  testWidgets('shows reader-requested resume detail for restored follow-up',
+      (tester) async {
+    const sessionId = 's-resume-follow-up-detail';
+    final evidenceBundle = AiSeminarEvidenceBundle(
+      query: 'Restored follow-up question?',
+      evidence: [
+        AiSeminarEvidence(
+          id: 'e1',
+          scope: AiSeminarEvidenceScope.currentBook,
+          text: 'The source passage.',
+          sourceRef: traceableRef(),
+        ),
+      ],
+    );
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: sessionId,
+        question: 'Restored follow-up question?',
+        billingContext: AiSeminarBillingContext(
+          providerId: 'local-gateway',
+          providerName: 'Local Gateway',
+          providerType: 'openai-compatible',
+          modelId: 'gpt-5.5',
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-resume-follow-up-detail',
+        sessionId: sessionId,
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: const [
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-resume-follow-up-detail',
+          sessionId: sessionId,
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+      ],
+      evidenceBundle: evidenceBundle,
+      activeRole: AiSeminarRole.critical,
+      partialRoleText: 'stale follow-up partial should not be shown',
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'critical prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+        ),
+        AiSeminarRoleTurn(
+          id: 'turn-supportive',
+          role: AiSeminarRole.supportive,
+          prompt: 'supportive prompt',
+          responseText: 'supportive response',
+          evidenceRefIds: ['e1'],
+        ),
+        AiSeminarRoleTurn(
+          id: 'turn-synthesizer',
+          role: AiSeminarRole.synthesizer,
+          prompt: 'synthesizer prompt',
+          responseText: 'synthesizer response',
+          evidenceRefIds: ['e1'],
+        ),
+      ],
+      directorState: const AiSeminarDirectorState(
+        sessionId: sessionId,
+        turnCount: 3,
+        completedRoles: [
+          AiSeminarRole.critical,
+          AiSeminarRole.supportive,
+          AiSeminarRole.synthesizer,
+        ],
+        completedRoleTurnIds: [
+          'turn-critical',
+          'turn-supportive',
+          'turn-synthesizer',
+        ],
+        evidenceLedger: ['e1'],
+        nextIntent: AiSeminarDirectorNextIntent.runRole,
+        lastUserIntervention: AiSeminarUserIntervention(
+          id: 'user-follow-up',
+          text: 'Please ask Critical to respond again.',
+          requestedAction: AiSeminarUserInterventionAction.askRole,
+          targetRole: AiSeminarRole.critical,
+          createdAt: 1234,
+        ),
+      ),
+    );
+    await Prefs().prefs.setString(
+          '$aiSeminarRuntimeScopedStateV1PrefsPrefix'
+          '${Uri.encodeComponent(sessionId)}',
+          jsonEncode(runningState.toJson()),
+        );
+
+    final roleStarted = Completer<void>();
+    final releaseRole = Completer<void>();
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fail('restored follow-up should use persisted evidence');
+      },
+      streamRole: (invocation, _) async* {
+        if (invocation.role == AiSeminarRole.critical &&
+            !roleStarted.isCompleted) {
+          roleStarted.complete();
+        }
+        yield AiSeminarRoleStreamChunk(
+          partialText: '${invocation.role.asString} follow-up partial',
+        );
+        await releaseRole.future;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}-follow-up',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} follow-up response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: Scaffold(
+            body: AiSeminarRuntimePanel(
+              initialSessionId: sessionId,
+              embedded: true,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    for (var i = 0; i < 20 && !roleStarted.isCompleted; i += 1) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(roleStarted.isCompleted, isTrue);
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.scrollUntilVisible(
+      find.textContaining('reader-requested Critical turn'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.textContaining('will continue from Critical'), findsOneWidget);
+    expect(
+        find.textContaining('reader-requested Critical turn'), findsOneWidget);
+    expect(find.textContaining('only for missing roles'), findsNothing);
+    expect(find.textContaining('Cost remains an estimate'), findsOneWidget);
+
+    releaseRole.complete();
+    for (var i = 0; i < 20; i += 1) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  });
+
   testWidgets('shows interrupted background job state after local restore',
       (tester) async {
     await Prefs().prefs.setString(
