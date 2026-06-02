@@ -120,12 +120,19 @@ class _ConceptGraphBody extends StatelessWidget {
     List<Widget> derivedSection({required bool compact}) {
       if (bookId == null || bookId! <= 0) {
         return <Widget>[
-          _DerivedBookGraphBrowser(compact: compact),
+          _DerivedBookGraphBrowser(
+            compact: compact,
+            sourceOpener: sourceOpener,
+          ),
           const SizedBox(height: 12),
         ];
       }
       return <Widget>[
-        _DerivedBookGraphSection(bookId: bookId!, compact: compact),
+        _DerivedBookGraphSection(
+          bookId: bookId!,
+          compact: compact,
+          sourceOpener: sourceOpener,
+        ),
         const SizedBox(height: 12),
       ];
     }
@@ -254,9 +261,13 @@ class _NodeListPane extends StatelessWidget {
 }
 
 class _DerivedBookGraphBrowser extends ConsumerStatefulWidget {
-  const _DerivedBookGraphBrowser({this.compact = false});
+  const _DerivedBookGraphBrowser({
+    this.compact = false,
+    required this.sourceOpener,
+  });
 
   final bool compact;
+  final PaperReaderSourceOpener sourceOpener;
 
   @override
   ConsumerState<_DerivedBookGraphBrowser> createState() =>
@@ -400,6 +411,7 @@ class _DerivedBookGraphBrowserState
               _DerivedBookGraphSection(
                 bookId: selectedBookId,
                 compact: widget.compact,
+                sourceOpener: widget.sourceOpener,
               ),
             ],
           ],
@@ -425,10 +437,12 @@ class _DerivedBookGraphBrowserState
 class _DerivedBookGraphSection extends ConsumerStatefulWidget {
   const _DerivedBookGraphSection({
     required this.bookId,
+    required this.sourceOpener,
     this.compact = false,
   });
 
   final int bookId;
+  final PaperReaderSourceOpener sourceOpener;
   final bool compact;
 
   @override
@@ -442,6 +456,7 @@ class _DerivedBookGraphSectionState
   late Future<AiGlobalIndexBookLayerStatus?> _statusFuture;
   bool _isRebuilding = false;
   String? _rebuildError;
+  String? _selectedNodeId;
 
   @override
   void initState() {
@@ -458,6 +473,7 @@ class _DerivedBookGraphSectionState
       _statusFuture = _loadStatus();
       _isRebuilding = false;
       _rebuildError = null;
+      _selectedNodeId = null;
     }
   }
 
@@ -587,6 +603,8 @@ class _DerivedBookGraphSectionState
                     nodes: graph.nodes.take(10).toList(growable: false),
                     edges: graph.edges,
                     centerNodeId: graph.nodes.first.id,
+                    onNodeSelected: (node) =>
+                        _handleDerivedNodeSelected(graph, node),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -594,9 +612,24 @@ class _DerivedBookGraphSectionState
                     runSpacing: 8,
                     children: [
                       for (final node in graph.nodes.take(8))
-                        _MapNodePill(node: node),
+                        _MapNodePill(
+                          node: node,
+                          isCenter: node.id == _selectedNodeId,
+                          onTap: () => _handleDerivedNodeSelected(graph, node),
+                        ),
                     ],
                   ),
+                  if (!widget.compact && _selectedNode(graph) != null) ...[
+                    const SizedBox(height: 12),
+                    _DerivedBookGraphNodeDetails(
+                      node: _selectedNode(graph)!,
+                      edges: _relatedEdges(graph, _selectedNode(graph)!.id),
+                      nodesById: {
+                        for (final node in graph.nodes) node.id: node,
+                      },
+                      sourceOpener: widget.sourceOpener,
+                    ),
+                  ],
                 ],
               ],
             ),
@@ -624,6 +657,165 @@ class _DerivedBookGraphSectionState
     return graph.edges.length == 1
         ? '1 relation'
         : '${graph.edges.length} relations';
+  }
+
+  ConceptNode? _selectedNode(DerivedBookConceptGraphSnapshot graph) {
+    final selectedId = _selectedNodeId;
+    if (selectedId == null) return null;
+    for (final node in graph.nodes) {
+      if (node.id == selectedId) return node;
+    }
+    return null;
+  }
+
+  List<ConceptEdge> _relatedEdges(
+    DerivedBookConceptGraphSnapshot graph,
+    String nodeId,
+  ) {
+    return graph.edges
+        .where(
+          (edge) => edge.sourceNodeId == nodeId || edge.targetNodeId == nodeId,
+        )
+        .toList(growable: false);
+  }
+
+  void _handleDerivedNodeSelected(
+    DerivedBookConceptGraphSnapshot graph,
+    ConceptNode node,
+  ) {
+    if (!widget.compact) {
+      setState(() => _selectedNodeId = node.id);
+      return;
+    }
+    final edges = _relatedEdges(graph, node.id);
+    final nodesById = {for (final item in graph.nodes) item.id: item};
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: _DerivedBookGraphNodeDetails(
+              node: node,
+              edges: edges,
+              nodesById: nodesById,
+              sourceOpener: widget.sourceOpener,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DerivedBookGraphNodeDetails extends ConsumerWidget {
+  const _DerivedBookGraphNodeDetails({
+    required this.node,
+    required this.edges,
+    required this.nodesById,
+    required this.sourceOpener,
+  });
+
+  final ConceptNode node;
+  final List<ConceptEdge> edges;
+  final Map<String, ConceptNode> nodesById;
+  final PaperReaderSourceOpener sourceOpener;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final sourceRefs = [
+      ...node.sourceRefs,
+      for (final edge in edges) ...edge.evidenceRefs,
+    ];
+    final firstIntent = _firstIntent(sourceRefs);
+    final summary = node.summary?.trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 20),
+        Row(
+          children: [
+            const Icon(Icons.ads_click_outlined, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                zh ? '选中的全书节点' : 'Selected full-book node',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            _TinyChip(
+              label: zh ? '派生缓存' : 'Derived cache',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          node.label,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        if (summary != null && summary.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(summary),
+        ],
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _TinyChip(
+                label:
+                    zh ? '${edges.length} 条相邻关系' : '${edges.length} related'),
+            _TinyChip(
+                label: zh
+                    ? '${sourceRefs.length} 条证据'
+                    : '${sourceRefs.length} evidence'),
+          ],
+        ),
+        if (edges.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            zh ? '相邻关系' : 'Related relations',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          for (final edge in edges.take(4))
+            _LocalGraphEdgeSummary(edge: edge, nodesById: nodesById),
+        ],
+        const SizedBox(height: 12),
+        Text(
+          zh ? '证据' : 'Evidence',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        if (sourceRefs.isEmpty)
+          Text(
+            zh ? '没有可追踪证据。' : 'No traceable evidence.',
+            style: TextStyle(color: ClaudePalette.secondary(context)),
+          )
+        else
+          for (final sourceRef in sourceRefs.take(4))
+            _EvidenceTile(sourceRef: sourceRef),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            icon: const Icon(Icons.open_in_new),
+            label: Text(
+              zh ? '打开来源' : 'Open source',
+            ),
+            onPressed: firstIntent == null
+                ? () => showPaperReaderSourceUnavailable(
+                      context,
+                      sourceRefs,
+                      zh ? '没有可追踪证据。' : 'No traceable evidence.',
+                    )
+                : () => sourceOpener(ref, firstIntent.toUri()),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1066,6 +1258,7 @@ class _ConceptGraphCanvas extends StatelessWidget {
     required this.nodes,
     required this.edges,
     required this.centerNodeId,
+    this.onNodeSelected,
   });
 
   final Key paintKey;
@@ -1073,12 +1266,13 @@ class _ConceptGraphCanvas extends StatelessWidget {
   final List<ConceptNode> nodes;
   final List<ConceptEdge> edges;
   final String centerNodeId;
+  final ValueChanged<ConceptNode>? onNodeSelected;
 
   @override
   Widget build(BuildContext context) {
     if (nodes.isEmpty) return const SizedBox.shrink();
     final colorScheme = Theme.of(context).colorScheme;
-    return SizedBox(
+    final canvas = SizedBox(
       height: height,
       child: CustomPaint(
         key: paintKey,
@@ -1099,6 +1293,24 @@ class _ConceptGraphCanvas extends StatelessWidget {
         ),
         child: const SizedBox.expand(),
       ),
+    );
+    final onSelected = onNodeSelected;
+    if (onSelected == null) return canvas;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (details) {
+        final box = context.findRenderObject() as RenderBox?;
+        final size = box?.size;
+        if (size == null || size.isEmpty) return;
+        final node = _hitTestConceptGraphNode(
+          details.localPosition,
+          size,
+          nodes,
+          centerNodeId,
+        );
+        if (node != null) onSelected(node);
+      },
+      child: canvas,
     );
   }
 }
@@ -1142,7 +1354,7 @@ class _ConceptGraphMapPainter extends CustomPainter {
       Paint()..color = backgroundColor,
     );
 
-    final positions = _layoutNodes(size);
+    final positions = _layoutConceptGraphNodes(size, nodes, centerNodeId);
     final nodeIds = positions.keys.toSet();
     final edgePaint = Paint()
       ..style = PaintingStyle.stroke
@@ -1197,35 +1409,6 @@ class _ConceptGraphMapPainter extends CustomPainter {
     }
   }
 
-  Map<String, Offset> _layoutNodes(Size size) {
-    final centerNode = nodes.firstWhere(
-      (node) => node.id == centerNodeId,
-      orElse: () => nodes.first,
-    );
-    final others = nodes
-        .where((node) => node.id != centerNode.id)
-        .take(8)
-        .toList(growable: false);
-    final center = Offset(size.width / 2, size.height / 2 - 10);
-    final positions = <String, Offset>{centerNode.id: center};
-    if (others.isEmpty) return positions;
-
-    final ringRadius = math.max(
-      54.0,
-      math.min(size.width, size.height) * 0.34,
-    );
-    for (var i = 0; i < others.length; i++) {
-      final angle = -math.pi / 2 + (math.pi * 2 * i / others.length);
-      final x = center.dx + math.cos(angle) * ringRadius;
-      final y = center.dy + math.sin(angle) * ringRadius;
-      positions[others[i].id] = Offset(
-        x.clamp(34.0, size.width - 34.0).toDouble(),
-        y.clamp(34.0, size.height - 42.0).toDouble(),
-      );
-    }
-    return positions;
-  }
-
   void _paintLabel(
     Canvas canvas,
     String label,
@@ -1272,20 +1455,77 @@ class _ConceptGraphMapPainter extends CustomPainter {
   }
 }
 
+Map<String, Offset> _layoutConceptGraphNodes(
+  Size size,
+  List<ConceptNode> nodes,
+  String centerNodeId,
+) {
+  final centerNode = nodes.firstWhere(
+    (node) => node.id == centerNodeId,
+    orElse: () => nodes.first,
+  );
+  final others = nodes
+      .where((node) => node.id != centerNode.id)
+      .take(8)
+      .toList(growable: false);
+  final center = Offset(size.width / 2, size.height / 2 - 10);
+  final positions = <String, Offset>{centerNode.id: center};
+  if (others.isEmpty) return positions;
+
+  final ringRadius = math.max(
+    54.0,
+    math.min(size.width, size.height) * 0.34,
+  );
+  for (var i = 0; i < others.length; i++) {
+    final angle = -math.pi / 2 + (math.pi * 2 * i / others.length);
+    final x = center.dx + math.cos(angle) * ringRadius;
+    final y = center.dy + math.sin(angle) * ringRadius;
+    positions[others[i].id] = Offset(
+      x.clamp(34.0, size.width - 34.0).toDouble(),
+      y.clamp(34.0, size.height - 42.0).toDouble(),
+    );
+  }
+  return positions;
+}
+
+ConceptNode? _hitTestConceptGraphNode(
+  Offset localPosition,
+  Size size,
+  List<ConceptNode> nodes,
+  String centerNodeId,
+) {
+  final positions = _layoutConceptGraphNodes(size, nodes, centerNodeId);
+  ConceptNode? closest;
+  var closestDistance = double.infinity;
+  for (final node in nodes) {
+    final center = positions[node.id];
+    if (center == null) continue;
+    final distance = (localPosition - center).distance;
+    final hitRadius = node.id == centerNodeId ? 30.0 : 25.0;
+    if (distance <= hitRadius && distance < closestDistance) {
+      closest = node;
+      closestDistance = distance;
+    }
+  }
+  return closest;
+}
+
 class _MapNodePill extends StatelessWidget {
   const _MapNodePill({
     required this.node,
     this.isCenter = false,
+    this.onTap,
   });
 
   final ConceptNode node;
   final bool isCenter;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    return ConstrainedBox(
+    final pill = ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 260),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -1341,6 +1581,13 @@ class _MapNodePill extends StatelessWidget {
           ),
         ),
       ),
+    );
+    final onTap = this.onTap;
+    if (onTap == null) return pill;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: pill,
     );
   }
 }

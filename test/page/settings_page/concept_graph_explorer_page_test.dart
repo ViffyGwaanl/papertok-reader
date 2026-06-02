@@ -160,6 +160,64 @@ void main() {
     );
   });
 
+  testWidgets('full-book derived graph node opens evidence details',
+      (tester) async {
+    final opened = <Uri>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(
+            bookId: 7,
+            sourceOpener: (_, uri) async => opened.add(uri),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.scrollUntilVisible(
+      find.text('Working memory'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    expect(graphMap, findsOneWidget);
+    expect(find.text('A whole-book graph node from the global layer.'),
+        findsNothing);
+
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected full-book node'), findsOneWidget);
+    expect(find.text('A whole-book graph node from the global layer.'),
+        findsOneWidget);
+    expect(find.text('Working memory evidence.'), findsOneWidget);
+
+    await tester.tap(find.text('Open source'));
+    await tester.pump();
+
+    expect(opened, hasLength(1));
+    expect(opened.single.scheme, 'paperreader');
+    expect(opened.single.host, 'reader');
+    expect(opened.single.path, '/open');
+    expect(opened.single.queryParameters['bookId'], '7');
+  });
+
   testWidgets('book scoped explorer can build a missing global layer in place',
       (tester) async {
     final loader = _MutableDerivedBookConceptGraphLoader();

@@ -29,13 +29,13 @@
 | RAG 结果生成知识卡 | Concept Graph 空态 -> `知识卡` | 没有现成概念时，从本地 RAG 证据生成待审知识卡。 | 只接受带 traceable chunk SourceRef 的结果。 |
 | Spaced Review | `Settings -> AI -> Spaced review` | 已应用知识卡或 Seminar flashcard 可以进入复习队列，按 Again/Hard/Good/Easy 更新间隔。 | 跨设备复习同步还没接。 |
 | Knowledge Sync / Export | `Settings -> AI -> Knowledge sync/export` | 可导出 manifest、Markdown、HTML report、Anki TSV、sync bundle；可预览远端 bundle，安全冲突进 Review。 | 这是前台安全编排，不是完整后台云同步。 |
-| Custom Skills | `Settings -> AI -> 自定义技能`，再到 `当前技能` 或 AI Chat `+ -> Choose style / 选择风格` 选择；也可从 AI Chat `Choose style` 的自定义 skill 行点 `Custom skills / 自定义技能` 回到配置页。 | 用户可导入受治理的 JSON skill，让 AI 在指定 scene 中追加行为和只读工具；在 AI Chat 里选择风格时也能回到配置页，不必退出当前对话去找 Settings。 | 写工具、递归 sub-agent、未知字段和禁用 skill 都不会注入运行时；点击配置入口不改变当前 active skill；普通内置 skill 仍是选择入口。 |
+| Custom Skills | `Settings -> AI -> 自定义技能`，再到 `当前技能` 或 AI Chat `+ -> Choose style / 选择风格` 选择；也可从 AI Chat `Choose style` 的自定义 skill 行点 `Custom skills / 自定义技能` 回到配置页。 | 用户可导入受治理的 JSON skill，让 AI 在指定 scene 中追加行为和只读工具；在 AI Chat 里选择风格时也能回到配置页，不必退出当前对话去找 Settings；普通内置 skill 行也可点 `Skill settings / 技能设置` 保存个人提示词补充。 | 写工具、递归 sub-agent、未知字段和禁用 skill 都不会注入运行时；点击配置入口不改变当前 active skill；普通内置 skill 的提示词补充不能覆盖隐私、证据、工具权限和写入确认规则。 |
 | OpenAI Responses 兼容诊断 | `Settings -> AI -> Provider Center` 配置 Responses provider | 官方支持 `previous_response_id` 的 provider 继续走 server-side continuation；拒绝该参数的兼容网关会自动降级重试，并在错误里给出 endpoint/model/参数诊断。 | 只对明确 `previous_response_id` unsupported 的 HTTP 400 重试；非该错误保留原始失败。 |
 | 当前书语义检索保护 | 阅读页搜索、Seminar evidence、`semantic_search_current_book` 工具 | 当前书向量搜索改为分页、串行、可取消、带进度，并优先 bounded FTS/BM25 候选，降低 OOM、发热和掉帧风险。 | 这是保护层，不是真 ANN 向量索引；无候选时只做预算内 fallback 扫描。 |
 | 书库 Hybrid RAG 召回 | AI Chat、Seminar library fallback、agent tool、ConceptGraph 空态等调用 `semantic_search_library` 的入口 | 书库检索已从“文本 miss 后才走 vector fallback”改成“FTS/BM25 精确召回 + 向量后端语义召回共同进入候选池”，结果可用 `usedVectorRecall` 判断向量是否参与；默认 backend 是 ANN -> native -> exact，Vec1/sqlite-vec function 和对应 ANN 表存在且完整时先用 ANN，只 hydrate winner 正文；不可用或不完整时合并/降级 native/exact，避免漏掉未升级书籍；删除书籍时会清理该书的派生图谱、native shadow vector 和 ANN 行。 | 已有 extension-ready Vec1 路径，但还不是真正发布级 sqlite-vec/ANN：移动端 extension 打包、UI build job 和 provider/model 失效没闭环；ConceptGraph 本地文本入口仍关闭 embedding/vector/rerank，避免外发正文；旧索引缺 blob 时仍保留 JSON fallback。 |
 | 旧索引全局层补建 | `Settings -> AI Index / Library Index` -> `全局层索引` -> `补建` | 用已有 chunk 给旧索引书籍补建 RAPTOR 全局摘要层和当前 GraphRAG 派生层，页面显示进度并可取消。 | 不重新生成 embedding；不是 sqlite-vec/ANN；当前纯中文 graph node 抽取仍需后续增强。 |
 | 旧索引向量层升级 | `Settings -> AI Index / Library Index` -> `向量索引升级` -> `升级`，再点 `ANN 向量索引` -> `构建` | 用已有 embedding 给旧索引书籍补建紧凑 native vector shadow layer，为 sqlite-vec/ANN 后端做迁移准备；页面显示缺失数量、进度和取消；`ANN 向量索引` 会检查 Vec1/sqlite-vec 扩展、ANN group/row 缺口，可用时从 shadow rows 重建 provider/model/dim 隔离的 Vec1 ANN 表。 | 不重嵌入；未加载 Vec1/sqlite-vec 扩展时只显示 ANN 暂不可用并继续 fallback；当前是 extension-ready schema/backend seam，不是已打包的 sqlite-vec/ANN 发布能力。 |
-| 全书自动图谱预览 | `Settings -> AI -> Concept graph`，或阅读页选中文本 -> `图谱` | Settings 入口会列出已有全局层的已索引书，用户可直接选择一本书查看只读全书关系图；阅读页入口会直接显示当前书的全书派生图谱。 | 只读派生缓存，不写正式知识资产；没有全局层时先去 AI Index 补建；不是无限画布。 |
+| 全书自动图谱预览 | `Settings -> AI -> Concept graph`，或阅读页选中文本 -> `图谱` | Settings 入口会列出已有全局层的已索引书，用户可直接选择一本书查看只读全书关系图；阅读页入口会直接显示当前书的全书派生图谱；点图谱节点可查看摘要、相邻关系、证据摘录，并可 `Open source / 打开来源` 回到原文。 | 只读派生缓存，不写正式知识资产；没有全局层时先去 AI Index 补建；不是无限画布。 |
 
 ## 3. 已做但用户不直接感知的功能
 
@@ -218,6 +218,7 @@
 当前已经有：
 
 - Concept Graph 局部探索和轻量节点-连线 canvas。
+- 全书派生图谱节点点击详情、证据摘录和来源跳转。
 - dossier。
 - 局部路径。
 - evidence badge。
@@ -229,7 +230,7 @@
 - 定义移动端图谱交互：缩放、拖拽、节点聚合、搜索定位、证据侧栏。
 - 定义图谱资产边界：哪些 node/edge 是用户确认资产，哪些只是派生视图。
 - 加入布局缓存和 incremental layout，避免每次打开都重算大图。
-- 加入 evidence-first rendering：点任何节点/边都能看到证据，不让图谱变成无来源的漂亮图。
+- 加入更完整的 evidence-first rendering：当前已支持全书节点点开证据；复杂画布还需要边详情、聚合节点和证据侧栏。
 - 加入图谱规模 gate：节点数、边数、布局耗时、内存、手势帧率。
 - 加入导出和恢复：用户确认关系可以同步，派生布局缓存可重建。
 
