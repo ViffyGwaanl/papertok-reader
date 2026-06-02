@@ -424,6 +424,12 @@ void main() {
       );
       expect(card?.snapshot?.roleSummaries.first.summary, 'critical response');
       expect(card?.snapshot?.synthesisSummary, 'synthesizer response');
+      expect(card?.snapshot?.disagreements, ['Scope remains disputed.']);
+      final disagreement = card?.snapshot?.disagreementDetails.single;
+      expect(disagreement?.text, 'Scope remains disputed.');
+      expect(disagreement?.roleIds, ['critical']);
+      expect(disagreement?.evidenceRefs.single.id, 'e1');
+      expect(disagreement?.evidenceRefs.single.snippet, 'The source passage.');
     },
   );
 
@@ -532,13 +538,16 @@ void main() {
         tester.element(find.byType(AiChatStream)),
       );
       await container.read(aiChatProvider.future);
-      container
-          .read(aiChatProvider.notifier)
-          .loadHistoryEntry(_seminarCardHistoryEntry());
+      container.read(aiChatProvider.notifier).loadHistoryEntry(
+            _seminarCardHistoryEntry(
+              extraLegacyDisagreement: 'Method remains unclear.',
+            ),
+          );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('Working memory evidence.'), findsOneWidget);
+      expect(find.text('2 个分歧'), findsOneWidget);
       await tester.tap(
         find.byKey(
           const ValueKey(
@@ -551,7 +560,12 @@ void main() {
       expect(find.byType(AiSeminarRuntimePanel), findsNothing);
       expect(find.text('分歧视图'), findsOneWidget);
       expect(find.text('Scope remains disputed.'), findsAtLeastNWidgets(1));
-      expect(find.text('Working memory evidence.'), findsNothing);
+      expect(find.text('Method remains unclear.'), findsOneWidget);
+      expect(find.text('关联角色'), findsOneWidget);
+      expect(find.text('批判者、支持者'), findsOneWidget);
+      expect(find.text('关联证据'), findsOneWidget);
+      expect(find.text('Working memory evidence.'), findsOneWidget);
+      expect(find.text('证据快照'), findsNothing);
 
       await tester.tap(
         find.byKey(
@@ -1196,9 +1210,54 @@ void _mockPathProvider(String? cachePath) {
                 });
 }
 
-AiChatHistoryEntry _seminarCardHistoryEntry({bool includeSnapshot = true}) {
+AiChatHistoryEntry _seminarCardHistoryEntry({
+  bool includeSnapshot = true,
+  String? extraLegacyDisagreement,
+}) {
   final human = ChatMessage.humanText('这个概念怎么理解？');
   final assistant = ChatMessage.ai('AI Seminar: 这个概念怎么理解？');
+  final snapshot = includeSnapshot
+      ? AiSeminarRunCardSnapshot(
+          evidence: const [
+            AiSeminarRunCardEvidenceSnapshot(
+              title: 'Working memory',
+              snippet: 'Working memory evidence.',
+            ),
+          ],
+          roleSummaries: const [
+            AiSeminarRunCardRoleSummary(
+              roleId: 'critical',
+              label: '批判者',
+              summary: 'This claim needs a boundary condition.',
+            ),
+            AiSeminarRunCardRoleSummary(
+              roleId: 'supportive',
+              label: '支持者',
+              summary: 'The surrounding paragraph supports it.',
+            ),
+          ],
+          synthesisSummary:
+              'The group agrees on the mechanism but not the scope.',
+          disagreements: [
+            'Scope remains disputed.',
+            if (extraLegacyDisagreement != null) extraLegacyDisagreement,
+          ],
+          disagreementDetails: const [
+            AiSeminarRunCardDisagreementDetail(
+              text: 'Scope remains disputed.',
+              roleIds: ['critical', 'supportive'],
+              evidenceRefs: [
+                AiSeminarRunCardEvidenceSnapshot(
+                  id: 'e1',
+                  title: 'Working memory',
+                  snippet: 'Working memory evidence.',
+                ),
+              ],
+            ),
+          ],
+          openQuestions: const ['What evidence would resolve scope?'],
+        )
+      : null;
   final card = AiSeminarRunCardMeta(
     question: '这个概念怎么理解？',
     sessionId: 'seminar-chat-history',
@@ -1211,32 +1270,7 @@ AiChatHistoryEntry _seminarCardHistoryEntry({bool includeSnapshot = true}) {
     writeRequiresApproval: true,
     maxRounds: 2,
     createdAt: 1234,
-    snapshot: includeSnapshot
-        ? const AiSeminarRunCardSnapshot(
-            evidence: [
-              AiSeminarRunCardEvidenceSnapshot(
-                title: 'Working memory',
-                snippet: 'Working memory evidence.',
-              ),
-            ],
-            roleSummaries: [
-              AiSeminarRunCardRoleSummary(
-                roleId: 'critical',
-                label: '批判者',
-                summary: 'This claim needs a boundary condition.',
-              ),
-              AiSeminarRunCardRoleSummary(
-                roleId: 'supportive',
-                label: '支持者',
-                summary: 'The surrounding paragraph supports it.',
-              ),
-            ],
-            synthesisSummary:
-                'The group agrees on the mechanism but not the scope.',
-            disagreements: ['Scope remains disputed.'],
-            openQuestions: ['What evidence would resolve scope?'],
-          )
-        : null,
+    snapshot: snapshot,
   );
   return AiChatHistoryEntry(
     id: 'seminar-card-history',
@@ -1327,6 +1361,16 @@ AiSeminarRuntimeService _seminarSnapshotService() {
             AiSeminarRole.supportive => const ['e3'],
             _ => const ['e4'],
           },
+          whiteboardEntries: [
+            if (invocation.role == AiSeminarRole.critical)
+              const AiSeminarWhiteboardEntry(
+                id: 'disagreement-1',
+                kind: AiSeminarWhiteboardKind.disagreement,
+                text: 'Scope remains disputed.',
+                role: AiSeminarRole.critical,
+                evidenceRefIds: ['e1'],
+              ),
+          ],
         ),
       );
     },

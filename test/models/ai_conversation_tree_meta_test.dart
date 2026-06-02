@@ -44,6 +44,19 @@ void main() {
             synthesisSummary:
                 'The group agrees on the mechanism but not the scope.',
             disagreements: ['Scope remains disputed.'],
+            disagreementDetails: [
+              AiSeminarRunCardDisagreementDetail(
+                text: 'Scope remains disputed.',
+                roleIds: ['critical', 'supportive'],
+                evidenceRefs: [
+                  AiSeminarRunCardEvidenceSnapshot(
+                    id: 'e1',
+                    title: 'Chapter 2',
+                    snippet: 'The source passage grounds the disagreement.',
+                  ),
+                ],
+              ),
+            ],
             openQuestions: ['Which chapter resolves the edge case?'],
           ),
         ),
@@ -73,6 +86,12 @@ void main() {
           'The group agrees on the mechanism but not the scope.');
       expect(restored.seminarRunCard?.snapshot?.disagreements,
           ['Scope remains disputed.']);
+      final restoredDisagreement =
+          restored.seminarRunCard?.snapshot?.disagreementDetails.single;
+      expect(restoredDisagreement?.text, 'Scope remains disputed.');
+      expect(restoredDisagreement?.roleIds, ['critical', 'supportive']);
+      expect(restoredDisagreement?.evidenceRefs.single.id, 'e1');
+      expect(restoredDisagreement?.evidenceRefs.single.title, 'Chapter 2');
       expect(restored.seminarRunCard?.snapshot?.openQuestions,
           ['Which chapter resolves the edge case?']);
     });

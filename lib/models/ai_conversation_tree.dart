@@ -481,16 +481,22 @@ class AiSegmentMeta {
 @immutable
 class AiSeminarRunCardEvidenceSnapshot {
   const AiSeminarRunCardEvidenceSnapshot({
+    this.id,
     required this.title,
     required this.snippet,
   });
 
+  final String? id;
   final String title;
   final String snippet;
 
-  bool get isEmpty => title.trim().isEmpty && snippet.trim().isEmpty;
+  bool get isEmpty =>
+      (id == null || id!.trim().isEmpty) &&
+      title.trim().isEmpty &&
+      snippet.trim().isEmpty;
 
   Map<String, dynamic> toJson() => {
+        if (id != null && id!.trim().isNotEmpty) 'id': id!.trim(),
         if (title.trim().isNotEmpty) 'title': title.trim(),
         if (snippet.trim().isNotEmpty) 'snippet': snippet.trim(),
       };
@@ -499,9 +505,16 @@ class AiSeminarRunCardEvidenceSnapshot {
     Map<String, dynamic> json,
   ) {
     return AiSeminarRunCardEvidenceSnapshot(
+      id: _trimmedOrNull(json['id']),
       title: json['title']?.toString().trim() ?? '',
       snippet: json['snippet']?.toString().trim() ?? '',
     );
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
   }
 }
 
@@ -536,12 +549,64 @@ class AiSeminarRunCardRoleSummary {
 }
 
 @immutable
+class AiSeminarRunCardDisagreementDetail {
+  const AiSeminarRunCardDisagreementDetail({
+    required this.text,
+    this.roleIds = const <String>[],
+    this.evidenceRefs = const <AiSeminarRunCardEvidenceSnapshot>[],
+  });
+
+  final String text;
+  final List<String> roleIds;
+  final List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs;
+
+  bool get isEmpty =>
+      text.trim().isEmpty &&
+      roleIds.where((item) => item.trim().isNotEmpty).isEmpty &&
+      evidenceRefs.where((item) => !item.isEmpty).isEmpty;
+
+  Map<String, dynamic> toJson() => {
+        if (text.trim().isNotEmpty) 'text': text.trim(),
+        if (roleIds.where((item) => item.trim().isNotEmpty).isNotEmpty)
+          'roleIds': roleIds
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+        if (evidenceRefs.where((item) => !item.isEmpty).isNotEmpty)
+          'evidenceRefs': evidenceRefs
+              .where((item) => !item.isEmpty)
+              .map((item) => item.toJson())
+              .toList(growable: false),
+      };
+
+  factory AiSeminarRunCardDisagreementDetail.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return AiSeminarRunCardDisagreementDetail(
+      text: json['text']?.toString().trim() ?? '',
+      roleIds: AiSeminarRunCardSnapshot._stringList(json['roleIds']),
+      evidenceRefs: (json['evidenceRefs'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => AiSeminarRunCardEvidenceSnapshot.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false) ??
+          const <AiSeminarRunCardEvidenceSnapshot>[],
+    );
+  }
+}
+
+@immutable
 class AiSeminarRunCardSnapshot {
   const AiSeminarRunCardSnapshot({
     this.evidence = const <AiSeminarRunCardEvidenceSnapshot>[],
     this.roleSummaries = const <AiSeminarRunCardRoleSummary>[],
     this.synthesisSummary,
     this.disagreements = const <String>[],
+    this.disagreementDetails = const <AiSeminarRunCardDisagreementDetail>[],
     this.openQuestions = const <String>[],
   });
 
@@ -549,6 +614,7 @@ class AiSeminarRunCardSnapshot {
   final List<AiSeminarRunCardRoleSummary> roleSummaries;
   final String? synthesisSummary;
   final List<String> disagreements;
+  final List<AiSeminarRunCardDisagreementDetail> disagreementDetails;
   final List<String> openQuestions;
 
   bool get isEmpty =>
@@ -556,6 +622,7 @@ class AiSeminarRunCardSnapshot {
       roleSummaries.where((item) => !item.isEmpty).isEmpty &&
       (synthesisSummary == null || synthesisSummary!.trim().isEmpty) &&
       disagreements.where((item) => item.trim().isNotEmpty).isEmpty &&
+      disagreementDetails.where((item) => !item.isEmpty).isEmpty &&
       openQuestions.where((item) => item.trim().isNotEmpty).isEmpty;
 
   Map<String, dynamic> toJson() => {
@@ -575,6 +642,11 @@ class AiSeminarRunCardSnapshot {
           'disagreements': disagreements
               .map((item) => item.trim())
               .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+        if (disagreementDetails.where((item) => !item.isEmpty).isNotEmpty)
+          'disagreementDetails': disagreementDetails
+              .where((item) => !item.isEmpty)
+              .map((item) => item.toJson())
               .toList(growable: false),
         if (openQuestions.where((item) => item.trim().isNotEmpty).isNotEmpty)
           'openQuestions': openQuestions
@@ -607,6 +679,16 @@ class AiSeminarRunCardSnapshot {
           const <AiSeminarRunCardRoleSummary>[],
       synthesisSummary: _trimmedOrNull(json['synthesisSummary']),
       disagreements: _stringList(json['disagreements']),
+      disagreementDetails: (json['disagreementDetails'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => AiSeminarRunCardDisagreementDetail.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false) ??
+          const <AiSeminarRunCardDisagreementDetail>[],
       openQuestions: _stringList(json['openQuestions']),
     );
   }

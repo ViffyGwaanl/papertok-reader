@@ -2900,12 +2900,17 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .take(3)
         .map(
           (item) => AiSeminarRunCardEvidenceSnapshot(
+            id: item.id,
             title: _seminarEvidenceSnapshotTitle(item),
             snippet: _seminarEvidenceSnapshotSnippet(item),
           ),
         )
         .where((item) => !item.isEmpty)
         .toList(growable: false);
+    final evidenceById = <String, AiSeminarEvidence>{
+      for (final item in citedEvidence)
+        if (item.id.trim().isNotEmpty) item.id.trim(): item,
+    };
     final roleSummaries = state.turns
         .where((turn) => !turn.isFailed && turn.responseText.trim().isNotEmpty)
         .take(4)
@@ -2918,14 +2923,97 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         )
         .toList(growable: false);
     final synthesis = state.synthesis;
+    final disagreementDetails = _seminarDisagreementDetailsFromState(
+      state,
+      evidenceById,
+    );
     final snapshot = AiSeminarRunCardSnapshot(
       evidence: evidence,
       roleSummaries: roleSummaries,
       synthesisSummary: synthesis?.summary.trim(),
       disagreements: synthesis?.disagreements ?? const <String>[],
+      disagreementDetails: disagreementDetails,
       openQuestions: synthesis?.openQuestions ?? const <String>[],
     );
     return snapshot.isEmpty ? null : snapshot;
+  }
+
+  List<AiSeminarRunCardDisagreementDetail> _seminarDisagreementDetailsFromState(
+    AiSeminarRuntimeState state,
+    Map<String, AiSeminarEvidence> evidenceById,
+  ) {
+    final entries = <AiSeminarWhiteboardEntry>[];
+    final seen = <String>{};
+
+    void addEntry(AiSeminarWhiteboardEntry entry) {
+      if (entry.kind != AiSeminarWhiteboardKind.disagreement) return;
+      final id = entry.id.trim();
+      final text = entry.text.trim();
+      final key = id.isNotEmpty ? id : text;
+      if (key.isEmpty || !seen.add(key)) return;
+      entries.add(entry);
+    }
+
+    for (final turn in state.turns) {
+      if (turn.isFailed) continue;
+      for (final entry in turn.whiteboardEntries) {
+        addEntry(entry);
+      }
+    }
+    for (final entry in state.whiteboardEntries) {
+      addEntry(entry);
+    }
+
+    return entries
+        .take(4)
+        .map(
+          (entry) => AiSeminarRunCardDisagreementDetail(
+            text: entry.text,
+            roleIds: _seminarDisagreementRoleIds(entry, state.turns),
+            evidenceRefs: entry.evidenceRefIds
+                .map((id) => evidenceById[id.trim()])
+                .whereType<AiSeminarEvidence>()
+                .map(
+                  (item) => AiSeminarRunCardEvidenceSnapshot(
+                    id: item.id,
+                    title: _seminarEvidenceSnapshotTitle(item),
+                    snippet: _seminarEvidenceSnapshotSnippet(item),
+                  ),
+                )
+                .where((item) => !item.isEmpty)
+                .toList(growable: false),
+          ),
+        )
+        .where((detail) => !detail.isEmpty)
+        .toList(growable: false);
+  }
+
+  List<String> _seminarDisagreementRoleIds(
+    AiSeminarWhiteboardEntry entry,
+    List<AiSeminarRoleTurn> turns,
+  ) {
+    final out = <String>[];
+    void addRole(AiSeminarRole? role) {
+      final roleId = role?.asString.trim();
+      if (roleId == null || roleId.isEmpty || out.contains(roleId)) return;
+      out.add(roleId);
+    }
+
+    addRole(entry.role);
+    for (final turn in turns) {
+      if (turn.isFailed) continue;
+      final hasEntry = turn.whiteboardEntries.any((item) {
+        final itemId = item.id.trim();
+        final entryId = entry.id.trim();
+        if (itemId.isNotEmpty && entryId.isNotEmpty && itemId == entryId) {
+          return true;
+        }
+        return item.text.trim().isNotEmpty &&
+            item.text.trim() == entry.text.trim();
+      });
+      if (hasEntry) addRole(turn.role);
+    }
+    return out;
   }
 
   List<AiSeminarEvidence> _seminarCitedTraceableEvidenceFromState(
@@ -5368,6 +5456,20 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .map((item) => item.trim())
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
+    final disagreementDetails = snapshot.disagreementDetails
+        .where((item) => !item.isEmpty)
+        .toList(growable: false);
+    final disagreementDetailTexts = disagreementDetails
+        .map((item) => item.text.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+    final legacyOnlyDisagreements = disagreements
+        .where((item) => !disagreementDetailTexts.contains(item))
+        .toList(growable: false);
+    final disagreementTexts = <String>[
+      ...disagreementDetailTexts,
+      ...legacyOnlyDisagreements,
+    ];
     final openQuestions = snapshot.openQuestions
         .map((item) => item.trim())
         .where((item) => item.isNotEmpty)
@@ -5376,7 +5478,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       evidence: evidence,
       roles: roles,
       synthesis: synthesis,
-      disagreements: disagreements,
+      disagreements: disagreementTexts,
       openQuestions: openQuestions,
     );
     final selectedSubview = _seminarSnapshotSelectedSubview(
@@ -5448,10 +5550,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  if (snapshot.disagreements.isNotEmpty)
+                  if (snapshot.disagreements.isNotEmpty ||
+                      disagreementDetails.isNotEmpty)
                     _seminarSnapshotTinyChip(
                       _seminarCountLabel(
-                        snapshot.disagreements.length,
+                        disagreementTexts.length,
                         zhUnit: '个分歧',
                         enSingular: 'disagreement',
                         enPlural: 'disagreements',
@@ -5481,7 +5584,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 ),
           ),
         ],
-        if (showDisagreements && disagreements.isNotEmpty) ...[
+        if (showDisagreements && disagreementTexts.isNotEmpty) ...[
           _seminarSnapshotHeading(
             Icons.report_problem_outlined,
             _localizedSeminarCardText(
@@ -5490,23 +5593,26 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
           ),
           const SizedBox(height: 6),
-          _seminarSnapshotWhiteboardGroup(
-            icon: Icons.report_problem_outlined,
-            label: _localizedSeminarCardText(
-              zh: '分歧',
-              en: 'Disagreements',
+          if (disagreementDetails.isNotEmpty)
+            _seminarSnapshotDisagreementDetails(disagreementDetails),
+          if (legacyOnlyDisagreements.isNotEmpty)
+            _seminarSnapshotWhiteboardGroup(
+              icon: Icons.report_problem_outlined,
+              label: _localizedSeminarCardText(
+                zh: '分歧',
+                en: 'Disagreements',
+              ),
+              items: legacyOnlyDisagreements,
             ),
-            items: disagreements,
-          ),
         ],
         if (showWhiteboard &&
-            (disagreements.isNotEmpty || openQuestions.isNotEmpty)) ...[
+            (disagreementTexts.isNotEmpty || openQuestions.isNotEmpty)) ...[
           if ((showEvidence && evidence.isNotEmpty) ||
               (showRoles && roles.isNotEmpty) ||
               (showSummary && synthesis != null))
             const SizedBox(height: 10),
           _seminarSnapshotWhiteboardSection(
-            disagreements: disagreements,
+            disagreements: disagreementTexts,
             openQuestions: openQuestions,
           ),
         ],
@@ -5700,6 +5806,106 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ],
       ),
     );
+  }
+
+  Widget _seminarSnapshotDisagreementDetails(
+    List<AiSeminarRunCardDisagreementDetail> details,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final detail in details)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: ClaudePalette.divider(context)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      detail.text.trim(),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: ClaudePalette.fg(context),
+                            height: 1.32,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    if (detail.roleIds
+                        .where((roleId) => roleId.trim().isNotEmpty)
+                        .isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      _seminarSnapshotDetailLabel(
+                        _localizedSeminarCardText(
+                          zh: '关联角色',
+                          en: 'Linked roles',
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _seminarRoleLabels(detail.roleIds),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: ClaudePalette.secondary(context),
+                              height: 1.3,
+                            ),
+                      ),
+                    ],
+                    if (detail.evidenceRefs
+                        .where((item) => !item.isEmpty)
+                        .isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      _seminarSnapshotDetailLabel(
+                        _localizedSeminarCardText(
+                          zh: '关联证据',
+                          en: 'Linked evidence',
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      for (final evidence
+                          in detail.evidenceRefs.where((item) => !item.isEmpty))
+                        _seminarSnapshotEvidenceTile(evidence),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _seminarSnapshotDetailLabel(String label) {
+    return Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: ClaudePalette.secondary(context),
+            fontWeight: FontWeight.w700,
+          ),
+    );
+  }
+
+  String _seminarRoleLabels(List<String> roleIds) {
+    final seen = <String>{};
+    final labels = <String>[];
+    for (final raw in roleIds) {
+      final roleId = raw.trim();
+      if (roleId.isEmpty || !seen.add(roleId)) continue;
+      labels.add(_seminarRoleFallbackLabel(roleId));
+    }
+    if (labels.isEmpty) {
+      return _localizedSeminarCardText(zh: '未标明角色', en: 'Unlabeled role');
+    }
+    return labels.join(_isChineseLocale ? '、' : ', ');
   }
 
   Widget _seminarSnapshotWhiteboardSection({

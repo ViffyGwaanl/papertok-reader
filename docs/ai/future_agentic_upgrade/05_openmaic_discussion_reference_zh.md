@@ -60,6 +60,7 @@ PaperTok 当前已经具备这些地基：
 - 阅读页/外部 `研讨` 入口没有传入 session id 时，AI Chat 会生成 `seminar-chat-*`，并把同一 `seminarSessionId` 的任务卡写入当前 `conversationV2`，让进程死亡后的恢复路径不只依赖临时内嵌面板。
 - completed AI Chat Seminar 历史任务卡已接入首片 run-scoped `读者参与` composer，用户可在同一张卡里输入回复，并选择让所选角色回应、重新找证据或整理总结；这些动作复用现有 Seminar runtime 的 user-turn ledger，不触发普通 AI Chat 单轮回复。
 - completed AI Chat Seminar 历史任务卡如果已有 disagreement 且仍匹配当前 scoped runtime，会显示 `分歧继续讨论` 快捷区；用户可以默认让 critical 围绕该分歧追加反驳 turn，如果本场没有启用 critical，则退回到当前可用角色回应；也可以围绕该分歧重新找 evidence 并重跑讨论。这是 OpenMAIC-style 多轮交锋的首片交互，不是完整 contradiction scanner。
+- AI Chat Seminar 历史卡的 `分歧` 子视图已从纯字符串列表升级为首片结构化详情：`AiSeminarRunCardDisagreementDetail` 保存分歧正文、关联角色和关联 evidence 摘录；runtime 完成后会从白板 disagreement entry 生成详情。该结构只借鉴 OpenMAIC whiteboard ledger 的“把行动和讨论状态显性化”思路，不复制 OpenMAIC 的白板 action 或 AGPL prompt。
 
 当前还不是完整 OpenMAIC-style Chat Seminar：
 
