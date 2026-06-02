@@ -116,6 +116,16 @@ void main() {
         .widget<AiSeminarRuntimePanel>(find.byType(AiSeminarRuntimePanel));
     expect(panel.embedded, isTrue);
     expect(panel.initialSessionId, startsWith('seminar-chat-'));
+
+    final chatContainer = ProviderScope.containerOf(
+      tester.element(find.byType(AiChatStream).first),
+    );
+    final seminarCard = chatContainer
+        .read(aiChatProvider.notifier)
+        .seminarRunCardForMessageIndex(1);
+    expect(seminarCard?.sessionId, panel.initialSessionId);
+    expect(seminarCard?.bookId, 9);
+    expect(seminarCard?.sourceRefCount, 1);
   });
 
   testWidgets('closing a streaming tab cancels its generation subscription',

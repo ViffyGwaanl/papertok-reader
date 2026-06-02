@@ -57,11 +57,12 @@ PaperTok 当前已经具备这些地基：
 - `askUser` 状态下已支持让指定角色回应、重新找证据、整理总结。
 - disagreement 在轮次预算内已能自动触发 evidence refresh。
 - AI Chat 的 `AI 研讨会` 历史任务卡已能随 `conversationV2` 保存，并在 runtime 状态变化时按 `seminarSessionId` 回写 evidence/role/synthesis snapshot、分歧数、开放问题数和真实可追踪来源数量。
+- 阅读页/外部 `研讨` 入口没有传入 session id 时，AI Chat 会生成 `seminar-chat-*`，并把同一 `seminarSessionId` 的任务卡写入当前 `conversationV2`，让进程死亡后的恢复路径不只依赖临时内嵌面板。
 
 当前还不是完整 OpenMAIC-style Chat Seminar：
 
 - AI Chat 嵌入路径的 per-run runtime state 隔离第一片已接入：`aiSeminarRuntimeScopedProvider` 按 `seminarSessionId` 保存独立 turns/evidence/budget/job id；历史任务卡、inline runtime panel、snapshot 回写和 `发送到待审` 已读取同一 scoped runtime。
-- 外部/阅读页入口没有传入 session id 时，AI Chat 会生成 `seminar-chat-*`，避免 embedded Seminar 回落到 legacy global runtime。
+- 外部/阅读页入口没有传入 session id 时，AI Chat 会生成 `seminar-chat-*`，避免 embedded Seminar 回落到 legacy global runtime，并写入同 session 的 AI Chat 任务卡作为用户可见恢复锚点。
 - scoped 本机恢复缓存使用 `aiSeminarRuntimeStateV1:<seminarSessionId>`，普通 prefs backup 会跳过 global 与 scoped runtime cache；Settings 独立入口仍保留旧 global runtime key。
 - scoped state 只隔离状态，不放开并行模型调用；不同 scoped runtime 的 Seminar model stream 由本机 coordinator 串行化。
 - 历史任务卡已有只读 snapshot，但还不是包含完整白板、送审详情子视图和 run-scoped composer 子视图的完整结构化 Chat message part。

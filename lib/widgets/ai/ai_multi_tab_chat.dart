@@ -108,6 +108,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
         sessionId: sessionId,
         bookId: bookId,
         sourceRef: sourceRef,
+        persistRunCard: true,
       );
       return;
     }
@@ -151,6 +152,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
         sessionId: pending.sessionId,
         bookId: pending.bookId,
         sourceRef: pending.sourceRef,
+        persistRunCard: true,
       );
     });
   }

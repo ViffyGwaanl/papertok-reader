@@ -2792,6 +2792,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     List<AiSeminarRoleProfile>? roleProfiles,
     int? maxRounds,
     bool? includeVerifier,
+    bool persistRunCard = false,
   }) {
     if (!mounted) return;
     final reading = ref.read(currentReadingProvider);
@@ -2801,6 +2802,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         normalizedSessionId == null || normalizedSessionId.isEmpty
             ? _newSeminarChatSessionId()
             : normalizedSessionId;
+    if (persistRunCard) {
+      unawaited(
+        ref.read(aiChatProvider.notifier).appendSeminarRunCard(
+              question: trimmedQuestion ?? '',
+              bookId: sourceRef?.bookId ?? bookId ?? reading.book?.id,
+              sourceRef: sourceRef,
+              seminarSessionId: resolvedSessionId,
+              includeVerifier: includeVerifier,
+              maxRounds: maxRounds,
+              roleProfiles: roleProfiles,
+            ),
+      );
+    }
     setState(() {
       _inlineSeminarVisible = true;
       _inlineSeminarQuestion =

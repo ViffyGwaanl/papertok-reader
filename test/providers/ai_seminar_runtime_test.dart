@@ -248,6 +248,121 @@ void main() {
     );
   });
 
+  test('scoped Seminar runtime resumes from persisted checkpoint', () async {
+    configureProvider();
+    final invokedRoles = <AiSeminarRole>[];
+    final resumeCompleted = Completer<void>();
+    const sessionId = 'seminar-chat-resume';
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: AiSeminarSessionContract(
+        id: sessionId,
+        question: 'Resume the chat seminar.',
+        billingContext: AiSeminarBillingContext(
+          providerId: 'local-gateway',
+          providerName: 'Local Gateway',
+          providerType: 'openai-compatible',
+          modelId: 'gpt-5.5',
+        ),
+      ),
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-scoped-running-resume',
+        sessionId: sessionId,
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: const [
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-scoped-running-resume',
+          sessionId: sessionId,
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+      ],
+      evidenceBundle: bundle(),
+      activeRole: AiSeminarRole.supportive,
+      partialRoleText: 'partial scoped stream should be ignored',
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'critical prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+          tokenUsage: AiSeminarTokenUsage(
+            inputTokens: 10,
+            outputTokens: 4,
+            isEstimated: true,
+            estimationMethod: 'local-char-estimate-v1',
+          ),
+        ),
+      ],
+    );
+    await Prefs().prefs.setString(
+          '$aiSeminarRuntimeScopedStateV1PrefsPrefix'
+          '${Uri.encodeComponent(sessionId)}',
+          jsonEncode(runningState.toJson()),
+        );
+    final resumeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async {
+        fail('scoped restored resume should use persisted evidence');
+      },
+      streamRole: (invocation, _) async* {
+        invokedRoles.add(invocation.role);
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+        if (invocation.role == AiSeminarRole.synthesizer &&
+            !resumeCompleted.isCompleted) {
+          resumeCompleted.complete();
+        }
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(resumeService),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    container.read(aiSeminarRuntimeScopedProvider(sessionId));
+    await resumeCompleted.future.timeout(const Duration(seconds: 2));
+    for (var i = 0; i < 20; i += 1) {
+      if (container.read(aiSeminarRuntimeScopedProvider(sessionId)).status !=
+          AiSeminarRunStatus.running) {
+        break;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    final restored = container.read(aiSeminarRuntimeScopedProvider(sessionId));
+    final legacy = container.read(aiSeminarRuntimeProvider);
+
+    expect(invokedRoles, [
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+    ]);
+    expect(restored.status, AiSeminarRunStatus.completed);
+    expect(restored.session!.id, sessionId);
+    expect(restored.turns.map((turn) => turn.role), [
+      AiSeminarRole.critical,
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+    ]);
+    expect(restored.backgroundJob!.id, 'job-scoped-running-resume');
+    expect(
+        restored.backgroundJob!.status, AiSeminarBackgroundJobStatus.completed);
+    expect(legacy.session, isNull);
+  });
+
   test('start captures evidence role turns whiteboard and synthesis', () async {
     configureProvider();
     final container = ProviderContainer(
