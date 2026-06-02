@@ -15,6 +15,8 @@ OpenMAIC 的“研讨会”不是服务端一次性跑完多 agent 长循环。�
 
 对 PaperTok Reader 最有价值的是这个“短步调度 + 状态账本 + 用户可插话 + action 白名单”的结构，而不是 OpenMAIC 的课堂 UI、白板动作代码或提示词原文。
 
+OpenMAIC 的 discussion loop 更强在角色调度和互动呈现；它并没有把每轮讨论都做成自动 RAG/evidence refresh。PaperTok 的差异化目标应更进一步：Director 发现角色分歧、证据不足、用户追问原文或准备送 Review 前，必须优先 current book 重找证据，再按用户许可扩展到 library 或 web。
+
 ## 2. OpenMAIC 实现锚点
 
 基于 `THU-MAIC/OpenMAIC` 当前源码核对：
@@ -73,6 +75,7 @@ PaperTok 当前已经具备这些地基：
 | E01-C05-T14 | 把用户插话接入 Chat run composer。 | 用户可在同一 Chat run card 内选择继续讨论、问某角色、重找证据、总结送审；输入只写 user-turn ledger，不进入 formal evidence。 |
 | E01-C05-T15 | 实现 per-run runtime state 隔离。 | 同一 AI Chat 会话中多个 Seminar run 不共享 turns/evidence/budget/job id；独立详情页和恢复缓存读取同一 run id。 |
 | E01-C05-T16 | 区分 `seminar_mode` prompt 风格和 `AiSeminarRuntime` 多角色研讨。 | UI 文案、设置入口和历史卡都不把普通多视角回复风格描述成多 agent runtime；旧 skill 保留降级用途。 |
+| E01-C05-T17 | 做 PaperTok evidence board action protocol。 | role turn 可以产生 `claim / counterclaim / evidence_request / open_question / review_candidate`；每个 formal claim 必须绑定 SourceRef 或保持 draft。 |
 
 ## 4. 许可边界
 

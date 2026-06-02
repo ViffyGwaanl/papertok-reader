@@ -1015,6 +1015,117 @@ void main() {
     );
   });
 
+  test('queued seminar start rebinds billing context to the current provider',
+      () async {
+    configureProvider();
+    final firstRoleStarted = Completer<void>();
+    final releaseFirstRole = Completer<void>();
+    final queuedCompleted = Completer<void>();
+    final queuedProviderIds = <String?>[];
+    final customService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        if (invocation.session.id == 's-provider-switch-active' &&
+            invocation.role == AiSeminarRole.critical) {
+          if (!firstRoleStarted.isCompleted) firstRoleStarted.complete();
+          await releaseFirstRole.future;
+        }
+        if (invocation.session.id == 's-provider-switch-queued') {
+          queuedProviderIds.add(invocation.session.billingContext?.providerId);
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.session.id}-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                '${invocation.session.id} ${invocation.role.asString}',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+        if (invocation.session.id == 's-provider-switch-queued' &&
+            invocation.role == AiSeminarRole.synthesizer &&
+            !queuedCompleted.isCompleted) {
+          queuedCompleted.complete();
+        }
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(customService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    final firstRun = notifier.start(
+      AiSeminarSessionContract(
+        id: 's-provider-switch-active',
+        question: 'Active on the old provider.',
+      ),
+    );
+    await firstRoleStarted.future;
+
+    await notifier.start(
+      AiSeminarSessionContract(
+        id: 's-provider-switch-queued',
+        question: 'Queued before provider switch.',
+      ),
+    );
+    Prefs().aiProvidersV1 = const [
+      AiProviderMeta(
+        id: 'local-gateway',
+        name: 'Local Gateway',
+        type: AiProviderType.openaiCompatible,
+        enabled: true,
+        isBuiltIn: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      ),
+      AiProviderMeta(
+        id: 'second-gateway',
+        name: 'Second Gateway',
+        type: AiProviderType.openaiCompatible,
+        enabled: true,
+        isBuiltIn: false,
+        createdAt: 1001,
+        updatedAt: 1001,
+      ),
+    ];
+    Prefs().selectedAiService = 'second-gateway';
+    Prefs().saveAiConfig('second-gateway', const {
+      'model': 'gpt-6',
+      'url': 'http://localhost:3004/v1/',
+    });
+    Prefs().saveAiModelCapabilitiesCacheV1(
+      'second-gateway',
+      [
+        AiModelCapability(
+          id: 'gpt-6',
+          contextWindow: 128000,
+          maxOutputTokens: 8192,
+          supportsTools: true,
+          supportsImages: true,
+          supportsThinking: true,
+          inputCostPerMillionTokens: 3,
+          outputCostPerMillionTokens: 9,
+          pricingSource: 'second-pricing-v1',
+        ),
+      ],
+    );
+
+    releaseFirstRole.complete();
+    await firstRun;
+    await queuedCompleted.future.timeout(const Duration(seconds: 2));
+    final state = container.read(aiSeminarRuntimeProvider);
+
+    expect(queuedProviderIds, isNotEmpty);
+    expect(queuedProviderIds.toSet(), {'second-gateway'});
+    expect(state.session!.billingContext!.providerId, 'second-gateway');
+    expect(state.session!.billingContext!.modelId, 'gpt-6');
+  });
+
   test('stale completed generation does not start queued seminar after restore',
       () async {
     configureProvider();
@@ -1793,6 +1904,158 @@ void main() {
       AiSeminarRole.supportive,
       AiSeminarRole.synthesizer,
     ]);
+  });
+
+  test('restored running seminar keeps queued job and starts it after resume',
+      () async {
+    configureProvider();
+    final invokedSessions = <String>[];
+    final activeResumeStarted = Completer<void>();
+    final releaseActiveResume = Completer<void>();
+    final queuedCompleted = Completer<void>();
+    final activeSession = AiSeminarSessionContract(
+      id: 's-restored-active',
+      question: 'Resume the active discussion?',
+      billingContext: AiSeminarBillingContext(
+        providerId: 'local-gateway',
+        providerName: 'Local Gateway',
+        providerType: 'openai-compatible',
+        modelId: 'gpt-5.5',
+      ),
+    );
+    final queuedSession = AiSeminarSessionContract(
+      id: 's-restored-queued',
+      question: 'Continue the queued discussion?',
+    );
+    final runningState = AiSeminarRuntimeState.initial().copyWith(
+      session: activeSession,
+      status: AiSeminarRunStatus.running,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-restored-active',
+        sessionId: 's-restored-active',
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: [
+        const AiSeminarBackgroundJobSnapshot(
+          id: 'job-restored-active',
+          sessionId: 's-restored-active',
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-restored-queued',
+          sessionId: 's-restored-queued',
+          status: AiSeminarBackgroundJobStatus.queued,
+          startedAt: 902,
+          updatedAt: 902,
+          message: 'AI Seminar queued behind the active run.',
+          session: queuedSession,
+        ),
+      ],
+      evidenceBundle: bundle(),
+      turns: const [
+        AiSeminarRoleTurn(
+          id: 'turn-critical',
+          role: AiSeminarRole.critical,
+          prompt: 'critical prompt',
+          responseText: 'critical response',
+          evidenceRefIds: ['e1'],
+          tokenUsage: AiSeminarTokenUsage(
+            inputTokens: 10,
+            outputTokens: 4,
+            isEstimated: true,
+            estimationMethod: 'local-char-estimate-v1',
+          ),
+        ),
+      ],
+    );
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode(runningState.toJson()),
+        );
+    final resumeService = AiSeminarRuntimeService(
+      fetchEvidence: (session) async {
+        if (session.id == 's-restored-active') {
+          fail('restored resume should use persisted evidence');
+        }
+        return bundle();
+      },
+      streamRole: (invocation, _) async* {
+        invokedSessions.add(invocation.session.id);
+        if (invocation.session.id == 's-restored-active' &&
+            invocation.role == AiSeminarRole.supportive) {
+          if (!activeResumeStarted.isCompleted) {
+            activeResumeStarted.complete();
+          }
+          await releaseActiveResume.future;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.session.id}-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                '${invocation.session.id} ${invocation.role.asString}',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+        if (invocation.session.id == 's-restored-queued' &&
+            invocation.role == AiSeminarRole.synthesizer &&
+            !queuedCompleted.isCompleted) {
+          queuedCompleted.complete();
+        }
+      },
+      now: () => 1000,
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(resumeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(aiSeminarRuntimeProvider);
+    await activeResumeStarted.future.timeout(const Duration(seconds: 2));
+
+    expect(
+      container
+          .read(aiSeminarRuntimeProvider)
+          .backgroundJobs
+          .firstWhere((job) => job.sessionId == 's-restored-queued')
+          .status,
+      AiSeminarBackgroundJobStatus.queued,
+    );
+
+    releaseActiveResume.complete();
+    await queuedCompleted.future.timeout(const Duration(seconds: 2));
+    for (var i = 0; i < 20; i += 1) {
+      if (container.read(aiSeminarRuntimeProvider).status !=
+          AiSeminarRunStatus.running) {
+        break;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    final restored = container.read(aiSeminarRuntimeProvider);
+
+    expect(invokedSessions, [
+      's-restored-active',
+      's-restored-active',
+      's-restored-queued',
+      's-restored-queued',
+      's-restored-queued',
+    ]);
+    expect(restored.status, AiSeminarRunStatus.completed);
+    expect(restored.backgroundJob!.sessionId, 's-restored-queued');
+    expect(
+      restored.backgroundJobs.map((job) => job.status),
+      [
+        AiSeminarBackgroundJobStatus.completed,
+        AiSeminarBackgroundJobStatus.completed,
+      ],
+    );
   });
 
   test('running user-directed role state resumes the requested follow-up',

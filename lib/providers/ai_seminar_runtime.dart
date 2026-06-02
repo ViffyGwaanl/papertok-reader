@@ -1041,10 +1041,16 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     }
     if (queuedJob == null) return;
     if (!mounted) return;
-    await _runResolvedSession(
+    final providerDiagnostics = _providerContext.resolve();
+    final resolvedSession = _sessionWithCurrentProviderBudget(
       queuedJob.session!,
-      queuedJob,
-      _providerContext.resolve(),
+      providerDiagnostics,
+    );
+    final resolvedJob = queuedJob.copyWith(session: resolvedSession);
+    await _runResolvedSession(
+      resolvedSession,
+      resolvedJob,
+      providerDiagnostics,
     );
   }
 
@@ -1750,6 +1756,14 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       jobs.map((job) {
         if (job.id == activeJob.id) return activeJob;
         if (job.status.isTerminal) return job;
+        if (job.isQueued && job.session != null) {
+          return job.copyWith(
+            status: AiSeminarBackgroundJobStatus.queued,
+            updatedAt: completedAt,
+            completedAt: null,
+            message: 'AI Seminar queued behind the restored active run.',
+          );
+        }
         return job.copyWith(
           status: AiSeminarBackgroundJobStatus.interrupted,
           updatedAt: completedAt,
