@@ -242,6 +242,93 @@ void main() {
     expect(find.text('Send to Review'), findsOneWidget);
   });
 
+  testWidgets('completed Seminar keeps a reader continuation composer',
+      (tester) async {
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => AiSeminarEvidenceBundle(
+        query: 'What is the claim?',
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'The source passage.',
+            sourceRef: traceableRef(),
+          ),
+        ],
+      ),
+      streamRole: (invocation, _) async* {
+        final isFollowUp = invocation.priorTurns.length >= 3;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: isFollowUp
+                ? 'turn-${invocation.role.asString}-follow-up'
+                : 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: isFollowUp
+                ? '${invocation.role.asString} follow-up response'
+                : '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiSeminarRuntimePanel)),
+    );
+    expect(container.read(aiSeminarRuntimeProvider).status,
+        AiSeminarRunStatus.completed);
+    await tester.scrollUntilVisible(
+      find.text('Continue discussion'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Continue discussion'), findsOneWidget);
+    expect(textFieldWithLabel('Your Seminar reply'), findsOneWidget);
+
+    await tester.enterText(
+      textFieldWithLabel('Your Seminar reply'),
+      '请让批判者继续反驳这个结论。',
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ask selected role'));
+    await tester.tap(find.text('Ask selected role'));
+    await tester.pumpAndSettle();
+
+    final state = container.read(aiSeminarRuntimeProvider);
+    expect(state.turns.last.id, 'turn-critical-follow-up');
+    expect(state.turns.last.responseText, 'critical follow-up response');
+    expect(
+      state.directorState!.lastUserIntervention!.requestedAction,
+      AiSeminarUserInterventionAction.askRole,
+    );
+    expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+    expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e1']);
+  });
+
   testWidgets('shows director next step when Seminar needs reader input',
       (tester) async {
     final runtimeService = AiSeminarRuntimeService(

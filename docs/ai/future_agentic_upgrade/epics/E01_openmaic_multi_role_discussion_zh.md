@@ -84,7 +84,7 @@ Seminar 结束时输出：
 把 Seminar 从独立页面能力推进为 AI Chat 内的原生讨论模式。借鉴 OpenMAIC 的做法，但只吸收结构思想：
 
 - Director 每轮只决定一个下一位角色，runtime 持久化 `turnCount`、已发言摘要、证据 ledger、白板 ledger 和用户插话状态。
-- AI Chat composer 是同一输入入口；用户可以在角色之间插话、要求重新找证据、追问某个角色、回答澄清问题。
+- AI Chat composer 是同一输入入口；用户可以在角色之间插话、要求重新找证据、追问某个角色、回答澄清问题，completed run 也必须允许继续讨论。
 - 角色配置不再只藏在固定 prompt：当前基础切片已支持每个角色的显示名和 custom prompt；后续继续补发言目标、证据策略、工具白名单、是否启用和 token/cost guardrail。
 - 讨论不是固定一轮：`evidence -> 角色观点 -> contradiction scan -> evidence refresh -> rebuttal -> synthesis -> Review handoff`，由 Director 根据 evidence gap、分歧和用户插话决定继续或暂停。
 - AI Chat 中渲染为一条可展开的 Seminar run 卡片，包含 `证据 / 分歧 / 白板 / 总结 / 送审` 子视图；不强迫用户离开当前对话上下文。
@@ -124,17 +124,17 @@ Seminar 结束时输出：
 | E01-C05-T01 | 定义 Chat Seminar DirectorState | E01-C03-T02, UFA-C02-T15 | `AiSeminarDirectorState` / migration | 第一片已接入模型和 runtime state JSON：可记录轮次、已完成角色、已完成 turn id、证据账本、白板账本、分歧 id、证据刷新次数、用户插话和下一步 intent；用户插话不算 formal evidence；恢复时不得重放已完成角色。后续必须让 Director loop 真正消费该状态。 |
 | E01-C05-T02 | 增加角色 prompt 设置 | E01-C01-T02, E06 skill governance | Seminar role profile store + Settings/AI Chat 配置入口 | 基础切片已支持默认角色显示名和 custom prompt，设置会持久化、写入 session contract 并注入 role prompt；后续仍需角色启用状态、证据策略、工具范围、空 prompt validator 和 AI Chat 内嵌配置入口；无效 prompt 或越权工具不得进入 runtime。 |
 | E01-C05-T03 | 接入多轮分歧与证据刷新 | E01-C02-T02, E01-C05-T01 | Director loop service | 已完成第一片：用户触发和 disagreement 预算内自动触发都会重新检索 evidence、重跑角色并保留 SourceRef；刷新后仍有分歧且预算耗尽时转为 `askUser`。后续继续补结构化 contradiction gap scan、角色 rebuttal turn 和完整结构化 Chat run card。 |
-| E01-C05-T04 | 接入用户插话/澄清回合 | E01-C05-T01, E07 Chat UI | Chat Seminar user-turn model | Director 可暂停为 `needsUserInput`；用户可指定追问某角色、要求重新找证据或回答澄清；用户输入不被当作 AI 证据。 |
+| E01-C05-T04 | 接入用户插话/澄清回合 | E01-C05-T01, E07 Chat UI | Chat Seminar user-turn model | 第一片已支持 Director 暂停为 `needsUserInput`，以及 completed run 在 synthesis 后显示 `Continue discussion / 继续讨论`；用户可指定追问某角色、要求重新找证据、整理总结或回答澄清；用户输入只写 `lastUserIntervention`，不被当作 AI 证据。完整 Chat message part composer routing 仍归 E01-C05-T08/T14。 |
 | E01-C05-T05 | 在 AI Chat 渲染 Seminar run 卡片 | E01-C05-T01, E07 Chat UI | `AiSeminarRuntimePanel` first slice; AI Chat message part / run card widgets | 已完成第二片：AI Chat `+` -> `AI 研讨会` 会在当前 AI Chat 页面内展开 runtime panel，不改 active skill，并向 `conversationV2` 写入轻量 `seminarRunCard` meta 和兼容 fallback assistant message；历史重载后这张 `AI 研讨会` 卡片可点击重新打开同一类 inline runtime。后续仍需升级为完整 message part，包含证据、角色发言、分歧、白板、总结和送审子视图，支持 per-run 多实例隔离，且不跳转独立 Seminar 页面也能走完讨论。 |
 | E01-C05-T06 | 迁移独立 Seminar 入口为可选详情页 | E01-C05-T05 | entry routing + compatibility tests | 已完成第一片：阅读页 `研讨` 和 AI Chat `AI 研讨会` 都进入 Chat 内嵌 runtime panel，且阅读页入口保留 reader SourceRef、不改 active skill；后续保留独立页面作为详情/恢复入口时必须共享同一 run-scoped runtime state。 |
 | E01-C05-T07 | 定义 Chat Seminar director action contract | E01-C05-T01 | `SeminarDirectorAction` enum + reducer tests | Director 每轮只能输出 `runRole / refreshEvidence / askUser / synthesize / stop` 之一；非法 action、重复已完成角色、无证据 synthesis 都被拒绝。 |
-| E01-C05-T08 | 接入 Chat composer 用户回合 | E01-C05-T04, E01-C05-T05 | Chat run input router | 用户在 Seminar run 卡片内输入时，可选择 `继续讨论 / 问某角色 / 重找证据 / 总结送审`；输入写入 user-turn ledger，不触发普通 AI Chat 单轮回答。 |
+| E01-C05-T08 | 接入 Chat composer 用户回合 | E01-C05-T04, E01-C05-T05 | Chat run input router | 当前 runtime panel 已支持 `askUser` 和 completed continuation composer 的读者回合：可选择 `继续讨论 / 问某角色 / 重找证据 / 整理总结`，输入写入 user-turn ledger，不触发普通 AI Chat 单轮回答。完整 Chat message part 中复用同一 composer 的路由仍需按 run id 隔离。 |
 | E01-C05-T09 | 接入 Chat 内角色配置入口 | E01-C05-T02, E06 skill governance | run-scoped role config sheet | 用户可在当前 run 内改角色名称、prompt、启用状态、发言顺序、证据范围和只读工具范围；越权工具、空 prompt、secret-like 文本被 validator 拦截。 |
 | E01-C05-T10 | 接入分歧面板和证据刷新按钮 | E01-C05-T03, E01-C05-T05 | disagreement view + evidence refresh event | 每个 contradiction 绑定两个以上 role turn 和 evidence ids；用户可点 `重新找证据`，刷新只读检索后追加 evidence ledger，并让 Director 决定反驳或总结。 |
 | E01-C05-T11 | 升级 AI Chat Seminar run card 为完整 message part | E01-C05-T05, E01-C05-T08 | `seminarRun` message part schema + widgets + history migration | 历史重载后仍显示证据、角色、分歧、白板、总结、送审子视图；Seminar 卡片不暴露普通 assistant 回答的 KnowledgeCard/Memory/regenerate 操作，避免伪造来源。 |
 | E01-C05-T12 | 增加 role profile governance v2 | E01-C05-T09, E06 governance | role enabled/scope/tools/budget schema + validator + UI | Settings 保存全局默认；Chat run 内设置只影响当前 run；空 prompt、secret-like 文本、越权工具、递归 spawn 和写工具被拒绝。 |
 | E01-C05-T13 | 接入 contradiction gap scan 和 rebuttal turn | E01-C05-T03, E01-C05-T10 | contradiction scanner + target rebuttal runner | 分歧必须绑定至少两个 role turn 和 evidence ids；Director 可选择 targeted evidence refresh 或指定角色反驳；刷新预算耗尽后进入用户确认，不无限循环。 |
-| E01-C05-T14 | 把用户插话接入 Chat run composer | E01-C05-T08, E07 Chat UI | run-scoped composer routing | 用户在同一 Chat run card 里选择继续讨论、问某角色、重新找证据、总结送审；输入只写 user-turn ledger，不进入 formal evidence。 |
+| E01-C05-T14 | 把用户插话接入 Chat run composer | E01-C05-T08, E07 Chat UI | run-scoped composer routing | 当前 completed runtime panel 已有继续讨论入口，证明读者回合、askRole、refreshEvidence、synthesize 可以在同一操作视图内闭环；下一片要把同样动作接到 AI Chat run-scoped composer。用户在同一 Chat run card 里选择继续讨论、问某角色、重新找证据、整理总结；输入只写 user-turn ledger，不进入 formal evidence。 |
 | E01-C05-T15 | 实现 per-run runtime state 隔离 | E01-C05-T11, E07 state recovery | run id keyed runtime store + detail page route | 同一 AI Chat 会话可有多个 Seminar run；每个 run 独立保存 turns/evidence/budget/job id；独立详情页和恢复缓存按 run id 读取同一状态源。 |
 | E01-C05-T16 | 区分 `seminar_mode` 与 `AiSeminarRuntime` | E01-C05-T05, E06 skill governance | UI labels + entry copy + migration notes | `seminar_mode` 作为普通多视角回复风格保留降级用途；AI Chat `AI 研讨会`、阅读页 `研讨`、历史卡和 Settings 文案明确指向真正 Seminar runtime；不会把 active skill 切换伪装成多角色 runtime。 |
 

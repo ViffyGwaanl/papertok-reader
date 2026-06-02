@@ -248,7 +248,10 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
         _StatusBanner(state: state),
         if (state.directorState?.needsUserInput == true) ...[
           const SizedBox(height: 12),
-          _SeminarUserInterventionSection(state: state),
+          _SeminarUserInterventionSection(
+            state: state,
+            promptedByDirector: true,
+          ),
         ],
         if (_shouldShowJobQueue(state.backgroundJobs)) ...[
           const SizedBox(height: 12),
@@ -262,6 +265,13 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
         _WhiteboardSection(entries: state.whiteboardEntries),
         const SizedBox(height: 12),
         _SynthesisSection(state: state),
+        if (_shouldShowContinuationComposer(state)) ...[
+          const SizedBox(height: 12),
+          _SeminarUserInterventionSection(
+            state: state,
+            promptedByDirector: false,
+          ),
+        ],
       ],
     );
 
@@ -388,6 +398,16 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
   bool _shouldShowJobQueue(List<AiSeminarBackgroundJobSnapshot> jobs) {
     if (jobs.length > 1) return true;
     return jobs.any((job) => job.isQueued);
+  }
+
+  bool _shouldShowContinuationComposer(AiSeminarRuntimeState state) {
+    if (state.status != AiSeminarRunStatus.completed) return false;
+    if (state.session == null ||
+        state.evidenceBundle == null ||
+        state.turns.isEmpty) {
+      return false;
+    }
+    return state.directorState?.needsUserInput != true;
   }
 
   List<AiSeminarRole> get _selectedRoles => [
@@ -826,9 +846,13 @@ String? _directorNextIntentLine(
 }
 
 class _SeminarUserInterventionSection extends ConsumerStatefulWidget {
-  const _SeminarUserInterventionSection({required this.state});
+  const _SeminarUserInterventionSection({
+    required this.state,
+    required this.promptedByDirector,
+  });
 
   final AiSeminarRuntimeState state;
+  final bool promptedByDirector;
 
   @override
   ConsumerState<_SeminarUserInterventionSection> createState() =>
@@ -866,13 +890,32 @@ class _SeminarUserInterventionSectionState
   Widget build(BuildContext context) {
     final canSubmit = _controller.text.trim().isNotEmpty;
     return _Section(
-      title: _runtimeText(
-        context,
-        en: 'Reader turn',
-        zh: '读者参与',
-      ),
+      title: widget.promptedByDirector
+          ? _runtimeText(
+              context,
+              en: 'Reader turn',
+              zh: '读者参与',
+            )
+          : _runtimeText(
+              context,
+              en: 'Continue discussion',
+              zh: '继续讨论',
+            ),
       icon: Icons.person_outline,
       children: [
+        if (!widget.promptedByDirector) ...[
+          Text(
+            _runtimeText(
+              context,
+              en: 'Your reply is stored as a reader turn. It can steer a role, trigger an evidence refresh, or close the run, but it is not treated as book evidence.',
+              zh: '你的输入会作为读者回合记录，可以推动某个角色继续回应、触发重新找证据或结束整理，但不会被当成书内证据。',
+            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          ),
+          const SizedBox(height: 8),
+        ],
         TextField(
           controller: _controller,
           minLines: 2,

@@ -72,7 +72,7 @@ PaperTok 当前已经具备这些地基：
 | E01-C05-T11 | 把 AI Chat Seminar run card 升级为完整 message part。 | 历史重载后仍显示证据、角色、分歧、白板、总结和送审；不把 Seminar 卡片当普通 assistant 回答生成知识卡或记忆。 |
 | E01-C05-T12 | 增加 role profile governance v2。 | 每个角色可配置启用状态、证据范围、只读工具范围、角色预算；空 prompt、secret-like 文本、越权工具被拒绝。 |
 | E01-C05-T13 | 接入 contradiction gap scan 和 rebuttal turn。 | 分歧必须绑定两个以上 role turns 和 evidence ids；Director 可选择重找证据或让指定角色反驳；预算耗尽进入用户确认。 |
-| E01-C05-T14 | 把用户插话接入 Chat run composer。 | 用户可在同一 Chat run card 内选择继续讨论、问某角色、重找证据、总结送审；输入只写 user-turn ledger，不进入 formal evidence。 |
+| E01-C05-T14 | 把用户插话接入 Chat run composer。 | 用户可在同一 Chat run card 内选择继续讨论、问某角色、重找证据、整理总结；输入只写 user-turn ledger，不进入 formal evidence。 |
 | E01-C05-T15 | 实现 per-run runtime state 隔离。 | 同一 AI Chat 会话中多个 Seminar run 不共享 turns/evidence/budget/job id；独立详情页和恢复缓存读取同一 run id。 |
 | E01-C05-T16 | 区分 `seminar_mode` prompt 风格和 `AiSeminarRuntime` 多角色研讨。 | UI 文案、设置入口和历史卡都不把普通多视角回复风格描述成多 agent runtime；旧 skill 保留降级用途。 |
 | E01-C05-T17 | 做 PaperTok evidence board action protocol。 | role turn 可以产生 `claim / counterclaim / evidence_request / open_question / review_candidate`；每个 formal claim 必须绑定 SourceRef 或保持 draft。 |
