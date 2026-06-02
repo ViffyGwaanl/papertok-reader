@@ -4971,6 +4971,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 card,
                 runtimeState,
                 onOpen: openCard,
+                onContinue: () => _continueSeminarRunCardFromCheckpoint(
+                  card.sessionId,
+                ),
               ),
             ],
             if (_shouldShowSeminarCardDisagreementActions(
@@ -5017,11 +5020,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     AiSeminarRunCardMeta card,
     AiSeminarRuntimeState runtimeState, {
     required VoidCallback onOpen,
+    required VoidCallback onContinue,
   }) {
     final sessionId = card.sessionId?.trim();
     if (sessionId == null || sessionId.isEmpty) {
       return const SizedBox.shrink();
     }
+    final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
     final completedRoleCount = runtimeState.turns
         .where((turn) => turn.responseText.trim().isNotEmpty)
         .length;
@@ -5030,8 +5035,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ? ''
         : ' · ${provider.providerName} / ${provider.modelId}';
     final detail = _localizedSeminarCardText(
-      zh: '已完成 $completedRoleCount 个角色，打开后确认继续缺失角色$providerLabel。',
-      en: '$completedRoleCount roles completed. Open it to confirm continuing missing roles$providerLabel.',
+      zh: '已完成 $completedRoleCount 个角色，可直接继续缺失角色，也可打开查看恢复详情$providerLabel。',
+      en: '$completedRoleCount roles completed. Continue missing roles directly, or open details$providerLabel.',
     );
 
     return DecoratedBox(
@@ -5042,60 +5047,118 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(10),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.restore_outlined,
-              size: 18,
-              color: ClaudePalette.accent(context),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _localizedSeminarCardText(
-                      zh: '可从中断处继续',
-                      en: 'Resumable checkpoint',
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: ClaudePalette.fg(context),
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    detail,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: ClaudePalette.secondary(context),
-                          height: 1.32,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            OutlinedButton.icon(
-              key: ValueKey('seminar-chat-card-resume-$sessionId'),
-              onPressed: onOpen,
-              icon: const Icon(Icons.play_arrow_outlined, size: 18),
-              label: Text(
-                _localizedSeminarCardText(
-                  zh: '打开恢复',
-                  en: 'Open resume',
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.restore_outlined,
+                  size: 18,
+                  color: ClaudePalette.accent(context),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _localizedSeminarCardText(
+                          zh: '可从中断处继续',
+                          en: 'Resumable checkpoint',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: ClaudePalette.fg(context),
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        detail,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: ClaudePalette.secondary(context),
+                              height: 1.32,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  key: ValueKey('seminar-chat-card-continue-$sessionId'),
+                  onPressed: isSubmitting ? null : onContinue,
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.play_arrow_outlined, size: 18),
+                  label: Text(
+                    _localizedSeminarCardText(
+                      zh: '继续研讨',
+                      en: 'Continue seminar',
+                    ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  key: ValueKey('seminar-chat-card-resume-$sessionId'),
+                  onPressed: isSubmitting ? null : onOpen,
+                  icon: const Icon(Icons.open_in_new_outlined, size: 18),
+                  label: Text(
+                    _localizedSeminarCardText(
+                      zh: '打开恢复',
+                      en: 'Open resume',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _continueSeminarRunCardFromCheckpoint(
+    String? rawSessionId,
+  ) async {
+    final sessionId = rawSessionId?.trim();
+    if (sessionId == null ||
+        sessionId.isEmpty ||
+        _seminarCardSubmittingSessionIds.contains(sessionId)) {
+      return;
+    }
+    final runtimeState = _readSeminarRuntimeState(sessionId);
+    if (runtimeState.session?.id != sessionId ||
+        !runtimeState.canResumeRestoredRunning) {
+      return;
+    }
+    setState(() => _seminarCardSubmittingSessionIds.add(sessionId));
+    try {
+      await _readSeminarRuntimeNotifier(sessionId).resumeRestoredRunning();
+      if (!mounted) return;
+      setState(() {});
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      _seminarCardSubmittingSessionIds.remove(sessionId);
+      if (mounted) setState(() {});
+    }
   }
 
   bool _shouldShowSeminarCardComposer(

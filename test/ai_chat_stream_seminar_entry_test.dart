@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -425,6 +426,243 @@ void main() {
 
       expect(find.byType(AiSeminarRuntimePanel), findsOneWidget);
       expect(Prefs().activeAiSkillId, 'paper_analyzer');
+    },
+  );
+
+  testWidgets(
+    'persisted Seminar chat card continues checkpoint directly',
+    (tester) async {
+      const providerId = 'openai';
+      const sessionId = 'seminar-chat-history';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+      final invokedRoles = <AiSeminarRole>[];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+        '$aiSeminarRuntimeScopedStateV1PrefsPrefix'
+                '${Uri.encodeComponent(sessionId)}':
+            jsonEncode(_resumableSeminarRuntimeState(sessionId).toJson()),
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiSeminarRuntimeServiceProvider.overrideWithValue(
+              AiSeminarRuntimeService(
+                fetchEvidence: (_) async {
+                  fail('direct resume should reuse persisted evidence');
+                },
+                streamRole: (invocation, _) async* {
+                  invokedRoles.add(invocation.role);
+                  yield AiSeminarRoleStreamChunk(
+                    completedTurn: AiSeminarRoleTurn(
+                      id: 'turn-${invocation.role.asString}',
+                      role: invocation.role,
+                      prompt: invocation.prompt,
+                      responseText: '${invocation.role.asString} response',
+                      evidenceRefIds: const ['e1'],
+                    ),
+                  );
+                },
+                now: () => 1000,
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.byType(AiSeminarRuntimePanel), findsNothing);
+      expect(invokedRoles, isEmpty);
+      expect(
+        find.byKey(
+          const ValueKey('seminar-chat-card-continue-$sessionId'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('继续研讨'), findsOneWidget);
+
+      await tester.ensureVisible(
+        find.byKey(
+          const ValueKey('seminar-chat-card-continue-$sessionId'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(
+          const ValueKey('seminar-chat-card-continue-$sessionId'),
+        ),
+      );
+      for (var i = 0; i < 20 && invokedRoles.length < 2; i += 1) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      expect(find.byType(AiSeminarRuntimePanel), findsNothing);
+      expect(invokedRoles, [
+        AiSeminarRole.supportive,
+        AiSeminarRole.synthesizer,
+      ]);
+      final state = container.read(
+        aiSeminarRuntimeScopedProvider(sessionId),
+      );
+      expect(state.status, AiSeminarRunStatus.completed);
+      expect(state.turns.map((turn) => turn.role), [
+        AiSeminarRole.critical,
+        AiSeminarRole.supportive,
+        AiSeminarRole.synthesizer,
+      ]);
+      expect(Prefs().activeAiSkillId, 'paper_analyzer');
+    },
+  );
+
+  testWidgets(
+    'persisted Seminar chat card ignores duplicate continue taps while running',
+    (tester) async {
+      const providerId = 'openai';
+      const sessionId = 'seminar-chat-history';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+      final releaseFirstRole = Completer<void>();
+      final invokedRoles = <AiSeminarRole>[];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+        '$aiSeminarRuntimeScopedStateV1PrefsPrefix'
+                '${Uri.encodeComponent(sessionId)}':
+            jsonEncode(_resumableSeminarRuntimeState(sessionId).toJson()),
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiSeminarRuntimeServiceProvider.overrideWithValue(
+              AiSeminarRuntimeService(
+                fetchEvidence: (_) async {
+                  fail('direct resume should reuse persisted evidence');
+                },
+                streamRole: (invocation, _) async* {
+                  invokedRoles.add(invocation.role);
+                  if (invocation.role == AiSeminarRole.supportive) {
+                    await releaseFirstRole.future;
+                  }
+                  yield AiSeminarRoleStreamChunk(
+                    completedTurn: AiSeminarRoleTurn(
+                      id: 'turn-${invocation.role.asString}',
+                      role: invocation.role,
+                      prompt: invocation.prompt,
+                      responseText: '${invocation.role.asString} response',
+                      evidenceRefIds: const ['e1'],
+                    ),
+                  );
+                },
+                now: () => 1000,
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final continueButton = find.byKey(
+        const ValueKey('seminar-chat-card-continue-$sessionId'),
+      );
+      final openButton = find.byKey(
+        const ValueKey('seminar-chat-card-resume-$sessionId'),
+      );
+      await tester.ensureVisible(continueButton);
+      await tester.pumpAndSettle();
+
+      await tester.tap(continueButton);
+      for (var i = 0; i < 20 && invokedRoles.isEmpty; i += 1) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(invokedRoles, [AiSeminarRole.supportive]);
+      await tester.pump();
+
+      expect(tester.widget<FilledButton>(continueButton).onPressed, isNull);
+      expect(tester.widget<OutlinedButton>(openButton).onPressed, isNull);
+
+      await tester.tap(continueButton, warnIfMissed: false);
+      await tester.tap(openButton, warnIfMissed: false);
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.byType(AiSeminarRuntimePanel), findsNothing);
+      expect(invokedRoles, [AiSeminarRole.supportive]);
+
+      releaseFirstRole.complete();
+      for (var i = 0; i < 20 && invokedRoles.length < 2; i += 1) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      expect(invokedRoles, [
+        AiSeminarRole.supportive,
+        AiSeminarRole.synthesizer,
+      ]);
+      final state = container.read(
+        aiSeminarRuntimeScopedProvider(sessionId),
+      );
+      expect(state.status, AiSeminarRunStatus.completed);
     },
   );
 
