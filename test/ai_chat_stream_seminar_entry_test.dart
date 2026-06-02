@@ -12,6 +12,8 @@ import 'package:papertok_reader/main.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
+import 'package:papertok_reader/models/knowledge_card.dart';
+import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
@@ -19,6 +21,8 @@ import 'package:papertok_reader/providers/ai_chat.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/ai/ai_history.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
+import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -315,6 +319,275 @@ void main() {
       expect(card?.snapshot?.synthesisSummary, 'synthesizer response');
     },
   );
+
+  testWidgets(
+    'Seminar chat card hides Review handoff for a different active run',
+    (tester) async {
+      tester.view.physicalSize = const Size(900, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final tempDir =
+          Directory.systemTemp.createTempSync('ai-chat-seminar-review-hide-');
+      _mockPathProvider(tempDir.path);
+      addTearDown(() {
+        _mockPathProvider(null);
+        tempDir.deleteSync(recursive: true);
+      });
+
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiSeminarRuntimeServiceProvider.overrideWithValue(
+              _seminarSnapshotService(),
+            ),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await container.read(aiSeminarRuntimeProvider.notifier).start(
+            AiSeminarSessionContract(
+              id: 'other-seminar-session',
+              question: '另一个研讨',
+              bookId: 7,
+              roles: AiSeminarRole.defaultRoles,
+              createdAt: 1000,
+            ),
+          );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(find.text('AI 研讨会'), findsOneWidget);
+      expect(find.text('发送到待审'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Seminar chat card sends active completed run to Review',
+    (tester) async {
+      tester.view.physicalSize = const Size(900, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final tempDir =
+          Directory.systemTemp.createTempSync('ai-chat-seminar-review-');
+      _mockPathProvider(tempDir.path);
+      addTearDown(() {
+        _mockPathProvider(null);
+        tempDir.deleteSync(recursive: true);
+      });
+
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+      final reviewStore = _MemoryReviewItemStore();
+      final cardStore = _MemoryKnowledgeCardStore();
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiSeminarRuntimeServiceProvider.overrideWithValue(
+              _seminarSnapshotService(),
+            ),
+            aiSeminarReviewItemStoreProvider.overrideWithValue(reviewStore),
+            aiSeminarKnowledgeCardStoreProvider.overrideWithValue(cardStore),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      final entry = _seminarCardHistoryEntry();
+      container.read(aiChatProvider.notifier).loadHistoryEntry(entry);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await container.read(aiSeminarRuntimeProvider.notifier).start(
+            AiSeminarSessionContract(
+              id: 'seminar-chat-history',
+              question: '这个概念怎么理解？',
+              bookId: 7,
+              roles: AiSeminarRole.defaultRoles,
+              createdAt: 1000,
+            ),
+          );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(find.byType(AiSeminarRuntimePanel), findsNothing);
+      expect(find.text('发送到待审'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, '知识卡'), findsNothing);
+
+      await tester.tap(find.text('发送到待审'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byType(AiSeminarRuntimePanel), findsNothing);
+
+      final pendingItems =
+          await reviewStore.list(status: ReviewItemStatus.pending);
+      final appliedItems =
+          await reviewStore.list(status: ReviewItemStatus.applied);
+      final seminarCards =
+          await cardStore.list(origin: KnowledgeCardOrigin.seminar);
+      final synthesis = pendingItems.singleWhere(
+        (item) => item.sourceType == ReviewItemSourceType.seminarSynthesis,
+      );
+
+      expect(synthesis.payload['summary'], 'synthesizer response');
+      expect(synthesis.sourceRefs, isNotEmpty);
+      expect(synthesis.sourceRefs.every((ref) => ref.hasEvidence), true);
+      expect(seminarCards, isEmpty);
+      expect(appliedItems, isEmpty);
+      expect(find.textContaining('已将综合总结和 0 张卡片发送到待审。'), findsOneWidget);
+    },
+  );
+}
+
+class _MemoryReviewItemStore extends ReviewItemStore {
+  final _items = <String, ReviewItem>{};
+
+  @override
+  Future<List<ReviewItem>> list({
+    ReviewItemStatus? status,
+    ReviewItemSourceType? sourceType,
+  }) async {
+    return _items.values.where((item) {
+      if (status != null && item.status != status) return false;
+      if (sourceType != null && item.sourceType != sourceType) return false;
+      return true;
+    }).toList(growable: false);
+  }
+
+  @override
+  Future<ReviewItem?> getById(String id) async => _items[id];
+
+  @override
+  Future<ReviewItem> upsert(ReviewItem item) async {
+    if (item.status != ReviewItemStatus.draft &&
+        item.status != ReviewItemStatus.pending) {
+      throw ArgumentError(
+        'Only draft/pending review items can be staged.',
+      );
+    }
+    _items[item.id] = item;
+    return item;
+  }
+}
+
+class _MemoryKnowledgeCardStore extends KnowledgeCardStore {
+  final _cards = <KnowledgeCard>[];
+
+  @override
+  Future<List<KnowledgeCard>> list({
+    KnowledgeCardReviewState? reviewState,
+    KnowledgeCardOrigin? origin,
+  }) async {
+    return _cards.where((card) {
+      if (reviewState != null && card.reviewState != reviewState) {
+        return false;
+      }
+      if (origin != null && card.origin != origin) return false;
+      return true;
+    }).toList(growable: false);
+  }
+
+  @override
+  Future<KnowledgeCard?> getById(String id) async {
+    for (final card in _cards) {
+      if (card.id == id) return card;
+    }
+    return null;
+  }
+
+  @override
+  Future<KnowledgeCardStoreUpsertResult> upsertCandidate(
+    KnowledgeCard candidate,
+  ) async {
+    for (final card in _cards) {
+      if (card.id == candidate.id ||
+          KnowledgeCardDedupe.isLikelyDuplicate(card, candidate)) {
+        return KnowledgeCardStoreUpsertResult(
+          card: card,
+          inserted: false,
+          duplicateOfId: card.id,
+        );
+      }
+    }
+    final staged = candidate.copyWith(
+      reviewState: candidate.reviewState == KnowledgeCardReviewState.draft
+          ? KnowledgeCardReviewState.draft
+          : KnowledgeCardReviewState.pending,
+      ownership: AiOutputOwnership.aiGeneratedDraft,
+    );
+    _cards.add(staged);
+    return KnowledgeCardStoreUpsertResult(card: staged, inserted: true);
+  }
 }
 
 void _mockPathProvider(String? cachePath) {

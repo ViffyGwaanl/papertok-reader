@@ -4312,6 +4312,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Widget _buildSeminarRunCard(AiSeminarRunCardMeta card) {
     final l10n = L10n.of(context);
     final question = card.question.trim();
+    final runtimeState = ref.watch(aiSeminarRuntimeProvider);
+    final canSendToReview = card.sessionId != null &&
+        runtimeState.session?.id == card.sessionId &&
+        runtimeState.canSendToReview;
+
     void openCard() {
       openInlineSeminar(
         question: question.isEmpty ? null : question,
@@ -4393,11 +4398,50 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 const SizedBox(height: 12),
                 _buildSeminarRunSnapshot(card.snapshot!),
               ],
+              if (canSendToReview) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.fact_check_outlined, size: 18),
+                    label: Text(l10n.seminarSendToReview),
+                    onPressed: () => _sendActiveSeminarRunCardToReview(
+                      card.sessionId,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _sendActiveSeminarRunCardToReview(String? sessionId) async {
+    final l10n = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final runtimeState = ref.read(aiSeminarRuntimeProvider);
+    if (sessionId == null ||
+        runtimeState.session?.id != sessionId ||
+        !runtimeState.canSendToReview) {
+      return;
+    }
+    try {
+      final result =
+          await ref.read(aiSeminarRuntimeProvider.notifier).sendToReview();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.seminarSentToReview(result.knowledgeCardIds.length),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
   }
 
   Widget _buildSeminarRunSnapshot(AiSeminarRunCardSnapshot snapshot) {
