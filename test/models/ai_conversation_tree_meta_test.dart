@@ -22,6 +22,30 @@ void main() {
           writeRequiresApproval: true,
           maxRounds: 2,
           createdAt: 1234,
+          snapshot: AiSeminarRunCardSnapshot(
+            evidence: [
+              AiSeminarRunCardEvidenceSnapshot(
+                title: 'Chapter 2',
+                snippet: 'The source passage grounds the disagreement.',
+              ),
+            ],
+            roleSummaries: [
+              AiSeminarRunCardRoleSummary(
+                roleId: 'critical',
+                label: 'Critical',
+                summary: 'This claim needs a boundary condition.',
+              ),
+              AiSeminarRunCardRoleSummary(
+                roleId: 'supportive',
+                label: 'Supportive',
+                summary: 'The surrounding paragraph supports it.',
+              ),
+            ],
+            synthesisSummary:
+                'The group agrees on the mechanism but not the scope.',
+            disagreements: ['Scope remains disputed.'],
+            openQuestions: ['Which chapter resolves the edge case?'],
+          ),
         ),
       );
       final restored = AiSegmentMeta.fromJson(meta.toJson());
@@ -41,6 +65,16 @@ void main() {
       expect(restored.seminarRunCard?.writeRequiresApproval, true);
       expect(restored.seminarRunCard?.maxRounds, 2);
       expect(restored.seminarRunCard?.createdAt, 1234);
+      expect(restored.seminarRunCard?.snapshot?.evidence.single.title,
+          'Chapter 2');
+      expect(restored.seminarRunCard?.snapshot?.roleSummaries.first.roleId,
+          'critical');
+      expect(restored.seminarRunCard?.snapshot?.synthesisSummary,
+          'The group agrees on the mechanism but not the scope.');
+      expect(restored.seminarRunCard?.snapshot?.disagreements,
+          ['Scope remains disputed.']);
+      expect(restored.seminarRunCard?.snapshot?.openQuestions,
+          ['Which chapter resolves the edge case?']);
     });
 
     test('seminar run card preserves reader SourceRef', () {

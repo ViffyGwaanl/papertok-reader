@@ -478,6 +478,154 @@ class AiSegmentMeta {
 }
 
 @immutable
+class AiSeminarRunCardEvidenceSnapshot {
+  const AiSeminarRunCardEvidenceSnapshot({
+    required this.title,
+    required this.snippet,
+  });
+
+  final String title;
+  final String snippet;
+
+  bool get isEmpty => title.trim().isEmpty && snippet.trim().isEmpty;
+
+  Map<String, dynamic> toJson() => {
+        if (title.trim().isNotEmpty) 'title': title.trim(),
+        if (snippet.trim().isNotEmpty) 'snippet': snippet.trim(),
+      };
+
+  factory AiSeminarRunCardEvidenceSnapshot.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return AiSeminarRunCardEvidenceSnapshot(
+      title: json['title']?.toString().trim() ?? '',
+      snippet: json['snippet']?.toString().trim() ?? '',
+    );
+  }
+}
+
+@immutable
+class AiSeminarRunCardRoleSummary {
+  const AiSeminarRunCardRoleSummary({
+    required this.roleId,
+    required this.label,
+    required this.summary,
+  });
+
+  final String roleId;
+  final String label;
+  final String summary;
+
+  bool get isEmpty =>
+      roleId.trim().isEmpty && label.trim().isEmpty && summary.trim().isEmpty;
+
+  Map<String, dynamic> toJson() => {
+        if (roleId.trim().isNotEmpty) 'roleId': roleId.trim(),
+        if (label.trim().isNotEmpty) 'label': label.trim(),
+        if (summary.trim().isNotEmpty) 'summary': summary.trim(),
+      };
+
+  factory AiSeminarRunCardRoleSummary.fromJson(Map<String, dynamic> json) {
+    return AiSeminarRunCardRoleSummary(
+      roleId: json['roleId']?.toString().trim() ?? '',
+      label: json['label']?.toString().trim() ?? '',
+      summary: json['summary']?.toString().trim() ?? '',
+    );
+  }
+}
+
+@immutable
+class AiSeminarRunCardSnapshot {
+  const AiSeminarRunCardSnapshot({
+    this.evidence = const <AiSeminarRunCardEvidenceSnapshot>[],
+    this.roleSummaries = const <AiSeminarRunCardRoleSummary>[],
+    this.synthesisSummary,
+    this.disagreements = const <String>[],
+    this.openQuestions = const <String>[],
+  });
+
+  final List<AiSeminarRunCardEvidenceSnapshot> evidence;
+  final List<AiSeminarRunCardRoleSummary> roleSummaries;
+  final String? synthesisSummary;
+  final List<String> disagreements;
+  final List<String> openQuestions;
+
+  bool get isEmpty =>
+      evidence.where((item) => !item.isEmpty).isEmpty &&
+      roleSummaries.where((item) => !item.isEmpty).isEmpty &&
+      (synthesisSummary == null || synthesisSummary!.trim().isEmpty) &&
+      disagreements.where((item) => item.trim().isNotEmpty).isEmpty &&
+      openQuestions.where((item) => item.trim().isNotEmpty).isEmpty;
+
+  Map<String, dynamic> toJson() => {
+        if (evidence.where((item) => !item.isEmpty).isNotEmpty)
+          'evidence': evidence
+              .where((item) => !item.isEmpty)
+              .map((item) => item.toJson())
+              .toList(growable: false),
+        if (roleSummaries.where((item) => !item.isEmpty).isNotEmpty)
+          'roleSummaries': roleSummaries
+              .where((item) => !item.isEmpty)
+              .map((item) => item.toJson())
+              .toList(growable: false),
+        if (synthesisSummary != null && synthesisSummary!.trim().isNotEmpty)
+          'synthesisSummary': synthesisSummary!.trim(),
+        if (disagreements.where((item) => item.trim().isNotEmpty).isNotEmpty)
+          'disagreements': disagreements
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+        if (openQuestions.where((item) => item.trim().isNotEmpty).isNotEmpty)
+          'openQuestions': openQuestions
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+      };
+
+  factory AiSeminarRunCardSnapshot.fromJson(Map<String, dynamic> json) {
+    return AiSeminarRunCardSnapshot(
+      evidence: (json['evidence'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => AiSeminarRunCardEvidenceSnapshot.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false) ??
+          const <AiSeminarRunCardEvidenceSnapshot>[],
+      roleSummaries: (json['roleSummaries'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => AiSeminarRunCardRoleSummary.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false) ??
+          const <AiSeminarRunCardRoleSummary>[],
+      synthesisSummary: _trimmedOrNull(json['synthesisSummary']),
+      disagreements: _stringList(json['disagreements']),
+      openQuestions: _stringList(json['openQuestions']),
+    );
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
+
+  static List<String> _stringList(Object? raw) {
+    if (raw is! List) return const <String>[];
+    return raw
+        .map((item) => item?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+}
+
+@immutable
 class AiSeminarRunCardMeta {
   const AiSeminarRunCardMeta({
     required this.question,
@@ -496,6 +644,7 @@ class AiSeminarRunCardMeta {
     this.allowWeb = false,
     this.writeRequiresApproval = true,
     this.maxRounds = 2,
+    this.snapshot,
   });
 
   final String question;
@@ -510,6 +659,29 @@ class AiSeminarRunCardMeta {
   final bool writeRequiresApproval;
   final int maxRounds;
   final int createdAt;
+  final AiSeminarRunCardSnapshot? snapshot;
+
+  AiSeminarRunCardMeta copyWith({
+    String? status,
+    int? sourceRefCount,
+    AiSeminarRunCardSnapshot? snapshot,
+  }) {
+    return AiSeminarRunCardMeta(
+      question: question,
+      sessionId: sessionId,
+      bookId: bookId,
+      sourceRef: sourceRef,
+      status: status ?? this.status,
+      roleIds: roleIds,
+      evidenceScopeIds: evidenceScopeIds,
+      sourceRefCount: sourceRefCount ?? this.sourceRefCount,
+      allowWeb: allowWeb,
+      writeRequiresApproval: writeRequiresApproval,
+      maxRounds: maxRounds,
+      createdAt: createdAt,
+      snapshot: snapshot ?? this.snapshot,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -526,6 +698,8 @@ class AiSeminarRunCardMeta {
       'writeRequiresApproval': writeRequiresApproval,
       'maxRounds': maxRounds,
       'createdAt': createdAt,
+      if (snapshot != null && !snapshot!.isEmpty)
+        'snapshot': snapshot!.toJson(),
     };
   }
 
@@ -537,6 +711,14 @@ class AiSeminarRunCardMeta {
       sourceRef = SourceRef.fromJson(
         rawSourceRef.map((k, v) => MapEntry(k.toString(), v)),
       );
+    }
+    AiSeminarRunCardSnapshot? snapshot;
+    final rawSnapshot = json['snapshot'];
+    if (rawSnapshot is Map) {
+      final parsedSnapshot = AiSeminarRunCardSnapshot.fromJson(
+        rawSnapshot.map((k, v) => MapEntry(k.toString(), v)),
+      );
+      if (!parsedSnapshot.isEmpty) snapshot = parsedSnapshot;
     }
     return AiSeminarRunCardMeta(
       question: json['question']?.toString() ?? '',
@@ -562,6 +744,7 @@ class AiSeminarRunCardMeta {
           _boolOrDefault(json['writeRequiresApproval'], true),
       maxRounds: _positiveInt(json['maxRounds'], fallback: 2),
       createdAt: json['createdAt'] is int ? json['createdAt'] as int : 0,
+      snapshot: snapshot,
     );
   }
 

@@ -1038,6 +1038,102 @@ class AiChat extends _$AiChat {
     await _queueDraftHistoryUpsert(historyNotifier, entry);
   }
 
+  Future<bool> updateSeminarRunCardSnapshot({
+    required String seminarSessionId,
+    required String status,
+    AiSeminarRunCardSnapshot? snapshot,
+    int? sourceRefCount,
+  }) async {
+    final targetSessionId = seminarSessionId.trim();
+    if (targetSessionId.isEmpty || _tree.nodes.isEmpty) return false;
+
+    String? targetNodeId;
+    AiConversationNode? targetNode;
+    AiSeminarRunCardMeta? targetCard;
+    for (final entry in _tree.nodes.entries) {
+      final card = entry.value.meta?.seminarRunCard;
+      if (card?.sessionId == targetSessionId) {
+        targetNodeId = entry.key;
+        targetNode = entry.value;
+        targetCard = card;
+        break;
+      }
+    }
+    if (targetNodeId == null || targetNode == null || targetCard == null) {
+      return false;
+    }
+
+    final meta = targetNode.meta ?? const AiSegmentMeta();
+    final updatedCard = targetCard.copyWith(
+      status: status.trim().isEmpty ? targetCard.status : status.trim(),
+      sourceRefCount: sourceRefCount,
+      snapshot: snapshot,
+    );
+    _tree = _tree.copyWithNode(
+      targetNodeId,
+      targetNode.copyWith(
+        meta: AiSegmentMeta(
+          model: meta.model,
+          inputTokens: meta.inputTokens,
+          outputTokens: meta.outputTokens,
+          seminarRunCard: updatedCard,
+        ),
+      ),
+    );
+    _rebuildFromTree();
+
+    final sessionId = _currentSessionId;
+    if (sessionId == null) return true;
+    final serviceId = Prefs().selectedAiService;
+    final config = Prefs().getAiConfig(serviceId);
+    final model = (config['model'])?.trim() ?? '';
+    final historyNotifier = ref.read(aiHistoryProvider.notifier);
+    final existing = historyNotifier.findById(sessionId);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final bookContext = _readCurrentBookContext(ref.read);
+    final historyBookContext = _historyBookContextFor(
+      existing: existing,
+      current: bookContext,
+    );
+    final currentMessages = List<ChatMessage>.from(state.value ?? const []);
+    final fallbackTitle = _titleService.deriveFallbackTitle(currentMessages);
+    final entry = (existing ??
+            AiChatHistoryEntry(
+              id: sessionId,
+              serviceId: serviceId,
+              model: model,
+              createdAt: now,
+              updatedAt: now,
+              title: fallbackTitle,
+              titleSource: 'heuristic',
+              bookId: historyBookContext.bookId,
+              bookTitle: historyBookContext.bookTitle,
+              messages: currentMessages,
+              completed: true,
+            ))
+        .copyWith(
+      serviceId: serviceId,
+      messages: currentMessages,
+      updatedAt: now,
+      completed: true,
+      model: model,
+      title: (existing?.title?.trim().isNotEmpty ?? false)
+          ? existing!.title
+          : fallbackTitle,
+      titleSource: (existing?.titleSource?.trim().isNotEmpty ?? false)
+          ? existing!.titleSource
+          : 'heuristic',
+      bookId: historyBookContext.bookId,
+      bookTitle: historyBookContext.bookTitle,
+      conversationV2: _tree.toJson(),
+    );
+    if (_draftEntry?.id == entry.id) {
+      _draftEntry = entry;
+    }
+    await _queueDraftHistoryUpsert(historyNotifier, entry);
+    return true;
+  }
+
   String _seminarRunCardFallbackText(AiSeminarRunCardMeta card) {
     final question = card.question.trim();
     if (question.isEmpty) {

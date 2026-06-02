@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/ai_conversation_tree.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/models/book.dart';
 import 'package:papertok_reader/models/current_reading_state.dart';
@@ -256,6 +257,80 @@ void main() {
     );
     expect(card['sourceRefCount'], 1);
     expect(card['bookId'], 7);
+  });
+
+  test('updateSeminarRunCardSnapshot persists structured Seminar summary',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('ai-chat-seminar-snapshot-');
+    _mockPathProvider(tempDir.path);
+    addTearDown(() {
+      _mockPathProvider(null);
+      tempDir.deleteSync(recursive: true);
+    });
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await container.read(aiChatProvider.future);
+    container.read(aiChatProvider.notifier).restore(
+      [ChatMessage.humanText('已有会话')],
+      sessionId: 'session-seminar-snapshot',
+    );
+
+    await container.read(aiChatProvider.notifier).appendSeminarRunCard(
+          question: '这个概念怎么理解？',
+          bookId: 7,
+          seminarSessionId: 'seminar-chat-snapshot',
+        );
+
+    await container.read(aiChatProvider.notifier).updateSeminarRunCardSnapshot(
+          seminarSessionId: 'seminar-chat-snapshot',
+          status: 'completed',
+          sourceRefCount: 1,
+          snapshot: const AiSeminarRunCardSnapshot(
+            evidence: [
+              AiSeminarRunCardEvidenceSnapshot(
+                title: 'Working memory',
+                snippet: 'Working memory evidence.',
+              ),
+            ],
+            roleSummaries: [
+              AiSeminarRunCardRoleSummary(
+                roleId: 'critical',
+                label: 'Critical',
+                summary: 'This claim needs a boundary condition.',
+              ),
+            ],
+            synthesisSummary:
+                'The group agrees on the mechanism but not the scope.',
+            disagreements: ['Scope remains disputed.'],
+          ),
+        );
+
+    final history = await AiHistoryStore.readHistory();
+    final nodes = history.single.conversationV2!['nodes'] as Map;
+    final seminarCards = nodes.values.where((raw) {
+      if (raw is! Map) return false;
+      final meta = raw['meta'];
+      return meta is Map && meta['seminarRunCard'] is Map;
+    }).toList();
+    final card = (seminarCards.single as Map)['meta']['seminarRunCard'] as Map;
+    final snapshot = card['snapshot'] as Map;
+    expect(card['status'], 'completed');
+    expect(card['sourceRefCount'], 1);
+    expect((snapshot['evidence'] as List).single['snippet'],
+        'Working memory evidence.');
+    expect((snapshot['roleSummaries'] as List).single['roleId'], 'critical');
+    expect(snapshot['synthesisSummary'],
+        'The group agrees on the mechanism but not the scope.');
+
+    final restoredCard = container
+        .read(aiChatProvider.notifier)
+        .seminarRunCardForMessageIndex(2);
+    expect(restoredCard?.status, 'completed');
+    expect(restoredCard?.snapshot?.evidence.single.snippet,
+        'Working memory evidence.');
   });
 
   test('appendSeminarRunCard ignores empty cards without source evidence',

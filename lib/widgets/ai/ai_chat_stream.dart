@@ -13,12 +13,14 @@ import 'package:papertok_reader/providers/ai_history.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:papertok_reader/service/ai/ai_services.dart';
 import 'package:papertok_reader/service/ai/ai_history.dart';
+import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/enums/ai_thinking_mode.dart';
 import 'package:papertok_reader/models/current_reading_state.dart';
 import 'package:papertok_reader/page/settings_page/custom_skills.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
+import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
 import 'package:papertok_reader/service/memory/memory_candidate.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_policy.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
@@ -356,6 +358,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   String? _inlineSeminarSessionId;
   int? _inlineSeminarBookId;
   SourceRef? _inlineSeminarSourceRef;
+  String? _lastInlineSeminarCardSignature;
 
   void _onDraftInputChanged() {
     if (_suppressDraftSync) return;
@@ -2410,6 +2413,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       _inlineSeminarSessionId = seminarSessionId;
       _inlineSeminarBookId = reading.book?.id;
       _inlineSeminarSourceRef = sourceRef;
+      _lastInlineSeminarCardSignature = null;
     });
   }
 
@@ -2432,7 +2436,140 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           sessionId?.trim().isEmpty == true ? null : sessionId?.trim();
       _inlineSeminarBookId = sourceRef?.bookId ?? bookId ?? reading.book?.id;
       _inlineSeminarSourceRef = sourceRef;
+      _lastInlineSeminarCardSignature = null;
     });
+  }
+
+  void _syncInlineSeminarRunCard(AiSeminarRuntimeState state) {
+    final sessionId = _inlineSeminarSessionId?.trim();
+    if (sessionId == null || sessionId.isEmpty) return;
+    final runtimeSession = state.session;
+    if (runtimeSession == null || runtimeSession.id != sessionId) return;
+
+    final citedEvidence = _seminarCitedTraceableEvidenceFromState(state);
+    final snapshot = _seminarRunCardSnapshotFromState(
+      state,
+      citedEvidence: citedEvidence,
+    );
+    final sourceRefCount = citedEvidence.length;
+    final signature = jsonEncode({
+      'sessionId': sessionId,
+      'status': state.status.asString,
+      'sourceRefCount': sourceRefCount,
+      'snapshot': snapshot?.toJson(),
+    });
+    if (signature == _lastInlineSeminarCardSignature) return;
+    _lastInlineSeminarCardSignature = signature;
+    unawaited(
+      ref.read(aiChatProvider.notifier).updateSeminarRunCardSnapshot(
+            seminarSessionId: sessionId,
+            status: state.status.asString,
+            sourceRefCount: sourceRefCount,
+            snapshot: snapshot,
+          ),
+    );
+  }
+
+  AiSeminarRunCardSnapshot? _seminarRunCardSnapshotFromState(
+    AiSeminarRuntimeState state, {
+    required List<AiSeminarEvidence> citedEvidence,
+  }) {
+    final evidence = citedEvidence
+        .take(3)
+        .map(
+          (item) => AiSeminarRunCardEvidenceSnapshot(
+            title: _seminarEvidenceSnapshotTitle(item),
+            snippet: _seminarEvidenceSnapshotSnippet(item),
+          ),
+        )
+        .where((item) => !item.isEmpty)
+        .toList(growable: false);
+    final roleSummaries = state.turns
+        .where((turn) => !turn.isFailed && turn.responseText.trim().isNotEmpty)
+        .take(4)
+        .map(
+          (turn) => AiSeminarRunCardRoleSummary(
+            roleId: turn.role.asString,
+            label: _seminarRoleFallbackLabel(turn.role.asString),
+            summary: turn.responseText.trim(),
+          ),
+        )
+        .toList(growable: false);
+    final synthesis = state.synthesis;
+    final snapshot = AiSeminarRunCardSnapshot(
+      evidence: evidence,
+      roleSummaries: roleSummaries,
+      synthesisSummary: synthesis?.summary.trim(),
+      disagreements: synthesis?.disagreements ?? const <String>[],
+      openQuestions: synthesis?.openQuestions ?? const <String>[],
+    );
+    return snapshot.isEmpty ? null : snapshot;
+  }
+
+  List<AiSeminarEvidence> _seminarCitedTraceableEvidenceFromState(
+    AiSeminarRuntimeState state,
+  ) {
+    final rawEvidence = state.synthesis?.evidence.isNotEmpty == true
+        ? state.synthesis!.evidence
+        : state.evidenceBundle?.evidence ?? const <AiSeminarEvidence>[];
+    final traceableById = <String, AiSeminarEvidence>{};
+    for (final item in rawEvidence) {
+      final id = item.id.trim();
+      if (id.isEmpty || !item.isTraceable) continue;
+      traceableById.putIfAbsent(id, () => item);
+    }
+    if (traceableById.isEmpty) return const <AiSeminarEvidence>[];
+
+    final citedIds = <String>[];
+    final seen = <String>{};
+    void addRefs(Iterable<String> refs) {
+      for (final raw in refs) {
+        final id = raw.trim();
+        if (id.isEmpty || !traceableById.containsKey(id)) continue;
+        if (seen.add(id)) citedIds.add(id);
+      }
+    }
+
+    final synthesis = state.synthesis;
+    if (synthesis != null) {
+      addRefs(synthesis.evidenceRefIds);
+      for (final card in synthesis.candidateCards) {
+        addRefs(card.evidenceRefIds);
+      }
+    }
+    for (final turn in state.turns) {
+      if (turn.isFailed) continue;
+      addRefs(turn.evidenceRefIds);
+      for (final entry in turn.whiteboardEntries) {
+        addRefs(entry.evidenceRefIds);
+      }
+    }
+
+    return citedIds.map((id) => traceableById[id]!).toList(growable: false);
+  }
+
+  String _seminarEvidenceSnapshotTitle(AiSeminarEvidence evidence) {
+    final ref = evidence.sourceRef;
+    final direct = ref.sourceTitle?.trim();
+    if (direct != null && direct.isNotEmpty) return direct;
+    final location = ref.locationLabel?.trim();
+    if (location != null && location.isNotEmpty) return location;
+    final href = ref.href?.trim();
+    if (href != null && href.isNotEmpty) return href;
+    final chunkId = ref.chunkId;
+    if (chunkId != null) return 'Chunk $chunkId';
+    return _seminarEvidenceScopeLabel(
+      evidence.scope.asString,
+      L10n.of(context),
+    );
+  }
+
+  String _seminarEvidenceSnapshotSnippet(AiSeminarEvidence evidence) {
+    final sourceSnippet = evidence.sourceRef.sourceTextSnippet?.trim();
+    if (sourceSnippet != null && sourceSnippet.isNotEmpty) {
+      return sourceSnippet;
+    }
+    return evidence.text.trim();
   }
 
   Widget _buildInlineSeminarPanel() {
@@ -3124,6 +3261,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         selection: TextSelection.collapsed(offset: next.length),
       );
       _suppressDraftSync = false;
+    });
+    ref.listen<AiSeminarRuntimeState>(aiSeminarRuntimeProvider, (_, next) {
+      if (!mounted) return;
+      _syncInlineSeminarRunCard(next);
     });
 
     final quickPrompts = _getQuickPrompts(context);
@@ -4248,11 +4389,274 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                 ),
               ],
+              if (card.snapshot != null && !card.snapshot!.isEmpty) ...[
+                const SizedBox(height: 12),
+                _buildSeminarRunSnapshot(card.snapshot!),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildSeminarRunSnapshot(AiSeminarRunCardSnapshot snapshot) {
+    final evidence = snapshot.evidence.take(3).toList(growable: false);
+    final roles = snapshot.roleSummaries.take(4).toList(growable: false);
+    final synthesis = snapshot.synthesisSummary?.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (evidence.isNotEmpty) ...[
+          _seminarSnapshotHeading(
+            Icons.fact_check_outlined,
+            _localizedSeminarCardText(
+              zh: '证据快照',
+              en: 'Evidence snapshot',
+            ),
+          ),
+          const SizedBox(height: 6),
+          for (final item in evidence) _seminarSnapshotEvidenceTile(item),
+        ],
+        if (roles.isNotEmpty) ...[
+          if (evidence.isNotEmpty) const SizedBox(height: 10),
+          _seminarSnapshotHeading(
+            Icons.forum_outlined,
+            _localizedSeminarCardText(
+              zh: '角色观点',
+              en: 'Role views',
+            ),
+          ),
+          const SizedBox(height: 6),
+          for (final role in roles) _seminarSnapshotRoleTile(role),
+        ],
+        if (synthesis != null && synthesis.isNotEmpty) ...[
+          if (evidence.isNotEmpty || roles.isNotEmpty)
+            const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: _seminarSnapshotHeading(
+                  Icons.auto_awesome_outlined,
+                  _localizedSeminarCardText(
+                    zh: '研讨总结',
+                    en: 'Seminar summary',
+                  ),
+                ),
+              ),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (snapshot.disagreements.isNotEmpty)
+                    _seminarSnapshotTinyChip(
+                      _seminarCountLabel(
+                        snapshot.disagreements.length,
+                        zhUnit: '个分歧',
+                        enSingular: 'disagreement',
+                        enPlural: 'disagreements',
+                      ),
+                    ),
+                  if (snapshot.openQuestions.isNotEmpty)
+                    _seminarSnapshotTinyChip(
+                      _seminarCountLabel(
+                        snapshot.openQuestions.length,
+                        zhUnit: '个问题',
+                        enSingular: 'question',
+                        enPlural: 'questions',
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            synthesis,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.fg(context),
+                  height: 1.35,
+                ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _seminarSnapshotHeading(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: ClaudePalette.secondary(context)),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _seminarSnapshotEvidenceTile(
+    AiSeminarRunCardEvidenceSnapshot evidence,
+  ) {
+    final title = evidence.title.trim();
+    final snippet = evidence.snippet.trim();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: ClaudePalette.divider(context)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (title.isNotEmpty)
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: ClaudePalette.fg(context),
+                      ),
+                ),
+              if (snippet.isNotEmpty) ...[
+                if (title.isNotEmpty) const SizedBox(height: 3),
+                Text(
+                  snippet,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: ClaudePalette.secondary(context),
+                        height: 1.32,
+                      ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _seminarSnapshotRoleTile(AiSeminarRunCardRoleSummary role) {
+    final label = role.label.trim().isNotEmpty
+        ? role.label.trim()
+        : _seminarRoleFallbackLabel(role.roleId);
+    final summary = role.summary.trim();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            _seminarRoleIconById(role.roleId),
+            size: 16,
+            color: ClaudePalette.accent(context),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: ClaudePalette.fg(context),
+                      ),
+                ),
+                if (summary.isNotEmpty)
+                  Text(
+                    summary,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                          height: 1.32,
+                        ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _seminarSnapshotTinyChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: Theme.of(context)
+            .colorScheme
+            .secondaryContainer
+            .withValues(alpha: 0.62),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: ClaudePalette.fg(context),
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+
+  IconData _seminarRoleIconById(String roleId) {
+    switch (roleId.trim()) {
+      case 'critical':
+        return Icons.report_problem_outlined;
+      case 'supportive':
+        return Icons.thumb_up_alt_outlined;
+      case 'verifier':
+        return Icons.verified_outlined;
+      case 'synthesizer':
+        return Icons.auto_awesome_outlined;
+      default:
+        return Icons.person_outline;
+    }
+  }
+
+  String _seminarRoleFallbackLabel(String roleId) {
+    switch (roleId.trim()) {
+      case 'critical':
+        return _localizedSeminarCardText(zh: '批判者', en: 'Critical');
+      case 'supportive':
+        return _localizedSeminarCardText(zh: '支持者', en: 'Supportive');
+      case 'verifier':
+        return _localizedSeminarCardText(zh: '验证者', en: 'Verifier');
+      case 'synthesizer':
+        return _localizedSeminarCardText(zh: '综合者', en: 'Synthesizer');
+      default:
+        return roleId.trim().isEmpty ? 'Role' : roleId.trim();
+    }
+  }
+
+  String _seminarCountLabel(
+    int count, {
+    required String zhUnit,
+    required String enSingular,
+    required String enPlural,
+  }) {
+    if (_isChineseLocale) return '$count $zhUnit';
+    return count == 1 ? '1 $enSingular' : '$count $enPlural';
   }
 
   List<Widget> _seminarMetaChips(AiSeminarRunCardMeta card) {

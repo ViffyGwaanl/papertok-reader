@@ -55,10 +55,11 @@ PaperTok 当前已经具备这些地基：
 - `AiSeminarDirectorState` 已能记录轮次、已完成角色、证据账本、白板账本、分歧、用户插话和 next intent。
 - `askUser` 状态下已支持让指定角色回应、重新找证据、整理总结。
 - disagreement 在轮次预算内已能自动触发 evidence refresh。
+- AI Chat 的 `AI 研讨会` 历史任务卡已能随 `conversationV2` 保存，并在 runtime 状态变化时按 `seminarSessionId` 回写 evidence/role/synthesis snapshot、分歧数、开放问题数和真实可追踪来源数量。
 
 当前还不是完整 OpenMAIC-style Chat Seminar：
 
-- 轻量历史卡片仍只是恢复入口，不是完整结构化 Chat message part。
+- 历史任务卡已有只读 snapshot，但还不是包含完整白板、送审子视图、run-scoped composer 子视图和 per-run 多实例隔离的完整结构化 Chat message part。
 - 还没有完整 contradiction gap scan 和针锋相对的 rebuttal turn。
 - 角色配置还缺启用状态、证据策略、工具范围、空 prompt validator 和 run-scoped 临时设置。
 - 仍是单个全局 runtime state，不支持同一 AI Chat 中多个 Seminar run 并存。
