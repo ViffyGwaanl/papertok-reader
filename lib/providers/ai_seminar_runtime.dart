@@ -330,6 +330,13 @@ class AiSeminarRuntimeState {
 
   bool get canCancel => status == AiSeminarRunStatus.running;
 
+  bool get canResumeRestoredRunning =>
+      restoredFromLocalCache &&
+      status == AiSeminarRunStatus.running &&
+      session != null &&
+      evidenceBundle != null &&
+      backgroundJob?.status == AiSeminarBackgroundJobStatus.running;
+
   bool get canRetry =>
       session != null &&
       (status == AiSeminarRunStatus.failed ||
@@ -503,12 +510,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         _runtimeRunOwnerId = 'seminar-runtime-${_nextRuntimeOwnerId++}',
         super(
           _initialState(_providerContext, runtimeStatePrefsKey),
-        ) {
-    if (state.restoredFromLocalCache &&
-        state.status == AiSeminarRunStatus.running) {
-      unawaited(_resumeRestoredRunningSession());
-    }
-  }
+        );
 
   final AiSeminarRuntimeService _service;
   final ReviewItemStore _reviewStore;
@@ -698,6 +700,11 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       ),
       directorStateSeed: state.directorState,
     );
+  }
+
+  Future<void> resumeRestoredRunning() async {
+    if (!state.canResumeRestoredRunning) return;
+    await _resumeRestoredRunningSession();
   }
 
   static bool _shouldResumeUserDirectedRole(AiSeminarRuntimeState state) {

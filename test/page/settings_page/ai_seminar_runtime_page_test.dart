@@ -1674,15 +1674,12 @@ void main() {
       ),
     );
 
-    for (var i = 0; i < 20 && !roleStarted.isCompleted; i += 1) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
+    await tester.pump(const Duration(milliseconds: 250));
     expect(
       roleStarted.isCompleted,
-      isTrue,
-      reason: 'restored running Seminar should continue from checkpoint',
+      isFalse,
+      reason: 'restored running Seminar should wait for user confirmation',
     );
-    await tester.pump(const Duration(milliseconds: 50));
 
     await tester.scrollUntilVisible(
       find.textContaining('will continue from Supportive'),
@@ -1695,11 +1692,23 @@ void main() {
         find.textContaining('will continue from Supportive'), findsOneWidget);
     expect(
       find.textContaining(
-        'will call Local Gateway · gpt-5.5 again only for missing roles',
+        'When you continue, PaperTok will call Local Gateway · gpt-5.5 '
+        'again only for missing roles',
       ),
       findsOneWidget,
     );
     expect(find.textContaining('Cost remains an estimate'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey('seminar-resume-restored-header')));
+    for (var i = 0; i < 20 && !roleStarted.isCompleted; i += 1) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(
+      roleStarted.isCompleted,
+      isTrue,
+      reason: 'confirmed restored Seminar should continue from checkpoint',
+    );
 
     releaseRole.complete();
     for (var i = 0; i < 20; i += 1) {
@@ -1852,11 +1861,8 @@ void main() {
       ),
     );
 
-    for (var i = 0; i < 20 && !roleStarted.isCompleted; i += 1) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    expect(roleStarted.isCompleted, isTrue);
-    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(roleStarted.isCompleted, isFalse);
 
     await tester.scrollUntilVisible(
       find.textContaining('reader-requested Critical turn'),
@@ -1870,6 +1876,13 @@ void main() {
         find.textContaining('reader-requested Critical turn'), findsOneWidget);
     expect(find.textContaining('only for missing roles'), findsNothing);
     expect(find.textContaining('Cost remains an estimate'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey('seminar-resume-restored-header')));
+    for (var i = 0; i < 20 && !roleStarted.isCompleted; i += 1) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(roleStarted.isCompleted, isTrue);
 
     releaseRole.complete();
     for (var i = 0; i < 20; i += 1) {

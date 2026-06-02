@@ -335,7 +335,13 @@ void main() {
     addTearDown(container.dispose);
 
     container.read(aiSeminarRuntimeScopedProvider(sessionId));
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(invokedRoles, isEmpty);
+    final resumeFuture = container
+        .read(aiSeminarRuntimeScopedProvider(sessionId).notifier)
+        .resumeRestoredRunning();
     await resumeCompleted.future.timeout(const Duration(seconds: 2));
+    await resumeFuture;
     for (var i = 0; i < 20; i += 1) {
       if (container.read(aiSeminarRuntimeScopedProvider(sessionId)).status !=
           AiSeminarRunStatus.running) {
@@ -2151,7 +2157,13 @@ void main() {
     );
     addTearDown(container.dispose);
     container.read(aiSeminarRuntimeProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(invokedRoles, isEmpty);
+    final resumeFuture = container
+        .read(aiSeminarRuntimeProvider.notifier)
+        .resumeRestoredRunning();
     await resumeCompleted.future.timeout(const Duration(seconds: 2));
+    await resumeFuture;
     for (var i = 0; i < 20; i += 1) {
       if (container.read(aiSeminarRuntimeProvider).status !=
           AiSeminarRunStatus.running) {
@@ -2292,7 +2304,8 @@ void main() {
     );
     addTearDown(container.dispose);
     container.read(aiSeminarRuntimeProvider);
-    await activeResumeStarted.future.timeout(const Duration(seconds: 2));
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(invokedSessions, isEmpty);
 
     expect(
       container
@@ -2303,8 +2316,13 @@ void main() {
       AiSeminarBackgroundJobStatus.queued,
     );
 
+    final resumeFuture = container
+        .read(aiSeminarRuntimeProvider.notifier)
+        .resumeRestoredRunning();
+    await activeResumeStarted.future.timeout(const Duration(seconds: 2));
     releaseActiveResume.complete();
     await queuedCompleted.future.timeout(const Duration(seconds: 2));
+    await resumeFuture;
     for (var i = 0; i < 20; i += 1) {
       if (container.read(aiSeminarRuntimeProvider).status !=
           AiSeminarRunStatus.running) {
@@ -2491,6 +2509,11 @@ void main() {
     );
     addTearDown(container.dispose);
     container.read(aiSeminarRuntimeProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(invokedRoles, isEmpty);
+    await container
+        .read(aiSeminarRuntimeProvider.notifier)
+        .resumeRestoredRunning();
     for (var i = 0; i < 20; i += 1) {
       if (container.read(aiSeminarRuntimeProvider).status !=
           AiSeminarRunStatus.running) {
@@ -2604,6 +2627,11 @@ void main() {
     );
     addTearDown(container.dispose);
     container.read(aiSeminarRuntimeProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(invokedRoles, isEmpty);
+    await container
+        .read(aiSeminarRuntimeProvider.notifier)
+        .resumeRestoredRunning();
     for (var i = 0; i < 20; i += 1) {
       if (container.read(aiSeminarRuntimeProvider).status !=
           AiSeminarRunStatus.running) {
@@ -2877,6 +2905,11 @@ void main() {
     );
     addTearDown(container.dispose);
     container.read(aiSeminarRuntimeProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(invokedRoles, isEmpty);
+    await container
+        .read(aiSeminarRuntimeProvider.notifier)
+        .resumeRestoredRunning();
     for (var i = 0; i < 20; i += 1) {
       if (container.read(aiSeminarRuntimeProvider).status !=
           AiSeminarRunStatus.running) {
@@ -2982,6 +3015,10 @@ void main() {
     );
     addTearDown(container.dispose);
     container.read(aiSeminarRuntimeProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    await container
+        .read(aiSeminarRuntimeProvider.notifier)
+        .resumeRestoredRunning();
     for (var i = 0; i < 20; i += 1) {
       if (container.read(aiSeminarRuntimeProvider).status !=
           AiSeminarRunStatus.running) {

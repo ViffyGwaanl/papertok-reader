@@ -225,6 +225,13 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
     );
   }
 
+  Future<void> _resumeRestoredRunning() async {
+    await _readSeminarRuntimeNotifier(
+      ref,
+      _runtimeScopeId,
+    ).resumeRestoredRunning();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
@@ -240,6 +247,7 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
           )
         : rawState;
     final busy = state.status == AiSeminarRunStatus.running;
+    final recoveryPending = state.canResumeRestoredRunning;
 
     final content = ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -287,13 +295,21 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
         const SizedBox(height: 10),
         Row(
           children: [
-            FilledButton.icon(
-              icon: Icon(
-                busy ? Icons.playlist_add_outlined : Icons.groups_2_outlined,
+            if (recoveryPending)
+              FilledButton.icon(
+                key: const ValueKey('seminar-resume-restored-button'),
+                icon: const Icon(Icons.play_arrow_outlined),
+                label: Text(l10n.commonResume),
+                onPressed: _resumeRestoredRunning,
+              )
+            else
+              FilledButton.icon(
+                icon: Icon(
+                  busy ? Icons.playlist_add_outlined : Icons.groups_2_outlined,
+                ),
+                label: Text(busy ? l10n.seminarQueue : l10n.seminarStart),
+                onPressed: _start,
               ),
-              label: Text(busy ? l10n.seminarQueue : l10n.seminarStart),
-              onPressed: _start,
-            ),
             const SizedBox(width: 8),
             if (state.canRetry)
               OutlinedButton.icon(
@@ -547,6 +563,16 @@ class _EmbeddedSeminarHeader extends ConsumerWidget {
               ),
             ),
             _TinyChip(label: _runStatusLabel(l10n, state.status)),
+            if (state.canResumeRestoredRunning)
+              IconButton(
+                key: const ValueKey('seminar-resume-restored-header'),
+                tooltip: l10n.commonResume,
+                icon: const Icon(Icons.play_arrow_outlined),
+                onPressed: () => _readSeminarRuntimeNotifier(
+                  ref,
+                  runtimeScopeId,
+                ).resumeRestoredRunning(),
+              ),
             IconButton(
               tooltip: l10n.seminarConfigTitle,
               icon: const Icon(Icons.tune_outlined),
@@ -981,10 +1007,10 @@ String? _recoveryResumeDetailLine(
         );
   return _runtimeText(
     context,
-    en: 'Resume detail: will continue from $roleLabel; PaperTok will call '
-        '$providerLabel again $callScope. Cost remains an '
+    en: 'Resume detail: will continue from $roleLabel. When you continue, '
+        'PaperTok will call $providerLabel again $callScope. Cost remains an '
         'estimate, not a provider invoice.',
-    zh: '恢复续跑：将从「$roleLabel」继续；PaperTok 会再次调用 '
+    zh: '恢复续跑：将从「$roleLabel」继续；点击继续后 PaperTok 会再次调用 '
         '$providerLabel，$callScope。费用仍按估算显示，不是 provider 发票。',
   );
 }
