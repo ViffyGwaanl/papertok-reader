@@ -34,7 +34,7 @@
 | 当前书 Hybrid 召回 | 阅读页搜索、Seminar evidence、`semantic_search_current_book` 工具 | 当前书检索已接入 book-scoped `AiVectorSearchBackend`：先按 `bookId` 调用向量后端；如果 per-book Vec1 sidecar 完整，会先用 book-scoped ANN 召回；全局 Vec1 ANN 和无预算 `vector_full_scan` native path 在当前书场景会跳过，避免全局 topK 后过滤漏召回或绕过扫描预算；ANN winner 与 FTS/BM25 候选按 chunk id 去重。 | 这能降低大书 current-book 搜索的内存和发热风险，但不是移动端 sqlite-vec/Vec1 发布闭环；当前书的 ANN 路径只在 per-book sidecar 完整时启用，不用全局 ANN 假装 book-scoped recall。 |
 | 书库 Hybrid RAG 召回 | AI Chat、Seminar library fallback、agent tool、ConceptGraph 空态等调用 `semantic_search_library` 的入口 | 书库检索已从“文本 miss 后才走 vector fallback”改成“FTS/BM25 精确召回 + 向量后端语义召回共同进入候选池”，结果可用 `usedVectorRecall` 判断向量是否参与；默认 backend 是 ANN -> native -> exact，Vec1/sqlite-vec function 和对应 ANN 表存在且完整时先用 ANN，只 hydrate winner 正文；不可用或不完整时合并/降级 native/exact，避免漏掉未升级书籍；删除书籍时会清理该书的派生图谱、native shadow vector 和 ANN 行。 | 已有 extension-ready Vec1 路径，但还不是真正发布级 sqlite-vec/ANN：移动端 extension 打包、UI build job 和 provider/model 失效没闭环；ConceptGraph 本地文本入口仍关闭 embedding/vector/rerank，避免外发正文；旧索引缺 blob 时仍保留 JSON fallback。 |
 | 旧索引全局层补建 | `Settings -> AI Index / Library Index` -> `全局层索引` -> `补建` | 用已有 chunk 给旧索引书籍补建 RAPTOR 全局摘要层和当前 GraphRAG 派生层，页面显示进度并可取消。 | 不重新生成 embedding；不是 sqlite-vec/ANN；当前纯中文 graph node 抽取仍需后续增强。 |
-| 旧索引向量层升级 | `Settings -> AI Index / Library Index` -> `向量索引升级` -> `升级`，再点 `ANN 向量索引` -> `构建` | 用已有 embedding 给旧索引书籍补建紧凑 native vector shadow layer，为 sqlite-vec/ANN 后端做迁移准备；页面显示缺失数量、进度和取消；`ANN 向量索引` 会检查 Vec1/sqlite-vec 扩展、ANN group/row 缺口，可用时从 shadow rows 重建 provider/model/dim 隔离的全书库 Vec1 ANN 表，并同步生成 per-book Vec1 sidecar。 | 不重嵌入；未加载 Vec1/sqlite-vec 扩展时只显示 ANN 暂不可用并继续 fallback；当前是 extension-ready schema/backend seam，不是已打包的 sqlite-vec/ANN 发布能力。 |
+| 旧索引向量层升级 | `Settings -> AI Index / Library Index` -> `向量索引升级` -> `升级`，再点 `ANN 向量索引` -> `构建` | 用已有 embedding 给旧索引书籍补建紧凑 native vector shadow layer，为 sqlite-vec/ANN 后端做迁移准备；页面显示缺失数量、进度和取消；`ANN 向量索引` 会检查 Vec1/sqlite-vec 扩展、ANN group/global row 缺口和 per-book sidecar 缺口，可用时从 shadow rows 重建 provider/model/dim 隔离的全书库 Vec1 ANN 表，并同步生成 per-book Vec1 sidecar。 | 不重嵌入；未加载 Vec1/sqlite-vec 扩展时只显示 ANN 暂不可用并继续 fallback；当前是 extension-ready schema/backend seam，不是已打包的 sqlite-vec/ANN 发布能力。 |
 | 全书自动图谱预览 | `Settings -> AI -> Concept graph`，或阅读页选中文本 -> `图谱` | Settings 入口会列出已有全局层的已索引书，用户可直接选择一本书查看只读全书关系图；阅读页入口会直接显示当前书的全书派生图谱；点图谱节点可查看摘要、相邻关系、证据摘录，并可 `Open source / 打开来源` 回到原文。 | 只读派生缓存，不写正式知识资产；没有全局层时先去 AI Index 补建；不是无限画布。 |
 
 ## 3. 已做但用户不直接感知的功能
@@ -189,7 +189,7 @@
 - 旧索引向量层升级入口：用已有 blob/JSON embedding 补建 compact float32 rows，不重嵌入。
 - ANN -> native -> exact backend seam：能检测 Vec1/sqlite-vec capability 和 per-model ANN table，不可用或不完整时自动降级 native/exact。
 - Vec1 table builder：能按 provider/model/dim 从 `ai_vector_index_rows` 重建独立 Vec1 virtual table，并写 `vec1-ann` meta。
-- per-book Vec1 sidecar：builder 会为每本书额外生成 book-scoped ANN table，当前书检索只在 sidecar 完整时使用它，避免全局 ANN 后过滤。
+- per-book Vec1 sidecar：builder 会为每本书额外生成 book-scoped ANN table，状态 API 会单独报告 sidecar ready/missing，当前书检索只在 sidecar 完整时使用它，避免全局 ANN 后过滤。
 - ANN/exact recall overlap gate：能用固定 fixture 比对候选 ANN/native backend 与 exact backend 的 topK chunk id 重合率。
 - overlap gate 可传入 `bookId`，候选 backend 和 exact backend 使用同一个 book scope 验证。
 - 搜索取消、进度、串行、background isolate scoring。

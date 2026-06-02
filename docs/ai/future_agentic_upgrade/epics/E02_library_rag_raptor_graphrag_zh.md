@@ -6,7 +6,7 @@
 ## 1. 当前事实
 
 - 现有 Library RAG 已支持 hybrid retrieval、FTS/BM25、vector、MMR 和 reader jump link。
-- 当前书语义检索已接入同一类 `AiVectorSearchBackend`，优先按 `bookId` 做语义召回；Vec1 builder 已能为 provider/model/dim 建全局 ANN 表，并为每本书建 per-book sidecar ANN 表。current-book 查询只使用完整的 per-book ANN，不使用全局 ANN topK 后过滤，也不使用无预算 `vector_full_scan` native path；FTS/BM25 继续承担精确文本候选，应用层合并时会按 chunk 去重，分页扫描只作为保底降级。
+- 当前书语义检索已接入同一类 `AiVectorSearchBackend`，优先按 `bookId` 做语义召回；Vec1 builder 已能为 provider/model/dim 建全局 ANN 表，并为每本书建 per-book sidecar ANN 表，status API 会单独报告 sidecar ready/missing。current-book 查询只使用完整的 per-book ANN，不使用全局 ANN topK 后过滤，也不使用无预算 `vector_full_scan` native path；FTS/BM25 继续承担精确文本候选，应用层合并时会按 chunk 去重，分页扫描只作为保底降级。
 - `ai_index.db` 是可重建派生缓存，不是用户资产 source-of-truth。
 - 当前实现已有 RAPTOR/GraphRAG 方向的表和 builder 雏形。
 - 新迁移必须以当前 `kAiIndexDbVersion` 为事实；不得在计划中继续写过期的 v6/v7 作为未来目标。
@@ -62,7 +62,7 @@ GraphRAG 的 node/edge/community 必须保留 chunk evidence。模型推断和�
 | E02-C03-T03 | 接入 index schema/progress validation | E02-C03-T01, E02-C03-T02 | current-version migration/progress tests | DB version 从 main v8 按当前 `kAiIndexDbVersion` 递增，`force_rebuild` 和 detailed progress 可验证。 |
 | E02-C04-T01 | 定义 GraphRAG evidence policy | E02-C01-T01 | graph evidence policy | 无 chunk evidence 的 node/edge 只能是 draft。 |
 | E02-C04-T02 | 接入 live provider smoke harness | E02-C01-T02 | `live_rag_gateway_smoke_test.dart` | embedding/rerank gateway smoke 显式 opt-in，默认测试无网络依赖。 |
-| E02-C02-T09 | 接入 current-book vector backend recall | E02-C02-T01 | `SemanticSearchCurrentBook.vectorSearch`, `AiVectorSearchBackend.bookId`, per-book Vec1 sidecar | 当前书检索先按 `bookId` 调用 book-scoped 向量后端，并把 fallback scan budget 传给后端；per-book Vec1 ANN 表存在且 shadow row 完整时先用 ANN，缺表或不完整时降级；全局 Vec1 ANN 和无预算 `vector_full_scan` native path 在 `bookId` 场景跳过；ANN/FTS 命中同一 chunk 时应用层只保留一条证据。 |
+| E02-C02-T09 | 接入 current-book vector backend recall | E02-C02-T01 | `SemanticSearchCurrentBook.vectorSearch`, `AiVectorSearchBackend.bookId`, per-book Vec1 sidecar | 当前书检索先按 `bookId` 调用 book-scoped 向量后端，并把 fallback scan budget 传给后端；per-book Vec1 ANN 表存在且 shadow row 完整时先用 ANN，缺表或不完整时降级；status/API/UI 必须把 per-book sidecar 缺口和全局 ANN group 缺口分开显示；全局 Vec1 ANN 和无预算 `vector_full_scan` native path 在 `bookId` 场景跳过；ANN/FTS 命中同一 chunk 时应用层只保留一条证据。 |
 
 ## 4. Task Execution Defaults
 

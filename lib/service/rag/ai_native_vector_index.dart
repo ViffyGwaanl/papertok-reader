@@ -340,8 +340,11 @@ class AiVec1VectorIndexStatus {
     required this.available,
     required this.totalGroups,
     required this.readyGroups,
+    required this.totalBookTables,
+    required this.readyBookTables,
     required this.nativeRowCount,
     required this.annRowCount,
+    required this.bookAnnRowCount,
     this.info,
     this.lastError,
   });
@@ -349,15 +352,24 @@ class AiVec1VectorIndexStatus {
   final bool available;
   final int totalGroups;
   final int readyGroups;
+  final int totalBookTables;
+  final int readyBookTables;
   final int nativeRowCount;
   final int annRowCount;
+  final int bookAnnRowCount;
   final String? info;
   final String? lastError;
 
   int get missingGroupCount =>
       (totalGroups - readyGroups).clamp(0, totalGroups);
 
-  bool get canBuild => available && nativeRowCount > 0 && missingGroupCount > 0;
+  int get missingBookTableCount =>
+      (totalBookTables - readyBookTables).clamp(0, totalBookTables);
+
+  bool get canBuild =>
+      available &&
+      nativeRowCount > 0 &&
+      (missingGroupCount > 0 || missingBookTableCount > 0);
 }
 
 class AiVec1VectorIndexBuilder {
@@ -415,8 +427,11 @@ class AiVec1VectorIndexBuilder {
         available: false,
         totalGroups: 0,
         readyGroups: 0,
+        totalBookTables: 0,
+        readyBookTables: 0,
         nativeRowCount: 0,
         annRowCount: 0,
+        bookAnnRowCount: 0,
         info: availability.info,
         lastError: availability.lastError,
       );
@@ -429,8 +444,11 @@ GROUP BY provider_id, embedding_model, embedding_dim
 ORDER BY provider_id, embedding_model, embedding_dim
 ''');
     var readyGroups = 0;
+    var totalBookTables = 0;
+    var readyBookTables = 0;
     var nativeRowCount = 0;
     var annRowCount = 0;
+    var bookAnnRowCount = 0;
     String? lastError;
 
     for (final group in groups) {
@@ -457,6 +475,41 @@ ORDER BY provider_id, embedding_model, embedding_dim
         if (tableRowCount >= groupRowCount) {
           readyGroups += 1;
         }
+        final bookRows = await db.rawQuery(
+          '''
+SELECT book_id, COUNT(*) AS row_count
+FROM ai_vector_index_rows
+WHERE COALESCE(provider_id, '') = ?
+  AND COALESCE(embedding_model, '') = ?
+  AND embedding_dim = ?
+GROUP BY book_id
+ORDER BY book_id
+''',
+          [providerId, embeddingModel, embeddingDim],
+        );
+        totalBookTables += bookRows.length;
+        for (final bookRow in bookRows) {
+          final bookId = (bookRow['book_id'] as num?)?.toInt();
+          final bookRowCount = (bookRow['row_count'] as num?)?.toInt() ?? 0;
+          if (bookId == null || bookRowCount <= 0) continue;
+          final bookTableName = tableNameForBook(
+            providerId: providerId,
+            embeddingModel: embeddingModel,
+            embeddingDim: embeddingDim,
+            bookId: bookId,
+          );
+          if (!await _tableExists(db, bookTableName)) continue;
+          final bookTableRows = await db.rawQuery(
+            'SELECT COUNT(*) AS row_count FROM $bookTableName',
+          );
+          final bookTableRowCount = bookTableRows.isEmpty
+              ? 0
+              : (bookTableRows.first['row_count'] as num?)?.toInt() ?? 0;
+          bookAnnRowCount += bookTableRowCount;
+          if (bookTableRowCount >= bookRowCount) {
+            readyBookTables += 1;
+          }
+        }
       } catch (e) {
         lastError = e.toString();
       }
@@ -466,8 +519,11 @@ ORDER BY provider_id, embedding_model, embedding_dim
       available: true,
       totalGroups: groups.length,
       readyGroups: readyGroups,
+      totalBookTables: totalBookTables,
+      readyBookTables: readyBookTables,
       nativeRowCount: nativeRowCount,
       annRowCount: annRowCount,
+      bookAnnRowCount: bookAnnRowCount,
       info: availability.info,
       lastError: lastError,
     );

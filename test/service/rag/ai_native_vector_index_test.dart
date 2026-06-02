@@ -415,6 +415,32 @@ void main() {
     expect(status.canBuild, true);
   });
 
+  test('vec1 status reports missing per-book sidecar tables', () async {
+    final tableName = AiVec1VectorIndexBuilder.tableNameFor(
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      embeddingDim: 2,
+    );
+    final db = _RecordingVec1StatusDatabase(
+      tableName: tableName,
+      nativeRowCount: 2,
+      annRowCount: 2,
+      bookRowCounts: const {1: 2},
+      bookAnnRowCounts: const {},
+    );
+
+    final status =
+        await const AiVec1VectorIndexBuilder().inspectBuildStatus(db);
+
+    expect(status.readyGroups, 1);
+    expect(status.missingGroupCount, 0);
+    expect(status.totalBookTables, 1);
+    expect(status.readyBookTables, 0);
+    expect(status.missingBookTableCount, 1);
+    expect(status.bookAnnRowCount, 0);
+    expect(status.canBuild, true);
+  });
+
   test('ann then native backend uses book-scoped ANN before fallback',
       () async {
     final ann = _StaticVectorBackend([
@@ -980,11 +1006,25 @@ class _RecordingVec1StatusDatabase implements Database {
     required this.tableName,
     required this.nativeRowCount,
     required this.annRowCount,
+    this.bookRowCounts = const {},
+    this.bookAnnRowCounts = const {},
   });
 
   final String tableName;
   final int nativeRowCount;
   final int annRowCount;
+  final Map<int, int> bookRowCounts;
+  final Map<int, int> bookAnnRowCounts;
+
+  Map<int, String> get _bookTableNames => {
+        for (final bookId in bookRowCounts.keys)
+          bookId: AiVec1VectorIndexBuilder.tableNameForBook(
+            providerId: 'provider-a',
+            embeddingModel: 'model-a',
+            embeddingDim: 2,
+            bookId: bookId,
+          ),
+      };
 
   @override
   Future<List<Map<String, Object?>>> rawQuery(
@@ -1006,10 +1046,39 @@ class _RecordingVec1StatusDatabase implements Database {
         }
       ];
     }
-    if (sql.contains('sqlite_master')) {
+    if (sql.contains('GROUP BY book_id')) {
       return [
-        {'name': tableName}
+        for (final entry in bookRowCounts.entries)
+          {
+            'book_id': entry.key,
+            'row_count': entry.value,
+          }
       ];
+    }
+    if (sql.contains('sqlite_master')) {
+      final requestedTable =
+          arguments?.isEmpty == false ? arguments!.first?.toString() : null;
+      if (requestedTable == tableName) {
+        return [
+          {'name': tableName}
+        ];
+      }
+      for (final entry in _bookTableNames.entries) {
+        if (requestedTable == entry.value &&
+            bookAnnRowCounts.containsKey(entry.key)) {
+          return [
+            {'name': entry.value}
+          ];
+        }
+      }
+      return const [];
+    }
+    for (final entry in _bookTableNames.entries) {
+      if (sql.contains('COUNT(*)') && sql.contains(entry.value)) {
+        return [
+          {'row_count': bookAnnRowCounts[entry.key] ?? 0}
+        ];
+      }
     }
     if (sql.contains('COUNT(*)') && sql.contains(tableName)) {
       return [

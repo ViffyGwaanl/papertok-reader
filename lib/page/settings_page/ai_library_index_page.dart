@@ -727,14 +727,14 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
           ? '还没有可构建 ANN 的向量层；请先运行“向量索引升级”。'
           : 'No compact vector rows are ready yet. Run Native vector index first.';
     }
-    if (status.missingGroupCount <= 0) {
+    if (status.missingGroupCount <= 0 && status.missingBookTableCount <= 0) {
       return _isZh(context)
-          ? 'ANN 已就绪：${status.readyGroups}/${status.totalGroups} 组，${status.annRowCount}/${status.nativeRowCount} 行。'
-          : 'ANN ready: ${status.readyGroups}/${status.totalGroups} group(s), ${status.annRowCount}/${status.nativeRowCount} row(s).';
+          ? 'ANN 已就绪：${status.readyGroups}/${status.totalGroups} 组，单书 sidecar ${status.readyBookTables}/${status.totalBookTables} 本，${status.annRowCount}/${status.nativeRowCount} 全局行，${status.bookAnnRowCount}/${status.nativeRowCount} sidecar 行。'
+          : 'ANN ready: ${status.readyGroups}/${status.totalGroups} group(s), ${status.readyBookTables}/${status.totalBookTables} book sidecar(s), ${status.annRowCount}/${status.nativeRowCount} global row(s), ${status.bookAnnRowCount}/${status.nativeRowCount} sidecar row(s).';
     }
     return _isZh(context)
-        ? '可构建 ANN：缺 ${status.missingGroupCount}/${status.totalGroups} 组，已写 ${status.annRowCount}/${status.nativeRowCount} 行。'
-        : 'ANN can be built: ${status.missingGroupCount}/${status.totalGroups} group(s) missing, ${status.annRowCount}/${status.nativeRowCount} row(s) written.';
+        ? '可构建 ANN：缺 ${status.missingGroupCount}/${status.totalGroups} 组，缺单书 sidecar ${status.missingBookTableCount}/${status.totalBookTables} 本，已写 ${status.annRowCount}/${status.nativeRowCount} 全局行，${status.bookAnnRowCount}/${status.nativeRowCount} sidecar 行。'
+        : 'ANN can be built: ${status.missingGroupCount}/${status.totalGroups} group(s) missing, ${status.missingBookTableCount}/${status.totalBookTables} book sidecar(s) missing, ${status.annRowCount}/${status.nativeRowCount} global row(s), ${status.bookAnnRowCount}/${status.nativeRowCount} sidecar row(s) written.';
   }
 
   String _annVectorRunningText(
