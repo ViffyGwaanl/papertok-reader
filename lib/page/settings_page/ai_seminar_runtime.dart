@@ -411,10 +411,13 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
   }
 
   List<AiSeminarRole> get _selectedRoles => [
-        AiSeminarRole.critical,
-        AiSeminarRole.supportive,
-        if (_includeVerifier) AiSeminarRole.verifier,
-        AiSeminarRole.synthesizer,
+        for (final role in [
+          AiSeminarRole.critical,
+          AiSeminarRole.supportive,
+          if (_includeVerifier) AiSeminarRole.verifier,
+          AiSeminarRole.synthesizer,
+        ])
+          if (Prefs().aiSeminarRoleProfileFor(role)?.enabled != false) role,
       ];
 }
 
@@ -1013,10 +1016,12 @@ class _SeminarUserInterventionSectionState
     final roles = (sessionRoles == null || sessionRoles.isEmpty)
         ? AiSeminarRole.defaultRoles
         : sessionRoles;
-    final out = roles
+    final nonSynthesizerRoles = roles
         .where((role) => role != AiSeminarRole.synthesizer)
         .toList(growable: false);
-    return out.isEmpty ? const [AiSeminarRole.critical] : out;
+    return nonSynthesizerRoles.isEmpty
+        ? roles.toList(growable: false)
+        : nonSynthesizerRoles;
   }
 
   Future<void> _submit(

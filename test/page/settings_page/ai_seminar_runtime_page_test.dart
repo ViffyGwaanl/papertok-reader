@@ -302,7 +302,7 @@ void main() {
     expect(container.read(aiSeminarRuntimeProvider).status,
         AiSeminarRunStatus.completed);
     await tester.scrollUntilVisible(
-      find.text('Continue discussion'),
+      textFieldWithLabel('Your Seminar reply'),
       220,
       scrollable: find.byType(Scrollable).first,
     );
@@ -431,6 +431,104 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('critical follow-up response'), findsOneWidget);
+  });
+
+  testWidgets('reader role picker respects disabled roles', (tester) async {
+    Prefs().aiSeminarRoleProfiles = [
+      AiSeminarRoleProfile(
+        role: AiSeminarRole.critical,
+        enabled: false,
+      ),
+      AiSeminarRoleProfile(
+        role: AiSeminarRole.supportive,
+        enabled: false,
+      ),
+    ];
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => AiSeminarEvidenceBundle(
+        query: 'What should I test?',
+        evidence: [
+          AiSeminarEvidence(
+            id: 'e1',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'The source passage.',
+            sourceRef: traceableRef(),
+          ),
+        ],
+      ),
+      streamRole: (invocation, _) async* {
+        final isFollowUp = invocation.priorTurns.isNotEmpty;
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: isFollowUp
+                ? 'turn-${invocation.role.asString}-follow-up'
+                : 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: isFollowUp
+                ? '${invocation.role.asString} follow-up response'
+                : '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+            whiteboardEntries: [
+              if (!isFollowUp)
+                const AiSeminarWhiteboardEntry(
+                  id: 'question-1',
+                  kind: AiSeminarWhiteboardKind.openQuestion,
+                  text: 'Which interpretation should the reader test next?',
+                  role: AiSeminarRole.synthesizer,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What should I test?'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      textFieldWithLabel('Your Seminar reply'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('Critical'), findsNothing);
+    expect(find.text('Synthesizer'), findsWidgets);
+    await tester.enterText(
+      textFieldWithLabel('Your Seminar reply'),
+      'Please continue as the remaining role.',
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ask selected role'));
+    await tester.tap(find.text('Ask selected role'));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiSeminarRuntimePanel)),
+    );
+    final state = container.read(aiSeminarRuntimeProvider);
+    expect(state.session!.roles, [AiSeminarRole.synthesizer]);
+    expect(state.turns.last.role, AiSeminarRole.synthesizer);
+    expect(state.turns.last.id, 'turn-synthesizer-follow-up');
+    expect(state.directorState!.lastUserIntervention!.targetRole,
+        AiSeminarRole.synthesizer);
   });
 
   testWidgets('refresh evidence action reruns Seminar with new evidence',
@@ -879,6 +977,74 @@ void main() {
     );
   });
 
+  testWidgets('Seminar settings page persists role governance', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: L10n.localizationsDelegates,
+        supportedLocales: L10n.supportedLocales,
+        home: AiSeminarConfigPage(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -520));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Role prompt profiles'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Supportive'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Supportive'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.widgetWithText(SwitchListTile, 'Enable Supportive'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Enable Supportive'));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(
+        const ValueKey('seminar-role-supportive-scope-library'),
+      ),
+    );
+    await tester.pump();
+    final currentBookTool = find.byKey(
+      const ValueKey(
+        'seminar-role-supportive-tool-semantic_search_current_book',
+      ),
+    );
+    await tester.ensureVisible(currentBookTool);
+    await tester.pumpAndSettle();
+    await tester.tap(currentBookTool);
+    await tester.pump();
+    final libraryTool = find.byKey(
+      const ValueKey(
+        'seminar-role-supportive-tool-semantic_search_library',
+      ),
+    );
+    await tester.ensureVisible(libraryTool);
+    await tester.pumpAndSettle();
+    await tester.tap(libraryTool);
+    await tester.pump();
+
+    final supportive =
+        Prefs().aiSeminarRoleProfileFor(AiSeminarRole.supportive);
+    expect(supportive?.enabled, false);
+    expect(supportive?.evidenceScopes, [
+      AiSeminarEvidenceScope.library,
+    ]);
+    expect(supportive?.allowedToolIds, [
+      'semantic_search_current_book',
+      'semantic_search_library',
+    ]);
+  });
+
   testWidgets('start injects configured role prompt into seminar invocation',
       (tester) async {
     await Prefs().prefs.setString(
@@ -944,6 +1110,97 @@ void main() {
     expect(
       criticalPrompt,
       contains('Challenge causal claims and name missing evidence.'),
+    );
+  });
+
+  testWidgets('start applies role governance to session and prompt',
+      (tester) async {
+    Prefs().aiSeminarRoleProfiles = [
+      AiSeminarRoleProfile(
+        role: AiSeminarRole.supportive,
+        enabled: false,
+        evidenceScopes: const [AiSeminarEvidenceScope.library],
+        allowedToolIds: const [
+          'semantic_search_current_book',
+          'semantic_search_library',
+          'create_note',
+        ],
+      ),
+      AiSeminarRoleProfile(
+        role: AiSeminarRole.critical,
+        evidenceScopes: const [AiSeminarEvidenceScope.currentBook],
+        allowedToolIds: const ['semantic_search_current_book'],
+      ),
+    ];
+    AiSeminarSessionContract? capturedSession;
+    String? criticalPrompt;
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (session) async {
+        capturedSession = session;
+        return AiSeminarEvidenceBundle(
+          query: session.question,
+          evidence: [
+            AiSeminarEvidence(
+              id: 'e1',
+              scope: AiSeminarEvidenceScope.currentBook,
+              text: 'Traceable evidence.',
+              sourceRef: traceableRef(),
+            ),
+          ],
+        );
+      },
+      streamRole: (invocation, _) async* {
+        if (invocation.role == AiSeminarRole.critical) {
+          criticalPrompt = invocation.prompt;
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(initialQuestion: 'What is the claim?'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await scrollToStartSeminar(tester);
+    await tester.tap(find.text('Start Seminar'));
+    await tester.pumpAndSettle();
+
+    expect(capturedSession, isNotNull);
+    expect(capturedSession!.roles, isNot(contains(AiSeminarRole.supportive)));
+    expect(capturedSession!.roles, contains(AiSeminarRole.critical));
+    expect(capturedSession!.roleProfileFor(AiSeminarRole.supportive)?.enabled,
+        false);
+    expect(
+      capturedSession!.roleProfileFor(AiSeminarRole.supportive)?.allowedToolIds,
+      ['semantic_search_current_book', 'semantic_search_library'],
+    );
+    expect(
+      criticalPrompt,
+      contains('Session evidence hints from role profile: current-book'),
+    );
+    expect(
+      criticalPrompt,
+      contains('Allowed read-only tools: semantic_search_current_book'),
     );
   });
 

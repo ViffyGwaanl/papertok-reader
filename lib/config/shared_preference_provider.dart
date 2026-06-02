@@ -4163,6 +4163,10 @@ Requirements:
     AiSeminarRole role, {
     String? name,
     String? customPrompt,
+    bool enabled = true,
+    List<AiSeminarEvidenceScope> evidenceScopes =
+        const <AiSeminarEvidenceScope>[],
+    List<String> allowedToolIds = const <String>[],
   }) {
     final byRole = <AiSeminarRole, AiSeminarRoleProfile>{
       for (final profile in aiSeminarRoleProfiles) profile.role: profile,
@@ -4171,6 +4175,9 @@ Requirements:
       role: role,
       name: name,
       customPrompt: customPrompt,
+      enabled: enabled,
+      evidenceScopes: evidenceScopes,
+      allowedToolIds: allowedToolIds,
     );
     if (next.hasOverrides) {
       byRole[role] = next;

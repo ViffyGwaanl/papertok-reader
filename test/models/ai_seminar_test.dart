@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/service/ai/ai_seminar_orchestration_service.dart';
 
 void main() {
   group('AiSeminarSessionContract', () {
@@ -91,6 +92,80 @@ void main() {
       expect(
         profile?.customPrompt,
         'Challenge causal claims and name missing evidence.',
+      );
+    });
+
+    test('round-trips role governance and filters unsafe tool scope', () {
+      final session = AiSeminarSessionContract(
+        id: 's-role-governance',
+        question: 'Who should challenge this claim?',
+        roleProfiles: [
+          AiSeminarRoleProfile(
+            role: AiSeminarRole.supportive,
+            enabled: false,
+            evidenceScopes: const [
+              AiSeminarEvidenceScope.currentBook,
+              AiSeminarEvidenceScope.library,
+              AiSeminarEvidenceScope.library,
+            ],
+            allowedToolIds: const [
+              'semantic_search_current_book',
+              'semantic_search_library',
+              'create_note',
+              'spawn_sub_agent',
+              'unknown_tool',
+              '',
+            ],
+          ),
+          AiSeminarRoleProfile(
+            role: AiSeminarRole.critical,
+            customPrompt: 'Use this API key api key: placeholder-value',
+          ),
+        ],
+      );
+
+      final restored = AiSeminarSessionContract.fromJson(session.toJson());
+      final supportive = restored.roleProfileFor(AiSeminarRole.supportive);
+      final critical = restored.roleProfileFor(AiSeminarRole.critical);
+
+      expect(restored.roles, [
+        AiSeminarRole.critical,
+        AiSeminarRole.synthesizer,
+      ]);
+      expect(supportive?.enabled, false);
+      expect(supportive?.evidenceScopes, [
+        AiSeminarEvidenceScope.currentBook,
+        AiSeminarEvidenceScope.library,
+      ]);
+      expect(supportive?.allowedToolIds, [
+        'semantic_search_current_book',
+        'semantic_search_library',
+      ]);
+      expect(critical, isNull);
+    });
+
+    test('execution order does not re-add disabled session roles', () {
+      final session = AiSeminarSessionContract(
+        id: 's-role-disabled',
+        question: 'Who should speak?',
+        roleProfiles: [
+          AiSeminarRoleProfile(
+            role: AiSeminarRole.supportive,
+            enabled: false,
+          ),
+        ],
+      );
+
+      expect(session.roles, [
+        AiSeminarRole.critical,
+        AiSeminarRole.synthesizer,
+      ]);
+      expect(
+        AiSeminarOrchestrationService.executionOrder(session.roles),
+        [
+          AiSeminarRole.critical,
+          AiSeminarRole.synthesizer,
+        ],
       );
     });
 

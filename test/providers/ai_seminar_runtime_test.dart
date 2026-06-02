@@ -511,6 +511,45 @@ void main() {
     expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e1']);
   });
 
+  test('rejects reader requested role disabled for the active session',
+      () async {
+    configureProvider();
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(aiSeminarRuntimeProvider.notifier);
+
+    await notifier.start(
+      AiSeminarSessionContract(
+        id: 's-disabled-user-role',
+        question: 'Explain.',
+        roleProfiles: [
+          AiSeminarRoleProfile(
+            role: AiSeminarRole.critical,
+            enabled: false,
+          ),
+        ],
+      ),
+    );
+
+    await expectLater(
+      notifier.recordUserIntervention(
+        text: '请 critical 角色继续回应。',
+        requestedAction: AiSeminarUserInterventionAction.askRole,
+        targetRole: AiSeminarRole.critical,
+        now: 1234,
+      ),
+      throwsA(isA<StateError>()),
+    );
+    final state = container.read(aiSeminarRuntimeProvider);
+    expect(state.session!.roles, isNot(contains(AiSeminarRole.critical)));
+    expect(state.error, contains('not enabled'));
+    expect(state.directorState?.lastUserIntervention, isNull);
+  });
+
   test('executes reader requested synthesize without rerunning roles',
       () async {
     configureProvider();

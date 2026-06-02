@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 
 enum AiSeminarRole {
@@ -36,11 +37,18 @@ class AiSeminarRoleProfile {
     required AiSeminarRole role,
     String? name,
     String? customPrompt,
+    bool enabled = true,
+    List<AiSeminarEvidenceScope> evidenceScopes =
+        const <AiSeminarEvidenceScope>[],
+    List<String> allowedToolIds = const <String>[],
   }) {
     return AiSeminarRoleProfile._(
       role: role,
       name: _trimmedOrNull(name),
-      customPrompt: _trimmedOrNull(customPrompt),
+      customPrompt: _safePromptOrNull(customPrompt),
+      enabled: enabled,
+      evidenceScopes: _dedupeScopes(evidenceScopes),
+      allowedToolIds: _sanitizeAllowedToolIds(allowedToolIds),
     );
   }
 
@@ -48,18 +56,33 @@ class AiSeminarRoleProfile {
     required this.role,
     required this.name,
     required this.customPrompt,
+    required this.enabled,
+    required this.evidenceScopes,
+    required this.allowedToolIds,
   });
 
   final AiSeminarRole role;
   final String? name;
   final String? customPrompt;
+  final bool enabled;
+  final List<AiSeminarEvidenceScope> evidenceScopes;
+  final List<String> allowedToolIds;
 
-  bool get hasOverrides => name != null || customPrompt != null;
+  bool get hasGovernanceOverrides =>
+      !enabled || evidenceScopes.isNotEmpty || allowedToolIds.isNotEmpty;
+
+  bool get hasOverrides =>
+      name != null || customPrompt != null || hasGovernanceOverrides;
 
   Map<String, dynamic> toJson() => {
         'role': role.asString,
         if (name != null) 'name': name,
         if (customPrompt != null) 'customPrompt': customPrompt,
+        if (!enabled) 'enabled': false,
+        if (evidenceScopes.isNotEmpty)
+          'evidenceScopes':
+              evidenceScopes.map((scope) => scope.asString).toList(),
+        if (allowedToolIds.isNotEmpty) 'allowedToolIds': allowedToolIds,
       };
 
   factory AiSeminarRoleProfile.fromJson(
@@ -70,6 +93,9 @@ class AiSeminarRoleProfile {
       role: role,
       name: json['name']?.toString(),
       customPrompt: json['customPrompt']?.toString(),
+      enabled: json['enabled'] != false,
+      evidenceScopes: _evidenceScopesFromJson(json['evidenceScopes']),
+      allowedToolIds: _stringListFromJson(json['allowedToolIds']),
     );
   }
 
@@ -77,6 +103,71 @@ class AiSeminarRoleProfile {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty) return null;
     return text;
+  }
+
+  static String? _safePromptOrNull(Object? value) {
+    final text = _trimmedOrNull(value);
+    if (text == null || _looksLikeSecret(text)) return null;
+    return text;
+  }
+
+  static bool _looksLikeSecret(String text) {
+    return RegExp(
+      r'(sk-[A-Za-z0-9_-]{8,}|api[_ -]?key\s*[:=]\s*\S{8,}|bearer\s+[A-Za-z0-9._-]{12,})',
+      caseSensitive: false,
+    ).hasMatch(text);
+  }
+
+  static List<AiSeminarEvidenceScope> _evidenceScopesFromJson(Object? raw) {
+    if (raw is! List) return const <AiSeminarEvidenceScope>[];
+    return _dedupeScopes(
+      raw
+          .map((item) => AiSeminarEvidenceScope.fromString(item?.toString()))
+          .whereType<AiSeminarEvidenceScope>()
+          .toList(growable: false),
+    );
+  }
+
+  static List<String> _stringListFromJson(Object? raw) {
+    if (raw is! List) return const <String>[];
+    return raw.map((item) => item?.toString() ?? '').toList(growable: false);
+  }
+
+  static List<AiSeminarEvidenceScope> _dedupeScopes(
+    List<AiSeminarEvidenceScope> scopes,
+  ) {
+    final out = <AiSeminarEvidenceScope>[];
+    for (final scope in scopes) {
+      if (!out.contains(scope)) out.add(scope);
+    }
+    return List.unmodifiable(out);
+  }
+
+  static List<String> _sanitizeAllowedToolIds(List<String> toolIds) {
+    final out = <String>[];
+    for (final raw in toolIds) {
+      final toolId = raw.trim();
+      if (toolId.isEmpty || out.contains(toolId)) continue;
+      if (!_isSafeSeminarRoleTool(toolId)) continue;
+      out.add(toolId);
+    }
+    return List.unmodifiable(out);
+  }
+
+  static bool _isSafeSeminarRoleTool(String toolId) {
+    if (toolId == 'spawn_sub_agent') return false;
+    final defaultRule = AiToolPermissionMatrix.defaultMatrix.ruleFor(toolId);
+    final fallbackRule =
+        AiToolPermissionMatrix.seminarLibraryFallbackMatrix.ruleFor(toolId);
+    final rule = fallbackRule ?? defaultRule;
+    if (rule == null) return false;
+    final allowedInSeminar =
+        defaultRule?.allows(AiAgentScene.seminar) == true ||
+            fallbackRule?.allows(AiAgentScene.seminar) == true;
+    return allowedInSeminar &&
+        rule.readOnly &&
+        !rule.requiresApproval &&
+        !rule.allowsExternalNetwork;
   }
 }
 
@@ -452,12 +543,15 @@ class AiSeminarSessionContract {
     List<AiSeminarRoleProfile> roleProfiles = const <AiSeminarRoleProfile>[],
     int? createdAt,
   }) {
-    final normalizedRoles = _normalizeRoles(roles);
-    final normalizedScopes = _dedupeScopes(scopes);
+    final normalizedRoleProfiles = _normalizeRoleProfiles(roleProfiles);
+    final normalizedRoles = _normalizeRoles(roles, normalizedRoleProfiles);
+    final normalizedScopes = _scopesWithRoleProfiles(
+      scopes,
+      normalizedRoleProfiles,
+    );
     final normalizedSourceRefs = _dedupeSourceRefs(sourceRefs);
     final normalizedBudget = budgetPolicy?.normalized;
     final normalizedBillingContext = billingContext?.normalized;
-    final normalizedRoleProfiles = _normalizeRoleProfiles(roleProfiles);
     return AiSeminarSessionContract._(
       id: id.trim(),
       question: question.trim(),
@@ -583,7 +677,10 @@ class AiSeminarSessionContract {
     );
   }
 
-  static List<AiSeminarRole> _normalizeRoles(List<AiSeminarRole> roles) {
+  static List<AiSeminarRole> _normalizeRoles(
+    List<AiSeminarRole> roles,
+    List<AiSeminarRoleProfile> roleProfiles,
+  ) {
     final out = <AiSeminarRole>[];
     for (final role in roles) {
       if (!out.contains(role)) out.add(role);
@@ -606,6 +703,12 @@ class AiSeminarSessionContract {
       };
       return order[a]!.compareTo(order[b]!);
     });
+    final disabledRoles = {
+      for (final profile in roleProfiles)
+        if (!profile.enabled) profile.role,
+    };
+    out.removeWhere(disabledRoles.contains);
+    if (out.isEmpty) out.add(AiSeminarRole.synthesizer);
     return List.unmodifiable(out);
   }
 
@@ -649,6 +752,17 @@ class AiSeminarSessionContract {
       return List.unmodifiable(out);
     }
     return const <AiSeminarRoleProfile>[];
+  }
+
+  static List<AiSeminarEvidenceScope> _scopesWithRoleProfiles(
+    List<AiSeminarEvidenceScope> scopes,
+    List<AiSeminarRoleProfile> roleProfiles,
+  ) {
+    return _dedupeScopes([
+      ...scopes,
+      for (final profile in roleProfiles)
+        if (profile.enabled) ...profile.evidenceScopes,
+    ]);
   }
 
   static List<AiSeminarEvidenceScope> _dedupeScopes(

@@ -20,7 +20,7 @@
 | 选中文本生成知识卡 | 阅读页选中文本 -> `知识卡` -> `Settings -> AI -> Review inbox` | 读到重点时点一下，生成带原文证据和跳转来源的 KnowledgeCard，先进入 Review。 | 不自动写长期记忆、笔记或复习；重复点击不会制造重复卡。 |
 | 图片解析生成知识卡 | 图片大图 -> `AI图片解析` -> `知识卡` | 对 EPUB 图片、图表、插图做 AI 解析后，把结果变成待审知识卡。 | 图片本体和 base64 不写进卡片；只保存解析结果、来源和证据摘录。 |
 | AI Chat 回答生成知识卡 | 阅读页选中文本 -> `AI` -> 等回答完成 -> 回答旁 `知识卡` | 普通问答结束后，把有价值回答沉淀为待审知识卡，并保留能否跳回原文的来源状态。 | streaming 中按钮禁用；无 reader grounding 的旧聊天只保留 conversation provenance。 |
-| 多角色 Seminar | 阅读页选中文本 -> `研讨`，AI Chat `+` -> `AI 研讨会`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文或一个聊天问题启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结；阅读页选中文本和 AI Chat 入口都会在当前 AI Chat 页面内展开 Seminar 面板，且阅读页入口保留 SourceRef；AI Chat `+` 入口会在会话历史里留下可持久化 `AI 研讨会` 任务卡，历史重载后可点击重新打开 inline runtime；内嵌 runtime 运行、完成或刷新证据时，会把卡片状态、来源数量、证据快照、角色观点、研讨总结、分歧数、开放问题数和 `研讨白板` 正文回写到同一张卡；当前活跃同 session 且可送审的任务卡会显示 `发送到待审`，把可追踪 synthesis 和候选项送入 pending Review；Seminar settings 可编辑每个角色的显示名和 custom prompt；当白板留下 open question 或 disagreement，状态区会显示主持人下一步是邀请读者参与还是重新检索证据；需要用户参与时，用户可输入回复并选择让某个角色回应、重新找证据或整理总结；选择让角色回应时，所选角色会生成 follow-up turn 并更新 synthesis；选择重新找证据时，会重新检索 evidence、重跑角色并更新 synthesis；选择整理总结时，会用现有 evidence 和 turns 执行本地 synthesis 并收束 Director；如果一轮讨论只留下 disagreement 且仍有轮次预算，runtime 会自动重新找证据并重跑角色，预算用完仍有分歧时再请用户介入。 | 任务卡已有只读证据/角色/总结 snapshot、白板正文首片和首片送审按钮，但还不是包含历史卡离线送审详情子视图、run-scoped composer 子视图和 per-run 多实例隔离的完整结构化消息卡；用户回复不进入 formal evidence；还没有完整角色反驳 loop；结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
+| 多角色 Seminar | 阅读页选中文本 -> `研讨`，AI Chat `+` -> `AI 研讨会`，或 `Settings -> AI -> Seminar Mode` | 围绕一段原文或一个聊天问题启动 critical、supportive、synthesizer 多角色讨论，展示 evidence、角色发言、共享白板和综合总结；阅读页选中文本和 AI Chat 入口都会在当前 AI Chat 页面内展开 Seminar 面板，且阅读页入口保留 SourceRef；AI Chat `+` 入口会在会话历史里留下可持久化 `AI 研讨会` 任务卡，历史重载后可点击重新打开 inline runtime；内嵌 runtime 运行、完成或刷新证据时，会把卡片状态、来源数量、证据快照、角色观点、研讨总结、分歧数、开放问题数和 `研讨白板` 正文回写到同一张卡；当前活跃同 session 且可送审的任务卡会显示 `发送到待审`，把可追踪 synthesis 和候选项送入 pending Review；Seminar settings 可编辑每个角色的显示名、custom prompt、启用状态、会话证据提示和允许的只读工具；关闭角色后新讨论会跳过该角色，全部关闭时保留 synthesizer 兜底；工具范围会过滤写工具、联网工具、unknown tool 和递归 `spawn_sub_agent`；当白板留下 open question 或 disagreement，状态区会显示主持人下一步是邀请读者参与还是重新检索证据；需要用户参与时，用户可输入回复并选择让某个角色回应、重新找证据或整理总结；选择让角色回应时，所选角色会生成 follow-up turn 并更新 synthesis；选择重新找证据时，会重新检索 evidence、重跑角色并更新 synthesis；选择整理总结时，会用现有 evidence 和 turns 执行本地 synthesis 并收束 Director；如果一轮讨论只留下 disagreement 且仍有轮次预算，runtime 会自动重新找证据并重跑角色，预算用完仍有分歧时再请用户介入。 | 任务卡已有只读证据/角色/总结 snapshot、白板正文首片和首片送审按钮，但还不是包含历史卡离线送审详情子视图、run-scoped composer 子视图、单次 run 临时角色配置和 per-run 多实例隔离的完整结构化消息卡；角色工具范围目前是配置和 prompt 治理，不代表每个角色都能自由调用工具；用户回复不进入 formal evidence；还没有完整角色反驳 loop；结果只进入 Review；默认 current book 优先；不自动写长期资产。 |
 | Seminar 预算与恢复 | Seminar 页面本地 budget 区、Provider readiness 区、job 状态区 | 用户能看到 provider/model 能力、token 用量、本地估算成本、当前 job id/status；可取消、重试、排队下一场。 | 这是本机 job/cache，不是跨进程后台续跑；重启中的 running job 只有在证据可追踪且 provider/model/pricing 仍匹配时才会重新生成缺失角色，旧 LLM stream 不会原地续传。 |
 | Review Inbox | `Settings -> AI -> Review inbox` | 所有 AI 生成的卡片、记忆、图谱关系、flashcard、同步冲突都先进入审批入口。 | 空 inbox 只代表没有 producer 写入，不代表入口不存在。 |
 | Memory 候选审核 | AI Chat 回答旁书签图标 -> `Add to Review inbox` | 有价值的聊天内容先进入 Review，再由用户决定写入 daily/long-term memory。 | Apply 才写 Markdown memory；Dismiss 不写 memory。 |
@@ -44,7 +44,7 @@
 | `SourceRef` / provenance 统一 | 所有 AI 结论、知识卡、图谱关系、复习项需要知道来自哪本书、哪个 CFI、哪个 chunk、哪个模型。 | 用户点击卡片或复习题能解释“这条知识从哪里来”，也能跳回原文。 |
 | Review source-specific adapters | KnowledgeCard、Memory、ConceptGraph、flashcard、sync conflict 的 Apply 逻辑不同，不能只改一个状态字段。 | 审批动作更可追踪，减少“点了 Apply 但资产没真正写入”的错位。 |
 | Seminar runtime contract | 多角色讨论需要结构化保存 session、evidence、turn、whiteboard、synthesis、billing snapshot。 | 用户看到的是一个可取消、可重试、能送 Review 的讨论界面，而不是一次 prompt-only 输出。 |
-| OpenMAIC-style Director 思路 | OpenMAIC 把多 agent 讨论拆成 DirectorState、agent turn summary、whiteboard ledger 和 USER cue；这个结构适合 PaperTok 的长讨论。 | 基础角色显示名/custom prompt 已先接到 Seminar settings；`AiSeminarDirectorState` 已能在 runtime state 里记录轮次、已完成角色、证据账本、白板账本、分歧和用户插话，并把 open question / disagreement 转成 `askUser` 或 `refreshEvidence` 的下一步提示；用户回复可保存为 human intervention 并路由成 `runRole / refreshEvidence / synthesize` intent，其中 `runRole` 已能调用所选角色生成 follow-up turn，`refreshEvidence` 已能重新检索 evidence 并重跑角色，`synthesize` 已能用现有 evidence/turns 执行本地 synthesis；completed run 只留下 disagreement 且仍有轮次预算时，runtime 会自动刷新 evidence 并重跑角色；AI Chat 历史任务卡已能持久化 evidence/role/synthesis snapshot，显示 `研讨白板` 中的分歧和开放问题正文，并在同 session active runtime 可送审时显示 `发送到待审`。下一步是让 AI Chat 内嵌 Seminar 继续做完整角色反驳 loop、历史卡离线送审子视图和 per-run 多实例隔离，而不是固定一轮就总结。 |
+| OpenMAIC-style Director 思路 | OpenMAIC 把多 agent 讨论拆成 DirectorState、agent turn summary、whiteboard ledger 和 USER cue；这个结构适合 PaperTok 的长讨论。 | 角色显示名、custom prompt、启用状态、会话证据提示和只读工具范围已先接到 Seminar settings；`AiSeminarDirectorState` 已能在 runtime state 里记录轮次、已完成角色、证据账本、白板账本、分歧和用户插话，并把 open question / disagreement 转成 `askUser` 或 `refreshEvidence` 的下一步提示；用户回复可保存为 human intervention 并路由成 `runRole / refreshEvidence / synthesize` intent，其中 `runRole` 已能调用所选角色生成 follow-up turn，`refreshEvidence` 已能重新检索 evidence 并重跑角色，`synthesize` 已能用现有 evidence/turns 执行本地 synthesis；completed run 只留下 disagreement 且仍有轮次预算时，runtime 会自动刷新 evidence 并重跑角色；AI Chat 历史任务卡已能持久化 evidence/role/synthesis snapshot，显示 `研讨白板` 中的分歧和开放问题正文，并在同 session active runtime 可送审时显示 `发送到待审`。下一步是让 AI Chat 内嵌 Seminar 继续做 Chat run 内临时角色配置、完整角色反驳 loop、历史卡离线送审子视图和 per-run 多实例隔离，而不是固定一轮就总结。 |
 | Provider capability / billing snapshot | provider 是否支持 tools、vision、thinking、streaming、pricing metadata，需要和运行记录分开。 | 页面能说清楚“provider 用量”和“本地估算”区别，不把估算当账单。 |
 | Current-book semantic search paging | 旧实现一次拉全书 chunk 和 embedding，容易 OOM。 | 用户感知为搜索更不容易卡死，AI 提问时更少把阅读页拖慢。 |
 | CustomSkill schema/parser/validator | 自定义 skill 不能只靠一段 YAML/JSON 文本直接注入。 | 用户能导入能力，但写操作、递归、未知字段被挡在运行时外面。 |
@@ -94,14 +94,14 @@
 - 内嵌面板可关闭，也可跳到完整 Seminar runtime page。
 - `Choose style / 选择风格` 中有 `研讨会设置` 入口。
 - 独立 Seminar runtime 已支持 evidence、角色输出、共享白板、synthesis、Review handoff、budget、job 状态和本机恢复。
-- Seminar settings 已支持每个默认角色的显示名和 custom prompt；新 session 会把这些设置注入角色 prompt，session JSON 和恢复缓存会保留 profile。
+- Seminar settings 已支持每个默认角色的显示名、custom prompt、启用状态、会话证据提示和允许的只读工具；新 session 会把这些设置注入角色 prompt，session JSON 和恢复缓存会保留 profile；当前可见证据提示只开放 current book/library，并合并到整场 evidence bundle；关闭角色后新 run 会跳过该角色，全部关闭时降级为 synthesizer；写工具、联网工具、unknown tool 和递归 `spawn_sub_agent` 会被过滤。
 - 阅读页选中文本入口能带入真实 SourceRef。
 
 还要做什么：
 
 - 把当前带 snapshot、白板正文首片和首片送审按钮的历史任务卡继续升级为完整 AI Chat message part / run 卡片，补齐历史卡离线送审详情子视图、run-scoped composer 子视图、分歧 tab 和 per-run 多实例隔离。
 - 让 `DirectorState` 从已接入的可恢复账本和 next-intent policy 升级为真实调度器输入：根据已发言角色、分歧、证据刷新次数、用户插话和下一步 intent 决定继续找证据、让某个角色反驳、向用户提问或总结。
-- 补齐角色 profile 治理：默认角色仍是 `critical/supportive/synthesizer/verifier`；显示名和 custom prompt 已有基础设置，后续还要增加启用状态、证据策略、工具范围、空 prompt 校验和角色级预算。
+- 补齐角色 profile 治理的剩余部分：默认角色仍是 `critical/supportive/synthesizer/verifier`；显示名、custom prompt、启用状态、会话证据提示和只读工具范围已有 Settings 全局默认；后续还要增加 AI Chat 单次 run 临时配置、空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用闭环。
 - 增加多轮机制：第一轮观点后做 contradiction scan；证据不足或角色冲突时重新检索，再进入反驳轮，最后 synthesis。
 - 继续完善用户讨论环节：用户输入框、动作选择、“某角色回应”、“重新找证据”、“直接总结”和 disagreement 预算内自动刷新执行路径已接入；后续要把运行结果落到完整结构化 Chat run card 子视图，并接入完整角色反驳 loop。
 - 把独立 Seminar 页面降为详情/恢复入口，并与 Chat run card 共用同一个 runtime state。
@@ -109,7 +109,7 @@
 做成后的效果：
 
 - 用户不需要离开 AI Chat，就能看到多个角色围绕同一个问题交锋、补证据、反驳和总结。
-- 角色不再只是固定 prompt；用户已能改基础名称和风格，后续还可以控制哪些角色启用、用哪些证据和工具。
+- 角色不再只是固定 prompt；用户已能改名称、风格、是否启用、为整场研讨补充 current book/library 证据提示，以及限制哪些安全只读工具会写入 role prompt；后续还可以在单次 Chat run 中临时覆盖这些设置，并做真正角色级证据过滤。
 - 讨论遇到矛盾不会一轮结束，而是会把争议点列出来，再按证据缺口重新查书内或书库 evidence。
 - AI Chat 的 thinking、tool call、skill/plugin 面板和 Seminar 会变成同一个工作台：用户在同一个输入框里提问、插话、点名某个角色、要求重查证据或收束送审。
 - 独立 Seminar 页面只承担详情、恢复和调试，不再是日常主路径；日常入口是 AI Chat 的结构化 Seminar run card。

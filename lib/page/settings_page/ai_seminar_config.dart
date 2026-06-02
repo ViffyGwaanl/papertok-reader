@@ -18,6 +18,10 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
   late final TextEditingController _runCostCapController;
   late final Map<AiSeminarRole, TextEditingController> _roleNameControllers;
   late final Map<AiSeminarRole, TextEditingController> _rolePromptControllers;
+  late final Map<AiSeminarRole, bool> _roleEnabled;
+  late final Map<AiSeminarRole, Set<AiSeminarEvidenceScope>>
+      _roleEvidenceScopes;
+  late final Map<AiSeminarRole, Set<String>> _roleAllowedToolIds;
   late bool _includeVerifier;
 
   @override
@@ -44,6 +48,22 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
         role: TextEditingController(
           text: Prefs().aiSeminarRoleProfileFor(role)?.customPrompt ?? '',
         ),
+    };
+    _roleEnabled = {
+      for (final role in AiSeminarRole.values)
+        role: Prefs().aiSeminarRoleProfileFor(role)?.enabled ?? true,
+    };
+    _roleEvidenceScopes = {
+      for (final role in AiSeminarRole.values)
+        role: {
+          ...?Prefs().aiSeminarRoleProfileFor(role)?.evidenceScopes,
+        },
+    };
+    _roleAllowedToolIds = {
+      for (final role in AiSeminarRole.values)
+        role: {
+          ...?Prefs().aiSeminarRoleProfileFor(role)?.allowedToolIds,
+        },
     };
   }
 
@@ -154,6 +174,41 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
                   role: role,
                   nameController: _roleNameControllers[role]!,
                   promptController: _rolePromptControllers[role]!,
+                  enabled: _roleEnabled[role] ?? true,
+                  selectedEvidenceScopes: _roleEvidenceScopes[role] ?? const {},
+                  selectedToolIds: _roleAllowedToolIds[role] ?? const {},
+                  onEnabledChanged: (value) {
+                    setState(() => _roleEnabled[role] = value);
+                    _saveRoleProfile(role);
+                  },
+                  onEvidenceScopeChanged: (scope, selected) {
+                    setState(() {
+                      final scopes = _roleEvidenceScopes.putIfAbsent(
+                        role,
+                        () => <AiSeminarEvidenceScope>{},
+                      );
+                      if (selected) {
+                        scopes.add(scope);
+                      } else {
+                        scopes.remove(scope);
+                      }
+                    });
+                    _saveRoleProfile(role);
+                  },
+                  onToolChanged: (toolId, selected) {
+                    setState(() {
+                      final toolIds = _roleAllowedToolIds.putIfAbsent(
+                        role,
+                        () => <String>{},
+                      );
+                      if (selected) {
+                        toolIds.add(toolId);
+                      } else {
+                        toolIds.remove(toolId);
+                      }
+                    });
+                    _saveRoleProfile(role);
+                  },
                   onChanged: () => _saveRoleProfile(role),
                 ),
             ],
@@ -180,6 +235,13 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
       role,
       name: _roleNameControllers[role]?.text,
       customPrompt: _rolePromptControllers[role]?.text,
+      enabled: _roleEnabled[role] ?? true,
+      evidenceScopes:
+          (_roleEvidenceScopes[role] ?? const <AiSeminarEvidenceScope>{})
+              .toList(growable: false),
+      allowedToolIds: (_roleAllowedToolIds[role] ?? const <String>{}).toList(
+        growable: false,
+      ),
     );
   }
 }
@@ -189,12 +251,25 @@ class _RoleProfileFields extends StatelessWidget {
     required this.role,
     required this.nameController,
     required this.promptController,
+    required this.enabled,
+    required this.selectedEvidenceScopes,
+    required this.selectedToolIds,
+    required this.onEnabledChanged,
+    required this.onEvidenceScopeChanged,
+    required this.onToolChanged,
     required this.onChanged,
   });
 
   final AiSeminarRole role;
   final TextEditingController nameController;
   final TextEditingController promptController;
+  final bool enabled;
+  final Set<AiSeminarEvidenceScope> selectedEvidenceScopes;
+  final Set<String> selectedToolIds;
+  final ValueChanged<bool> onEnabledChanged;
+  final void Function(AiSeminarEvidenceScope scope, bool selected)
+      onEvidenceScopeChanged;
+  final void Function(String toolId, bool selected) onToolChanged;
   final VoidCallback onChanged;
 
   @override
@@ -208,6 +283,22 @@ class _RoleProfileFields extends StatelessWidget {
         title: Text(roleLabel),
         childrenPadding: const EdgeInsets.only(bottom: 8),
         children: [
+          SwitchListTile(
+            key: ValueKey('seminar-role-${role.asString}-enabled'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(_configText(
+              context,
+              en: 'Enable $roleLabel',
+              zh: '启用$roleLabel',
+            )),
+            subtitle: Text(_configText(
+              context,
+              en: 'Disabled roles stay in saved settings but are skipped in new Seminar runs.',
+              zh: '关闭后设置仍会保留，但新的研讨不会执行该角色。',
+            )),
+            value: enabled,
+            onChanged: onEnabledChanged,
+          ),
           TextField(
             controller: nameController,
             decoration: InputDecoration(
@@ -235,8 +326,129 @@ class _RoleProfileFields extends StatelessWidget {
             ),
             onChanged: (_) => onChanged(),
           ),
+          const SizedBox(height: 8),
+          _RoleEvidenceScopePicker(
+            role: role,
+            selectedScopes: selectedEvidenceScopes,
+            onChanged: onEvidenceScopeChanged,
+          ),
+          const SizedBox(height: 8),
+          _RoleToolPicker(
+            role: role,
+            selectedToolIds: selectedToolIds,
+            onChanged: onToolChanged,
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _RoleEvidenceScopePicker extends StatelessWidget {
+  const _RoleEvidenceScopePicker({
+    required this.role,
+    required this.selectedScopes,
+    required this.onChanged,
+  });
+
+  final AiSeminarRole role;
+  final Set<AiSeminarEvidenceScope> selectedScopes;
+  final void Function(AiSeminarEvidenceScope scope, bool selected) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const scopes = [
+      AiSeminarEvidenceScope.currentBook,
+      AiSeminarEvidenceScope.library,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _configText(
+            context,
+            en: 'Session evidence hints',
+            zh: '会话证据提示',
+          ),
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        Text(
+          _configText(
+            context,
+            en: 'These add sources to the Seminar evidence bundle. They do not filter evidence separately for each role yet.',
+            zh: '这些选项会为整场研讨补充证据来源，目前还不会按角色单独过滤证据。',
+          ),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: ClaudePalette.secondary(context),
+              ),
+        ),
+        for (final scope in scopes)
+          CheckboxListTile(
+            key: ValueKey(
+              'seminar-role-${role.asString}-scope-${scope.asString}',
+            ),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(_evidenceScopeLabel(context, scope)),
+            value: selectedScopes.contains(scope),
+            onChanged: (value) => onChanged(scope, value == true),
+          ),
+      ],
+    );
+  }
+}
+
+class _RoleToolPicker extends StatelessWidget {
+  const _RoleToolPicker({
+    required this.role,
+    required this.selectedToolIds,
+    required this.onChanged,
+  });
+
+  static const _toolIds = [
+    'semantic_search_current_book',
+    'semantic_search_library',
+    'notes_search',
+    'resolve_cfi',
+  ];
+
+  final AiSeminarRole role;
+  final Set<String> selectedToolIds;
+  final void Function(String toolId, bool selected) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _configText(
+            context,
+            en: 'Allowed read-only tools',
+            zh: '允许的只读工具',
+          ),
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        Text(
+          _configText(
+            context,
+            en: 'Write tools, web tools, and recursive sub-agent tools are filtered out even if they appear in imported settings.',
+            zh: '写入工具、联网工具和递归 sub-agent 工具即使出现在导入设置里也会被过滤。',
+          ),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: ClaudePalette.secondary(context),
+              ),
+        ),
+        for (final toolId in _toolIds)
+          CheckboxListTile(
+            key: ValueKey('seminar-role-${role.asString}-tool-$toolId'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(toolId),
+            value: selectedToolIds.contains(toolId),
+            onChanged: (value) => onChanged(toolId, value == true),
+          ),
+      ],
     );
   }
 }
@@ -331,6 +543,24 @@ String _roleProfileLabel(BuildContext context, AiSeminarRole role) {
     AiSeminarRole.supportive => zh ? '支持者' : 'Supportive',
     AiSeminarRole.synthesizer => zh ? '综合者' : 'Synthesizer',
     AiSeminarRole.verifier => zh ? '核验者' : 'Verifier',
+  };
+}
+
+String _evidenceScopeLabel(
+  BuildContext context,
+  AiSeminarEvidenceScope scope,
+) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  return switch (scope) {
+    AiSeminarEvidenceScope.currentChapter =>
+      zh ? '当前章节证据' : 'Current chapter evidence',
+    AiSeminarEvidenceScope.currentBook =>
+      zh ? '当前书证据' : 'Current book evidence',
+    AiSeminarEvidenceScope.library => zh ? '书库证据' : 'Library evidence',
+    AiSeminarEvidenceScope.notes => zh ? '笔记证据' : 'Notes evidence',
+    AiSeminarEvidenceScope.memory => zh ? '记忆证据' : 'Memory evidence',
+    AiSeminarEvidenceScope.conceptGraph =>
+      zh ? '概念图谱证据' : 'Concept graph evidence',
   };
 }
 

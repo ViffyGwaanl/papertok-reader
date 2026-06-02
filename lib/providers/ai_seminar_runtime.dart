@@ -810,13 +810,15 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       throw StateError(message);
     }
     final createdAt = now ?? DateTime.now().millisecondsSinceEpoch;
+    final resolvedTargetRole =
+        requestedAction == AiSeminarUserInterventionAction.askRole
+            ? _resolveUserDirectedRole(session, targetRole)
+            : null;
     final intervention = AiSeminarUserIntervention(
       id: 'user-$createdAt',
       text: trimmed,
       requestedAction: requestedAction,
-      targetRole: requestedAction == AiSeminarUserInterventionAction.askRole
-          ? targetRole ?? AiSeminarRole.critical
-          : null,
+      targetRole: resolvedTargetRole,
       createdAt: createdAt,
     );
     final nextDirector = AiSeminarDirectorState(
@@ -867,7 +869,10 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       throw StateError(message);
     }
 
-    final targetRole = intervention.targetRole ?? AiSeminarRole.critical;
+    final targetRole = _resolveUserDirectedRole(
+      session,
+      intervention.targetRole,
+    );
     final generation = ++_generation;
     final token = AiSeminarCancellationToken();
     _activeToken?.cancel();
@@ -1423,6 +1428,30 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     }
 
     return AiSeminarDirectorNextIntent.end;
+  }
+
+  AiSeminarRole _resolveUserDirectedRole(
+    AiSeminarSessionContract session,
+    AiSeminarRole? requestedRole,
+  ) {
+    final roles = session.roles;
+    if (requestedRole != null) {
+      if (roles.contains(requestedRole)) return requestedRole;
+      final message =
+          'AI Seminar role ${requestedRole.asString} is not enabled for this session.';
+      state = state.copyWith(error: message);
+      throw StateError(message);
+    }
+    final nonSynthesizerRoles = roles
+        .where((role) => role != AiSeminarRole.synthesizer)
+        .toList(growable: false);
+    if (nonSynthesizerRoles.isNotEmpty) return nonSynthesizerRoles.first;
+    if (roles.contains(AiSeminarRole.synthesizer)) {
+      return AiSeminarRole.synthesizer;
+    }
+    const message = 'AI Seminar has no enabled role for reader follow-up.';
+    state = state.copyWith(error: message);
+    throw StateError(message);
   }
 
   static AiSeminarDirectorNextIntent _nextIntentForUserIntervention(

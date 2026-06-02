@@ -941,12 +941,20 @@ class AiChat extends _$AiChat {
     );
     final resolvedBookId = sourceRef?.bookId ?? bookId ?? bookContext.bookId;
     final includeVerifier = Prefs().aiSeminarIncludeVerifier;
-    final roleIds = <AiSeminarRole>[
+    final selectedRoles = <AiSeminarRole>[
       AiSeminarRole.critical,
       AiSeminarRole.supportive,
       if (includeVerifier) AiSeminarRole.verifier,
       AiSeminarRole.synthesizer,
-    ].map((role) => role.asString).toList(growable: false);
+    ]
+        .where(
+            (role) => Prefs().aiSeminarRoleProfileFor(role)?.enabled != false)
+        .toList(growable: false);
+    final roleIds = (selectedRoles.isEmpty
+            ? const [AiSeminarRole.synthesizer]
+            : selectedRoles)
+        .map((role) => role.asString)
+        .toList(growable: false);
     final evidenceScopeIds = const <AiSeminarEvidenceScope>[
       AiSeminarEvidenceScope.currentBook,
     ].map((scope) => scope.asString).toList(growable: false);

@@ -141,18 +141,14 @@ class AiSeminarOrchestrationService {
   }
 
   static List<AiSeminarRole> executionOrder(List<AiSeminarRole> roles) {
+    if (roles.isEmpty) {
+      return AiSeminarRole.defaultRoles;
+    }
     final out = <AiSeminarRole>[];
     for (final role in roles) {
       if (role != AiSeminarRole.synthesizer && !out.contains(role)) {
         out.add(role);
       }
-    }
-    if (!out.contains(AiSeminarRole.critical)) {
-      out.insert(0, AiSeminarRole.critical);
-    }
-    if (!out.contains(AiSeminarRole.supportive)) {
-      final insertAt = out.contains(AiSeminarRole.critical) ? 1 : out.length;
-      out.insert(insertAt, AiSeminarRole.supportive);
     }
     out.remove(AiSeminarRole.synthesizer);
     out.add(AiSeminarRole.synthesizer);
@@ -169,6 +165,10 @@ class AiSeminarOrchestrationService {
     return [
       'PaperTok AI Seminar role: ${role.asString}',
       if (profile?.name != null) 'Configured role name: ${profile!.name}',
+      if (profile?.evidenceScopes.isNotEmpty == true)
+        'Session evidence hints from role profile: ${profile!.evidenceScopes.map((scope) => scope.asString).join(', ')}',
+      if (profile?.allowedToolIds.isNotEmpty == true)
+        'Allowed read-only tools: ${profile!.allowedToolIds.join(', ')}',
       'Question: ${session.question}',
       'Evidence ids: ${evidenceBundle.evidence.map((e) => e.id).join(', ')}',
       if (priorTurns.isNotEmpty)
