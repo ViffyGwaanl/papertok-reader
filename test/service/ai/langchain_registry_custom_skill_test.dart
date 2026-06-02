@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/enums/ai_tool_scene.dart';
@@ -140,6 +142,132 @@ void main() {
         activeSkill: activeSkill,
       ),
       false,
+    );
+  });
+
+  test('active built-in skill injects user prompt profile', () {
+    Prefs().activeAiSkillId = 'paper_analyzer';
+    Prefs().prefs.setString(
+          'aiSkillPromptProfilesV1',
+          jsonEncode({
+            'paper_analyzer': {
+              'customPrompt':
+                  'Always include a methods-versus-evidence checklist.',
+            },
+          }),
+        );
+
+    final pipelineProvider = Provider(
+      (ref) => LangchainAiRegistry(ref).resolve(
+        LangchainAiConfig(
+          identifier: 'openai',
+          model: 'test-model',
+          apiKey: '',
+        ),
+        useAgent: true,
+      ),
+    );
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final pipeline = container.read(pipelineProvider);
+    final systemPrompt = pipeline.systemMessage!.contentAsString;
+
+    expect(systemPrompt, contains('## Active Skill: Paper Analyzer'));
+    expect(
+      systemPrompt,
+      contains('Always include a methods-versus-evidence checklist.'),
+    );
+    expect(
+      systemPrompt,
+      contains('## User Skill Settings'),
+    );
+    expect(
+      systemPrompt,
+      contains('lower priority than PaperTok app rules'),
+    );
+    expect(
+      systemPrompt,
+      contains('## Non-overridable PaperTok Rules'),
+    );
+  });
+
+  test('built-in skill prompt profiles are capped and preserve future fields',
+      () {
+    Prefs().prefs.setString(
+          'aiSkillPromptProfilesV1',
+          jsonEncode({
+            'paper_analyzer': {
+              'customPrompt': 'old',
+              'evidenceStrategy': 'current-book',
+            },
+          }),
+        );
+
+    Prefs().setAiSkillCustomPrompt('paper_analyzer', 'x' * 2500);
+
+    final stored = jsonDecode(
+      Prefs().prefs.getString('aiSkillPromptProfilesV1')!,
+    ) as Map<String, dynamic>;
+    final profile = stored['paper_analyzer'] as Map<String, dynamic>;
+
+    expect(
+      (profile['customPrompt'] as String).length,
+      Prefs.aiSkillCustomPromptMaxChars,
+    );
+    expect(profile['evidenceStrategy'], 'current-book');
+  });
+
+  test('skill prompt profiles do not alter custom skills or seminar mode',
+      () async {
+    await CustomSkillStore().importJson('''
+{
+  "schemaVersion": 1,
+  "id": "library_terms",
+  "name": "Library Terms",
+  "description": "Explain terms from library evidence.",
+  "systemPromptAppend": "Custom runtime prompt: cite library evidence only.",
+  "allowedToolIds": ["semantic_search_library"],
+  "scenes": ["library"],
+  "enabled": true
+}
+''');
+    Prefs().prefs.setString(
+          'aiSkillPromptProfilesV1',
+          jsonEncode({
+            'library_terms': {
+              'customPrompt': 'Hidden custom skill override.',
+            },
+            'seminar_mode': {
+              'customPrompt': 'Hidden seminar override.',
+            },
+          }),
+        );
+
+    LangchainPipeline pipelineFor(String skillId) {
+      Prefs().activeAiSkillId = skillId;
+      final pipelineProvider = Provider(
+        (ref) => LangchainAiRegistry(ref).resolve(
+          LangchainAiConfig(
+            identifier: 'openai',
+            model: 'test-model',
+            apiKey: '',
+          ),
+          useAgent: true,
+        ),
+      );
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      return container.read(pipelineProvider);
+    }
+
+    expect(
+      pipelineFor('library_terms').systemMessage!.contentAsString,
+      isNot(contains('Hidden custom skill override.')),
+    );
+    expect(
+      pipelineFor('seminar_mode').systemMessage!.contentAsString,
+      isNot(contains('Hidden seminar override.')),
     );
   });
 }

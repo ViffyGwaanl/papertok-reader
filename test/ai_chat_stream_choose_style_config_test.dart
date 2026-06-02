@@ -83,4 +83,74 @@ void main() {
       expect(Prefs().activeAiSkillId, 'paper_analyzer');
     },
   );
+
+  testWidgets(
+    'Choose style built-in skill row opens prompt settings without selecting it',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'reading_companion',
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.add_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose style'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Paper Analyzer'), findsOneWidget);
+      expect(find.text('Skill settings'), findsAtLeastNWidgets(1));
+
+      await tester.tap(find.text('Skill settings').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Paper Analyzer settings'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField).last).maxLength,
+        Prefs.aiSkillCustomPromptMaxChars,
+      );
+      await tester.enterText(
+        find.byType(TextField).last,
+        'Always include a methods-versus-evidence checklist.',
+      );
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(Prefs().activeAiSkillId, 'reading_companion');
+      expect(
+        Prefs().prefs.getString('aiSkillPromptProfilesV1'),
+        contains('methods-versus-evidence checklist'),
+      );
+    },
+  );
 }

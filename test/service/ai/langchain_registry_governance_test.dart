@@ -1,10 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/enums/ai_tool_scene.dart';
 import 'package:papertok_reader/models/ai_agent_governance.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/service/ai/langchain_registry.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+  });
+
   test('seminar skill maps runtime to seminar governance scene', () {
     final seminar = AiSkillRegistry.byId('seminar_mode');
 

@@ -167,6 +167,109 @@ class _ConfigurableSkillPickerRow extends StatelessWidget {
   }
 }
 
+class _BuiltInSkillPromptSettingsSheet extends StatefulWidget {
+  const _BuiltInSkillPromptSettingsSheet({
+    required this.initialPrompt,
+    required this.description,
+    required this.label,
+    required this.hint,
+    required this.clearLabel,
+    required this.cancelLabel,
+    required this.saveLabel,
+    required this.onClear,
+    required this.onSave,
+  });
+
+  final String initialPrompt;
+  final String description;
+  final String label;
+  final String hint;
+  final String clearLabel;
+  final String cancelLabel;
+  final String saveLabel;
+  final VoidCallback onClear;
+  final ValueChanged<String> onSave;
+
+  @override
+  State<_BuiltInSkillPromptSettingsSheet> createState() =>
+      _BuiltInSkillPromptSettingsSheetState();
+}
+
+class _BuiltInSkillPromptSettingsSheetState
+    extends State<_BuiltInSkillPromptSettingsSheet> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialPrompt);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.description,
+            style: TextStyle(
+              fontSize: 13,
+              color: ClaudePalette.secondary(context),
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            minLines: 4,
+            maxLines: 8,
+            maxLength: Prefs.aiSkillCustomPromptMaxChars,
+            textInputAction: TextInputAction.newline,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: widget.label,
+              hintText: widget.hint,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              TextButton(
+                onPressed: widget.onClear,
+                child: Text(widget.clearLabel),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(widget.cancelLabel),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: () => widget.onSave(_controller.text),
+                icon: const Icon(Icons.save_outlined, size: 18),
+                label: Text(widget.saveLabel),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class AiChatStream extends ConsumerStatefulWidget {
   const AiChatStream({
     super.key,
@@ -2192,22 +2295,89 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   },
                 )
               else
-                PTPickerRow<String>(
-                  value: skill.id,
-                  groupValue: activeId ?? '',
+                _ConfigurableSkillPickerRow(
+                  selected: activeId == skill.id,
                   title: _localizedSkillName(context, skill),
                   subtitle: _localizedSkillDesc(context, skill),
-                  leading: Icons.auto_fix_high,
-                  onChanged: (v) {
-                    Prefs().activeAiSkillId = v;
+                  icon: Icons.auto_fix_high,
+                  configLabel: _skillSettingsText(
+                    zh: '技能设置',
+                    en: 'Skill settings',
+                  ),
+                  onSelect: () {
+                    Prefs().activeAiSkillId = skill.id;
                     setState(() {});
                     Navigator.of(ctx).pop();
+                  },
+                  onConfigure: () {
+                    Navigator.of(ctx).pop();
+                    unawaited(_showBuiltInSkillPromptSettings(skill));
                   },
                 ),
           ],
         );
       },
     );
+  }
+
+  Future<void> _showBuiltInSkillPromptSettings(AiSkill skill) async {
+    final l10n = L10n.of(context);
+    await PTBottomSheet.show<void>(
+      context,
+      title: _skillSettingsTitle(skill),
+      builder: (ctx) {
+        return _BuiltInSkillPromptSettingsSheet(
+          initialPrompt: Prefs().aiSkillCustomPromptFor(skill.id) ?? '',
+          description: _skillSettingsText(
+            zh: '这里的内容会附加到该风格的系统提示词里。它只影响新的 AI 请求，不会改变已有历史消息。',
+            en: 'These instructions are appended to this style prompt. They affect new AI requests only and do not rewrite chat history.',
+          ),
+          label: _skillSettingsText(
+            zh: '自定义附加提示词',
+            en: 'Custom prompt add-on',
+          ),
+          hint: _skillSettingsText(
+            zh: '例如：回答时先列出证据，再给出结论。',
+            en: 'Example: list the evidence first, then state the conclusion.',
+          ),
+          clearLabel: _skillSettingsText(zh: '清除', en: 'Clear'),
+          cancelLabel: l10n.commonCancel,
+          saveLabel: l10n.commonSave,
+          onClear: () {
+            Prefs().setAiSkillCustomPrompt(skill.id, null);
+            if (mounted) setState(() {});
+            Navigator.of(ctx).pop();
+            _showToastIfAvailable(l10n.commonSaved);
+          },
+          onSave: (value) {
+            Prefs().setAiSkillCustomPrompt(skill.id, value);
+            if (mounted) setState(() {});
+            Navigator.of(ctx).pop();
+            _showToastIfAvailable(l10n.commonSaved);
+          },
+        );
+      },
+    );
+  }
+
+  String _skillSettingsTitle(AiSkill skill) {
+    final skillName = _localizedSkillName(context, skill);
+    return _skillSettingsText(
+      zh: '$skillName设置',
+      en: '$skillName settings',
+    );
+  }
+
+  String _skillSettingsText({
+    required String zh,
+    required String en,
+  }) {
+    return _isChineseLocale ? zh : en;
+  }
+
+  void _showToastIfAvailable(String message) {
+    if (navigatorKey.currentContext == null) return;
+    AnxToast.show(message);
   }
 
   void _openSeminarRuntimeFromChat() {

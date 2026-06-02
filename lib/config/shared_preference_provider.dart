@@ -3962,6 +3962,9 @@ Requirements:
 
   // --- Skills ---
 
+  static const int aiSkillCustomPromptMaxChars = 2000;
+  static const String _aiSkillPromptProfilesV1Key = 'aiSkillPromptProfilesV1';
+
   /// Currently active AI skill ID, or null if no skill is active.
   String? get activeAiSkillId => prefs.getString('activeAiSkillId');
 
@@ -3972,6 +3975,85 @@ Requirements:
       prefs.setString('activeAiSkillId', id);
     }
     notifyListeners();
+  }
+
+  Map<String, String> get aiSkillCustomPrompts {
+    final out = <String, String>{};
+    for (final entry in _aiSkillPromptProfilePayload().entries) {
+      final customPrompt = entry.value['customPrompt'];
+      if (customPrompt is! String) continue;
+      final normalized = _normalizeAiSkillCustomPrompt(customPrompt);
+      if (normalized.isNotEmpty) {
+        out[entry.key] = normalized;
+      }
+    }
+    return Map.unmodifiable(out);
+  }
+
+  String? aiSkillCustomPromptFor(String? skillId) {
+    final normalizedId = skillId?.trim();
+    if (normalizedId == null || normalizedId.isEmpty) return null;
+    return aiSkillCustomPrompts[normalizedId];
+  }
+
+  void setAiSkillCustomPrompt(String skillId, String? customPrompt) {
+    final normalizedId = skillId.trim();
+    if (normalizedId.isEmpty) return;
+
+    final next = _aiSkillPromptProfilePayload();
+    final profile = Map<String, dynamic>.from(
+      next[normalizedId] ?? const <String, dynamic>{},
+    );
+    final normalizedPrompt = _normalizeAiSkillCustomPrompt(customPrompt ?? '');
+    if (normalizedPrompt.isEmpty) {
+      profile.remove('customPrompt');
+    } else {
+      profile['customPrompt'] = normalizedPrompt;
+    }
+
+    if (profile.isEmpty) {
+      next.remove(normalizedId);
+    } else {
+      next[normalizedId] = profile;
+    }
+
+    if (next.isEmpty) {
+      prefs.remove(_aiSkillPromptProfilesV1Key);
+    } else {
+      prefs.setString(_aiSkillPromptProfilesV1Key, jsonEncode(next));
+    }
+    touchAiSettingsUpdatedAt();
+    notifyListeners();
+  }
+
+  Map<String, Map<String, dynamic>> _aiSkillPromptProfilePayload() {
+    final raw = prefs.getString(_aiSkillPromptProfilesV1Key);
+    if (raw == null || raw.trim().isEmpty) {
+      return <String, Map<String, dynamic>>{};
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        return <String, Map<String, dynamic>>{};
+      }
+      final out = <String, Map<String, dynamic>>{};
+      for (final entry in decoded.entries) {
+        final skillId = entry.key.toString().trim();
+        if (skillId.isEmpty || entry.value is! Map) continue;
+        out[skillId] = Map<String, dynamic>.from(entry.value as Map);
+      }
+      return out;
+    } catch (_) {
+      return <String, Map<String, dynamic>>{};
+    }
+  }
+
+  String _normalizeAiSkillCustomPrompt(String prompt) {
+    final normalized = prompt.trim();
+    if (normalized.length <= aiSkillCustomPromptMaxChars) {
+      return normalized;
+    }
+    return normalized.substring(0, aiSkillCustomPromptMaxChars);
   }
 
   bool get aiSeminarIncludeVerifier =>
