@@ -18,6 +18,9 @@ class AiSeminarRuntimePage extends ConsumerWidget {
     this.initialSessionId,
     this.bookId,
     this.initialSourceRef,
+    this.initialRoleProfiles,
+    this.initialMaxRounds,
+    this.initialIncludeVerifier,
     this.autoStart = false,
   });
 
@@ -25,6 +28,9 @@ class AiSeminarRuntimePage extends ConsumerWidget {
   final String? initialSessionId;
   final int? bookId;
   final SourceRef? initialSourceRef;
+  final List<AiSeminarRoleProfile>? initialRoleProfiles;
+  final int? initialMaxRounds;
+  final bool? initialIncludeVerifier;
   final bool autoStart;
 
   @override
@@ -61,6 +67,9 @@ class AiSeminarRuntimePage extends ConsumerWidget {
         initialSessionId: initialSessionId,
         bookId: bookId,
         initialSourceRef: initialSourceRef,
+        initialRoleProfiles: initialRoleProfiles,
+        initialMaxRounds: initialMaxRounds,
+        initialIncludeVerifier: initialIncludeVerifier,
         autoStart: autoStart,
       ),
     );
@@ -74,6 +83,9 @@ class AiSeminarRuntimePanel extends ConsumerStatefulWidget {
     this.initialSessionId,
     this.bookId,
     this.initialSourceRef,
+    this.initialRoleProfiles,
+    this.initialMaxRounds,
+    this.initialIncludeVerifier,
     this.autoStart = false,
     this.embedded = false,
     this.onClose,
@@ -84,6 +96,9 @@ class AiSeminarRuntimePanel extends ConsumerStatefulWidget {
   final String? initialSessionId;
   final int? bookId;
   final SourceRef? initialSourceRef;
+  final List<AiSeminarRoleProfile>? initialRoleProfiles;
+  final int? initialMaxRounds;
+  final bool? initialIncludeVerifier;
   final bool autoStart;
   final bool embedded;
   final VoidCallback? onClose;
@@ -99,6 +114,8 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
   late final TextEditingController _roleOutputBudgetController;
   late final TextEditingController _runBudgetController;
   late final TextEditingController _runCostCapController;
+  late final TextEditingController _maxRoundsController;
+  late final List<AiSeminarRoleProfile> _roleProfiles;
   late bool _includeVerifier;
   bool _autoStarted = false;
   bool _discardedMismatchedEntryState = false;
@@ -118,7 +135,13 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
     _runCostCapController = TextEditingController(
       text: Prefs().aiSeminarDefaultRunCostCapUsd?.toString() ?? '',
     );
-    _includeVerifier = Prefs().aiSeminarIncludeVerifier;
+    _maxRoundsController = TextEditingController(
+      text: (widget.initialMaxRounds ?? 2).clamp(1, 5).toString(),
+    );
+    _roleProfiles = List.unmodifiable(
+        widget.initialRoleProfiles ?? Prefs().aiSeminarRoleProfiles);
+    _includeVerifier =
+        widget.initialIncludeVerifier ?? Prefs().aiSeminarIncludeVerifier;
     if (widget.autoStart && _questionController.text.trim().isNotEmpty) {
       Future.microtask(_start);
     }
@@ -130,6 +153,7 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
     _roleOutputBudgetController.dispose();
     _runBudgetController.dispose();
     _runCostCapController.dispose();
+    _maxRoundsController.dispose();
     super.dispose();
   }
 
@@ -152,8 +176,9 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
               if (widget.initialSourceRef != null) widget.initialSourceRef!,
             ],
             roles: _selectedRoles,
+            maxRounds: _maxRoundsFromInput(),
             budgetPolicy: _budgetPolicyFromInputs(diagnostics),
-            roleProfiles: Prefs().aiSeminarRoleProfiles,
+            roleProfiles: _roleProfiles,
             createdAt: now,
           ),
         );
@@ -203,6 +228,7 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
           roleOutputBudgetController: _roleOutputBudgetController,
           runBudgetController: _runBudgetController,
           runCostCapController: _runCostCapController,
+          maxRoundsController: _maxRoundsController,
           diagnostics: state.providerDiagnostics,
           enabled: !busy,
         ),
@@ -336,6 +362,11 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
     return parsed;
   }
 
+  int _maxRoundsFromInput() {
+    final parsed = int.tryParse(_maxRoundsController.text.trim()) ?? 2;
+    return parsed.clamp(1, 5).toInt();
+  }
+
   bool _hasMismatchedEntryState(AiSeminarRuntimeState state) {
     if (state.session == null) return false;
     final entrySessionId = widget.initialSessionId?.trim();
@@ -417,8 +448,15 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
           if (_includeVerifier) AiSeminarRole.verifier,
           AiSeminarRole.synthesizer,
         ])
-          if (Prefs().aiSeminarRoleProfileFor(role)?.enabled != false) role,
+          if (_roleProfileFor(role)?.enabled != false) role,
       ];
+
+  AiSeminarRoleProfile? _roleProfileFor(AiSeminarRole role) {
+    for (final profile in _roleProfiles) {
+      if (profile.role == role) return profile;
+    }
+    return null;
+  }
 }
 
 class _EmbeddedSeminarHeader extends ConsumerWidget {
@@ -540,6 +578,7 @@ class _BudgetSection extends StatelessWidget {
     required this.roleOutputBudgetController,
     required this.runBudgetController,
     required this.runCostCapController,
+    required this.maxRoundsController,
     required this.diagnostics,
     required this.enabled,
   });
@@ -547,6 +586,7 @@ class _BudgetSection extends StatelessWidget {
   final TextEditingController roleOutputBudgetController;
   final TextEditingController runBudgetController;
   final TextEditingController runCostCapController;
+  final TextEditingController maxRoundsController;
   final AiSeminarProviderDiagnostics? diagnostics;
   final bool enabled;
 
@@ -588,6 +628,19 @@ class _BudgetSection extends StatelessWidget {
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: l10n.seminarRunCostCapUsd,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              TextField(
+                controller: maxRoundsController,
+                enabled: enabled,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: _runtimeText(
+                    context,
+                    zh: '最多讨论轮次',
+                    en: 'Max discussion rounds',
+                  ),
                   border: const OutlineInputBorder(),
                 ),
               ),

@@ -272,6 +272,289 @@ class _BuiltInSkillPromptSettingsSheetState
   }
 }
 
+class _SeminarRunConfig {
+  const _SeminarRunConfig({
+    required this.includeVerifier,
+    required this.maxRounds,
+    required this.roleProfiles,
+  });
+
+  final bool includeVerifier;
+  final int maxRounds;
+  final List<AiSeminarRoleProfile> roleProfiles;
+}
+
+class _SeminarRunSetupSheet extends StatefulWidget {
+  const _SeminarRunSetupSheet({
+    required this.initialQuestion,
+    required this.cancelLabel,
+    required this.startLabel,
+    required this.onStart,
+  });
+
+  final String initialQuestion;
+  final String cancelLabel;
+  final String startLabel;
+  final void Function(String question, _SeminarRunConfig config) onStart;
+
+  @override
+  State<_SeminarRunSetupSheet> createState() => _SeminarRunSetupSheetState();
+}
+
+class _SeminarRunSetupSheetState extends State<_SeminarRunSetupSheet> {
+  late final TextEditingController _questionController;
+  late final TextEditingController _maxRoundsController;
+  late final Map<AiSeminarRole, TextEditingController> _promptControllers;
+  late final Map<AiSeminarRole, TextEditingController> _nameControllers;
+  late final Map<AiSeminarRole, AiSeminarRoleProfile?> _baseProfiles;
+  late final Map<AiSeminarRole, bool> _roleEnabled;
+  late bool _includeVerifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _questionController = TextEditingController(text: widget.initialQuestion);
+    _maxRoundsController = TextEditingController(text: '2');
+    _includeVerifier = Prefs().aiSeminarIncludeVerifier;
+    _baseProfiles = {
+      for (final role in AiSeminarRole.values)
+        role: Prefs().aiSeminarRoleProfileFor(role),
+    };
+    _promptControllers = {
+      for (final role in AiSeminarRole.values)
+        role: TextEditingController(
+          text: _baseProfiles[role]?.customPrompt ?? '',
+        ),
+    };
+    _nameControllers = {
+      for (final role in AiSeminarRole.values)
+        role: TextEditingController(
+          text: _baseProfiles[role]?.name ?? '',
+        ),
+    };
+    _roleEnabled = {
+      for (final role in AiSeminarRole.values)
+        role: _baseProfiles[role]?.enabled ?? true,
+    };
+  }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    _maxRoundsController.dispose();
+    for (final controller in _promptControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _nameControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final roleOrder = [
+      AiSeminarRole.critical,
+      AiSeminarRole.supportive,
+      AiSeminarRole.synthesizer,
+      AiSeminarRole.verifier,
+    ];
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            zh
+                ? '这次配置只影响即将插入的研讨卡，不会覆盖全局设置。'
+                : 'These settings only affect the next Seminar card.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _questionController,
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: zh ? '研讨问题' : 'Seminar question',
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            key: const ValueKey('seminar-run-max-rounds'),
+            controller: _maxRoundsController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: zh ? '最多讨论轮次' : 'Max discussion rounds',
+              helperText: zh
+                  ? '出现分歧时可刷新证据再讨论，范围 1-5。'
+                  : 'When disagreements appear, evidence can refresh and the panel can continue. Range 1-5.',
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.verified_outlined),
+            title: Text(zh ? '加入核验者' : 'Include verifier'),
+            subtitle: Text(zh
+                ? '让一个角色专门检查证据和引用。'
+                : 'Adds a role focused on evidence checks.'),
+            value: _includeVerifier,
+            onChanged: (value) => setState(() => _includeVerifier = value),
+          ),
+          const SizedBox(height: 6),
+          for (final role in roleOrder)
+            _SeminarRunRoleProfileTile(
+              role: role,
+              initiallyExpanded: role == AiSeminarRole.critical,
+              enabled: _roleEnabled[role] ?? true,
+              nameController: _nameControllers[role]!,
+              promptController: _promptControllers[role]!,
+              onEnabledChanged: (value) {
+                setState(() => _roleEnabled[role] = value);
+              },
+            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(widget.cancelLabel),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  key: const ValueKey('seminar-run-start'),
+                  icon: const Icon(Icons.groups_2_outlined),
+                  label: Text(widget.startLabel),
+                  onPressed: _start,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _start() {
+    final maxRounds = int.tryParse(_maxRoundsController.text.trim()) ?? 2;
+    final profiles = <AiSeminarRoleProfile>[];
+    for (final role in AiSeminarRole.values) {
+      final baseProfile = _baseProfiles[role];
+      final profile = AiSeminarRoleProfile(
+        role: role,
+        name: _nameControllers[role]?.text,
+        customPrompt: _promptControllers[role]?.text,
+        enabled: _roleEnabled[role] ?? true,
+        evidenceScopes:
+            baseProfile?.evidenceScopes ?? const <AiSeminarEvidenceScope>[],
+        allowedToolIds: baseProfile?.allowedToolIds ?? const <String>[],
+      );
+      if (profile.hasOverrides) {
+        profiles.add(profile);
+      }
+    }
+    widget.onStart(
+      _questionController.text,
+      _SeminarRunConfig(
+        includeVerifier: _includeVerifier,
+        maxRounds: maxRounds.clamp(1, 5).toInt(),
+        roleProfiles: List.unmodifiable(profiles),
+      ),
+    );
+  }
+}
+
+class _SeminarRunRoleProfileTile extends StatelessWidget {
+  const _SeminarRunRoleProfileTile({
+    required this.role,
+    required this.initiallyExpanded,
+    required this.enabled,
+    required this.nameController,
+    required this.promptController,
+    required this.onEnabledChanged,
+  });
+
+  final AiSeminarRole role;
+  final bool initiallyExpanded;
+  final bool enabled;
+  final TextEditingController nameController;
+  final TextEditingController promptController;
+  final ValueChanged<bool> onEnabledChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final label = _seminarRunRoleLabel(context, role);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: ClaudePalette.divider(context)),
+        ),
+      ),
+      child: ExpansionTile(
+        key: ValueKey('seminar-run-role-${role.asString}'),
+        tilePadding: EdgeInsets.zero,
+        initiallyExpanded: initiallyExpanded,
+        title: Text(label),
+        childrenPadding: const EdgeInsets.only(bottom: 8),
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(zh ? '启用$label' : 'Enable $label'),
+            value: enabled,
+            onChanged: onEnabledChanged,
+          ),
+          TextField(
+            controller: nameController,
+            decoration: InputDecoration(
+              labelText: zh ? '$label名称' : '$label name',
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: ValueKey('seminar-run-role-${role.asString}-prompt'),
+            controller: promptController,
+            minLines: 3,
+            maxLines: 5,
+            decoration: InputDecoration(
+              labelText: zh ? '$label提示词' : '$label prompt',
+              hintText: zh
+                  ? '例如：先列出你不同意的论点，再说明需要哪些证据。'
+                  : 'Example: list what you disagree with first, then name the evidence needed.',
+              border: const OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _seminarRunRoleLabel(BuildContext context, AiSeminarRole role) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  return switch (role) {
+    AiSeminarRole.critical => zh ? '批判者' : 'Critical',
+    AiSeminarRole.supportive => zh ? '支持者' : 'Supportive',
+    AiSeminarRole.synthesizer => zh ? '综合者' : 'Synthesizer',
+    AiSeminarRole.verifier => zh ? '核验者' : 'Verifier',
+  };
+}
+
 class AiChatStream extends ConsumerStatefulWidget {
   const AiChatStream({
     super.key,
@@ -358,6 +641,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   String? _inlineSeminarSessionId;
   int? _inlineSeminarBookId;
   SourceRef? _inlineSeminarSourceRef;
+  List<AiSeminarRoleProfile>? _inlineSeminarRoleProfiles;
+  int? _inlineSeminarMaxRounds;
+  bool? _inlineSeminarIncludeVerifier;
   String? _lastInlineSeminarCardSignature;
 
   void _onDraftInputChanged() {
@@ -2092,13 +2378,31 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  l10n.aiChatSeminarFeatureAction,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      key: const ValueKey('ai-chat-seminar-run-setup'),
+                      tooltip: _skillSettingsText(
+                        zh: '本次研讨设置',
+                        en: 'Run setup',
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.tune_outlined, size: 18),
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        unawaited(_showSeminarRunSetupSheet());
+                      },
+                    ),
+                    Text(
+                      l10n.aiChatSeminarFeatureAction,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -2383,10 +2687,38 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     AnxToast.show(message);
   }
 
-  void _openSeminarRuntimeFromChat() {
+  Future<void> _showSeminarRunSetupSheet() async {
+    final l10n = L10n.of(context);
+    await PTBottomSheet.show<void>(
+      context,
+      title: _skillSettingsText(
+        zh: '本次研讨设置',
+        en: 'Run Seminar setup',
+      ),
+      builder: (ctx) {
+        return _SeminarRunSetupSheet(
+          initialQuestion: inputController.text.trim(),
+          cancelLabel: l10n.commonCancel,
+          startLabel: l10n.seminarStart,
+          onStart: (question, config) {
+            Navigator.of(ctx).pop();
+            _openSeminarRuntimeFromChat(
+              overrideQuestion: question,
+              runConfig: config,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openSeminarRuntimeFromChat({
+    String? overrideQuestion,
+    _SeminarRunConfig? runConfig,
+  }) {
     if (!mounted) return;
     final reading = ref.read(currentReadingProvider);
-    final question = inputController.text.trim();
+    final question = (overrideQuestion ?? inputController.text).trim();
     final sourceRef = _draftSourceRefSeedText == inputController.text
         ? _draftSourceRef
         : null;
@@ -2398,6 +2730,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             bookId: reading.book?.id,
             sourceRef: sourceRef,
             seminarSessionId: seminarSessionId,
+            includeVerifier: runConfig?.includeVerifier,
+            maxRounds: runConfig?.maxRounds,
+            roleProfiles: runConfig?.roleProfiles,
           ),
     );
     _suppressDraftSync = true;
@@ -2413,6 +2748,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       _inlineSeminarSessionId = seminarSessionId;
       _inlineSeminarBookId = reading.book?.id;
       _inlineSeminarSourceRef = sourceRef;
+      _inlineSeminarRoleProfiles = runConfig?.roleProfiles;
+      _inlineSeminarMaxRounds = runConfig?.maxRounds;
+      _inlineSeminarIncludeVerifier = runConfig?.includeVerifier;
       _lastInlineSeminarCardSignature = null;
     });
   }
@@ -2422,6 +2760,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     String? sessionId,
     int? bookId,
     SourceRef? sourceRef,
+    List<AiSeminarRoleProfile>? roleProfiles,
+    int? maxRounds,
+    bool? includeVerifier,
   }) {
     if (!mounted) return;
     final reading = ref.read(currentReadingProvider);
@@ -2436,6 +2777,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           sessionId?.trim().isEmpty == true ? null : sessionId?.trim();
       _inlineSeminarBookId = sourceRef?.bookId ?? bookId ?? reading.book?.id;
       _inlineSeminarSourceRef = sourceRef;
+      _inlineSeminarRoleProfiles = roleProfiles;
+      _inlineSeminarMaxRounds = maxRounds;
+      _inlineSeminarIncludeVerifier = includeVerifier;
       _lastInlineSeminarCardSignature = null;
     });
   }
@@ -2587,12 +2931,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             _inlineSeminarSourceRef?.href ?? '',
             _inlineSeminarSourceRef?.cfi ?? '',
             _inlineSeminarSourceRef?.chunkId ?? '',
+            _inlineSeminarMaxRounds?.toString() ?? '',
           ].join('\u001f'),
         ),
         initialQuestion: _inlineSeminarQuestion,
         initialSessionId: _inlineSeminarSessionId,
         bookId: _inlineSeminarBookId,
         initialSourceRef: _inlineSeminarSourceRef,
+        initialRoleProfiles: _inlineSeminarRoleProfiles,
+        initialMaxRounds: _inlineSeminarMaxRounds,
+        initialIncludeVerifier: _inlineSeminarIncludeVerifier,
         embedded: true,
         onClose: () {
           if (!mounted) return;
@@ -2612,6 +2960,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           initialSessionId: _inlineSeminarSessionId,
           bookId: _inlineSeminarBookId,
           initialSourceRef: _inlineSeminarSourceRef,
+          initialRoleProfiles: _inlineSeminarRoleProfiles,
+          initialMaxRounds: _inlineSeminarMaxRounds,
+          initialIncludeVerifier: _inlineSeminarIncludeVerifier,
         ),
       ),
     );
@@ -4323,6 +4674,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         sessionId: card.sessionId,
         bookId: card.sourceRef?.bookId ?? card.bookId,
         sourceRef: card.sourceRef,
+        roleProfiles: card.roleProfiles,
+        maxRounds: card.maxRounds,
+        includeVerifier: card.roleIds.contains(AiSeminarRole.verifier.asString),
       );
     }
 

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/book.dart';
 import 'package:papertok_reader/models/current_reading_state.dart';
 import 'package:papertok_reader/models/source_ref.dart';
@@ -257,6 +258,83 @@ void main() {
     );
     expect(card['sourceRefCount'], 1);
     expect(card['bookId'], 7);
+  });
+
+  test('appendSeminarRunCard preserves per-run role profiles', () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('ai-chat-seminar-run-profiles-');
+    _mockPathProvider(tempDir.path);
+    addTearDown(() {
+      _mockPathProvider(null);
+      tempDir.deleteSync(recursive: true);
+    });
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await container.read(aiChatProvider.future);
+    container.read(aiChatProvider.notifier).restore(
+      [ChatMessage.humanText('已有会话')],
+      sessionId: 'session-seminar-run-profiles',
+    );
+
+    await container.read(aiChatProvider.notifier).appendSeminarRunCard(
+      question: '请进行多角度讨论。',
+      bookId: 7,
+      maxRounds: 4,
+      roleProfiles: [
+        AiSeminarRoleProfile(
+          role: AiSeminarRole.critical,
+          name: '反方审稿人',
+          customPrompt: '专门寻找论证漏洞，并要求补证据。',
+          evidenceScopes: const [AiSeminarEvidenceScope.currentBook],
+          allowedToolIds: const ['semantic_search_current_book'],
+        ),
+        AiSeminarRoleProfile(
+          role: AiSeminarRole.verifier,
+          enabled: false,
+        ),
+      ],
+    );
+
+    final history = await AiHistoryStore.readHistory();
+    final nodes = history.single.conversationV2!['nodes'] as Map;
+    final seminarCards = nodes.values.where((raw) {
+      if (raw is! Map) return false;
+      final meta = raw['meta'];
+      return meta is Map && meta['seminarRunCard'] is Map;
+    }).toList();
+    final card = (seminarCards.single as Map)['meta']['seminarRunCard'] as Map;
+    final roleProfiles = card['roleProfiles'] as Map;
+    expect(card['maxRounds'], 4);
+    expect(roleProfiles.keys, contains('critical'));
+    expect(roleProfiles.keys, contains('verifier'));
+    expect(roleProfiles['critical']['name'], '反方审稿人');
+    expect(
+      roleProfiles['critical']['customPrompt'],
+      '专门寻找论证漏洞，并要求补证据。',
+    );
+    expect(roleProfiles['critical']['evidenceScopes'], ['current-book']);
+    expect(
+      roleProfiles['critical']['allowedToolIds'],
+      ['semantic_search_current_book'],
+    );
+    expect(roleProfiles['verifier']['enabled'], false);
+
+    container.read(aiChatProvider.notifier).clear();
+    container.read(aiChatProvider.notifier).loadHistoryEntry(history.single);
+
+    final restoredCard = container
+        .read(aiChatProvider.notifier)
+        .seminarRunCardForMessageIndex(2);
+    expect(restoredCard?.maxRounds, 4);
+    expect(restoredCard?.roleProfiles, hasLength(2));
+    expect(
+      restoredCard?.roleProfiles
+          .firstWhere((profile) => profile.role == AiSeminarRole.critical)
+          .customPrompt,
+      '专门寻找论证漏洞，并要求补证据。',
+    );
   });
 
   test('updateSeminarRunCardSnapshot persists structured Seminar summary',

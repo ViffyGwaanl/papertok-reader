@@ -102,6 +102,107 @@ void main() {
   );
 
   testWidgets(
+    'AI Chat Seminar run setup persists single-run role prompt and rounds',
+    (tester) async {
+      final tempDir =
+          Directory.systemTemp.createTempSync('ai-chat-seminar-run-setup-');
+      _mockPathProvider(tempDir.path);
+      addTearDown(() {
+        _mockPathProvider(null);
+        tempDir.deleteSync(recursive: true);
+      });
+
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+      });
+      await Prefs().initPrefs();
+      Prefs().aiSeminarRoleProfiles = [
+        AiSeminarRoleProfile(
+          role: AiSeminarRole.critical,
+          evidenceScopes: const [AiSeminarEvidenceScope.library],
+          allowedToolIds: const ['semantic_search_current_book'],
+        ),
+      ];
+      expect(
+        Prefs().aiSeminarRoleProfileFor(AiSeminarRole.critical)?.evidenceScopes,
+        const [AiSeminarEvidenceScope.library],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+
+      await tester.enterText(find.byType(TextField).first, '这个概念怎么理解？');
+      await tester.tap(find.byIcon(Icons.add_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('ai-chat-seminar-run-setup')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('本次研讨设置'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('seminar-run-max-rounds')),
+        '4',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('seminar-run-role-critical-prompt')),
+        '请先指出反方证据缺口，再决定是否需要刷新证据。',
+      );
+      await tester
+          .ensureVisible(find.byKey(const ValueKey('seminar-run-start')));
+      await tester.tap(find.byKey(const ValueKey('seminar-run-start')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(AiSeminarRuntimePanel), findsOneWidget);
+      final card = container
+          .read(aiChatProvider.notifier)
+          .seminarRunCardForMessageIndex(1);
+      final criticalProfile = card?.roleProfiles.firstWhere(
+        (profile) => profile.role == AiSeminarRole.critical,
+      );
+      expect(card?.maxRounds, 4);
+      expect(criticalProfile?.customPrompt, '请先指出反方证据缺口，再决定是否需要刷新证据。');
+      expect(criticalProfile?.evidenceScopes,
+          const [AiSeminarEvidenceScope.library]);
+      expect(
+        criticalProfile?.allowedToolIds,
+        const ['semantic_search_current_book'],
+      );
+      expect(Prefs().activeAiSkillId, 'paper_analyzer');
+    },
+  );
+
+  testWidgets(
     'Choose style Seminar row opens settings without selecting Seminar skill',
     (tester) async {
       const providerId = 'openai';

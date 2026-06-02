@@ -119,6 +119,20 @@ void main() {
       expect(restored.createdAt, 0);
     });
 
+    test('seminar run card clamps restored maxRounds to supported range', () {
+      final restoredHigh = AiSeminarRunCardMeta.fromJson(const {
+        'question': 'Debate this passage.',
+        'maxRounds': 99,
+      });
+      final restoredLow = AiSeminarRunCardMeta.fromJson(const {
+        'question': 'Debate this passage.',
+        'maxRounds': 0,
+      });
+
+      expect(restoredHigh.maxRounds, 5);
+      expect(restoredLow.maxRounds, 2);
+    });
+
     test('fromJson tolerates missing fields', () {
       final restored = AiSegmentMeta.fromJson(const {'model': 'claude'});
       expect(restored.model, 'claude');

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:langchain_core/chat_models.dart';
+import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 
 /// A persistent conversation tree that supports branching edits and per-turn
@@ -643,9 +644,14 @@ class AiSeminarRunCardMeta {
     this.sourceRefCount = 0,
     this.allowWeb = false,
     this.writeRequiresApproval = true,
-    this.maxRounds = 2,
+    int maxRounds = 2,
+    this.roleProfiles = const <AiSeminarRoleProfile>[],
     this.snapshot,
-  });
+  }) : maxRounds = maxRounds <= 0
+            ? 2
+            : maxRounds > 5
+                ? 5
+                : maxRounds;
 
   final String question;
   final String? sessionId;
@@ -658,6 +664,7 @@ class AiSeminarRunCardMeta {
   final bool allowWeb;
   final bool writeRequiresApproval;
   final int maxRounds;
+  final List<AiSeminarRoleProfile> roleProfiles;
   final int createdAt;
   final AiSeminarRunCardSnapshot? snapshot;
 
@@ -678,6 +685,7 @@ class AiSeminarRunCardMeta {
       allowWeb: allowWeb,
       writeRequiresApproval: writeRequiresApproval,
       maxRounds: maxRounds,
+      roleProfiles: roleProfiles,
       createdAt: createdAt,
       snapshot: snapshot ?? this.snapshot,
     );
@@ -697,6 +705,11 @@ class AiSeminarRunCardMeta {
       'allowWeb': allowWeb,
       'writeRequiresApproval': writeRequiresApproval,
       'maxRounds': maxRounds,
+      if (roleProfiles.isNotEmpty)
+        'roleProfiles': {
+          for (final profile in roleProfiles)
+            profile.role.asString: profile.toJson(),
+        },
       'createdAt': createdAt,
       if (snapshot != null && !snapshot!.isEmpty)
         'snapshot': snapshot!.toJson(),
@@ -742,10 +755,40 @@ class AiSeminarRunCardMeta {
       allowWeb: _boolOrDefault(json['allowWeb'], false),
       writeRequiresApproval:
           _boolOrDefault(json['writeRequiresApproval'], true),
-      maxRounds: _positiveInt(json['maxRounds'], fallback: 2),
+      maxRounds: _supportedMaxRounds(
+        _positiveInt(json['maxRounds'], fallback: 2),
+      ),
+      roleProfiles: _roleProfilesFromJson(json['roleProfiles']),
       createdAt: json['createdAt'] is int ? json['createdAt'] as int : 0,
       snapshot: snapshot,
     );
+  }
+
+  static List<AiSeminarRoleProfile> _roleProfilesFromJson(Object? raw) {
+    final out = <AiSeminarRoleProfile>[];
+    if (raw is Map) {
+      for (final entry in raw.entries) {
+        final role = AiSeminarRole.fromString(entry.key.toString());
+        if (role == null || entry.value is! Map) continue;
+        final profile = AiSeminarRoleProfile.fromJson(
+          role,
+          Map<String, dynamic>.from(entry.value as Map),
+        );
+        if (profile.hasOverrides) out.add(profile);
+      }
+    } else if (raw is List) {
+      for (final item in raw.whereType<Map>()) {
+        final role = AiSeminarRole.fromString(item['role']?.toString());
+        if (role == null) continue;
+        final profile = AiSeminarRoleProfile.fromJson(
+          role,
+          Map<String, dynamic>.from(item),
+        );
+        if (profile.hasOverrides) out.add(profile);
+      }
+    }
+    if (out.isEmpty) return const <AiSeminarRoleProfile>[];
+    return List.unmodifiable(out);
   }
 
   static String? _trimmedOrNull(Object? value) {
@@ -784,6 +827,11 @@ class AiSeminarRunCardMeta {
             : int.tryParse(raw?.toString() ?? '');
     if (parsed == null || parsed <= 0) return fallback;
     return parsed;
+  }
+
+  static int _supportedMaxRounds(int value) {
+    if (value <= 0) return 2;
+    return value.clamp(1, 5).toInt();
   }
 
   static bool _boolOrDefault(Object? raw, bool fallback) {

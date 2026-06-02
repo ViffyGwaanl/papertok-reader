@@ -921,6 +921,9 @@ class AiChat extends _$AiChat {
     int? bookId,
     SourceRef? sourceRef,
     String? seminarSessionId,
+    bool? includeVerifier,
+    int? maxRounds,
+    List<AiSeminarRoleProfile>? roleProfiles,
   }) async {
     final trimmedQuestion = question.trim();
     if (trimmedQuestion.isEmpty && sourceRef == null) {
@@ -940,24 +943,27 @@ class AiChat extends _$AiChat {
       current: bookContext,
     );
     final resolvedBookId = sourceRef?.bookId ?? bookId ?? bookContext.bookId;
-    final includeVerifier = Prefs().aiSeminarIncludeVerifier;
+    final effectiveRoleProfiles = _effectiveSeminarRoleProfiles(roleProfiles);
+    final effectiveIncludeVerifier =
+        includeVerifier ?? Prefs().aiSeminarIncludeVerifier;
     final selectedRoles = <AiSeminarRole>[
       AiSeminarRole.critical,
       AiSeminarRole.supportive,
-      if (includeVerifier) AiSeminarRole.verifier,
+      if (effectiveIncludeVerifier) AiSeminarRole.verifier,
       AiSeminarRole.synthesizer,
     ]
-        .where(
-            (role) => Prefs().aiSeminarRoleProfileFor(role)?.enabled != false)
+        .where((role) =>
+            _roleProfileFor(effectiveRoleProfiles, role)?.enabled != false)
         .toList(growable: false);
     final roleIds = (selectedRoles.isEmpty
             ? const [AiSeminarRole.synthesizer]
             : selectedRoles)
         .map((role) => role.asString)
         .toList(growable: false);
-    final evidenceScopeIds = const <AiSeminarEvidenceScope>[
-      AiSeminarEvidenceScope.currentBook,
-    ].map((scope) => scope.asString).toList(growable: false);
+    final evidenceScopeIds = _seminarEvidenceScopesFor(effectiveRoleProfiles)
+        .map((scope) => scope.asString)
+        .toList(growable: false);
+    final effectiveMaxRounds = _seminarMaxRounds(maxRounds);
     final cardSessionId = _seminarSessionId(
       preferred: seminarSessionId,
       now: now,
@@ -988,7 +994,8 @@ class AiChat extends _$AiChat {
       sourceRefCount: sourceRef == null ? 0 : 1,
       allowWeb: false,
       writeRequiresApproval: true,
-      maxRounds: 2,
+      maxRounds: effectiveMaxRounds,
+      roleProfiles: effectiveRoleProfiles,
       createdAt: now,
     );
     _tree = _tree.appendChild(
@@ -1157,6 +1164,47 @@ class AiChat extends _$AiChat {
     final trimmed = preferred?.trim();
     if (trimmed != null && trimmed.isNotEmpty) return trimmed;
     return 'seminar-chat-$now';
+  }
+
+  List<AiSeminarRoleProfile> _effectiveSeminarRoleProfiles(
+    List<AiSeminarRoleProfile>? explicitProfiles,
+  ) {
+    final source = explicitProfiles ?? Prefs().aiSeminarRoleProfiles;
+    final byRole = <AiSeminarRole, AiSeminarRoleProfile>{};
+    for (final profile in source) {
+      if (profile.hasOverrides) {
+        byRole[profile.role] = profile;
+      }
+    }
+    return List.unmodifiable(byRole.values);
+  }
+
+  AiSeminarRoleProfile? _roleProfileFor(
+    List<AiSeminarRoleProfile> profiles,
+    AiSeminarRole role,
+  ) {
+    for (final profile in profiles) {
+      if (profile.role == role) return profile;
+    }
+    return null;
+  }
+
+  List<AiSeminarEvidenceScope> _seminarEvidenceScopesFor(
+    List<AiSeminarRoleProfile> profiles,
+  ) {
+    final scopes = <AiSeminarEvidenceScope>[AiSeminarEvidenceScope.currentBook];
+    for (final profile in profiles) {
+      if (!profile.enabled) continue;
+      for (final scope in profile.evidenceScopes) {
+        if (!scopes.contains(scope)) scopes.add(scope);
+      }
+    }
+    return List.unmodifiable(scopes);
+  }
+
+  int _seminarMaxRounds(int? value) {
+    final parsed = value ?? 2;
+    return parsed.clamp(1, 5).toInt();
   }
 
   void persistCurrentConversation(WidgetRef ref) {
