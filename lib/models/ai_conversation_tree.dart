@@ -482,23 +482,49 @@ class AiSeminarRunCardMeta {
   const AiSeminarRunCardMeta({
     required this.question,
     required this.createdAt,
+    this.sessionId,
     this.bookId,
     this.sourceRef,
     this.status = 'ready',
+    this.roleIds = const <String>[
+      'critical',
+      'supportive',
+      'synthesizer',
+    ],
+    this.evidenceScopeIds = const <String>['current-book'],
+    this.sourceRefCount = 0,
+    this.allowWeb = false,
+    this.writeRequiresApproval = true,
+    this.maxRounds = 2,
   });
 
   final String question;
+  final String? sessionId;
   final int? bookId;
   final SourceRef? sourceRef;
   final String status;
+  final List<String> roleIds;
+  final List<String> evidenceScopeIds;
+  final int sourceRefCount;
+  final bool allowWeb;
+  final bool writeRequiresApproval;
+  final int maxRounds;
   final int createdAt;
 
   Map<String, dynamic> toJson() {
     return {
       'question': question,
+      if (sessionId != null && sessionId!.trim().isNotEmpty)
+        'sessionId': sessionId,
       if (bookId != null) 'bookId': bookId,
       if (sourceRef != null) 'sourceRef': sourceRef!.toJson(),
       'status': status,
+      'roleIds': roleIds,
+      'evidenceScopeIds': evidenceScopeIds,
+      'sourceRefCount': sourceRefCount,
+      'allowWeb': allowWeb,
+      'writeRequiresApproval': writeRequiresApproval,
+      'maxRounds': maxRounds,
       'createdAt': createdAt,
     };
   }
@@ -514,6 +540,7 @@ class AiSeminarRunCardMeta {
     }
     return AiSeminarRunCardMeta(
       question: json['question']?.toString() ?? '',
+      sessionId: _trimmedOrNull(json['sessionId']),
       bookId: rawBookId is int
           ? rawBookId
           : rawBookId is num
@@ -521,7 +548,66 @@ class AiSeminarRunCardMeta {
               : int.tryParse(rawBookId?.toString() ?? ''),
       sourceRef: sourceRef,
       status: json['status']?.toString() ?? 'ready',
+      roleIds: _stringList(
+        json['roleIds'],
+        fallback: const <String>['critical', 'supportive', 'synthesizer'],
+      ),
+      evidenceScopeIds: _stringList(
+        json['evidenceScopeIds'],
+        fallback: const <String>['current-book'],
+      ),
+      sourceRefCount: _nonNegativeInt(json['sourceRefCount']),
+      allowWeb: _boolOrDefault(json['allowWeb'], false),
+      writeRequiresApproval:
+          _boolOrDefault(json['writeRequiresApproval'], true),
+      maxRounds: _positiveInt(json['maxRounds'], fallback: 2),
       createdAt: json['createdAt'] is int ? json['createdAt'] as int : 0,
     );
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
+
+  static List<String> _stringList(
+    Object? raw, {
+    required List<String> fallback,
+  }) {
+    if (raw is! List) return fallback;
+    final values = raw
+        .map((value) => value?.toString().trim() ?? '')
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    return values.isEmpty ? fallback : values;
+  }
+
+  static int _nonNegativeInt(Object? raw) {
+    final parsed = raw is int
+        ? raw
+        : raw is num
+            ? raw.toInt()
+            : int.tryParse(raw?.toString() ?? '');
+    if (parsed == null || parsed < 0) return 0;
+    return parsed;
+  }
+
+  static int _positiveInt(Object? raw, {required int fallback}) {
+    final parsed = raw is int
+        ? raw
+        : raw is num
+            ? raw.toInt()
+            : int.tryParse(raw?.toString() ?? '');
+    if (parsed == null || parsed <= 0) return fallback;
+    return parsed;
+  }
+
+  static bool _boolOrDefault(Object? raw, bool fallback) {
+    if (raw is bool) return raw;
+    final text = raw?.toString().trim().toLowerCase();
+    if (text == 'true') return true;
+    if (text == 'false') return false;
+    return fallback;
   }
 }

@@ -5,6 +5,7 @@ import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/models/book.dart';
 import 'package:papertok_reader/models/current_reading_state.dart';
+import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/providers/ai_chat.dart';
 import 'package:papertok_reader/providers/ai_history.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
@@ -182,8 +183,15 @@ void main() {
     expect(seminarCards, hasLength(1));
     final card = (seminarCards.single as Map)['meta']['seminarRunCard'] as Map;
     expect(card['question'], '这个概念怎么理解？');
+    expect(card['sessionId'], startsWith('seminar-chat-'));
     expect(card['bookId'], 7);
     expect(card['status'], 'ready');
+    expect(card['roleIds'], ['critical', 'supportive', 'synthesizer']);
+    expect(card['evidenceScopeIds'], ['current-book']);
+    expect(card['sourceRefCount'], 0);
+    expect(card['allowWeb'], false);
+    expect(card['writeRequiresApproval'], true);
+    expect(card['maxRounds'], 2);
 
     container.read(aiChatProvider.notifier).clear();
     container.read(aiChatProvider.notifier).loadHistoryEntry(entry);
@@ -198,7 +206,56 @@ void main() {
         .read(aiChatProvider.notifier)
         .seminarRunCardForMessageIndex(2);
     expect(restoredCard?.question, '这个概念怎么理解？');
+    expect(restoredCard?.sessionId, startsWith('seminar-chat-'));
     expect(restoredCard?.bookId, 7);
+    expect(restoredCard?.roleIds, ['critical', 'supportive', 'synthesizer']);
+  });
+
+  test('appendSeminarRunCard persists verifier and source evidence context',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('ai-chat-seminar-context-');
+    _mockPathProvider(tempDir.path);
+    addTearDown(() {
+      _mockPathProvider(null);
+      tempDir.deleteSync(recursive: true);
+    });
+
+    Prefs().aiSeminarIncludeVerifier = true;
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await container.read(aiChatProvider.future);
+    container.read(aiChatProvider.notifier).restore(
+      [ChatMessage.humanText('已有会话')],
+      sessionId: 'session-seminar-card-source',
+    );
+
+    await container.read(aiChatProvider.notifier).appendSeminarRunCard(
+          question: '这段话有哪些争议？',
+          sourceRef: SourceRef(
+            bookId: 7,
+            href: 'Text/chapter.xhtml',
+            cfi: 'epubcfi(/6/4)',
+            sourceTextSnippet: 'Evidence-backed passage.',
+            sourceKind: SourceRefKind.reader,
+          ),
+        );
+
+    final history = await AiHistoryStore.readHistory();
+    final nodes = history.single.conversationV2!['nodes'] as Map;
+    final seminarCards = nodes.values.where((raw) {
+      if (raw is! Map) return false;
+      final meta = raw['meta'];
+      return meta is Map && meta['seminarRunCard'] is Map;
+    }).toList();
+    final card = (seminarCards.single as Map)['meta']['seminarRunCard'] as Map;
+    expect(
+      card['roleIds'],
+      ['critical', 'supportive', 'verifier', 'synthesizer'],
+    );
+    expect(card['sourceRefCount'], 1);
+    expect(card['bookId'], 7);
   });
 
   test('appendSeminarRunCard ignores empty cards without source evidence',

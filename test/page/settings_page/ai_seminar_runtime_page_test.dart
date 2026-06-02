@@ -910,6 +910,7 @@ void main() {
           supportedLocales: L10n.supportedLocales,
           home: AiSeminarRuntimePage(
             initialQuestion: 'Discuss this selection.',
+            initialSessionId: 'seminar-chat-selection',
             bookId: 42,
             initialSourceRef: selectedRef,
           ),
@@ -925,6 +926,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(capturedSession, isNotNull);
+    expect(capturedSession!.id, 'seminar-chat-selection');
     expect(capturedSession!.bookId, 42);
     expect(capturedSession!.sourceRefs, hasLength(1));
     expect(capturedSession!.sourceRefs.single.cfi, 'epubcfi(/6/4)');
@@ -1428,6 +1430,58 @@ void main() {
     expect(find.text('Start Seminar'), findsOneWidget);
     expect(find.textContaining('Recovered local Seminar state'), findsNothing);
     expect(find.text('old restored response'), findsNothing);
+    await tester.pump();
+    expect(Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey), isNull);
+  });
+
+  testWidgets('does not restore Seminar state for a different session id',
+      (tester) async {
+    await Prefs().prefs.setString(
+          aiSeminarRuntimeStateV1PrefsKey,
+          jsonEncode({
+            'status': 'completed',
+            'session': {
+              'id': 'seminar-chat-old',
+              'question': 'Same selected passage?',
+              'bookId': 42,
+            },
+            'turns': [
+              {
+                'id': 'turn-critical',
+                'role': 'critical',
+                'prompt': 'prompt',
+                'responseText': 'old session restored response',
+                'evidenceRefIds': ['e1'],
+              },
+            ],
+          }),
+        );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiSeminarRuntimePage(
+            initialQuestion: 'Same selected passage?',
+            initialSessionId: 'seminar-chat-new',
+            bookId: 42,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(tester.takeException(), isNull);
+    await scrollToStartSeminar(tester);
+    expect(find.text('Start Seminar'), findsOneWidget);
+    expect(find.textContaining('Recovered local Seminar state'), findsNothing);
+    expect(find.text('old session restored response'), findsNothing);
     await tester.pump();
     expect(Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey), isNull);
   });

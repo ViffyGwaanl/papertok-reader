@@ -195,6 +195,11 @@ void main() {
 
       expect(find.text('AI 研讨会'), findsOneWidget);
       expect(find.text('这个概念怎么理解？'), findsAtLeastNWidgets(1));
+      expect(find.text('待开始'), findsOneWidget);
+      expect(find.text('3 个角色'), findsOneWidget);
+      expect(find.text('证据：当前书籍'), findsOneWidget);
+      expect(find.text('写入需确认'), findsOneWidget);
+      expect(find.byTooltip('研讨会设置'), findsOneWidget);
       expect(find.widgetWithText(TextButton, '知识卡'), findsNothing);
       expect(find.widgetWithText(TextButton, '重新生成'), findsNothing);
       expect(find.widgetWithText(TextButton, '复制'), findsOneWidget);
@@ -230,8 +235,15 @@ AiChatHistoryEntry _seminarCardHistoryEntry() {
   final assistant = ChatMessage.ai('AI Seminar: 这个概念怎么理解？');
   const card = AiSeminarRunCardMeta(
     question: '这个概念怎么理解？',
+    sessionId: 'seminar-chat-history',
     bookId: 7,
     status: 'ready',
+    roleIds: ['critical', 'supportive', 'synthesizer'],
+    evidenceScopeIds: ['current-book'],
+    sourceRefCount: 0,
+    allowWeb: false,
+    writeRequiresApproval: true,
+    maxRounds: 2,
     createdAt: 1234,
   );
   return AiChatHistoryEntry(

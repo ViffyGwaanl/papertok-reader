@@ -250,6 +250,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   bool _suppressDraftSync = false;
   bool _inlineSeminarVisible = false;
   String? _inlineSeminarQuestion;
+  String? _inlineSeminarSessionId;
   int? _inlineSeminarBookId;
   SourceRef? _inlineSeminarSourceRef;
 
@@ -2216,11 +2217,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final sourceRef = _draftSourceRefSeedText == inputController.text
         ? _draftSourceRef
         : null;
+    final seminarSessionId =
+        'seminar-chat-${DateTime.now().millisecondsSinceEpoch}';
     unawaited(
       ref.read(aiChatProvider.notifier).appendSeminarRunCard(
             question: question,
             bookId: reading.book?.id,
             sourceRef: sourceRef,
+            seminarSessionId: seminarSessionId,
           ),
     );
     _suppressDraftSync = true;
@@ -2233,6 +2237,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     setState(() {
       _inlineSeminarVisible = true;
       _inlineSeminarQuestion = question.isEmpty ? null : question;
+      _inlineSeminarSessionId = seminarSessionId;
       _inlineSeminarBookId = reading.book?.id;
       _inlineSeminarSourceRef = sourceRef;
     });
@@ -2240,6 +2245,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   void openInlineSeminar({
     String? question,
+    String? sessionId,
     int? bookId,
     SourceRef? sourceRef,
   }) {
@@ -2252,6 +2258,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           trimmedQuestion == null || trimmedQuestion.isEmpty
               ? null
               : trimmedQuestion;
+      _inlineSeminarSessionId =
+          sessionId?.trim().isEmpty == true ? null : sessionId?.trim();
       _inlineSeminarBookId = sourceRef?.bookId ?? bookId ?? reading.book?.id;
       _inlineSeminarSourceRef = sourceRef;
     });
@@ -2266,6 +2274,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         key: ValueKey(
           [
             _inlineSeminarQuestion ?? '',
+            _inlineSeminarSessionId ?? '',
             _inlineSeminarBookId?.toString() ?? '',
             _inlineSeminarSourceRef?.bookId?.toString() ?? '',
             _inlineSeminarSourceRef?.href ?? '',
@@ -2274,6 +2283,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ].join('\u001f'),
         ),
         initialQuestion: _inlineSeminarQuestion,
+        initialSessionId: _inlineSeminarSessionId,
         bookId: _inlineSeminarBookId,
         initialSourceRef: _inlineSeminarSourceRef,
         embedded: true,
@@ -2292,6 +2302,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       CupertinoStyleRoute(
         page: AiSeminarRuntimePage(
           initialQuestion: _inlineSeminarQuestion,
+          initialSessionId: _inlineSeminarSessionId,
           bookId: _inlineSeminarBookId,
           initialSourceRef: _inlineSeminarSourceRef,
         ),
@@ -3990,15 +4001,20 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Widget _buildSeminarRunCard(AiSeminarRunCardMeta card) {
     final l10n = L10n.of(context);
     final question = card.question.trim();
+    void openCard() {
+      openInlineSeminar(
+        question: question.isEmpty ? null : question,
+        sessionId: card.sessionId,
+        bookId: card.sourceRef?.bookId ?? card.bookId,
+        sourceRef: card.sourceRef,
+      );
+    }
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () => openInlineSeminar(
-          question: question.isEmpty ? null : question,
-          bookId: card.sourceRef?.bookId ?? card.bookId,
-          sourceRef: card.sourceRef,
-        ),
+        onTap: openCard,
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
@@ -4028,18 +4044,30 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => openInlineSeminar(
-                      question: question.isEmpty ? null : question,
-                      bookId: card.sourceRef?.bookId ?? card.bookId,
-                      sourceRef: card.sourceRef,
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: l10n.seminarConfigTitle,
+                    icon: const Icon(Icons.tune_outlined, size: 18),
+                    onPressed: () => Navigator.of(context).push(
+                      CupertinoStyleRoute(
+                        page: const AiSeminarConfigPage(),
+                      ),
                     ),
+                  ),
+                  TextButton(
+                    onPressed: openCard,
                     child: Text(l10n.aiChatSeminarFeatureAction),
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: _seminarMetaChips(card),
+              ),
               if (question.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
                 Text(
                   question,
                   maxLines: 3,
@@ -4056,6 +4084,184 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       ),
     );
   }
+
+  List<Widget> _seminarMetaChips(AiSeminarRunCardMeta card) {
+    final l10n = L10n.of(context);
+    final chips = <Widget>[
+      _seminarMetaChip(
+        Icons.flag_outlined,
+        _seminarStatusLabel(card.status, l10n),
+      ),
+      _seminarMetaChip(
+        Icons.groups_2_outlined,
+        _seminarRoleCountLabel(card.roleIds.length),
+      ),
+      _seminarMetaChip(
+        Icons.manage_search_outlined,
+        _seminarEvidenceScopeSummary(card.evidenceScopeIds, l10n),
+      ),
+    ];
+    if (card.sourceRefCount > 0) {
+      chips.add(
+        _seminarMetaChip(
+          Icons.link_outlined,
+          _seminarSourceCountLabel(card.sourceRefCount),
+        ),
+      );
+    }
+    if (card.writeRequiresApproval) {
+      chips.add(
+        _seminarMetaChip(
+          Icons.fact_check_outlined,
+          _localizedSeminarCardText(
+            zh: '写入需确认',
+            en: 'Approval before write',
+          ),
+        ),
+      );
+    }
+    if (card.allowWeb) {
+      chips.add(
+        _seminarMetaChip(
+          Icons.public_outlined,
+          _localizedSeminarCardText(
+            zh: '允许联网',
+            en: 'Web allowed',
+          ),
+        ),
+      );
+    }
+    if (card.maxRounds > 1) {
+      chips.add(
+        _seminarMetaChip(
+          Icons.repeat_outlined,
+          _localizedSeminarCardText(
+            zh: '最多 ${card.maxRounds} 轮',
+            en: 'Up to ${card.maxRounds} rounds',
+          ),
+        ),
+      );
+    }
+    return chips;
+  }
+
+  Widget _seminarMetaChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: ClaudePalette.accentTint(context),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: ClaudePalette.accent(context),
+          ),
+          const SizedBox(width: 4),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width * 0.52,
+            ),
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: ClaudePalette.fg(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _seminarStatusLabel(String status, L10n l10n) {
+    switch (status) {
+      case 'draft':
+        return l10n.seminarRunStatusDraft;
+      case 'running':
+        return l10n.seminarRunStatusRunning;
+      case 'completed':
+        return l10n.seminarRunStatusCompleted;
+      case 'needs-evidence':
+        return l10n.seminarRunStatusNeedsEvidence;
+      case 'cancelled':
+        return l10n.seminarRunStatusCancelled;
+      case 'failed':
+        return l10n.seminarRunStatusFailed;
+      case 'ready':
+      default:
+        return _localizedSeminarCardText(
+          zh: '待开始',
+          en: 'Ready',
+        );
+    }
+  }
+
+  String _seminarRoleCountLabel(int count) {
+    final safeCount = count <= 0 ? 3 : count;
+    return _localizedSeminarCardText(
+      zh: '$safeCount 个角色',
+      en: '$safeCount roles',
+    );
+  }
+
+  String _seminarEvidenceScopeSummary(
+    List<String> scopeIds,
+    L10n l10n,
+  ) {
+    final safeScopeIds =
+        scopeIds.isEmpty ? const <String>['current-book'] : scopeIds;
+    final separator = _isChineseLocale ? '、' : ', ';
+    final labels = safeScopeIds
+        .map((scopeId) => _seminarEvidenceScopeLabel(scopeId, l10n))
+        .toList(growable: false)
+        .join(separator);
+    return _localizedSeminarCardText(
+      zh: '证据：$labels',
+      en: 'Evidence: $labels',
+    );
+  }
+
+  String _seminarEvidenceScopeLabel(String scopeId, L10n l10n) {
+    switch (scopeId) {
+      case 'current-chapter':
+        return l10n.seminarEvidenceScopeCurrentChapter;
+      case 'current-book':
+        return l10n.seminarEvidenceScopeCurrentBook;
+      case 'library':
+        return l10n.seminarEvidenceScopeLibrary;
+      case 'notes':
+        return l10n.seminarEvidenceScopeNotes;
+      case 'memory':
+        return l10n.seminarEvidenceScopeMemory;
+      case 'concept-graph':
+        return l10n.seminarEvidenceScopeConceptGraph;
+      default:
+        return scopeId;
+    }
+  }
+
+  String _seminarSourceCountLabel(int count) {
+    return _localizedSeminarCardText(
+      zh: '$count 条来源',
+      en: count == 1 ? '1 source' : '$count sources',
+    );
+  }
+
+  String _localizedSeminarCardText({
+    required String zh,
+    required String en,
+  }) {
+    return _isChineseLocale ? zh : en;
+  }
+
+  bool get _isChineseLocale =>
+      Localizations.localeOf(context).languageCode.toLowerCase() == 'zh';
 
   Widget _buildUserMessageItem(_UserChatItem item) {
     final content = _extractUserTextFromHuman(item.message);

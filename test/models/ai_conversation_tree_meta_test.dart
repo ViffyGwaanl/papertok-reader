@@ -12,8 +12,15 @@ void main() {
         outputTokens: 880,
         seminarRunCard: AiSeminarRunCardMeta(
           question: 'How should I read this claim?',
+          sessionId: 'seminar-session-1',
           bookId: 7,
           status: 'ready',
+          roleIds: ['critical', 'supportive', 'verifier', 'synthesizer'],
+          evidenceScopeIds: ['current-book'],
+          sourceRefCount: 1,
+          allowWeb: false,
+          writeRequiresApproval: true,
+          maxRounds: 2,
           createdAt: 1234,
         ),
       );
@@ -23,8 +30,16 @@ void main() {
       expect(restored.outputTokens, 880);
       expect(
           restored.seminarRunCard?.question, 'How should I read this claim?');
+      expect(restored.seminarRunCard?.sessionId, 'seminar-session-1');
       expect(restored.seminarRunCard?.bookId, 7);
       expect(restored.seminarRunCard?.status, 'ready');
+      expect(restored.seminarRunCard?.roleIds,
+          ['critical', 'supportive', 'verifier', 'synthesizer']);
+      expect(restored.seminarRunCard?.evidenceScopeIds, ['current-book']);
+      expect(restored.seminarRunCard?.sourceRefCount, 1);
+      expect(restored.seminarRunCard?.allowWeb, false);
+      expect(restored.seminarRunCard?.writeRequiresApproval, true);
+      expect(restored.seminarRunCard?.maxRounds, 2);
       expect(restored.seminarRunCard?.createdAt, 1234);
     });
 

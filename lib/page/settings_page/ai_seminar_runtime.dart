@@ -15,12 +15,14 @@ class AiSeminarRuntimePage extends ConsumerWidget {
   const AiSeminarRuntimePage({
     super.key,
     this.initialQuestion,
+    this.initialSessionId,
     this.bookId,
     this.initialSourceRef,
     this.autoStart = false,
   });
 
   final String? initialQuestion;
+  final String? initialSessionId;
   final int? bookId;
   final SourceRef? initialSourceRef;
   final bool autoStart;
@@ -56,6 +58,7 @@ class AiSeminarRuntimePage extends ConsumerWidget {
       ],
       child: AiSeminarRuntimePanel(
         initialQuestion: initialQuestion,
+        initialSessionId: initialSessionId,
         bookId: bookId,
         initialSourceRef: initialSourceRef,
         autoStart: autoStart,
@@ -68,6 +71,7 @@ class AiSeminarRuntimePanel extends ConsumerStatefulWidget {
   const AiSeminarRuntimePanel({
     super.key,
     this.initialQuestion,
+    this.initialSessionId,
     this.bookId,
     this.initialSourceRef,
     this.autoStart = false,
@@ -77,6 +81,7 @@ class AiSeminarRuntimePanel extends ConsumerStatefulWidget {
   });
 
   final String? initialQuestion;
+  final String? initialSessionId;
   final int? bookId;
   final SourceRef? initialSourceRef;
   final bool autoStart;
@@ -134,9 +139,13 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
     final question = _questionController.text.trim();
     if (question.isEmpty) return;
     final diagnostics = ref.read(aiSeminarRuntimeProvider).providerDiagnostics;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final initialSessionId = widget.initialSessionId?.trim();
     await ref.read(aiSeminarRuntimeProvider.notifier).start(
           AiSeminarSessionContract(
-            id: 'seminar-${DateTime.now().millisecondsSinceEpoch}',
+            id: initialSessionId == null || initialSessionId.isEmpty
+                ? 'seminar-$now'
+                : initialSessionId,
             question: question,
             bookId: widget.initialSourceRef?.bookId ?? widget.bookId,
             sourceRefs: [
@@ -145,6 +154,7 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
             roles: _selectedRoles,
             budgetPolicy: _budgetPolicyFromInputs(diagnostics),
             roleProfiles: Prefs().aiSeminarRoleProfiles,
+            createdAt: now,
           ),
         );
   }
@@ -318,13 +328,20 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
 
   bool _hasMismatchedEntryState(AiSeminarRuntimeState state) {
     if (state.session == null) return false;
+    final entrySessionId = widget.initialSessionId?.trim();
     final entryQuestion = widget.initialQuestion?.trim();
     final entryBookId = widget.initialSourceRef?.bookId ?? widget.bookId;
     final hasScopedEntry = entryBookId != null ||
         widget.initialSourceRef != null ||
+        (entrySessionId?.isNotEmpty ?? false) ||
         (entryQuestion?.isNotEmpty ?? false);
     if (!hasScopedEntry) return false;
     final session = state.session!;
+    if (entrySessionId != null &&
+        entrySessionId.isNotEmpty &&
+        session.id != entrySessionId) {
+      return true;
+    }
     if (entryBookId != null && session.bookId != entryBookId) {
       return true;
     }

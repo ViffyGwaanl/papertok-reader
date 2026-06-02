@@ -9,6 +9,7 @@ import 'package:papertok_reader/service/ai/index.dart';
 import 'package:papertok_reader/service/ai/prompt_budgeting_service.dart';
 import 'package:papertok_reader/service/mcp/mcp_client_service.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
+import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
@@ -919,6 +920,7 @@ class AiChat extends _$AiChat {
     required String question,
     int? bookId,
     SourceRef? sourceRef,
+    String? seminarSessionId,
   }) async {
     final trimmedQuestion = question.trim();
     if (trimmedQuestion.isEmpty && sourceRef == null) {
@@ -938,6 +940,20 @@ class AiChat extends _$AiChat {
       current: bookContext,
     );
     final resolvedBookId = sourceRef?.bookId ?? bookId ?? bookContext.bookId;
+    final includeVerifier = Prefs().aiSeminarIncludeVerifier;
+    final roleIds = <AiSeminarRole>[
+      AiSeminarRole.critical,
+      AiSeminarRole.supportive,
+      if (includeVerifier) AiSeminarRole.verifier,
+      AiSeminarRole.synthesizer,
+    ].map((role) => role.asString).toList(growable: false);
+    final evidenceScopeIds = const <AiSeminarEvidenceScope>[
+      AiSeminarEvidenceScope.currentBook,
+    ].map((scope) => scope.asString).toList(growable: false);
+    final cardSessionId = _seminarSessionId(
+      preferred: seminarSessionId,
+      now: now,
+    );
 
     if (_tree.nodes.isEmpty) {
       _tree = AiConversationTree.empty();
@@ -955,9 +971,16 @@ class AiChat extends _$AiChat {
 
     final card = AiSeminarRunCardMeta(
       question: trimmedQuestion,
+      sessionId: cardSessionId,
       bookId: resolvedBookId,
       sourceRef: sourceRef,
       status: 'ready',
+      roleIds: roleIds,
+      evidenceScopeIds: evidenceScopeIds,
+      sourceRefCount: sourceRef == null ? 0 : 1,
+      allowWeb: false,
+      writeRequiresApproval: true,
+      maxRounds: 2,
       createdAt: now,
     );
     _tree = _tree.appendChild(
@@ -1021,6 +1044,15 @@ class AiChat extends _$AiChat {
       return 'AI Seminar';
     }
     return 'AI Seminar: $question';
+  }
+
+  String _seminarSessionId({
+    required String? preferred,
+    required int now,
+  }) {
+    final trimmed = preferred?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    return 'seminar-chat-$now';
   }
 
   void persistCurrentConversation(WidgetRef ref) {
